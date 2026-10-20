@@ -1084,7 +1084,7 @@ const MSG_FLOW_ERROR_13: c_int = 1;
 /// `s` is live.
 unsafe fn client_derive_and_install(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc as k;
-    let mut pms = [0u8; 64];
+    let mut pms = crate::runtime::mem::CleansedScratch::<64>::new();
     let mut pmslen = 0usize;
     // SAFETY: `s` is live; the keys are the connection's ephemerals.
     if unsafe {
@@ -1093,7 +1093,7 @@ unsafe fn client_derive_and_install(s: *mut Ssl) -> c_int {
             (*s).pkey,
             (*s).peer_tmp,
             pms.as_mut_ptr(),
-            pms.len(),
+            64,
             &mut pmslen,
         )
     } == 0
@@ -1101,7 +1101,7 @@ unsafe fn client_derive_and_install(s: *mut Ssl) -> c_int {
         return 0;
     }
     // SAFETY: `s` is live; `pms[..pmslen]` is the shared secret.
-    if unsafe { k::tls13_generate_handshake_secret(s, &pms[..pmslen]) } == 0 {
+    if unsafe { k::tls13_generate_handshake_secret(s, &pms.as_slice()[..pmslen]) } == 0 {
         return 0;
     }
     // SAFETY: `s` is live; the transcript is `ClientHello || ServerHello`.
@@ -2489,15 +2489,23 @@ pub(crate) unsafe fn tls12_process_cert_verify(s: *mut Ssl, msg: &[u8], _is_serv
 /// # Safety
 /// `s` is live.
 unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
-    use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
+    use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key, EVP_PKEY_get_size};
+    use crate::runtime::mem::CleansedScratch;
     use crate::ssl::ssl_ciph_table as ct;
+    use crate::ssl::statem::statem_srvr::TLS12_MAX_RSA_BYTES;
     use crate::ssl::tls13_enc::write_handshake_message;
 
     // SAFETY: `s` is live.
     let mkey = unsafe { (*(*s).pending_cipher).algorithm_mkey as u64 };
-    let mut pms = [0u8; 80];
+    // The premaster is a secret stack copy; the guard wipes it on every return path, not only on
+    // success. 80 bytes covers an X25519/X448 secret and a P-521 x-coordinate (66).
+    let mut pms = CleansedScratch::<80>::new();
     let pmslen;
-    let mut body = [0u8; 512];
+    // The authority's `OPENSSL_RSA_MAX_MODULUS_BITS` is 16384 (`rsa.h:39`), so the largest
+    // ciphertext this writer can carry is 2048 bytes. The buffer is sized to that maximum and the
+    // actual modulus size is checked against it; the former fixed 512-byte buffer rejected every
+    // RSA key above 4088 bits.
+    let mut body = [0u8; 2 + TLS12_MAX_RSA_BYTES];
     let bodylen;
     if (mkey & ct::SSL_kRSA) != 0 && (mkey & ct::SSL_kECDHE) == 0 {
         // `tls_construct_cke_rsa` (`statem_clnt.c:3153-3225`): 48-byte pre-master
@@ -2513,11 +2521,19 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
         if server_key.is_null() {
             return 0;
         }
+        // SAFETY: `server_key` is live.
+        let modulus_bytes = unsafe { EVP_PKEY_get_size(server_key) };
+        if modulus_bytes <= 0 || modulus_bytes as usize > TLS12_MAX_RSA_BYTES {
+            return 0;
+        }
         // SAFETY: `s` is live; this is the TLS1.2 client's advertised version.
         let client_version = unsafe { (*s).client_version };
-        pms[0] = (client_version >> 8) as u8;
-        pms[1] = client_version as u8;
-        // SAFETY: `pms[2..]` is 46 writable bytes.
+        // SAFETY: `pms` is 80 writable bytes; the two version bytes are this frame's.
+        unsafe {
+            *pms.as_mut_ptr() = (client_version >> 8) as u8;
+            *pms.as_mut_ptr().add(1) = client_version as u8;
+        }
+        // SAFETY: `pms` is 80 writable bytes; the initialised prefix is two bytes.
         if unsafe { crate::rand::rand_lib::RAND_bytes(pms.as_mut_ptr().add(2), 46) } <= 0 {
             return 0;
         }
@@ -2603,7 +2619,7 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
                 (*s).pkey,
                 (*s).peer_tmp,
                 pms.as_mut_ptr(),
-                pms.len(),
+                80,
                 &mut got,
             )
         } == 0

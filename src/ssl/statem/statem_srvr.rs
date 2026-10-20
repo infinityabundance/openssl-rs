@@ -109,6 +109,12 @@ const SSL3_MT_COMPRESSED_CERTIFICATE: c_int = 25;
 const SSL3_MT_NEXT_PROTO: c_int = 67;
 const SSL3_MT_CHANGE_CIPHER_SPEC: c_int = 0x0101;
 
+/// The largest RSA modulus the TLS1.2 ClientKeyExchange writer accepts: 16384 bits, the
+/// authority's `OPENSSL_RSA_MAX_MODULUS_BITS` (`rsa.h:39`). The handshake writer's own body bound
+/// is larger, so this is the limit that keeps the CKE scratch bounded while accepting every key
+/// the provider can generate.
+pub(crate) const TLS12_MAX_RSA_BYTES: usize = 2048;
+
 // --- alerts / reasons --------------------------------------------------------
 const SSL_AD_INTERNAL_ERROR: c_int = 80;
 const SSL_AD_UNEXPECTED_MESSAGE: c_int = 10;
@@ -2150,7 +2156,7 @@ unsafe fn tls13_server_finish_flight(s: *mut Ssl) -> c_int {
 /// `s` is live.
 unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc as k;
-    let mut pms = [0u8; 64];
+    let mut pms = crate::runtime::mem::CleansedScratch::<64>::new();
     let mut pmslen = 0usize;
     // SAFETY: `s` is live; the server ephemeral (`pkey`) and client share (`peer_tmp`) are set.
     if unsafe {
@@ -2159,7 +2165,7 @@ unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
             (*s).pkey,
             (*s).peer_tmp,
             pms.as_mut_ptr(),
-            pms.len(),
+            64,
             &mut pmslen,
         )
     } == 0
@@ -2167,7 +2173,7 @@ unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
         return 0;
     }
     // SAFETY: `s` is live; `pms` is `pmslen` initialised bytes.
-    if unsafe { k::tls13_generate_handshake_secret(s, &pms[..pmslen]) } == 0 {
+    if unsafe { k::tls13_generate_handshake_secret(s, &pms.as_slice()[..pmslen]) } == 0 {
         return 0;
     }
     // SAFETY: `s` is live; the transcript is `ClientHello || ServerHello`.
@@ -3637,7 +3643,9 @@ unsafe fn tls12_process_client_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
     }
     // SAFETY: `s` is live.
     let mkey = unsafe { (*(*s).pending_cipher).algorithm_mkey as u64 };
-    let mut pms = [0u8; 80];
+    // The premaster is a secret stack copy; the guard wipes it on every return path, not only on
+    // success. 80 bytes covers an X25519/X448 secret and a P-521 x-coordinate (66).
+    let mut pms = crate::runtime::mem::CleansedScratch::<80>::new();
     let pmslen = if (mkey & ct::SSL_kRSA) != 0 && (mkey & ct::SSL_kECDHE) == 0 {
         // `tls_process_cke_rsa` (`statem_srvr.c:3157-3250`). TLS1.2 prefixes the encrypted
         // pre-master with its two-byte length; the reduced state machine never negotiates SSLv3.
@@ -3730,7 +3738,7 @@ unsafe fn tls12_process_client_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
                 (*s).pkey,
                 (*s).peer_tmp,
                 pms.as_mut_ptr(),
-                pms.len(),
+                80,
                 &mut got,
             )
         };
@@ -4598,20 +4606,28 @@ mod tls12_group_tests {
     use super::*;
     use core::ffi::{c_int, c_long, c_void, CStr};
 
+    use crate::evp::asymcipher::{EVP_PKEY_encrypt, EVP_PKEY_encrypt_init};
     use crate::evp::legacy_sha::EVP_sha256;
-    use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free, EvpPkey};
+    use crate::evp::pkey::{
+        openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free, EVP_PKEY_get_size, EvpPkey,
+    };
+    use crate::evp::pkey_ctx::{
+        EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_pkey, RSA_NO_PADDING, RSA_PKCS1_PADDING,
+    };
+    use crate::rsa::ctrl::EVP_PKEY_CTX_set_rsa_padding;
     use crate::runtime::bio::Bio;
-    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_new, BIO_read, BIO_write};
-    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
+    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_ctrl_pending, BIO_new, BIO_read, BIO_write};
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error, ERR_peek_error};
     use crate::runtime::obj as o;
     use crate::ssl::methods::TLS_method;
-    use crate::ssl::ssl_ciph::SSL_CIPHER_get_name;
+    use crate::ssl::ssl_ciph::{ssl3_get_cipher_by_id, SSL_CIPHER_get_name};
     use crate::ssl::ssl_lib::{
         SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_cipher_list, SSL_CTX_set_verify,
         SSL_do_handshake, SSL_free, SSL_get_current_cipher, SSL_new, SSL_set_accept_state,
         SSL_set_bio, SSL_set_connect_state, SSL_set_options, SslCtx,
     };
     use crate::ssl::ssl_rsa::{SSL_CTX_use_PrivateKey, SSL_CTX_use_certificate};
+    use crate::ssl::t1_enc::tls12_setup_cipher;
     use crate::x509::x509_set::{
         X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
     };
@@ -4631,7 +4647,7 @@ mod tls12_group_tests {
     ///
     /// # Safety
     /// Every object is created and released by this function's caller.
-    unsafe fn rsa_identity() -> (*mut EvpPkey, *mut X509) {
+    unsafe fn rsa_identity(bits: usize) -> (*mut EvpPkey, *mut X509) {
         use crate::asn1::layout::MBSTRING_UTF8;
         use crate::asn1::prim::ASN1_INTEGER_set;
         // SAFETY: constructors below answer fresh objects owned by this frame.
@@ -4641,7 +4657,7 @@ mod tls12_group_tests {
                 core::ptr::null(),
                 c"RSA".as_ptr(),
                 1,
-                2048,
+                bits,
                 core::ptr::null(),
             );
             assert!(!pkey.is_null(), "an RSA key must be generatable");
@@ -4718,6 +4734,21 @@ mod tls12_group_tests {
         client_group: Option<c_int>,
         server_group: Option<c_int>,
     ) -> Pair {
+        // SAFETY: the caller's contract; the default identity is 2048-bit RSA.
+        unsafe { make_pair_bits(cipher, version, client_group, server_group, 2048) }
+    }
+
+    /// As [`make_pair`], with an explicit RSA modulus size for the server identity.
+    ///
+    /// # Safety
+    /// The caller owns the returned objects and releases them with [`free_pair`].
+    unsafe fn make_pair_bits(
+        cipher: &CStr,
+        version: c_int,
+        client_group: Option<c_int>,
+        server_group: Option<c_int>,
+        rsa_bits: usize,
+    ) -> Pair {
         // SAFETY: every constructor below answers a fresh object owned by this frame.
         unsafe {
             let cctx = SSL_CTX_new(TLS_method());
@@ -4764,7 +4795,7 @@ mod tls12_group_tests {
                 }
             }
 
-            let (pkey, x) = rsa_identity();
+            let (pkey, x) = rsa_identity(rsa_bits);
             assert_eq!(SSL_CTX_use_certificate(sctx, x), 1);
             assert_eq!(SSL_CTX_use_PrivateKey(sctx, pkey), 1);
             EVP_PKEY_free(pkey);
@@ -4843,7 +4874,6 @@ mod tls12_group_tests {
     }
 
     /// Drain this thread's error queue and return the reason codes.
-    /// Drain this thread's error queue and return the reason codes.
     fn error_reasons() -> Vec<c_int> {
         let mut reasons = Vec::new();
         loop {
@@ -4855,6 +4885,21 @@ mod tls12_group_tests {
             reasons.push((e & 0x7f_ffff) as c_int);
         }
         reasons
+    }
+
+    /// Drain this thread's error queue and return `(ERR_GET_LIB, ERR_GET_REASON)` pairs.
+    fn error_lib_reasons() -> Vec<(c_int, c_int)> {
+        let mut out = Vec::new();
+        loop {
+            let e = ERR_get_error();
+            if e == 0 {
+                break;
+            }
+            // `ERR_GET_LIB` is bits 23..30 and `ERR_GET_REASON` is the low 23 bits on this
+            // non-system queue (`err.h`).
+            out.push((((e >> 23) & 0xff) as c_int, (e & 0x7f_ffff) as c_int));
+        }
+        out
     }
 
     fn current_cipher(s: *mut Ssl) -> String {
@@ -4870,6 +4915,255 @@ mod tls12_group_tests {
         } else {
             // SAFETY: `p` is NUL-terminated.
             unsafe { CStr::from_ptr(p) }.to_string_lossy().into_owned()
+        }
+    }
+
+    /// Encrypt `input` under the server's public key with an explicit padding mode, for the
+    /// canary's textbook (`RSA_NO_PADDING`) malformed blocks and the valid positive control.
+    ///
+    /// # Safety
+    /// `pkey` is a live key; `input` is readable for its length.
+    unsafe fn rsa_encrypt_with_key(pkey: *mut EvpPkey, input: &[u8], padding: c_int) -> Vec<u8> {
+        // SAFETY: the pointers below are live locals or the caller's live key.
+        unsafe {
+            let ctx = EVP_PKEY_CTX_new_from_pkey(core::ptr::null_mut(), pkey, core::ptr::null());
+            assert!(
+                !ctx.is_null(),
+                "an RSA encryption context must be buildable"
+            );
+            assert!(EVP_PKEY_encrypt_init(ctx) > 0);
+            assert!(
+                EVP_PKEY_CTX_set_rsa_padding(ctx, padding) > 0,
+                "the padding mode must be accepted"
+            );
+            let mut outlen = 0usize;
+            assert!(
+                EVP_PKEY_encrypt(
+                    ctx,
+                    core::ptr::null_mut(),
+                    &mut outlen,
+                    input.as_ptr(),
+                    input.len(),
+                ) > 0
+            );
+            let mut out = vec![0u8; outlen];
+            assert!(
+                EVP_PKEY_encrypt(
+                    ctx,
+                    out.as_mut_ptr(),
+                    &mut outlen,
+                    input.as_ptr(),
+                    input.len(),
+                ) > 0
+            );
+            out.truncate(outlen);
+            EVP_PKEY_CTX_free(ctx);
+            out
+        }
+    }
+
+    /// A server connection that has processed its ServerHello/cipher setup and can accept a
+    /// ClientKeyExchange directly. The caller frees `ctx`, `s` and `pkey`.
+    ///
+    /// # Safety
+    /// Every returned pointer is this frame's own object.
+    unsafe fn static_rsa_server(bits: usize) -> (*mut SslCtx, *mut Ssl, *mut EvpPkey) {
+        // SAFETY: constructors and installers below use live objects owned by this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let (pkey, x) = rsa_identity(bits);
+            assert_eq!(SSL_CTX_use_certificate(ctx, x), 1);
+            assert_eq!(SSL_CTX_use_PrivateKey(ctx, pkey), 1);
+            X509_free(x);
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            SSL_set_accept_state(s);
+            (*s).version = TLS1_2_VERSION;
+            (*s).client_version = TLS1_2_VERSION;
+            (*s).pending_cipher = ssl3_get_cipher_by_id(0x0300_009c);
+            assert!(!(*s).pending_cipher.is_null());
+            assert_eq!(tls12_setup_cipher(s, 0x009c), 1);
+            (ctx, s, pkey)
+        }
+    }
+
+    /// Frame a ciphertext as a TLS1.2 `ClientKeyExchange` handshake message.
+    fn cke_message(ciphertext: &[u8]) -> Vec<u8> {
+        let bodylen = 2 + ciphertext.len();
+        let mut msg = Vec::with_capacity(4 + bodylen);
+        msg.push(SSL3_MT_CLIENT_KEY_EXCHANGE as u8);
+        msg.extend_from_slice(&[(bodylen >> 16) as u8, (bodylen >> 8) as u8, bodylen as u8]);
+        msg.extend_from_slice(&(ciphertext.len() as u16).to_be_bytes());
+        msg.extend_from_slice(ciphertext);
+        msg
+    }
+
+    /// Drive one ClientKeyExchange through the real server function and return the master secret
+    /// it derived. The caller has cleared the error queue.
+    ///
+    /// # Safety
+    /// `s` is a live server connection from [`static_rsa_server`].
+    unsafe fn direct_master_secret(s: *mut Ssl, ciphertext: &[u8]) -> [u8; 48] {
+        // SAFETY: `s` is live; the message is this frame's own buffer.
+        unsafe {
+            (*s).tls12_master_secret = [0x5A; 48];
+            let msg = cke_message(ciphertext);
+            let r = tls12_process_client_key_exchange(s, &msg);
+            assert_eq!(r, 1, "a malformed ciphertext must be implicitly rejected");
+            assert_eq!(
+                ERR_peek_error(),
+                0,
+                "implicit rejection must not leave a distinguishable error"
+            );
+            (*s).tls12_master_secret
+        }
+    }
+
+    /// Drive one ClientKeyExchange through the real server function and return its answer plus
+    /// the queued `(library, reason)` pairs. Used for the public `c >= n` rejection.
+    ///
+    /// # Safety
+    /// `s` is a live server connection from [`static_rsa_server`].
+    unsafe fn direct_failure(s: *mut Ssl, ciphertext: &[u8]) -> (c_int, Vec<(c_int, c_int)>) {
+        // SAFETY: `s` is live; the message is this frame's own buffer.
+        unsafe {
+            (*s).tls12_master_secret = [0x5A; 48];
+            ERR_clear_error();
+            let msg = cke_message(ciphertext);
+            let r = tls12_process_client_key_exchange(s, &msg);
+            (r, error_lib_reasons())
+        }
+    }
+
+    /// Read every pending byte out of a memory BIO. The caller writes the (possibly rewritten)
+    /// bytes back before the peer reads them.
+    ///
+    /// # Safety
+    /// `b` is a live memory BIO.
+    unsafe fn bio_take_all(b: *mut Bio) -> Vec<u8> {
+        // SAFETY: `b` is live.
+        let n = unsafe { BIO_ctrl_pending(b) };
+        if n == 0 {
+            return Vec::new();
+        }
+        let mut v = vec![0u8; n];
+        // SAFETY: `v` is writable for `n` bytes; `b` is live.
+        let r = unsafe { BIO_read(b, v.as_mut_ptr().cast(), n as c_int) };
+        v.truncate(r.max(0) as usize);
+        v
+    }
+
+    /// Replace the ClientKeyExchange ciphertext in a captured client-to-server stream. Each
+    /// record's framing is rebuilt around the replacement, so a differently-sized ciphertext
+    /// (the truncated case) is delivered intact.
+    fn rewrite_cke(stream: &[u8], ciphertext: &[u8]) -> Option<Vec<u8>> {
+        let mut out = Vec::with_capacity(stream.len());
+        let mut p = 0usize;
+        let mut found = false;
+        while p + 5 <= stream.len() {
+            let rtype = stream[p];
+            let version = [stream[p + 1], stream[p + 2]];
+            let rlen = u16::from_be_bytes([stream[p + 3], stream[p + 4]]) as usize;
+            if p + 5 + rlen > stream.len() {
+                return None;
+            }
+            let payload = &stream[p + 5..p + 5 + rlen];
+            if !found && rtype == 22 && payload.len() >= 4 && payload[0] == 16 {
+                let hlen = ((payload[1] as usize) << 16)
+                    | ((payload[2] as usize) << 8)
+                    | payload[3] as usize;
+                if 4 + hlen != payload.len() {
+                    return None;
+                }
+                let bodylen = 2 + ciphertext.len();
+                let mut replacement = Vec::with_capacity(4 + bodylen);
+                replacement.push(16);
+                replacement.extend_from_slice(&[
+                    (bodylen >> 16) as u8,
+                    (bodylen >> 8) as u8,
+                    bodylen as u8,
+                ]);
+                replacement.extend_from_slice(&(ciphertext.len() as u16).to_be_bytes());
+                replacement.extend_from_slice(ciphertext);
+                out.push(rtype);
+                out.extend_from_slice(&version);
+                out.extend_from_slice(&(replacement.len() as u16).to_be_bytes());
+                out.extend_from_slice(&replacement);
+                found = true;
+            } else {
+                out.extend_from_slice(&stream[p..p + 5 + rlen]);
+            }
+            p += 5 + rlen;
+        }
+        (found && p == stream.len()).then_some(out)
+    }
+
+    /// Run a full TLS1.2 handshake, replacing the client's ClientKeyExchange ciphertext with one
+    /// derived from `block`, and return the server's failing hand state and error reasons.
+    ///
+    /// `raw` delivers `block` unchanged (the all-zero and `>= n` cases); otherwise it is encrypted
+    /// under the pair's own server key with `padding`. `truncate` shortens the ciphertext for the
+    /// short-ciphertext case.
+    ///
+    /// # Safety
+    /// The pair is created and released here.
+    unsafe fn intercepted_handshake(
+        block: &[u8],
+        raw: bool,
+        padding: c_int,
+        truncate: Option<usize>,
+    ) -> (c_int, Vec<(c_int, c_int)>) {
+        // SAFETY: the pair and its BIOs are live for the whole loop.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"AES128-GCM-SHA256", TLS1_2_VERSION, None, None);
+            let cpk = crate::ssl::ssl_lib::cert_active_key((*p.s).cert);
+            assert!(!cpk.is_null() && !(*cpk).x509.is_null());
+            let server_key = crate::x509::x509_cmp::X509_get0_pubkey((*cpk).x509);
+            assert!(!server_key.is_null());
+            let mut ciphertext = if raw {
+                block.to_vec()
+            } else {
+                rsa_encrypt_with_key(server_key, block, padding)
+            };
+            if let Some(n) = truncate {
+                ciphertext.truncate(n);
+            }
+            let mut injected = false;
+            let mut server_ok = false;
+            for _ in 0..32 {
+                let _ = SSL_do_handshake(p.c);
+                let pending = bio_take_all(p.c_w);
+                if !pending.is_empty() {
+                    let payload = if !injected {
+                        if let Some(rewritten) = rewrite_cke(&pending, &ciphertext) {
+                            injected = true;
+                            rewritten
+                        } else {
+                            pending
+                        }
+                    } else {
+                        pending
+                    };
+                    let written = BIO_write(p.c_w, payload.as_ptr().cast(), payload.len() as c_int);
+                    assert_eq!(written, payload.len() as c_int);
+                }
+                drain(p.c_w, p.s_r);
+                if SSL_do_handshake(p.s) == 1 {
+                    server_ok = true;
+                }
+                drain(p.s_w, p.c_r);
+                if server_ok || crate::ssl::statem::statem::ossl_statem_in_error(p.s) != 0 {
+                    break;
+                }
+            }
+            assert!(injected, "the client never emitted a ClientKeyExchange");
+            assert!(!server_ok, "a modified ClientKeyExchange must not complete");
+            let state = (*p.s).hand_state;
+            let reasons = error_lib_reasons();
+            free_pair(p);
+            (state, reasons)
         }
     }
 
@@ -4947,6 +5241,193 @@ mod tls12_group_tests {
                  (client={client_ok} server={server_ok}, reasons={reasons:?})"
             );
             assert_eq!(cipher, "AES128-GCM-SHA256");
+        }
+    }
+
+    #[test]
+    fn tls12_static_rsa_handshake_4096_bit_modulus() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair_bits(c"AES128-GCM-SHA256", TLS1_2_VERSION, None, None, 4096);
+            let (client_ok, server_ok) = drive(&p);
+            let cipher = current_cipher(p.c);
+            let reasons = if server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "4096-bit static-RSA TLS1.2 handshake failed \
+                 (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert_eq!(cipher, "AES128-GCM-SHA256");
+        }
+    }
+
+    #[test]
+    fn tls12_static_rsa_malformed_ciphertexts_are_indistinguishable() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released in this frame; the crafted ciphertexts are
+        // public data encrypted under this test's own server key.
+        unsafe {
+            let (ctx, s, pkey) = static_rsa_server(2048);
+            let size = EVP_PKEY_get_size(pkey) as usize;
+            let mut pms = [0u8; 48];
+            pms[0] = 0x03;
+            pms[1] = 0x03;
+            for (i, b) in pms.iter_mut().enumerate().skip(2) {
+                *b = (i as u8).wrapping_mul(7);
+            }
+            ERR_clear_error();
+            let master_valid =
+                direct_master_secret(s, &rsa_encrypt_with_key(pkey, &pms, RSA_PKCS1_PADDING));
+            // The wrong-version block is structurally padding-valid; its embedded premaster is
+            // `03 01 || 46 * 0xAA`. If the version check were skipped, the server would derive
+            // this master secret instead of a random one.
+            let mut embedded_pms = [0xAAu8; 48];
+            embedded_pms[0] = 0x03;
+            embedded_pms[1] = 0x01;
+            let master_embedded = direct_master_secret(
+                s,
+                &rsa_encrypt_with_key(pkey, &embedded_pms, RSA_PKCS1_PADDING),
+            );
+            assert_ne!(master_embedded, master_valid);
+
+            // Textbook blocks whose encoded message starts with the three PKCS#1 block types.
+            let mut bt00 = [0xAAu8; 2048];
+            bt00[0] = 0x00;
+            bt00[1] = 0x00;
+            let mut bt01 = [0xAAu8; 2048];
+            bt01[0] = 0x00;
+            bt01[1] = 0x01;
+            let mut bt02 = [0xAAu8; 2048];
+            bt02[0] = 0x00;
+            bt02[1] = 0x02;
+            // Block type 2 with a well-formed separator but the wrong client version: the
+            // padding check must still reject it and randomise the premaster.
+            let mut bad_version = [0xAAu8; 2048];
+            bad_version[0] = 0x00;
+            bad_version[1] = 0x02;
+            bad_version[2..10].fill(0x11);
+            bad_version[10] = 0x00;
+            bad_version[11] = 0x03;
+            bad_version[12] = 0x01;
+
+            let zero = vec![0u8; size];
+            let ge_n = vec![0xFFu8; size];
+            let valid_ct = rsa_encrypt_with_key(pkey, &pms, RSA_PKCS1_PADDING);
+            let truncated = &valid_ct[..size / 4];
+
+            // (c) In-range malformed values: each is implicitly rejected, raises nothing, and
+            // yields a master secret different from the padding-valid control.
+            for (name, block) in [
+                ("block-type-0", &bt00),
+                ("block-type-1", &bt01),
+                ("block-type-2-no-separator", &bt02),
+                ("block-type-2-bad-version", &bad_version),
+            ] {
+                let ct = rsa_encrypt_with_key(pkey, &block[..size], RSA_NO_PADDING);
+                let master = direct_master_secret(s, &ct);
+                if name == "block-type-2-bad-version" {
+                    assert_ne!(
+                        master, master_embedded,
+                        "{name} accepted the embedded wrong-version premaster"
+                    );
+                } else {
+                    assert_ne!(
+                        master, master_valid,
+                        "{name} was accepted as a padding-valid premaster"
+                    );
+                }
+            }
+            for (name, ct) in [("all-zero", zero.as_slice()), ("truncated", truncated)] {
+                let master = direct_master_secret(s, ct);
+                assert_ne!(
+                    master, master_valid,
+                    "{name} was accepted as a padding-valid premaster"
+                );
+            }
+            // A ciphertext >= n is refused before blinding (`rsa_ossl.c:606`) with
+            // RSA_R_DATA_TOO_LARGE_FOR_MODULUS. The comparison depends only on the received
+            // ciphertext and the public modulus, so it cannot leak private data or act as a
+            // Bleichenbacher oracle; this is the authority's behaviour and must not be softened.
+            {
+                let (r, errors) = direct_failure(s, &ge_n);
+                assert_eq!(r, 0, "c >= n must be refused");
+                assert!(
+                    errors.contains(&(4, 132)),
+                    "expected ERR_LIB_RSA/RSA_R_DATA_TOO_LARGE_FOR_MODULUS, got {errors:?}"
+                );
+            }
+
+            // (a) and (b) end to end. In-range malformed values all fail in the Finished state
+            // with the same reason vector; an early distinguishable decryption error would
+            // change both and fail these assertions.
+            let mut baseline: Option<(c_int, Vec<(c_int, c_int)>)> = None;
+            #[allow(clippy::type_complexity)]
+            let cases: [(&str, &[u8], bool, c_int, Option<usize>); 6] = [
+                ("block-type-0", &bt00[..size], false, RSA_NO_PADDING, None),
+                ("block-type-1", &bt01[..size], false, RSA_NO_PADDING, None),
+                (
+                    "block-type-2-no-separator",
+                    &bt02[..size],
+                    false,
+                    RSA_NO_PADDING,
+                    None,
+                ),
+                (
+                    "block-type-2-bad-version",
+                    &bad_version[..size],
+                    false,
+                    RSA_NO_PADDING,
+                    None,
+                ),
+                ("all-zero", zero.as_slice(), true, RSA_PKCS1_PADDING, None),
+                ("truncated", &pms, false, RSA_PKCS1_PADDING, Some(size / 4)),
+            ];
+            for (name, block, raw, padding, truncate) in cases {
+                let (state, reasons) = intercepted_handshake(block, raw, padding, truncate);
+                assert_eq!(
+                    state, TLS_ST_SR_FINISHED,
+                    "{name} failed before the Finished state (state {state})"
+                );
+                assert!(
+                    !reasons.iter().any(|(_, reason)| *reason == 147),
+                    "{name} produced a distinguishable decryption failure: {reasons:?}"
+                );
+                match &baseline {
+                    None => baseline = Some((state, reasons)),
+                    Some((base_state, base_reasons)) => {
+                        assert_eq!(state, *base_state, "{name} failed in a different state");
+                        assert_eq!(
+                            &reasons, base_reasons,
+                            "{name} produced a distinct error/reason"
+                        );
+                    }
+                }
+            }
+
+            // The public `c >= n` case is rejected at the key exchange, not at Finished.
+            {
+                let ct = ge_n.as_slice();
+                let (state, errors) = intercepted_handshake(ct, true, RSA_PKCS1_PADDING, None);
+                assert_eq!(
+                    state, TLS_ST_SR_KEY_EXCH,
+                    "c >= n must be rejected while processing the ClientKeyExchange"
+                );
+                assert!(
+                    errors.contains(&(4, 132)),
+                    "expected ERR_LIB_RSA/RSA_R_DATA_TOO_LARGE_FOR_MODULUS, got {errors:?}"
+                );
+            }
+
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+            EVP_PKEY_free(pkey);
         }
     }
 

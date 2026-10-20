@@ -1140,6 +1140,49 @@ pub(crate) unsafe fn cleanse(p: *mut u8, len: usize) {
     core::sync::atomic::compiler_fence(Ordering::SeqCst);
 }
 
+/// A fixed-size scratch buffer that wipes itself when it goes out of scope.
+///
+/// [`cleanse`] writes through volatile pointers and a compiler fence, so the wipe survives
+/// optimisation. The type exists for functions with many early returns: the secret is wiped on
+/// every one of them, not only the success path. It deliberately exposes no accessor that could
+/// observe the contents after `Drop`.
+pub(crate) struct CleansedScratch<const N: usize>([u8; N]);
+
+impl<const N: usize> CleansedScratch<N> {
+    /// A zero-initialised scratch buffer.
+    pub(crate) fn new() -> Self {
+        Self([0u8; N])
+    }
+
+    /// The buffer's read pointer.
+    pub(crate) fn as_ptr(&self) -> *const u8 {
+        self.0.as_ptr()
+    }
+
+    /// The buffer's write pointer.
+    pub(crate) fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.0.as_mut_ptr()
+    }
+
+    /// The buffer as a slice; callers pass the initialised prefix.
+    pub(crate) fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl<const N: usize> Default for CleansedScratch<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const N: usize> Drop for CleansedScratch<N> {
+    fn drop(&mut self) {
+        // SAFETY: the array is live for `N` writable bytes for the duration of `Drop`.
+        unsafe { cleanse(self.0.as_mut_ptr(), N) }
+    }
+}
+
 /// # Safety
 /// `s` must be a NUL-terminated C string.
 unsafe fn strlen(s: *const c_char) -> usize {
