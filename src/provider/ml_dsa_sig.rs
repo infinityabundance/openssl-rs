@@ -283,6 +283,14 @@ unsafe extern "C" fn ml_dsa_dupctx(vctx: *mut c_void) -> *mut c_void {
                 FILE_SEAM,
                 LINE_FREE_SIG,
             ) else {
+                // The authority frees the context copy alone here (it cannot call `freectx`
+                // before `md_ctx` is duplicated). That copy may carry the caller's secret
+                // `test_entropy`, so cleanse it before the release; the authority leaves it
+                // uncleansed (AGENTS.md section 5). Release events are unchanged.
+                OPENSSL_cleanse(
+                    (*dstctx).test_entropy.as_mut_ptr().cast(),
+                    (*dstctx).test_entropy.len(),
+                );
                 (*dstctx).sig = ptr::null_mut();
                 CRYPTO_free(dstctx.cast(), FILE, LINE_FREE_DSTCTX);
                 return ptr::null_mut();
@@ -1252,3 +1260,56 @@ make_ml_dsa_signature_functions!(
 /// `ML_DSA_MESSAGE_ENCODE_RAW` is the value `set_ctx_params` writes for a raw message; named here
 /// so a reader sees both encodings the unit carries.
 const _: c_int = ML_DSA_MESSAGE_ENCODE_RAW;
+
+/// Negative control for the `ml_dsa_dupctx` signature-refusal path.
+///
+/// When the signature copy is refused, the authority frees the context duplicate alone
+/// (`OPENSSL_free(dstctx)`, not `freectx`, because `md_ctx` has not been duplicated yet).
+/// That duplicate carries a copy of the caller's secret `test_entropy`; before this repair
+/// it stayed in the released block. The probe refuses the two-byte signature allocation
+/// and checks the `test_entropy` member before the context is released.
+///
+/// Process-global allocator hook, so the test is ignored in the routine suite and runs
+/// alone in its own process.
+#[cfg(test)]
+mod adv_probe {
+    use super::*;
+    use crate::ssl::adv_alloc;
+
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    #[test]
+    fn refused_signature_copy_cleanses_the_dupctx_entropy() {
+        let _g = crate::test_support::lock_global_state();
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+
+        let mut sig = [0u8; 2];
+        // SAFETY: every field is a raw pointer, an integer or a fixed array; the zero value is a
+        // valid source context for `ml_dsa_dupctx`, whose `md_ctx` is NULL so no digest context is
+        // duplicated.
+        let mut src = unsafe { core::mem::zeroed::<ProvMlDsaCtx>() };
+        src.test_entropy = [0x5au8; ML_DSA_ENTROPY_LEN];
+        src.test_entropy_len = ML_DSA_ENTROPY_LEN;
+        src.sig = sig.as_mut_ptr();
+        src.siglen = sig.len();
+
+        adv_alloc::reset();
+        // The signature copy is the first request of this size; the context memdup is larger.
+        adv_alloc::arm_any(sig.len());
+        // SAFETY: the next forwarded release is the context duplicate (the refusal above does not
+        // release anything); its `test_entropy` member is live for the whole block.
+        unsafe {
+            adv_alloc::arm_cleansed_free_range(
+                core::mem::offset_of!(ProvMlDsaCtx, test_entropy),
+                ML_DSA_ENTROPY_LEN,
+            )
+        };
+        // SAFETY: `src` is this frame's live context; `ml_dsa_dupctx` owns the duplicate and frees
+        // it on the refused-signature arm.
+        let dup = unsafe { ml_dsa_dupctx((&mut src as *mut ProvMlDsaCtx).cast()) };
+        adv_alloc::disarm_any();
+        assert!(dup.is_null(), "a refused signature copy must refuse dupctx");
+        adv_alloc::assert_not_cleansed();
+        adv_alloc::assert_no_double_free();
+    }
+}
