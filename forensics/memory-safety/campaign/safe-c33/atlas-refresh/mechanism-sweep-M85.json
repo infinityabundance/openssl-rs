@@ -1,0 +1,97 @@
+{
+ "receipt": "mechanism-sweep-M85",
+ "branch": "integrate/safe-c33",
+ "source_head": "466913a3c",
+ "worktree": true,
+ "date": "2026-10-20",
+ "verification_level": "FAST plus BATCH plus the affected RT-STORE differential probe. Eight files audited, no memory-safety defect and no ABI/layout regression found, no source edit, no new unsafe operation and no new hidden obligation.",
+ "scope": "Per-file contract audit of the head entries of REMAINING-AUDIT.txt: the key-usage/nsCertType bit-string tables and their two exported callbacks; the cRLReason enumerated table and its exported printer; the EXTENDED_KEY_USAGE item group, four rows and two callbacks; the groupAC and indirectIssuer ASN1_NULL rows; the two Netscape IA5 helpers and their eight-row table; the three integer-backed rows and their wrapper; and the issuedOnBehalfOf GENERAL_NAME printer.",
+ "files": [
+  "src/x509/v3_bitst.rs",
+  "src/x509/v3_enum.rs",
+  "src/x509/v3_extku.rs",
+  "src/x509/v3_group_ac.rs",
+  "src/x509/v3_ia5.rs",
+  "src/x509/v3_ind_iss.rs",
+  "src/x509/v3_int.rs",
+  "src/x509/v3_iobo.rs"
+ ],
+ "files_not_run": [],
+ "defects": [],
+ "unsafe_operations_introduced": [],
+ "unsafe_operations_removed": [],
+ "unsafe_operations_relocated": [],
+ "test_only_unsafe_operations": [],
+ "hidden_obligations": [],
+ "new_unsafe_assumptions": [],
+ "abi_or_layout_changes": [],
+ "allocator_coordinate_changes": [],
+ "excluded_symbol_changes": [],
+ "documentation_corrections": [
+  "src/x509/v3_bitst.rs: the unknown-name arm substitutes `(null)` for a NULL CONF_VALUE name, whereas the authority passes the same pointer to `%s` (undefined behaviour for a NULL argument). The configuration stack contract requires a NUL-terminated non-NULL name, so the authority arm is C-invalid and unreachable from a valid config; the substitution is the §17 treatment and is recorded rather than reproduced."
+ ],
+ "boundary_control": [
+  "No negative control was added: the batch found no defect and changed no source. The affected RT-STORE court drives s2i_ASN1_IA5STRING/i2s_ASN1_IA5STRING (valid, empty and NULL arms with their coordinates), i2s_ASN1_ENUMERATED_TABLE (table hit and fallback miss), i2v_ASN1_BIT_STRING (the last_seen_bit alias skip) and v2i_ASN1_BIT_STRING (short/long names and the unknown-name refusal) against the pinned authority; it passed with 0 residuals."
+ ],
+ "not_discharged": [
+  "All audited files are file-level audits, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+  "Miri/ASan/Loom/TSan were not run: no owner, extent, aliasing or concurrency mechanism changed.",
+  "No dudect/ctgrind claim is made.",
+  "The other phase-10 courts were not re-run (not affected); the phase-11 X.509 suite was not re-run for this batch and its last candidate-bound pass is reused.",
+  "v3_group_ac, v3_ind_iss, v3_int, v3_iobo and v3_extku are reviewed but only link/reference-covered on this candidate, not behaviourally driven.",
+  "FRF and the SEAL-level forensic regeneration were not run."
+ ],
+ "retained_obligations": [
+  "src/x509/v3_bitst.rs: `method` is a live row whose `usr_data` is a NULL-`lname`-terminated BIT_STRING_BITNAME array; `bits` is NULL or a live bit string; `ret` is NULL or a live CONF_VALUE stack; every CONF_VALUE on the v2i input stack has a NUL-terminated non-NULL name; the built ASN1_BIT_STRING is freed on both failure arms; the two tables are compile-time initialised and only read; the const-fn casts match the authority's ABI-compatible pointer-parameter casts.",
+  "src/x509/v3_enum.rs: `method` is a live row whose `usr_data` is an `lname`-terminated BitStringBitname array and `e` is NULL or a live enumerated value; the returned block is one allocator-seam allocation owned by the caller; the `as_i2s` cast is the authority's ABI-compatible pointer-parameter cast.",
+  "src/x509/v3_extku.rs: `a` is NULL or a writable slot, `in_` a readable cursor and `len` the input extent for d2i; `a` is NULL or a live value and `out` a NULL or writable cursor for i2d; `eku`/`nval` are live stacks whose elements are ASN1_OBJECT/CONF_VALUE respectively; each CONF_VALUE value-or-name operand is NUL-terminated; the pop_free thunk receives NULL or a live ASN1_OBJECT; the destination is pre-reserved for `num` so the unexamined push succeeds.",
+  "src/x509/v3_group_ac.rs and src/x509/v3_ind_iss.rs: the four callbacks ignore their value/context arguments; `i2r` writes nothing; `r2i`/`s2i` answer a fresh ASN1_NULL or NULL, owned by the extension machinery; `i2s` answers one allocator-seam strdup block owned by the caller.",
+  "src/x509/v3_ia5.rs: `ia5` is NULL or a live ASN1_IA5STRING whose `data` holds `length` readable bytes (required only when `length > 0`); `str_` is NULL or NUL-terminated; the i2s block is one allocator-seam allocation transferred to the caller and the checked length plus OwnedBlock make the copy and terminator fit; s2i frees its own string on ASN1_STRING_set failure; every row's item is ASN1_IA5STRING_it.",
+  "src/x509/v3_int.rs: `value` is NULL or NUL-terminated and forwarded unchanged to s2i_ASN1_INTEGER, which ignores `method`; every row's item is ASN1_INTEGER_it; the const-fn casts are ABI-compatible.",
+  "src/x509/v3_iobo.rs: `out` is a live BIO and `gn` is a live GENERAL_NAME; each of the three writes is a refusal arm and nothing is allocated or retained."
+ ],
+ "shared_boundary_files": [
+  "src/asn1/items.rs (item descriptors/template tables)",
+  "src/asn1/layout.rs (Asn1String/BitStringBitname)",
+  "src/asn1/string.rs (ASN1_STRING_set/ASN1_BIT_STRING_new/free)",
+  "src/asn1/bitstr.rs (ASN1_BIT_STRING_get_bit/set_bit)",
+  "src/runtime/stack.rs (OPENSSL_sk_* NULL/range discipline, pop_free, new_reserve)",
+  "src/runtime/mem.rs (CRYPTO_strdup and the allocator seam)",
+  "src/asn1/owned.rs (OwnedBlock)",
+  "src/x509/v3_lib.rs (X509V3_EXT_METHOD callback types and the i2s transfer contract)",
+  "src/x509/v3_utl.rs (X509V3_add_value, i2s/s2i_ASN1_INTEGER, i2s_ASN1_ENUMERATED)",
+  "src/x509/v3_san.rs and src/x509/v3_genn.rs (GENERAL_NAME_print/GENERAL_NAME_it)"
+ ],
+ "secret_bearing_buffers": "No new secret-bearing buffer or cleansing claim changed. Every audited unit handles public certificate/CRL configuration data; the only allocations are the public name strings and the EXTENDED_KEY_USAGE object stack, plainly freed by the receiving extension machinery.",
+ "residuals": [
+  "M85-R1 (info, OOM-only): v2i_EXTENDED_KEY_USAGE pre-reserves `num` slots, so its push cannot fail; the authority ignores a failed sk_ASN1_OBJECT_push and leaks the object. Observable only under allocator failure; never a memory-safety difference.",
+  "M85-R2 (info, authority parity): the v3_int/v3_enum/v3_ia5 const-fn row casts rely on the established ABI-compatible pointer-parameter function-type equivalence; no ownership crosses the cast and the callee ignores the arguments the authority's macro leaves unused."
+ ],
+ "unrelated_residuals": [],
+ "deferred": [],
+ "gates_observed": {
+  "fmt": "cargo fmt --all -- --check clean",
+  "clippy": "cargo clippy --all-targets -- -D warnings clean",
+  "focused": "cargo test --lib -- --test-threads=4 x509::v3: 20 passed / 0 failed / 0 ignored (1711 filtered out)",
+  "full_lib_serial": "1700 passed / 0 failed / 31 ignored (1731 total), 240.33 s, --test-threads=1",
+  "full_lib_threads4": "1700 passed / 0 failed / 31 ignored (1731 total), 91.34 s, --test-threads=4",
+  "affected_probe": "RT-STORE pass with 0 residuals (drives the IA5 helpers, the enumerated table and both bit-string callbacks)"
+ },
+ "queue_after": {
+  "remaining": 30,
+  "audited": 733
+ },
+ "next_queue": {
+  "next_file": "src/x509/v3_ist.rs",
+  "then": [
+   "src/x509/v3_ist.rs",
+   "src/x509/v3_no_ass.rs",
+   "src/x509/v3_no_rev_avail.rs",
+   "src/x509/v3_pcia.rs",
+   "src/x509/v3_pcons.rs",
+   "src/x509/v3_pku.rs",
+   "src/x509/v3_pmaps.rs",
+   "src/x509/v3_rolespec.rs"
+  ]
+ }
+}
