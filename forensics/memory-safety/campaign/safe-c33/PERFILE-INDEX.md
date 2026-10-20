@@ -7961,3 +7961,75 @@ full Phase-25 forensic regeneration; FRF and SEAL.
 **Next eight from the file head.** `src/x509/v3_bitst.rs`, `src/x509/v3_enum.rs`,
 `src/x509/v3_extku.rs`, `src/x509/v3_group_ac.rs`, `src/x509/v3_ia5.rs`,
 `src/x509/v3_ind_iss.rs`, `src/x509/v3_int.rs`, `src/x509/v3_iobo.rs`.
+
+## M85 (mechanism) — per-file contract sweep (bit-string and enumerated name tables, extended key usage, the ASN1_NULL IA5-family rows, integer rows and the issued-on-behalf-of printer)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M85.json`](atlas-refresh/mechanism-sweep-M85.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`466913a3c`. No source edit: all eight audited units are byte-identical to their
+landed blobs. No `#[repr(C)]` layout, exported symbol/signature, allocator
+coordinate, excluded symbol or lint attribute changed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/x509/v3_bitst.rs` | two `BIT_STRING_BITNAME` tables and the `Sync` claim, `i2v_ASN1_BIT_STRING` (the `last_seen_bit` alias skip), `v2i_ASN1_BIT_STRING` (short/long match, `ASN1_BIT_STRING_set_bit` failure and unknown-name arms, every free), the two const-fn slot casts, both `EXT_BITSTRING` rows | no defect; matches `v3_bitst.c:16-100`. The unknown-name message substitutes `(null)` for a NULL `name` while the authority passes it to `%s`; the stack contract says `name` is NUL-terminated and non-NULL, so the authority arm is itself C-invalid and the substitution is unreachable from a valid config |
+| `src/x509/v3_enum.rs` | the eleven-row `crl_reasons` table, the row literal, `i2s_ASN1_ENUMERATED_TABLE` hit/fallback and its `as_i2s` cast | no defect; matches `v3_enum.c:15-53` |
+| `src/x509/v3_extku.rs` | `EXTENDED_KEY_USAGE` template/item, `_new`/`_free`/`d2i_`/`i2d_`, `i2v_`/`v2i_` and every free-on-failure arm, the four rows and the `pop_free` destructor thunk | no defect; matches `v3_extku.c:24-125`. The port reserves `num` slots (`OPENSSL_sk_new_reserve`) instead of pushing onto a zero-capacity stack; the authority ignores a failed push (leaking the object), while this port's push cannot fail. Divergence is OOM-only and is recorded as `M85-R1` |
+| `src/x509/v3_group_ac.rs` | the four `ASN1_NULL` callbacks and the row | no defect; matches `v3_group_ac.c:17-53` |
+| `src/x509/v3_ia5.rs` | `i2s_ASN1_IA5STRING` (NULL/empty answers, `checked_add`, `OwnedBlock` and the raw transfer), `s2i_ASN1_IA5STRING` (NULL refusal, new-failure site, `ASN1_STRING_set` failure free), the two slot casts and the eight-row `ossl_v3_ns_ia5_list` | no defect; matches `v3_ia5.c:17-61`; the `checked_add` arm is the §3 improvement over `length + 1` and is unreachable for an `int` length |
+| `src/x509/v3_ind_iss.rs` | the four `ASN1_NULL` callbacks and the row | no defect; matches `v3_ind_iss.c:17-53` |
+| `src/x509/v3_int.rs` | the three `ASN1_INTEGER` rows, `s2i_asn1_int` and its `*const`→`*mut` forwarding, the `as_i2s` casts | no defect; matches `v3_int.c:15-43`; `s2i_ASN1_INTEGER` ignores `method` |
+| `src/x509/v3_iobo.rs` | `i2r_ISSUED_ON_BEHALF_OF`'s three refusal arms and the row | no defect; matches `v3_iobo.c:13-32` |
+
+**New unsafe assumptions (hidden must be 0).** Production: **0** introduced, 0
+removed, 0 relocated. Every unsafe operation already carries its contract: the
+shared item-layer slot/cursor contract for the `EXTENDED_KEY_USAGE` group; the
+OB-1/OB-2 block transfer for the `CRYPTO_strdup`/`OwnedBlock` returns; the
+`OPENSSL_sk_*` NULL/range and `pop_free` destructor discipline; the
+B1/B2/B6–B29 callback contracts for the extension machinery that calls these
+rows; the established v3-table ABI-compatible callback-cast contract; and the
+`# Safety` sections on both exported printers/helpers. Hidden obligations: **0**.
+
+**Contracts reused.** RC-1; OB-1/OB-2; OB-3/OB-4 (not exercised beyond the
+`OwnedBlock` transfer in `v3_ia5.rs`); the v3-table callback-cast contract; the
+`ASN1_ITEM` template/item contract; `raise_site`/`ErrSite` coordinates
+(`V3_IA5_46`/`V3_IA5_50`, `V3_EXTKU_105`/`V3_EXTKU_118`, and the three locally
+declared `v3_bitst` sites); the `CRYPTO_*` allocator seam; and the
+`X509V3_EXT_METHOD` `usr_data` ownership convention.
+
+**Residuals.** `M85-R1` (info, OOM-only): `v2i_EXTENDED_KEY_USAGE` pre-reserves
+the destination count, so a failed push is impossible here whereas the authority
+ignores a failed `sk_ASN1_OBJECT_push`; observable only under allocator failure
+and never a memory-safety difference. `M85-R2` (info, authority parity): the
+`v3_int`/`v3_enum`/`v3_ia5` row casts rely on the established ABI-compatible
+pointer-parameter function-type equivalence; no ownership crosses the cast and
+the callees ignore the `method`/`ctx` arguments where the macro does.
+
+**Gates observed (final worktree).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; focused `x509::v3` tests
+**20 passed / 0 failed**; full library **1700 passed / 0 failed / 31 ignored**
+(1731 total) serially (240.33 s) and with `--test-threads=4` (91.34 s), in the
+court with `CARGO_BUILD_JOBS=4`; affected probe **RT-STORE pass with 0
+residuals** (it drives `i2s_ASN1_IA5STRING`/`s2i_ASN1_IA5STRING`,
+`i2s_ASN1_ENUMERATED_TABLE` and both bit-string callbacks). No unexplained test
+removal and no newly ignored test.
+
+**NOT_RUN.** Miri/ASan/Loom/TSan (no owner, extent, aliasing or concurrency
+mechanism changed); dudect/ctgrind (no constant-time claim); the other phase-10
+courts (not affected); the phase-11 X.509 suite (not re-run for this batch; its
+last candidate-bound pass is reused); full Phase-25 forensic regeneration; FRF
+and SEAL. The five rows without a direct court arm (`v3_group_ac`,
+`v3_ind_iss`, `v3_int`, `v3_iobo`, `v3_extku`) are reviewed but only
+link/reference-covered, not behaviourally driven on this candidate.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **30**, `AUDITED-FILES.txt` **733**.
+**Next ordinary position.** `src/x509/v3_ist.rs`.
+**Next eight from the file head.** `src/x509/v3_ist.rs`, `src/x509/v3_no_ass.rs`,
+`src/x509/v3_no_rev_avail.rs`, `src/x509/v3_pcia.rs`, `src/x509/v3_pcons.rs`,
+`src/x509/v3_pku.rs`, `src/x509/v3_pmaps.rs`, `src/x509/v3_rolespec.rs`.

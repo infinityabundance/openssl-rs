@@ -723,3 +723,11 @@ src/x509/v3_audit_id.rs
 src/x509/v3_authattid.rs
 src/x509/v3_battcons.rs
 src/x509/v3_bcons.rs
+src/x509/v3_bitst.rs
+src/x509/v3_enum.rs
+src/x509/v3_extku.rs
+src/x509/v3_group_ac.rs
+src/x509/v3_ia5.rs
+src/x509/v3_ind_iss.rs
+src/x509/v3_int.rs
+src/x509/v3_iobo.rs
