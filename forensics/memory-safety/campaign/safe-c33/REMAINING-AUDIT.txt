@@ -1,6 +1,0 @@
-src/x509/x509_trust.rs
-src/x509/x509type.rs
-src/x509/x_attrib.rs
-src/x509/x_exten.rs
-src/x509/x_req.rs
-src/x509/x_x509a.rs
