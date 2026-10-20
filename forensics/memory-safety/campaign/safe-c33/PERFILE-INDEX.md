@@ -6214,3 +6214,108 @@ eight.** `src/provider/slh_dsa_kmgmt.rs`, `src/provider/slh_dsa_sig.rs`,
 `src/provider/sm2_enc.rs`, `src/provider/sm2_sig.rs`,
 `src/provider/stores.rs`, `src/provider/util.rs`, `src/punycode.rs`,
 `src/quic_vlint.rs`.
+
+## M70 (mechanism) — per-file contract sweep (SLH-DSA keymgmt/signature, SM2 asymmetric cipher/signature, provider store bridges, provider utility helpers, punycode, QUIC varint)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M70.json`](atlas-refresh/mechanism-sweep-M70.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`44e389df3`. Three files carry worktree repairs (two findings, one of them
+class-wide): the SLH-DSA and
+SM2 signature AlgorithmIdentifier builders now hand `WPACKET_cleanup` a zeroed
+packet image, so the authority's unconditional cleanup is defined when
+`WPACKET_init_der` refuses (its node-allocation refusal returns before writing
+`subs`); and `ossl_quic_vlint_decode`'s `# Safety` contract no longer offers
+NULL for a pointer the body unconditionally writes. One test-only negative
+control was added. Layouts, exported symbols, signatures, allocation sizes and
+`FILE` values are unchanged; no unsafe operation was removed, and the only
+new production unsafe expressions are the two `core::mem::zeroed` calls that
+replace the `MaybeUninit` declarations.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/provider/slh_dsa_kmgmt.rs` | `SlhDsaGenCtx` zalloc/cleanup (`OwnedCtx`/`OwnedStr`), seed `entropy` copy and cleanse, export param-builder key copies and their cleanse, generated import/get/gen-set decoders, `load` detachment, twelve dispatch tables | no defect |
+| `src/provider/slh_dsa_sig.rs` | `ProvSlhDsaCtx` zalloc/memdup/dup/free, `RawCtx`→`OwnedCtx` transition, `add_random` cleanse, stack `add_rand` cleanse, AlgorithmIdentifier builder, generated set/get decoders, borrowed key/alg | 1 medium-severity uninitialised-read/free class repaired (M70-D1) |
+| `src/provider/sm2_enc.rs` | `ProvSm2Ctx` zalloc/dup/free split, borrowed `EC_KEY` refcount, `PROV_DIGEST` reset/copy, size-query returns, generated set/get decoders | no defect |
+| `src/provider/sm2_sig.rs` | `ProvSm2SigCtx` zalloc/dup/free, `id`/`propq` ownership, `Z`-digest scratch, md/mdctx refcounts, AlgorithmIdentifier builder, distid and digest setters, md-params rows | 1 medium-severity uninitialised-read/free class repaired (M70-D1) |
+| `src/provider/stores.rs` | nine method-store/cache bridges, slot read plus NULL test, absent-store return values, provider-context lookup | no defect |
+| `src/provider/util.rs` | `PROV_CIPHER`/`PROV_DIGEST` reset/copy/fetch/load, engine narrowing, MAC context load, `ossl_prov_memdup` | no defect |
+| `src/punycode.rs` | `ossl_punycode_decode` bounds/overflow refusals and `memmove` insert, `ossl_a2ulabel` label walk, WPACKET output, UTF-8 encoder buffer contract | no defect |
+| `src/quic_vlint.rs` | encode length/body bounds, decode length and truncation refusal, pointer contracts | 1 low-severity unsafe-contract understatement repaired (M70-D2) |
+
+**Defects.**
+
+| ID | Location (pre-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M70-D1 | `src/provider/slh_dsa_sig.rs:389-402`, `src/provider/sm2_sig.rs:392-402` | medium | uninitialised read / invalid free on an allocation-failure path | both bodies build the packet with `MaybeUninit` but call `WPACKET_cleanup` unconditionally, exactly as the authority does. `WPACKET_init_der` also refuses when its `WPACKET_SUB` allocation fails, and on that arm it has written `curr`/`written` but not `subs`, so cleanup walked an uninitialised pointer. Each packet is now the all-zero `Wpacket` image (`subs` NULL, a valid value for every field), which `init_der` overwrites completely on success; a refusal now cleans up as an empty chain. No reachable success-path behaviour changes. |
+| M70-D2 | `src/quic_vlint.rs:163-166` | low | unsafe-contract understatement | the `# Safety` text said `v` may be NULL, but the body dereferences it unconditionally (the authority does the same). It now requires `v` to be non-NULL and writable; the inline `SAFETY:` note matches. |
+
+**Class finding outside this batch (not repaired here).** The same
+failed-initialisation cleanup is present wherever the authority cleans up a
+non-zeroed packet after a possibly-refused initialisation:
+`src/provider/ecdsa_sig.rs:288-300`, `src/provider/dsa_sig.rs:259-311`,
+`src/provider/eddsa_sig.rs:348-376`, `src/provider/ml_dsa_sig.rs:313-325`,
+`src/provider/ml_kem_kmgmt.rs:1355-1373`, and `src/provider/kdf.rs:2114-2150`
+(first-arm cleanup; the second `der_encode_sharedinfo` reuses a packet already
+cleared) and `:4905-4923`. `rsa_sig.rs` and the `der_*` helpers are already
+guarded. The root-cause repair is one line in
+`src/packet.rs`'s `wpacket_intern_init_len` (clear `subs` before the node
+allocation), which would cover every caller; because that is a shared
+ownership mechanism it needs its own BOUNDARY sweep and independent review,
+so it is queued rather than folded into this batch.
+
+**Secret-bearing buffers.** SLH-DSA generation `entropy` (the caller-supplied
+seed) is cleansed by `SlhDsaGenCtx::destroy_body` on `gen_cleanup` and on the
+`gen_init` failure path; the export builder's private-key copy is cleansed
+before `OSSL_PARAM_free` on the callback path. SLH-DSA signature contexts hold
+`add_random` (cleansed in `destroy_body`) and the stack `add_rand` (cleansed
+only when the provider drew it, which is the authority's own rule; the caller's
+`test-entropy` is borrowed). The SLH-DSA private key is borrowed through
+`EVP_PKEY` and released by its owner. SM2 contexts borrow the `EC_KEY`
+(`EC_KEY_up_ref`/`EC_KEY_free`); the SM2 user ID and property query are public
+metadata, released plainly. `sm2_enc`, `stores`, `util`, `punycode` and
+`quic_vlint` hold no secret-bearing storage (`ossl_prov_memdup` copies a
+caller's bucket, and its KDF callers own the cleanse).
+
+**Assumptions.** Eliminated: 1 (the hidden "init_der cannot fail" precondition
+on the cleanup). Relocated: 0. New: 0. Hidden: **0**. Unsafe expressions: two
+production `core::mem::zeroed` calls replacing the `MaybeUninit` declarations
+and one test-only `zeroed` in the control; no unsafe operation was removed. Contracts reused: OB-1
+`OwnedBuf`, OB-2 `OwnedStr`, OB-3 `OwnedCtx`/`RawCtx`/`CtxDestroy` with the
+zero-validity sweep, OB-4 member slots, RC-1 refcounts, the provider
+`OSSL_CALLBACK` lifetime contract, the `WPACKET` init/cleanup contract and the
+`CRYPTO_*` seam.
+
+**Gates observed.** FAST `cargo fmt --all -- --check` clean; `cargo check --lib`
+clean; focused `slh_dsa` 8/0, `sm2` 10/0, control
+`provider::slh_dsa_sig::tests::a_refused_der_init_leaves_a_cleanable_packet`
+1/0. BATCH `cargo clippy --all-targets -- -D warnings` clean; full library
+**1674 passed / 0 failed / 27 ignored** threaded (`--test-threads=4`) in
+102.23 s and serial (`--test-threads=1`) in 223.14 s, in the court with
+`CARGO_BUILD_JOBS=4`. Targeted Miri on the control passed under both Stacked
+Borrows and Tree Borrows (`nightly-2026-10-01`).
+
+**NOT_RUN.** Allocator-failure injection exercising the repaired arm end to
+end (no injection harness exists for `WPACKET_SUB`; the control reaches the
+same early-return state through the argument refusal); authority differential
+for the twelve SLH-DSA rows and the SM2 cipher/signature rows; ASan; constant-
+time measurement (no secret-dependent control flow changed, no claim made);
+dependency-graph regeneration; FRF suite and SEAL. The shared-callee repair
+noted above is deliberately not attempted here and needs a BOUNDARY gate.
+
+**Residuals.** (1) The eight files are audited, not `SAFETY_DISCHARGED`. (2)
+`slh_dsa_signverify_msg_init` replaces `ctx->hash_ctx` without releasing the
+previous one when an init with a key runs twice; that is the authority's own
+leak, not UB, and is left for compatibility. (3) The class finding above
+remains in six other files until the shared-callee repair is scheduled. (4)
+`ossl_prov_memdup` leaves `*dest` untouched on allocation failure where the
+authority writes NULL; no in-crate caller reads `*dest` after a 0 answer. (5)
+The borrowed key and `alg`/`id` lifetimes are EVP caller obligations.
+
+**Queue.** `REMAINING-AUDIT.txt` 159 -> **151**; `AUDITED-FILES.txt` 604 ->
+**612**. **Next ordinary position.** `src/rand/pool.rs`. **Next eight.**
+`src/rand/pool.rs`, `src/rand/prov_seed.rs`, `src/rand/rand_uniform.rs`,
+`src/rand/sys.rs`, `src/rc2.rs`, `src/rc4.rs`, `src/rsa/asn1.rs`,
+`src/rsa/backend.rs`.

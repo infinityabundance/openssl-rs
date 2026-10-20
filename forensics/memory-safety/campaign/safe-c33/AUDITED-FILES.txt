@@ -602,3 +602,11 @@ src/provider/securitycheck_default.rs
 src/provider/securitycheck.rs
 src/provider/seeding.rs
 src/provider/skeymgmt.rs
+src/provider/slh_dsa_kmgmt.rs
+src/provider/slh_dsa_sig.rs
+src/provider/sm2_enc.rs
+src/provider/sm2_sig.rs
+src/provider/stores.rs
+src/provider/util.rs
+src/punycode.rs
+src/quic_vlint.rs
