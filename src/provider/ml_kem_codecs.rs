@@ -59,7 +59,7 @@ use crate::provider::ml_kem_kmgmt::ossl_prov_ml_kem_new;
 use crate::runtime::bio::print::BIO_printf;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::CRYPTO_memcmp;
+use crate::runtime::mem::{CRYPTO_memcmp, OPENSSL_cleanse};
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::OBJ_obj2nid;
 use crate::runtime::owned_buf::OwnedBuf;
@@ -76,12 +76,20 @@ const FILE_SEAM: SeamFile = SeamFile::new(
 const LINE_SECURE_MALLOC: c_int = 388;
 /// `ml_kem_codecs.c:421`, `ossl_ml_kem_i2d_pubkey`'s `OPENSSL_malloc(publen)`.
 const LINE_MALLOC_PUB: c_int = 421;
+/// `ml_kem_codecs.c:427`, `ossl_ml_kem_i2d_pubkey`'s failure `OPENSSL_free(*out)`.
+const LINE_FREE_ENC_PUB: c_int = 427;
 /// `ml_kem_codecs.c:486`, `ossl_ml_kem_i2d_prvkey`'s `OPENSSL_malloc((size_t)len)`.
 const LINE_MALLOC: c_int = 486;
+/// `ml_kem_codecs.c:554`, `ossl_ml_kem_i2d_prvkey`'s failure `OPENSSL_free(buf)`.
+const LINE_FREE_ENC_PRV: c_int = 554;
 /// `ml_kem_codecs.c:586`, `ossl_ml_kem_key_to_text`'s `OPENSSL_malloc(prvlen)`.
 const LINE_MALLOC_TO_TEXT_PRV: c_int = 586;
 /// `ml_kem_codecs.c:602`, `ossl_ml_kem_key_to_text`'s `OPENSSL_malloc(key->vinfo->pubkey_bytes)`.
 const LINE_MALLOC_TO_TEXT_PUB: c_int = 602;
+/// `ml_kem_codecs.c:616`, `ossl_ml_kem_key_to_text`'s `OPENSSL_free(pubenc)`.
+const LINE_FREE_TO_TEXT_PUB: c_int = 616;
+/// `ml_kem_codecs.c:617`, `ossl_ml_kem_key_to_text`'s `OPENSSL_free(prvenc)`.
+const LINE_FREE_TO_TEXT_PRV: c_int = 617;
 
 /// `OSSL_PKEY_PARAM_ML_KEM_INPUT_FORMATS` — `core_names.h:433`.
 const OSSL_PKEY_PARAM_ML_KEM_INPUT_FORMATS: *const c_char = c"ml-kem.input_formats".as_ptr();
@@ -755,7 +763,13 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_pubkey(key: *const MlKemKey, out: *mut *mut
         return 0;
     }
     // SAFETY: `out` is writable and the allocation is the authority's own.
-    let Some(p) = OwnedBuf::new(publen, FILE_SEAM, LINE_MALLOC_PUB) else {
+    let Some(p) = OwnedBuf::new_plain_released(
+        publen,
+        FILE_SEAM,
+        LINE_MALLOC_PUB,
+        FILE_SEAM,
+        LINE_FREE_ENC_PUB,
+    ) else {
         return 0;
     };
     // SAFETY: `out` is writable per the contract.
@@ -868,7 +882,18 @@ pub(crate) unsafe fn ossl_ml_kem_i2d_prvkey(
                 break 'end;
             }
 
-            let Some(buf_owned) = OwnedBuf::new(len as usize, FILE_SEAM, LINE_MALLOC) else {
+            // The private-key DER is secret-bearing: the failure-path release cleanses the
+            // allocation, and the release coordinates are the authority's `end:` free rather
+            // than the allocation line. Deliberate secret-residue improvement over
+            // `ml_kem_codecs.c:554`; on success the caller takes the block and frees it as the
+            // authority does.
+            let Some(buf_owned) = OwnedBuf::new_cleansed_released(
+                len as usize,
+                FILE_SEAM,
+                LINE_MALLOC,
+                FILE_SEAM,
+                LINE_FREE_ENC_PRV,
+            ) else {
                 break 'end;
             };
             let buf = buf_owned.as_ptr();
@@ -1001,7 +1026,13 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
                     }
                 }
                 if ossl_ml_kem_have_prvkey(key) {
-                    let Some(b) = OwnedBuf::new(prvlen, FILE_SEAM, LINE_MALLOC_TO_TEXT_PRV) else {
+                    let Some(b) = OwnedBuf::new_cleansed_released(
+                        prvlen,
+                        FILE_SEAM,
+                        LINE_MALLOC_TO_TEXT_PRV,
+                        FILE_SEAM,
+                        LINE_FREE_TO_TEXT_PRV,
+                    ) else {
                         break 'end;
                     };
                     if ossl_ml_kem_encode_private_key(b.as_ptr(), prvlen, key) == 0 {
@@ -1022,7 +1053,13 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
                     break 'end;
                 }
 
-                let Some(b) = OwnedBuf::new(publen, FILE_SEAM, LINE_MALLOC_TO_TEXT_PUB) else {
+                let Some(b) = OwnedBuf::new_plain_released(
+                    publen,
+                    FILE_SEAM,
+                    LINE_MALLOC_TO_TEXT_PUB,
+                    FILE_SEAM,
+                    LINE_FREE_TO_TEXT_PUB,
+                ) else {
                     break 'end;
                 };
                 if ossl_ml_kem_encode_public_key(b.as_ptr(), publen, key) == 0
@@ -1048,6 +1085,9 @@ pub(crate) unsafe fn ossl_ml_kem_key_to_text(
         // `prvenc`/`pubenc` release their blocks here, the authority's own order and sites.
         drop(pubenc);
         drop(prvenc);
+        // `seed` is a stack copy of the private seed. The authority leaves it to the stack;
+        // clearing it is a deliberate secret-residue improvement (`ml_kem_codecs.c:560`).
+        OPENSSL_cleanse(seed.as_mut_ptr().cast(), seed.len());
     }
     ret
 }
