@@ -283,8 +283,11 @@ unsafe fn ecx_pubkey(ecx: *mut EcxKey) -> *mut u8 {
 /// The KEM `newctx` dispatch contract.
 unsafe extern "C" fn ecxkem_newctx(provctx: *mut c_void) -> *mut c_void {
     // SAFETY: a fresh zeroed allocation of this call's own context.
-    let ctx =
-        CRYPTO_zalloc(core::mem::size_of::<ProvEcxCtx>(), FILE_ECX_KEM, 163).cast::<ProvEcxCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<ProvEcxCtx>(), FILE_ECX_KEM, 163)
+    }
+    .cast::<ProvEcxCtx>();
 
     if ctx.is_null() {
         return ptr::null_mut();

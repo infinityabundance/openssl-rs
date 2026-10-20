@@ -483,7 +483,11 @@ unsafe impl DrbgCtx for ProvDrbg {
     fn zalloc() -> *mut ProvDrbg {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of `size_of::<ProvDrbg>()` bytes, which is exactly this layout.
-        CRYPTO_zalloc(core::mem::size_of::<ProvDrbg>(), Self::FILE, LINE).cast::<ProvDrbg>()
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<ProvDrbg>(), Self::FILE, LINE)
+        }
+        .cast::<ProvDrbg>()
     }
 
     unsafe fn destroy_body(ptr: *mut ProvDrbg) {
@@ -518,11 +522,14 @@ unsafe impl DrbgCtx for ProvDrbgNonceGlobal {
     fn zalloc() -> *mut ProvDrbgNonceGlobal {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of `size_of::<ProvDrbgNonceGlobal>()` bytes, which is exactly this layout.
-        CRYPTO_zalloc(
-            core::mem::size_of::<ProvDrbgNonceGlobal>(),
-            Self::FILE,
-            LINE,
-        )
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<ProvDrbgNonceGlobal>(),
+                Self::FILE,
+                LINE,
+            )
+        }
         .cast::<ProvDrbgNonceGlobal>()
     }
 

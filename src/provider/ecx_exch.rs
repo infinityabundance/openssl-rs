@@ -100,11 +100,14 @@ impl OwnedCtx {
     fn new() -> Option<OwnedCtx> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<ProvEcxCtx>()` bytes, which is exactly `PROV_ECX_CTX`'s layout.
-        let raw = CRYPTO_zalloc(
-            core::mem::size_of::<ProvEcxCtx>(),
-            FILE_ECX_EXCH,
-            LINE_NEWCTX_MALLOC,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<ProvEcxCtx>(),
+                FILE_ECX_EXCH,
+                LINE_NEWCTX_MALLOC,
+            )
+        }
         .cast::<ProvEcxCtx>();
         NonNull::new(raw).map(|ptr| OwnedCtx { ptr })
     }
@@ -165,11 +168,14 @@ impl RawCtx {
     fn new() -> Option<RawCtx> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<ProvEcxCtx>()` bytes, which is exactly `PROV_ECX_CTX`'s layout.
-        let raw = CRYPTO_zalloc(
-            core::mem::size_of::<ProvEcxCtx>(),
-            FILE_ECX_EXCH,
-            LINE_DUPCTX_MALLOC,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<ProvEcxCtx>(),
+                FILE_ECX_EXCH,
+                LINE_DUPCTX_MALLOC,
+            )
+        }
         .cast::<ProvEcxCtx>();
         NonNull::new(raw).map(|ptr| RawCtx {
             ptr,

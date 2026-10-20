@@ -205,8 +205,11 @@ struct OwnedValue {
 impl OwnedValue {
     /// `CRYPTO_malloc(sizeof(*v), NULL, 0)`, or `None` when it answers NULL.
     fn new_block() -> Option<OwnedValue> {
-        let raw =
-            CRYPTO_malloc(core::mem::size_of::<ConfValue>(), ptr::null(), 0).cast::<ConfValue>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<ConfValue>(), ptr::null(), 0)
+        }
+        .cast::<ConfValue>();
         ptr::NonNull::new(raw).map(|ptr| OwnedValue {
             ptr,
             release: ValueRelease::BlockOnly,

@@ -446,7 +446,11 @@ unsafe fn der2key_decode_p8(
 /// `provctx` is the live provider context; `desc` a live row descriptor.
 unsafe fn der2key_newctx(provctx: *mut c_void, desc: &'static KeytypeDesc) -> *mut c_void {
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ctx = CRYPTO_zalloc(size_of::<Der2keyCtx>(), ptr::null(), 0).cast::<Der2keyCtx>();
+    let ctx = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(size_of::<Der2keyCtx>(), ptr::null(), 0)
+    }
+    .cast::<Der2keyCtx>();
     if !ctx.is_null() {
         // SAFETY: `ctx` is a fresh zeroed allocation this frame owns.
         unsafe {

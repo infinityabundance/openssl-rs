@@ -86,7 +86,11 @@ impl OwnedStr {
         release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_malloc(len, alloc_file.as_ptr(), alloc_line).cast::<c_char>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, alloc_file.as_ptr(), alloc_line)
+        }
+        .cast::<c_char>();
         if raw.is_null() {
             return None;
         }
@@ -113,7 +117,11 @@ impl OwnedStr {
         release_file: SeamFile,
         release_line: c_int,
     ) -> Option<Self> {
-        let raw = CRYPTO_zalloc(len, alloc_file.as_ptr(), alloc_line).cast::<c_char>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(len, alloc_file.as_ptr(), alloc_line)
+        }
+        .cast::<c_char>();
         if raw.is_null() {
             return None;
         }

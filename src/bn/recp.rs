@@ -194,8 +194,11 @@ fn recp_init() -> RecpCtx {
     target_pointer_width = "64"
 ))]
 fn alloc_recp() -> *mut RecpCtx {
-    let block =
-        CRYPTO_zalloc(AUTHORITY_BN_RECP_CTX_SIZE, FILE.as_ptr(), LINE_ALLOC).cast::<RecpCtx>();
+    let block = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(AUTHORITY_BN_RECP_CTX_SIZE, FILE.as_ptr(), LINE_ALLOC)
+    }
+    .cast::<RecpCtx>();
     if block.is_null() {
         return core::ptr::null_mut();
     }

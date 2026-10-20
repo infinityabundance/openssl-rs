@@ -186,7 +186,11 @@ impl OwnedBuf {
             // NULL or `len` zeroed bytes.
             unsafe { CRYPTO_secure_zalloc(len, FILE.as_ptr(), alloc_line) }.cast::<c_uchar>()
         } else {
-            CRYPTO_zalloc(len, FILE.as_ptr(), alloc_line).cast::<c_uchar>()
+            unsafe {
+                // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+                CRYPTO_zalloc(len, FILE.as_ptr(), alloc_line)
+            }
+            .cast::<c_uchar>()
         };
         if raw.is_null() {
             return None;
@@ -258,8 +262,11 @@ pub(crate) fn ossl_rand_pool_new(
 ) -> *mut RandPool {
     // `CRYPTO_zalloc` is a safe function in this crate: it answers null or
     // `sizeof(RandPool)` zeroed bytes, as the authority's `OPENSSL_zalloc(sizeof(*pool))`.
-    let pool =
-        CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_POOL).cast::<RandPool>();
+    let pool = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_POOL)
+    }
+    .cast::<RandPool>();
 
     if pool.is_null() {
         return ptr::null_mut();
@@ -317,8 +324,11 @@ pub(crate) fn ossl_rand_pool_attach(
 ) -> *mut RandPool {
     // `CRYPTO_zalloc` is a safe function in this crate and answers null or
     // `sizeof(RandPool)` zeroed bytes.
-    let pool =
-        CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_ATTACH).cast::<RandPool>();
+    let pool = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_ATTACH)
+    }
+    .cast::<RandPool>();
 
     if pool.is_null() {
         return ptr::null_mut();

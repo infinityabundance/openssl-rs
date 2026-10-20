@@ -177,7 +177,11 @@ enum BufRelease {
 impl OwnedBuf {
     /// `OPENSSL_malloc_array(count, size, file, line)`, or `None` when the allocator answers NULL.
     fn new_array(count: usize, size: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc_array(count, size, file, line).cast::<c_uchar>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(count, size, file, line)
+        }
+        .cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -195,7 +199,11 @@ impl OwnedBuf {
         file: *const c_char,
         line: c_int,
     ) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc_array(count, size, file, line).cast::<c_uchar>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(count, size, file, line)
+        }
+        .cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -504,8 +512,11 @@ pub(crate) unsafe fn ossl_ml_dsa_key_new(
     }
 
     // SAFETY: `CRYPTO_zalloc` answers NULL on failure, which is checked.
-    let ret =
-        CRYPTO_zalloc(core::mem::size_of::<MlDsaKey>(), FILE, LINE_KEY_NEW).cast::<MlDsaKey>();
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<MlDsaKey>(), FILE, LINE_KEY_NEW)
+    }
+    .cast::<MlDsaKey>();
     if !ret.is_null() {
         // SAFETY: `ret` is a fresh, zeroed allocation; every field is written below.
         unsafe {

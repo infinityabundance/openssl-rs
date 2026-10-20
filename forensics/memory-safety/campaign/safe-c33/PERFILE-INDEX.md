@@ -8497,3 +8497,46 @@ repair is pending independent review); full ERR mechanism remains `CONTRACTED`.
 NEO-ERR-3/4/6/7 are retained obligations; documentation alone is not discharge.
 Consumer `SAFE_COMPATIBLE` stays **0/33**. Machine-readable receipt:
 [`atlas-refresh/boundary-sweep-B33.json`](atlas-refresh/boundary-sweep-B33.json).
+
+## Boundary sweep B34 — ERR remaining obligations (NEO-ERR-3/4/6/7) — 2026-10-20
+
+**Source identity:** `integrate/safe-c33` at `f78df27a8` (B33 merge) plus the
+uncommitted B34 working-tree changes; blobs `mem.rs` `aa87baed4c…`, `err.rs`
+`6de7b075ba…`, `err_state.rs` `8a6d05d7c2…`, `miri_tcb.rs` `397823234a…`,
+`async/arch/async_posix.rs` `353dac9638…`. **STOP:** none. Nothing is promoted
+to `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE`.
+
+| boundary | file | disposition | mechanism |
+|---|---|---|---|
+| `B34-ERR-6` | `src/runtime/mem.rs:228-281, 450-482, 498-590` | `FIXED` (unsafe entry points) | `CRYPTO_malloc/zalloc/calloc/malloc_array` are `pub unsafe extern "C" fn` with a NULL-or-NUL-terminated `file` contract; the internal `malloc_request`/`alloc`/`dealloc`/`clear_dealloc`/`report_alloc_err`/`raise_integer_overflow` helpers are unsafe fns with the same clause; 247 in-crate call sites across 152 files updated. C ABI/symbols unchanged |
+| `B34-ERR-7` | `src/runtime/err.rs:745-775, 872-900` | `FIXED` (guard) | a thread-local `STATE_IN_USE` guard refuses a nested `with_state` (`None`, state untouched) and resets on Drop, including unwinding; the B33 external hook contract is retained as defence in depth |
+| `B34-ERR-3` | `src/runtime/err_state.rs:87-210` | `CONTRACT_ONLY` (retained) | save/save_to_mark destination provenance/exclusive ownership/no concurrent mutation; no ABI-compatible runtime marker exists |
+| `B34-ERR-4` | `src/runtime/err_state.rs:212-300` | `CONTRACT_ONLY` + cheap check | restore source extent/termination/stability retained; out-of-range `top`/`bottom` is treated as empty instead of indexing out of bounds or walking forever |
+
+**NEO-ERR-6.** Signature change is Rust-only: the four functions gained
+`unsafe` and `# Safety`; the exported C symbols, parameter lists, return types
+and calling convention are identical. 247 call sites received a
+SAFETY-commented block; the `file` expression is NULL, a static coordinate, or
+an enclosing helper parameter. 24 helper-parameter forwards remain retained
+owner obligations (R-ERR-10).
+
+**NEO-ERR-7.** A nested ERR access on the same thread returns the existing
+`None`/no-state outcome; the outer operation completes and the nested raise is
+dropped. The new unit test asserts `None` for the nested call, `Some` for the
+outer, and a successful access afterwards (guard reset).
+
+**Evidence.** FAST: fmt, `cargo check --lib`, `cargo check --all-targets` clean;
+focused `runtime::err::` 14/14 and `runtime::err_state::` 5/5. BATCH: clippy
+`--all-targets -D warnings` PASS; library **1707 passed / 0 failed / 31 ignored**
+serially (239.83 s) and threaded (94.12 s). Miri Stacked Borrows 14/14 and Tree
+Borrows 19/19; ASan 19/19; TSan 19/19 (`-Zbuild-std`, 64 TiB shadow). ASan/TSan
+needed `-Ccodegen-units=256` (cgu=1/8 OOM LLVM); the final runs were at the
+mandated 8 GiB court cap. **NOT_RUN:** the six items in
+`boundary-sweep-B34.json.not_run` (authority differential, Miri over C, a real
+C allocator-hook harness, independent review, Loom/Kani, clang ASan C probe).
+
+**Lifecycle.** Consumer C2 ERR scope remains `ESTABLISHED`; full ERR mechanism
+remains `CONTRACTED`. NEO-ERR-3/4 are retained obligations; NEO-ERR-1/2/5/6/7
+await independent review. Consumer `SAFE_COMPATIBLE` stays **0/33**.
+Machine-readable receipt:
+[`atlas-refresh/boundary-sweep-B34.json`](atlas-refresh/boundary-sweep-B34.json).

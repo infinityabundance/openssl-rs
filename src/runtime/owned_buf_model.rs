@@ -1003,7 +1003,11 @@ fn adoption_constructors_store_the_model_mode() {
     let file = SeamFile::new(FILE);
     let token = file.as_ptr() as usize;
 
-    let raw = CRYPTO_malloc(4, FILE.as_ptr(), 30).cast::<c_uchar>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(4, FILE.as_ptr(), 30)
+    }
+    .cast::<c_uchar>();
     assert!(!raw.is_null(), "the seam must allocate 4 bytes");
     // SAFETY: `raw` is the whole block a fresh plain seam allocation returned, and
     // this test is its only owner from here on.
@@ -1017,7 +1021,11 @@ fn adoption_constructors_store_the_model_mode() {
     );
     drop(plain);
 
-    let raw = CRYPTO_malloc(4, FILE.as_ptr(), 32).cast::<c_uchar>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(4, FILE.as_ptr(), 32)
+    }
+    .cast::<c_uchar>();
     assert!(!raw.is_null(), "the seam must allocate 4 bytes");
     // SAFETY: `raw` is the whole block a fresh plain seam allocation returned; the
     // cleansing length is inside that allocation.
@@ -1032,7 +1040,11 @@ fn adoption_constructors_store_the_model_mode() {
     );
     drop(cleansed);
 
-    let raw = CRYPTO_malloc(4, FILE.as_ptr(), 34).cast::<c_uchar>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(4, FILE.as_ptr(), 34)
+    }
+    .cast::<c_uchar>();
     assert!(!raw.is_null(), "the seam must allocate 4 bytes");
     // SAFETY: `raw` is the whole block a fresh plain seam allocation returned; the
     // cleansing length and the authority's `clear` decision are this test's.
@@ -1104,7 +1116,11 @@ fn secure_adoption_constructor_stores_the_model_mode() {
 fn set_clear_matches_the_model() {
     let file = SeamFile::new(FILE);
     let token = file.as_ptr() as usize;
-    let raw = CRYPTO_malloc(4, FILE.as_ptr(), 40).cast::<c_uchar>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(4, FILE.as_ptr(), 40)
+    }
+    .cast::<c_uchar>();
     assert!(!raw.is_null(), "the seam must allocate 4 bytes");
     // SAFETY: `raw` is the whole block a fresh plain seam allocation returned.
     let adopted = unsafe { OwnedBuf::adopt_conditional(raw, 4, false, file, 41) };
@@ -1205,7 +1221,11 @@ fn set_release_line_changes_only_the_line() {
     );
     drop(cleansed);
 
-    let raw = CRYPTO_malloc(4, FILE.as_ptr(), 46).cast::<c_uchar>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(4, FILE.as_ptr(), 46)
+    }
+    .cast::<c_uchar>();
     assert!(!raw.is_null(), "the seam must allocate 4 bytes");
     // SAFETY: `raw` is the whole block a fresh plain seam allocation returned.
     let adopted = unsafe { OwnedBuf::adopt_conditional(raw, 4, true, file, 47) };
@@ -1247,7 +1267,11 @@ fn drop_dispatch_matches_the_model_for_every_mode() {
         "Cleansed must select CRYPTO_clear_free over the stored length"
     );
 
-    let raw = CRYPTO_malloc(4, FILE.as_ptr(), 50).cast::<c_uchar>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(4, FILE.as_ptr(), 50)
+    }
+    .cast::<c_uchar>();
     assert!(!raw.is_null(), "the seam must allocate 4 bytes");
     // SAFETY: `raw` is the whole block a fresh plain seam allocation returned.
     let conditional = allocated!(unsafe { OwnedBuf::adopt_conditional(raw, 4, true, file, 51) });
@@ -1259,7 +1283,11 @@ fn drop_dispatch_matches_the_model_for_every_mode() {
         "Conditional(clear) must select CRYPTO_clear_free"
     );
 
-    let raw = CRYPTO_malloc(4, FILE.as_ptr(), 52).cast::<c_uchar>();
+    let raw = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(4, FILE.as_ptr(), 52)
+    }
+    .cast::<c_uchar>();
     assert!(!raw.is_null(), "the seam must allocate 4 bytes");
     // SAFETY: `raw` is the whole block a fresh plain seam allocation returned.
     let conditional = allocated!(unsafe { OwnedBuf::adopt_conditional(raw, 4, false, file, 53) });

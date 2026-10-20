@@ -347,8 +347,11 @@ impl RawDataCtx {
     fn new() -> Option<RawDataCtx> {
         // A zeroed context is a valid one: every member is a plain pointer or scalar and
         // `dynamic_set_data_ctx` sets each before it is read.
-        let raw = CRYPTO_zalloc(size_of::<DynamicDataCtx>(), FILE, LINE_SET_CTX_ZALLOC)
-            .cast::<DynamicDataCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<DynamicDataCtx>(), FILE, LINE_SET_CTX_ZALLOC)
+        }
+        .cast::<DynamicDataCtx>();
         ptr::NonNull::new(raw).map(|ptr| RawDataCtx { ptr })
     }
 

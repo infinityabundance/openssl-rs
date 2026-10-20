@@ -564,8 +564,11 @@ impl RawLookup {
     /// `CRYPTO_zalloc(sizeof(*ret), FILE, 20)`, or `None` when it answers NULL.
     fn new() -> Option<RawLookup> {
         // `CRYPTO_zalloc` is a safe function.
-        let raw = CRYPTO_zalloc(size_of::<X509Lookup>(), FILE.as_ptr(), LINE_ZALLOC_LOOKUP)
-            .cast::<X509Lookup>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<X509Lookup>(), FILE.as_ptr(), LINE_ZALLOC_LOOKUP)
+        }
+        .cast::<X509Lookup>();
         ptr::NonNull::new(raw).map(|ptr| RawLookup { ptr })
     }
 
@@ -613,8 +616,11 @@ impl RawStore {
     /// `CRYPTO_zalloc(sizeof(*ret), FILE, 184)`, or `None` when it answers NULL.
     fn new() -> Option<RawStore> {
         // `CRYPTO_zalloc` is a safe function.
-        let raw = CRYPTO_zalloc(size_of::<X509Store>(), FILE.as_ptr(), LINE_ZALLOC_STORE)
-            .cast::<X509Store>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(size_of::<X509Store>(), FILE.as_ptr(), LINE_ZALLOC_STORE)
+        }
+        .cast::<X509Store>();
         ptr::NonNull::new(raw).map(|ptr| RawStore { ptr })
     }
 

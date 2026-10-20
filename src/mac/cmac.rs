@@ -84,8 +84,11 @@ struct CmacRawCtx {
 impl CmacRawCtx {
     /// `CMAC_CTX_new`'s `OPENSSL_malloc(sizeof(*ctx))` at `:58`, or `None` when refused.
     fn malloc() -> Option<CmacRawCtx> {
-        let raw =
-            CRYPTO_malloc(core::mem::size_of::<CmacCtx>(), FILE, LINE_MALLOC_CTX).cast::<CmacCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<CmacCtx>(), FILE, LINE_MALLOC_CTX)
+        }
+        .cast::<CmacCtx>();
         // `CRYPTO_malloc` answers NULL or a fresh writable block of exactly `size_of::<CmacCtx>()`
         // bytes; the bytes are not yet a valid context, which is what this staged type records.
         core::ptr::NonNull::new(raw).map(|ptr| CmacRawCtx { ptr })

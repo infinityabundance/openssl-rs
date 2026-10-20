@@ -128,12 +128,15 @@ impl MkeyBuf {
     /// The authority's `OPENSSL_calloc(...)` at `:361`, or `None` when it is refused.
     fn calloc() -> Option<MkeyBuf> {
         // `CRYPTO_calloc` checks `num * size` for overflow and is a safe function in this crate.
-        let raw = CRYPTO_calloc(
-            CRYPTO_THREAD_LOCAL_KEY_MAX,
-            core::mem::size_of::<MasterKeyEntry>(),
-            FILE,
-            L_MKEY_ALLOC,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(
+                CRYPTO_THREAD_LOCAL_KEY_MAX,
+                core::mem::size_of::<MasterKeyEntry>(),
+                FILE,
+                L_MKEY_ALLOC,
+            )
+        }
         .cast::<MasterKeyEntry>();
         // A zeroed `MasterKeyEntry` is a valid value: its only field is a NULL raw pointer.
         NonNull::new(raw).map(|ptr| MkeyBuf {

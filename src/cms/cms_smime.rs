@@ -828,7 +828,11 @@ impl OwnedChainArray {
         // count is a plain allocation failure rather than a silent wraparound.
         let bytes = count.checked_mul(core::mem::size_of::<*mut OpenSslStack>())?;
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block.
-        let raw = CRYPTO_zalloc(bytes, FILE.as_ptr(), 397).cast::<*mut OpenSslStack>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(bytes, FILE.as_ptr(), 397)
+        }
+        .cast::<*mut OpenSslStack>();
         if raw.is_null() {
             return None;
         }

@@ -106,11 +106,14 @@ impl OwnedNode {
     /// Allocate and zero a fresh node, or `None` when the allocator answers NULL -- the
     /// authority's `alloc_node`.
     fn new() -> Option<OwnedNode> {
-        let raw = CRYPTO_malloc(
-            core::mem::size_of::<BioAddrInfo>(),
-            ALLOC_FILE.as_ptr(),
-            ALLOC_LINE,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(
+                core::mem::size_of::<BioAddrInfo>(),
+                ALLOC_FILE.as_ptr(),
+                ALLOC_LINE,
+            )
+        }
         .cast::<BioAddrInfo>();
         let ptr = ptr::NonNull::new(raw)?;
         // SAFETY: `ptr` is a fresh writable block of `size_of::<BioAddrInfo>()` bytes this

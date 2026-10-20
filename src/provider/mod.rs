@@ -626,8 +626,11 @@ unsafe extern "C" fn infopair_free(p: *mut c_void) {
 unsafe extern "C" fn infopair_copy(p: *const c_void) -> *mut c_void {
     let src = p.cast::<InfoPair>();
     // SAFETY: a fresh zeroed block of exactly this type.
-    let dest = CRYPTO_zalloc(core::mem::size_of::<InfoPair>(), FILE, lines::L_PAIR_COPY)
-        .cast::<InfoPair>();
+    let dest = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<InfoPair>(), FILE, lines::L_PAIR_COPY)
+    }
+    .cast::<InfoPair>();
     if dest.is_null() {
         return ptr::null_mut();
     }
@@ -679,8 +682,11 @@ pub(crate) unsafe fn infopair_add(
     value: *const c_char,
 ) -> c_int {
     // SAFETY: a fresh zeroed block of exactly this type.
-    let pair =
-        CRYPTO_zalloc(core::mem::size_of::<InfoPair>(), FILE, lines::L_PAIR_ADD).cast::<InfoPair>();
+    let pair = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<InfoPair>(), FILE, lines::L_PAIR_ADD)
+    }
+    .cast::<InfoPair>();
     if pair.is_null() {
         return 0;
     }
@@ -854,11 +860,14 @@ pub(crate) unsafe fn ossl_provider_register_child_cb(
 
     // `OPENSSL_malloc`, which is a macro over `CRYPTO_malloc` that fills in the file and
     // line at the call site — which is why this needs no `unsafe` block.
-    let child_cb = CRYPTO_malloc(
-        core::mem::size_of::<ProviderChildCb>(),
-        FILE,
-        child_cb_lines::L_CB_ALLOC,
-    )
+    let child_cb = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(
+            core::mem::size_of::<ProviderChildCb>(),
+            FILE,
+            child_cb_lines::L_CB_ALLOC,
+        )
+    }
     .cast::<ProviderChildCb>();
     if child_cb.is_null() {
         return 0;
@@ -1000,11 +1009,14 @@ pub(crate) unsafe fn ossl_provider_deregister_child_cb(handle: *const c_void) {
 /// `ctx` is stored and never dereferenced.
 pub(crate) unsafe fn ossl_provider_store_new(ctx: *mut c_void) -> *mut c_void {
     // SAFETY: a fresh zeroed block of exactly this type.
-    let store = CRYPTO_zalloc(
-        core::mem::size_of::<ProviderStore>(),
-        FILE,
-        lines::L_STORE_NEW,
-    )
+    let store = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<ProviderStore>(),
+            FILE,
+            lines::L_STORE_NEW,
+        )
+    }
     .cast::<ProviderStore>();
     if store.is_null() {
         return ptr::null_mut();
@@ -1812,11 +1824,14 @@ pub(crate) unsafe fn provider_new(
     parameters: *mut OpenSslStack,
 ) -> *mut OsslProvider {
     // SAFETY: a fresh zeroed block of exactly this type.
-    let prov = CRYPTO_zalloc(
-        core::mem::size_of::<OsslProvider>(),
-        FILE,
-        lines::L_PROV_NEW,
-    )
+    let prov = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<OsslProvider>(),
+            FILE,
+            lines::L_PROV_NEW,
+        )
+    }
     .cast::<OsslProvider>();
     if prov.is_null() {
         return ptr::null_mut();
@@ -2891,11 +2906,14 @@ mod tests {
         // `CRYPTO_zalloc` is a *safe* function in this crate, so no block is needed: the
         // convention is that every pointer operation gets its own block with a SAFETY line,
         // not that every call does.
-        let entry = CRYPTO_zalloc(
-            core::mem::size_of::<OsslProviderInfo>(),
-            FILE,
-            lines::L_INFO_ADD_CALLOC,
-        )
+        let entry = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(
+                core::mem::size_of::<OsslProviderInfo>(),
+                FILE,
+                lines::L_INFO_ADD_CALLOC,
+            )
+        }
         .cast::<OsslProviderInfo>();
         assert!(!entry.is_null(), "an entry is constructible");
         // SAFETY: `entry` is live and zeroed; both strings are literals.

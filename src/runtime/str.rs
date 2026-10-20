@@ -526,7 +526,11 @@ pub unsafe extern "C" fn OPENSSL_buf2hexstr_ex(
 unsafe fn ossl_buf2hexstr_sep(buf: *const c_uchar, buflen: c_long, sep: c_char) -> *mut c_char {
     if buflen == 0 {
         // SAFETY: a plain zeroed allocation of one byte.
-        return CRYPTO_zalloc(1, core::ptr::null(), 0).cast::<c_char>();
+        return unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(1, core::ptr::null(), 0)
+        }
+        .cast::<c_char>();
     }
 
     let has_sep = promoted(sep) != 0;

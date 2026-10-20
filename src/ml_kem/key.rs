@@ -127,7 +127,11 @@ enum BufRelease {
 impl OwnedBuf {
     /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
     fn new(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
-        let raw = CRYPTO_malloc(len, file, line).cast::<c_uchar>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len, file, line)
+        }
+        .cast::<c_uchar>();
         if raw.is_null() {
             return None;
         }
@@ -750,8 +754,11 @@ pub(crate) unsafe fn ossl_ml_kem_key_new(
     }
 
     // SAFETY: `CRYPTO_malloc` answers NULL on failure, which is checked.
-    let key =
-        CRYPTO_malloc(core::mem::size_of::<MlKemKey>(), FILE, LINE_KEY_NEW).cast::<MlKemKey>();
+    let key = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(core::mem::size_of::<MlKemKey>(), FILE, LINE_KEY_NEW)
+    }
+    .cast::<MlKemKey>();
     if key.is_null() {
         return ptr::null_mut();
     }

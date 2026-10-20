@@ -11709,7 +11709,11 @@ mod tests {
         // `CRYPTO_zalloc` is safe here: it answers NULL or a fresh zeroed block of
         // `size_of::<T>()`, and every field of the four method records is a scalar, raw pointer or
         // `Option<fn>`.
-        let p = CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, 0).cast::<T>();
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<T>(), FILE, 0)
+        }
+        .cast::<T>();
         assert!(!p.is_null());
         p
     }

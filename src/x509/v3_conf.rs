@@ -646,7 +646,11 @@ unsafe fn do_ext_i2d(
             return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
         }
         // SAFETY: the allocator answers NULL or `len` bytes.
-        let buf = CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE_MALLOC_DER).cast::<c_uchar>();
+        let buf = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE_MALLOC_DER)
+        }
+        .cast::<c_uchar>();
         if buf.is_null() {
             // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
             return unsafe { do_ext_i2d_err(ext_der, ext_oct) };

@@ -68,9 +68,15 @@
 //! The state is reached through `UnsafeCell`, not a `RefCell`. That is not a
 //! shortcut: the authority re-enters its own state from inside these operations
 //! (a `CRYPTO_malloc` inside `err_set_debug`, for example), and a runtime borrow
-//! check would turn that into a panic where the authority simply proceeds. The
-//! absence of a borrow check is therefore part of the contract, and the
-//! invariants that make it sound are stated at each access.
+//! check would turn that into a panic where the authority simply proceeds.
+//!
+//! Reentry is instead **refused** by a thread-local guard: while one `with_state`
+//! closure holds `&mut ErrState`, a nested ERR call on the same thread returns
+//! the "no state" outcome without touching the state. That covers the one
+//! reentry edge this module cannot exclude by construction — a caller-installed
+//! `CRYPTO_set_mem_functions` hook that calls back into ERR while the closure is
+//! live — and turns what would be two aliasing `&mut` references into a defined
+//! failure (the nested raise is dropped; the outer operation completes).
 
 use core::cell::{Cell, UnsafeCell};
 use core::ffi::{c_char, c_int, c_ulong, c_void};
@@ -672,8 +678,11 @@ impl OwnedErrState {
     pub(crate) fn new() -> Option<OwnedErrState> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block
         // of `size_of::<ErrState>()` bytes, which is exactly the layout the C ABI expects.
-        let raw =
-            CRYPTO_zalloc(core::mem::size_of::<ErrState>(), ERR_FILE, ERR_LINE).cast::<ErrState>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<ErrState>(), ERR_FILE, ERR_LINE)
+        }
+        .cast::<ErrState>();
         ptr::NonNull::new(raw).map(|ptr| OwnedErrState { ptr })
     }
 
@@ -730,6 +739,36 @@ thread_local! {
     /// Whether this thread has already performed the authority's per-thread
     /// state creation, which is what loads the crypto error strings.
     static STATE_READY: Cell<bool> = const { Cell::new(false) };
+    /// Whether this thread currently holds the `&mut ErrState` that `with_state`
+    /// hands its closure. A nested ERR call sees `true` and is refused instead
+    /// of forming a second `&mut` (NEO-ERR-7).
+    static STATE_IN_USE: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Clears [`STATE_IN_USE`] on every exit path, including an unwinding closure.
+struct StateAccessGuard;
+
+impl StateAccessGuard {
+    /// Take the thread's state-access slot, or `None` when this thread already
+    /// holds it (a reentrant call) or the thread-local is being destroyed.
+    fn enter() -> Option<StateAccessGuard> {
+        STATE_IN_USE
+            .try_with(|in_use| {
+                if in_use.replace(true) {
+                    None
+                } else {
+                    Some(StateAccessGuard)
+                }
+            })
+            .ok()
+            .flatten()
+    }
+}
+
+impl Drop for StateAccessGuard {
+    fn drop(&mut self) {
+        let _ = STATE_IN_USE.try_with(|in_use| in_use.set(false));
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -822,17 +861,22 @@ pub extern "C" fn err_free_strings_int() {}
 
 /// Run `f` with this thread's error state.
 ///
-/// ## Reentrancy (retained obligation)
+/// ## Reentrancy
 ///
 /// The closure runs with `&mut ErrState`, and several callers allocate or release inside it, so
 /// the installed `CRYPTO_set_mem_functions` hooks run while that reference is live. A hook that
-/// re-enters the ERR API on the same thread would form a second `&mut` to the same state. The
-/// authority has the same reentrancy hazard; suppressing it is a retained obligation, so such a
-/// hook is outside this crate's contract. No application callback is invoked from the closure.
+/// re-enters the ERR API on the same thread is therefore refused by [`StateAccessGuard`]: the
+/// nested call returns `None` without touching the state, so the raise it attempted is dropped
+/// and the outer operation completes. This is a defined failure, not UB, and it is the only
+/// reentrancy edge here — no application callback is invoked from the closure.
 pub(crate) fn with_state<R>(f: impl FnOnce(&mut ErrState) -> R) -> Option<R> {
     if init::stopped() {
         return None;
     }
+    // Refuse a nested access before loading strings or touching the state: those
+    // steps may themselves allocate, and a hook that re-enters ERR must not see a
+    // second `&mut`. The guard resets even if `f` unwinds.
+    let _access = StateAccessGuard::enter()?;
     // First ERR call on this thread: the authority creates the `ERR_STATE` and
     // that creation is what loads the crypto error strings.
     let _ = STATE_READY.try_with(|r| {
@@ -2488,6 +2532,24 @@ mod tests {
         crate::test_support::lock_global_state()
     }
 
+    #[test]
+    fn a_reentrant_state_access_is_refused_and_the_guard_resets() {
+        let _g = lock();
+        let outer = with_state(|s| {
+            // A nested ERR call on this thread must not form a second `&mut`:
+            // it is refused with the same "no state" outcome as a stopped
+            // library, and it does not mutate the slot the outer call holds.
+            let nested = with_state(|inner| {
+                inner.top += 1;
+            });
+            assert!(nested.is_none(), "reentrant access must be refused");
+            s.top
+        });
+        assert!(outer.is_some(), "the outer access still succeeds");
+        // The guard resets on exit, so the next unrelated ERR call works.
+        assert!(with_state(|_| ()).is_some());
+    }
+
     /// Read a static C string returned by the tables.
     fn cstr(p: *const c_char) -> Option<String> {
         if p.is_null() {
@@ -2805,7 +2867,10 @@ mod tests {
         drain();
         ERR_new();
         // SAFETY: one fresh seam block, written as a NUL-terminated string.
-        let p = crate::runtime::mem::CRYPTO_malloc(4, core::ptr::null(), 0);
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            crate::runtime::mem::CRYPTO_malloc(4, core::ptr::null(), 0)
+        };
         assert!(!p.is_null());
         // SAFETY: `p` is four writable bytes.
         unsafe { core::ptr::copy_nonoverlapping(b"abc".as_ptr(), p.cast::<u8>(), 3) };

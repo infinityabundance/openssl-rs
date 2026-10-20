@@ -496,7 +496,11 @@ mod adv_probe {
         const LEN: usize = 16;
 
         // `CRYPTO_malloc` is safe; `p` is a fresh block of `LEN` bytes owned by this frame.
-        let p = CRYPTO_malloc(LEN, FILE.as_ptr(), 37).cast::<c_uchar>();
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(LEN, FILE.as_ptr(), 37)
+        }
+        .cast::<c_uchar>();
         assert!(!p.is_null(), "the password canary block must allocate");
         // SAFETY: `p` is the fresh `LEN`-byte block above and is not yet owned elsewhere.
         unsafe { core::ptr::write_bytes(p, 0xAA, LEN) };

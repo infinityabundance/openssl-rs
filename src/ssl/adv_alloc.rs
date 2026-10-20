@@ -382,7 +382,10 @@ pub(crate) fn require_installed() {
 /// its own transcript, so this panics rather than returning.
 pub(crate) fn assert_instrument_live() {
     reset();
-    let p = CRYPTO_malloc(8, ptr::null(), 0);
+    let p = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(8, ptr::null(), 0)
+    };
     assert!(
         !p.is_null(),
         "probe self-check: a fresh 8-byte allocation failed"
@@ -574,7 +577,11 @@ pub(crate) unsafe fn zeroed_ssl() -> *mut Ssl {
     // `CRYPTO_zalloc` is a safe function: a zeroed block of `Ssl`'s size is what `SSL_new`
     // allocates; every field of `Ssl` has an all-zero valid value, and the caller sets the fields
     // the writer reads before it is used.
-    CRYPTO_zalloc(core::mem::size_of::<Ssl>(), ptr::null(), 0).cast::<Ssl>()
+    unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(core::mem::size_of::<Ssl>(), ptr::null(), 0)
+    }
+    .cast::<Ssl>()
 }
 
 /// Negative control for the cleansed-free instrument itself (§16).

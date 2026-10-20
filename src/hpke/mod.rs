@@ -1922,7 +1922,11 @@ unsafe fn hpke_encap(
         // `shared_secret` is a `#[repr(C)]` member buffer the ABI reads back, so it stays a raw
         // seam allocation rather than an owned handle; `destroy_ctx_body` is its release.
         // SAFETY: `lsslen` was filled by the size query.
-        let ss = CRYPTO_malloc(lsslen, FILE_HPKE, 524).cast::<c_uchar>();
+        let ss = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(lsslen, FILE_HPKE, 524)
+        }
+        .cast::<c_uchar>();
         if ss.is_null() {
             break 'body;
         }
@@ -2088,7 +2092,11 @@ unsafe fn hpke_decap(
         // allocation, released by `destroy_ctx_body` (`hpke_decap`'s own refusal frees it in place).
         // SAFETY: `lsslen` was filled by the size query.
         alloc_len = lsslen;
-        let ss = CRYPTO_malloc(lsslen, FILE_HPKE, 620).cast::<c_uchar>();
+        let ss = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(lsslen, FILE_HPKE, 620)
+        }
+        .cast::<c_uchar>();
         if ss.is_null() {
             break 'body;
         }
@@ -3556,7 +3564,11 @@ pub extern "C" fn OSSL_HPKE_get_recommended_ikmelen(suite: OsslHpkeSuite) -> usi
 /// # Safety
 /// `p` must be readable for `len` bytes.
 unsafe fn c_memdup(p: *const c_uchar, len: usize) -> *mut c_uchar {
-    let out = CRYPTO_malloc(len, FILE_HPKE_UTIL, 483).cast::<c_uchar>();
+    let out = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(len, FILE_HPKE_UTIL, 483)
+    }
+    .cast::<c_uchar>();
     if out.is_null() {
         return ptr::null_mut();
     }
@@ -3581,7 +3593,11 @@ unsafe fn c_strdup(s: *const c_char) -> *mut c_char {
     let Some(alloc_len) = len.checked_add(1) else {
         return ptr::null_mut();
     };
-    let out = CRYPTO_malloc(alloc_len, FILE_HPKE, 836).cast::<c_char>();
+    let out = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(alloc_len, FILE_HPKE, 836)
+    }
+    .cast::<c_char>();
     if out.is_null() {
         return ptr::null_mut();
     }
@@ -3777,7 +3793,11 @@ mod tests {
     /// reports cannot leave a tail the destructor would miss (D049/D051).
     #[test]
     fn kem_tail_cleanse_covers_the_unreported_extent() {
-        let p = CRYPTO_malloc(64, FILE_HPKE, 524).cast::<c_uchar>();
+        let p = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(64, FILE_HPKE, 524)
+        }
+        .cast::<c_uchar>();
         assert!(!p.is_null());
         // SAFETY: `p` is this test frame's own 64-byte block; the helper writes only within it and
         // the single release below is its only release.
@@ -3843,7 +3863,11 @@ mod tests {
             )
         };
         assert!(!ctx.is_null());
-        let es = CRYPTO_malloc(SHA256_DIGEST_LENGTH, FILE_HPKE, 785).cast::<c_uchar>();
+        let es = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(SHA256_DIGEST_LENGTH, FILE_HPKE, 785)
+        }
+        .cast::<c_uchar>();
         assert!(!es.is_null());
         // SAFETY: `ctx` is live and `es` is this test's own block; the destructor releases it.
         unsafe {

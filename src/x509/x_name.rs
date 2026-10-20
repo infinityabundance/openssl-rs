@@ -376,11 +376,14 @@ unsafe extern "C" fn free_inner_stack_with_entries(elem: *mut c_void) {
 unsafe extern "C" fn x509_name_ex_new(val: *mut *mut c_void, it: *const Asn1Item) -> c_int {
     let _ = it;
     // SAFETY: the allocator takes the file/line for its mdbg record only.
-    let ret = CRYPTO_zalloc(
-        core::mem::size_of::<X509Name>(),
-        FILE.as_ptr(),
-        LINE_ZALLOC_EX_NEW,
-    )
+    let ret = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_zalloc(
+            core::mem::size_of::<X509Name>(),
+            FILE.as_ptr(),
+            LINE_ZALLOC_EX_NEW,
+        )
+    }
     .cast::<X509Name>();
     if ret.is_null() {
         return 0;
@@ -711,7 +714,11 @@ unsafe fn x509_name_canon(a: *mut X509Name) -> c_int {
     // SAFETY: `a` is live.
     unsafe { (*a).canon_enclen = len };
     // SAFETY: the allocator takes the file/line for its mdbg record only; `len` is positive here.
-    let p = CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE_CANON_MALLOC).cast::<c_uchar>();
+    let p = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE_CANON_MALLOC)
+    }
+    .cast::<c_uchar>();
     if p.is_null() {
         // SAFETY: `intname` is live.
         unsafe { OPENSSL_sk_pop_free(intname, Some(free_inner_stack_with_entries)) };

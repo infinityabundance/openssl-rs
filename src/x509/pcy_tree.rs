@@ -198,12 +198,15 @@ impl OwnedLevels {
     fn new(nlevel: usize) -> Option<OwnedLevels> {
         // `CRYPTO_calloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `nlevel * size_of::<X509PolicyLevel>()` bytes.
-        let raw = CRYPTO_calloc(
-            nlevel,
-            core::mem::size_of::<X509PolicyLevel>(),
-            FILE.as_ptr(),
-            0,
-        )
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_calloc(
+                nlevel,
+                core::mem::size_of::<X509PolicyLevel>(),
+                FILE.as_ptr(),
+                0,
+            )
+        }
         .cast::<X509PolicyLevel>();
         NonNull::new(raw).map(|ptr| OwnedLevels { ptr })
     }
@@ -254,8 +257,11 @@ impl OwnedTree {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // the header's size, which is exactly `X509PolicyTree`'s layout (every field NULL/0, the
         // authority's `OPENSSL_zalloc`).
-        let raw = CRYPTO_zalloc(core::mem::size_of::<X509PolicyTree>(), FILE.as_ptr(), 0)
-            .cast::<X509PolicyTree>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(core::mem::size_of::<X509PolicyTree>(), FILE.as_ptr(), 0)
+        }
+        .cast::<X509PolicyTree>();
         NonNull::new(raw).map(|ptr| OwnedTree { ptr })
     }
 

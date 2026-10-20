@@ -246,8 +246,11 @@ struct GcmRawCtx {
 impl GcmRawCtx {
     /// `CRYPTO_malloc(sizeof(*ctx), FILE, line)`, or `None` when the allocator answers NULL.
     fn malloc() -> Option<GcmRawCtx> {
-        let raw =
-            CRYPTO_malloc(core::mem::size_of::<GcmCtx>(), FILE.as_ptr(), LINE).cast::<GcmCtx>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(core::mem::size_of::<GcmCtx>(), FILE.as_ptr(), LINE)
+        }
+        .cast::<GcmCtx>();
         NonNull::new(raw).map(|ptr| GcmRawCtx { ptr })
     }
 

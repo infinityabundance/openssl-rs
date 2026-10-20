@@ -228,7 +228,11 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             break 'err unsafe { read_err(buf, ptr::null_mut()) };
         }
         // `CRYPTO_malloc` is the safe allocator and answers NULL on failure.
-        let ret = CRYPTO_malloc(size_of::<TxtDb>(), FILE, MALLOC_DB).cast::<TxtDb>();
+        let ret = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc(size_of::<TxtDb>(), FILE, MALLOC_DB)
+        }
+        .cast::<TxtDb>();
         if ret.is_null() {
             // SAFETY: `buf` is live and there is no `ret` yet.
             break 'err unsafe { read_err(buf, ret) };
@@ -255,12 +259,15 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             break 'err unsafe { read_err(buf, ret) };
         }
         // An array of `num` lhash pointers; `CRYPTO_malloc_array` is safe.
-        let index = CRYPTO_malloc_array(
-            num as usize,
-            size_of::<*mut OpenSslLhash>(),
-            FILE,
-            MALLOC_INDEX,
-        )
+        let index = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_malloc_array(
+                num as usize,
+                size_of::<*mut OpenSslLhash>(),
+                FILE,
+                MALLOC_INDEX,
+            )
+        }
         .cast::<*mut OpenSslLhash>();
         // SAFETY: `ret` is live.
         unsafe { (*ret).index = index };
@@ -269,9 +276,11 @@ pub unsafe extern "C" fn TXT_DB_read(in_: *mut Bio, num: c_int) -> *mut TxtDb {
             break 'err unsafe { read_err(buf, ret) };
         }
         // An array of `num` qualifier slots; `CRYPTO_malloc_array` is safe.
-        let qual =
+        let qual = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc_array(num as usize, size_of::<Option<QualFn>>(), FILE, MALLOC_QUAL)
-                .cast::<Option<QualFn>>();
+        }
+        .cast::<Option<QualFn>>();
         // SAFETY: `ret` is live.
         unsafe { (*ret).qual = qual };
         if qual.is_null() {

@@ -131,7 +131,11 @@ impl OwnedParamBlock {
     fn zalloc(len: usize, alloc_line: c_int, release_line: c_int) -> Option<OwnedParamBlock> {
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `len` bytes.
-        let raw = CRYPTO_zalloc(len, FILE.as_ptr(), alloc_line).cast::<u8>();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(len, FILE.as_ptr(), alloc_line)
+        }
+        .cast::<u8>();
         if raw.is_null() {
             None
         } else {
@@ -245,7 +249,10 @@ unsafe fn ossl_param_buf_alloc(out: &mut ParamBuf, extra_blocks: usize, is_secur
         // SAFETY: a plain size argument.
         unsafe { CRYPTO_secure_zalloc(sz, FILE.as_ptr(), LINE_ALLOC_BUF) }
     } else {
-        CRYPTO_zalloc(sz, FILE.as_ptr(), LINE_ALLOC_BUF)
+        unsafe {
+            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+            CRYPTO_zalloc(sz, FILE.as_ptr(), LINE_ALLOC_BUF)
+        }
     };
     if alloc.is_null() {
         return false;

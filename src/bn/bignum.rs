@@ -277,7 +277,10 @@ pub(crate) fn dup_cstring(s: &str) -> *mut c_char {
     let Some(n) = bytes.len().checked_add(1) else {
         return core::ptr::null_mut();
     };
-    let p = crate::runtime::mem::CRYPTO_malloc(n, FILE.as_ptr(), LINE);
+    let p = unsafe {
+        // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
+        crate::runtime::mem::CRYPTO_malloc(n, FILE.as_ptr(), LINE)
+    };
     if p.is_null() {
         return core::ptr::null_mut();
     }
