@@ -28,7 +28,8 @@
 //! A name component longer than `NAME_ONELINE_MAX` (1 MiB) and a name whose rendering would
 //! exceed it both raise `ERR_LIB_X509`/`X509_R_NAME_TOO_LONG` and answer NULL; an allocation
 //! or grow failure raises `ERR_LIB_X509`/`ERR_R_BUF_LIB` and answers NULL. The coordinates are
-//! the generated `X509_OBJ_75`/`X509_OBJ_175`, because `crypto/x509/x509_obj.c` joins
+//! the generated `X509_OBJ_75`/`X509_OBJ_116`/`X509_OBJ_175`, because
+//! `crypto/x509/x509_obj.c` joins
 //! `gen_err_raise_sites.py`'s covered set with this subphase.
 //!
 //! ## The court
