@@ -691,3 +691,11 @@ src/ssl/s3_lib.rs
 src/ssl/ssl_asn1.rs
 src/ssl/ssl_cert_comp.rs
 src/ssl/record/rec_layer_s3.rs
+src/ssl/ssl_init.rs
+src/ssl/ssl_mcnf.rs
+src/ssl/ssl_rsa_legacy.rs
+src/ssl/ssl_stat.rs
+src/ssl/ssl_txt.rs
+src/ssl/statem/extensions_cust.rs
+src/ssl/statem/extensions_srvr.rs
+src/ssl/statem/statem_lib.rs

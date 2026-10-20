@@ -1,0 +1,83 @@
+{
+  "receipt": "mechanism-sweep-M81",
+  "branch": "integrate/safe-c33",
+  "source_head": "4bc6c4813",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH plus the five affected SSL member-buffer/member-slot adversarial probes. Eight files audited, zero defects, zero repairs, no UB, no ABI regression and no hidden obligation. No file was deferred.",
+  "scope": "Per-file contract audit of the eight head entries of REMAINING-AUDIT.txt: the SSL process-initialiser, the ssl_conf config driver, the deprecated RSA private-key spellings, the alert/state string readers, the session printers, the custom-extension registration surface, the TLS1.3 ServerHello extension block, and the protocol-version helpers. The two files flagged as possible init/callback boundaries were audited rather than deferred: ssl_init.rs introduces no ownership boundary of its own (it reuses the process-init contract), and extensions_srvr.rs invokes no application callback.",
+  "files": [
+    "src/ssl/ssl_init.rs",
+    "src/ssl/ssl_mcnf.rs",
+    "src/ssl/ssl_rsa_legacy.rs",
+    "src/ssl/ssl_stat.rs",
+    "src/ssl/ssl_txt.rs",
+    "src/ssl/statem/extensions_cust.rs",
+    "src/ssl/statem/extensions_srvr.rs",
+    "src/ssl/statem/statem_lib.rs"
+  ],
+  "files_not_run": [],
+  "defects": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "unsafe_operations_relocated": [],
+  "hidden_obligations": [],
+  "new_unsafe_assumptions": [],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "documentation_corrections": [],
+  "not_discharged": [
+    "All audited files are file-level audits, not SAFETY_DISCHARGED and not SAFE_COMPATIBLE.",
+    "ssl_init.rs is audited against the existing process-init contract only; this receipt does not discharge the RUN_ONCE/initialisation ordering of the runtime init layer.",
+    "The custom-extension callbacks are stored but never invoked in this slice (no add/parse pass is walked). This receipt does not discharge their invocation contract, and no handshake path that calls them is exercised.",
+    "The TLS1.3 key-share constructor is audited for the non-resuming, non-HelloRetryRequest, X25519 arm only; the HRR and KEM arms remain unbuilt, and ssl_derive is not called.",
+    "No new cryptographic or timing evidence is claimed for the session printers or the key-share generation.",
+    "No Miri/ASan/Loom run was made: no owner, extent, aliasing or concurrency mechanism changed."
+  ],
+  "retained_obligations": [
+    "src/ssl/ssl_init.rs: settings is NULL or a live OPENSSL_INIT_SETTINGS; the Once base step touches only the process-global compression registry and cannot fail.",
+    "src/ssl/ssl_mcnf.rs: exactly one of s/ctx is non-NULL (or both NULL for the refusal arm); name is NULL or NUL-terminated; the live object carries a live ctx/method. The final restores the previous default library context even when the switch never ran (NULL is a no-op).",
+    "src/ssl/ssl_rsa_legacy.rs: ssl/ctx is live and rsa is NULL or a live key; d is readable for len; file is NULL or NUL-terminated. Each RSA is up-reffed before EVP_PKEY_assign and released on every refusal, matching EVP_PKEY_assign's transfer-on-success contract.",
+    "src/ssl/ssl_stat.rs: s is NULL or a live connection; all returned strings are process-lifetime statics.",
+    "src/ssl/ssl_txt.rs: bp is a live writable BIO and x is NULL or a live session; bp's write callbacks must not free x during the call (the same C-level obligation the authority imposes).",
+    "src/ssl/statem/extensions_cust.rs: ctx is NULL or a live SSL_CTX and ctx->cert is non-NULL for every context this crate constructs (SSL_CTX_new refuses on cert_new failure); the callback pointers are stored, never invoked, and remain the application's to keep valid until the context is freed.",
+    "src/ssl/statem/extensions_srvr.rs: s is a live connection and pkt a live packet; the generated ephemeral key is transferred to s->pkey on success and freed on every failure, and SSL_free releases it once.",
+    "src/ssl/statem/statem_lib.rs: s is a live connection (a live Ssl always carries non-NULL method and cert); the out-pointers are writable, and real_max may be NULL."
+  ],
+  "residuals": [
+    "extensions_cust.rs appends to the owned Vec with push/extend_from_slice; an allocator failure aborts the process where the authority's sk_CUSTOM_EXT_METHOD_push returns 0. This is the crate's established ownership-container behaviour, leaves no partially published record and is not UB; recorded rather than repaired.",
+    "extensions_srvr.rs assigns s->pkey directly, as the authority does. A second key-share construction on the same connection without an intervening clear would leak the previous key; the reduced state machine calls it once per handshake, so the path is unreachable here and matches the authority's own lifecycle assumption.",
+    "ssl_txt.rs indexes the fixed session_id/sid_ctx/master_key arrays by the stored length fields. A corrupted length panics (caught by guard_ffi) rather than reading out of bounds; the arrays are the authority's own extents.",
+    "ssl_mcnf.rs and extensions_cust.rs expose unguarded extern \"C\" exports. No panic is reachable for a contract-satisfying call (Vec push aside), so this is an observation, not a repair."
+  ],
+  "unrelated_residuals": [],
+  "next_queue": {
+    "file": "src/ssl/statem/statem.rs",
+    "then": [
+      "src/ssl/t1_enc.rs",
+      "src/ssl/t1_lib.rs",
+      "src/ssl/tls_depr.rs",
+      "src/store/store_meth.rs",
+      "src/ts/mod.rs",
+      "src/ts/ts_lib.rs",
+      "src/ts/ts_req_print.rs"
+    ]
+  },
+  "deferred": [],
+  "shared_boundary_files": [],
+  "secret_bearing_buffers": "ssl_rsa_legacy.rs imports and wraps private keys but copies no key material and changes no release path. ssl_txt.rs prints the session master key/PSK by design (the authority's own SSL_SESSION_print transcript). extensions_srvr.rs generates an ephemeral X25519 key and moves it into the connection's owned pkey slot; SSL_free remains its single release. No allocation, release coordinate or cleansing claim changed, and no constant-time property is asserted.",
+  "boundary_control": [],
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean",
+    "clippy": "cargo clippy --all-targets -- -D warnings clean",
+    "focused_ssl": "95 passed / 0 failed / 15 ignored (ssl filter, --test-threads=4; one first-run isolation flake in ssl_free_reentrancy_is_defined_noop passed alone and on rerun)",
+    "adv_probe_serverinfo_refused": "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_refused_keeps_old_owner passed (one process, --ignored, --exact)",
+    "adv_probe_serverinfo_reentrancy": "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_reentrancy_reads_member passed (one process, --ignored, --exact)",
+    "adv_probe_canary_refusal": "ssl::ssl_lib::adv_realloc_probe::canary_realloc_refusal_instrument_fires passed (one process, --ignored, --exact)",
+    "adv_probe_canary_reenter": "ssl::ssl_lib::adv_realloc_probe::canary_reenter_observer_fires passed (one process, --ignored, --exact)",
+    "adv_probe_self_aliasing": "ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc passed (one process, --ignored, --exact)",
+    "full_lib_threads4": "1697 passed / 0 failed / 27 ignored (98.63 s)",
+    "full_lib_serial": "1697 passed / 0 failed / 27 ignored (261.36 s)"
+  }
+}
