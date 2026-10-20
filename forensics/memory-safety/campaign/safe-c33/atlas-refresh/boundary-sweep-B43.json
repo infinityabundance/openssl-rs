@@ -1,0 +1,124 @@
+{
+  "receipt": "boundary-sweep-B43",
+  "date": "2026-10-20",
+  "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+  "subphase": "Batch 3: Argon2 secret memory -- attacker-controlled extent, refusal-set reclassification",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "649ed3091",
+    "base_subject": "Merge stage/p25/alloc-b2: PQ failure-path cleansing (B42)",
+    "source_commit": "d9a8f093f",
+    "committed": true,
+    "changed_files": 2,
+    "diffstat": "src/provider/kdf.rs +87/-10 then comment-only correction; scripts/adv-probe.sh +2",
+    "signed_hashes": {
+      "src/provider/kdf.rs": "5b87cd3b8561ba8f8ca1ec95532191660f535adb29923ff87d7a1deb8cda3b65",
+      "scripts/adv-probe.sh": "18f94e8d5e6b12acfbdc1e88ba03f436321b9a7b1b7f2a01caa8e0f0fa8e5f95"
+    },
+    "scope": "provider/kdf.rs Argon2 memory sizing/cleansing plus the same-class cleanse findings in HMAC-DRBG and PKCS12KDF"
+  },
+  "stop_status": "NO_STOP_DEFECT REMAINING IN THE REVIEWED SCOPE. The batch was INDEPENDENTLY REJECTED ON ITS FIRST CLAIM and then corrected and accepted. The rejected claim (authority parity) was false; the accepted claim is an explicit, documented section 17 divergence.",
+  "adjudication_history": [
+    {
+      "round": 1,
+      "verdict": "REJECT",
+      "reason": "The author claimed the 32-bit product refusal restored authority parity. The reviewer proved the authority guard at argon2.c:732 is dead on x86-64 (sizeof yields size_t, promoting the uint32_t operand), demonstrated empirically that m_cost 0x3FFFFF/0x400000/0x400001 all reach OPENSSL_secure_calloc, and showed that our guard therefore refuses a STRICTLY LARGER input set, silently, under a false parity claim.",
+      "disposition": "Claim withdrawn. The fix was retained but reclassified as a deliberate divergence, and the refusal was made to raise the same error state as the allocation-failure path."
+    },
+    {
+      "round": 2,
+      "verdict": "ACCEPT (after correction)",
+      "reason": "The refusal is correctly classified, raises byte-identical error state (PROV_ARGON2_741, 'cannot allocate required memory', 0x1C8000EB), and its input set is exactly the documented cap; both cleanse fixes are sound and their probes fire."
+    }
+  ],
+  "authority": {
+    "source": "openssl-3.6.4 (pinned), ELF 64-bit x86-64",
+    "abi": "No C ABI change; no #[repr(C)], exported symbol, extern \"C\" signature, seam constant or lint attribute changed.",
+    "authority_guard": "argon2.c:732 -- memory_blocks * sizeof(BLOCK) / sizeof(BLOCK) != memory_blocks. sizeof(BLOCK) is size_t, so the predicate is always false on 64-bit and the guard never fires. Verified statically and by running the pinned behaviour: all three boundary m_cost values reached allocation."
+  },
+  "divergence": {
+    "class": "known vulnerability mechanism / resource exhaustion not reproduced (AGENTS.md section 17)",
+    "statement": "For any Argon2 m_cost whose post-normalization block count N = floor(m_cost/(4*lanes))*4*lanes is >= 0x400000, this crate refuses before allocation with PROV_R_INVALID_MEMORY_SIZE ('cannot allocate required memory'), whereas the pinned x86-64 OpenSSL 3.6.4 authority attempts OPENSSL_(secure_)calloc(N, 1024) and proceeds if it succeeds. All other inputs are behaviour-identical.",
+    "compatibility_consequence": "When the authority's allocation fails it raises the same error state, so the difference is confined to hosts that can actually satisfy >= 4 GiB. Under Linux overcommit even that is not guaranteed: calloc may succeed lazily and fail later in fill_memory_blocks.",
+    "cap": "working memory capped at 0x3FFFFF blocks (4 GiB - 4 KiB)"
+  },
+  "boundaries": [
+    {
+      "id": "B43-ALLOC-4",
+      "file": "src/provider/kdf.rs:10510-10535 (argon2_initialize)",
+      "operation": "attacker-controlled working-memory sizing",
+      "before": "The 32-bit product guard was computed in usize and was therefore dead on the admitted target, so m_cost up to u32::MAX reached the allocator. This reproduced the authority's dead guard.",
+      "after": "checked_mul in u32 at the same product boundary; refusal raises the allocation-failure error state; documented divergence and cap.",
+      "mechanism": "ELIMINATED: an unbounded attacker-controlled allocation request is no longer expressible through this path.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY_CHECKED (reviewer round 2)"
+    },
+    {
+      "id": "B43-ALLOC-5",
+      "file": "src/provider/kdf.rs set_secret / set_pwd over-length refusal branches",
+      "operation": "release of a just-made secret copy on refusal",
+      "before": "Plain CRYPTO_free of a secret copy.",
+      "after": "CRYPTO_clear_free with the allocation length. Not executable in the venue: needs a >4 GiB parameter.",
+      "mechanism": "ELIMINATED: a refused over-length copy cannot leave the secret in freed storage.",
+      "hidden": 0,
+      "state": "FIXED (author); regression NOT_RUN (input unallocatable)"
+    },
+    {
+      "id": "B43-ALLOC-6",
+      "file": "src/provider/kdf.rs HMAC-DRBG entropy/nonce replacement; PKCS12KDF ai/b/d",
+      "operation": "replacement and cleanup of secret-derived buffers",
+      "before": "Plain CRYPTO_free; the authority does the same at hmacdrbg_kdf.c:361/371 while its destructor clear-frees.",
+      "after": "CRYPTO_clear_free with the recorded allocation lengths.",
+      "mechanism": "ELIMINATED: replaced secret buffers cannot leave residue.",
+      "hidden": 0,
+      "state": "FIXED (author) + INDEPENDENTLY_CHECKED for the HMAC-DRBG entropy probe; nonce and PKCS12KDF are symmetric but not probe-backed"
+    }
+  ],
+  "controls": [
+    {"id": "FAST-FMT", "instrument": "cargo fmt --all -- --check", "result": "PASS", "observed": "exit 0"},
+    {"id": "PROBE-MATRIX", "instrument": "OPENSSL_RS_ADV_PROBE=1 ... --ignored --exact --test-threads=1 provider::kdf::tests::adv_probe::argon2_memory_boundary_refusal_matrix", "result": "PASS", "observed": "1 passed. Boundary table: 0x10 accepted+allocates; 0x3FFFFF normalizes to 0x3FFFFC, allocates+raises 0x1C8000EB; 0x400000 and 0x400001 normalize to 0x400000, no allocation event, raise 0x1C8000EB"},
+    {"id": "PROBE-RESIDUE", "instrument": "OPENSSL_RS_ADV_PROBE=1 ... provider::kdf::tests::adv_probe::hmac_drbg_entropy_replacement_cleanses_the_incumbent", "result": "PASS", "observed": "1 passed"},
+    {"id": "NEGATIVE-CONTROL-GUARD", "instrument": "remove the guard's raise", "result": "PASS (control fires)", "observed": "matrix fails at m_cost=0x400000 error: left 0, right 478150891"},
+    {"id": "NEGATIVE-CONTROL-CLEANSE", "instrument": "revert entropy replacement to CRYPTO_free", "result": "PASS (control fires)", "observed": "probe fails: the incumbent entropy was released without being cleansed"},
+    {"id": "BATCH-CLIPPY", "instrument": "cargo clippy --all-targets -- -D warnings", "result": "PASS", "observed": "exit 0, no warnings"},
+    {"id": "BATCH-TESTS-T4", "instrument": "cargo test --lib -- --test-threads=4", "result": "PASS", "observed": "1711 passed; 0 failed; 41 ignored"},
+    {"id": "FOCUSED-KDF", "instrument": "cargo test --lib provider::kdf -- --test-threads=4", "result": "PASS", "observed": "11 passed; 0 failed; 5 ignored"},
+    {"id": "ORCHESTRATOR-EDIT-AUDIT", "instrument": "reviewer re-diff of the comment-only correction", "result": "PASS", "observed": "exactly one hunk in argon2_initialize, 3 comment lines replaced by 5; no code, signature, attribute or test change"}
+  ],
+  "not_run": [
+    {"check": "regression for the two >4 GiB over-length cleanses", "reason": "NOT_RUN: requires a >4 GiB OSSL_PARAM; no safe hook can fabricate it. Code inspected for allocation-length correctness and absence of double free."},
+    {"check": "residue probe for HMAC-DRBG nonce and PKCS12KDF ai/b/d", "reason": "NOT_RUN: fixes are symmetric to the probed entropy path but are not negative-control-backed."},
+    {"check": "authority success at a real 4 GiB allocation", "reason": "NOT_RUN deliberately; authority semantics were re-confirmed statically and from the prior ulimit run."},
+    {"check": "Miri / ASan", "reason": "NOT_RUN: BOUNDARY/SEAL instruments."},
+    {"check": "remaining 1305 sites", "reason": "NOT_RUN: queued as batches 4..N."}
+  ],
+  "obligations": {
+    "discharged_at_scope": [
+      "Argon2 working memory is capped and the refusal error state matches the allocation-failure path (B43-ALLOC-4)",
+      "refused over-length secret copies are cleansed (B43-ALLOC-5)",
+      "HMAC-DRBG entropy/nonce and PKCS12KDF secret-derived buffers are cleansed on release (B43-ALLOC-6)"
+    ],
+    "retained": [
+      "the >4 GiB cleansing paths have no executable regression",
+      "HMAC-DRBG nonce and PKCS12KDF cleanses have no residue probe",
+      "Argon2 t_cost remains an unbounded loop bound (authority behaviour)",
+      "a failed ossl_crypto_thread_join leaves remaining workers unjoined -- belongs to RUNTIME_CONCURRENCY",
+      "1305 alloc/release sites remain in later batches"
+    ],
+    "unknown_or_new": [],
+    "hidden": 0
+  },
+  "graduation": {
+    "state": "BATCH_INDEPENDENTLY_CHECKED",
+    "independently_checked": true,
+    "safety_discharged": false,
+    "safe_compatible_consumers": "0/33",
+    "statement": "Batch 3 is independently checked after one rejection. RUNTIME_ALLOC_OWNERSHIP remains UNSAFE_OPEN."
+  },
+  "non_claims": [
+    "Not a RUNTIME_ALLOC_OWNERSHIP discharge and not a SAFE_COMPATIBLE promotion; consumers remain 0/33.",
+    "The authority parity claim from round 1 is withdrawn and must not be cited.",
+    "No Miri, ASan or authority differential was run for the cleanse paths."
+  ]
+}
