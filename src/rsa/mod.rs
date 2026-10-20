@@ -899,8 +899,11 @@ pub extern "C" fn RSA_null_method() -> *const RsaMethod {
 // an `int` length straight into `memcpy`/`memset`, so a negative `flen` (or the `flen < 2` X9.31
 // check, which reads a header and a trailer before copying) is undefined behaviour in the
 // authority. These entry points reject the length before touching a buffer; every non-negative
-// input keeps the authority's result and error reason. This is the deliberate divergence §17
-// requires: a C-valid hostile argument must not reach the copies.
+// input keeps the authority's result and error reason. Where the authority's own length checks
+// refuse before any buffer is touched -- the two OAEP tests at `rsa_oaep.c:99` and `:104` -- they
+// run **first**, so a small block's negative-`flen` call still reports the authority's site and
+// reason rather than the refusal's. This is the deliberate divergence §17 requires: a C-valid
+// hostile argument must not reach the copies.
 //
 // Three of the eight padding *add* functions need `RAND_bytes_ex` for the bytes they insert
 // `rsa_pk1.c:147`, `rsa_oaep.c:122`, `rsa_pss.c`'s salt), and three of the six *checks* need it
@@ -2497,14 +2500,15 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
-        // The authority computes `tlen - 1` before any check and passes `plen`/`flen` straight
-        // into `EVP_Digest`/`memcpy`; a negative or `INT_MIN` value therefore wraps or is negated
-        // into a `size_t`. Every non-positive `tlen` and negative length is refused here.
-        if tlen <= 0 || flen < 0 || plen < 0 {
-            raise_site(&err_sites::RSA_OAEP_99);
-            return 0;
-        }
-        let emlen: c_int = tlen - 1;
+        // The authority computes `emlen = tlen - 1` and both length bounds in `int`, and passes
+        // `plen`/`flen` straight into `EVP_Digest`/`memset`/`memcpy`. A negative length would be
+        // negated into a `size_t` and a `tlen` of `INT_MIN` would overflow `tlen - 1`, so those
+        // are refused rather than reproduced. The two authority length checks are evaluated
+        // **first**, in `i64` so a non-positive `tlen` cannot wrap: the authority reaches both
+        // sites before touching either buffer, and `RT-RSA` observes their coordinates and
+        // reasons (`rsa_oaep.c:99` and `:104`). Refusing a negative length ahead of them would
+        // preempt that safe refusal with the wrong reason.
+        let emlen_w: i64 = tlen as i64 - 1;
         let mut seedmask = [0u8; EVP_MAX_MD_SIZE];
 
         let mut md = md;
@@ -2523,15 +2527,26 @@ pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
             raise_site(&err_sites::RSA_OAEP_93);
             return 0;
         }
+        let mdlen_w: i64 = mdlen as i64;
 
         // step 2b: check KLen > nLen - 2 HLen - 2
-        if flen > emlen - 2 * mdlen - 1 {
+        if flen as i64 > emlen_w - 2 * mdlen_w - 1 {
             raise_site(&err_sites::RSA_OAEP_99);
             return 0;
         }
 
-        if emlen < 2 * mdlen + 1 {
+        if emlen_w < 2 * mdlen_w + 1 {
             raise_site(&err_sites::RSA_OAEP_104);
+            return 0;
+        }
+
+        // Both authority checks passed, so `emlen_w >= 2*mdlen + 1 >= 3` and `tlen` is
+        // positive: the narrowing below is in range and `tlen - 1` cannot overflow. A negative
+        // `flen` or `plen` would now reach `memset`/`memcpy`/`EVP_Digest` as a huge `size_t` --
+        // the authority's undefined behaviour -- so refuse it before either buffer is touched.
+        let emlen: c_int = emlen_w as c_int;
+        if flen < 0 || plen < 0 {
+            raise_site(&err_sites::RSA_OAEP_99);
             return 0;
         }
 
@@ -3393,6 +3408,7 @@ mod tests {
         ossl_rsa_padding_add_PKCS1_PSS_mgf1, RSA_padding_add_PKCS1_PSS,
         RSA_padding_add_PKCS1_PSS_mgf1,
     };
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
 
     /// **`RSA_METHOD`, field for field.** The numbers are `courts/layout/measure-rsa-ctx.c`'s: 120
     /// bytes with `name` 0, the four crypt entry points at 8/16/24/32, the two mod-exp members at
@@ -3732,8 +3748,14 @@ mod tests {
     /// digest the *first* one fires for every non-negative message length: `emlen < 2*mdlen + 1`
     /// means the largest accepted `flen` is `emlen - 2*mdlen - 1 <= -1`. The
     /// `RSA_R_KEY_SIZE_TOO_SMALL` site is therefore reachable only through the `flen < 0` the
-    /// authority never checks for, and this arm is what says so rather than leaving the site
-    /// unexercised.
+    /// authority never rejects before its second check, and this arm is what says so rather than
+    /// leaving the site unexercised.
+    ///
+    /// **The queued site is part of the observation.** `RT-RSA` prints
+    /// `rsa.oaep_add_small_key.err.0`, so the second arm asserts the line and reason the authority
+    /// raises (`rsa_oaep.c:104`, `RSA_R_KEY_SIZE_TOO_SMALL`) and not merely the `0` answer. A
+    /// negative-length guard placed ahead of the two checks would answer 0 from `:99` with
+    /// `RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE` instead, which is what the court caught.
     #[test]
     fn the_oaep_padding_refuses_the_two_lengths_it_names() {
         let md = crate::evp::legacy_sha::EVP_sha1();
@@ -3742,7 +3764,8 @@ mod tests {
         // SAFETY: `em` is 128 writable octets and every refusal below is decided before `MSG` is
         // read, so the length arguments do not have to be real message lengths.
         unsafe {
-            /* `flen (87) > emlen (127) - 2*mdlen (40) - 1 (86)`. */
+            /* `flen (87) > emlen (127) - 2*mdlen (40) - 1 (86)`, refused at `rsa_oaep.c:99`. */
+            ERR_clear_error();
             assert_eq!(
                 RSA_padding_add_PKCS1_OAEP_mgf1(
                     em.as_mut_ptr(),
@@ -3756,7 +3779,14 @@ mod tests {
                 ),
                 0
             );
-            /* `emlen (40) < 2*mdlen + 1 (41)`, reached only with `flen == -1`. */
+            assert_eq!(
+                ERR_get_error(),
+                (4 << 23) | 110,
+                "RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE at rsa_oaep.c:99"
+            );
+            /* `emlen (40) < 2*mdlen + 1 (41)`, reached only with `flen == -1`, refused at
+             * `rsa_oaep.c:104` -- the second check must run before any negative-length guard. */
+            ERR_clear_error();
             assert_eq!(
                 RSA_padding_add_PKCS1_OAEP_mgf1(
                     em.as_mut_ptr(),
@@ -3769,6 +3799,11 @@ mod tests {
                     md,
                 ),
                 0
+            );
+            assert_eq!(
+                ERR_get_error(),
+                (4 << 23) | 120,
+                "RSA_R_KEY_SIZE_TOO_SMALL at rsa_oaep.c:104"
             );
             /* The largest length the 128-octet modulus takes is 86, and it must be accepted. */
             assert_eq!(
