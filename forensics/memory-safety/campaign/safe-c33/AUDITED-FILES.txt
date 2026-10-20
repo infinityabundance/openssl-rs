@@ -715,3 +715,11 @@ src/x509/pcy_node.rs
 src/x509/t_acert.rs
 src/x509/t_crl.rs
 src/ui/ui_openssl.rs
+src/x509/t_req.rs
+src/x509/t_x509.rs
+src/x509/v3_aaa.rs
+src/x509/v3_akeya.rs
+src/x509/v3_audit_id.rs
+src/x509/v3_authattid.rs
+src/x509/v3_battcons.rs
+src/x509/v3_bcons.rs
