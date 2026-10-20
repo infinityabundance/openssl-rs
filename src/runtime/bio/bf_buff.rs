@@ -460,12 +460,21 @@ unsafe extern "C" fn buffer_ctrl(
             }
         }
         BIO_C_SET_BUFF_READ_DATA => {
+            // The length becomes the `int` `ibuf_len` and is also used as a
+            // `usize` copy count, so a negative or above-`INT_MAX` request is
+            // outside the control's contract. The authority truncates `num`
+            // to `int` and hands the truncated value to `memcpy`, which is
+            // undefined behaviour for those inputs; refuse them instead.
+            if num < 0 || num > c_int::MAX as c_long {
+                return 0;
+            }
+            // A positive count requires the caller's data pointer.
+            if num > 0 && ptr_.is_null() {
+                return 0;
+            }
             // SAFETY: `c` is a live context.
             if num > unsafe { (*c).ibuf_size } as c_long {
-                if num <= 0 {
-                    return 0;
-                }
-                // SAFETY: `num > 0` bytes are requested.
+                // SAFETY: `num > 0` bytes are requested and fit in `c_int`.
                 let p1 = CRYPTO_malloc(num as usize, ptr::null(), 0).cast::<c_char>();
                 if p1.is_null() {
                     return 0;
@@ -476,11 +485,15 @@ unsafe extern "C" fn buffer_ctrl(
                     (*c).ibuf = p1;
                 }
             }
-            // SAFETY: `c` is live; `ptr_` is readable for `num` bytes.
+            // SAFETY: `c` is live; `ptr_` is readable for `num` bytes when
+            // `num > 0`. A zero-length copy is skipped so a NULL `ptr_` is
+            // never handed to `copy_nonoverlapping`.
             unsafe {
                 (*c).ibuf_off = 0;
                 (*c).ibuf_len = num as c_int;
-                ptr::copy_nonoverlapping(ptr_.cast::<c_char>(), (*c).ibuf, num as usize);
+                if num > 0 {
+                    ptr::copy_nonoverlapping(ptr_.cast::<c_char>(), (*c).ibuf, num as usize);
+                }
             }
             ret = 1;
         }
@@ -646,14 +659,25 @@ unsafe extern "C" fn buffer_ctrl(
                 // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
                 n = unsafe { (*c).ibuf_len } as c_long;
             }
-            // SAFETY: `ptr_` is writable for `n` bytes and the buffer holds
-            // `ibuf_len >= n` bytes from `ibuf_off`.
-            unsafe {
-                ptr::copy_nonoverlapping(
-                    (*c).ibuf.add((*c).ibuf_off as usize),
-                    ptr_.cast::<c_char>(),
-                    n as usize,
-                );
+            // A negative length is outside the control's contract; the
+            // authority's `memcpy` takes it as a huge `size_t`. Refuse it, and
+            // skip the zero-length copy so a NULL `ptr_` is legal there.
+            if n < 0 {
+                return 0;
+            }
+            if n > 0 {
+                if ptr_.is_null() {
+                    return 0;
+                }
+                // SAFETY: `ptr_` is writable for `n` bytes and the buffer holds
+                // `ibuf_len >= n` bytes from `ibuf_off`.
+                unsafe {
+                    ptr::copy_nonoverlapping(
+                        (*c).ibuf.add((*c).ibuf_off as usize),
+                        ptr_.cast::<c_char>(),
+                        n as usize,
+                    );
+                }
             }
             ret = n;
         }
@@ -778,3 +802,92 @@ unsafe extern "C" fn buffer_puts(b: *mut Bio, str_: *const c_char) -> c_int {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(BioBufferCtx => zero_state_sweep_bio_buffer_ctx);
+
+#[cfg(test)]
+mod tests {
+    use core::ptr;
+
+    use super::*;
+    use crate::runtime::bio::bss_mem::BIO_s_mem;
+    use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, BIO_push, BIO_read};
+
+    fn new_buffer() -> *mut Bio {
+        // SAFETY: `BIO_f_buffer` answers the static buffer method.
+        let b = unsafe { BIO_new(BIO_f_buffer()) };
+        assert!(!b.is_null());
+        b
+    }
+
+    fn new_buffer_with_mem_next() -> *mut Bio {
+        let b = new_buffer();
+        // SAFETY: `BIO_s_mem` answers the static memory method.
+        let next = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!next.is_null());
+        // SAFETY: `b` is live and owns the chain it is pushed onto.
+        assert!(!unsafe { BIO_push(b, next) }.is_null());
+        b
+    }
+
+    #[test]
+    fn set_buffer_read_data_accepts_a_bounded_copy() {
+        let b = new_buffer_with_mem_next();
+        let data = *b"pre!";
+        // SAFETY: `b` is live and `data` is readable for four bytes.
+        let set = unsafe {
+            BIO_ctrl(
+                b,
+                BIO_C_SET_BUFF_READ_DATA,
+                4,
+                data.as_ptr().cast_mut().cast(),
+            )
+        };
+        assert_eq!(set, 1);
+        let mut out = [0u8; 4];
+        // SAFETY: `b` is live and `out` is writable for four bytes.
+        let n = unsafe { BIO_read(b, out.as_mut_ptr().cast(), 4) };
+        assert_eq!(n, 4);
+        assert_eq!(&out, b"pre!");
+        // SAFETY: this is the BIO's single release.
+        unsafe { BIO_free(b) };
+    }
+
+    #[test]
+    fn set_buffer_read_data_refuses_a_negative_length() {
+        let b = new_buffer();
+        let byte = 0u8;
+        // SAFETY: `b` is live and the control refuses the negative length
+        // without reading the pointer.
+        let ret = unsafe {
+            BIO_ctrl(
+                b,
+                BIO_C_SET_BUFF_READ_DATA,
+                -1,
+                ptr::from_ref(&byte).cast_mut().cast(),
+            )
+        };
+        assert_eq!(ret, 0);
+        // SAFETY: this is the BIO's single release.
+        unsafe { BIO_free(b) };
+    }
+
+    #[test]
+    fn set_buffer_read_data_accepts_a_zero_length_null_pointer() {
+        let b = new_buffer();
+        // SAFETY: `b` is live; a zero count is not copied.
+        let ret = unsafe { BIO_ctrl(b, BIO_C_SET_BUFF_READ_DATA, 0, ptr::null_mut()) };
+        assert_eq!(ret, 1);
+        // SAFETY: this is the BIO's single release.
+        unsafe { BIO_free(b) };
+    }
+
+    #[test]
+    fn peek_refuses_a_negative_length() {
+        let b = new_buffer();
+        let mut out = [0u8; 1];
+        // SAFETY: `b` is live; the control refuses the negative length.
+        let ret = unsafe { BIO_ctrl(b, BIO_CTRL_PEEK, -1, out.as_mut_ptr().cast()) };
+        assert_eq!(ret, 0);
+        // SAFETY: this is the BIO's single release.
+        unsafe { BIO_free(b) };
+    }
+}

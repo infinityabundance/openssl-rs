@@ -6609,3 +6609,87 @@ ordinary position.** `src/runtime/bio/bf_buff.rs`. **Next eight.**
 `src/runtime/bio/bf_null.rs`, `src/runtime/bio/bf_prefix.rs`,
 `src/runtime/bio/bf_readbuff.rs`, `src/runtime/bio/bio_cb.rs`,
 `src/runtime/bio/bss_acpt.rs`, `src/runtime/bio/bss_fd.rs`.
+
+## M73 (mechanism) — per-file contract sweep (buffer/readbuffer filters, nbio/null/prefix filters, debug callback, accept and fd BIOs)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M73.json`](atlas-refresh/mechanism-sweep-M73.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`a7b39ac9e` (M72 merge). Four findings were repaired: two hostile-input UB
+classes in `BIO_f_buffer`'s controls, one signed-overflow path that could skip a
+`BIO_f_readbuffer` resize and allow an out-of-bounds write, and one shared
+defect in the legacy length adapters the audited filters dispatch through. Six
+focused tests were added: four direct negative controls and two positive
+companions. Layouts, exported symbols, signatures, allocation sizes and `FILE`
+values are unchanged; no production unsafe operation was added or removed.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/runtime/bio/bf_buff.rs` | `BioBufferCtx` `CtxDestroy`, create/free, read/write cursor arithmetic, every control arm, `BIO_CTRL_PEEK`, gets/puts | 2 medium-severity hostile-input UB repairs (M73-D1, M73-D2) |
+| `src/runtime/bio/bf_nbio.rs` | `NbioTest` `CtxDestroy`, `RAND_priv_bytes` draws, write cap `lwn`, retry flags, forwarding controls/gets/puts | no defect |
+| `src/runtime/bio/bf_null.rs` | forwarding read/write/ctrl/callback/gets/puts, retry-flag order, DUP refusal | no defect |
+| `src/runtime/bio/bf_prefix.rs` | `PrefixCtx` `CtxDestroy`, prefix replacement, indent formatting, line-start tracking, partial-write handling | no defect |
+| `src/runtime/bio/bf_readbuff.rs` | cache growth/rounding, tell/seek/reset bounds, EOF semantics, one-byte gets loop | 1 medium-severity signed-overflow repair (M73-D3) |
+| `src/runtime/bio/bio_cb.rs` | `BIO_debug_callback_ex` message formatting, `sendmmsg`/`recvmmsg` return rewrite, deprecated coercion wrapper, `cb_arg` emission | no defect |
+| `src/runtime/bio/bss_acpt.rs` | `BioAccept` `CtxDestroy`, state machine transitions and cleanup split, socket ownership, ctrl argument shapes, cache-string ownership | no defect |
+| `src/runtime/bio/bss_fd.rs` | create/free close semantics, read/write retry and EOF flags, seek/tell, SET_FD, one-byte gets | no defect |
+
+**Shared boundary repair.** Checking the filters' caller preconditions exposed
+M73-D4 in `src/runtime/bio/method.rs`, the already-audited
+`bwrite_conv`/`bread_conv` adapters that every legacy read/write slot in these
+files uses. It is repaired in place and included in the receipt.
+
+**Defects.**
+
+| ID | Location (pre-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M73-D1 | `src/runtime/bio/bf_buff.rs:462-484` | medium | UB from a negative or over-`INT_MAX` control length and a zero-length NULL copy | `BIO_C_SET_BUFF_READ_DATA` stored `num` in an `int` and used it as a `usize` copy count. A negative `num` reached `copy_nonoverlapping` as a huge count, a value above `INT_MAX` left a negative `ibuf_len` for a later read, and a zero count still required non-NULL pointers. The authority truncates to `int` and passes that to `memcpy`, which is undefined for those inputs. The arm now bounds `num` to `0..=INT_MAX`, refuses a positive count with a NULL pointer, and skips the zero-length copy. |
+| M73-D2 | `src/runtime/bio/bf_buff.rs:636-658` | medium | UB from a negative control length or a NULL destination in `BIO_CTRL_PEEK` | The arm clamped only the upper bound, so a negative `num` became a huge `copy_nonoverlapping` count and a zero count with a NULL destination was still passed to it. The authority's `memcpy` has the same undefined inputs. The arm now refuses a negative length, skips the zero copy, and refuses `n > 0` with a NULL destination. |
+| M73-D3 | `src/runtime/bio/bf_readbuff.rs:132-137` | medium | signed overflow disabling a cache resize, leading to an out-of-bounds write | `readbuffer_resize` added `ibuf_off + DEFAULT_BUFFER_SIZE - 1 + sz` in `int`; a request whose length plus the consumed prefix exceeded `INT_MAX` wrapped negative, the resize was skipped, and the read then wrote past the cache. The addition is now `checked_add` and an overflowing request is refused like an allocation failure. Non-overflowing requests keep the authority's block rounding. |
+| M73-D4 | `src/runtime/bio/method.rs:97-102,137-142` | high | shared length-adapter UB: an unclamped `usize` becomes a negative `c_int` | Both legacy adapters clamped only when `datal as c_long > INT_MAX`; for a `size_t` above `LONG_MAX` that comparison is negative, so the clamp is skipped and `datal as c_int` wraps negative, which the legacy filter/socket methods use as a huge count. `BIO_read_ex`/`BIO_write_ex` accept `usize`, so `SIZE_MAX` is a legal public request. The authority compares the `size_t` directly and clamps to `INT_MAX`; both adapters now do the same. |
+
+All four preserve the authority's conforming behaviour. M73-D1-D3 deliberately
+refuse inputs on which the authority's own arithmetic or `memcpy` is undefined;
+M73-D4 restores the authority's exact `INT_MAX` clamp for every `size_t`.
+
+**Unsafe accounting.** Eliminated: none (these are range/arithmetic guards at
+safe-looking control entry points and the shared length shim). Relocated: none.
+New: **0** production unsafe operations. Hidden: **0**. Contracts reused: OB-1 `OwnedBlock`, OB-3
+`OwnedCtx`/`CtxDestroy`, the B1/B2/B6-B22 BIO control/read/write/callback
+contracts, RC-1 `guard_ffi`/`raise_site`, the allocator seam, and D351's
+authority-text rule.
+
+**Gates observed (final blob).** FAST `cargo fmt --all -- --check` clean;
+`cargo test --lib runtime::bio --no-run` clean; focused
+`cargo test --lib runtime::bio:: -- --test-threads=4` **82 passed / 0 failed**
+(the six new controls included). BATCH `cargo clippy --all-targets -- -D
+warnings` clean; full library **1684 passed / 0 failed / 27 ignored** with
+`--test-threads=4` (92.33 s) and serial (201.51 s). The candidate shell was
+rebuilt from the current worktree; all **11/11 Phase 2 ABI courts** passed, and
+`RT-BIO`, `RT-BIO-DEBUG` and `RT-BIO-FILTER` each produced **0 residuals**.
+Both BATCH runs and both shell rebuilds were repeated after M73-D4 was added,
+so the evidence is bound to the final source. Generated tracked artifacts were restored to HEAD afterwards.
+
+**Invalidated evidence.** None of the shared owners changed: `BioBufferCtx`'s
+layout and destructor, `OwnedCtx`/`OwnedBlock`, the method tables and the
+allocator coordinates are untouched, so existing evidence bound to them
+remains valid. The new controls extend the `bf_buff`/`bf_readbuff` rows only.
+
+**NOT_RUN.** ASan (no extent or ownership change; the repaired classes are
+range and arithmetic guards); Miri/Loom (no aliasing or concurrency change);
+allocator-failure injection for the `readbuffer_resize` refusal arm;
+dependency-graph regeneration; FRF and SEAL; constant-time (no secret-dependent
+flow claim).
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. M73-D1-D4 are STOP-class UB repairs and were repaired before
+the BATCH run; the BATCH evidence is the local gate, not a promotion.
+
+**Queue.** `REMAINING-AUDIT.txt` **127**, `AUDITED-FILES.txt` **636**. **Next
+ordinary position.** `src/runtime/bio/bss_log.rs`. **Next eight.**
+`src/runtime/bio/bss_log.rs`, `src/runtime/bio/bss_null.rs`,
+`src/runtime/bio/bss_sock.rs`, `src/runtime/bio/comp.rs`,
+`src/runtime/bio/core_bio.rs`, `src/runtime/bio/dump.rs`,
+`src/runtime/bio/legacy_host.rs`, `src/runtime/bio/owned.rs`.

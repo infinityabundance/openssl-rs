@@ -131,8 +131,18 @@ unsafe extern "C" fn readbuffer_free(a: *mut Bio) -> c_int {
 /// `c` must be a live readbuffer context.
 unsafe fn readbuffer_resize(c: *mut BioBufferCtx, sz: c_int) -> bool {
     // SAFETY: `c` is live.
-    let mut sz = unsafe { (*c).ibuf_off } + DEFAULT_BUFFER_SIZE - 1 + sz;
-    sz = DEFAULT_BUFFER_SIZE * (sz / DEFAULT_BUFFER_SIZE);
+    let base = unsafe { (*c).ibuf_off };
+    // Round up to whole blocks, counting the bytes already consumed. The
+    // authority's `int` addition overflows for a huge request, after which its
+    // comparison is false and a later read writes past the cache. Refuse the
+    // resize instead; non-overflowing requests keep the authority's arithmetic.
+    let Some(total) = base
+        .checked_add(DEFAULT_BUFFER_SIZE - 1)
+        .and_then(|v| v.checked_add(sz))
+    else {
+        return false;
+    };
+    let sz = DEFAULT_BUFFER_SIZE * (total / DEFAULT_BUFFER_SIZE);
     // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
     if sz > unsafe { (*c).ibuf_size } {
         // SAFETY: `ibuf` is owned here and `sz > 0`.
@@ -403,4 +413,27 @@ unsafe extern "C" fn readbuffer_gets(b: *mut Bio, buf: *mut c_char, size: c_int)
     // SAFETY: `out` is inside the caller's buffer.
     unsafe { *out = 0 };
     num
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resize_refuses_an_offset_that_would_overflow() {
+        let mut c = BioBufferCtx {
+            ibuf_size: DEFAULT_BUFFER_SIZE,
+            obuf_size: 0,
+            ibuf: ptr::null_mut(),
+            ibuf_len: 0,
+            ibuf_off: c_int::MAX - 16,
+            obuf: ptr::null_mut(),
+            obuf_len: 0,
+            obuf_off: 0,
+        };
+        // SAFETY: `c` is a live local context; the overflowing size is refused
+        // before any allocation or write.
+        assert!(!unsafe { readbuffer_resize(&mut c, 64) });
+        assert_eq!(c.ibuf_size, DEFAULT_BUFFER_SIZE);
+    }
 }
