@@ -2906,6 +2906,9 @@ unsafe fn pkcs12kdf_derive(
         let mut i_buf: *mut u8 = ptr::null_mut();
         let mut i_buf_len: usize = 0;
         let mut ai: *mut u8 = ptr::null_mut();
+        let mut d_len: usize = 0;
+        let mut ai_len: usize = 0;
+        let mut b_len: usize = 0;
         let mut ret: c_int = 0;
         let mut n = n_in;
         let mut out = out;
@@ -2922,6 +2925,9 @@ unsafe fn pkcs12kdf_derive(
                 }
                 let u = ui as usize;
                 let v = vi as usize;
+                d_len = v;
+                ai_len = u;
+                b_len = v + 1;
                 d = CRYPTO_malloc(v, FILE_PKCS12KDF, LINE).cast();
                 ai = CRYPTO_malloc(u, FILE_PKCS12KDF, LINE).cast();
                 b = CRYPTO_malloc(v + 1, FILE_PKCS12KDF, LINE).cast();
@@ -2995,9 +3001,12 @@ unsafe fn pkcs12kdf_derive(
             }
         }
 
-        CRYPTO_free(ai.cast(), FILE_PKCS12KDF, LINE);
-        CRYPTO_free(b.cast(), FILE_PKCS12KDF, LINE);
-        CRYPTO_free(d.cast(), FILE_PKCS12KDF, LINE);
+        /* §17 divergence: `ai` is the derived key and `b` is its block copy; both are
+         * secret-derived. `d` is the id repeated, cleansed with them for uniformity. The
+         * authority plain-frees all three; release them over their allocation lengths. */
+        CRYPTO_clear_free(ai.cast(), ai_len, FILE_PKCS12KDF, LINE);
+        CRYPTO_clear_free(b.cast(), b_len, FILE_PKCS12KDF, LINE);
+        CRYPTO_clear_free(d.cast(), d_len, FILE_PKCS12KDF, LINE);
         /* §17 divergence: `i_buf` holds the password/salt concatenation (secret material). The
          * authority plain-frees it; clear it over the length it was allocated at. */
         CRYPTO_clear_free(i_buf.cast(), i_buf_len, FILE_PKCS12KDF, LINE);
@@ -9257,7 +9266,14 @@ unsafe extern "C" fn hmac_drbg_kdf_set_ctx_params(
             if OSSL_PARAM_get_octet_string(p.ent, &mut ptr_, 0, &mut size) == 0 {
                 return 0;
             }
-            CRYPTO_free((*hmac).entropy.cast(), FILE_HMACDRBG_KDF, LINE);
+            // The incumbent entropy is secret; cleanse it over its allocation length before
+            // replacing it. The authority plain-frees it (AGENTS.md section 5).
+            CRYPTO_clear_free(
+                (*hmac).entropy.cast(),
+                (*hmac).entropylen,
+                FILE_HMACDRBG_KDF,
+                LINE,
+            );
             (*hmac).entropy = ptr_.cast();
             (*hmac).entropylen = size;
             (*hmac).init = 0;
@@ -9268,7 +9284,14 @@ unsafe extern "C" fn hmac_drbg_kdf_set_ctx_params(
             if OSSL_PARAM_get_octet_string(p.nonce, &mut ptr_, 0, &mut size) == 0 {
                 return 0;
             }
-            CRYPTO_free((*hmac).nonce.cast(), FILE_HMACDRBG_KDF, LINE);
+            // The incumbent nonce is secret; cleanse it over its allocation length before
+            // replacing it. The authority plain-frees it (AGENTS.md section 5).
+            CRYPTO_clear_free(
+                (*hmac).nonce.cast(),
+                (*hmac).noncelen,
+                FILE_HMACDRBG_KDF,
+                LINE,
+            );
             (*hmac).nonce = ptr_.cast();
             (*hmac).noncelen = size;
             (*hmac).init = 0;
@@ -10483,10 +10506,28 @@ unsafe fn argon2_initialize(ctx: *mut KdfArgon2) -> c_int {
             return 0;
         }
 
-        let memory_blocks = (*ctx).memory_blocks as usize;
-        if memory_blocks.wrapping_mul(ARGON2_BLOCK_SIZE) / ARGON2_BLOCK_SIZE != memory_blocks {
+        let memory_blocks = (*ctx).memory_blocks;
+        // Deliberate §17 divergence. The authority's check at `argon2.c:732` is
+        // `memory_blocks * sizeof(BLOCK) / sizeof(BLOCK) != memory_blocks`; `sizeof` has type
+        // `size_t`, so on x86-64 the `uint32_t` operand is promoted and the predicate is always
+        // false. The authority therefore attempts the allocation. We refuse at the same 32-bit
+        // product boundary (`memory_blocks * 1024 > u32::MAX`) and raise the same reason as the
+        // allocation-failure path, which caps the working memory at 0x3FFFFF blocks. When the
+        // authority's allocation fails it raises the same `PROV_R_INVALID_MEMORY_SIZE` failure, so
+        // the observable difference is confined to hosts that can actually satisfy the request
+        // (under Linux overcommit even that is not guaranteed, since `calloc` may succeed lazily
+        // and fail later in `fill_memory_blocks`).
+        if memory_blocks
+            .checked_mul(ARGON2_BLOCK_SIZE as u32)
+            .is_none()
+        {
+            raise_site_data(
+                &err_sites::PROV_ARGON2_741,
+                c"cannot allocate required memory".as_ptr(),
+            );
             return 0;
         }
+        let memory_blocks = memory_blocks as usize;
 
         if (*ctx).type_ != ARGON2_D {
             (*ctx).memory =
@@ -11048,7 +11089,20 @@ unsafe extern "C" fn kdf_argon2_derive(
             }
         }
 
-        if (*ctx).m_cost < 8 * (*ctx).lanes {
+        // `m_cost`, `lanes` and the block size are all caller-supplied. The authority does this
+        // sizing in `uint32_t`; every step below is checked so a future bound regression cannot
+        // wrap or panic. The current domains (`lanes <= 0xFFFFFF`, `m_cost <= u32::MAX`, and a
+        // quotient-multiply that is at most `m_cost`) make every `None` branch unreachable.
+        let lanes_per_sync = match (*ctx).lanes.checked_mul(ARGON2_SYNC_POINTS) {
+            Some(v) => v,
+            None => return 0,
+        };
+        let min_blocks = match lanes_per_sync.checked_mul(2) {
+            Some(v) => v,
+            None => return 0,
+        };
+
+        if (*ctx).m_cost < min_blocks {
             raise_site_data(
                 &err_sites::PROV_ARGON2_1092,
                 c"m_cost must be greater or equal than 8 times the number of lanes".as_ptr(),
@@ -11057,19 +11111,26 @@ unsafe extern "C" fn kdf_argon2_derive(
         }
 
         let mut memory_blocks = (*ctx).m_cost;
-        if memory_blocks < 2 * ARGON2_SYNC_POINTS * (*ctx).lanes {
-            memory_blocks = 2 * ARGON2_SYNC_POINTS * (*ctx).lanes;
+        if memory_blocks < min_blocks {
+            memory_blocks = min_blocks;
         }
 
         /* Ensure that all segments have equal length */
-        let segment_length = memory_blocks / ((*ctx).lanes * ARGON2_SYNC_POINTS);
-        memory_blocks = segment_length * ((*ctx).lanes * ARGON2_SYNC_POINTS);
+        let segment_length = memory_blocks / lanes_per_sync;
+        memory_blocks = match segment_length.checked_mul(lanes_per_sync) {
+            Some(v) => v,
+            None => return 0,
+        };
+        let lane_length = match segment_length.checked_mul(ARGON2_SYNC_POINTS) {
+            Some(v) => v,
+            None => return 0,
+        };
 
         (*ctx).memory = ptr::null_mut();
         (*ctx).memory_blocks = memory_blocks;
         (*ctx).segment_length = segment_length;
         (*ctx).passes = (*ctx).t_cost;
-        (*ctx).lane_length = segment_length * ARGON2_SYNC_POINTS;
+        (*ctx).lane_length = lane_length;
 
         if argon2_initialize(ctx) != 1 {
             // The matrix may be NULL (allocation refused) or, defensively, live; release either.
@@ -11331,7 +11392,10 @@ unsafe fn kdf_argon2_ctx_set_secret(ctx: *mut KdfArgon2, p: *const OsslParam) ->
         }
 
         if buflen > ARGON2_MAX_SECRET as usize {
-            CRYPTO_free((*ctx).secret.cast(), FILE_ARGON2, LINE);
+            // The copy holds the caller's secret; cleanse the whole allocation before the
+            // refusal. The authority's plain `OPENSSL_free` leaves it in released memory
+            // (AGENTS.md section 5); the release events are unchanged.
+            CRYPTO_clear_free((*ctx).secret.cast(), buflen, FILE_ARGON2, LINE);
             (*ctx).secret = ptr::null_mut();
             (*ctx).secretlen = 0;
             return 0;
@@ -11381,7 +11445,10 @@ unsafe fn kdf_argon2_ctx_set_pwd(ctx: *mut KdfArgon2, p: *const OsslParam) -> c_
                 ARGON2_MAX_PWD_LENGTH,
             );
             raise_site_data(&err_sites::PROV_ARGON2_1280, msg.as_ptr());
-            CRYPTO_free((*ctx).pwd.cast(), FILE_ARGON2, LINE);
+            // The password copy is secret: cleanse the whole allocation before the refusal.
+            // The authority's plain `OPENSSL_free` leaves it in released memory (AGENTS.md
+            // section 5); the release events are unchanged.
+            CRYPTO_clear_free((*ctx).pwd.cast(), buflen, FILE_ARGON2, LINE);
             (*ctx).pwd = ptr::null_mut();
             (*ctx).pwdlen = 0;
             return 0;
@@ -13624,6 +13691,153 @@ mod tests {
                 argon2_release_memory(ctx);
                 assert!(!adv_alloc::double_free());
                 kdf_argon2_free(ctx.cast());
+            }
+        }
+
+        /// Boundary matrix for the §17 memory refusal, through the normal entry point
+        /// (`m_cost`/salt params -> `kdf_argon2_derive`), so the parameter decoder and the
+        /// `segment_length * lanes * SYNC_POINTS` normalization are exercised too.
+        ///
+        /// `0x3FFFFF` normalizes to `0x3FFFFC` blocks (4 GiB - 4 KiB) and must reach the
+        /// allocation (which this probe refuses, to keep the run cheap). `0x400000` and
+        /// `0x400001` normalize to `0x400000` blocks and must be refused *before* any allocation.
+        /// Every refusal raises `PROV_R_INVALID_MEMORY_SIZE` with the allocation-failure data.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn argon2_memory_boundary_refusal_matrix() {
+            use crate::params::OSSL_PARAM_construct_uint32;
+            use crate::runtime::err::{ERR_clear_error, ERR_peek_last_error_all};
+
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            // `(PROV_LIB << 23) | PROV_R_INVALID_MEMORY_SIZE`.
+            const EXPECTED: u64 = (57 << 23) | 235;
+            let mut salt = [0x11u8; 8];
+            let mut out = [0u8; 64];
+
+            // SAFETY: this probe owns the context and every buffer it passes; params live for the
+            // duration of each derive call.
+            unsafe {
+                let ctx = kdf_argon2d_new(ptr::null_mut()).cast::<KdfArgon2>();
+                assert!(!ctx.is_null());
+
+                for &(m_cost, must_reach_allocation) in &[
+                    (0x003F_FFFFu32, true),
+                    (0x0040_0000u32, false),
+                    (0x0040_0001u32, false),
+                ] {
+                    let mut m = m_cost;
+                    let params = [
+                        OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST, &mut m),
+                        OSSL_PARAM_construct_octet_string(
+                            OSSL_KDF_PARAM_SALT,
+                            salt.as_mut_ptr().cast(),
+                            salt.len(),
+                        ),
+                        OSSL_PARAM_construct_end(),
+                    ];
+                    // lanes defaults to 1, so the normalization rounds down to a multiple of 4.
+                    let blocks = (m_cost / 4) * 4;
+                    let bytes = blocks as usize * ARGON2_BLOCK_SIZE;
+
+                    adv_alloc::reset();
+                    ERR_clear_error();
+                    // If the refusal is bypassed, this is the request the allocator sees. Refusing
+                    // it keeps both the pre-fix diagnostic and the accepted-boundary case cheap.
+                    adv_alloc::arm_any(bytes);
+                    let ret =
+                        kdf_argon2_derive(ctx.cast(), out.as_mut_ptr(), out.len(), params.as_ptr());
+                    adv_alloc::disarm_any();
+                    assert_eq!(ret, 0, "m_cost=0x{m_cost:x} must refuse");
+
+                    let mut file: *const c_char = ptr::null();
+                    let mut line: c_int = 0;
+                    let mut func: *const c_char = ptr::null();
+                    let mut data: *const c_char = ptr::null();
+                    let mut flags: c_int = 0;
+                    let e = ERR_peek_last_error_all(
+                        &mut file, &mut line, &mut func, &mut data, &mut flags,
+                    );
+                    assert_eq!(e as u64, EXPECTED, "m_cost=0x{m_cost:x} error");
+                    assert!(!data.is_null(), "m_cost=0x{m_cost:x} data");
+                    assert_eq!(
+                        core::ffi::CStr::from_ptr(data).to_bytes(),
+                        b"cannot allocate required memory",
+                        "m_cost=0x{m_cost:x} data"
+                    );
+
+                    let saw_refused = adv_alloc::events().iter().any(|ev| {
+                        matches!(ev, adv_alloc::Ev::Malloc { n, refused, .. } if *n == bytes && *refused)
+                    });
+                    if must_reach_allocation {
+                        assert!(saw_refused, "m_cost=0x{m_cost:x} must reach the allocation");
+                    } else {
+                        assert!(
+                            !saw_refused,
+                            "m_cost=0x{m_cost:x} must be refused before allocating"
+                        );
+                        assert!(
+                            !adv_alloc::events().iter().any(
+                                |ev| matches!(ev, adv_alloc::Ev::Malloc { n, .. } if *n >= bytes)
+                            ),
+                            "m_cost=0x{m_cost:x} reached the allocator"
+                        );
+                    }
+                }
+
+                adv_alloc::assert_no_double_free();
+                kdf_argon2_free(ctx.cast());
+            }
+        }
+
+        /// Replacing HMAC-DRBG's entropy cleanses the incumbent copy over its allocation length.
+        /// The authority plain-frees it; the pre-fix code left the first secret in released memory.
+        #[test]
+        #[ignore = "allocator-injection probe; run via scripts/adv-probe.sh"]
+        fn hmac_drbg_entropy_replacement_cleanses_the_incumbent() {
+            let _g = crate::test_support::lock_global_state();
+            adv_alloc::require_installed();
+            adv_alloc::assert_instrument_live();
+
+            let mut first = [0x5au8; 32];
+            let mut second = [0xa5u8; 32];
+            // SAFETY: this probe owns the context and both parameter arrays; each array is live
+            // for the call that reads it.
+            unsafe {
+                let ctx = hmac_drbg_kdf_new(ptr::null_mut()).cast::<KdfHmacDrbg>();
+                assert!(!ctx.is_null());
+
+                let p1 = [
+                    OSSL_PARAM_construct_octet_string(
+                        OSSL_KDF_PARAM_HMACDRBG_ENTROPY,
+                        first.as_mut_ptr().cast(),
+                        first.len(),
+                    ),
+                    OSSL_PARAM_construct_end(),
+                ];
+                assert_eq!(hmac_drbg_kdf_set_ctx_params(ctx.cast(), p1.as_ptr()), 1);
+                assert_eq!((*ctx).entropylen, first.len());
+
+                adv_alloc::reset();
+                adv_alloc::arm_cleansed_free(first.len());
+                let p2 = [
+                    OSSL_PARAM_construct_octet_string(
+                        OSSL_KDF_PARAM_HMACDRBG_ENTROPY,
+                        second.as_mut_ptr().cast(),
+                        second.len(),
+                    ),
+                    OSSL_PARAM_construct_end(),
+                ];
+                assert_eq!(hmac_drbg_kdf_set_ctx_params(ctx.cast(), p2.as_ptr()), 1);
+                assert!(
+                    adv_alloc::cleansed_free_ok(),
+                    "the incumbent entropy was released without being cleansed"
+                );
+                assert!(!adv_alloc::double_free());
+
+                hmac_drbg_kdf_free(ctx.cast());
             }
         }
 
