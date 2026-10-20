@@ -86,8 +86,8 @@ pub unsafe extern "C" fn BIO_dump_indent_cb(
                 n += 1;
             }
             let off = (i * dump_width) as u32;
-            let off_text = format_hex4(off);
-            for b in off_text {
+            let (off_text, off_len) = format_offset(off);
+            for &b in &off_text[..off_len] {
                 if space(n, 1) {
                     buf[n] = b;
                     n += 1;
@@ -315,15 +315,23 @@ pub unsafe extern "C" fn BIO_hex_string(
     })
 }
 
-/// Four lower-case hex digits, as `%04x` produces for a row offset.
-fn format_hex4(v: u32) -> [u8; 4] {
+/// A row offset as `%04x` produces it: lower-case hex, **at least** four digits
+/// and more when the value needs them. `%04x` is a minimum width, so a dump
+/// beyond 64 KiB prints a five-or-more-digit offset rather than wrapping to four.
+fn format_offset(v: u32) -> ([u8; 8], usize) {
     let digits = b"0123456789abcdef";
-    [
-        digits[((v >> 12) & 0xf) as usize],
-        digits[((v >> 8) & 0xf) as usize],
-        digits[((v >> 4) & 0xf) as usize],
-        digits[(v & 0xf) as usize],
-    ]
+    let mut len = 1usize;
+    let mut rest = v;
+    while rest >= 16 {
+        rest >>= 4;
+        len += 1;
+    }
+    let len = len.max(4);
+    let mut out = [0u8; 8];
+    for k in 0..len {
+        out[len - 1 - k] = digits[((v >> (4 * k)) & 0xf) as usize];
+    }
+    (out, len)
 }
 
 /// Two lower-case hex digits, as `%02x` produces for one byte.
@@ -334,3 +342,24 @@ fn format_hex2(v: u8) -> [u8; 2] {
 
 /// `NULL` need not be spelled for the C string literals above.
 const _: *const c_char = ptr::null();
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_row_offset_is_a_minimum_width_hex_field() {
+        // `%04x` is a *minimum* width: four digits are padded, but a larger
+        // offset keeps every digit instead of wrapping.
+        for (value, expected) in [
+            (0u32, &b"0000"[..]),
+            (0x10, &b"0010"[..]),
+            (0xffff, &b"ffff"[..]),
+            (0x1_0000, &b"10000"[..]),
+            (0x12345, &b"12345"[..]),
+        ] {
+            let (buf, len) = format_offset(value);
+            assert_eq!(&buf[..len], expected, "offset {value:#x}");
+        }
+    }
+}
