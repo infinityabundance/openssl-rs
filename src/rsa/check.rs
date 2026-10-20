@@ -336,6 +336,9 @@ pub(crate) unsafe fn ossl_rsa_check_private_exponent(
         BN_clear(p1);
         BN_clear(q1);
         BN_clear(lcm);
+        /* (p-1)(q-1) = n - p - q + 1, so its residue would recover `p + q`; the authority
+         * leaves this pool slot uncleansed, and cleansing it is a deliberate improvement. */
+        BN_clear(p1q1);
         BN_clear(gcd);
         BN_CTX_end(ctx);
     }
