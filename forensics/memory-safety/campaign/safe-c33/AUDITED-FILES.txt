@@ -682,3 +682,11 @@ src/sm3/legacy_sm3.rs
 src/sm4.rs
 src/ssl/d1_lib.rs
 src/ssl/d1_srtp.rs
+src/ssl/methods.rs
+src/ssl/quic/quic_impl.rs
+src/ssl/quic/quic_method.rs
+src/ssl/quic/quic_tls_api.rs
+src/ssl/rio/poll_immediate.rs
+src/ssl/s3_lib.rs
+src/ssl/ssl_asn1.rs
+src/ssl/ssl_cert_comp.rs

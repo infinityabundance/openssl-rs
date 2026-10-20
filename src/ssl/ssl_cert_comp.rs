@@ -12,9 +12,10 @@
 //! `BIO_f_*` probes are `NULL`. Every other function in the unit is gated on that predicate, so
 //! the whole unit reduces to its refusal arms in this build:
 //!
-//! * `SSL_CTX_set1_cert_comp_preference`/`SSL_set1_cert_comp_preference` accept the empty list
-//!   (`len == 0` or `algs == NULL`, clearing the preferences and returning 1) and refuse a
-//!   non-empty one (no algorithm is supported, `found == 0`, returning 0);
+//! * `SSL_CTX_set1_cert_comp_preference`/`SSL_set1_cert_comp_preference` return 0 for every input:
+//!   the exports' `OPENSSL_NO_COMP_ALG` arm is `return 0`, so even the empty list (`len == 0` or
+//!   `algs == NULL`) is refused. The helper's empty-list arm (`ssl_set_cert_comp_pref`, which would
+//!   return 1) is transcribed below but is not reached in this build;
 //! * `SSL_compress_certs`/`SSL_CTX_compress_certs` return 0;
 //! * `SSL_get1_compressed_cert`/`SSL_CTX_get1_compressed_cert` return 0;
 //! * `SSL_set1_compressed_cert` (a non-server connection, and the algorithm unsupported) and
