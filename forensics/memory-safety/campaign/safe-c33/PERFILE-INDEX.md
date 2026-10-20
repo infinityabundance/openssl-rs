@@ -5814,3 +5814,92 @@ again), `src/provider/dsa_kmgmt.rs`, `src/provider/ecdh_exch.rs`,
 `src/provider/encode_key2blob.rs`, `src/provider/encode_key2ms.rs`,
 `src/provider/endecoder_common.rs`; `src/provider/file_store_any2obj.rs` is the
 substitute ordinary entry if `method_store.rs` is deferred again.
+
+---
+
+## M67 — per-file contract sweep (DSA keymgmt, ECDH/ECX exchange, ECX DHKEM, key encoders and endecoder helpers)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M67.json`](atlas-refresh/mechanism-sweep-M67.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`1d5186002`. One documentation-accuracy repair in `src/provider/ecx_kem.rs` (a
+SAFETY comment claimed `ecx_key_check` tolerated a NULL key while its body
+dereferences it); behaviour, layout, symbols and allocator coordinates are
+unchanged. Authority sources were read from
+`forensics/authorities/src/openssl-3.5.9/` and, for the generated
+`ecdh_exch` unit, the `3.6.4` `.c.in`, for every unit compared. The eight
+records are file-level obligation checks, not `SAFETY_DISCHARGED` results.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/provider/file_store_any2obj.rs` | OB-3 `OwnedCtx`/`RawCtx` for `Any2objCtx`, the DER/MSBLOB/PVK decoders' `BUF_MEM` ownership and empty-handed paths, callback parameter lifetimes, `data_structure` bounds | no defect |
+| `src/provider/dsa_kmgmt.rs` | `DsaGenCtx` ownership (`seed`/`mdname`/`mdprops`), generation callback, `dsa_export` builder/parameter release, `ossl_dsa_*`/`DSA_free` object lifetime | no defect |
+| `src/provider/ecdh_exch.rs` | `ProvEcdhCtx` keys and `kdf_md` up-ref/free, UKM replacement (plain) vs final release (cleansed), `dupctx` failure paths, X9.63 staging and `derive_skey` output cleansing | no defect |
+| `src/provider/ecx_exch.rs` | local `OwnedCtx`/`RawCtx` context ownership, key/peerkey up-ref balance in `dupctx`, block-vs-member release split | no defect |
+| `src/provider/ecx_kem.rs` | `ProvEcxCtx` ownership, `ikm` replacement/final cleansing, `derivekey` temp seed, `dhkm`/`prk` cleansing, encapsulate/decapsulate output and error paths | no functional defect; one SAFETY-comment correction |
+| `src/provider/encode_key2blob.rs` | `i2o_ECPublicKey` block adoption, core-BIO bridge lifetime, six-slot tables and selection rule | no defect |
+| `src/provider/encode_key2ms.rs` | `Key2msCtx` via `OwnedCtx`/`CtxDestroy`, `pwdata` clear, `EVP_PKEY` lifetime, PVK/MSBLOB selection and passphrase callback | no defect |
+| `src/provider/endecoder_common.rs` | dispatch pilfers, `ossl_prov_import_key`/`free_key` failure path, `ossl_read_der` header-vs-data ownership split | no defect |
+
+**Defects.** No memory-safety, ownership, aliasing, ABI or secret-lifetime
+defect. The only source edit corrects the `ecx_key_check`/`ecxkem_init`
+contract to say what the code and the KEM dispatch already require (a live
+`ECX_KEY`), removing a misleading claim that NULL was tolerated.
+
+**Unsafe accounting.** Eliminated: 0. Relocated: 0. Introduced: 0. No
+`unsafe fn` signature, `#[repr(C)]` layout, exported symbol or allocator-seam
+coordinate changed. Hidden obligations: 0. Retained documented preconditions
+are the keyexch/KEM dispatch contracts (live non-NULL context and key), the
+authority-identical inert `ProvEcxCtx::propq` field (never assigned, always
+NULL), and the authority-faithful plain release of private-key copies in
+`dsa_export`'s `OSSL_PARAM` block and `ossl_read_der`'s DER block.
+
+**Secret-bearing storage.** `ecx_kem` cleanses `ikm`, `dhkm`, `prk` and the
+temporary random seed on every replacement, failure and teardown path;
+`ecdh_exch` cleanses the UKM final release, the secure X9.63 staging buffer and
+the `derive_skey` output, while replacing the old UKM with the authority's
+plain free; `dsa_kmgmt` cleanses the generation seed; `file_store_any2obj`
+releases every DER/MSBLOB/PVK `BUF_MEM` through `BUF_MEM_free`, whose data
+block is cleansed over the block capacity; `encode_key2ms` clears `pwdata` and
+lets `EVP_PKEY_free` cleanse the imported key's BIGNUMs. Private-key copies
+handed to callers (`dsa_export`, `ossl_read_der`) use the authority's plain
+releases and are recorded as such. `encode_key2blob` handles public points
+only. No constant-time claim is made.
+
+**Contracts reused.** OB-1 `OwnedBuf`; OB-3 `OwnedCtx`/`RawCtx`/`CtxDestroy`;
+OB-4 in-place member replacement; RC-1 reference-count pairs; B19 BIGNUM
+cleansing through the key destructors; the `BUF_MEM_free` cleansing-release
+contract; the B1/B2/B6–B20 callback contracts; the core-BIO bridge and C ABI
+buffer/key contracts; and the provider encoder NULL/0 allocator-coordinate
+convention established in M27. No new model was created.
+
+**Gates observed.** FAST: `cargo fmt --all -- --check` clean; focused
+`provider::file_store_any2obj` **2 / 0** (including the zero-state sweep) and
+`provider::encode_key2blob` **2 / 0**; the other six units have no name-filtered
+unit tests and are covered by the full suite. BATCH:
+`cargo clippy --all-targets -- -D warnings` clean; full library **1672 passed /
+0 failed / 27 ignored** (1699 total) with `--test-threads=1` in 243.24 s and
+with `--test-threads=4` in 86.54 s, in the court with `CARGO_BUILD_JOBS=4`. No
+unexplained removal and no newly ignored test.
+
+**NOT_RUN.** Miri/Tree Borrows/ASan (no ownership or aliasing claim changed);
+Loom; affected adversarial probes (none exists for these units); dudect/ctgrind
+(no constant-time claim); authority differential courts for derived secrets and
+PVK/MSBLOB bytes; FRF suite; dependency-graph regeneration; SEAL.
+
+**Residual.** (1) `src/evp/method_store.rs` remains the deferred registry
+boundary at the head of the queue. (2) `ProvEcxCtx::propq` is documented as an
+inert owned-typed field, not an allocation; the authority never assigns it.
+(3) The dispatch functions that dereference their context/key state the C
+ABI's non-NULL precondition at each declaration; no safe-Rust caller can reach
+them. (4) Private-key copies handed to callbacks are released plainly exactly
+as the authority releases them.
+
+**Queue.** `REMAINING-AUDIT.txt` 185 -> **177**; `AUDITED-FILES.txt` 578 ->
+**586**. **Next eight.** `src/evp/method_store.rs` (registry boundary — defer
+again), `src/provider/init.rs`, `src/provider/kem_util.rs`,
+`src/provider/keymgmt.rs`, `src/provider/legacyprov.rs`,
+`src/provider/mac_legacy_sig.rs`, `src/provider/ml_common_codecs.rs`,
+`src/provider/ml_dsa_sig.rs`.
