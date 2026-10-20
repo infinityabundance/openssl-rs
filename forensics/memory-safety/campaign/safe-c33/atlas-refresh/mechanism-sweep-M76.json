@@ -1,0 +1,91 @@
+{
+  "receipt": "mechanism-sweep-M76",
+  "branch": "integrate/safe-c33",
+  "source_head": "342f73ce6",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH; no memory-safety defect found; four documentation-only contract clarifications (three aliasing exclusions on the ERR_STATE entries, one DSO resolution residual); 57 focused module tests; full library suite serially and with four threads; clippy and fmt. C-ABI courts not rebuilt (comments only). Miri and Loom NOT_RUN.",
+  "scope": "Per-file contract audit of the legacy automatic configuration loader, the directory walk and path predicates, the cross-DSO runtime-state resolver, the ERR_STATE save/restore owner, the ex_data registry and callbacks, the secure environment lookup, the OB-1 shared byte-block owner and the RCU layer. All eight entries were the head of REMAINING-AUDIT.txt; none was deferred or skipped. owned_buf.rs (OB-1) and rcu.rs were audited without modification.",
+  "files": [
+    "src/runtime/conf/sap.rs",
+    "src/runtime/dir.rs",
+    "src/runtime/dso_shared.rs",
+    "src/runtime/err_state.rs",
+    "src/runtime/ex_data.rs",
+    "src/runtime/getenv.rs",
+    "src/runtime/owned_buf.rs",
+    "src/runtime/rcu.rs"
+  ],
+  "files_not_run": [],
+  "defects": [],
+  "deferred": [
+    "ASan: no repaired path and no new extent; no sanitizer build (BOUNDARY).",
+    "Miri: unavailable on the pinned 1.98.1 toolchain; the ERR_STATE transfer and RCU thread-local array are the best candidates (BOUNDARY).",
+    "Loom: rcu.rs audited but unmodified; no model-checking run for its ordering protocol (BOUNDARY).",
+    "Dependency-graph regeneration: no shared mechanism's contract or semantics edited; owned_buf.rs and rcu.rs unmodified.",
+    "Phase 2/4/6 compatibility courts: not rebuilt; the four edits are comments only and do not affect generated code.",
+    "FRF and SEAL; constant-time review (no secret-dependent flow claim)."
+  ],
+  "not_discharged": [
+    "All eight files are audited, not SAFETY_DISCHARGED.",
+    "The four edits make existing preconditions explicit; none is a safety repair and none changes a compatibility result.",
+    "owned_buf.rs is the OB-1 shared owner and was not modified: OB-1 evidence is preserved.",
+    "rcu.rs's ordering protocol was checked line by line against the 3.6.4 authority but no Loom/TSan evidence was produced."
+  ],
+  "retained_obligations": [
+    "err_state::OSSL_ERR_STATE_save/save_to_mark/restore require a caller-owned state and exclude the calling thread's own state: the authority's C tolerates that aliasing, but `&mut *es` alongside the thread state's `&mut` would be Rust UB.",
+    "err_state::OSSL_ERR_STATE_save transfers buffer ownership to the destination and zeroes the thread state; the caller must not release the thread's former buffers.",
+    "dir::OPENSSL_DIR_read returns the context's interior buffer, invalidated by the next call and by OPENSSL_DIR_end.",
+    "dir::OPENSSL_DIR_end leaves the caller's `*ctx` unchanged (authority behaviour); a second end or reuse is outside the contract, stated in # Safety.",
+    "conf/sap::OPENSSL_config is an unguarded extern \"C\" entry whose callees cannot panic (libc strdup/free; OPENSSL_init_crypto is guard_ffi-wrapped).",
+    "dso_shared's dlsym results must be functions of the declared prototypes; a first call racing a resolution may use this DSO's local implementation (functional residual only).",
+    "ex_data callbacks run with the registry lock released and must not retain `ad`/`obj`; callback priority is not modelled because only CRYPTO_get_ex_new_index (priority 0) is provided, and the authority's equal-priority order is unspecified.",
+    "ex_data::CRYPTO_set_ex_data grows the slot stack up to `idx`; a huge idx is O(idx) work, as in the authority.",
+    "getenv::ossl_safe_getenv returns library-owned storage: do not free it or hold it across an environment change.",
+    "owned_buf's adopt constructors require CRYPTO_* provenance, whole-block identity, `num <= extent`, alignment, initialization for reads, exclusive ownership and the exact release coordinates; the safe constructors fix num to the allocation length.",
+    "rcu's locks require the caller to hold the write lock for ossl_rcu_call, no read hold at ossl_rcu_lock_free, and a live lock for every entry point; a zeroed RcuCbItem is not a valid node until ossl_rcu_call writes its function pointer, and nothing reads that field before then."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "residuals": [
+    "dso_shared: a first call that loses the UNRESOLVED->RESOLVING race uses this DSO's local ERR/ssl_conf store instead of libcrypto's. Memory-safe; only the first-call window is affected, and the lookup runs once."
+  ],
+  "next_queue": {
+    "file": "src/runtime/rdtsc.rs",
+    "then": [
+      "src/runtime/sparse_array.rs",
+      "src/runtime/thread_arch.rs",
+      "src/runtime/threads_common.rs",
+      "src/runtime/time.rs",
+      "src/runtime/trace.rs",
+      "src/runtime/uid.rs",
+      "src/seed.rs"
+    ]
+  },
+  "documentation_corrections": [
+    "err_state::OSSL_ERR_STATE_save's # Safety now excludes the calling thread's own state and states the authority's aliasing tolerance.",
+    "err_state::OSSL_ERR_STATE_save_to_mark's # Safety states the same exclusion for the destination borrow.",
+    "err_state::OSSL_ERR_STATE_restore's # Safety states that `es` must not be the thread's own state (the `&*es`/`&mut` alias).",
+    "dso_shared's LazySymbol comment now states the exact consequence of the re-entrancy fallback instead of justifying it only for a static link."
+  ],
+  "shared_boundary_files": [
+    "src/runtime/owned_buf.rs: audited, not modified; the OB-1 ownership/release model and its evidence remain bound to the existing source.",
+    "src/runtime/rcu.rs: audited, not modified; its source identity and retained obligations are unchanged."
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [],
+  "unsafe_operations_removed": [],
+  "secret_bearing_buffers": [
+    "dir/sap/dso_shared/getenv store metadata and caller paths; no secret handling claim.",
+    "err_state stores provider data and debug strings; the MALLOCED slot contract is unchanged and restore duplicates rather than shares the data.",
+    "owned_buf's cleansing arms (Cleansed, Conditional, SecureCleansed) are unchanged; no secret-bearing call site was touched.",
+    "rcu stores callbacks and context pointers only; no secret data."
+  ],
+  "boundary_control": {
+    "negative_control_added": false,
+    "name": "",
+    "reason": "No defect was repaired, so no new canary was required. The existing focused controls for these modules ran green (57 tests), including owned_buf's release-model mutants and the RCU unbalanced-unlock/eleventh-lock controls; the two edits change only doc comments and cannot be exercised by a behavioural control."
+  }
+}
