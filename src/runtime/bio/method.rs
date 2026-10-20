@@ -23,7 +23,7 @@
 //! Reproducing that asymmetry matters because a caller can (and the RT-BIO probe
 //! does) set one form and read both.
 
-use core::ffi::{c_char, c_int, c_long, c_void};
+use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
@@ -94,7 +94,7 @@ pub(crate) unsafe extern "C" fn bwrite_conv(
     datal: usize,
     written: *mut usize,
 ) -> c_int {
-    let datal = if datal as c_long > c_int::MAX as c_long {
+    let datal = if datal > c_int::MAX as usize {
         c_int::MAX as usize
     } else {
         datal
@@ -134,7 +134,7 @@ pub(crate) unsafe extern "C" fn bread_conv(
     datal: usize,
     readbytes: *mut usize,
 ) -> c_int {
-    let datal = if datal as c_long > c_int::MAX as c_long {
+    let datal = if datal > c_int::MAX as usize {
         c_int::MAX as usize
     } else {
         datal
@@ -615,3 +615,68 @@ pub unsafe extern "C" fn BIO_meth_get_recvmmsg(biom: *const BioMethod) -> Option
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(BioMethod => zero_state_sweep_bio_method);
+
+#[cfg(test)]
+mod tests {
+    use core::sync::atomic::{AtomicI32, Ordering};
+
+    use super::*;
+    use crate::runtime::bio::Bio;
+
+    static SEEN_WRITE: AtomicI32 = AtomicI32::new(-1);
+    static SEEN_READ: AtomicI32 = AtomicI32::new(-1);
+
+    unsafe extern "C" fn record_write(_b: *mut Bio, _data: *const c_char, len: c_int) -> c_int {
+        SEEN_WRITE.store(len, Ordering::SeqCst);
+        len
+    }
+
+    unsafe extern "C" fn record_read(_b: *mut Bio, _data: *mut c_char, len: c_int) -> c_int {
+        SEEN_READ.store(len, Ordering::SeqCst);
+        len
+    }
+
+    fn method_with(write: Option<BioWriteFn>, read: Option<BioReadFn>) -> BioMethod {
+        BioMethod {
+            type_: 0,
+            name: core::ptr::null(),
+            bwrite: None,
+            bwrite_old: write,
+            bread: None,
+            bread_old: read,
+            bputs: None,
+            bgets: None,
+            ctrl: None,
+            create: None,
+            destroy: None,
+            callback_ctrl: None,
+            sendmmsg: None,
+            recvmmsg: None,
+        }
+    }
+
+    #[test]
+    fn legacy_adapters_clamp_size_max_to_int_max() {
+        let method = method_with(Some(record_write), Some(record_read));
+        // SAFETY: every field of `Bio` admits the all-zero value (raw pointers,
+        // integers and an `AtomicI32`); the method pointer is then set.
+        let mut bio: Bio = unsafe { core::mem::zeroed() };
+        bio.method = &method;
+
+        let mut written = 0usize;
+        // SAFETY: `bio` points at the table above and the shim reads only its
+        // method; the sink never dereferences `data`.
+        let ret = unsafe { bwrite_conv(&mut bio, b"x".as_ptr().cast(), usize::MAX, &mut written) };
+        assert_eq!(ret, 1);
+        assert_eq!(SEEN_WRITE.load(Ordering::SeqCst), c_int::MAX);
+        assert_eq!(written, c_int::MAX as usize);
+
+        let mut readbytes = 0usize;
+        let mut byte = 0 as c_char;
+        // SAFETY: as above; the read sink records the length without writing.
+        let ret = unsafe { bread_conv(&mut bio, &mut byte, usize::MAX, &mut readbytes) };
+        assert_eq!(ret, 1);
+        assert_eq!(SEEN_READ.load(Ordering::SeqCst), c_int::MAX);
+        assert_eq!(readbytes, c_int::MAX as usize);
+    }
+}
