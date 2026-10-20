@@ -46,6 +46,8 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
+use crate::ffi::guard_ffi;
+
 use super::Bio;
 
 // ---------------------------------------------------------------------------
@@ -1044,29 +1046,35 @@ pub unsafe extern "C" fn openssl_rs_dopr_snprintf(
     format: *const c_char,
     ap: *mut c_void,
 ) -> c_int {
-    if format.is_null() {
-        // The authority dereferences the format and faults; total by policy
-        // (docs/SECURITY_DIVERGENCE_POLICY.md).
-        return -1;
-    }
-    if buf.is_null() && n != 0 {
-        // Likewise: the authority's `doapr_outch` only asserts.
-        return -1;
-    }
-    let mut args = VaArgs(ap);
-    // SAFETY: `buf`/`n` and `format` follow the caller's contract.
-    let (ok, truncated, retlen) = unsafe { dopr(buf, n, None, format, &mut args) };
-    if !ok {
-        return -1;
-    }
-    if truncated {
-        return -1;
-    }
-    if retlen <= c_int::MAX as usize {
-        retlen as c_int
-    } else {
-        -1
-    }
+    // The engine does width/precision arithmetic on caller-supplied values under
+    // `overflow-checks = true`; a panic here would unwind (or abort) across the C
+    // caller, so the documented failure value is returned instead. Bytes already
+    // written to `buf` stay written, which is the authority's own failure shape.
+    guard_ffi(-1, || {
+        if format.is_null() {
+            // The authority dereferences the format and faults; total by policy
+            // (docs/SECURITY_DIVERGENCE_POLICY.md).
+            return -1;
+        }
+        if buf.is_null() && n != 0 {
+            // Likewise: the authority's `doapr_outch` only asserts.
+            return -1;
+        }
+        let mut args = VaArgs(ap);
+        // SAFETY: `buf`/`n` and `format` follow the caller's contract.
+        let (ok, truncated, retlen) = unsafe { dopr(buf, n, None, format, &mut args) };
+        if !ok {
+            return -1;
+        }
+        if truncated {
+            return -1;
+        }
+        if retlen <= c_int::MAX as usize {
+            retlen as c_int
+        } else {
+            -1
+        }
+    })
 }
 
 /// The engine half of `BIO_vprintf`.
@@ -1084,20 +1092,25 @@ pub unsafe extern "C" fn openssl_rs_dopr_vprintf(
     format: *const c_char,
     ap: *mut c_void,
 ) -> c_int {
-    if format.is_null() {
-        // As above: the authority faults, this is total by policy.
-        return -1;
-    }
-    let mut args = VaArgs(ap);
-    let mut out: Vec<u8> = Vec::new();
-    // SAFETY: `format` is NUL-terminated; `out` grows as needed.
-    let (ok, _truncated, retlen) =
-        unsafe { dopr(ptr::null_mut(), 0, Some(&mut out), format, &mut args) };
-    if !ok {
-        return -1;
-    }
-    // SAFETY: `out` holds at least the terminator, and `bio` is live.
-    unsafe { super::BIO_write(bio, out.as_ptr().cast(), retlen as c_int) }
+    // As for the fixed-buffer entry: the engine's arithmetic runs with overflow
+    // checks, so a panic is turned into the documented failure value here rather
+    // than being allowed to cross the C frame.
+    guard_ffi(-1, || {
+        if format.is_null() {
+            // As above: the authority faults, this is total by policy.
+            return -1;
+        }
+        let mut args = VaArgs(ap);
+        let mut out: Vec<u8> = Vec::new();
+        // SAFETY: `format` is NUL-terminated; `out` grows as needed.
+        let (ok, _truncated, retlen) =
+            unsafe { dopr(ptr::null_mut(), 0, Some(&mut out), format, &mut args) };
+        if !ok {
+            return -1;
+        }
+        // SAFETY: `out` holds at least the terminator, and `bio` is live.
+        unsafe { super::BIO_write(bio, out.as_ptr().cast(), retlen as c_int) }
+    })
 }
 
 // ---------------------------------------------------------------------------

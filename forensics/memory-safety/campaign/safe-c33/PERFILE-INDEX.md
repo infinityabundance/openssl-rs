@@ -6784,3 +6784,97 @@ ordinary position.** `src/runtime/bio/print_engine.rs`. **Next eight.**
 `src/runtime/bio/retry.rs`, `src/runtime/bio/sys.rs`,
 `src/runtime/buffer.rs`, `src/runtime/conf/init_settings.rs`,
 `src/runtime/confmod/asn1.rs`, `src/runtime/conf/modparse.rs`.
+
+## M75 (mechanism) — per-file contract sweep (printf engine, retry classifiers, OS surface, buffer owner, init settings, OID module and CONF list parser)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M75.json`](atlas-refresh/mechanism-sweep-M75.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`5c3c6b677` (M74 merge). Five findings were repaired: an out-of-bounds backward
+read in the OID module's long-name trim, out-of-bounds pointer formation in
+`CMSG_NXTHDR`, a past-the-terminator read for a NUL `CONF_parse_list`
+separator, a missing panic boundary on the printf engine's two C entry points,
+and zero-length pointer arithmetic in `BUF_reverse`. No layout, exported
+symbol, signature or allocator coordinate changed. `buffer.rs`'s `OwnedData`
+cleansing owner was not modified, so OB-1/OB-4 evidence remains bound to its
+existing source.
+
+**Files audited (8).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/runtime/bio/print_engine.rs` | `Args`/`VaArgs` va_list pulls, `Dopr` fixed/growing sink and `pos`, `fmtint`/`fmtstr`/`fmtfp`, the parse state machine, truncation arithmetic, both `#[no_mangle]` entries | 1 medium-severity boundary repair (M75-D4) |
+| `src/runtime/bio/print.rs` | C-variadic declarations, `BIO_indent` clamp and per-byte `BIO_puts` contract | no defect |
+| `src/runtime/bio/retry.rs` | the two non-fatal sets and `BIO_fd_should_retry`'s 0/-1 gate | no defect |
+| `src/runtime/bio/sys.rs` | libc declarations, errno, socket/address layouts, `CMSG_*` helpers, alignment of `SockAddrStorage` | 1 medium-severity UB repair (M75-D2) |
+| `src/runtime/buffer.rs` | `BufMem` ABI layout, `OwnedData` adopt/drop, grow/grow_clean growth and cleansing, checksum arithmetic, `BUF_reverse`, header-copy helpers | 1 low-severity UB repair (M75-D5) |
+| `src/runtime/conf/init_settings.rs` | stack settings, `DEFAULT_CONF_MFLAGS`, libc allocator pairing, both setters' copy-then-free order, `OPENSSL_INIT_free` | no defect |
+| `src/runtime/confmod/asn1.rs` | `do_create`'s three shapes, `LntmpBuf` release, `OBJ_create` argument order, `oid_module_init`/finish and registration | 1 high-severity OOB repair (M75-D1) |
+| `src/runtime/conf/modparse.rs` | `CONF_parse_list` element delivery and callback stop, `CONF_get1_default_config_file`'s environment branch | 1 medium-severity OOB repair (M75-D3) |
+
+**Defects.**
+
+| ID | Location (pre-fix) | Severity | Class | Repair |
+|---|---|---|---|---|
+| M75-D1 | `src/runtime/confmod/asn1.rs:184-210` | high | out-of-bounds backward read in the long-name trim | The authority's floor `p == ln` is unreachable when the long-name half is entirely whitespace, because `ln` then lands on the comma; `p.sub(1)` leaves the allocation and `*p` reads before `value`. Reachable from a quoted `oid_section` value. A `ln == last_comma` guard now refuses the shape, which is the authority's observed result whenever the byte before the value is not whitespace. |
+| M75-D2 | `src/runtime/bio/sys.rs:524-551` | medium | out-of-bounds pointer formation in `CMSG_NXTHDR` | The bounds test formed `next + sizeof(cmsghdr)`, which is 16 bytes past the allocation whenever the final record ends exactly at `end` — every completed walk. `CMSG_ALIGN(prev_len)` also used unchecked addition, panicking under overflow checks on a corrupted length. The walk now compares offsets (`prev.offset_from(ctl)`), uses checked alignment, and forms `next` only after proving the record and header fit. |
+| M75-D3 | `src/runtime/conf/modparse.rs:136-140` | medium | past-the-terminator read for a NUL separator | `strchr(s, 0)` returns the terminator; the authority's loop treats it as a separator, sets `lstart = p + 1`, and reads past the NUL next iteration (its own UB). A terminator match is now normalised to "no separator", so one element is delivered and the walk stops; `sep != 0` is unchanged. |
+| M75-D4 | `src/runtime/bio/print_engine.rs:1041-1103` | medium | missing panic boundary on the C-ABI printf entries | The two `extern "C"` entries were the only ones in the family without `guard_ffi`. Width arithmetic panics under `overflow-checks = true` for a conforming `BIO_snprintf(b, n, "%*d", INT_MIN, 1)`, and a precision near `INT_MAX` overflows the padding sum; the panic aborts at the C frame. Both entries are wrapped in `guard_ffi(-1, ...)`, turning such a panic into the documented failure value. |
+| M75-D5 | `src/runtime/buffer.rs:325-361` | low | zero-length pointer arithmetic in `BUF_reverse` | `out.add(size.wrapping_sub(1))` with `size == 0` is an out-of-bounds pointer in Rust even though the loop never runs, and the documented contract permits a zero-length call. An early return now makes it a true no-op. In-crate callers guard their lengths, so no call site changes. |
+
+All five preserve conforming behaviour; D1/D3/D5 remove authority UB rather than
+changing a conforming observable, and D2/D4 remove UB/abort without changing any
+non-panicking result.
+
+**Unsafe accounting.** Eliminated: the out-of-allocation `p.sub(1)` read (D1),
+the final-record `next + 16` and the unchecked alignment (D2), the
+past-the-terminator read (D3), the aborting panic path (D4), and the
+`usize::MAX` offset (D5). Relocated: none. New production unsafe operation:
+one `prev.offset_from(ctl)` (D2, established by the existing control-buffer
+contract) and one `*p` terminator read after `strchr` (D3, inside the same
+allocation). Removed: three pointer formations. Hidden: **0**. Contracts
+reused: RC-1 `guard_ffi`/`raise_site`, OB-2 `OwnedStr` (`modparse`),
+OB-1-style local cleansing owner `OwnedData` (unchanged), the `CRYPTO_*`
+allocator seam and `CRYPTO_malloc`/`CRYPTO_free` (asn1), the authority's own
+libc `malloc`/`strdup`/`free` pairing (init settings), and the B1/B2/B6-B22 BIO
+callback/read/write contracts.
+
+**Gates observed (final worktree).** FAST `cargo fmt --all -- --check` clean and
+`cargo clippy --all-targets -- -D warnings` clean. Focused
+`cargo test --lib -- --test-threads=4`: `nxthdr_rejects_a_length_beyond_the_buffer`
+**1 passed**, `all_whitespace_long_name_is_refused` **1 passed**,
+`a_nul_separator_matches_no_separator` **1 passed**, `reverse_` **3 passed**,
+`cmsg` **2 passed**, `parse_list` **2 passed**, `runtime::conf::modparse`
+**6 passed**, `print_engine` **7 passed**, `init_settings` **2 passed**,
+`oid` **14 passed**, `bss_mem` **2 passed**, `cipher_tdes_wrap` **2 passed**,
+`bio::core_bio` **7 passed**. BATCH full library **1692 passed / 0 failed /
+27 ignored** serially (219.91 s) and with `--test-threads=4` (102.56 s).
+Compatibility: `build_phase2.sh` rebuilt the distribution shell from this
+worktree and its **11** ABI courts passed (`all_pass=True`); the Phase 4 courts
+**18/18** passed, including `RT-BIO-PRINT` (213 observations), `RT-CONF` (736),
+`RT-BIO-DGRAM` (294) and `RT-BIO` (212); the Phase 6 courts **10/10** passed,
+including `RT-CONF-MOD` (247), which loads a real `oid_section`.
+
+**Evidence reused / invalidated.** `buffer.rs`'s `OwnedData` owner and `BufMem`
+layout are unchanged, so OB-1/OB-4 evidence and every dependent receipt stay
+bound to their existing source; only `BUF_reverse` and a new test module changed.
+No shared contract (`guard_ffi`, `OwnedStr`, `OwnedBlock`, `OwnedCtx`,
+`CtxDestroy`, the member-buffer slots) was edited, so no dependency closure is
+invalidated. The distribution shell was rebuilt so the compatibility courts
+measure the exact converted candidate, not the stale phase2 artifacts.
+
+**NOT_RUN.** ASan (the repairs are offset/length logic; no new extent); Miri
+(unavailable on the pinned 1.98.1 stable toolchain — "the miri component is not
+available"); Loom (no concurrency/refcount change); dependency-graph
+regeneration; FRF and SEAL; constant-time (no secret-dependent flow claim).
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. M75-D1 is a reachable memory-safety defect and was repaired
+before the BATCH run; the BATCH evidence is the local gate and the rebuilt
+courts, not a promotion.
+
+**Queue.** `REMAINING-AUDIT.txt` **111**, `AUDITED-FILES.txt` **652**. **Next
+ordinary position.** `src/runtime/conf/sap.rs`. **Next eight.**
+`src/runtime/conf/sap.rs`, `src/runtime/dir.rs`, `src/runtime/dso_shared.rs`,
+`src/runtime/err_state.rs`, `src/runtime/ex_data.rs`, `src/runtime/getenv.rs`,
+`src/runtime/owned_buf.rs`, `src/runtime/rcu.rs`.

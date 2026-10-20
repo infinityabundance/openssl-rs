@@ -1,0 +1,145 @@
+{
+  "receipt": "mechanism-sweep-M75",
+  "branch": "integrate/safe-c33",
+  "source_head": "5c3c6b677",
+  "worktree": true,
+  "date": "2026-10-20",
+  "verification_level": "FAST plus BATCH; five repairs (one out-of-bounds read in the OID module, one out-of-bounds pointer formation in the control-message walk, one past-the-terminator read for a NUL list separator, one missing panic boundary on the printf engine's C entry points, and one zero-length pointer-arithmetic case), five focused tests plus two buffer tests, the full library suite serially and with four threads, clippy and fmt, and the Phase 2, Phase 4 and Phase 6 courts against a distribution shell rebuilt from this exact source. Miri/ASan and Loom are NOT_RUN.",
+  "scope": "Per-file contract audit of the BIO printf engine and its non-variadic surface, the descriptor retry classifiers, the libc/BIO operating-system surface (including the CMSG walk), the BUF_MEM buffer owner, OPENSSL_INIT_SETTINGS, the oid_section module and CONF_parse_list. All eight entries were the head of REMAINING-AUDIT.txt; none was deferred. buffer.rs is a shared buffer owner: only BUF_reverse and a test module were touched, so the OwnedData ownership mechanism and OB-1/OB-4 evidence are unchanged.",
+  "files": [
+    "src/runtime/bio/print_engine.rs",
+    "src/runtime/bio/print.rs",
+    "src/runtime/bio/retry.rs",
+    "src/runtime/bio/sys.rs",
+    "src/runtime/buffer.rs",
+    "src/runtime/conf/init_settings.rs",
+    "src/runtime/confmod/asn1.rs",
+    "src/runtime/conf/modparse.rs"
+  ],
+  "files_not_run": [],
+  "defects": [
+    {
+      "id": "M75-D1",
+      "file": "src/runtime/confmod/asn1.rs",
+      "lines_pre_fix": "184-210",
+      "line_post_fix": 195,
+      "severity": "high",
+      "class": "out-of-bounds backward read in the OID module's long-name trim",
+      "description": "do_create's `long name, oid` shape walks the long-name half backwards over whitespace with the authority's floor `p == ln`. When the whole half is whitespace, `ln` (the first non-whitespace byte) is the comma itself, so the floor is unreachable and `p.sub(1)` steps before `value`; the loop then reads `*p` outside the allocation. The C authority has the same defect, but \u00a717 forbids reproducing it. A quoted oid_section value can carry the leading whitespace the CONF reader otherwise strips. The guard now refuses the all-whitespace half, which is the authority's observed result whenever the byte before the value is not whitespace.",
+      "divergence": "For a value whose long-name half is entirely whitespace the candidate returns 0 (module initialiser raises ASN_MOID_38); the authority reads before its buffer and in practice also fails. Every well-formed shape is unchanged."
+    },
+    {
+      "id": "M75-D2",
+      "file": "src/runtime/bio/sys.rs",
+      "lines_pre_fix": "524-551",
+      "line_post_fix": 540,
+      "severity": "medium",
+      "class": "out-of-bounds pointer formation in CMSG_NXTHDR",
+      "description": "The walk formed `next = prev + CMSG_ALIGN(prev_len)` and then tested `next + sizeof(cmsghdr) > end`. On the ordinary final record `next == end`, so the test itself created a pointer 16 bytes past the allocation \u2014 undefined behaviour in Rust on every completed control-message walk, although it was never dereferenced. CMSG_ALIGN(prev_len) also used unchecked `+ 7`, so a corrupted cmsg_len panicked under the crate's overflow checks. The walk now compares offsets computed from `prev.offset_from(ctl)`, uses a checked alignment round-up, and forms `next` only after proving the record and its header fit inside `[ctl, ctl + len)`.",
+      "divergence": "No change for any well-formed record set; the record count and returned pointers are identical. A cmsg_len that cannot fit ends the walk instead of panicking."
+    },
+    {
+      "id": "M75-D3",
+      "file": "src/runtime/conf/modparse.rs",
+      "lines_pre_fix": "136-140",
+      "line_post_fix": 137,
+      "severity": "medium",
+      "class": "past-the-terminator read when the list separator is NUL",
+      "description": "`strchr(s, 0)` returns the terminator rather than NULL. With sep == 0 the walk treated that as a separator, delivered the whole string as one element, set `lstart = p + 1`, and dereferenced one byte past the NUL on the next iteration. The authority has the same loop and the same UB. A terminator match is now normalised to \"no separator\" (a NUL cannot delimit a C string), so the walk stops after delivering the single element; for every non-zero sep the normalisation is unreachable.",
+      "divergence": "sep == 0 now delivers one element (or one empty element for an empty list) and returns 1 without reading past the string; sep != 0 is bit-identical."
+    },
+    {
+      "id": "M75-D4",
+      "file": "src/runtime/bio/print_engine.rs",
+      "lines_pre_fix": "1041-1103",
+      "line_post_fix": 1053,
+      "severity": "medium",
+      "class": "missing panic boundary on the C-ABI printf entry points",
+      "description": "openssl_rs_dopr_snprintf and openssl_rs_dopr_vprintf are `extern \"C\"` entry points called from bio_variadic.c and were the only ones in this family without guard_ffi. The engine performs width/precision arithmetic under `overflow-checks = true`, and a conforming call such as BIO_snprintf(b, n, \"%*d\", INT_MIN, 1) overflows `-min`, panicking in release and aborting when the panic cannot cross the C frame; a precision near INT_MAX also overflows the padding sum. Both entry points are now wrapped in guard_ffi(-1, ...), so such a panic becomes the documented failure value.",
+      "divergence": "Only panic paths change (abort -> -1). Every non-panicking format is unchanged; bytes written before a failure remain written, as in the authority's own failure shape."
+    },
+    {
+      "id": "M75-D5",
+      "file": "src/runtime/buffer.rs",
+      "lines_pre_fix": "325-361",
+      "line_post_fix": 327,
+      "severity": "low",
+      "class": "zero-length pointer arithmetic in BUF_reverse",
+      "description": "With size == 0 the implementation formed `out.add(size.wrapping_sub(1))`, an offset of usize::MAX and therefore an out-of-bounds pointer in Rust, even though the loop body never ran. The documented contract (out points to size writable bytes) is satisfied by a zero-length call, so this was reachable by a conforming C caller. A size == 0 early return now preserves the no-op behaviour without any pointer arithmetic. In-crate callers guard their lengths, so no call site changes.",
+      "divergence": "None: the authority writes nothing for size 0 as well."
+    }
+  ],
+  "deferred": [
+    "ASan: the repaired paths are offset/length logic in this crate; the cmsg and OID changes remove out-of-bounds reads/pointers but no sanitizer build was run (BOUNDARY).",
+    "Miri: unavailable on the pinned 1.98.1 stable toolchain ('the miri component is not available'); the asn1 and cmsg bounds changes are the strongest Miri candidates and are recorded as NOT_RUN (BOUNDARY).",
+    "Loom: no concurrency or refcount change.",
+    "Dependency-graph regeneration: no shared mechanism's contract was edited; buffer.rs ownership was not touched.",
+    "FRF and SEAL; constant-time review (no secret-dependent control-flow claim)."
+  ],
+  "not_discharged": [
+    "All eight files are audited, not SAFETY_DISCHARGED.",
+    "The OID module's refusal of an all-whitespace long-name half is a deliberate safety divergence from the authority's out-of-bounds read, not a new compatibility result.",
+    "cmsg_nxthdr's third condition (the next record's own cmsg_len must be at least a header) is retained as a safety improvement over glibc's __cmsg_nxthdr, which returns a short record; it only changes malformed-buffer walks.",
+    "CONF_parse_list's NULL-list and NULL-callback answers remain the recorded total-by-policy divergences from the authority's fault.",
+    "BUF_MEM_free releases the BUF_MEM struct with CRYPTO_clear_free of its size where the authority uses CRYPTO_free; retained as a cleansing improvement, with the data block's cleansing release unchanged.",
+    "CONF_get1_default_config_file's no-OPENSSL_CONF branch returns the empty string rather than the authority's forensic OPENSSLDIR (OBL-CONF-DEFAULT-CONFIG-FILE, Phase 16)."
+  ],
+  "retained_obligations": [
+    "print_engine::dopr requires format NUL-terminated and, with a fixed sink, fixed writable for maxlen; `%s`/`%n` argument types are the caller's varargs contract. The entry points now also require a live BIO (vprintf).",
+    "fmtstr's `%s` scan is bounded by the precision when one is given, so a caller satisfying C's printf contract (NUL-terminated for an unbounded %s, or at least `precision` bytes) is safe.",
+    "cmsg_firsthdr/cmsg_nxthdr require a live Msghdr whose msg_control is readable for msg_controllen bytes, and prev must be a record from the same buffer.",
+    "cmsg_hdr/cmsg_set_hdr/cmsg_data operate on byte pointers with unaligned access; the caller must establish the record lies inside the control buffer.",
+    "CONF_parse_list requires a NUL-terminated list (or NULL) and a callback accepting (NULL-or-string, len); sep must be a separator byte, and sep == 0 is now total.",
+    "BUF_MEM_grow/grow_clean require NULL or a live BUF_MEM whose data block has capacity max; BUF_reverse requires out writable for size bytes and a non-overlapping input.",
+    "do_create requires NUL-terminated value and name (name non-NULL); OBJ_create copies its arguments before the lntmp owner is released.",
+    "OPENSSL_INIT_set_config_* require a live settings object from OPENSSL_INIT_new; the libc malloc/strdup/free pair is the authority's own seam and must stay paired."
+  ],
+  "new_unsafe_assumptions": [],
+  "hidden_obligations": [],
+  "residuals": [],
+  "next_queue": {
+    "file": "src/runtime/conf/sap.rs",
+    "then": [
+      "src/runtime/dir.rs",
+      "src/runtime/dso_shared.rs",
+      "src/runtime/err_state.rs",
+      "src/runtime/ex_data.rs",
+      "src/runtime/getenv.rs",
+      "src/runtime/owned_buf.rs",
+      "src/runtime/rcu.rs"
+    ]
+  },
+  "documentation_corrections": [
+    "BUF_reverse's doc now states that size == 0 returns before any pointer arithmetic instead of claiming out - 1 is well defined.",
+    "cmsg_nxthdr's doc now names the offset-based bounds test and the retained third condition honestly.",
+    "The OID module's backward-walk comment records that the authority's floor is unreachable for an all-whitespace long-name half.",
+    "CONF_parse_list's separator comment records that a NUL separator matches the terminator in strchr, which the authority mishandles."
+  ],
+  "shared_boundary_files": [
+    "src/runtime/buffer.rs: BUF_reverse and a test module only; the OwnedData cleansing owner (OB-1/OwnedBlock-style) and the BUF_MEM public layout were not modified, so OB-1/OB-4 evidence remains bound to its existing source."
+  ],
+  "abi_or_layout_changes": [],
+  "allocator_coordinate_changes": [],
+  "excluded_symbol_changes": [],
+  "unsafe_operations_introduced": [
+    "src/runtime/bio/sys.rs:540: prev.offset_from(ctl), after the contract establishes both derive from one control buffer.",
+    "src/runtime/conf/modparse.rs:143: one `*p` terminator read after strchr, inside the existing allocation."
+  ],
+  "unsafe_operations_removed": [
+    "src/runtime/buffer.rs:335/350: out.add(size.wrapping_sub(1)) for the size == 0 case.",
+    "src/runtime/bio/sys.rs:534/540: prev.add(cmsg_align(prev_len)) and next.add(size_of::<Cmsghdr>()) as the bounds test; the latter was out of bounds at the final record.",
+    "src/runtime/confmod/asn1.rs:205: the p.sub(1) step that could leave the allocation is now unreachable."
+  ],
+  "secret_bearing_buffers": [
+    "print_engine writes caller data into caller-owned or growing buffers and stores nothing; `%n` writes through the caller's pointer. No secret handling claim.",
+    "buffer.rs cleanses the BUF_MEM data block on release (CRYPTO_clear_free / CRYPTO_secure_clear_free) including the secure-heap branch; BUF_reverse touches caller buffers in place and stores nothing.",
+    "conf/modparse duplicates environment/default paths through OwnedStr and makes no secret claim.",
+    "confmod/asn1 copies the long name into an OPENSSL_malloc block released unconditionally after OBJ_create; OID names are public.",
+    "conf/init_settings uses libc malloc/strdup/free for a settings object that may predate CRYPTO_set_mem_functions; it holds filenames/appnames, not key material."
+  ],
+  "boundary_control": {
+    "negative_control_added": true,
+    "name": "runtime::confmod::asn1::tests::all_whitespace_long_name_is_refused; runtime::bio::sys::tests::nxthdr_rejects_a_length_beyond_the_buffer; runtime::conf::modparse::tests::a_nul_separator_matches_no_separator; runtime::buffer::tests::reverse_with_zero_size_touches_nothing; runtime::buffer::tests::reverse_copies_from_a_source_and_in_place",
+    "reason": "The asn1 control drives the repaired floor directly; the sys control gives a record whose cmsg_len is usize::MAX, which the old code either aligned with an overflowing `+ 7` or turned into an out-of-bounds pointer; the modparse control drives sep == 0 on a non-empty and an empty list; the buffer controls pin the zero-length no-op and the ordinary copy/in-place reversal. The pre-existing bss_dgram::tests::cmsg_records_walk_in_order walks a two-record buffer to the exact end-of-buffer path that the old bounds test made UB, so it is the functional control for M75-D2. The Phase 2/4/6 courts below re-executed the affected surfaces against the rebuilt candidate. No sanitizer or Miri control was run (NOT_RUN)."
+  }
+}

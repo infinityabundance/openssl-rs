@@ -314,9 +314,9 @@ pub unsafe extern "C" fn BUF_MEM_grow_clean(m: *mut BufMem, len: usize) -> usize
 
 /// `void BUF_reverse(unsigned char *out, const unsigned char *in, size_t size)`
 ///
-/// In-place when `in` is NULL. A zero `size` with a NULL `in` is a no-op; with a
-/// non-NULL `in` the authority computes `out + size - 1`, so `size == 0` is still
-/// well defined only because no byte is then written.
+/// In-place when `in` is NULL. A zero `size` is a no-op: the authority computes
+/// `out + size - 1` but never dereferences it, and forming `out - 1` is undefined
+/// in Rust, so the empty case returns before any pointer arithmetic.
 ///
 /// # Safety
 /// `out` must be NULL or point to `size` writable bytes. `input`, when non-NULL,
@@ -324,15 +324,14 @@ pub unsafe extern "C" fn BUF_MEM_grow_clean(m: *mut BufMem, len: usize) -> usize
 #[no_mangle]
 pub unsafe extern "C" fn BUF_reverse(out: *mut u8, input: *const u8, size: usize) {
     guard_ffi((), || {
-        if out.is_null() {
+        if out.is_null() || size == 0 {
             return;
         }
         if !input.is_null() {
             // SAFETY: `out` is writable for `size` bytes per the caller's
-            // contract, so `out + size - 1` addresses its last byte; for
-            // `size == 0` the loop body does not run and the pointer is never
-            // dereferenced.
-            let mut o = unsafe { out.add(size.wrapping_sub(1)) };
+            // contract, so `out + size - 1` addresses its last byte; `size` is
+            // non-zero here, so the pointer is inside the buffer.
+            let mut o = unsafe { out.add(size - 1) };
             let mut i = input;
             for _ in 0..size {
                 // SAFETY: `o` and `i` stay within their buffers by construction.
@@ -345,9 +344,8 @@ pub unsafe extern "C" fn BUF_reverse(out: *mut u8, input: *const u8, size: usize
         } else {
             let mut lo = out;
             // SAFETY: `out` is writable for `size` bytes per the caller's
-            // contract; `size == 0` leaves this pointer unused because the loop
-            // below runs zero times.
-            let mut hi = unsafe { out.add(size.wrapping_sub(1)) };
+            // contract; `size` is non-zero, so the address is in bounds.
+            let mut hi = unsafe { out.add(size - 1) };
             for _ in 0..size / 2 {
                 // SAFETY: `lo < hi` throughout, so the two references are
                 // disjoint, and both lie within `out`.
@@ -390,4 +388,34 @@ pub unsafe fn as_void(p: *mut BufMem) -> *mut c_void {
 /// `p` must be NULL or a live `BUF_MEM`.
 pub unsafe fn from_void(p: *mut c_void) -> *mut BufMem {
     p.cast()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reverse_copies_from_a_source_and_in_place() {
+        let src = *b"abcd";
+        let mut dst = [0u8; 4];
+        // SAFETY: `dst` is writable for 4 bytes and `src` is readable for 4.
+        unsafe { BUF_reverse(dst.as_mut_ptr(), src.as_ptr(), 4) };
+        assert_eq!(&dst, b"dcba");
+
+        // SAFETY: `dst` is writable for 4 bytes; in-place reversal.
+        unsafe { BUF_reverse(dst.as_mut_ptr(), ptr::null(), 4) };
+        assert_eq!(&dst, b"abcd");
+    }
+
+    /// A zero length writes nothing and, before the guard, formed `out - 1` — an
+    /// out-of-bounds pointer in Rust even though it was never dereferenced.
+    #[test]
+    fn reverse_with_zero_size_touches_nothing() {
+        let mut buf = [0x5au8; 4];
+        // SAFETY: `buf` is writable for 4 bytes and `size` is zero.
+        unsafe { BUF_reverse(buf.as_mut_ptr(), ptr::null(), 0) };
+        // SAFETY: as above, with a non-NULL source.
+        unsafe { BUF_reverse(buf.as_mut_ptr(), buf.as_ptr(), 0) };
+        assert_eq!(buf, [0x5au8; 4]);
+    }
 }
