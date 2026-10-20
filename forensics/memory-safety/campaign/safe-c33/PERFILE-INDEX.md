@@ -8280,3 +8280,112 @@ regeneration; FRF and SEAL.
 **Next eight from the file head (only six remain).** `src/x509/x509_trust.rs`,
 `src/x509/x509type.rs`, `src/x509/x_attrib.rs`, `src/x509/x_exten.rs`,
 `src/x509/x_req.rs`, `src/x509/x_x509a.rs`.
+
+---
+
+## M89 (mechanism) — final per-file contract sweep and campaign census reconciliation (trust table, certificate type, attribute item/printer, extension wrappers, request core, certificate aux)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M89.json`](atlas-refresh/mechanism-sweep-M89.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`0bfd7f1e5`. One low-severity compatibility repair in `x_attrib.rs` (an
+unrecognised OID's `SEQUENCE` value must take `ASN1_parse_dump`, not the
+distinguished-name decoder) plus its regression test. No `#[repr(C)]` layout,
+exported symbol/signature, allocator coordinate, excluded symbol or lint
+attribute changed.
+
+**Files audited (6).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/x509/x509_trust.rs` | the eight reserved `trstandard` rows and the dynamic `trtable`; `X509_TRUST_set_default`; `X509_check_trust` and the three checkers; `get_count`/`get0`/`get_by_id`/`set`; `X509_TRUST_add`'s fresh-row `RawTrust` versus existing-row mutation and the `err: if (idx < 0)` tail; `X509_TRUST_cleanup`'s `OwnedCtx` rows; `obj_trust`'s reject/trust/`anyEKU`/self-signed decision | no defect; matches `x509_trust.c:23-298`, including the asymmetric NULL-object arms and the unchecked `default_trust` slot modelled as a 0 answer |
+| `src/x509/x509type.rs` | `X509_certificate_type`'s key-id switch, the `EVP_PK_*`/`EVP_PKT_*` words and the second `OBJ_find_sigid_algs` family switch | no defect; matches `x509type.c:16-84`; no raise |
+| `src/x509/x_attrib.rs` | the `X509_ATTRIBUTE` item; `X509_ATTRIBUTE_create`'s static OID and adopted `ASN1_TYPE`; `print_oid`; `ossl_print_attribute_value`'s whole tag switch, indentation guard, hex fallbacks, DN OID set and DER dump | one defect `M89-D1`: `is_dn_oid` listed `NID_undef`, sending an unknown OID's `SEQUENCE` to `d2i_X509_NAME`; repaired plus regression test. The rest matches `x_attrib.c:37-249` |
+| `src/x509/x_exten.rs` | the `X509_EXTENSION` template and its `_it`/`_new`/`_free`/`_dup`/`d2i_`/`i2d_` group; the `X509_EXTENSIONS` `SEQUENCE OF` wrapper and its three exports | no defect; matches `x_exten.c:16-27` |
+| `src/x509/x_req.rs` | `rinf_cb` and `req_cb`; the `X509_REQ_INFO` and `X509_REQ` item descriptors; the generated lifecycle; `X509_REQ_dup`; the distinguishing-id accessors; `ossl_x509_req_set0_libctx` and `X509_REQ_new_ex` | no defect; matches `x_req.c:35-167`, including the `D2I_PRE` fall-through and the duplicate-key release on both failure arms |
+| `src/x509/x_x509a.rs` | the `X509_CERT_AUX` item and lifecycle; `aux_get`; `X509_trusted`; alias/key-id setters and readers; the two adders and their shared `err:` tail; trust/reject clear and readers | no defect; matches `x_x509a.c:36-174`, including `trust` accepting a NULL object while `reject` refuses it |
+
+**New unsafe assumptions (hidden must be 0).** Production: **0** introduced, 0
+removed, 0 relocated. Every unsafe operation already carries its contract: the
+OB-3 raw/owned split for `RawTrust`/`OwnedCtx`; the OB-4 property-query member
+slot; the item-layer callback contract for `rinf_cb`/`req_cb` and the pointer
+thunks `tr_cmp`/`trtable_free_thunk`/`free_object`; the `ASN1_TYPE_set` adoption
+and ASN.1 cursor contracts; the `OPENSSL_sk_*` NULL/range/sort/`pop_free`
+discipline; and the `CRYPTO_*` allocator seam. Hidden obligations: **0**.
+
+**Contracts reused.** OB-1/OB-2/OB-3/OB-4; RC-1 for every borrowed object field;
+the callback contracts from B1/B2/B6–B29; the `X509_NAME_set`,
+`X509_PUBKEY_set` and `ASN1_TYPE_set` adoption contracts; the `OPENSSL_sk_*`
+discipline; the `raise_site`/`ErrSite` coordinates; and the `CRYPTO_*` seam.
+
+**Defect repaired.** `M89-D1` (low, compatibility): `is_dn_oid` included
+`NID_undef`, but the authority's inner `switch` opens with
+`case NID_undef: /* Unrecognized OID. */ break;`, which exits that switch for
+`return ASN1_parse_dump(...)`. Only the nine named attribute types decode a
+distinguished name. The crate therefore decoded an unknown OID's `SEQUENCE` as
+a name: an empty `Name` (`30 00`) printed nothing and answered 0, and other
+bytes printed `(COULD NOT DECODE DISTINGUISHED NAME)` and answered 0, where the
+authority dumps and answers positive. `v3_attrdesc` calls the printer with
+`obj_nid` 0, so every `SEQUENCE` algorithm parameter took the wrong arm. The fix
+removes `NID_undef` from `is_dn_oid`; the focused test
+`x509::x_attrib::tests::undefined_oid_sequence_is_dumped_not_decoded_as_a_name`
+pins the positive dump answer.
+
+**Census reconciliation (Task B).** `REMAINING-AUDIT.txt` is empty.
+
+| Measure | Count |
+|---|---|
+| Current `src/**/*.rs` | **877** |
+| Census files (pinned `c09eef8b`) | **868** |
+| `ZERO_UNSAFE` | **92** |
+| `BOUNDARY_COVERED` | **15** |
+| `PARTIAL` | **761** |
+| Audited `PARTIAL` | **761** |
+| Remaining | **0** |
+| `AUDITED-FILES.txt` lines | **763** |
+| Post-census files absent from the 868 census | **9** |
+
+Every `PARTIAL-FILES.txt` entry now appears in `AUDITED-FILES.txt` (set
+difference empty). The list has 763 unique lines because `src/bn/recp.rs`
+(B12) and `src/runtime/thread.rs` (B11) are `BOUNDARY_COVERED` files that also
+received boundary receipts; excluding those two, the PARTIAL-to-AUDITED sets are
+identical. All 92 `ZERO_UNSAFE` files have `production_sites = 0` and
+`attributed_sites = 0`; all 15 `BOUNDARY_COVERED` files have
+`attributed_sites == production_sites` and `unattributed_sites = 0`.
+
+**Unaccounted relative to the census (not the queue).** Nine files exist at
+HEAD but not in the pinned 868-file census commit: six are `cfg(test)`-only
+models/probes (`runtime/bio/owned_ctx_model.rs`, `runtime/bio/zero_state.rs`,
+`runtime/member_slot_model.rs`, `runtime/owned_buf_model.rs`,
+`runtime/owned_str_model.rs`, `runtime/release_probe.rs`) and three are
+production helpers at established shared boundaries (`runtime/foreign.rs`,
+`runtime/member_slot.rs`, `runtime/mem_coords.rs`). They are unclassified **with
+respect to the census** and require a census refresh plus attribution at the
+next BATCH/SEAL gate. No claim of full campaign closure is made.
+
+**Gates observed (final worktree).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; focused
+`undefined_oid_sequence_is_dumped` **1 passed / 0 failed** (1732 filtered); full
+library **1702 passed / 0 failed / 31 ignored** (1733 total) serially (275.97 s)
+and with `--test-threads=4` (90.32 s), in the court with `CARGO_BUILD_JOBS=4`.
+No unexplained test removal and no newly ignored test.
+
+**NOT_RUN.** No affected C probe: no court builds an authority-attribute,
+attribute-descriptor, attribute-mapping or SDA extension and prints it, so none
+reaches `ossl_print_attribute_value`; RT-STORE prints basicConstraints and an
+unknown extension only. Miri/ASan/Loom/TSan (no owner, extent, aliasing or
+concurrency mechanism changed); dudect/ctgrind (no constant-time claim); the
+census refresh and attribution for the nine post-census files; the other
+phase-10/phase-11 courts (not affected); full Phase-25 forensic regeneration;
+FRF and SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**.
+
+The **761-file per-file audit queue is complete**. `REMAINING-AUDIT.txt` is
+empty and `AUDITED-FILES.txt` covers all 761 `PARTIAL` files. This does not
+complete the campaign: before any consumer family can be called
+`SAFE_COMPATIBLE` it still needs the refreshed census/attribution for the nine
+post-census files, SEAL dependency-closure evidence, independent review of these
+receipts, and the downstream consumer courts (deepened L7 evidence for curl,
+nginx, OpenSSH, HAProxy, Redis and the remaining build/link families).
