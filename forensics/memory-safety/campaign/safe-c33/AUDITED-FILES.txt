@@ -747,3 +747,11 @@ src/x509/v3_tlsf.rs
 src/x509/v3_usernotice.rs
 src/x509/v3_utf8.rs
 src/x509/x509aset.rs
+src/x509/x509cset.rs
+src/x509/x509_d2.rs
+src/x509/x509_ext.rs
+src/x509/x509_meth.rs
+src/x509/x509_obj.rs
+src/x509/x509_r2x.rs
+src/x509/x509rset.rs
+src/x509/x509spki.rs
