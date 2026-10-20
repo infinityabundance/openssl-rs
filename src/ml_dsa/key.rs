@@ -45,6 +45,7 @@ use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc_array, CRYPTO_memcmp, CRYPTO_memdup,
     CRYPTO_zalloc, OPENSSL_cleanse,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_free, CRYPTO_secure_malloc};
 
 use super::encoders::{ossl_ml_dsa_pk_encode, ossl_ml_dsa_sk_encode};
@@ -67,7 +68,9 @@ use super::{
 const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int = 0x01 | 0x02;
 
 /// The unit's own `__FILE__`, for the allocator's debug arguments.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_key.c".as_ptr();
+const FILE_C: &CStr = c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_key.c";
+const FILE: *const c_char = FILE_C.as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(FILE_C);
 
 /// `ossl_ml_dsa_set_prekey`'s `OPENSSL_secure_malloc(sk_len)`, `ml_dsa_key.c:52`.
 const LINE_SET_PREKEY_SK: c_int = 52;
@@ -176,7 +179,8 @@ enum BufRelease {
 
 impl OwnedBuf {
     /// `OPENSSL_malloc_array(count, size, file, line)`, or `None` when the allocator answers NULL.
-    fn new_array(count: usize, size: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new_array(count: usize, size: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc_array(count, size, file, line)
@@ -196,9 +200,10 @@ impl OwnedBuf {
     fn new_array_cleansed(
         count: usize,
         size: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
     ) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc_array(count, size, file, line)
@@ -219,7 +224,8 @@ impl OwnedBuf {
     }
 
     /// `CRYPTO_secure_malloc(len, file, line)`, or `None` when the allocator answers NULL.
-    fn new_secure(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new_secure(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE`.
         let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
         if raw.is_null() {
@@ -233,7 +239,8 @@ impl OwnedBuf {
 
     /// `CRYPTO_secure_malloc(len, file, line)` for a block the authority frees through its cleansing
     /// `CRYPTO_secure_clear_free(ptr, len, ...)`, or `None` when the allocator answers NULL.
-    fn new_secure_cleansed(len: usize, file: *const c_char, line: c_int) -> Option<OwnedBuf> {
+    fn new_secure_cleansed(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         // SAFETY: `file` is NULL or a NUL-terminated C string, per this unit's `FILE`.
         let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<c_uchar>();
         if raw.is_null() {
@@ -460,7 +467,8 @@ pub(crate) unsafe fn ossl_ml_dsa_set_prekey(
         // The C's `goto end` on either allocation failure.
         'end: {
             if !sk.is_null() {
-                let Some(buf) = OwnedBuf::new_secure_cleansed(sk_len, FILE, LINE_SET_PREKEY_SK)
+                let Some(buf) =
+                    OwnedBuf::new_secure_cleansed(sk_len, FILE_SEAM, LINE_SET_PREKEY_SK)
                 else {
                     break 'end;
                 };
@@ -469,7 +477,8 @@ pub(crate) unsafe fn ossl_ml_dsa_set_prekey(
             }
 
             if !seed.is_null() {
-                let Some(buf) = OwnedBuf::new_secure_cleansed(seed_len, FILE, LINE_SET_PREKEY_SEED)
+                let Some(buf) =
+                    OwnedBuf::new_secure_cleansed(seed_len, FILE_SEAM, LINE_SET_PREKEY_SEED)
                 else {
                     break 'end;
                 };
@@ -734,7 +743,7 @@ pub(crate) unsafe fn ossl_ml_dsa_key_dup(src: *const MlDsaKey, selection: c_int)
                         }
                         match OwnedBuf::new_secure_cleansed(
                             (*(*src).params).sk_len,
-                            FILE,
+                            FILE_SEAM,
                             LINE_DUP_PRV,
                         ) {
                             Some(buf) => {
@@ -752,8 +761,11 @@ pub(crate) unsafe fn ossl_ml_dsa_key_dup(src: *const MlDsaKey, selection: c_int)
                         }
                     }
                     if !(*src).seed.is_null() {
-                        match OwnedBuf::new_secure_cleansed(ML_DSA_SEED_BYTES, FILE, LINE_DUP_SEED)
-                        {
+                        match OwnedBuf::new_secure_cleansed(
+                            ML_DSA_SEED_BYTES,
+                            FILE_SEAM,
+                            LINE_DUP_SEED,
+                        ) {
                             Some(buf) => {
                                 ptr::copy_nonoverlapping(
                                     (*src).seed,
@@ -885,7 +897,7 @@ unsafe fn public_from_private(
         let Some(polys) = OwnedBuf::new_array(
             (k + l + k * l) as usize,
             core::mem::size_of::<Poly>(),
-            FILE,
+            FILE_SEAM,
             LINE_PFP_ALLOC_POLYS,
         ) else {
             return 0;
@@ -1000,7 +1012,7 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pairwise_check(key: *const MlDsaKey) -> c_i
         let Some(polys) = OwnedBuf::new_array_cleansed(
             (2 * k) as usize,
             core::mem::size_of::<Poly>(),
-            FILE,
+            FILE_SEAM,
             LINE_PWC_ALLOC_POLYS,
         ) else {
             return 0;
@@ -1139,7 +1151,7 @@ pub(crate) unsafe fn ossl_ml_dsa_generate_key(out: *mut MlDsaKey) -> c_int {
         if (*out).seed.is_null() {
             // The handle owns the seed until it is handed to `out->seed`; a refused RNG drops it
             // through the authority's own `CRYPTO_secure_free` at the authority's own site.
-            let Some(seed) = OwnedBuf::new_secure(seed_len, FILE, LINE_GENKEY_SEED) else {
+            let Some(seed) = OwnedBuf::new_secure(seed_len, FILE_SEAM, LINE_GENKEY_SEED) else {
                 return 0;
             };
             if RAND_priv_bytes_ex((*out).libctx, seed.as_ptr(), seed_len, 0) <= 0 {

@@ -47,6 +47,7 @@ use crate::runtime::err::{err_sites, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, OPENSSL_cleanse,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
 
 use super::hash::shake_xof;
@@ -62,7 +63,9 @@ use super::{
 };
 
 /// The unit's own `__FILE__`, for the allocator's debug arguments.
-const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c".as_ptr();
+const FILE_C: &CStr = c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c";
+const FILE: *const c_char = FILE_C.as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(FILE_C);
 
 /// `ossl_ml_dsa_pk_encode`'s `OPENSSL_malloc(enc_len)`, `ml_dsa_encoders.c:629`.
 const LINE_PK_ENCODE_ENC: c_int = 629;
@@ -111,12 +114,8 @@ struct OwnedBuf {
 
 impl OwnedBuf {
     /// `OPENSSL_malloc(len)` at `file`/`line`, released by `Drop` at `release_line`.
-    fn malloc(
-        len: usize,
-        file: *const c_char,
-        line: c_int,
-        release_line: c_int,
-    ) -> Option<OwnedBuf> {
+    fn malloc(len: usize, file: SeamFile, line: c_int, release_line: c_int) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of `len`
         // bytes.
         let raw = unsafe {
@@ -141,10 +140,11 @@ impl OwnedBuf {
     /// cleanses these `len` bytes, then releases them through the plain seam.
     fn secure_malloc(
         len: usize,
-        file: *const c_char,
+        file: SeamFile,
         line: c_int,
         release_line: c_int,
     ) -> Option<OwnedBuf> {
+        let file = file.as_ptr();
         // SAFETY: `CRYPTO_secure_malloc` answers NULL or a fresh, writable block of `len` bytes.
         let raw = unsafe { CRYPTO_secure_malloc(len, file, line) }.cast::<u8>();
         ptr::NonNull::new(raw).map(|ptr| OwnedBuf {
@@ -1005,9 +1005,12 @@ pub(crate) unsafe fn ossl_ml_dsa_pk_encode(key: *mut MlDsaKey) -> c_int {
     // `OPENSSL_malloc(enc_len)` at `:629`, released by `Drop` at `:650` when the encoding does not
     // land (the authority's error-path `OPENSSL_free(enc)`); on success `into_raw` transfers it into
     // `key->pub_encoding`.
-    let Some(enc_owned) =
-        OwnedBuf::malloc(enc_len, FILE, LINE_PK_ENCODE_ENC, LINE_PK_ENCODE_FREE_ENC)
-    else {
+    let Some(enc_owned) = OwnedBuf::malloc(
+        enc_len,
+        FILE_SEAM,
+        LINE_PK_ENCODE_ENC,
+        LINE_PK_ENCODE_FREE_ENC,
+    ) else {
         return 0;
     };
     let enc = enc_owned.as_ptr();
@@ -1166,9 +1169,12 @@ pub(crate) unsafe fn ossl_ml_dsa_sk_encode(key: *mut MlDsaKey) -> c_int {
     let mut t0 = unsafe { (*key).t0.poly };
     // `OPENSSL_secure_malloc(enc_len)` at `:716`, released by `Drop` (secure clear) at `:750` when
     // the encoding does not land; on success `into_raw` transfers it into `key->priv_encoding`.
-    let Some(enc_owned) =
-        OwnedBuf::secure_malloc(enc_len, FILE, LINE_SK_ENCODE_ENC, LINE_SK_ENCODE_CLEAR_ENC)
-    else {
+    let Some(enc_owned) = OwnedBuf::secure_malloc(
+        enc_len,
+        FILE_SEAM,
+        LINE_SK_ENCODE_ENC,
+        LINE_SK_ENCODE_CLEAR_ENC,
+    ) else {
         return 0;
     };
     let enc = enc_owned.as_ptr();

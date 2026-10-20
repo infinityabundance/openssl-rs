@@ -55,6 +55,7 @@ use crate::asn1::owned::OwnedBlock;
 use crate::asn1::prim::ASN1_INTEGER_get;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid};
 use crate::runtime::refcount::{down_ref, up_ref, DownRef};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
@@ -382,7 +383,7 @@ pub(crate) unsafe fn enc_save(
         return 0;
     }
     // SAFETY: `inlen` is positive.
-    let Some(buf) = OwnedBlock::<u8>::malloc(inlen as usize, FILE.as_ptr(), LINE) else {
+    let Some(buf) = OwnedBlock::<u8>::malloc(inlen as usize, SeamFile::new(FILE), LINE) else {
         return 0;
     };
     // SAFETY: `buf` holds `inlen` bytes, `in_` is readable for `inlen`, and `enc` is live.

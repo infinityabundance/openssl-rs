@@ -80,13 +80,16 @@ use crate::runtime::ex_data::{CRYPTO_get_ex_data, CRYPTO_set_ex_data};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc,
 };
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_X9_62_ppBasis, NID_X9_62_tpBasis, NID_undef,
 };
 
 /// The translation-unit coordinate the `OPENSSL_zalloc`/`OPENSSL_malloc`/`OPENSSL_strdup`/
 /// `OPENSSL_free` sites in this unit are attributed to, as the allocator reports them.
-const FILE: *const c_char = c"crypto/ec/ec_lib.c".as_ptr();
+const FILE_C: &core::ffi::CStr = c"crypto/ec/ec_lib.c";
+const FILE: *const c_char = FILE_C.as_ptr();
+const FILE_SEAM: SeamFile = SeamFile::new(FILE_C);
 
 // `#ifndef OPENSSL_NO_EC_NISTP_64_GCC_128` holds on this profile, so `PCT_nistp224` ..
 // `PCT_nistp521` compile to empty arms in the two pre-computation switches. The four arms are
@@ -158,7 +161,8 @@ struct OwnedCtx<T: CtxDestroy> {
 impl<T: CtxDestroy> OwnedCtx<T> {
     /// Allocate a fresh zeroed block of `T`'s size at `file`/`alloc_line`, or `None` when the seam
     /// answers NULL (the authority's refused `CRYPTO_zalloc`).
-    fn new(file: *const c_char, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+    fn new(file: SeamFile, alloc_line: c_int, line: c_int) -> Option<OwnedCtx<T>> {
+        let file = file.as_ptr();
         // `CRYPTO_zalloc` answers NULL or a fresh, zeroed, writable block of `size_of::<T>()`
         // bytes, which is exactly `T`'s layout.
         let raw = unsafe {
@@ -372,7 +376,7 @@ pub unsafe extern "C" fn ossl_ec_group_new_ex(
         // `OPENSSL_zalloc(sizeof(*ret))`, line 44. The block is allocated through the crate's
         // allocator seam at the authority's own alloc site and owned by `ret` until it is handed to
         // the caller; each refusal below releases it through the owner.
-        let Some(ret) = OwnedCtx::<EcGroup>::new(FILE, 44, 138) else {
+        let Some(ret) = OwnedCtx::<EcGroup>::new(FILE_SEAM, 44, 138) else {
             return ptr::null_mut();
         };
         let g = ret.as_ptr();
@@ -1461,7 +1465,7 @@ pub unsafe extern "C" fn EC_POINT_new(group: *const EcGroup) -> *mut EcPoint {
         // `OPENSSL_zalloc(sizeof(*ret))`, line 729. The block is allocated through the crate's
         // allocator seam at the authority's own alloc site and owned by `ret` until it is handed to
         // the caller; each refusal below releases it through the owner.
-        let Some(ret) = OwnedCtx::<EcPoint>::new(FILE, 729, 754) else {
+        let Some(ret) = OwnedCtx::<EcPoint>::new(FILE_SEAM, 729, 754) else {
             return ptr::null_mut();
         };
         let p = ret.as_ptr();
@@ -3119,7 +3123,7 @@ mod tests {
     #[test]
     fn a_zeroed_group_and_point_drop_through_both_bodies() {
         // Plain owners: `Drop` selects `destroy_body`, which reads the method through `as_ref()`.
-        let Some(group) = OwnedCtx::<EcGroup>::new(FILE, 44, 138) else {
+        let Some(group) = OwnedCtx::<EcGroup>::new(FILE_SEAM, 44, 138) else {
             panic!("CRYPTO_zalloc answered NULL");
         };
         // SAFETY: the owner holds a live, zero-initialised block for these reads.
@@ -3136,7 +3140,7 @@ mod tests {
         }
         drop(group);
 
-        let Some(point) = OwnedCtx::<EcPoint>::new(FILE, 729, 754) else {
+        let Some(point) = OwnedCtx::<EcPoint>::new(FILE_SEAM, 729, 754) else {
             panic!("CRYPTO_zalloc answered NULL");
         };
         // SAFETY: the owner holds a live, zero-initialised block for these reads.
@@ -3151,7 +3155,7 @@ mod tests {
 
         // Clear owners: reclaim the same zeroed shape through the cleansing selection. The block
         // is still the one `new` allocated, live and exclusively owned here.
-        let group = match OwnedCtx::<EcGroup>::new(FILE, 44, 138) {
+        let group = match OwnedCtx::<EcGroup>::new(FILE_SEAM, 44, 138) {
             Some(owner) => owner.into_raw(),
             None => panic!("CRYPTO_zalloc answered NULL"),
         };
@@ -3166,7 +3170,7 @@ mod tests {
             drop(group);
         }
 
-        let point = match OwnedCtx::<EcPoint>::new(FILE, 729, 754) {
+        let point = match OwnedCtx::<EcPoint>::new(FILE_SEAM, 729, 754) {
             Some(owner) => owner.into_raw(),
             None => panic!("CRYPTO_zalloc answered NULL"),
         };

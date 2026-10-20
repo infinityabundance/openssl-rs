@@ -84,6 +84,7 @@ use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_undef;
 use crate::runtime::obj::OBJ_nid2sn;
 
@@ -212,7 +213,9 @@ const OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD: *const c_char = c"alg_id_param"
 /// The authority's translation unit, as the compiler spelled it — `evp_enc.c`'s sites.
 const FILE_ENC: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c".as_ptr();
 /// `crypto/evp/evp_lib.c`'s sites.
-const FILE_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c".as_ptr();
+const FILE_LIB_C: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c";
+const FILE_LIB: *const c_char = FILE_LIB_C.as_ptr();
+const FILE_LIB_SEAM: SeamFile = SeamFile::new(FILE_LIB_C);
 
 /// `OPENSSL_zalloc(sizeof(EVP_CIPHER_CTX))` in `EVP_CIPHER_CTX_new`.
 const LINE_ZALLOC_CTX: c_int = 74;
@@ -3443,7 +3446,7 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor_params(
     // The block is owned here: its `Drop` is its single release at the authority's own site, so no
     // path below writes a `CRYPTO_free` by hand.
     // SAFETY: this allocates a fresh block of `derl` bytes through the installed allocator.
-    let der = OwnedBlock::<c_uchar>::malloc(derl, FILE_LIB, LINE_FREE_AID);
+    let der = OwnedBlock::<c_uchar>::malloc(derl, FILE_LIB_SEAM, LINE_FREE_AID);
     if let Some(der) = &der {
         let mut derp: *const c_uchar = der.as_ptr();
         // SAFETY: the constructor writes one entry of this frame's own array, and `der` holds

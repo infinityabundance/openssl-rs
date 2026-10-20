@@ -391,7 +391,13 @@ impl ErrState {
     /// "may be provider owned", and a provider can be unloaded while the error
     /// is still queued. A NULL or empty string is stored as NULL, and the read
     /// side turns NULL back into `""`.
-    pub(crate) fn set_debug(
+    /// # Safety
+    /// `file` and `func` are each NULL or a NUL-terminated C string. The strings are
+    /// duplicated through `CRYPTO_strdup`, whose allocation-failure path reads `file`
+    /// as a C string; a non-NUL-terminated pointer is therefore undefined behaviour.
+    /// This cannot be `SeamFile`: an external C caller's coordinates need only be
+    /// valid for the call, not for static storage.
+    pub(crate) unsafe fn set_debug(
         &mut self,
         i: usize,
         file: *const c_char,
@@ -918,7 +924,8 @@ pub(crate) unsafe fn raise_with(lib: c_int, reason: c_int, file: *const c_char, 
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, file, line, EMPTY_C);
+        // SAFETY: `file` is NULL or NUL-terminated per this function's contract.
+        unsafe { s.set_debug(t, file, line, EMPTY_C) };
         s.set_error(t, lib, reason);
     });
 }
@@ -938,7 +945,8 @@ pub(crate) unsafe fn raise_site(site: &err_sites::ErrSite) {
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        // SAFETY: the site's pointers are static NUL-terminated C strings.
+        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
         s.set_error(t, site.lib, site.reason);
     });
 }
@@ -967,7 +975,8 @@ pub(crate) unsafe fn raise_site_dynamic(site: &err_sites::ErrSite, reason: c_int
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        // SAFETY: the site's pointers are static NUL-terminated C strings.
+        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
         s.set_error(t, site.lib, reason);
     });
 }
@@ -1019,7 +1028,8 @@ pub(crate) unsafe fn raise_site_data(site: &err_sites::ErrSite, msg: *const c_ch
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        // SAFETY: the site's pointers are static NUL-terminated C strings.
+        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
         s.set_error(t, site.lib, site.reason);
         // SAFETY: `msg` is NUL-terminated per the caller's contract.
         unsafe { attach_message(s, t, msg) };
@@ -1050,7 +1060,8 @@ pub(crate) unsafe fn raise_site_dynamic_data(
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        // SAFETY: the site's pointers are static NUL-terminated C strings.
+        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
         s.set_error(t, site.lib, reason);
         // SAFETY: `msg` is NUL-terminated per the caller's contract.
         unsafe { attach_message(s, t, msg) };
@@ -1093,7 +1104,8 @@ pub unsafe extern "C" fn ERR_set_debug(file: *const c_char, line: c_int, func: *
     guard_ffi((), || {
         with_state(|s| {
             let t = s.top as usize;
-            s.set_debug(t, file, line, func);
+            // SAFETY: `file`/`func` are NULL or NUL-terminated per this function's contract.
+            unsafe { s.set_debug(t, file, line, func) };
         });
     })
 }

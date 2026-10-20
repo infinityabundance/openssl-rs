@@ -37,6 +37,7 @@ use crate::asn1::layout::Asn1String;
 use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::{ASN1_STRING_set, ASN1_UTF8STRING_free, ASN1_UTF8STRING_new};
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::NID_subjectSignTool;
 use crate::x509::v3_lib::X509V3ExtMethod;
 
@@ -89,7 +90,8 @@ pub unsafe extern "C" fn i2s_ASN1_UTF8STRING(
         let Some(count) = len.checked_add(1) else {
             return ptr::null_mut();
         };
-        let Some(tmp) = OwnedBlock::<c_char>::malloc(count, FILE.as_ptr(), LINE_MALLOC) else {
+        let Some(tmp) = OwnedBlock::<c_char>::malloc(count, SeamFile::new(FILE), LINE_MALLOC)
+        else {
             return ptr::null_mut();
         };
         let dst = tmp.as_ptr();

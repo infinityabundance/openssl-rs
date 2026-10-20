@@ -71,6 +71,7 @@ use crate::runtime::bio::sys::{fwrite, FILE};
 use crate::runtime::bio::{BIO_free, Bio, BIO_NOCLOSE};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{NID_undef, OBJ_nid2ln, OBJ_nid2sn, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::str::OPENSSL_strnlen;
 use crate::x509::x509name::{
@@ -509,7 +510,8 @@ unsafe fn do_dump(
     }
     // The block is a local temporary: `OwnedBlock` allocates it at the authority's exact
     // size/`file`/`line` and its `Drop` is the single plain release.
-    let Some(der_buf) = OwnedBlock::<c_uchar>::malloc(der_len as usize, FILE.as_ptr(), LINE) else {
+    let Some(der_buf) = OwnedBlock::<c_uchar>::malloc(der_len as usize, SeamFile::new(FILE), LINE)
+    else {
         return -1;
     };
     let mut p = der_buf.as_ptr();

@@ -61,6 +61,7 @@ use crate::evp::cipher_ctx::{
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_hmacWithSHA1, NID_hmacWithSHA256, NID_id_pbkdf2, NID_pbes2, NID_rc2_cbc, NID_undef,
     OBJ_nid2obj,
@@ -92,11 +93,13 @@ impl SaltBuf {
     /// count, so there is no product to guard.
     fn new(
         len: usize,
-        alloc_file: *const c_char,
+        alloc_file: SeamFile,
         alloc_line: c_int,
-        release_file: *const c_char,
+        release_file: SeamFile,
         release_line: c_int,
     ) -> Option<SaltBuf> {
+        let alloc_file = alloc_file.as_ptr();
+        let release_file = release_file.as_ptr();
         let raw = unsafe {
             // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
             CRYPTO_malloc(len, alloc_file, alloc_line)
@@ -686,9 +689,9 @@ pub unsafe extern "C" fn PKCS5_pbkdf2_set_ex(
         // on the `RAND` failure path; `into_raw` below is the store into the octet string.
         let Some(sstr) = SaltBuf::new(
             saltlen as usize,
-            FILE.as_ptr(),
+            SeamFile::new(FILE),
             206,
-            STRING_FILE.as_ptr(),
+            SeamFile::new(STRING_FILE),
             STRING_LINE,
         ) else {
             return pbkdf2_err(kdf, keyfunc);

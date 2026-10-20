@@ -88,6 +88,7 @@ use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{BN_PRIME_135, BN_PRIME_143};
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_calloc, CRYPTO_free};
+use crate::runtime::mem_coords::SeamFile;
 
 // =============================================================================================
 // The authority's named primes: `bn_const.c` and `bn_nist.c`'s data, over
@@ -1331,7 +1332,8 @@ struct OwnedMods {
 
 impl OwnedMods {
     /// `CRYPTO_calloc(count, size_of::<PrimeT>(), file, line)`, or `None` when it answers NULL.
-    fn calloc(count: usize, file: *const c_char, line: c_int) -> Option<OwnedMods> {
+    fn calloc(count: usize, file: SeamFile, line: c_int) -> Option<OwnedMods> {
+        let file = file.as_ptr();
         // `CRYPTO_calloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `count * size_of::<PrimeT>()` bytes (raising and answering NULL on overflow), which is
         // exactly `count` `PrimeT`s' layout.
@@ -1410,7 +1412,7 @@ pub unsafe extern "C" fn BN_generate_prime_ex2(
             // `OPENSSL_calloc(NUMPRIMES, sizeof(*mods))`. The zeroing is not
             // observable — every slot the sieve reads is one it has written — but it
             // it is what the authority does. The handle's `Drop` is its `OPENSSL_free`.
-            let Some(mods) = OwnedMods::calloc(NUMPRIMES, FILE.as_ptr(), LINE) else {
+            let Some(mods) = OwnedMods::calloc(NUMPRIMES, SeamFile::new(FILE), LINE) else {
                 break 'body;
             };
 

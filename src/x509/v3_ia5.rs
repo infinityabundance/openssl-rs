@@ -37,6 +37,7 @@ use crate::asn1::layout::Asn1String;
 use crate::asn1::owned::OwnedBlock;
 use crate::asn1::string::{ASN1_IA5STRING_free, ASN1_IA5STRING_new, ASN1_STRING_set};
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
     NID_netscape_base_url, NID_netscape_ca_policy_url, NID_netscape_ca_revocation_url,
     NID_netscape_comment, NID_netscape_renewal_url, NID_netscape_revocation_url,
@@ -91,7 +92,7 @@ pub unsafe extern "C" fn i2s_ASN1_IA5STRING(
         };
         // The block is owned here until the return edge: `OwnedBlock` records the authority's
         // exact `file`/`line` and would release it on any earlier exit.
-        let Some(tmp) = OwnedBlock::<c_char>::malloc(size, FILE.as_ptr(), LINE_MALLOC) else {
+        let Some(tmp) = OwnedBlock::<c_char>::malloc(size, SeamFile::new(FILE), LINE_MALLOC) else {
             return ptr::null_mut();
         };
         let dst = tmp.as_ptr();

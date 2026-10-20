@@ -134,7 +134,10 @@ pub(crate) const ML_KEM_KEY_PROV_FLAGS_DEFAULT: c_int =
     ML_KEM_KEY_RANDOM_PCT | ML_KEM_KEY_PREFER_SEED | ML_KEM_KEY_RETAIN_SEED;
 
 /// The unit's own `__FILE__`, for the allocator's debug arguments.
-pub(crate) const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c".as_ptr();
+const FILE_C: &core::ffi::CStr = c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c";
+pub(crate) const FILE: *const c_char = FILE_C.as_ptr();
+pub(crate) const FILE_SEAM: crate::runtime::mem_coords::SeamFile =
+    crate::runtime::mem_coords::SeamFile::new(FILE_C);
 
 /// `struct ossl_ml_kem_scalar_st` — `ml_kem.c:91-94`.
 ///
