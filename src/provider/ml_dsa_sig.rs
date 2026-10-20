@@ -182,9 +182,14 @@ unsafe extern "C" fn ml_dsa_freectx(vctx: *mut c_void) {
     // SAFETY: `ctx` is the caller's context.
     unsafe {
         EVP_MD_CTX_free((*ctx).md_ctx);
+        // The whole array is cleansed, not `test_entropy_len` bytes: a failed or
+        // wrong-length `set_ctx_params` resets the length to 0 after writing entropy into
+        // the buffer, so the length alone would leave the earlier bytes (and any partial
+        // write) uncleansed. Deliberate secret-residue improvement over
+        // `ml_dsa_sig.c:78`; the buffer contents are not observable through the API.
         OPENSSL_cleanse(
             (*ctx).test_entropy.as_mut_ptr().cast(),
-            (*ctx).test_entropy_len,
+            (*ctx).test_entropy.len(),
         );
         // SAFETY: `sig` is a live block this unit allocated through the crate's `CRYPTO_*` seam
         // (or NULL), and no other owner will release it.
@@ -940,6 +945,14 @@ unsafe extern "C" fn ml_dsa_set_ctx_params(vctx: *mut c_void, params: *const Oss
         if !p.ent.is_null() {
             let mut vp: *mut c_void = (*pctx).test_entropy.as_mut_ptr().cast();
             (*pctx).test_entropy_len = 0;
+            // Clear the previous value before the copy so neither a refused copy nor a
+            // wrong-length copy can leave earlier entropy bytes in the array. Deliberate
+            // secret-residue improvement over `ml_dsa_sig.c:415-427`; no observable output
+            // changes (the length is zero on both refusal paths).
+            OPENSSL_cleanse(
+                (*pctx).test_entropy.as_mut_ptr().cast(),
+                (*pctx).test_entropy.len(),
+            );
             if OSSL_PARAM_get_octet_string(
                 p.ent,
                 &mut vp,
@@ -951,6 +964,10 @@ unsafe extern "C" fn ml_dsa_set_ctx_params(vctx: *mut c_void, params: *const Oss
             }
             if (*pctx).test_entropy_len != (*pctx).test_entropy.len() {
                 (*pctx).test_entropy_len = 0;
+                OPENSSL_cleanse(
+                    (*pctx).test_entropy.as_mut_ptr().cast(),
+                    (*pctx).test_entropy.len(),
+                );
                 raise_site(&err_sites::PROV_ML_DSA_SIG_622);
                 return 0;
             }
