@@ -366,9 +366,17 @@ src/provider/rand.rs
 src/provider/rsa_kmgmt.rs
 src/provider/rsa_sig.rs
 src/provider/seed_src.rs
+src/rand/pool.rs
+src/rand/prov_seed.rs
 src/rand/rand_lib.rs
+src/rand/rand_uniform.rs
+src/rand/sys.rs
 src/rand/unix.rs
+src/rc2.rs
+src/rc4.rs
 src/rsa/ameth.rs
+src/rsa/asn1.rs
+src/rsa/backend.rs
 src/rsa/ctrl.rs
 src/rsa/gen.rs
 src/rsa/mod.rs

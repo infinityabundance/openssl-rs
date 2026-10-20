@@ -447,7 +447,8 @@ unsafe extern "C" fn pkey_dh_ctrl_str(
     // SAFETY: `type_` is NUL-terminated per the contract.
     if unsafe { cstr_is(type_, b"dh_rfc5114") } {
         // SAFETY: `value` is NUL-terminated and `ctx` is live.
-        let id = atoi(value);
+        // SAFETY: `value` is NUL-terminated per the contract.
+        let id = unsafe { atoi(value) };
         if !(0..=3).contains(&id) {
             return -2;
         }

@@ -220,7 +220,11 @@ pub(crate) unsafe fn ossl_rand_get_user_nonce(
         return unsafe { ossl_rand_get_nonce(ctx, pout, min_len, max_len, salt, salt_len) };
     }
 
-    let buf = match OwnedBuf::new_plain_released(min_len, FILE_SEAM, LINE, FILE_SEAM, LINE) {
+    // The authority allocates with `OPENSSL_malloc` and plainly `OPENSSL_free`s the buffer when
+    // `EVP_RAND_generate` fails. That failure can follow a partial write of nonce material, so
+    // this owner releases through the cleansing seam at the same allocation/release coordinates
+    // (a deliberate improvement over the authority's plain free, not observable through the API).
+    let buf = match OwnedBuf::new_cleansed_released(min_len, FILE_SEAM, LINE, FILE_SEAM, LINE) {
         Some(buf) => buf,
         None => return 0,
     };
@@ -238,7 +242,7 @@ pub(crate) unsafe fn ossl_rand_get_user_nonce(
         )
     } == 0
     {
-        // The authority's success-only `OPENSSL_free` is `buf`'s `Drop`.
+        // The authority's success-only `OPENSSL_free` is now `buf`'s cleansing `Drop`.
         return 0;
     }
     // SAFETY: `pout` is writable per the contract; ownership of `buf` moves to the caller.
