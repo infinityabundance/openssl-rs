@@ -7717,3 +7717,76 @@ already audited; no queue movement).
 **Next eight from the file head.** `src/ui/ui_openssl.rs`, `src/ui/ui_util.rs`,
 `src/x509/by_store.rs`, `src/x509/pcy_data.rs`, `src/x509/pcy_lib.rs`,
 `src/x509/pcy_node.rs`, `src/x509/t_acert.rs`, `src/x509/t_crl.rs`.
+
+## M83 (mechanism) — per-file contract sweep (UI callback wrapper, store lookup, policy graph data/library/node, ACERT/CRL printers)
+
+Receipt: [`atlas-refresh/mechanism-sweep-M83.json`](atlas-refresh/mechanism-sweep-M83.json).
+
+**Candidate identity.** Worktree audit on `integrate/safe-c33` at source HEAD
+`f98d42f06`. No source file was edited: the seven audited units are byte-identical
+to their landed blobs. No ownership model, `#[repr(C)]` layout, exported symbol,
+allocation coordinate or signature changed.
+
+**Files audited (7, one deferred).**
+
+| File | Mechanisms checked | Result |
+|---|---|---|
+| `src/ui/ui_util.rs` | `OwnedPwData` (zalloc/adopt/into_raw/Drop), ex-data `new`/`dup`/`free` callbacks, `RUN_ONCE` index publication, `ui_read` clamp/NUL/`UI_set_result_ex`, `UI_UTIL_read_pw{,_string}` buffer extents and cleanse, wrapper failure path/`UI_DESTROY`/ex-data transfer | no defect; matches `ui_util.c` including `ui_dup_method_data`'s `*pptr == NULL` → 0 answer and the failure-path free/`RUN_ONCE` order |
+| `src/x509/by_store.rs` | `CachedStore` `CtxDestroy`/`OwnedCtx` transfer, stack-owning `free_store_thunk`, `BorrowedStore` vs `PropqSlot` typestate, `cache_objects` open/find/load/free/depth, `ADD_STORE` dup/push/rollback, `LOAD_STORE` borrow, `by_store_subject` lock/ref drop | no defect; every early return releases the record at the authority's `free_store` sites and a failed push leaves the stack unchanged |
+| `src/x509/pcy_data.rs` | `Box`-owned datum, shared-qualifier flag, OID/qualifier move-out, expected-set failure raise, NULL arms | no defect; order and ownership match `pcy_data.c:38-80`; the datum's `Box` is the recorded allocator-hook residual (`M83-R1`) |
+| `src/x509/pcy_lib.rs` | `#[repr(C)]` size/offset asserts, `tree_levels` owner-derived borrow, `level_ptr` bounds, all nine accessors' NULL arms | no defect; both AGENTS §2 audit items (`tree_levels` caller-chosen lifetime, `parent_mut`) are already repaired in the landed blobs |
+| `src/x509/pcy_node.rs` | `Node::of` borrow boundary, `parent_mut(&mut self)`, `OwnedNode` zalloc/Drop, `add_node` cap/anyPolicy/stack/extra-data and every `node_error`/`extra_data_error` arm, `find`/`match` walks | no defect; failure arms match `pcy_node.c:58-125` (including no pop on push failure and pop on extra-data failure) and the 24-byte seam is preserved |
+| `src/x509/t_acert.rs` | `print_attribute` extent/index/termination arms, attribute/holder/issuer/validity/extensions/signature sections, `err:` raise coordinate, `SIGDUMP` no-raise arm | no defect; matches `t_acert.c` line for line |
+| `src/x509/t_crl.rs` | `X509_CRL_print_fp` BIO/no-close wrap and raise, `print_ex` version/issuer/update/extensions/revoked/signature order | no defect; matches `t_crl.c` line for line |
+
+**Deferred.** `src/ui/ui_openssl.rs` is a genuine console callback/I/O boundary
+(libc `termios`/`sigaction`, process signal table, `static mut` `TTY_IN`/`TTY_OUT`,
+blocking `/dev/tty` reads). It is **NOT_RUN**, retained at the head of
+`REMAINING-AUDIT.txt`; earlier sweeps already deferred it on the same ground.
+
+**Defects.** None. No file:line repair was required and none was made.
+
+**New unsafe assumptions (hidden must be 0).** Zero. Unsafe operations
+introduced/removed/relocated: **0/0/0**. Every remaining unsafe op in these units
+has an explicit `# Safety` contract naming its live/NULL, extent, ownership and
+aliasing precondition.
+
+**Contracts reused.** OB-3 `OwnedCtx`/`CtxDestroy` and `from_raw_at`; the member-
+buffer slot protocol (`CStrSlot`/`EmptyCStrSlot`, `PropqSlot`); OB-2 `OwnedCStr`;
+RC-1; the B1/B2/B6–B25 callback contracts for ex-data and store/BIO callbacks;
+`raise_site`/`ErrSite`; the `CRYPTO_*` allocator seam; `OPENSSL_sk_*` NULL/range
+discipline.
+
+**Residuals.** `M83-R1`: `ossl_policy_data_new` allocates the 32-byte datum with
+`Box`, so a caller-installed `CRYPTO_set_mem_functions` hook does not observe it;
+the graph's own 24-byte node and 64-byte tree/levels blocks do match, and
+`ms_x509_policy_court.py` adjudicates the divergence against measured container/
+object controls (`unadjudicated=0`). `M83-R2`: the pre-existing per-cert policy-
+cache release gap in `X509_free` remains (freeze authoring gap, not this batch).
+
+**Gates observed (final worktree).** `cargo fmt --all -- --check` clean;
+`cargo clippy --all-targets -- -D warnings` clean; focused `ui_util::tests`
+**3 passed / 0 failed** and `borrowed_store_tests` **1 passed / 0 failed**; full
+library **1697 passed / 0 failed / 31 ignored** (1728 total) with
+`--test-threads=4` (112.94 s) and serially (250.23 s), in the court with
+`CARGO_BUILD_JOBS=4`. Affected courts re-run on this candidate: the X.509 policy
+differential (behavioural match true, unadjudicated 0, graph block census/
+failure answer/refcounts match, controls invisible), **RT-STORE** (1038
+observations, phase-10 all_pass over 6) and the phase-11 suite including
+**RT-X509-ACERT** (178 observations) and **RT-X509-REQ** (76 observations),
+all_pass over 9. `RT-PEM-KEY` is pass in the phase-8 artifact (18/18) and was
+reused, not re-run.
+
+**NOT_RUN.** `src/ui/ui_openssl.rs` (console callback/signal boundary, deferred);
+Miri/ASan/Loom/TSan (no owner, extent, aliasing or concurrency mechanism changed);
+dudect/ctgrind (no constant-time claim); full Phase-25 forensic regeneration;
+FRF and SEAL.
+
+**Classification.** File-level audits, not `SAFETY_DISCHARGED` and not
+`SAFE_COMPATIBLE`. Hidden obligations: **0**.
+
+**Queue.** `REMAINING-AUDIT.txt` **47**, `AUDITED-FILES.txt` **716**.
+**Next ordinary position.** `src/ui/ui_openssl.rs` (retained console boundary).
+**Next eight from the file head.** `src/ui/ui_openssl.rs`, `src/x509/t_req.rs`,
+`src/x509/t_x509.rs`, `src/x509/v3_aaa.rs`, `src/x509/v3_akeya.rs`,
+`src/x509/v3_audit_id.rs`, `src/x509/v3_authattid.rs`, `src/x509/v3_battcons.rs`.

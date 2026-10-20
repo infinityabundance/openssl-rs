@@ -1,11 +1,4 @@
 src/ui/ui_openssl.rs
-src/ui/ui_util.rs
-src/x509/by_store.rs
-src/x509/pcy_data.rs
-src/x509/pcy_lib.rs
-src/x509/pcy_node.rs
-src/x509/t_acert.rs
-src/x509/t_crl.rs
 src/x509/t_req.rs
 src/x509/t_x509.rs
 src/x509/v3_aaa.rs
