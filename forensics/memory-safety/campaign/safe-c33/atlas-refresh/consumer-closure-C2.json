@@ -1,0 +1,266 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v1",
+  "subphase": "C2",
+  "date_utc": "2026-10-20",
+  "family": "pure-ftpd",
+  "source_identity": {
+    "repository": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "head_sha": "5730c4a56f42389c9e3a5780f310138ead46c6dc",
+    "head_subject": "Merge stage/p25/c1: current-candidate L7 evidence for eight families",
+    "c1_head_sha": "e0def58aabe60f86c6f376f612db22036aa20791",
+    "src_diff_c1_to_head": "none",
+    "note": "HEAD advances C1 only in tools/forensics; git diff --stat e0def58aa..HEAD -- src is empty."
+  },
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "02613bc21d4169c5d48dbcc88a7ed6ec13bd178396c7e129d19c5f5b6d356770",
+    "libssl_so_3_sha256": "dde65b92158c0fbde92ac615540a3f632ad476b3fc3e13b5a40fc8b8759a9578",
+    "matches_c1_recorded_identity": true,
+    "recheck_method": "sha256sum artifacts/phase2/install/lib/libcrypto.so.3 artifacts/phase2/install/lib/libssl.so.3"
+  },
+  "ledger_record": {
+    "source": "forensics/downstream/p1000-run.json#/body/per_consumer_receipts[family_id=family:pure-ftpd]",
+    "family_id": "family:pure-ftpd",
+    "canonical_name": "pure-ftpd",
+    "pinned_version": "1.0.52",
+    "p1000_rank": 39,
+    "ledger_level": "L7-functional",
+    "result": "DROP_IN_PASS",
+    "residual": "none",
+    "openssl_linkage": "direct",
+    "candidate_libs_loaded": [
+      {"soname": "libcrypto.so.3", "resolved": "prefix:libcrypto.so.3"},
+      {"soname": "libssl.so.3", "resolved": "prefix:libssl.so.3"}
+    ],
+    "claimed_mechanisms": ["ERR", "RAND_CMS_STORE_KEYFMT", "RUNTIME_CONCURRENCY", "SSL_SESSION"],
+    "claimed_mechanism_source": "atlas-refresh/consumer-status-C1.json#/l7_families[family=pure-ftpd].next_action and atlas-refresh/REPORT.md:185 (mechs=4, recon=3, open=1, open mechanism=ERR)",
+    "surface_used": "pure-ftpd: authenticated FTPS login + PWD over explicit TLS"
+  },
+  "symbol_evidence": {
+    "source": "forensics/downstream/usage-fingerprints.json#/body/fingerprints[family_id=family:pure-ftpd]",
+    "artifact_rel": "src/pure-ftpd",
+    "artifact_sha256": "f9a294e39acc92352a0c22e331c03daaf2e9b97829bb91c3c4351db55517d74a",
+    "linkage_proof_all_under_authority": true,
+    "max_level": "L5-loaded",
+    "launch_ok": true,
+    "headers": ["openssl/bn.h", "openssl/dh.h", "openssl/ec.h", "openssl/err.h", "openssl/rand.h", "openssl/ssl.h"],
+    "imported_symbol_count": 43,
+    "imported_symbols_sha256": "not recorded in fingerprint",
+    "imported_symbols": [
+      "ERR_error_string", "ERR_get_error",
+      "OPENSSL_init_crypto", "OPENSSL_init_ssl",
+      "RAND_seed", "RAND_status",
+      "SSL_accept", "SSL_CIPHER_get_bits", "SSL_CIPHER_get_name", "SSL_CIPHER_get_version",
+      "SSL_clear", "SSL_CTX_callback_ctrl", "SSL_CTX_check_private_key",
+      "SSL_CTX_clear_options", "SSL_CTX_ctrl", "SSL_CTX_free", "SSL_CTX_get_options",
+      "SSL_CTX_load_verify_locations", "SSL_CTX_new", "SSL_CTX_set_cipher_list",
+      "SSL_CTX_set_info_callback", "SSL_CTX_set_options", "SSL_CTX_set_session_id_context",
+      "SSL_CTX_set_session_ticket_cb", "SSL_CTX_set_timeout", "SSL_CTX_set_verify",
+      "SSL_CTX_set_verify_depth", "SSL_CTX_use_certificate_chain_file",
+      "SSL_CTX_use_PrivateKey_file", "SSL_free", "SSL_get_current_cipher", "SSL_get_error",
+      "SSL_get_fd", "SSL_get_servername", "SSL_new", "SSL_read", "SSL_set_accept_state",
+      "SSL_set_fd", "SSL_set_options", "SSL_set_SSL_CTX", "SSL_shutdown", "SSL_write",
+      "TLS_server_method"
+    ],
+    "evidence_gap": "The fingerprint is authority-linked; the candidate-linked pure-ftpd binary is not retained in the repository, so nm -D could not be re-run on the exact candidate artifact. Source and link line are unchanged, so the import set is expected to be identical; this is an expectation, not a re-measurement."
+  },
+  "closure": [
+    {
+      "mechanism": "ERR",
+      "basis": "ERR_error_string, ERR_get_error; SSL_CTX_set_info_callback (error reporting)",
+      "safety_state": "UNSAFE_OPEN",
+      "safety_state_source": "state.json#/mechanisms[id=ERR].state",
+      "nearest_receipt": {
+        "file": "PERFILE-INDEX.md:1499",
+        "id": "B10-ERR-1/2/3",
+        "state": "CONTRACTED",
+        "note": "Boundary receipt explicitly says 'all CONTRACTED, none promoted'.",
+        "boundary_artifact": "atlas-refresh/boundary-sweep-B10.json"
+      },
+      "candidate_residual": {
+        "unconverted_interior_files": 0,
+        "unconverted_interior_sites": 0,
+        "no_seam_production_alloc_files": 0,
+        "production_alloc_calls": 1,
+        "production_release_calls": 1,
+        "crate_unsafe_operations": 540
+      },
+      "discharged": false
+    },
+    {
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "basis": "RAND_seed, RAND_status",
+      "safety_state": "OWNERSHIP_RECONSTRUCTED",
+      "safety_state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT].state",
+      "nearest_receipt": {
+        "file": "PERFILE-INDEX.md:6427,6444-6447",
+        "id": "M71",
+        "state": "NO_PER_FILE_DISCHARGE",
+        "note": "Per-file contract sweep records repairs only; no mechanism discharge. Mechanism-level state is OWNERSHIP_RECONSTRUCTED."
+      },
+      "candidate_residual": {
+        "unconverted_interior_files": 2,
+        "unconverted_interior_sites": 4,
+        "no_seam_production_alloc_files": 2,
+        "production_alloc_calls": 36,
+        "production_release_calls": 41,
+        "crate_unsafe_operations": 21499
+      },
+      "discharged": false
+    },
+    {
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "basis": "OPENSSL_init_crypto, OPENSSL_init_ssl (init/threading path)",
+      "safety_state": "OWNERSHIP_RECONSTRUCTED",
+      "safety_state_source": "state.json#/mechanisms[id=RUNTIME_CONCURRENCY].state",
+      "nearest_receipt": {
+        "file": "PERFILE-INDEX.md:2682",
+        "id": "B15-TE-1..5",
+        "state": "CONTRACTED",
+        "note": "boundary-sweep-B15 thread-events boundary; CONTRACTED only."
+      },
+      "candidate_residual": {
+        "unconverted_interior_files": 1,
+        "unconverted_interior_sites": 3,
+        "no_seam_production_alloc_files": 1,
+        "production_alloc_calls": 7,
+        "production_release_calls": 15,
+        "crate_unsafe_operations": 1572
+      },
+      "discharged": false
+    },
+    {
+      "mechanism": "SSL_SESSION",
+      "basis": "SSL_accept/SSL_new/SSL_read/SSL_write/SSL_CTX_*; session id and ticket callbacks; TLS_server_method",
+      "safety_state": "OWNERSHIP_RECONSTRUCTED",
+      "safety_state_source": "state.json#/mechanisms[id=SSL_SESSION].state",
+      "nearest_receipt": {
+        "file": "PERFILE-INDEX.md:840",
+        "id": "B4-SL-1..5",
+        "state": "CONTRACTED",
+        "note": "ssl_sess.rs boundary receipt CONTRACTED; not SAFETY_DISCHARGED."
+      },
+      "candidate_residual": {
+        "unconverted_interior_files": 1,
+        "unconverted_interior_sites": 1,
+        "no_seam_production_alloc_files": 1,
+        "production_alloc_calls": 58,
+        "production_release_calls": 23,
+        "crate_unsafe_operations": 11781
+      },
+      "discharged": false
+    }
+  ],
+  "closure_expansion_candidates": {
+    "rule": "Conservative reading of the 43 imported symbols: a symbol that enters an x509/pem/evp/BIO entry point pulls that mechanism into the dependency closure unless non-impact is proven. These are inference, not measured call-graph results. They are additional blockers, not evidence of safety.",
+    "candidates": [
+      {
+        "mechanism": "X509_VERIFY_POLICY",
+        "trigger_symbols": ["SSL_CTX_load_verify_locations", "SSL_CTX_set_verify", "SSL_CTX_set_verify_depth"],
+        "safety_state": "OWNERSHIP_RECONSTRUCTED",
+        "discharged": false
+      },
+      {
+        "mechanism": "EVP_PKEY_PROVIDER",
+        "trigger_symbols": ["SSL_CTX_use_certificate_chain_file", "SSL_CTX_use_PrivateKey_file", "SSL_CTX_check_private_key"],
+        "safety_state": "OWNERSHIP_RECONSTRUCTED",
+        "discharged": false
+      },
+      {
+        "mechanism": "BIO",
+        "trigger_symbols": ["transitive: every SSL_* read/write/accept path"],
+        "safety_state": "UNSAFE_OPEN",
+        "discharged": false
+      },
+      {
+        "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+        "trigger_symbols": ["transitive: SSL_CTX_new/free, SSL_new/free, SSL_CTX_use_*"],
+        "safety_state": "UNSAFE_OPEN",
+        "discharged": false
+      },
+      {
+        "mechanism": "ASN1_OCSP",
+        "trigger_symbols": ["possible transitive: certificate/chain parsing via ASN1"],
+        "safety_state": "UNSAFE_OPEN",
+        "discharged": false,
+        "asserted_required": false,
+        "note": "No OCSP or ASN1_* import observed; not asserted as required without a call-graph witness."
+      }
+    ]
+  },
+  "mechanism_discharge_plane": {
+    "source": "CAMPAIGN-STATUS.json#/mechanism_discharges",
+    "discharged_entries": ["RC-1", "OB-1", "OB-2", "OB-3"],
+    "note": "Only shared-refcount and owner-type abstractions are mechanism-scope SAFETY_DISCHARGED. None of the nine consumer mechanisms (ERR, RAND_CMS_STORE_KEYFMT, BIO, EVP_PKEY_PROVIDER, RUNTIME_ALLOC_OWNERSHIP, ASN1_OCSP, X509_VERIFY_POLICY, RUNTIME_CONCURRENCY, SSL_SESSION) appears in the discharge plane."
+  },
+  "compatibility": {
+    "evidence_sources": [
+      "atlas-refresh/consumer-status-C1.json#/l7_families[family=pure-ftpd]",
+      "forensics/downstream/p1000-run.json#/body/per_consumer_receipts[family_id=family:pure-ftpd]",
+      "forensics/downstream/p1000-run.json#/body/verdicts[family_id=family:pure-ftpd]"
+    ],
+    "level": "L7-functional",
+    "result": "DROP_IN_PASS",
+    "workload": "authenticated FTPS login + PWD over explicit TLS",
+    "functional_ok": true,
+    "runtime_ok": true,
+    "load_all_under_prefix": true,
+    "linkage_proven": true,
+    "current_candidate": true,
+    "candidate_specific_patch_count": 0,
+    "transcript_sha256_c1": "afcf1c7a2bdb63f87357070ad4b1cd962ab28a2041083ffcede71b6ec384e5b3",
+    "transcript_sha256_p1000": "b65e64d297bd965611b310006e6cc3cd065b973be50c40d0bf5324ac03796c6d",
+    "sonames_under_prefix": ["libcrypto.so.3", "libssl.so.3"],
+    "harness": {
+      "count": 1,
+      "name": "forensics/tools/downstream_runtime.py",
+      "independent_harness": false,
+      "gap": "Single-harness evidence: no independent phase17-style court; the candidate-linked binary is not retained for independent nm -D replay. C1 transcript is replayable but not independently derived."
+    },
+    "compatibility_confirmed": true
+  },
+  "verdict": {
+    "state": "BLOCKED",
+    "safe_compatible": false,
+    "reason": "No mechanism in pure-ftpd's closure is SAFETY_DISCHARGED. The minimal claimed closure is 3x OWNERSHIP_RECONSTRUCTED (RAND_CMS_STORE_KEYFMT, RUNTIME_CONCURRENCY, SSL_SESSION) + 1x UNSAFE_OPEN (ERR). A conservative reading of the imported symbols adds X509_VERIFY_POLICY, EVP_PKEY_PROVIDER, BIO and RUNTIME_ALLOC_OWNERSHIP, all likewise non-discharged. Functional DROP_IN_PASS is necessary but not sufficient under AGENTS.md section 7.",
+    "blockers": [
+      {"mechanism": "ERR", "state": "UNSAFE_OPEN", "required": "SAFETY_DISCHARGED"},
+      {"mechanism": "RAND_CMS_STORE_KEYFMT", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED"},
+      {"mechanism": "RUNTIME_CONCURRENCY", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED"},
+      {"mechanism": "SSL_SESSION", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED"},
+      {"mechanism": "X509_VERIFY_POLICY", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED or proven non-impact", "closure_status": "expansion candidate"},
+      {"mechanism": "EVP_PKEY_PROVIDER", "state": "OWNERSHIP_RECONSTRUCTED", "required": "SAFETY_DISCHARGED or proven non-impact", "closure_status": "expansion candidate"},
+      {"mechanism": "BIO", "state": "UNSAFE_OPEN", "required": "SAFETY_DISCHARGED or proven non-impact", "closure_status": "expansion candidate"},
+      {"mechanism": "RUNTIME_ALLOC_OWNERSHIP", "state": "UNSAFE_OPEN", "required": "SAFETY_DISCHARGED or proven non-impact", "closure_status": "expansion candidate"},
+      {"blocker": "single-harness compatibility", "detail": "No independent phase17-style harness; not a safety discharge blocker but blocks independent compatibility confirmation."},
+      {"blocker": "independent review", "detail": "No record claims INDEPENDENTLY_CHECKED (CAMPAIGN-STATUS.json#/remaining_obligations)."}
+    ]
+  },
+  "counts": {
+    "safe_compatible_claims_before": 0,
+    "safe_compatible_claims_after": 0,
+    "cohort_safe_compatible_total": 0,
+    "cohort_size": 33,
+    "cohort_l7_families": 8
+  },
+  "non_claims": [
+    "This receipt does not change the 0/33 SAFE_COMPATIBLE count.",
+    "This receipt does not claim pure-ftpd is unsafe or functionally broken: its L7 DROP_IN_PASS stands.",
+    "This receipt does not discharge any mechanism and does not promote any file or boundary.",
+    "The expansion candidates are inference from imported entry points, not a measured call graph.",
+    "ASN1_OCSP is not asserted as a required mechanism; no OCSP/ASN1 import was observed.",
+    "Candidate-symbol parity is expected from an unchanged source and link line, but the exact candidate-linked binary was not retained for a fresh nm -D.",
+    "No unsafe code was added or changed by this analysis-only subphase."
+  ],
+  "next_family": {
+    "family": "redis",
+    "ledger_level": "L7-functional",
+    "mechanisms": 7,
+    "reconstructed": 4,
+    "open": 3,
+    "open_mechanisms": ["BIO", "ERR", "RUNTIME_ALLOC_OWNERSHIP"],
+    "fingerprint_symbols": 51,
+    "evidence": "atlas-refresh/REPORT.md:186; atlas-refresh/consumer-status-C1.json#/next_highest_value_subphase"
+  }
+}
