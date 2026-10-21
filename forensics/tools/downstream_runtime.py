@@ -453,6 +453,94 @@ PROGRAMS: dict[str, dict] = {
                  "es256_pk_from_EVP_PKEY/es256_pk_to_EVP_PKEY, the ES256 signature verifies, and "
                  "an altered signature is rejected"),
     },
+    # The Phase-25 L7 expansion batch (b9): six LIBRARY-only families. Each ships no executable,
+    # so the admitted workload is a harness under forensics/tools/ built against the family
+    # library rebuilt in this source tree and the subject prefix. Every harness asserts the
+    # family's own OpenSSL consumer path plus a negative control (an unrelated CA, a wrong
+    # password, or a corrupted input).
+    "libwebsockets": {
+        "program": ".l7-libwebsockets-harness", "launch": ["--version"],
+        "version_re": r"libwebsockets-l7-harness", "lib_paths": ["b/lib"],
+        "harness": {
+            "source": "forensics/tools/l7_libwebsockets.c",
+            "cflags": ["-I{root}/include", "-I{root}/b", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b/lib", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b/lib", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lwebsockets", "-lssl", "-lcrypto", "-lpthread"],
+        },
+        "note": ("libwebsockets' wss client and server over loopback: a TLS1.3 handshake with the "
+                 "fixture CA and an echo round trip; a client trusting only an unrelated CA is "
+                 "rejected"),
+    },
+    "libstrophe": {
+        "program": ".l7-libstrophe-harness", "launch": ["--version"],
+        "version_re": r"libstrophe-l7-harness", "lib_paths": [".libs"],
+        "harness": {
+            "source": "forensics/tools/l7_libstrophe.c",
+            "cflags": ["-I{root}", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lstrophe", "-lssl", "-lcrypto", "-lexpat"],
+        },
+        "note": ("libstrophe's XMPP-over-TLS client: mandatory STARTTLS against a local stub, "
+                 "certificate verification against the fixture CA, SASL PLAIN and a message "
+                 "stanza round trip; an unrelated CA is rejected"),
+    },
+    "libcoap": {
+        "program": ".l7-libcoap-harness", "launch": ["--version"],
+        "version_re": r"libcoap-l7-harness", "lib_paths": ["b"],
+        "harness": {
+            "source": "forensics/tools/l7_libcoap.c",
+            "cflags": ["-I{root}/include", "-I{root}/b", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lcoap-3", "-lssl", "-lcrypto", "-lpthread"],
+        },
+        "note": ("libcoap's CoAP-over-TLS server and client: a GET on /l7 returns the exact "
+                 "payload over a verified TLS session; a client trusting only an unrelated CA "
+                 "receives no response"),
+    },
+    "libesmtp": {
+        "program": ".l7-libesmtp-harness", "launch": ["--version"],
+        "version_re": r"libesmtp-l7-harness", "lib_paths": ["b"],
+        "harness": {
+            "source": "forensics/tools/l7_libesmtp.c",
+            "cflags": ["-I{root}", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lesmtp", "-lssl", "-lcrypto", "-lpthread"],
+        },
+        "note": ("libesmtp's SMTP submission over STARTTLS against a local stub: the message is "
+                 "accepted over a TLS1.3 session verified against the fixture CA; an unrelated CA "
+                 "never establishes TLS"),
+    },
+    "minizip-ng": {
+        "program": ".l7-minizip-ng-harness", "launch": ["--version"],
+        "version_re": r"minizip-ng-l7-harness", "lib_paths": ["b"],
+        "harness": {
+            "source": "forensics/tools/l7_minizip_ng.c",
+            "cflags": ["-I{root}", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lminizip", "-lssl", "-lcrypto"],
+        },
+        "note": ("minizip-ng's WinZip AES-256 archive path through its OpenSSL crypto backend: "
+                 "write/read with the right password and a wrong-password reject"),
+    },
+    "libtins": {
+        "program": ".l7-libtins-harness", "launch": ["--version"],
+        "version_re": r"libtins-l7-harness", "lib_paths": ["b/lib"],
+        "harness": {
+            "source": "forensics/tools/l7_libtins.cpp",
+            "cflags": ["-I{root}/include", "-I{root}/b/include", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b/lib", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b/lib", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-ltins", "-lstdc++", "-lcrypto"],
+        },
+        "note": ("libtins' WPA2 crypto path through libcrypto: the supplicant PMK derivation "
+                 "reproduces the 802.11i vector and a corrupted passphrase derives a different "
+                 "key"),
+    },
     # The Phase-25 L7 server batch: three TLS servers, an FTPS server and a TLS terminator. Each is
     # a real local exchange with a concrete observable and a negative control, not a banner.
     "memcached": {
@@ -7489,6 +7577,148 @@ def _wl_mktorrent(ctx: dict) -> dict:
             "local_only": True}
 
 
+
+def _wl_libwebsockets(ctx: dict) -> dict:
+    """A wss client+server loopback session with an echo and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"]),
+              "--other-ca", str(pki["other_crt"])]
+    good = _run_captured([prog] + common + ["--ca", str(pki["ca_crt"])], cwd=d,
+                         env=ctx["env"], timeout=60)
+    neg = _run_captured([prog, "--negative"] + common + ["--ca", str(pki["ca_crt"])],
+                        cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    handshake_ok = ("handshake=TLSv1.3" in text and "echo=ok" in text)
+    runtime_ok = bool(good["ok"] and handshake_ok)
+    neg_rejected = bool(neg["ok"] and "negative=rejected" in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the wss loopback session did not complete a verified TLS1.3 handshake and echo"
+            if not runtime_ok else "the unrelated CA completed the wss handshake"),
+        "transcript": _transcript(("wss client+server", good), ("unrelated CA", neg)),
+        "workload": ("libwebsockets: wss server+client over loopback (TLS1.3 handshake, "
+                     "verified peer, echo round trip) + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_libstrophe(ctx: dict) -> dict:
+    """An XMPP STARTTLS session plus a stanza exchange, and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"])]
+    good = _run_captured([prog] + common + ["--ca", str(pki["ca_crt"])], cwd=d,
+                         env=ctx["env"], timeout=60)
+    neg = _run_captured([prog, "--negative"] + common + ["--ca", str(pki["other_crt"])],
+                        cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    handshake_ok = ("tls=TLSv1.3" in text and "stanza=ok" in text)
+    runtime_ok = bool(good["ok"] and handshake_ok)
+    neg_rejected = bool(neg["ok"] and "negative=rejected" in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the libstrophe client did not complete STARTTLS and the stanza exchange"
+            if not runtime_ok else "the unrelated CA passed libstrophe's certificate check"),
+        "transcript": _transcript(("STARTTLS + stanza", good), ("unrelated CA", neg)),
+        "workload": ("libstrophe: XMPP STARTTLS against a local stub (verified TLS1.3, SASL "
+                     "PLAIN, message stanza round trip) + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_libcoap(ctx: dict) -> dict:
+    """CoAP-over-TLS request/response with an exact payload and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    res = _run_captured([str(ctx["program"]), "--cert", str(pki["srv_crt"]),
+                         "--key", str(pki["srv_key"]), "--ca", str(pki["ca_crt"]),
+                         "--other-ca", str(pki["other_crt"])],
+                        cwd=d, env=ctx["env"], timeout=60)
+    text = res["stdout"] + res["stderr"]
+    runtime_ok = bool(res["ok"] and "coap_tls=ok" in text)
+    payload_ok = "payload=phase25-l7-coap-response" in text
+    neg_rejected = "negative=rejected" in text
+    functional_ok = runtime_ok and payload_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the CoAP-over-TLS exchange did not complete" if not runtime_ok else
+            ("the response payload differs" if not payload_ok else
+             "the unrelated CA received a response")),
+        "transcript": _transcript(("coap over TLS", res)),
+        "workload": ("libcoap: CoAP-over-TLS GET /l7 with a verified session and an exact "
+                     "payload, plus an unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_libesmtp(ctx: dict) -> dict:
+    """An SMTP STARTTLS submission accepted by a local stub, and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"])]
+    good = _run_captured([prog] + common + ["--ca", str(pki["ca_crt"])], cwd=d,
+                         env=ctx["env"], timeout=60)
+    neg = _run_captured([prog, "--negative"] + common + ["--ca", str(pki["other_crt"])],
+                        cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    handshake_ok = ("tls=TLSv1.3" in text and "starttls=ok" in text
+                    and "message=accepted" in text and "session=ok" in text)
+    runtime_ok = bool(good["ok"] and handshake_ok)
+    neg_rejected = bool(neg["ok"] and "negative=rejected" in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the STARTTLS submission did not complete" if not runtime_ok else
+            "the unrelated CA completed the TLS handshake"),
+        "transcript": _transcript(("STARTTLS submission", good), ("unrelated CA", neg)),
+        "workload": ("libesmtp: SMTP submission over STARTTLS against a local stub (verified "
+                     "TLS1.3, message accepted) + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_minizip_ng(ctx: dict) -> dict:
+    """minizip-ng's AES-256 archive write/read with a wrong-password reject."""
+    return _wl_markers(ctx, ["aes256_write=ok", "aes256_read=ok", "wrong_password=rejected"],
+                       "minizip-ng: WinZip AES-256 archive write/read + wrong-password reject")
+
+
+def _wl_libtins(ctx: dict) -> dict:
+    """libtins' WPA2 PMK derivation against the 802.11i vector and a corrupted input."""
+    return _wl_markers(ctx, ["pmk_vector=ok", "corrupt_input_differs=ok"],
+                       "libtins: WPA2 PMK derivation reproduces the 802.11i vector and a "
+                       "corrupted passphrase differs")
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -7573,6 +7803,13 @@ RUNNERS = {
     "aircrack-ng": _wl_aircrack,
     "nrpe": _wl_nrpe,
     "mktorrent": _wl_mktorrent,
+    # The Phase-25 L7 expansion batch (b9): six LIBRARY-only families.
+    "libwebsockets": _wl_libwebsockets,
+    "libstrophe": _wl_libstrophe,
+    "libcoap": _wl_libcoap,
+    "libesmtp": _wl_libesmtp,
+    "minizip-ng": _wl_minizip_ng,
+    "libtins": _wl_libtins,
 }
 
 

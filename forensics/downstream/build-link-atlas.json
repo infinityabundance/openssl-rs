@@ -9,40 +9,41 @@
       "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
     },
     "counts": {
-      "authority_linkage_proven": 76,
+      "authority_linkage_proven": 82,
       "by_subject": {
         "authority": {
-          "built": 76,
-          "configured": 76,
+          "built": 82,
+          "configured": 82,
           "failed": 2,
-          "linked": 76,
-          "not_attempted": 922
+          "linked": 82,
+          "not_attempted": 916
         },
         "candidate": {
-          "built": 76,
-          "configured": 76,
+          "built": 82,
+          "configured": 82,
           "failed": 2,
-          "linked": 76,
-          "not_attempted": 922
+          "linked": 82,
+          "not_attempted": 916
         }
       },
       "candidate_failures": {
-        "acquire-failure": 922,
+        "acquire-failure": 916,
         "configure-failure": 2
       },
-      "candidate_linkage_proven": 76,
+      "candidate_linkage_proven": 82,
       "candidate_specific_patch_count": 0,
-      "measured_families": 78,
-      "no_recipe": 922,
+      "measured_families": 84,
+      "no_recipe": 916,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 78
+      "with_recipe": 84
     },
     "evidence_reuse": {
       "candidate_identity_match": true,
-      "families_reused": 77,
+      "families_reused": 78,
       "mode": "committed-rows",
       "reused_families": [
+        "aircrack-ng",
         "apache2-utils",
         "apr-util",
         "axel",
@@ -1200,6 +1201,83 @@
         "sha256": "d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
         "url": "https://deb.debian.org/debian/pool/main/m/mktorrent/mktorrent_1.1.orig.tar.gz",
         "version": "1.1"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "b/lib/libwebsockets.so*",
+        "build_system": "cmake",
+        "env_extra": null,
+        "family": "libwebsockets",
+        "note": "libwebsockets 4.3.3 built with CMake against the subject prefix; its TLS client and server paths use the subject libssl (the test apps are disabled because the workload is the harness)",
+        "recipe_id": "recipe:libwebsockets:4.3.3",
+        "sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "url": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "version": "4.3.3"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": ".libs/libstrophe.so*",
+        "build_system": "configure",
+        "env_extra": {
+          "openssl_CFLAGS": "-I{prefix}/include",
+          "openssl_LIBS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lssl -lcrypto"
+        },
+        "family": "libstrophe",
+        "note": "libstrophe 0.13.1 built with its shipped configure; the prefix ships no openssl.pc, so PKG_CHECK_MODULES is satisfied through the module's openssl_CFLAGS/openssl_LIBS override and the TLS backend is the subject libssl (expat is the venue's XML parser)",
+        "recipe_id": "recipe:libstrophe:0.13.1",
+        "sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "url": "https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz",
+        "version": "0.13.1"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "b/libcoap-3.so*",
+        "build_system": "cmake",
+        "env_extra": null,
+        "family": "libcoap",
+        "note": "libcoap 4.3.5 built with CMake, DTLS/TLS on the OpenSSL backend so CoAP over TLS uses the subject libssl; tests, examples and documentation are disabled",
+        "recipe_id": "recipe:libcoap:4.3.5",
+        "sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "url": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "version": "4.3.5"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "b/libesmtp.so*",
+        "build_system": "meson",
+        "env_extra": {
+          "PKG_CONFIG_PATH": "{prefix}/lib/pkgconfig:{root}/.l7-pc"
+        },
+        "family": "libesmtp",
+        "note": "libesmtp 1.1.0 built with meson/ninja; its STARTTLS path links the subject libssl through a prefix shim openssl.pc (the prefix ships no openssl.pc)",
+        "recipe_id": "recipe:libesmtp:1.1.0",
+        "sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "url": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "version": "1.1.0"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "b/libminizip.so*",
+        "build_system": "cmake",
+        "env_extra": null,
+        "family": "minizip-ng",
+        "note": "minizip-ng 4.0.10 built with CMake; WinZip AES encryption uses the subject libcrypto (zstd is disabled because the venue carries no zstd headers)",
+        "recipe_id": "recipe:minizip-ng:4.0.10",
+        "sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "url": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "version": "4.0.10"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "b/lib/libtins.so*",
+        "build_system": "cmake",
+        "env_extra": null,
+        "family": "libtins",
+        "note": "libtins 4.5 with its WPA2 decryption path enabled; the PMK derivation uses the subject libcrypto's PBKDF2/HMAC (libpcap capture is disabled: the workload needs no capture device)",
+        "recipe_id": "recipe:libtins:4.5",
+        "sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "url": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "version": "4.5"
       }
     ],
     "resource_limits": {
@@ -59400,24 +59478,55 @@
         "canonical_name": "libcoap",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libcoap"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libcoap",
+          "recipe:recipe:libcoap:4.3.5",
+          "source:https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz#a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+          "artifact:b/libcoap-3.so.3.2.0"
+        ],
+        "failure_class": null,
         "family_id": "family:libcoap",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 157,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/libcoap-3.so.3.2.0",
+          "artifact_sha256": "d843389b24f64ce057e90c228bfa82b7ea49e49a3161e78cfbcecc6c9bc19f6b",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 76,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libcoap:4.3.5",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -59427,41 +59536,124 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:libcoap",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "c555db7b0a9a4aef6894822c9959f0f54f4bdc91523013841f5c2b9135c0afd2",
+        "source_sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "source_url": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "specimen_id": "specimen:libcoap:4.3.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libcoap/source.tar.gz",
+              "-C",
+              "{scratch}/libcoap/authority/src"
+            ],
+            "elapsed_seconds": 0.015,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DBUILD_SHARED_LIBS=ON",
+              "-DENABLE_DTLS=ON",
+              "-DDTLS_BACKEND=openssl",
+              "-DENABLE_OSCORE=OFF",
+              "-DENABLE_TESTS=OFF",
+              "-DENABLE_EXAMPLES=OFF",
+              "-DENABLE_DOCS=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_C_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 1.234,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 0.846,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:libcoap:4.3.5:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "libcoap",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libcoap"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libcoap",
+          "recipe:recipe:libcoap:4.3.5",
+          "source:https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz#a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+          "artifact:b/libcoap-3.so.3.2.0"
+        ],
+        "failure_class": null,
         "family_id": "family:libcoap",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 157,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/libcoap-3.so.3.2.0",
+          "artifact_sha256": "dfb180bbab36dcbb1f1696fa3292b6b1fa97fddb0453e2d7f7d49db904a87b03",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 76,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libcoap:4.3.5",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -59472,18 +59664,70 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:libcoap",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "c555db7b0a9a4aef6894822c9959f0f54f4bdc91523013841f5c2b9135c0afd2",
+        "source_sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "source_url": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "specimen_id": "specimen:libcoap:4.3.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libcoap/source.tar.gz",
+              "-C",
+              "{scratch}/libcoap/candidate/src"
+            ],
+            "elapsed_seconds": 0.015,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DBUILD_SHARED_LIBS=ON",
+              "-DENABLE_DTLS=ON",
+              "-DDTLS_BACKEND=openssl",
+              "-DENABLE_OSCORE=OFF",
+              "-DENABLE_TESTS=OFF",
+              "-DENABLE_EXAMPLES=OFF",
+              "-DENABLE_DOCS=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_C_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 1.231,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 0.755,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:libcoap:4.3.5:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -63000,24 +63244,55 @@
         "canonical_name": "libesmtp",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libesmtp"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libesmtp",
+          "recipe:recipe:libesmtp:1.1.0",
+          "source:https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz#32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+          "artifact:b/libesmtp.so.6.2.0"
+        ],
+        "failure_class": null,
         "family_id": "family:libesmtp",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 45,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/libesmtp.so.6.2.0",
+          "artifact_sha256": "f3fa72c07e9daac1d202a5cb529e12f6274d14262508f7e7959aaca295ac4e58",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 264,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libesmtp:1.1.0",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -63027,41 +63302,125 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:libesmtp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "ba1bde35a8d87aeaebcb4d4a66ba8531fe0c67e905603dacee26f5017d7644b4",
+        "source_sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "source_url": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "specimen_id": "specimen:libesmtp:1.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libesmtp/source.tar.gz",
+              "-C",
+              "{scratch}/libesmtp/authority/src"
+            ],
+            "elapsed_seconds": 0.004,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "mkdir -p {scratch}/libesmtp/authority/src/libESMTP-1.1.0/.l7-pc && printf 'Name: OpenSSL\nDescription: subject OpenSSL prefix\nVersion: 3.0.0\nLibs: -L{prefix}/lib -Wl,-rpath,{prefix}/lib -lssl -lcrypto\nCflags: -I{prefix}/include\n' > {scratch}/libesmtp/authority/src/libESMTP-1.1.0/.l7-pc/openssl.pc"
+            ],
+            "elapsed_seconds": 0.001,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "meson",
+              "setup",
+              "b",
+              "--buildtype=release",
+              "-Dwerror=false",
+              "-Dlwres=disabled",
+              "-Dxdg=false",
+              "-Dpthreads=enabled",
+              "-Dtls=enabled"
+            ],
+            "elapsed_seconds": 0.281,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "ninja",
+              "-C",
+              "b"
+            ],
+            "elapsed_seconds": 0.315,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:libesmtp:1.1.0:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "libesmtp",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libesmtp"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libesmtp",
+          "recipe:recipe:libesmtp:1.1.0",
+          "source:https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz#32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+          "artifact:b/libesmtp.so.6.2.0"
+        ],
+        "failure_class": null,
         "family_id": "family:libesmtp",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 45,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/libesmtp.so.6.2.0",
+          "artifact_sha256": "2594eb0aa218131083d2f2f8fee337ed96d97b9bffe2a1253b7eab02f368293a",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 264,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libesmtp:1.1.0",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -63072,18 +63431,71 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:libesmtp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "ba1bde35a8d87aeaebcb4d4a66ba8531fe0c67e905603dacee26f5017d7644b4",
+        "source_sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "source_url": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "specimen_id": "specimen:libesmtp:1.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libesmtp/source.tar.gz",
+              "-C",
+              "{scratch}/libesmtp/candidate/src"
+            ],
+            "elapsed_seconds": 0.004,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "mkdir -p {scratch}/libesmtp/candidate/src/libESMTP-1.1.0/.l7-pc && printf 'Name: OpenSSL\nDescription: subject OpenSSL prefix\nVersion: 3.0.0\nLibs: -L{prefix}/lib -Wl,-rpath,{prefix}/lib -lssl -lcrypto\nCflags: -I{prefix}/include\n' > {scratch}/libesmtp/candidate/src/libESMTP-1.1.0/.l7-pc/openssl.pc"
+            ],
+            "elapsed_seconds": 0.001,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "meson",
+              "setup",
+              "b",
+              "--buildtype=release",
+              "-Dwerror=false",
+              "-Dlwres=disabled",
+              "-Dxdg=false",
+              "-Dpthreads=enabled",
+              "-Dtls=enabled"
+            ],
+            "elapsed_seconds": 0.279,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "ninja",
+              "-C",
+              "b"
+            ],
+            "elapsed_seconds": 0.333,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:libesmtp:1.1.0:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -68360,24 +68772,57 @@
         "canonical_name": "libstrophe",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libstrophe"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libexpat.so.1",
+          "libssl.so.3",
+          "libz.so.1"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libstrophe",
+          "recipe:recipe:libstrophe:0.13.1",
+          "source:https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz#a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+          "artifact:.libs/libstrophe.so.0.13.1"
+        ],
+        "failure_class": null,
         "family_id": "family:libstrophe",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 98,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": ".libs/libstrophe.so.0.13.1",
+          "artifact_sha256": "a8c41f290a2a3a92e5675257e54babc81dc288076ec1892ee1c7ce845b0d5437",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 23,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libstrophe:0.13.1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -68387,41 +68832,110 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:libstrophe",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "994bc81e59f406b234911936ce24d97743595819de678b575bc40bcfbdf0107c",
+        "source_sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "source_url": "https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz",
+        "specimen_id": "specimen:libstrophe:0.13.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libstrophe/source.tar.gz",
+              "-C",
+              "{scratch}/libstrophe/authority/src"
+            ],
+            "elapsed_seconds": 0.011,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/libstrophe/authority/src/libstrophe-0.13.1/.l7-install",
+              "--disable-static",
+              "--enable-shared"
+            ],
+            "elapsed_seconds": 1.237,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j8"
+            ],
+            "elapsed_seconds": 0.798,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:libstrophe:0.13.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "libstrophe",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libstrophe"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libexpat.so.1",
+          "libssl.so.3",
+          "libz.so.1"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libstrophe",
+          "recipe:recipe:libstrophe:0.13.1",
+          "source:https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz#a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+          "artifact:.libs/libstrophe.so.0.13.1"
+        ],
+        "failure_class": null,
         "family_id": "family:libstrophe",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 98,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": ".libs/libstrophe.so.0.13.1",
+          "artifact_sha256": "6f578df78d4d52656d938fc04fe8e652f6b1a7242a907d819b7c16394ba3479f",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 23,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libstrophe:0.13.1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -68432,42 +68946,105 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:libstrophe",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "994bc81e59f406b234911936ce24d97743595819de678b575bc40bcfbdf0107c",
+        "source_sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "source_url": "https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz",
+        "specimen_id": "specimen:libstrophe:0.13.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libstrophe/source.tar.gz",
+              "-C",
+              "{scratch}/libstrophe/candidate/src"
+            ],
+            "elapsed_seconds": 0.01,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/libstrophe/candidate/src/libstrophe-0.13.1/.l7-install",
+              "--disable-static",
+              "--enable-shared"
+            ],
+            "elapsed_seconds": 1.231,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j8"
+            ],
+            "elapsed_seconds": 0.839,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:libstrophe:0.13.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "libtins",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libtins"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libgcc_s.so.1",
+          "libm.so.6",
+          "libstdc++.so.6"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libtins",
+          "recipe:recipe:libtins:4.5",
+          "source:https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz#6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+          "artifact:b/lib/libtins.so.4.5"
+        ],
+        "failure_class": null,
         "family_id": "family:libtins",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 6,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/lib/libtins.so.4.5",
+          "artifact_sha256": "d0d4d7216f0bdd8180e3e59dec546af0dce40a2a5fb29452f3b5ee6e062f6694",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 278,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libtins:4.5",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -68477,41 +69054,119 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:libtins",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "6a1a80f21fdff1cfe82eff0411ced3ebb8a3cb539ea1ebae8875dddd651efe2a",
+        "source_sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "source_url": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "specimen_id": "specimen:libtins:4.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libtins/source.tar.gz",
+              "-C",
+              "{scratch}/libtins/authority/src"
+            ],
+            "elapsed_seconds": 0.009,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DLIBTINS_ENABLE_PCAP=OFF",
+              "-DLIBTINS_ENABLE_WPA2=ON",
+              "-DLIBTINS_ENABLE_DOT11=ON",
+              "-DLIBTINS_ENABLE_CXX11=ON",
+              "-DLIBTINS_BUILD_EXAMPLES=OFF",
+              "-DLIBTINS_BUILD_TESTS=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 0.677,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 3.193,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:libtins:4.5:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "libtins",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libtins"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libgcc_s.so.1",
+          "libm.so.6",
+          "libstdc++.so.6"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libtins",
+          "recipe:recipe:libtins:4.5",
+          "source:https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz#6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+          "artifact:b/lib/libtins.so.4.5"
+        ],
+        "failure_class": null,
         "family_id": "family:libtins",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 6,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/lib/libtins.so.4.5",
+          "artifact_sha256": "6a57dec2facfa6794073daf2886c6d7e64fef4edf633471f9f53ff5b29dcc2bd",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 278,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libtins:4.5",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -68522,18 +69177,69 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:libtins",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "6a1a80f21fdff1cfe82eff0411ced3ebb8a3cb539ea1ebae8875dddd651efe2a",
+        "source_sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "source_url": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "specimen_id": "specimen:libtins:4.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libtins/source.tar.gz",
+              "-C",
+              "{scratch}/libtins/candidate/src"
+            ],
+            "elapsed_seconds": 0.009,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DLIBTINS_ENABLE_PCAP=OFF",
+              "-DLIBTINS_ENABLE_WPA2=ON",
+              "-DLIBTINS_ENABLE_DOT11=ON",
+              "-DLIBTINS_ENABLE_CXX11=ON",
+              "-DLIBTINS_BUILD_EXAMPLES=OFF",
+              "-DLIBTINS_BUILD_TESTS=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 0.674,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 3.28,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:libtins:4.5:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -68900,24 +69606,55 @@
         "canonical_name": "libwebsockets",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libwebsockets"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libwebsockets",
+          "recipe:recipe:libwebsockets:4.3.3",
+          "source:https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz#6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+          "artifact:b/lib/libwebsockets.so.19"
+        ],
+        "failure_class": null,
         "family_id": "family:libwebsockets",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 133,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/lib/libwebsockets.so.19",
+          "artifact_sha256": "098ad586e80997ebac872045a56b8e3d517418117880bfcb730aeb2ab1c33b85",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 24,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libwebsockets:4.3.3",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -68927,41 +69664,124 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:libwebsockets",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cb66a6a4db2df84632e74484380ee857a8c1411a79c4cfa7ae900816ab426929",
+        "source_sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "source_url": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "specimen_id": "specimen:libwebsockets:4.3.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libwebsockets/source.tar.gz",
+              "-C",
+              "{scratch}/libwebsockets/authority/src"
+            ],
+            "elapsed_seconds": 0.1,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DLWS_WITH_SSL=ON",
+              "-DLWS_WITHOUT_TESTAPPS=ON",
+              "-DLWS_WITH_MINIMAL_EXAMPLES=OFF",
+              "-DLWS_WITH_STATIC=OFF",
+              "-DLWS_WITH_SHARED=ON",
+              "-DLWS_WITH_LIBUV=OFF",
+              "-DLWS_WITH_PLUGINS=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_C_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 3.044,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 1.778,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:libwebsockets:4.3.3:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "libwebsockets",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libwebsockets"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libwebsockets",
+          "recipe:recipe:libwebsockets:4.3.3",
+          "source:https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz#6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+          "artifact:b/lib/libwebsockets.so.19"
+        ],
+        "failure_class": null,
         "family_id": "family:libwebsockets",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 133,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/lib/libwebsockets.so.19",
+          "artifact_sha256": "bebc3b5228421a5a0210accda3430142f129f2f23a9d792eafe1a6bf7a1b0cca",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 24,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libwebsockets:4.3.3",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -68972,18 +69792,70 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:libwebsockets",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cb66a6a4db2df84632e74484380ee857a8c1411a79c4cfa7ae900816ab426929",
+        "source_sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "source_url": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "specimen_id": "specimen:libwebsockets:4.3.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libwebsockets/source.tar.gz",
+              "-C",
+              "{scratch}/libwebsockets/candidate/src"
+            ],
+            "elapsed_seconds": 0.099,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DLWS_WITH_SSL=ON",
+              "-DLWS_WITHOUT_TESTAPPS=ON",
+              "-DLWS_WITH_MINIMAL_EXAMPLES=OFF",
+              "-DLWS_WITH_STATIC=OFF",
+              "-DLWS_WITH_SHARED=ON",
+              "-DLWS_WITH_LIBUV=OFF",
+              "-DLWS_WITH_PLUGINS=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_C_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 3.04,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 1.914,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:libwebsockets:4.3.3:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -71864,24 +72736,51 @@
         "canonical_name": "minizip-ng",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:minizip-ng"
+        "dt_needed": [
+          "libbz2.so.1.0",
+          "libc.so.6",
+          "libcrypto.so.3",
+          "liblzma.so.5",
+          "libz.so.1"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:minizip-ng",
+          "recipe:recipe:minizip-ng:4.0.10",
+          "source:https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz#c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+          "artifact:b/libminizip.so.4.0.10"
+        ],
+        "failure_class": null,
         "family_id": "family:minizip-ng",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 41,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/libminizip.so.4.0.10",
+          "artifact_sha256": "548c96256bbaaf76ca8f770b23ceb25850042092b57f661a0ea8fea79736321e",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 293,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:minizip-ng:4.0.10",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -71891,41 +72790,124 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:minizip-ng",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "1c1aa90a4ba501c4c5b51da80ca2539d24f75c87d2037af4f5c699fa3672137a",
+        "source_sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "source_url": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "specimen_id": "specimen:minizip-ng:4.0.10",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/minizip-ng/source.tar.gz",
+              "-C",
+              "{scratch}/minizip-ng/authority/src"
+            ],
+            "elapsed_seconds": 0.009,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DBUILD_SHARED_LIBS=ON",
+              "-DMZ_OPENSSL=ON",
+              "-DMZ_ZLIB=ON",
+              "-DMZ_BZIP2=ON",
+              "-DMZ_LZMA=ON",
+              "-DMZ_ZSTD=OFF",
+              "-DMZ_PKCRYPT=ON",
+              "-DMZ_WZAES=ON",
+              "-DMZ_COMPAT=ON",
+              "-DMZ_BUILD_TESTS=OFF",
+              "-DMZ_BUILD_UNIT_TESTS=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_C_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 0.279,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 0.357,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:minizip-ng:4.0.10:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "minizip-ng",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:minizip-ng"
+        "dt_needed": [
+          "libbz2.so.1.0",
+          "libc.so.6",
+          "libcrypto.so.3",
+          "liblzma.so.5",
+          "libz.so.1"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:minizip-ng",
+          "recipe:recipe:minizip-ng:4.0.10",
+          "source:https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz#c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+          "artifact:b/libminizip.so.4.0.10"
+        ],
+        "failure_class": null,
         "family_id": "family:minizip-ng",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 41,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/libminizip.so.4.0.10",
+          "artifact_sha256": "0439dab526f729002e7bdbfcd0d7c006d212b9f999292b61c6ecfa37f93de993",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 293,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:minizip-ng:4.0.10",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -71936,18 +72918,74 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:minizip-ng",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "1c1aa90a4ba501c4c5b51da80ca2539d24f75c87d2037af4f5c699fa3672137a",
+        "source_sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "source_url": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "specimen_id": "specimen:minizip-ng:4.0.10",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/minizip-ng/source.tar.gz",
+              "-C",
+              "{scratch}/minizip-ng/candidate/src"
+            ],
+            "elapsed_seconds": 0.009,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DBUILD_SHARED_LIBS=ON",
+              "-DMZ_OPENSSL=ON",
+              "-DMZ_ZLIB=ON",
+              "-DMZ_BZIP2=ON",
+              "-DMZ_LZMA=ON",
+              "-DMZ_ZSTD=OFF",
+              "-DMZ_PKCRYPT=ON",
+              "-DMZ_WZAES=ON",
+              "-DMZ_COMPAT=ON",
+              "-DMZ_BUILD_TESTS=OFF",
+              "-DMZ_BUILD_UNIT_TESTS=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_C_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 0.278,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 0.359,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:minizip-ng:4.0.10:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -102065,6 +103103,34 @@
       },
       {
         "evidence": [
+          "source:https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz#a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+          "recipe:recipe:libcoap:4.3.5",
+          "pinned_sha256:a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f"
+        ],
+        "family_id": "family:libcoap",
+        "licence": "unknown",
+        "pristine_source_root_hash": "c555db7b0a9a4aef6894822c9959f0f54f4bdc91523013841f5c2b9135c0afd2",
+        "pristine_source_sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "specimen_id": "specimen:libcoap:4.3.5",
+        "upstream_ref": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "version": "4.3.5"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz#32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+          "recipe:recipe:libesmtp:1.1.0",
+          "pinned_sha256:32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3"
+        ],
+        "family_id": "family:libesmtp",
+        "licence": "unknown",
+        "pristine_source_root_hash": "ba1bde35a8d87aeaebcb4d4a66ba8531fe0c67e905603dacee26f5017d7644b4",
+        "pristine_source_sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "specimen_id": "specimen:libesmtp:1.1.0",
+        "upstream_ref": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "version": "1.1.0"
+      },
+      {
+        "evidence": [
           "source:https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/libevent-2.1.12-stable.tar.gz#92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb",
           "recipe:recipe:libevent:2.1.12-stable",
           "pinned_sha256:92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb"
@@ -102132,6 +103198,48 @@
         "specimen_id": "specimen:libssh:0.10.6",
         "upstream_ref": "https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz",
         "version": "0.10.6"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz#a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+          "recipe:recipe:libstrophe:0.13.1",
+          "pinned_sha256:a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa"
+        ],
+        "family_id": "family:libstrophe",
+        "licence": "unknown",
+        "pristine_source_root_hash": "994bc81e59f406b234911936ce24d97743595819de678b575bc40bcfbdf0107c",
+        "pristine_source_sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "specimen_id": "specimen:libstrophe:0.13.1",
+        "upstream_ref": "https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz",
+        "version": "0.13.1"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz#6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+          "recipe:recipe:libtins:4.5",
+          "pinned_sha256:6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841"
+        ],
+        "family_id": "family:libtins",
+        "licence": "unknown",
+        "pristine_source_root_hash": "6a1a80f21fdff1cfe82eff0411ced3ebb8a3cb539ea1ebae8875dddd651efe2a",
+        "pristine_source_sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "specimen_id": "specimen:libtins:4.5",
+        "upstream_ref": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "version": "4.5"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz#6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+          "recipe:recipe:libwebsockets:4.3.3",
+          "pinned_sha256:6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90"
+        ],
+        "family_id": "family:libwebsockets",
+        "licence": "unknown",
+        "pristine_source_root_hash": "cb66a6a4db2df84632e74484380ee857a8c1411a79c4cfa7ae900816ab426929",
+        "pristine_source_sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "specimen_id": "specimen:libwebsockets:4.3.3",
+        "upstream_ref": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "version": "4.3.3"
       },
       {
         "evidence": [
@@ -102216,6 +103324,20 @@
         "specimen_id": "specimen:mini-httpd:1.30",
         "upstream_ref": "http://www.acme.com/software/mini_httpd/mini_httpd-1.30.tar.gz",
         "version": "1.30"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz#c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+          "recipe:recipe:minizip-ng:4.0.10",
+          "pinned_sha256:c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7"
+        ],
+        "family_id": "family:minizip-ng",
+        "licence": "unknown",
+        "pristine_source_root_hash": "1c1aa90a4ba501c4c5b51da80ca2539d24f75c87d2037af4f5c699fa3672137a",
+        "pristine_source_sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "specimen_id": "specimen:minizip-ng:4.0.10",
+        "upstream_ref": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "version": "4.0.10"
       },
       {
         "evidence": [
@@ -103097,6 +104219,30 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libcoap:4.3.5",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libcoap:4.3.5",
+        "variant_id": "variant:libcoap:4.3.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "meson-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libesmtp:1.1.0",
+          "build_system:meson"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libesmtp:1.1.0",
+        "variant_id": "variant:libesmtp:1.1.0:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "autotools-pristine-shared",
         "evidence": [
           "recipe:recipe:libevent:2.1.12-stable",
@@ -103154,6 +104300,42 @@
         "platform": "linux",
         "specimen_id": "specimen:libssh:0.10.6",
         "variant_id": "variant:libssh:0.10.6:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libstrophe:0.13.1",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libstrophe:0.13.1",
+        "variant_id": "variant:libstrophe:0.13.1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libtins:4.5",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libtins:4.5",
+        "variant_id": "variant:libtins:4.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libwebsockets:4.3.3",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libwebsockets:4.3.3",
+        "variant_id": "variant:libwebsockets:4.3.3:pristine"
       },
       {
         "arch": "x86_64",
@@ -103226,6 +104408,18 @@
         "platform": "linux",
         "specimen_id": "specimen:mini-httpd:1.30",
         "variant_id": "variant:mini-httpd:1.30:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:minizip-ng:4.0.10",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:minizip-ng:4.0.10",
+        "variant_id": "variant:minizip-ng:4.0.10:pristine"
       },
       {
         "arch": "x86_64",
@@ -103661,7 +104855,7 @@
       }
     ]
   },
-  "body_hash": "7e66a2a8ebb51e033444efd05f9199da659387e72c5941c271a03f37559d8218",
+  "body_hash": "75470e34ec054a088eb1e8db42a79ebbfa526b563593b50d4afe97bf28dfda9a",
   "generator": "forensics/tools/downstream_build_link.py",
   "inputs": [
     {

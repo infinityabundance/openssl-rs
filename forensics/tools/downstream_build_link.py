@@ -1938,8 +1938,128 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b9): six LIBRARY-only families. Each is a pristine
+    # released archive built against the subject prefix with the expansion venue's toolchain;
+    # none ships an executable, so the runtime atlas' harnesses are their admitted consumers.
+    for spec in _L7_EXPAND6_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
+
+
+# The Phase-25 L7 expansion batch (b9): six LIBRARY-only families whose build systems the
+# expansion venue admits (CMake, autotools and meson). Each archive is pinned by digest; the
+# subject prefix is the only OpenSSL and `{prefix}` the only substitution.
+_L7_EXPAND6_SPECS: tuple[dict, ...] = (
+    {
+        "family": "libwebsockets", "version": "4.3.3",
+        "url": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DLWS_WITH_SSL=ON",
+                      "-DLWS_WITHOUT_TESTAPPS=ON", "-DLWS_WITH_MINIMAL_EXAMPLES=OFF",
+                      "-DLWS_WITH_STATIC=OFF", "-DLWS_WITH_SHARED=ON",
+                      "-DLWS_WITH_LIBUV=OFF", "-DLWS_WITH_PLUGINS=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/lib/libwebsockets.so*", "launch": None,
+        "note": ("libwebsockets 4.3.3 built with CMake against the subject prefix; its TLS "
+                 "client and server paths use the subject libssl (the test apps are disabled "
+                 "because the workload is the harness)"),
+    },
+    {
+        "family": "libstrophe", "version": "0.13.1",
+        "url": ("https://github.com/strophe/libstrophe/releases/download/0.13.1/"
+                "libstrophe-0.13.1.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "configure": ["--prefix={root}/.l7-install", "--disable-static", "--enable-shared"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libstrophe.so*", "launch": None,
+        "env_extra": {"openssl_CFLAGS": "-I{prefix}/include",
+                      "openssl_LIBS": ("-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                                       "-lssl -lcrypto")},
+        "note": ("libstrophe 0.13.1 built with its shipped configure; the prefix ships no "
+                 "openssl.pc, so PKG_CHECK_MODULES is satisfied through the module's "
+                 "openssl_CFLAGS/openssl_LIBS override and the TLS backend is the subject "
+                 "libssl (expat is the venue's XML parser)"),
+    },
+    {
+        "family": "libcoap", "version": "4.3.5",
+        "url": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DENABLE_DTLS=ON", "-DDTLS_BACKEND=openssl", "-DENABLE_OSCORE=OFF",
+                      "-DENABLE_TESTS=OFF", "-DENABLE_EXAMPLES=OFF", "-DENABLE_DOCS=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libcoap-3.so*", "launch": None,
+        "note": ("libcoap 4.3.5 built with CMake, DTLS/TLS on the OpenSSL backend so CoAP over "
+                 "TLS uses the subject libssl; tests, examples and documentation are disabled"),
+    },
+    {
+        "family": "libesmtp", "version": "1.1.0",
+        "url": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "archive": "tar.gz", "build_system": "meson",
+        "sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "configure": ["--buildtype=release", "-Dwerror=false", "-Dlwres=disabled",
+                      "-Dxdg=false", "-Dpthreads=enabled", "-Dtls=enabled"],
+        "make": [], "artifact": "b/libesmtp.so*", "launch": None,
+        # libesmtp's meson build takes its TLS dependency from `dependency('openssl')`, and the
+        # subject prefix ships libssl.pc/libcrypto.pc but no openssl.pc. The shim is a build
+        # input under the extracted tree, not a source edit; the same file is written for both
+        # subjects and points only at that subject's prefix.
+        "pre_build": [["sh", "-c",
+                       "mkdir -p {root}/.l7-pc && printf 'Name: OpenSSL\n"
+                       "Description: subject OpenSSL prefix\nVersion: 3.0.0\n"
+                       "Libs: -L{prefix}/lib -Wl,-rpath,{prefix}/lib -lssl -lcrypto\n"
+                       "Cflags: -I{prefix}/include\n' > {root}/.l7-pc/openssl.pc"]],
+        "env_extra": {"PKG_CONFIG_PATH": "{prefix}/lib/pkgconfig:{root}/.l7-pc"},
+        "note": ("libesmtp 1.1.0 built with meson/ninja; its STARTTLS path links the subject "
+                 "libssl through a prefix shim openssl.pc (the prefix ships no openssl.pc)"),
+    },
+    {
+        "family": "minizip-ng", "version": "4.0.10",
+        "url": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DMZ_OPENSSL=ON", "-DMZ_ZLIB=ON", "-DMZ_BZIP2=ON", "-DMZ_LZMA=ON",
+                      "-DMZ_ZSTD=OFF", "-DMZ_PKCRYPT=ON", "-DMZ_WZAES=ON", "-DMZ_COMPAT=ON",
+                      "-DMZ_BUILD_TESTS=OFF", "-DMZ_BUILD_UNIT_TESTS=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libminizip.so*", "launch": None,
+        "note": ("minizip-ng 4.0.10 built with CMake; WinZip AES encryption uses the subject "
+                 "libcrypto (zstd is disabled because the venue carries no zstd headers)"),
+    },
+    {
+        "family": "libtins", "version": "4.5",
+        "url": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DLIBTINS_ENABLE_PCAP=OFF",
+                      "-DLIBTINS_ENABLE_WPA2=ON", "-DLIBTINS_ENABLE_DOT11=ON",
+                      "-DLIBTINS_ENABLE_CXX11=ON", "-DLIBTINS_BUILD_EXAMPLES=OFF",
+                      "-DLIBTINS_BUILD_TESTS=OFF", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/lib/libtins.so*", "launch": None,
+        "note": ("libtins 4.5 with its WPA2 decryption path enabled; the PMK derivation uses "
+                 "the subject libcrypto's PBKDF2/HMAC (libpcap capture is disabled: the "
+                 "workload needs no capture device)"),
+    },
+)
 
 RECIPES: tuple[dict, ...] = _build_catalogue()
 _RECIPE_BY_FAMILY: dict[str, dict] = {r["family"]: r for r in RECIPES}
