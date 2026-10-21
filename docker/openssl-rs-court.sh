@@ -52,6 +52,13 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${OPENSSL_RS_COURT_IMAGE:-openssl-rs-court:1}"
 NAME="${OPENSSL_RS_COURT_NAME:-openssl-rs-court}"
+# Expansion image (docker/openssl-rs-court-expand.Dockerfile): cmake/ninja/meson and
+# the dependency dev packages the L7 cohort expansion needs. It is a SEPARATE tag and
+# is never selected implicitly: the default above stays the minimal conversion image,
+# so every existing invocation is byte-for-byte unchanged unless the caller opts in
+# with OPENSSL_RS_COURT_IMAGE. It must not be used for conversion gates or forensics.
+EXPAND_IMAGE="${OPENSSL_RS_COURT_EXPAND_IMAGE:-openssl-rs-court-expand:1}"
+EXPAND_BASE="${OPENSSL_RS_COURT_EXPAND_BASE:-openssl-rs-court:1}"
 
 # Shared host-side budget / OOM helpers. Sourced so the three venues all see the
 # same running openssl-rs-* set and the budget cannot drift between them.
@@ -129,6 +136,9 @@ usage() {
 usage: openssl-rs-court.sh <command>
 
   build         build the court image from docker/openssl-rs-court.Dockerfile
+  build-expand  build the expansion image from docker/openssl-rs-court-expand.Dockerfile
+                (FROM ${EXPAND_BASE}); opt in at run time with
+                OPENSSL_RS_COURT_IMAGE=${EXPAND_IMAGE}
   up            (re)create and start the court container with resource caps
   down          stop and remove the court container
   status        show container state and effective resource caps
@@ -139,6 +149,8 @@ usage: openssl-rs-court.sh <command>
 env overrides:
   OPENSSL_RS_COURT_IMAGE           default ${IMAGE}
   OPENSSL_RS_COURT_NAME            default ${NAME}
+  OPENSSL_RS_COURT_EXPAND_IMAGE    default ${EXPAND_IMAGE}, tag 'build-expand' writes
+  OPENSSL_RS_COURT_EXPAND_BASE     default ${EXPAND_BASE}, base image 'build-expand' uses
   OPENSSL_RS_COURT_MEM             default ${MEM}, clamped to the host's MemTotal
   OPENSSL_RS_COURT_MEMRES          default ${MEMRES}, the soft limit
   OPENSSL_RS_COURT_MEMSWAP         default ${MEMSWAP}
@@ -161,7 +173,27 @@ EOF
 }
 
 do_build() {
+  # Refuse to overwrite an expansion tag with the minimal image. The two venues have
+  # different purposes (conversion gates vs. downstream-family expansion) and a
+  # mis-tagged image would silently change what a court is running under the tag a
+  # receipt names.
+  if [ "${IMAGE}" = "${EXPAND_IMAGE}" ]; then
+    echo "openssl-rs-court: '${IMAGE}' is the expansion image; use 'build-expand' for it" >&2
+    exit 2
+  fi
   docker build -f "${PROJECT_DIR}/docker/openssl-rs-court.Dockerfile" -t "${IMAGE}" "${PROJECT_DIR}/docker"
+}
+
+do_build_expand() {
+  if [ "${EXPAND_BASE}" = "${EXPAND_IMAGE}" ]; then
+    echo "openssl-rs-court: OPENSSL_RS_COURT_EXPAND_BASE must not be the expansion image itself" >&2
+    exit 2
+  fi
+  docker build \
+    -f "${PROJECT_DIR}/docker/openssl-rs-court-expand.Dockerfile" \
+    --build-arg BASE_IMAGE="${EXPAND_BASE}" \
+    -t "${EXPAND_IMAGE}" \
+    "${PROJECT_DIR}/docker"
 }
 
 do_up() {
@@ -261,6 +293,7 @@ do_verify() {
 
 case "${1:-}" in
   build)  do_build ;;
+  build-expand) do_build_expand ;;
   up)     do_up ;;
   down)   do_down ;;
   status) do_status ;;
