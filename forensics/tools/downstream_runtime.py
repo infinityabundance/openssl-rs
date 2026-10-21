@@ -345,6 +345,39 @@ PROGRAMS: dict[str, dict] = {
                  "verifies the fixture CA and renders the payload; the unrelated CA is rejected "
                  "with `Invalid certificate`"),
     },
+    # The closing Phase-25 L7-expansion pair. dovecot's executables satisfy their SSL dependency
+    # through a module loaded with dlopen (no `ldd` line names libssl), so the admitted program is
+    # the dovecot-owned TLS client harness; the workload is the installed dovecot master serving
+    # IMAPS. librdkafka is library-only: the harness drives its SSL transport against a local TLS
+    # broker stub. `make_steps` installs dovecot into its own build tree (`DESTDIR`) before the
+    # load proof, because the master needs its full libexec/module layout to start.
+    "dovecot": {
+        "program": ".l7-dovecot-harness", "launch": ["--version"],
+        "version_re": r"dovecot-l7-harness",
+        "harness": {
+            "source": "forensics/tools/l7_dovecot.c",
+            "cflags": ["-I{prefix}/include"],
+            "ldflags": ["-L{prefix}/lib", "-Wl,-rpath,{prefix}/lib", "-lssl", "-lcrypto"],
+        },
+        "make_steps": [["install", "DESTDIR={root}/.l7-install"]],
+        "note": ("dovecot's installed IMAPS listener: a dovecot-linked TLS client verifies the "
+                 "fixture CA, logs in, APPENDs a message, SELECTs INBOX and FETCHes the exact "
+                 "payload back; an unrelated CA fails with `certificate verify failed`"),
+    },
+    "librdkafka": {
+        "program": ".l7-rdkafka-harness", "launch": ["--version"],
+        "version_re": r"librdkafka-l7-harness", "lib_paths": ["src"],
+        "harness": {
+            "source": "forensics/tools/l7_rdkafka.c",
+            "cflags": ["-I{root}/src", "-I{prefix}/include", "-Wno-ignored-qualifiers"],
+            "ldflags": ["-L{root}/src", "-L{prefix}/lib", "-Wl,-rpath,{root}/src",
+                        "-Wl,-rpath,{prefix}/lib", "-lrdkafka", "-lssl", "-lcrypto",
+                        "-lpthread", "-lz", "-ldl", "-lrt", "-lm"],
+        },
+        "note": ("librdkafka's SSL transport: a producer with `security.protocol=ssl` completes "
+                 "a TLS handshake with a local broker stub, reports the connection UP and sends "
+                 "its Metadata request; an unrelated CA fails certificate verification"),
+    },
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -2995,6 +3028,204 @@ def _wl_links(ctx: dict) -> dict:
     }
 
 
+def _dovecot_links(install: Path) -> list[tuple[Path, Path]]:
+    """The two compile-time `/usr/local` paths dovecot's master re-execs and dlopens.
+
+    The pristine build is configured with the upstream default prefix but installed with `DESTDIR`
+    into its own tree, so `BINDIR/doveconf` and `MODULE_DIR/libssl_iostream_openssl.so` still name
+    `/usr/local`. The two paths are linked to the installed tree for the duration of the run and
+    restored afterwards; a pre-existing real path is never overwritten.
+    """
+    return [(Path("/usr/local/bin/doveconf"), install / "bin" / "doveconf"),
+            (Path("/usr/local/lib/dovecot"), install / "lib" / "dovecot")]
+
+
+def _wl_dovecot(ctx: dict) -> dict:
+    """The installed dovecot master serving IMAPS, driven by a dovecot-linked TLS client.
+
+    The client is the harness the load proof resolves: it links the subject's libssl directly and
+    verifies the server certificate against the fixture CA. It logs in, APPENDs a message, SELECTs
+    INBOX and FETCHes the message back, so the assertion covers the IMAP greeting, the mailbox
+    write and the read path. A client trusting only the unrelated CA must fail certificate
+    verification (and the server log must record the resulting `unknown ca` alert).
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    root, prog = ctx["root"], str(ctx["program"])
+    prefix = ctx["prefix"]
+    pki = _gen_pki(ap, d)
+    install = root / ".l7-install" / "usr" / "local"
+    master = install / "sbin" / "dovecot"
+    base = d / "dovecot"
+    for sub in ("run", "state", "maildir", "home"):
+        (base / sub).mkdir(parents=True, exist_ok=True)
+    for sub in ("maildir", "home"):
+        try:
+            os.chown(base / sub, 65534, 65534)
+        except OSError:
+            pass
+    port = ctx["port"]
+    conf = d / "dovecot.conf"
+    conf.write_text(
+        f"base_dir = {base}/run\n"
+        f"state_dir = {base}/state\n"
+        f"libexec_dir = {install}/libexec/dovecot\n"
+        f"log_path = {base}/dovecot.log\n"
+        "protocols = imap\n"
+        "listen = 127.0.0.1\n"
+        "ssl = yes\n"
+        f"ssl_cert = <{pki['srv_crt']}\n"
+        f"ssl_key = <{pki['srv_key']}\n"
+        "ssl_min_protocol = TLSv1.2\n"
+        "disable_plaintext_auth = no\n"
+        "auth_mechanisms = plain login\n"
+        f"mail_location = maildir:{base}/maildir\n"
+        "mail_fsync = never\n"
+        "default_internal_user = nobody\n"
+        "default_internal_group = nogroup\n"
+        "default_login_user = nobody\n"
+        "first_valid_uid = 1\n"
+        "service imap-login {\n"
+        "  inet_listener imap {\n"
+        "    port = 0\n"
+        "  }\n"
+        "  inet_listener imaps {\n"
+        f"    port = {port}\n"
+        "    ssl = yes\n"
+        "  }\n"
+        "}\n"
+        "passdb {\n"
+        "  driver = static\n"
+        "  args = password=phase25pass\n"
+        "}\n"
+        "userdb {\n"
+        "  driver = static\n"
+        f"  args = uid=65534 gid=65534 home={base}/home\n"
+        "}\n",
+        encoding="utf-8")
+
+    saved: list[tuple[Path, str | None, bool]] = []
+    server = out = err = None
+    good = neg = None
+    try:
+        for link, target in _dovecot_links(install):
+            if link.is_symlink():
+                saved.append((link, os.readlink(link), True))
+                link.unlink()
+            elif link.exists():
+                raise RuntimeError(f"{link} exists and is not a symlink; refusing to replace it")
+            else:
+                saved.append((link, None, True))
+            link.parent.mkdir(parents=True, exist_ok=True)
+            link.symlink_to(target)
+
+        env = dict(ctx["env"], LD_LIBRARY_PATH=os.pathsep.join(
+            [str(prefix / "lib"), str(install / "lib" / "dovecot")]))
+        server, out, err = _spawn([str(master), "-c", str(conf), "-F"], d, env,
+                                  d / "dovecot.out", d / "dovecot.err")
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("dovecot master", {"exit_code": 0,
+                                                 "stderr": _read(d / "dovecot.err")})],
+                            "the dovecot master did not open its IMAPS listener",
+                            "runtime-failure", d)
+        common = ["--ca", str(pki["ca_crt"]), "--host", "127.0.0.1", "--port", str(port)]
+        good = _run_captured([prog] + common + ["--message", "phase25-dovecot-payload"],
+                             cwd=d, env=ctx["env"], timeout=90)
+        neg = _run_captured([prog, "--negative", "--ca", str(pki["other_crt"]),
+                             "--host", "127.0.0.1", "--port", str(port)],
+                            cwd=d, env=ctx["env"], timeout=90)
+    finally:
+        if server is not None:
+            _stop(server)
+        if out is not None:
+            out.close()
+        if err is not None:
+            err.close()
+        for link, old, touched in saved:
+            if not touched:
+                continue
+            if link.is_symlink():
+                link.unlink()
+            if old is not None:
+                link.symlink_to(old)
+
+    log = _read(d / "dovecot.log")
+    text = (good["stdout"] + good["stderr"]) if good else ""
+    neg_text = (neg["stdout"] + neg["stderr"]) if neg else ""
+    handshake = "handshake=TLSv1.3" in text and "peer_verify=ok" in text
+    runtime_ok = bool(good and good["ok"] and handshake)
+    steps_ok = all(f"{step}=ok" in text
+                   for step in ("greeting", "login", "append", "select", "payload"))
+    neg_rejected = bool(neg and neg["ok"] and "negative=rejected" in neg_text
+                        and "certificate verify failed" in neg_text)
+    functional_ok = runtime_ok and steps_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the dovecot IMAPS session did not complete a verified TLS1.3 handshake"
+            if not runtime_ok else
+            "the IMAP greeting/login/append/select/fetch sequence did not complete"
+            if not steps_ok else
+            "a client trusting only the unrelated CA was not rejected"),
+        "transcript": _transcript(("dovecot IMAPS greeting + LOGIN + APPEND + SELECT + FETCH", good),
+                                  ("dovecot unrelated-ca (must fail)", neg),
+                                  ("dovecot master log", {"exit_code": 0, "stderr": log})),
+        "workload": ("dovecot: installed master + IMAPS listener with the fixture CA + greeting "
+                     "+ LOGIN + APPEND + SELECT INBOX + FETCH payload + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_rdkafka(ctx: dict) -> dict:
+    """librdkafka's SSL transport against a local broker stub.
+
+    The harness creates a loopback TLS listener with the fixture certificate and configures a
+    producer with `security.protocol=ssl`, the fixture CA and `api.version.request=false` (so the
+    first bytes after the handshake are a Metadata request). A passing run requires the stub to
+    record the handshake and the request bytes, the client's own log to report `CONNECTED`/UP, and
+    no `SSL handshake failed`. With `--negative` the client trusts only the unrelated CA and must
+    fail certificate verification without ever reporting the connection up.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"])]
+    good = _run_captured([prog] + common + ["--ca", str(pki["ca_crt"])], cwd=d,
+                         env=ctx["env"], timeout=120)
+    neg = _run_captured([prog, "--negative"] + common + ["--ca", str(pki["other_crt"])],
+                        cwd=d, env=ctx["env"], timeout=120)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    runtime_ok = bool(good["ok"] and "handshake=ok" in text
+                      and "metadata_request=ok" in text and "connected=up" in text
+                      and "ssl_error=none" in text)
+    neg_rejected = bool(neg["ok"] and "negative=rejected" in neg_text
+                        and "ssl_error=certificate verify failed" in neg_text
+                        and "connected=down" in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "librdkafka did not complete the SSL transport handshake and report the connection up"
+            if not runtime_ok else
+            "a producer trusting only the unrelated CA was not rejected"),
+        "transcript": _transcript(("librdkafka security.protocol=ssl + broker stub", good),
+                                  ("librdkafka unrelated-ca (must fail)", neg)),
+        "workload": ("librdkafka: producer with security.protocol=ssl + fixture-CA verify + "
+                     "TLS handshake + Metadata request + connection UP + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
 def _wl_fetchmail(ctx: dict) -> dict:
     """fetchmail's IMAPS retrieve path against a local IMAP stub, with a trust negative control.
 
@@ -3411,6 +3642,8 @@ RUNNERS = {
     "mosquitto": _wl_mosquitto,
     "cyrus-sasl": _wl_cyrus_sasl,
     "links": _wl_links,
+    "dovecot": _wl_dovecot,
+    "librdkafka": _wl_rdkafka,
     "fetchmail": _wl_fetchmail,
     "iperf3": _wl_iperf3,
     "kmod": _wl_kmod,
@@ -3570,6 +3803,9 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     # recipe builds lib/ only, while the broker and clients are separate sub-makes). Each step is
     # run with the same prefix environment and must succeed before the load proof is attempted.
     for step in prog.get("make_steps") or []:
+        # A step may name the build tree or the subject prefix (dovecot's workload installs into
+        # its own `DESTDIR`); substitute them exactly as the harness flags are substituted.
+        step = [str(a).format(root=root, prefix=prefix) for a in step]
         prep = census._run(["make", *(prog.get("make_jobs") or [MAKE_JOBS]), *step], cwd=root,
                            env=build_env)
         if not prep["ok"]:
