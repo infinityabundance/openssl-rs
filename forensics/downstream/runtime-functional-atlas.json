@@ -16,6 +16,8 @@
         "family:curl": "L7-functional",
         "family:cyrus-sasl": "L7-functional",
         "family:dovecot": "L7-functional",
+        "family:eggdrop": "L7-functional",
+        "family:exim": "L7-functional",
         "family:fastd": "L6-runtime",
         "family:fetchmail": "L7-functional",
         "family:fido2": "L7-functional",
@@ -25,6 +27,7 @@
         "family:hitch": "L7-functional",
         "family:icecast": "L7-functional",
         "family:iperf3": "L7-functional",
+        "family:irssi": "L7-functional",
         "family:isync": "L7-functional",
         "family:jwt": "L7-functional",
         "family:kea": "L7-functional",
@@ -45,10 +48,13 @@
         "family:monit": "L7-functional",
         "family:mosquitto": "L7-functional",
         "family:mumble-server": "L7-functional",
+        "family:net-snmp": "L7-functional",
         "family:nginx": "L7-functional",
         "family:nmap": "L7-functional",
+        "family:nsd": "L7-functional",
         "family:opendkim": "L7-functional",
         "family:openssh": "L7-functional",
+        "family:openssh-server": "L7-functional",
         "family:openvpn": "L7-functional",
         "family:osslsigncode": "L7-functional",
         "family:partclone": "L7-functional",
@@ -75,36 +81,36 @@
       "by_subject": {
         "authority": {
           "failed": 0,
-          "functional": 58,
-          "loaded": 59,
-          "not_attempted": 941,
-          "runtime": 59
+          "functional": 64,
+          "loaded": 65,
+          "not_attempted": 935,
+          "runtime": 65
         },
         "candidate": {
           "failed": 0,
-          "functional": 58,
-          "loaded": 59,
-          "not_attempted": 941,
-          "runtime": 59
+          "functional": 64,
+          "loaded": 65,
+          "not_attempted": 935,
+          "runtime": 65
         }
       },
       "candidate_baseline_not_linked": 2,
       "candidate_below_baseline": 0,
       "candidate_failures": {
-        "acquire-failure": 939,
+        "acquire-failure": 933,
         "link-failure": 2
       },
-      "candidate_reaches_baseline": 61,
-      "candidate_reaches_linked_baseline": 59,
+      "candidate_reaches_baseline": 67,
+      "candidate_reaches_linked_baseline": 65,
       "candidate_specific_patch_count": 0,
-      "no_recipe": 939,
+      "no_recipe": 933,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 61
+      "with_recipe": 67
     },
     "evidence_reuse": {
       "candidate_identity_match": true,
-      "families_reused": 60,
+      "families_reused": 61,
       "mode": "committed-rows",
       "reused_families": [
         "apache2-utils",
@@ -150,6 +156,7 @@
         "osslsigncode",
         "partclone",
         "proftpd",
+        "prosody",
         "proxytunnel",
         "pure-ftpd",
         "radsecproxy",
@@ -542,6 +549,42 @@
         "program": "src/partclone.extfs",
         "recipe_id": "recipe:partclone:0.3.27",
         "version": "0.3.27"
+      },
+      {
+        "family": "exim",
+        "program": "build-Linux-x86_64/exim",
+        "recipe_id": "recipe:exim:4.100.1",
+        "version": "4.100.1"
+      },
+      {
+        "family": "nsd",
+        "program": "nsd",
+        "recipe_id": "recipe:nsd:4.10.1",
+        "version": "4.10.1"
+      },
+      {
+        "family": "net-snmp",
+        "program": "agent/snmpd",
+        "recipe_id": "recipe:net-snmp:5.9.4",
+        "version": "5.9.4"
+      },
+      {
+        "family": "eggdrop",
+        "program": "eggdrop",
+        "recipe_id": "recipe:eggdrop:1.9.5",
+        "version": "1.9.5"
+      },
+      {
+        "family": "irssi",
+        "program": "src/fe-text/irssi",
+        "recipe_id": "recipe:irssi:1.4.5",
+        "version": "1.4.5"
+      },
+      {
+        "family": "openssh-server",
+        "program": "sshd",
+        "recipe_id": "recipe:openssh-server:9.9p1",
+        "version": "9.9p1"
       }
     ],
     "resource_limits": {
@@ -38529,7 +38572,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "eggdrop",
@@ -38537,18 +38580,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:eggdrop"
+          "family:family:eggdrop",
+          "recipe:recipe:eggdrop:1.9.5",
+          "artifact:eggdrop",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:eggdrop",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4058770:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "4058770:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "4058770:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "4058770:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "4058770:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "4058770:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -38568,13 +38656,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 60,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:eggdrop:1.9.5",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -38584,10 +38672,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:eggdrop",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "85f306d897c4e56b8f8b1b12d621feb2ca300e06b40045eaab3696dec659df9c",
+        "source_sha256": "e26918ea8a64d9857579c5b60c661a337f20773edd83086b356525beb581736a",
+        "source_url": "https://github.com/eggheads/eggdrop/releases/download/v1.9.5/eggdrop-1.9.5.tar.gz",
+        "specimen_id": "specimen:eggdrop:1.9.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -38595,13 +38683,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "C: CAP END",
+          "C: WHOIS l7bot",
+          "C: JOIN #l7",
+          "JOINED #l7",
+          "C: MODE #l7 +b",
+          "C: MODE #l7 +e",
+          "C: QUIT :",
+          "EOF",
+          "== irc stub (plaintext) log ==",
+          "exit=0",
+          "READY 42189",
+          "EOF",
+          "== eggdrop ==",
+          "exit=0",
+          "G52D:  0.0%",
+          "Configured with: '--with-tclinc={repo}/court/phase24-build-link/eggdrop/authority/aux/root/usr/include/tcl8.6/tcl.h' '--with-tcllib={repo}/court/phase24-build-link/eggdrop/authority/aux/root/usr/lib/x86_64-linux-gnu/libtcl8.6.so' '--with-sslinc={prefix}/include' '--with-ssllib={prefix}/lib' 'LDFLAGS=-L{prefix}/lib -L{repo}/court/phase24-build-link/eggdrop/authority/aux/root/usr/lib/x86_64-linux-gnu -L{repo}/court/phase24-build-link/eggdrop/authority/aux/root/usr/lib/x86_64-linux-gnu' 'CPPFLAGS=-I{prefix}/include -I{repo}/court/phase24-build-link/eggdrop/authority/aux/root/usr/include'",
+          "Admin: l7 <l7@l7.test>",
+          "Config file: {scratch}/egg.conf",
+          "OS: Linux 7.2.9-2-cachyos",
+          "Process ID: 4058783 (parent 4041788)",
+          "MSG52F {repo}/court/phase24-build-link/eggdrop/tcl8.6.13/library",
+          "MSG544 8.6.13 (MSG544 8.6.13)",
+          "Tcl is threaded.",
+          "TLS support is enabled.",
+          "TLS library: OpenSSL 3.6.4 25 Aug 2026 (MSG545 OpenSSL 3.6.4 25 Aug 2026)",
+          "IPv6 support is enabled.",
+          "Threaded DNS core is enabled.",
+          "Socket table: 10/100",
+          "    MSG646",
+          "    Active CAP negotiations: (none)",
+          "    #l7                 : (not on channel)",
+          "",
+          "Eggdrop v1.9.5 (C) 1997 Robey Pointer (C) 1999-2023 Eggheads",
+          "",
+          "",
+          "MSG536",
+          "MSG537MSG538",
+          "",
+          "NOTE: You don't need to use the -n flag with the",
+          "       -t or -c flag anymore."
+        ],
+        "transcript_sha256": "a1d3de5299eb65fad1d91bedbf516118a15188bac818ad0e006ee30df2ce232a",
+        "variant_id": "variant:eggdrop:1.9.5:pristine",
+        "workload": "eggdrop: IRC-over-TLS registration and join; plaintext never registers",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "eggdrop: IRC-over-TLS registration and join; plaintext never registers",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "eggdrop",
@@ -38609,18 +38744,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:eggdrop"
+          "family:family:eggdrop",
+          "recipe:recipe:eggdrop:1.9.5",
+          "artifact:eggdrop",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:eggdrop",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4058794:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "4058794:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "4058794:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "4058794:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "4058794:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "4058794:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -38640,12 +38820,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 60,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:eggdrop:1.9.5",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -38656,10 +38836,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:eggdrop",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "85f306d897c4e56b8f8b1b12d621feb2ca300e06b40045eaab3696dec659df9c",
+        "source_sha256": "e26918ea8a64d9857579c5b60c661a337f20773edd83086b356525beb581736a",
+        "source_url": "https://github.com/eggheads/eggdrop/releases/download/v1.9.5/eggdrop-1.9.5.tar.gz",
+        "specimen_id": "specimen:eggdrop:1.9.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -38667,10 +38847,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "C: WHOIS l7bot",
+          "C: JOIN #l7",
+          "JOINED #l7",
+          "C: MODE #l7 +b",
+          "C: MODE #l7 +e",
+          "C: QUIT :",
+          "EOF",
+          "== irc stub (plaintext) log ==",
+          "exit=0",
+          "READY 60191",
+          "EOF",
+          "== eggdrop ==",
+          "exit=0",
+          "\u001b[2J\u001b[1;1HI am l7bot, running eggdrop v1.9.5: 0 users (mem: 87k).",
+          "MSG52D 00:00 (MSG52B) - CPU: 00:00.01 - MSG52D:  0.0%",
+          "Configured with: '--with-tclinc={repo}/court/phase24-build-link/eggdrop/candidate/aux/root/usr/include/tcl8.6/tcl.h' '--with-tcllib={repo}/court/phase24-build-link/eggdrop/candidate/aux/root/usr/lib/x86_64-linux-gnu/libtcl8.6.so' '--with-sslinc={prefix}/include' '--with-ssllib={prefix}/lib' 'LDFLAGS=-L{prefix}/lib -L{repo}/court/phase24-build-link/eggdrop/candidate/aux/root/usr/lib/x86_64-linux-gnu -L{repo}/court/phase24-build-link/eggdrop/candidate/aux/root/usr/lib/x86_64-linux-gnu' 'CPPFLAGS=-I{prefix}/include -I{repo}/court/phase24-build-link/eggdrop/candidate/aux/root/usr/include'",
+          "Admin: l7 <l7@l7.test>",
+          "Config file: {scratch}/egg.conf",
+          "OS: Linux 7.2.9-2-cachyos",
+          "Process ID: 4058807 (parent 4041788)",
+          "MSG52F {repo}/court/phase24-build-link/eggdrop/tcl8.6.13/library",
+          "MSG544 8.6.13 (MSG544 8.6.13)",
+          "Tcl is threaded.",
+          "TLS support is enabled.",
+          "TLS library: OpenSSL 3.6.4 25 Aug 2026 (MSG545 OpenSSL 3.6.4 25 Aug 2026)",
+          "IPv6 support is enabled.",
+          "Threaded DNS core is enabled.",
+          "Socket table: 10/100",
+          "    MSG646",
+          "    Active CAP negotiations: (none)",
+          "    #l7                 : (not on channel)",
+          "",
+          "Eggdrop v1.9.5 (C) 1997 Robey Pointer (C) 1999-2023 Eggheads",
+          "",
+          "",
+          "MSG536",
+          "MSG537MSG538",
+          "",
+          "NOTE: You don't need to use the -n flag with the",
+          "       -t or -c flag anymore."
+        ],
+        "transcript_sha256": "33e132d70866090475dccbf41e060f79927187c0e7248bbd51d73cb049d84afc",
+        "variant_id": "variant:eggdrop:1.9.5:pristine",
+        "workload": "eggdrop: IRC-over-TLS registration and join; plaintext never registers",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "eggdrop: IRC-over-TLS registration and join; plaintext never registers",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -42129,7 +42356,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "exim",
@@ -42137,18 +42364,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:exim"
+          "family:family:exim",
+          "recipe:recipe:exim:4.100.1",
+          "artifact:build-Linux-x86_64/exim",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:exim",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4155112:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "4155112:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "4155112:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "4155112:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "4155112:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "4155112:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 1
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -42168,13 +42440,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 221,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:exim:4.100.1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -42184,10 +42456,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:exim",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "3d3094944886276681408c8ff36d1cc1106aa959d8b9b34cdf37e1913fb3f1ca",
+        "source_sha256": "e9fb41f6724a5b136d64c9d19dbc5f26494af879a3e7e3190f91639eaa79fa0d",
+        "source_url": "https://ftp.exim.org/pub/exim/exim4/exim-4.100.1.tar.xz",
+        "specimen_id": "specimen:exim:4.100.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -42195,13 +42467,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "Configure owner: 0:0",
+          "Size of off_t:8 ptr:8 long:8 int:4",
+          "{timestamp} non-existent configuration file(s): {repo}/court/phase24-build-link/exim/authority/src/exim-4.100.1/.l7-install/etc/exim.conf",
+          "== workload ==",
+          "exit=0",
+          "== authority s_client STARTTLS submission ==",
+          "exit=0",
+          "250-l7.test Hello client [{addr}]",
+          "250-SIZE 52428800",
+          "250-LIMITS MAILMAX=1000 RCPTMAX=50000",
+          "250-8BITMIME",
+          "250-PIPELINING",
+          "250-PIPECONNECT",
+          "250-CHUNKING",
+          "250 HELP",
+          "250 OK",
+          "250 Accepted",
+          "354 Enter message, ending with \".\" on a line by itself",
+          "250 OK id=1xJZBb-0000000HQw9-3YL8",
+          "221 l7.test closing connection",
+          "Connecting to {addr}",
+          "depth=1 CN=runtime test CA",
+          "verify return:1",
+          "depth=0 CN={addr}",
+          "verify return:1",
+          "250 HELP",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "809B405EC47F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "809B405EC47F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "== exim mainlog ==",
+          "exit=0",
+          "{timestamp} Warning: purging the environment.",
+          " Suggested action: use keep_environment.",
+          "{timestamp} exim 4.100.1 daemon started: pid {pid}, no queue runs, listening for SMTP on [{addr}]:{port}",
+          "{timestamp} 1xJZBb-0000000HQw9-3YL8 <= a@l7.test H=(client) [{addr}] P=esmtps X=TLS1.3:TLS_AES_256_GCM_SHA384:256:X25519MLKEM768 S=271",
+          "{timestamp} TLS error on connection from (mail.example.com) [{addr}] (SSL_accept): error:0A000418:SSL routines::tlsv1 alert unknown ca"
+        ],
+        "transcript_sha256": "952b51cebbcf7d34caa6c56632c70d3198624f247b5a1aa1f909a695cea94442",
+        "variant_id": "variant:exim:4.100.1:pristine",
+        "workload": "exim: SMTP STARTTLS submission queued; unrelated CA refused",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "exim: SMTP STARTTLS submission queued; unrelated CA refused",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "exim",
@@ -42209,18 +42528,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:exim"
+          "family:family:exim",
+          "recipe:recipe:exim:4.100.1",
+          "artifact:build-Linux-x86_64/exim",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:exim",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4155136:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "4155136:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "4155136:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "4155136:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "4155136:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "4155136:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 1
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -42240,12 +42604,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 221,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:exim:4.100.1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -42256,10 +42620,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:exim",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "3d3094944886276681408c8ff36d1cc1106aa959d8b9b34cdf37e1913fb3f1ca",
+        "source_sha256": "e9fb41f6724a5b136d64c9d19dbc5f26494af879a3e7e3190f91639eaa79fa0d",
+        "source_url": "https://ftp.exim.org/pub/exim/exim4/exim-4.100.1.tar.xz",
+        "specimen_id": "specimen:exim:4.100.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -42267,10 +42631,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "Configure owner: 0:0",
+          "Size of off_t:8 ptr:8 long:8 int:4",
+          "{timestamp} non-existent configuration file(s): {repo}/court/phase24-build-link/exim/candidate/src/exim-4.100.1/.l7-install/etc/exim.conf",
+          "== workload ==",
+          "exit=0",
+          "== authority s_client STARTTLS submission ==",
+          "exit=0",
+          "250-l7.test Hello client [{addr}]",
+          "250-SIZE 52428800",
+          "250-LIMITS MAILMAX=1000 RCPTMAX=50000",
+          "250-8BITMIME",
+          "250-PIPELINING",
+          "250-PIPECONNECT",
+          "250-CHUNKING",
+          "250 HELP",
+          "250 OK",
+          "250 Accepted",
+          "354 Enter message, ending with \".\" on a line by itself",
+          "250 OK id=1xJZBc-0000000HQwX-0mEu",
+          "221 l7.test closing connection",
+          "Connecting to {addr}",
+          "depth=1 CN=runtime test CA",
+          "verify return:1",
+          "depth=0 CN={addr}",
+          "verify return:1",
+          "250 HELP",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "80DB658E147F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "80DB658E147F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:",
+          "== exim mainlog ==",
+          "exit=0",
+          "{timestamp} Warning: purging the environment.",
+          " Suggested action: use keep_environment.",
+          "{timestamp} exim 4.100.1 daemon started: pid {pid}, no queue runs, listening for SMTP on [{addr}]:{port}",
+          "{timestamp} 1xJZBc-0000000HQwX-0mEu <= a@l7.test H=(client) [{addr}] P=esmtps X=TLS1.3:TLS_AES_256_GCM_SHA384:256 S=271",
+          "{timestamp} TLS error on connection from (mail.example.com) [{addr}] (SSL_accept): error:0A000418:SSL routines::tlsv1 alert unknown ca"
+        ],
+        "transcript_sha256": "6bec997235440bc0205f6c8bb56f2597e01e175edc395046e666517d87a25c85",
+        "variant_id": "variant:exim:4.100.1:pristine",
+        "workload": "exim: SMTP STARTTLS submission queued; unrelated CA refused",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "exim: SMTP STARTTLS submission queued; unrelated CA refused",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -76357,7 +76768,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "irssi",
@@ -76365,18 +76776,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:irssi"
+          "family:family:irssi",
+          "recipe:recipe:irssi:1.4.5",
+          "artifact:src/fe-text/irssi",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:irssi",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4069063:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "4069063:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "4069063:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "4069063:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "4069063:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "4069063:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -76396,13 +76852,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 72,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:irssi:1.4.5",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -76412,10 +76868,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:irssi",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "2861801c6446f68403bf28b78c4192460340848da3265025f622c9dfaa46cc13",
+        "source_sha256": "72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062",
+        "source_url": "https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz",
+        "specimen_id": "specimen:irssi:1.4.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -76423,13 +76879,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "exit=0",
+          "[m\u001b[24m\u001b[27m\u001b[23m \u001b[36m\u001b[1ml7client\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[30m\u001b[1m[\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36ml7client@l7.stub\u001b[30m\u001b[1m]\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m has joined \u001b[1m:\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[79b\u001b[23;1H \u001b[36m[\u001b[37m16:26\u001b[36m]\u001b[37m \u001b[36m[\u001b[37ml7irssi\u001b[36m]\u001b[37m \u001b[36m[\u001b[37m1:l7net (change with ^X)\u001b[36m]\u001b[37m \u001b[36m[\u001b[37mAct: \u001b[35m\u001b[1m2\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36m\u001b[44m]\u001b[37m\u001b[23;80H \u001b[24;12H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[?25l\u001b[21;1H16:26 \u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m!\u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m Welcome to the Phase-25 fixture network\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[K\u001b[K\u001b[?25l\u001b[2;1H\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[?25l\u001b[24;1H\u001b[K[#l7] \u001b[K\u001b[?12l\u001b[?25h\u001b[K\u001b[37m\u001b[44m\u001b[?25l\u001b[1;1H \u001b[79b\u001b[1;1H \u001b[23;19H \u001b[61b\u001b[23;19H\u001b[23;9H \u001b[36m[\u001b[37ml7irssi\u001b[36m]\u001b[37m \u001b[36m[\u001b[37m3:l7net/#l7\u001b[36m]\u001b[37m \u001b[36m[\u001b[37mAct: \u001b[35m\u001b[1m2\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36m\u001b[44m]\u001b[37m\u001b[23;80H \u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[36m[\u001b[37m16:26\u001b[36m]\u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[?25l\u001b[2;1H16:26 \u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m!\u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[36m\u001b[1ml7irssi\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[30m\u001b[1m[\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36ml7irssi@l7.stub\u001b[30m\u001b[1m]\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m has joined \u001b[1m#l7\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[K\u001b[3;1H16:26 \u001b[30m\u001b[1m<\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m l7irssi\u001b[30m\u001b[1m>\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m phase24 runtime irc fixture\u001b[K\u001b[24;7H\u001b[?12l\u001b[?25h"
+        ],
+        "transcript_sha256": "9cb260664e1b5b461ddb8a22b6fe366053041367a6dc441d1646678d61e54dbd",
+        "variant_id": "variant:irssi:1.4.5:pristine",
+        "workload": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "irssi",
@@ -76437,18 +76940,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:irssi"
+          "family:family:irssi",
+          "recipe:recipe:irssi:1.4.5",
+          "artifact:src/fe-text/irssi",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:irssi",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4069089:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "4069089:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "4069089:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "4069089:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "4069089:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "4069089:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -76468,12 +77016,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 72,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:irssi:1.4.5",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -76484,10 +77032,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:irssi",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "2861801c6446f68403bf28b78c4192460340848da3265025f622c9dfaa46cc13",
+        "source_sha256": "72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062",
+        "source_url": "https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz",
+        "specimen_id": "specimen:irssi:1.4.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -76495,10 +77043,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "exit=0",
+          "3m\u001b[36ml7client@l7.stub\u001b[30m\u001b[1m]\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m has joined \u001b[1m:\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[79b\u001b[23;1H \u001b[36m[\u001b[37m16:26\u001b[36m]\u001b[37m \u001b[36m[\u001b[37ml7irssi\u001b[36m]\u001b[37m \u001b[36m[\u001b[37m1:l7net (change with ^X)\u001b[36m]\u001b[37m \u001b[36m[\u001b[37mAct: \u001b[35m\u001b[1m2\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36m\u001b[44m]\u001b[37m\u001b[23;80H \u001b[24;12H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[?25l\u001b[21;1H16:26 \u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m!\u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m Welcome to the Phase-25 fixture network\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[K\u001b[K\u001b[?25l\u001b[2;1H\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[?25l\u001b[24;1H\u001b[K[#l7] \u001b[K\u001b[?12l\u001b[?25h\u001b[K\u001b[37m\u001b[44m\u001b[?25l\u001b[1;1H \u001b[79b\u001b[1;1H \u001b[23;19H \u001b[61b\u001b[23;19H\u001b[23;9H \u001b[36m[\u001b[37ml7irssi\u001b[36m]\u001b[37m \u001b[36m[\u001b[37m3:l7net/#l7\u001b[36m]\u001b[37m \u001b[36m[\u001b[37mAct: \u001b[35m\u001b[1m2\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36m\u001b[44m]\u001b[37m\u001b[23;80H \u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[36m[\u001b[37m16:26\u001b[36m]\u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[36m[\u001b[37m16:27\u001b[36m]\u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[?25l\u001b[2;1H16:27 \u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m!\u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[36m\u001b[1ml7irssi\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[30m\u001b[1m[\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36ml7irssi@l7.stub\u001b[30m\u001b[1m]\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m has joined \u001b[1m#l7\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[K\u001b[3;1H16:27 \u001b[30m\u001b[1m<\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m l7irssi\u001b[30m\u001b[1m>\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m phase24 runtime irc fixture\u001b[K\u001b[24;7H\u001b[?12l\u001b[?25h"
+        ],
+        "transcript_sha256": "9e0c830f20cce1c2d73982e82aaab97010d830969488dad3854e3c4ee85dadf4",
+        "variant_id": "variant:irssi:1.4.5:pristine",
+        "workload": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -113886,7 +114481,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "net-snmp",
@@ -113894,18 +114489,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:net-snmp"
+          "family:family:net-snmp",
+          "recipe:recipe:net-snmp:5.9.4",
+          "artifact:agent/snmpd",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:net-snmp",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4151268:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "4151268:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "4151268:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "4151268:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "4151268:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "4151268:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "4151268:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "4151268:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -113925,13 +114557,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 154,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:net-snmp:5.9.4",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -113941,10 +114573,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:net-snmp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "bf01ecffe845ad350839dd32099ad114ba83504375285d3efe43b90f47851dcf",
+        "source_sha256": "8b4de01391e74e3c7014beb43961a2d6d6fa03acc34280b9585f4930745b0544",
+        "source_url": "https://downloads.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.tar.gz",
+        "specimen_id": "specimen:net-snmp:5.9.4",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -113952,13 +114584,57 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "NET-SNMP version:  5.9.4.pre2",
+          "Web:               http://www.net-snmp.org/",
+          "Email:             net-snmp-coders@lists.sourceforge.net",
+          "== workload ==",
+          "exit=0",
+          "== snmpget v3 authNoPriv ==",
+          "exit=0",
+          ".{addr}.{addr}.0 = STRING: \"phase24-runtime-netsnmp-ok\"",
+          "== snmpget v3 wrong password (must fail) ==",
+          "exit=1",
+          "snmpget: Authentication failure (incorrect password, community or key)",
+          "== snmpd ==",
+          "exit=0",
+          "ET-MIB): At line 0 in (none)",
+          "Cannot find module (NET-SNMP-AGENT-MIB): At line 0 in (none)",
+          "Cannot find module (HOST-RESOURCES-TYPES): At line 0 in (none)",
+          "Cannot find module (SNMP-FRAMEWORK-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-MPD-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-USER-BASED-SM-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-VIEW-BASED-ACM-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-COMMUNITY-MIB): At line 0 in (none)",
+          "Cannot find module (IPV6-ICMP-MIB): At line 0 in (none)",
+          "Cannot find module (IPV6-MIB): At line 0 in (none)",
+          "Cannot find module (IPV6-TCP-MIB): At line 0 in (none)",
+          "Cannot find module (IPV6-UDP-MIB): At line 0 in (none)",
+          "Cannot find module (IP-FORWARD-MIB): At line 0 in (none)",
+          "Cannot find module (NET-SNMP-PASS-MIB): At line 0 in (none)",
+          "Cannot find module (NET-SNMP-EXTEND-MIB): At line 0 in (none)",
+          "Cannot find module (UCD-DLMOD-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-NOTIFICATION-MIB): At line 0 in (none)",
+          "Cannot find module (SNMPv2-TM): At line 0 in (none)",
+          "Cannot find module (NET-SNMP-VACM-MIB): At line 0 in (none)",
+          "NET-SNMP version 5.9.4.pre2",
+          "Authentication failed for l7user",
+          "Received TERM or STOP signal...  shutting down..."
+        ],
+        "transcript_sha256": "56881405be8b013292c9b9e2ac39b80077bbd219e73c801c07ed717e64c88fe5",
+        "variant_id": "variant:net-snmp:5.9.4:pristine",
+        "workload": "net-snmp: SNMPv3 SHA-authenticated GET returns the fixture OID value",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "net-snmp: SNMPv3 SHA-authenticated GET returns the fixture OID value",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "net-snmp",
@@ -113966,18 +114642,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:net-snmp"
+          "family:family:net-snmp",
+          "recipe:recipe:net-snmp:5.9.4",
+          "artifact:agent/snmpd",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:net-snmp",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4151280:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "4151280:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "4151280:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "4151280:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "4151280:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "4151280:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "4151280:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "4151280:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -113997,12 +114710,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 154,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:net-snmp:5.9.4",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -114013,10 +114726,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:net-snmp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "bf01ecffe845ad350839dd32099ad114ba83504375285d3efe43b90f47851dcf",
+        "source_sha256": "8b4de01391e74e3c7014beb43961a2d6d6fa03acc34280b9585f4930745b0544",
+        "source_url": "https://downloads.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.tar.gz",
+        "specimen_id": "specimen:net-snmp:5.9.4",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -114024,10 +114737,54 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "NET-SNMP version:  5.9.4.pre2",
+          "Web:               http://www.net-snmp.org/",
+          "Email:             net-snmp-coders@lists.sourceforge.net",
+          "== workload ==",
+          "exit=0",
+          "== snmpget v3 authNoPriv ==",
+          "exit=0",
+          ".{addr}.{addr}.0 = STRING: \"phase24-runtime-netsnmp-ok\"",
+          "== snmpget v3 wrong password (must fail) ==",
+          "exit=1",
+          "snmpget: Authentication failure (incorrect password, community or key)",
+          "== snmpd ==",
+          "exit=0",
+          "ET-MIB): At line 0 in (none)",
+          "Cannot find module (NET-SNMP-AGENT-MIB): At line 0 in (none)",
+          "Cannot find module (HOST-RESOURCES-TYPES): At line 0 in (none)",
+          "Cannot find module (SNMP-FRAMEWORK-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-MPD-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-USER-BASED-SM-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-VIEW-BASED-ACM-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-COMMUNITY-MIB): At line 0 in (none)",
+          "Cannot find module (IPV6-ICMP-MIB): At line 0 in (none)",
+          "Cannot find module (IPV6-MIB): At line 0 in (none)",
+          "Cannot find module (IPV6-TCP-MIB): At line 0 in (none)",
+          "Cannot find module (IPV6-UDP-MIB): At line 0 in (none)",
+          "Cannot find module (IP-FORWARD-MIB): At line 0 in (none)",
+          "Cannot find module (NET-SNMP-PASS-MIB): At line 0 in (none)",
+          "Cannot find module (NET-SNMP-EXTEND-MIB): At line 0 in (none)",
+          "Cannot find module (UCD-DLMOD-MIB): At line 0 in (none)",
+          "Cannot find module (SNMP-NOTIFICATION-MIB): At line 0 in (none)",
+          "Cannot find module (SNMPv2-TM): At line 0 in (none)",
+          "Cannot find module (NET-SNMP-VACM-MIB): At line 0 in (none)",
+          "NET-SNMP version 5.9.4.pre2",
+          "Authentication failed for l7user",
+          "Received TERM or STOP signal...  shutting down..."
+        ],
+        "transcript_sha256": "56881405be8b013292c9b9e2ac39b80077bbd219e73c801c07ed717e64c88fe5",
+        "variant_id": "variant:net-snmp:5.9.4:pristine",
+        "workload": "net-snmp: SNMPv3 SHA-authenticated GET returns the fixture OID value",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "net-snmp: SNMPv3 SHA-authenticated GET returns the fixture OID value",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -117996,7 +118753,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "nsd",
@@ -118004,18 +118761,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:nsd"
+          "family:family:nsd",
+          "recipe:recipe:nsd:4.10.1",
+          "artifact:nsd",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:nsd",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4049901:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "4049901:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "4049901:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "4049901:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "4049901:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "4049901:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "4049901:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "4049901:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -118035,13 +118839,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 33,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:nsd:4.10.1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -118051,10 +118855,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:nsd",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "1094852ec01e45e0e76e9f4cf9f05fe0913b7f98a2d2076d2c22b7c22a63d58f",
+        "source_sha256": "c0190f923f0095995f2e6331dacd92c6e1f4d578b880d61690602b43a5acfd84",
+        "source_url": "https://www.nlnetlabs.nl/downloads/nsd/nsd-4.10.1.tar.gz",
+        "specimen_id": "specimen:nsd:4.10.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -118062,13 +118866,53 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "NSD version 4.10.1",
+          "Written by NLnet Labs.",
+          "",
+          "Configure line: --with-ssl={prefix} --with-libevent={repo}/court/phase24-build-link/nsd/authority/aux/root/usr --prefix={repo}/court/phase24-build-link/nsd/authority/src/nsd-4.10.1/.l7-install",
+          "Event loop: libevent 2.1.12-stable (uses epoll)",
+          "Linked with OpenSSL 3.6.4 25 Aug 2026",
+          "",
+          "Copyright (C) 2001-2020 NLnet Labs.  This is free software.",
+          "There is NO warranty; not even for MERCHANTABILITY or FITNESS",
+          "FOR A PARTICULAR PURPOSE.",
+          "== workload ==",
+          "exit=0",
+          "== authority s_client DoT (raw) ==",
+          "exit=-15",
+          "005312348500000100010001000103777777076578616d706c6504746573740000010001c00c000100010000012c0004c000027bc010000200010000012c0005",
+          "Connecting to {addr}",
+          "Can't use SSL_get_servername",
+          "depth=1 CN=runtime test CA",
+          "verify return:1",
+          "depth=0 CN={addr}",
+          "verify return:1",
+          "== plaintext on the TLS port (raw) ==",
+          "exit=0",
+          "== nsd log ==",
+          "exit=0",
+          "[{timestamp}] nsd[4049908]: notice: nsd starting (NSD 4.10.1)",
+          "[{timestamp}] nsd[4049909]: notice: nsd started (NSD 4.10.1), pid {pid}",
+          "[{timestamp}] nsd[4049910]: error: TLS handshake failed from {addr} crypto error:0A000126:SSL routines::unexpected eof while reading",
+          "[{timestamp}] nsd[4049910]: error: could not SSL_read crypto error:0A000126:SSL routines::unexpected eof while reading",
+          "[{timestamp}] nsd[4049910]: error: and additionally crypto error:0A000197:SSL routines::shutdown while in init",
+          "[{timestamp}] nsd[4049909]: warning: signal received, shutting down..."
+        ],
+        "transcript_sha256": "8a7ef9f244de642713e6f32d24b3aa246a0e7e7064cd387095b9be0042b8a416",
+        "variant_id": "variant:nsd:4.10.1:pristine",
+        "workload": "nsd: DNS-over-TLS authoritative answer; plaintext on the TLS port fails",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "nsd: DNS-over-TLS authoritative answer; plaintext on the TLS port fails",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "nsd",
@@ -118076,18 +118920,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:nsd"
+          "family:family:nsd",
+          "recipe:recipe:nsd:4.10.1",
+          "artifact:nsd",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:nsd",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4049920:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "4049920:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "4049920:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "4049920:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "4049920:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "4049920:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "4049920:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "4049920:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -118107,12 +118998,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 33,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:nsd:4.10.1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -118123,10 +119014,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:nsd",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "1094852ec01e45e0e76e9f4cf9f05fe0913b7f98a2d2076d2c22b7c22a63d58f",
+        "source_sha256": "c0190f923f0095995f2e6331dacd92c6e1f4d578b880d61690602b43a5acfd84",
+        "source_url": "https://www.nlnetlabs.nl/downloads/nsd/nsd-4.10.1.tar.gz",
+        "specimen_id": "specimen:nsd:4.10.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -118134,10 +119025,51 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "NSD version 4.10.1",
+          "Written by NLnet Labs.",
+          "",
+          "Configure line: --with-ssl={prefix} --with-libevent={repo}/court/phase24-build-link/nsd/candidate/aux/root/usr --prefix={repo}/court/phase24-build-link/nsd/candidate/src/nsd-4.10.1/.l7-install",
+          "Event loop: libevent 2.1.12-stable (uses epoll)",
+          "Linked with OpenSSL 3.6.4 25 Aug 2026",
+          "",
+          "Copyright (C) 2001-2020 NLnet Labs.  This is free software.",
+          "There is NO warranty; not even for MERCHANTABILITY or FITNESS",
+          "FOR A PARTICULAR PURPOSE.",
+          "== workload ==",
+          "exit=0",
+          "== authority s_client DoT (raw) ==",
+          "exit=-15",
+          "005312348500000100010001000103777777076578616d706c6504746573740000010001c00c000100010000012c0004c000027bc010000200010000012c0005",
+          "Connecting to {addr}",
+          "Can't use SSL_get_servername",
+          "depth=1 CN=runtime test CA",
+          "verify return:1",
+          "depth=0 CN={addr}",
+          "verify return:1",
+          "== plaintext on the TLS port (raw) ==",
+          "exit=0",
+          "== nsd log ==",
+          "exit=0",
+          "[{timestamp}] nsd[4049927]: notice: nsd starting (NSD 4.10.1)",
+          "[{timestamp}] nsd[4049928]: notice: nsd started (NSD 4.10.1), pid {pid}",
+          "[{timestamp}] nsd[4049929]: error: TLS handshake failed from {addr} crypto error:0A000126:SSL routines::unexpected eof while reading",
+          "[{timestamp}] nsd[4049929]: error: could not SSL_read crypto error:0A000126:SSL routines::unexpected eof while reading",
+          "[{timestamp}] nsd[4049929]: error: and additionally crypto error:0A000197:SSL routines::shutdown while in init",
+          "[{timestamp}] nsd[4049929]: error: TLS handshake failed from {addr} crypto error:0A000126:SSL routines::unexpected eof while reading",
+          "[{timestamp}] nsd[4049928]: warning: signal received, shutting down..."
+        ],
+        "transcript_sha256": "3fd385083f4bef53329e28a4ccbc371cabfb1b14645957dec1ddbbd80926be98",
+        "variant_id": "variant:nsd:4.10.1:pristine",
+        "workload": "nsd: DNS-over-TLS authoritative answer; plaintext on the TLS port fails",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "nsd: DNS-over-TLS authoritative answer; plaintext on the TLS port fails",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -121004,7 +121936,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "openssh-server",
@@ -121012,18 +121944,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:openssh-server"
+          "family:family:openssh-server",
+          "recipe:recipe:openssh-server:9.9p1",
+          "artifact:sshd",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:openssh-server",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-V"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4084735:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "4084735:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "4084735:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "4084735:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "4084735:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "4084735:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "4084735:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "4084735:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -121043,13 +122012,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 92,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:openssh-server:9.9p1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -121059,10 +122028,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:openssh-server",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+        "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "specimen_id": "specimen:openssh-server:9.9p1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -121070,13 +122039,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026",
+          "== workload ==",
+          "exit=0",
+          "== ssh exec over sshd ==",
+          "exit=0",
+          "ok",
+          "== ssh host-key mismatch (must fail) ==",
+          "exit=255",
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+          "@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @",
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+          "IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!",
+          "Someone could be eavesdropping on you right now (man-in-the-middle attack)!",
+          "It is also possible that a host key has just been changed.",
+          "The fingerprint for the ED25519 key sent by the remote host is",
+          "SHA256:Qq48FO70FJd38RKNnXjjPuBnP8BSC1xbIYPza4IHU9s.",
+          "Please contact your system administrator.",
+          "Add correct host key in {scratch}/known_bad to get rid of this message.",
+          "Offending ED25519 key in {scratch}/known_bad:1",
+          "Host key for [{addr}]:{port} has changed and you have requested strict checking.",
+          "Host key verification failed.",
+          "== sshd ==",
+          "exit=0",
+          "Server listening on {addr} port {port}.",
+          "Connection from {addr} port 51890 on {addr} port {port} rdomain \"\"",
+          "kex_exchange_identification: Connection closed by remote host",
+          "Connection closed by {addr} port 51890",
+          "srclimit_penalise: ipv4: new {addr}/32 deferred penalty of 1 seconds for penalty: connections without attempting authentication",
+          "Connection from {addr} port 51900 on {addr} port {port} rdomain \"\"",
+          "Accepted key ED25519 SHA256:R0m1oytFzUpVCYpQ5lLi8mj9PcvoIO0oZyuQ3lAOfvw found at {scratch}/authorized_keys:1",
+          "Postponed publickey for root from {addr} port 51900 ssh2 [preauth]",
+          "Accepted key ED25519 SHA256:R0m1oytFzUpVCYpQ5lLi8mj9PcvoIO0oZyuQ3lAOfvw found at {scratch}/authorized_keys:1",
+          "Accepted publickey for root from {addr} port 51900 ssh2: ED25519 SHA256:R0m1oytFzUpVCYpQ5lLi8mj9PcvoIO0oZyuQ3lAOfvw",
+          "User child is on pid {pid}",
+          "Starting session: command for root from {addr} port 51900 id 0",
+          "Received disconnect from {addr} port 51900:11: disconnected by user",
+          "Disconnected from user root {addr} port 51900",
+          "Connection from {addr} port 51908 on {addr} port {port} rdomain \"\"",
+          "Connection closed by {addr} port 51908 [preauth]",
+          "Received signal 15; terminating."
+        ],
+        "transcript_sha256": "b6af13e74ad59b25c5a11f3c239c6b518f430bf7c50423dc7d2e207c01171c1e",
+        "variant_id": "variant:openssh-server:9.9p1:pristine",
+        "workload": "openssh-server: sshd -D, verified exec, host-key mismatch rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "openssh-server: sshd -D, verified exec, host-key mismatch rejected",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "openssh-server",
@@ -121084,18 +122100,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:openssh-server"
+          "family:family:openssh-server",
+          "recipe:recipe:openssh-server:9.9p1",
+          "artifact:sshd",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:openssh-server",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-V"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "4084757:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "4084757:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "4084757:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "4084757:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "4084757:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "4084757:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "4084757:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "4084757:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -121115,12 +122168,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 92,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:openssh-server:9.9p1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -121131,10 +122184,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:openssh-server",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+        "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "specimen_id": "specimen:openssh-server:9.9p1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -121142,10 +122195,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026",
+          "== workload ==",
+          "exit=0",
+          "== ssh exec over sshd ==",
+          "exit=0",
+          "ok",
+          "== ssh host-key mismatch (must fail) ==",
+          "exit=255",
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+          "@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @",
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+          "IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!",
+          "Someone could be eavesdropping on you right now (man-in-the-middle attack)!",
+          "It is also possible that a host key has just been changed.",
+          "The fingerprint for the ED25519 key sent by the remote host is",
+          "SHA256:g3Tr9gn0/jjfrzpHvkjBuLZtTy+SNc6D7Wm0mrw64zI.",
+          "Please contact your system administrator.",
+          "Add correct host key in {scratch}/known_bad to get rid of this message.",
+          "Offending ED25519 key in {scratch}/known_bad:1",
+          "Host key for [{addr}]:{port} has changed and you have requested strict checking.",
+          "Host key verification failed.",
+          "== sshd ==",
+          "exit=0",
+          "Server listening on {addr} port {port}.",
+          "Connection from {addr} port 45262 on {addr} port {port} rdomain \"\"",
+          "kex_exchange_identification: Connection closed by remote host",
+          "Connection closed by {addr} port 45262",
+          "srclimit_penalise: ipv4: new {addr}/32 deferred penalty of 1 seconds for penalty: connections without attempting authentication",
+          "Connection from {addr} port 45272 on {addr} port {port} rdomain \"\"",
+          "Accepted key ED25519 SHA256:+LvT2RnnjDaAasfeB62C5YoHwqloxcoe5cKPC3HrQa0 found at {scratch}/authorized_keys:1",
+          "Postponed publickey for root from {addr} port 45272 ssh2 [preauth]",
+          "Accepted key ED25519 SHA256:+LvT2RnnjDaAasfeB62C5YoHwqloxcoe5cKPC3HrQa0 found at {scratch}/authorized_keys:1",
+          "Accepted publickey for root from {addr} port 45272 ssh2: ED25519 SHA256:+LvT2RnnjDaAasfeB62C5YoHwqloxcoe5cKPC3HrQa0",
+          "User child is on pid {pid}",
+          "Starting session: command for root from {addr} port 45272 id 0",
+          "Received disconnect from {addr} port 45272:11: disconnected by user",
+          "Disconnected from user root {addr} port 45272",
+          "Connection from {addr} port 45286 on {addr} port {port} rdomain \"\"",
+          "Connection closed by {addr} port 45286 [preauth]",
+          "Received signal 15; terminating."
+        ],
+        "transcript_sha256": "a9b30f40d583733d9d5b2b3a6cd4c1f13c4adb0daa3ec5fa18fa1b46f4076fc9",
+        "variant_id": "variant:openssh-server:9.9p1:pristine",
+        "workload": "openssh-server: sshd -D, verified exec, host-key mismatch rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "openssh-server: sshd -D, verified exec, host-key mismatch rejected",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L7-functional",
@@ -154169,6 +155269,34 @@
       },
       {
         "evidence": [
+          "source:https://github.com/eggheads/eggdrop/releases/download/v1.9.5/eggdrop-1.9.5.tar.gz#e26918ea8a64d9857579c5b60c661a337f20773edd83086b356525beb581736a",
+          "recipe:recipe:eggdrop:1.9.5",
+          "pinned_sha256:e26918ea8a64d9857579c5b60c661a337f20773edd83086b356525beb581736a"
+        ],
+        "family_id": "family:eggdrop",
+        "licence": "unknown",
+        "pristine_source_root_hash": "85f306d897c4e56b8f8b1b12d621feb2ca300e06b40045eaab3696dec659df9c",
+        "pristine_source_sha256": "e26918ea8a64d9857579c5b60c661a337f20773edd83086b356525beb581736a",
+        "specimen_id": "specimen:eggdrop:1.9.5",
+        "upstream_ref": "https://github.com/eggheads/eggdrop/releases/download/v1.9.5/eggdrop-1.9.5.tar.gz",
+        "version": "1.9.5"
+      },
+      {
+        "evidence": [
+          "source:https://ftp.exim.org/pub/exim/exim4/exim-4.100.1.tar.xz#e9fb41f6724a5b136d64c9d19dbc5f26494af879a3e7e3190f91639eaa79fa0d",
+          "recipe:recipe:exim:4.100.1",
+          "pinned_sha256:e9fb41f6724a5b136d64c9d19dbc5f26494af879a3e7e3190f91639eaa79fa0d"
+        ],
+        "family_id": "family:exim",
+        "licence": "unknown",
+        "pristine_source_root_hash": "3d3094944886276681408c8ff36d1cc1106aa959d8b9b34cdf37e1913fb3f1ca",
+        "pristine_source_sha256": "e9fb41f6724a5b136d64c9d19dbc5f26494af879a3e7e3190f91639eaa79fa0d",
+        "specimen_id": "specimen:exim:4.100.1",
+        "upstream_ref": "https://ftp.exim.org/pub/exim/exim4/exim-4.100.1.tar.xz",
+        "version": "4.100.1"
+      },
+      {
+        "evidence": [
           "source:https://github.com/neocturne/fastd/releases/download/v22/fastd-22.tar.xz#19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951",
           "recipe:recipe:fastd:22",
           "pinned_sha256:19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951"
@@ -154292,6 +155420,20 @@
         "specimen_id": "specimen:iperf3:3.17.1",
         "upstream_ref": "https://downloads.es.net/pub/iperf/iperf-3.17.1.tar.gz",
         "version": "3.17.1"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz#72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062",
+          "recipe:recipe:irssi:1.4.5",
+          "pinned_sha256:72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062"
+        ],
+        "family_id": "family:irssi",
+        "licence": "unknown",
+        "pristine_source_root_hash": "2861801c6446f68403bf28b78c4192460340848da3265025f622c9dfaa46cc13",
+        "pristine_source_sha256": "72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062",
+        "specimen_id": "specimen:irssi:1.4.5",
+        "upstream_ref": "https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz",
+        "version": "1.4.5"
       },
       {
         "evidence": [
@@ -154547,6 +155689,20 @@
       },
       {
         "evidence": [
+          "source:https://downloads.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.tar.gz#8b4de01391e74e3c7014beb43961a2d6d6fa03acc34280b9585f4930745b0544",
+          "recipe:recipe:net-snmp:5.9.4",
+          "pinned_sha256:8b4de01391e74e3c7014beb43961a2d6d6fa03acc34280b9585f4930745b0544"
+        ],
+        "family_id": "family:net-snmp",
+        "licence": "unknown",
+        "pristine_source_root_hash": "bf01ecffe845ad350839dd32099ad114ba83504375285d3efe43b90f47851dcf",
+        "pristine_source_sha256": "8b4de01391e74e3c7014beb43961a2d6d6fa03acc34280b9585f4930745b0544",
+        "specimen_id": "specimen:net-snmp:5.9.4",
+        "upstream_ref": "https://downloads.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.tar.gz",
+        "version": "5.9.4"
+      },
+      {
+        "evidence": [
           "source:https://nginx.org/download/nginx-1.26.3.tar.gz#69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa",
           "recipe:recipe:nginx:1.26.3",
           "pinned_sha256:69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa"
@@ -154575,6 +155731,20 @@
       },
       {
         "evidence": [
+          "source:https://www.nlnetlabs.nl/downloads/nsd/nsd-4.10.1.tar.gz#c0190f923f0095995f2e6331dacd92c6e1f4d578b880d61690602b43a5acfd84",
+          "recipe:recipe:nsd:4.10.1",
+          "pinned_sha256:c0190f923f0095995f2e6331dacd92c6e1f4d578b880d61690602b43a5acfd84"
+        ],
+        "family_id": "family:nsd",
+        "licence": "unknown",
+        "pristine_source_root_hash": "1094852ec01e45e0e76e9f4cf9f05fe0913b7f98a2d2076d2c22b7c22a63d58f",
+        "pristine_source_sha256": "c0190f923f0095995f2e6331dacd92c6e1f4d578b880d61690602b43a5acfd84",
+        "specimen_id": "specimen:nsd:4.10.1",
+        "upstream_ref": "https://www.nlnetlabs.nl/downloads/nsd/nsd-4.10.1.tar.gz",
+        "version": "4.10.1"
+      },
+      {
+        "evidence": [
           "source:https://sourceforge.net/projects/opendkim/files/opendkim-2.10.3.tar.gz/download#43a0ba57bf942095fe159d0748d8933c6b1dd1117caf0273fa9a0003215e681b",
           "recipe:recipe:opendkim:2.10.3",
           "pinned_sha256:43a0ba57bf942095fe159d0748d8933c6b1dd1117caf0273fa9a0003215e681b"
@@ -154586,6 +155756,20 @@
         "specimen_id": "specimen:opendkim:2.10.3",
         "upstream_ref": "https://sourceforge.net/projects/opendkim/files/opendkim-2.10.3.tar.gz/download",
         "version": "2.10.3"
+      },
+      {
+        "evidence": [
+          "source:https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz#b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+          "recipe:recipe:openssh-server:9.9p1",
+          "pinned_sha256:b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02"
+        ],
+        "family_id": "family:openssh-server",
+        "licence": "unknown",
+        "pristine_source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+        "pristine_source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "specimen_id": "specimen:openssh-server:9.9p1",
+        "upstream_ref": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "version": "9.9p1"
       },
       {
         "evidence": [
@@ -154985,6 +156169,30 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:eggdrop:1.9.5",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:eggdrop:1.9.5",
+        "variant_id": "variant:eggdrop:1.9.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:exim:4.100.1",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:exim:4.100.1",
+        "variant_id": "variant:exim:4.100.1:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "meson-pristine-shared",
         "evidence": [
           "recipe:recipe:fastd:22",
@@ -155090,6 +156298,18 @@
         "platform": "linux",
         "specimen_id": "specimen:iperf3:3.17.1",
         "variant_id": "variant:iperf3:3.17.1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:irssi:1.4.5",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:irssi:1.4.5",
+        "variant_id": "variant:irssi:1.4.5:pristine"
       },
       {
         "arch": "x86_64",
@@ -155311,6 +156531,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:net-snmp:5.9.4",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:net-snmp:5.9.4",
+        "variant_id": "variant:net-snmp:5.9.4:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:nginx:1.26.3",
           "build_system:configure"
         ],
@@ -155335,6 +156567,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:nsd:4.10.1",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:nsd:4.10.1",
+        "variant_id": "variant:nsd:4.10.1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:opendkim:2.10.3",
           "build_system:configure"
         ],
@@ -155342,6 +156586,18 @@
         "platform": "linux",
         "specimen_id": "specimen:opendkim:2.10.3",
         "variant_id": "variant:opendkim:2.10.3:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:openssh-server:9.9p1",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:openssh-server:9.9p1",
+        "variant_id": "variant:openssh-server:9.9p1:pristine"
       },
       {
         "arch": "x86_64",
@@ -155621,7 +156877,7 @@
       }
     ]
   },
-  "body_hash": "91ab4fb6f85f33707e1966ffb92834a4b96d4acd4efe0eafd340a4038bc782a7",
+  "body_hash": "541440e86792a40ae93cebcf0d9684435feba85f7cc5a01980eef0298c806094",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
@@ -155637,12 +156893,12 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "d905916a4aab9a6e1f205a024f6bc25de0dab74e9b80f8698d8d46f26746b327"
+      "sha256": "4356bda12abd2da0cc3c0188767715993655a2ba088def2d739be1ccf4b360f4"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "aacbf252b50335ef9aae964f7a60259d820feac0f62262009bc07d82c9b158b0"
+      "sha256": "c6d7b092faded922d9ab16cbaac72eabe51b991ee37fc7b96045f7df40659f67"
     },
     {
       "name": "downstream-census",
