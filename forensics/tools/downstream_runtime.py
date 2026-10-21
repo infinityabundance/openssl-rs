@@ -660,6 +660,48 @@ PROGRAMS: dict[str, dict] = {
                  "ok`; a known_hosts entry for a different host key is rejected with `Host key "
                  "verification failed`"),
     },
+    # The Phase-25 L7 expansion batch (b7): a packet capture, an offline NNTP client, an IRC
+    # client, a TLS banner grabber, an HTTPS benchmark and an OpenSSL-digest password tool.
+    "tcpdump": {
+        "program": "tcpdump", "launch": ["--version"],
+        "version_re": r"tcpdump version 4\.99\.6",
+        "note": ("tcpdump's capture path: a local TLS handshake is captured on loopback and its "
+                 "handshake record bytes are printed from the pcap; a plaintext capture prints "
+                 "no TLS record"),
+    },
+    "slrn": {
+        "program": "src/objs/slrn", "launch": ["--version"],
+        "version_re": r"slrn 1\.0\.3",
+        "note": ("slrn's slrnpull NNTP-over-TLS client fetches a fixture article into its spool; "
+                 "slrn 1.0.3a's src/sltcp.c only calls SSL_CTX_new and never sets a verify mode, "
+                 "so an unrelated-CA server certificate is accepted and the required negative "
+                 "control cannot be established without changing the client"),
+    },
+    "epic5": {
+        "program": "source/epic5", "launch": ["-v"],
+        "version_re": r"EPIC5-3\.0\.3",
+        "note": ("epic5's IRC-over-TLS client registers and joins the fixture channel; a client "
+                 "trusting only the unrelated CA is refused at certificate verification"),
+    },
+    "bannergrab": {
+        "program": "bannergrab", "launch": ["--version"],
+        "version_re": r"Version 3\.5",
+        "note": ("bannergrab's TLS path against a local HTTPS fixture prints the negotiated "
+                 "protocol, cipher and certificate; a closed port yields no banner"),
+    },
+    "httperf": {
+        "program": "src/httperf", "launch": ["--version"],
+        "version_re": r"httperf",
+        "note": ("httperf's HTTPS path completes one request with one successful reply against a "
+                 "local TLS server; the same --ssl run against a plaintext listener yields zero "
+                 "successful replies"),
+    },
+    "makepasswd": {
+        "program": "src/makepasswd", "launch": ["--help"],
+        "version_re": r"Usage: makepasswd",
+        "note": ("makepasswd's OpenSSL MD5 digest path: a fixed password and salt produce the "
+                 "exact MD5 digest, repeated runs are identical, and a different salt differs"),
+    },
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -6505,6 +6547,560 @@ def _wl_openssh_server(ctx: dict) -> dict:
             "local_only": True}
 
 
+def _plain_http_fixture(port: int, body: str, state: dict,
+                        stop: threading.Event) -> threading.Thread:
+    """A minimal loopback plaintext HTTP/1.0 server (the TLS negative-control peer)."""
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(8)
+    listener.settimeout(0.5)
+    payload = body.encode()
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            try:
+                with conn:
+                    conn.settimeout(5)
+                    try:
+                        conn.recv(4096)
+                    except OSError:
+                        pass
+                    conn.sendall(b"HTTP/1.0 200 OK\r\nContent-Length: " +
+                                 str(len(payload)).encode() +
+                                 b"\r\nConnection: close\r\n\r\n" + payload)
+            except OSError:
+                continue
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
+def _nntp_tls_fixture(port: int, pki: dict, state: dict,
+                      stop: threading.Event) -> threading.Thread:
+    """A local NNTP-over-TLS peer serving one fixture article (RFC 3977 subset)."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile=str(pki["srv_pem"]))
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(8)
+    listener.settimeout(0.5)
+    headers = (b"Path: l7.test\r\nFrom: l7@l7.test\r\nNewsgroups: l7.test\r\n"
+               b"Subject: L7-FIXTURE-ARTICLE\r\nMessage-ID: <l7@l7.test>\r\n"
+               b"Date: Mon, 01 Jan 2024 00:00:00 +0000\r\nXref: l7.test l7.test:1\r\n")
+    body = b"phase24 runtime nntp fixture body\r\n"
+
+    def send(tls, line: str) -> None:
+        tls.sendall((line + "\r\n").encode())
+
+    def handle(conn) -> None:
+        try:
+            with context.wrap_socket(conn, server_side=True) as tls:
+                tls.settimeout(20)
+                state["handshakes"] = int(state.get("handshakes", 0)) + 1
+                send(tls, "200 l7 fixture ready")
+                stream = tls.makefile("rb")
+                for raw in stream:
+                    command = raw.decode("utf-8", "ignore").strip()
+                    state.setdefault("commands", []).append(command)
+                    upper = command.upper()
+                    if upper.startswith("CAPABILITIES"):
+                        send(tls, "101 Capability list")
+                        send(tls, "VERSION 2")
+                        send(tls, "READER")
+                        send(tls, ".")
+                    elif upper.startswith("MODE READER"):
+                        send(tls, "200 reader")
+                    elif upper.startswith("DATE"):
+                        send(tls, "111 20240101000000")
+                    elif upper.startswith("LISTGROUP"):
+                        send(tls, "211 1 1 1 l7.test")
+                        send(tls, "1")
+                        send(tls, ".")
+                    elif upper.startswith("XHDR"):
+                        send(tls, "221 header follows")
+                        send(tls, "1 <l7@l7.test>")
+                        send(tls, ".")
+                    elif upper.startswith("LIST"):
+                        send(tls, "215 list follows")
+                        send(tls, "l7.test 1 1 y")
+                        send(tls, ".")
+                    elif upper.startswith("GROUP"):
+                        send(tls, "211 1 1 1 l7.test")
+                    elif upper.startswith("XOVER") or upper.startswith("OVER"):
+                        send(tls, "224 overview")
+                        send(tls, "1\tL7-FIXTURE-ARTICLE\tl7@l7.test\t"
+                                   "Mon, 01 Jan 2024 00:00:00 +0000\t<l7@l7.test>\t\t1\t1")
+                        send(tls, ".")
+                    elif upper.startswith("HEAD"):
+                        send(tls, "221 1 <l7@l7.test>")
+                        tls.sendall(headers)
+                        send(tls, ".")
+                    elif upper.startswith("BODY"):
+                        send(tls, "222 1 <l7@l7.test>")
+                        tls.sendall(body)
+                        send(tls, ".")
+                    elif upper.startswith("ARTICLE"):
+                        send(tls, "220 1 <l7@l7.test>")
+                        tls.sendall(headers + b"\r\n" + body)
+                        send(tls, ".")
+                    elif upper.startswith("STAT"):
+                        send(tls, "223 0 <l7@l7.test>")
+                    elif upper.startswith("QUIT"):
+                        send(tls, "205 bye")
+                        break
+                    else:
+                        send(tls, "500 unknown")
+        except (OSError, ssl.SSLError):
+            pass
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            threading.Thread(target=handle, args=(conn,), daemon=True).start()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
+def _capture_hex(program: Path, pcap: Path, env: dict) -> str:
+    """Read a pcap back through tcpdump's `-XX` dump and return a whitespace-free hex string."""
+    res = _run_captured([str(program), "-nn", "-XX", "-r", str(pcap)], env=env, timeout=60)
+    return re.sub(r"\s+", "", res["stdout"]).upper()
+
+
+def _wl_tcpdump(ctx: dict) -> dict:
+    """Capture a local TLS handshake; the plaintext control must carry no TLS record."""
+    ap, d, program = ctx["authority_prefix"], ctx["workdir"], ctx["program"]
+    pki = _gen_pki(ap, d)
+    port = ctx["port"]
+    cap = d / "tls.pcap"
+    tc, of, ef = _spawn([str(program), "-i", "lo", "-n", "-s", "0", "-U", "-w", str(cap),
+                         "tcp", "port", str(port)], d, ctx["env"], d / "tc.out", d / "tc.err")
+    try:
+        if not _wait_log(d / "tc.err", "listening on", 15):
+            return _wl_fail([("tcpdump", {"exit_code": 0, "stdout": _read(d / "tc.err")})],
+                            "tcpdump did not start its loopback capture", "harness-failure", d)
+        srv, sof, sef = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(port),
+                                "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]),
+                                "-www", "-quiet"], d, _auth_env(ap), d / "srv.out",
+                               d / "srv.err")
+        try:
+            if not _wait_tcp("127.0.0.1", port, 15):
+                return _wl_fail([("s_server", {"exit_code": 0, "stdout": _read(d / "srv.err")})],
+                                "the local TLS server did not listen", "harness-failure", d)
+            handshake = _s_client(ap, port, pki["ca_crt"], ["-quiet"], stdin_text="", timeout=25)
+        finally:
+            _stop(srv)
+            sof.close()
+            sef.close()
+        time.sleep(1)
+    finally:
+        _stop(tc)
+        of.close()
+        ef.close()
+    tls_hex = _capture_hex(program, cap, ctx["env"])
+    tls_record = "160301" in tls_hex or "160303" in tls_hex
+    handshake_record = "010000" in tls_hex or "020000" in tls_hex
+
+    # The control: capture plaintext bytes only, on a second port, with the same reader.
+    pport = _free_port()
+    pcap = d / "plain.pcap"
+    tc2, of2, ef2 = _spawn([str(program), "-i", "lo", "-n", "-s", "0", "-U", "-w", str(pcap),
+                            "tcp", "port", str(pport)], d, ctx["env"], d / "tc2.out",
+                           d / "tc2.err")
+    try:
+        if not _wait_log(d / "tc2.err", "listening on", 15):
+            return _wl_fail([("tcpdump (control)",
+                              {"exit_code": 0, "stdout": _read(d / "tc2.err")})],
+                            "tcpdump did not start its control capture", "harness-failure", d)
+        listener = socket.socket()
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", pport))
+        listener.listen(1)
+        conn = socket.create_connection(("127.0.0.1", pport), timeout=5)
+        conn.sendall(b"PLAINTEXT-ONLY-FIXTURE")
+        conn.close()
+        listener.close()
+        time.sleep(1)
+    finally:
+        _stop(tc2)
+        of2.close()
+        ef2.close()
+    plain_hex = _capture_hex(program, pcap, ctx["env"])
+    plain_tls = "160301" in plain_hex or "160303" in plain_hex
+    runtime_ok = handshake.get("exit_code") != 127
+    functional_ok = runtime_ok and tls_record and handshake_record and not plain_tls
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS capture carried no TLS handshake record" if runtime_ok else
+             "the tcpdump/s_client fixture did not run"),
+            "transcript": _transcript(("tls handshake", handshake),
+                                      ("tcpdump TLS capture (hex)",
+                                       {"exit_code": 0, "stdout": tls_hex[-2000:]}),
+                                      ("tcpdump plaintext control (hex)",
+                                       {"exit_code": 0, "stdout": plain_hex[-1000:]})),
+            "workload": "tcpdump: local TLS handshake records; plaintext carries none",
+            "local_only": True}
+
+
+def _wl_bannergrab(ctx: dict) -> dict:
+    """A TLS banner grab on 443, and a closed port that must yield no banner."""
+    ap, d, program = ctx["authority_prefix"], ctx["workdir"], ctx["program"]
+    pki = _gen_pki(ap, d)
+    state: dict = {}
+    stop = threading.Event()
+    thread = None
+    try:
+        thread = _https_fixture(443, pki, "bannergrab fixture banner", state, stop)
+        positive = _run_captured([str(program), "--verbose", "--conn-time=3", "--read-time=3",
+                                  "127.0.0.1", "443"], cwd=d, env=ctx["env"], timeout=45)
+    finally:
+        stop.set()
+        if thread is not None:
+            thread.join(timeout=2)
+        listener = state.get("listener")
+        if listener is not None:
+            listener.close()
+    pos_text = positive["stdout"] + positive["stderr"]
+    ssl_info = "SSL SERVICE INFORMATION" in pos_text
+    protocol = "Protocol: TLSv1.3" in pos_text or "Protocol: TLSv1.2" in pos_text
+    banner = "bannergrab fixture banner" in pos_text
+
+    closed_port = _free_port()
+    negative = _run_captured([str(program), "--verbose", "--conn-time=2", "--read-time=1",
+                              "127.0.0.1", str(closed_port)], cwd=d, env=ctx["env"], timeout=20)
+    neg_text = negative["stdout"] + negative["stderr"]
+    closed_clean = "SSL SERVICE INFORMATION" not in neg_text and "Certificate:" not in neg_text
+    runtime_ok = positive["exit_code"] == 0
+    functional_ok = runtime_ok and ssl_info and protocol and banner and closed_clean
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS banner grab printed no SSL service information" if not ssl_info else
+             "the TLS banner grab printed no protocol" if not protocol else
+             "the fixture banner was not printed" if not banner else
+             "the closed-port control produced a banner"),
+            "transcript": _transcript(("bannergrab TLS", positive),
+                                      ("bannergrab closed port", negative)),
+            "workload": "bannergrab: TLS banner/protocol; closed port yields none",
+            "local_only": True}
+
+
+def _httperf_replies(text: str) -> int:
+    m = re.search(r"Total:\s+connections\s+\d+\s+requests\s+\d+\s+replies\s+(\d+)", text)
+    return int(m.group(1)) if m else 0
+
+
+def _wl_httperf(ctx: dict) -> dict:
+    """One HTTPS request with one successful reply; plaintext yields zero replies."""
+    ap, d, program = ctx["authority_prefix"], ctx["workdir"], ctx["program"]
+    pki = _gen_pki(ap, d)
+    port = ctx["port"]
+    state: dict = {}
+    stop = threading.Event()
+    thread = _https_fixture(port, pki, "httperf fixture body", state, stop)
+    try:
+        positive = _run_captured([str(program), "--server", "127.0.0.1", "--port", str(port),
+                                  "--uri", "/", "--num-conns", "1", "--num-calls", "1",
+                                  "--ssl", "--timeout", "5"], cwd=d, env=ctx["env"],
+                                 timeout=45)
+    finally:
+        stop.set()
+        thread.join(timeout=2)
+        listener = state.get("listener")
+        if listener is not None:
+            listener.close()
+    pos_text = positive["stdout"] + positive["stderr"]
+    replies = _httperf_replies(pos_text)
+    ok2xx = "2xx=1" in pos_text
+
+    pport = _free_port()
+    pstate: dict = {}
+    pstop = threading.Event()
+    pthread = _plain_http_fixture(pport, "plaintext fixture body", pstate, pstop)
+    try:
+        negative = _run_captured([str(program), "--server", "127.0.0.1", "--port", str(pport),
+                                  "--uri", "/", "--num-conns", "1", "--num-calls", "1",
+                                  "--ssl", "--timeout", "5"], cwd=d, env=ctx["env"],
+                                 timeout=45)
+    finally:
+        pstop.set()
+        pthread.join(timeout=2)
+        listener = pstate.get("listener")
+        if listener is not None:
+            listener.close()
+    neg_text = negative["stdout"] + negative["stderr"]
+    neg_replies = _httperf_replies(neg_text)
+    neg_refused = neg_replies == 0 and ("failed to connect to SSL server" in neg_text or
+                                        neg_replies == 0)
+    runtime_ok = positive["exit_code"] == 0
+    functional_ok = runtime_ok and replies == 1 and ok2xx and neg_refused
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the HTTPS run did not report one successful reply" if runtime_ok else
+             "httperf did not run"),
+            "transcript": _transcript(("httperf HTTPS", positive),
+                                      ("httperf plaintext control", negative)),
+            "workload": "httperf: one HTTPS reply; plaintext yields zero",
+            "local_only": True}
+
+
+def _wl_makepasswd(ctx: dict) -> dict:
+    """The OpenSSL MD5 digest path: deterministic, and salt-sensitive."""
+    d, program = ctx["workdir"], ctx["program"]
+    one = _run_captured([str(program), "-e", "md5", "-p", "testing", "-s", "foobar"],
+                        cwd=d, env=ctx["env"], timeout=20)
+    two = _run_captured([str(program), "-e", "md5", "-p", "testing", "-s", "foobar"],
+                        cwd=d, env=ctx["env"], timeout=20)
+    other = _run_captured([str(program), "-e", "md5", "-p", "testing2", "-s", "foobar"],
+                          cwd=d, env=ctx["env"], timeout=20)
+    expected = "ae2b1fca515949e5d54fb22b8ed95575"
+    first = one["stdout"].strip()
+    deterministic = first == two["stdout"].strip()
+    salt_sensitive = other["stdout"].strip() != first
+    digest_ok = expected in first
+    runtime_ok = one["exit_code"] == 0
+    functional_ok = runtime_ok and digest_ok and deterministic and salt_sensitive
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the MD5 digest did not match the OpenSSL value" if not digest_ok else
+             "the same input produced different digests" if not deterministic else
+             "the digest did not change with the password"),
+            "transcript": _transcript(("makepasswd md5", one),
+                                      ("makepasswd md5 repeat", two),
+                                      ("makepasswd md5 other password", other)),
+            "workload": "makepasswd: OpenSSL MD5 digest is exact and deterministic",
+            "local_only": True}
+
+
+def _epic5_script(path: Path, cafile: Path, join: bool) -> None:
+    body = f"set ssl_root_certs_location {cafile}\n"
+    if not join:
+        body += "set accept_invalid_ssl_cert off\n"
+    else:
+        body += "on ^001 * { join #l7 }\n"
+    body += "on ^*join* { echo EPIC_JOINED }\n"
+    path.write_text(body, encoding="utf-8")
+
+
+def _run_epic5(ctx: dict, script: Path, log: Path, timeout: float) -> tuple[bool, bool, bytes]:
+    """Run epic5 on a pty; return (registered, joined, screen bytes)."""
+    master, slave = pty.openpty()
+    env = dict(ctx["env"], TERM="dumb", HOME=str(script.parent))
+    proc = subprocess.Popen([str(ctx["program"]), "-B", "-d", "-l", str(script),
+                             "-n", "l7epic",
+                             f"type=irc-ssl:host=127.0.0.1:port={ctx['port']}"],
+                            stdin=slave, stdout=slave, stderr=slave, env=env,
+                            cwd=str(script.parent))
+    os.close(slave)
+    screen = b""
+    registered = joined = False
+    try:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            ready, _, _ = select.select([master], [], [], 0.3)
+            if ready:
+                try:
+                    chunk = os.read(master, 65536)
+                except OSError:
+                    chunk = b""
+                if not chunk:
+                    break
+                screen += chunk
+            text = _read(log)
+            registered = registered or "REGISTERED " in text
+            joined = joined or "JOINED #l7" in text
+            if registered and joined:
+                time.sleep(1.5)
+                break
+    finally:
+        _stop(proc)
+        try:
+            os.close(master)
+        except OSError:
+            pass
+    return registered, joined, screen
+
+
+def _wl_epic5(ctx: dict) -> dict:
+    """IRC-over-TLS registration and join; a client with only the unrelated CA is refused."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    stub, built = _l7_irc_stub(ctx)
+    if not built["ok"] or not stub.is_file():
+        return {"runtime_ok": False, "functional_ok": False, "failure_class": "harness-failure",
+                "residual": "out-of-scope",
+                "reason": f"the IRC stub harness did not compile: {census._error_line(built)}",
+                "transcript": _transcript(("cc l7_irc_stub.c", built)),
+                "workload": "epic5: IRC-over-TLS registration", "local_only": True}
+    script = d / "epic.rc"
+    _epic5_script(script, pki["ca_crt"], join=True)
+    log = d / "stub.log"
+    srv, of, ef = _spawn([str(stub), str(ctx["port"]), str(log), "tls", str(pki["srv_crt"]),
+                          str(pki["srv_key"])], d, _auth_env(ap), d / "stub.out",
+                         d / "stub.err")
+    try:
+        if not _wait_marker(log, "READY", 20):
+            return _wl_fail([("irc stub", {"exit_code": 0, "stdout": _read(d / "stub.err")})],
+                            "the local IRC stub did not listen", "harness-failure", d)
+        registered, joined, screen = _run_epic5(ctx, script, log, timeout=35)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    nctx = dict(ctx, port=_free_port())
+    nlog = d / "stub-neg.log"
+    nscript = d / "epic-neg.rc"
+    _epic5_script(nscript, pki["other_crt"], join=False)
+    stub2, of2, ef2 = _spawn([str(stub), str(nctx["port"]), str(nlog), "tls",
+                              str(pki["srv_crt"]), str(pki["srv_key"])], d, _auth_env(ap),
+                             d / "stub-neg.out", d / "stub-neg.err")
+    try:
+        nregistered = False
+        if _wait_marker(nlog, "READY", 20):
+            nregistered, _nj, nscreen = _run_epic5(nctx, nscript, nlog, timeout=20)
+        else:
+            nscreen = b""
+            nregistered = True
+    finally:
+        _stop(stub2)
+        of2.close()
+        ef2.close()
+    neg_text = _read(nlog)
+    neg_refused = not nregistered and "REGISTERED" not in neg_text
+    screen_text = screen.decode("utf-8", "ignore")
+    screen_join = "has joined channel #l7" in screen_text or "phase24 runtime irc fixture" in screen_text
+    runtime_ok = registered
+    functional_ok = registered and joined and screen_join and neg_refused
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("epic5 did not register over TLS" if not registered else
+             "epic5 registered but did not join the fixture channel" if not joined else
+             "the joined channel is not on epic5's screen" if not screen_join else
+             "a client trusting only the unrelated CA was not refused"),
+            "transcript": _transcript(("irc stub (TLS) log", {"exit_code": 0, "stdout": _read(log)}),
+                                      ("irc stub (unrelated CA) log",
+                                       {"exit_code": 0, "stdout": neg_text}),
+                                      ("epic5 screen (tail)",
+                                       {"exit_code": 0, "stdout": screen_text[-1500:]})),
+            "workload": "epic5: IRC-over-TLS registration and join; unrelated CA refused",
+            "local_only": True}
+
+
+def _wl_slrn(ctx: dict) -> dict:
+    """slrnpull fetches an NNTP-over-TLS article; its missing verify mode is recorded."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    slrnpull = ctx["program"].parent / "slrnpull"
+    if not slrnpull.is_file():
+        return {"runtime_ok": False, "functional_ok": False, "failure_class": "harness-failure",
+                "residual": "out-of-scope",
+                "reason": "the recipe built no src/objs/slrnpull beside slrn",
+                "transcript": "", "workload": "slrn: NNTP-over-TLS article fetch",
+                "local_only": True}
+    spool = d / "spool"
+    spool.mkdir(parents=True, exist_ok=True)
+    (spool / "slrnpull.conf").write_text("l7.test 20 0 0\n", encoding="utf-8")
+    state: dict = {}
+    stop = threading.Event()
+    thread = _nntp_tls_fixture(ctx["port"], pki, state, stop)
+    try:
+        positive = _run_captured([str(slrnpull), "-d", str(spool), "-h",
+                                  f"snews://127.0.0.1:{ctx['port']}", "--debug",
+                                  str(d / "slrn-debug.log"), "--no-post"],
+                                 cwd=d, env=ctx["env"], timeout=40)
+    finally:
+        stop.set()
+        thread.join(timeout=2)
+        listener = state.get("listener")
+        if listener is not None:
+            listener.close()
+    article = ""
+    for path in spool.rglob("*"):
+        if path.is_file():
+            article += _read(path)
+    fetched = "phase24 runtime nntp fixture body" in article
+    handshook = int(state.get("handshakes", 0)) >= 1
+
+    # The required control: the same server certificate, but the client trusts only the unrelated
+    # CA.  slrn has no verify mode, so it still fetches; record the finding rather than a pass.
+    nstate: dict = {}
+    nstop = threading.Event()
+    nthread = _nntp_tls_fixture(_free_port(), pki, nstate, nstop)
+    try:
+        nport = nstate["listener"].getsockname()[1]
+        nspool = d / "spool-neg"
+        nspool.mkdir(parents=True, exist_ok=True)
+        (nspool / "slrnpull.conf").write_text("l7.test 20 0 0\n", encoding="utf-8")
+        neg_env = dict(ctx["env"], SSL_CERT_FILE=str(pki["other_crt"]), SSL_CERT_DIR="")
+        _run_captured([str(slrnpull), "-d", str(nspool), "-h", f"snews://127.0.0.1:{nport}",
+                       "--no-post"], cwd=d, env=neg_env, timeout=40)
+        neg_article = ""
+        for path in nspool.rglob("*"):
+            if path.is_file():
+                neg_article += _read(path)
+    finally:
+        nstop.set()
+        nthread.join(timeout=2)
+        listener = nstate.get("listener")
+        if listener is not None:
+            listener.close()
+    wrong_ca_accepted = "phase24 runtime nntp fixture body" in neg_article
+    runtime_ok = handshook and fetched
+    functional_ok = runtime_ok and not wrong_ca_accepted
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("slrn 1.0.3a src/sltcp.c:alloc_ssl calls SSL_CTX_new(SSLv23_client_method()) with no "
+             "SSL_CTX_set_verify/load_verify_locations, so a server certificate from an unrelated "
+             "CA is accepted and the wrong-CA control cannot be established" if runtime_ok else
+             "slrnpull did not complete the NNTP-over-TLS fetch"),
+            "transcript": _transcript(("slrnpull TLS", positive),
+                                      ("slrnpull wrong-CA control article",
+                                       {"exit_code": 0, "stdout": neg_article[-1000:]})),
+            "workload": "slrn: slrnpull NNTP-over-TLS article fetch; wrong CA accepted",
+            "local_only": True}
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -6576,6 +7172,13 @@ RUNNERS = {
     "eggdrop": _wl_eggdrop,
     "irssi": _wl_irssi,
     "openssh-server": _wl_openssh_server,
+    # The Phase-25 L7 expansion batch (b7).
+    "tcpdump": _wl_tcpdump,
+    "slrn": _wl_slrn,
+    "epic5": _wl_epic5,
+    "bannergrab": _wl_bannergrab,
+    "httperf": _wl_httperf,
+    "makepasswd": _wl_makepasswd,
 }
 
 
