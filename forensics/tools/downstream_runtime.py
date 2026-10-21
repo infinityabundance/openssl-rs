@@ -88,6 +88,7 @@ import re
 import shutil
 import socket
 import ssl
+import struct
 import subprocess
 import sys
 import threading
@@ -243,6 +244,20 @@ PROGRAMS: dict[str, dict] = {
               "version_re": r"sSMTP 2\.64"},
     "tnftp": {"program": "src/tnftp", "launch": ["-?"],
               "version_re": r"usage: tnftp"},
+    # The Phase-25 L7-expansion batch: an IMAPS client (fetchmail), an RSA/SHA-256 authenticated
+    # throughput tool (iperf3) and a module-signature parser (kmod). Each asserts the family's own
+    # OpenSSL consumer path, not a banner.
+    "fetchmail": {"program": "fetchmail", "launch": ["--version"],
+                  "version_re": r"fetchmail release 6\.5"},
+    # iperf3's recipe artifact is the shared library, but configure also links `src/iperf3`; the
+    # libtool target binary under `.libs` is what the loader trace can resolve.
+    "iperf3": {"program": "src/.libs/iperf3", "launch": ["--version"],
+               "version_re": r"iperf 3", "lib_paths": ["src/.libs"]},
+    # kmod dispatches its tools on argv[0]; `tools/modinfo` is the build tree's own symlink to the
+    # single kmod binary, so launching it selects the modinfo command (and keeps the loader proof
+    # on the ELF that libkmod links).
+    "kmod": {"program": "tools/modinfo", "launch": ["--version"],
+             "version_re": r"kmod version"},
     # The 24.24 L7-expansion batch: three LIBRARY-only families. They ship no executable of their
     # own, so the admitted workload is a small harness under forensics/tools/ built against the
     # rebuilt library and the subject prefix. `harness` compiles it into the source tree before the
@@ -2757,6 +2772,393 @@ def _wl_libarchive(ctx: dict) -> dict:
     }
 
 
+def _wl_fetchmail(ctx: dict) -> dict:
+    """fetchmail's IMAPS retrieve path against a local IMAP stub, with a trust negative control.
+
+    fetchmail's IMAP client wraps the mailbox socket with libssl (`ssl` in the rc), verifies the
+    peer chain against the fixture CA through `sslcertfile`, and hands the fetched message to its
+    MDA. The stub speaks the minimum IMAP4rev1 needed for a one-message retrieve; the MDA appends
+    what it receives, so the message body is the functional assertion. A second poll whose trust
+    store holds only the unrelated CA must fail certificate verification before any IMAP command.
+
+    fetchmail's reader calls `SSL_peek` before every `SSL_read` (`socket.c:SockRead`). A subject
+    whose `SSL_peek` is unimplemented therefore completes the TLS handshake and then aborts the
+    poll; that is recorded as L6 with the blocker named, never masked as a fixture failure.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = b"L7-FETCHMAIL-BODY-MARKER"
+    message = (b"From: l7@example.test\r\nTo: l7@example.test\r\nSubject: l7-fetchmail\r\n"
+               b"Date: Tue, 21 Oct 2026 00:00:00 +0000\r\nMessage-ID: <l7@example.test>\r\n"
+               b"\r\n" + body + b"\r\n")
+    port = ctx["port"]
+    events: list[str] = []
+    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    tls.load_cert_chain(str(pki["srv_crt"]), str(pki["srv_key"]))
+    stop = threading.Event()
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(4)
+    listener.settimeout(0.5)
+
+    def session(raw: socket.socket) -> None:
+        """One IMAPS session: greeting, LOGIN, SELECT, FETCH, STORE, LOGOUT."""
+        try:
+            conn = tls.wrap_socket(raw, server_side=True)
+        except (ssl.SSLError, OSError) as exc:
+            events.append(f"tls=failed ({exc.__class__.__name__})")
+            raw.close()
+            return
+        events.append(f"handshake={conn.version()}")
+        stream = conn.makefile("rwb")
+
+        def reply(line: bytes) -> None:
+            stream.write(line)
+            stream.flush()
+
+        try:
+            reply(b"* OK [CAPABILITY IMAP4rev1] l7 stub ready\r\n")
+            while True:
+                line = stream.readline()
+                if not line:
+                    break
+                text = line.decode("utf-8", "replace").rstrip("\r\n")
+                tag, _, rest = text.partition(" ")
+                upper = rest.upper()
+                events.append("imap: " + rest)
+                if upper.startswith("CAPABILITY"):
+                    reply(b"* CAPABILITY IMAP4rev1\r\n" + tag.encode() + b" OK done\r\n")
+                elif upper.startswith("LOGIN"):
+                    reply(tag.encode() + b" OK LOGIN done\r\n")
+                elif upper.startswith(("SELECT", "EXAMINE")):
+                    reply(b"* 1 EXISTS\r\n* 0 RECENT\r\n* FLAGS (\\Seen)\r\n"
+                          + tag.encode() + b" OK [READ-WRITE] done\r\n")
+                elif upper.startswith("SEARCH"):
+                    reply(b"* SEARCH 1\r\n" + tag.encode() + b" OK done\r\n")
+                elif upper.startswith(("FETCH", "UID FETCH")):
+                    bits = rest.split(None, 2)
+                    items = (bits[1] if len(bits) > 1 else "") + (
+                        " " + bits[2] if len(bits) > 2 else "")
+                    spec = items.upper()
+                    if "RFC822.SIZE" in spec and "BODY" not in spec and "HEADER" not in spec:
+                        reply(b"* 1 FETCH (RFC822.SIZE " + str(len(message)).encode() + b")\r\n")
+                    else:
+                        if "HEADER" in spec:
+                            data = message.split(b"\r\n\r\n", 1)[0] + b"\r\n\r\n"
+                            item = b"RFC822.HEADER"
+                        elif "TEXT" in spec:
+                            data = message.split(b"\r\n\r\n", 1)[1]
+                            item = b"RFC822.TEXT"
+                        else:
+                            data, item = message, b"BODY[]"
+                        if "UID" in spec and "BODY" not in spec:
+                            item = b"UID 1 " + item
+                        reply(b"* 1 FETCH (" + item + b" {" + str(len(data)).encode() + b"}\r\n"
+                              + data + b")\r\n")
+                    reply(tag.encode() + b" OK done\r\n")
+                elif upper.startswith("LOGOUT"):
+                    reply(b"* BYE bye\r\n" + tag.encode() + b" OK done\r\n")
+                    break
+                else:
+                    reply(tag.encode() + b" OK done\r\n")
+        except (ssl.SSLError, OSError):
+            events.append("imap: session ended by peer")
+        finally:
+            try:
+                stream.close()
+            except OSError:
+                pass
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                raw, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            threading.Thread(target=session, args=(raw,), daemon=True).start()
+        listener.close()
+
+    def poll(tag: str, ca: Path) -> dict:
+        """One fetchmail run: an appending MDA and a one-message IMAP poll over implicit TLS."""
+        out = d / f"{tag}.mbox"
+        mda = d / f"{tag}-mda.sh"
+        mda.write_text("#!/bin/sh\nexec cat >> " + str(out) + "\n", encoding="utf-8")
+        mda.chmod(0o755)
+        rc = d / f"{tag}.rc"
+        rc.write_text(
+            "set no syslog\nset daemon 0\nset postmaster l7\n"
+            f"poll 127.0.0.1 protocol IMAP port {port}\n"
+            '  user "l7" password "secret"\n'
+            f'  ssl sslcertck sslcertfile "{ca}"\n'
+            f'  keep fetchall\n  mda "{mda}"\n', encoding="utf-8")
+        rc.chmod(0o600)
+        return _run_captured([prog, "-f", str(rc), "-v", "--nosyslog"], cwd=d, env=ctx["env"],
+                             timeout=60)
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    try:
+        good = poll("good", pki["ca_crt"])
+        neg = poll("neg", pki["other_crt"])
+    finally:
+        stop.set()
+        try:
+            listener.close()
+        except OSError:
+            pass
+        thread.join(timeout=2)
+
+    delivered = d / "good.mbox"
+    rejected = d / "neg.mbox"
+    text = good["stdout"] + good["stderr"]
+    tls_line = next((ln for ln in text.splitlines() if "SSL/TLS: using protocol" in ln), "")
+    neg_text = neg["stdout"] + neg["stderr"]
+    runtime_ok = bool(tls_line)
+    payload_ok = delivered.is_file() and body in delivered.read_bytes()
+    neg_rejected = not rejected.is_file() or body not in rejected.read_bytes()
+    functional_ok = runtime_ok and payload_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "fetchmail did not complete the TLS handshake with the local IMAPS stub"
+            if not runtime_ok else
+            "fetchmail completed the verified TLS session but delivered no message body: its "
+            "IMAP reader calls SSL_peek before every SSL_read, and ssl_peek_internal returns -1 "
+            "for every call (src/ssl/ssl_lib.rs), which fetchmail reports as a socket error"
+            if not payload_ok else
+            "the poll trusting only the unrelated CA was not rejected"),
+        "transcript": _transcript(
+            ("fetchmail IMAPS poll", {"exit_code": good["exit_code"], "stdout": tls_line}),
+            ("imap stub", {"exit_code": 0, "stdout": "\n".join(events)}),
+            ("fetchmail unrelated-ca poll (must fail)", {
+                "exit_code": neg["exit_code"],
+                "stderr": "\n".join(ln for ln in neg_text.splitlines()
+                                     if "verification error" in ln
+                                     or "OpenSSL reported" in ln
+                                     or "SSL connection failed" in ln)})),
+        "workload": ("fetchmail: IMAPS poll to a local IMAP/TLS stub + message-body delivery "
+                     "through the MDA + unrelated-CA reject"),
+        "note": ("fetchmail verifies the peer against the fixture CA through sslcertfile and "
+                 "checks the SAN IP; the IMAP exchange runs over TLSv1.3 / TLSv1.2 as negotiated"),
+        "local_only": True,
+    }
+
+
+def _wl_iperf3(ctx: dict) -> dict:
+    """iperf3's completed test plus its OpenSSL SHA-256/authorization decision.
+
+    iperf3 3.17.1's authenticated mode encrypts the salted credentials with OpenSSL's RSA. Its
+    `encrypt_rsa_message` passes an output length of 0 to `EVP_PKEY_encrypt`, so every OpenSSL 3
+    build answers "output buffer too small" and the token is empty; the authority and the candidate
+    fail identically, which is recorded as a venue/upstream limitation rather than a divergence.
+    The assertions are therefore (a) a completed server/client throughput test and (b) the part of
+    the same libiperf auth code that does work on both subjects: `sha256()` over the salted
+    credential and `check_authentication()`'s authorized-users decision, driven by a small harness
+    linked against the family's rebuilt libiperf and the subject's libcrypto.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    root, prefix = ctx["root"], ctx["prefix"]
+    prog = str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    pub = d / "auth-pub.pem"
+    keygen = _ossl(ap, ["pkey", "-in", str(pki["srv_key"]), "-pubout", "-out", str(pub)],
+                   timeout=60)
+    if not keygen["ok"]:
+        return _wl_fail([("openssl pkey -pubout", keygen)],
+                        "the authentication public key could not be derived", "harness-failure", d)
+    users = d / "users.csv"
+    users.write_text("l7," + hashlib.sha256(b"{l7}secret").hexdigest() + "\n", encoding="utf-8")
+
+    def test(extra_server: list[str], extra_client: list[str], env_extra: dict,
+             tag: str, port: int | None = None) -> tuple[dict, dict]:
+        """Run one server and its client; the server stays up for the client's real test."""
+        port = port or _free_port()
+        server, out, err = _spawn([prog, "-s", "-p", str(port), *extra_server], d,
+                                  ctx["env"], d / f"{tag}-server.out",
+                                  d / f"{tag}-server.err")
+        try:
+            if not _wait_tcp("127.0.0.1", port):
+                return ({"exit_code": -1, "ok": False, "stdout": "", "stderr": ""},
+                        {"exit_code": -1, "ok": False, "stdout": "", "stderr": ""})
+            client = _run_captured([prog, "-c", "127.0.0.1", "-p", str(port), "-t", "1",
+                                    *extra_client], cwd=d,
+                                   env=dict(ctx["env"], **env_extra), timeout=90)
+        finally:
+            _stop(server)
+            out.close()
+            err.close()
+        srv = {"exit_code": server.returncode, "ok": server.returncode == 0,
+               "stdout": _read(d / f"{tag}-server.out"),
+               "stderr": _read(d / f"{tag}-server.err")}
+        return client, srv
+
+    plain, plain_srv = test([], [], {}, "plain", ctx["port"])
+    auth, auth_srv = test(
+        [f"--rsa-private-key-path={pki['srv_key']}", f"--authorized-users-path={users}"],
+        ["--username", "l7", "--rsa-public-key-path", str(pub)], {"IPERF3_PASSWORD": "secret"},
+        "auth")
+
+    harness = d / "l7-iperf3-harness"
+    build = census._run(
+        ["cc", str(REPO_ROOT / "forensics/tools/l7_iperf3.c"), "-o", str(harness), "-O2",
+         "-Wall", "-Wextra", f"-I{prefix / 'include'}", f"-L{root / 'src/.libs'}",
+         f"-L{prefix / 'lib'}", f"-Wl,-rpath,{root / 'src/.libs'}",
+         f"-Wl,-rpath,{prefix / 'lib'}", "-liperf", "-lssl", "-lcrypto"],
+        cwd=root, env=ctx["build_env"])
+    if not build["ok"]:
+        return _wl_fail([("cc l7_iperf3.c", build)],
+                        f"the iperf3 digest/auth harness did not compile: "
+                        f"{census._error_line(build)}", "harness-failure", d)
+    digest = _run_captured([str(harness), str(users)], cwd=d, env=ctx["env"], timeout=60)
+
+    plain_text = plain["stdout"] + plain["stderr"]
+    plain_ok = bool(plain["ok"] and "iperf Done." in plain_text
+                    and "Server listening on" in (plain_srv["stdout"] + plain_srv["stderr"]))
+    digest_text = digest["stdout"] + digest["stderr"]
+    expected = "65e9c904a7f6c8e173a48c57a67ac6e25cf991a79ff87b53591b3f1c26616dcf"
+    digest_ok = bool(
+        digest["ok"] and f"sha256={expected}" in digest_text
+        and "auth_ok=accepted" in digest_text and "auth_wrong=rejected" in digest_text
+        and "auth_stale=rejected" in digest_text)
+    auth_text = auth["stdout"] + auth["stderr"]
+    runtime_ok = plain_ok
+    functional_ok = plain_ok and digest_ok
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the local iperf3 server/client test did not complete" if not plain_ok else
+            "libiperf's SHA-256/authorized-users decision did not match the fixture"),
+        "transcript": _transcript(
+            ("iperf3 test", {"exit_code": plain["exit_code"], "stdout": "\n".join(
+                ln for ln in plain_text.splitlines()
+                if "Connecting to host" in ln or "iperf Done." in ln)}),
+            ("iperf3 server", {"exit_code": plain_srv["exit_code"], "stdout": "\n".join(
+                ln for ln in (plain_srv["stdout"] + plain_srv["stderr"]).splitlines()
+                if "Server listening on" in ln)}),
+            ("iperf3 digest/auth harness", digest),
+            ("iperf3 rsa-auth attempt (same upstream OpenSSL 3 failure on both subjects)", {
+                "exit_code": auth["exit_code"], "stderr": "\n".join(
+                    ln for ln in auth_text.splitlines()
+                    if "output buffer too small" in ln or "authorization failed" in ln)})),
+        "workload": ("iperf3: local server/client throughput test + libiperf SHA-256 of the "
+                     "salted credential + authorized-users accept/reject/stale decisions"),
+        "note": ("iperf3 3.17.1's RSA auth transport cannot complete with OpenSSL 3 (it passes a "
+                 "zero output length to EVP_PKEY_encrypt; the authority fails identically), so "
+                 "the digest and authorization decision are the asserted OpenSSL observable"),
+        "local_only": True,
+    }
+
+
+def _wl_kmod(ctx: dict) -> dict:
+    """kmod's module-signature path: libkmod parses an appended PKCS#7 with libcrypto.
+
+    kmod 33 is built `--with-openssl` (its version banner reports `+LIBCRYPTO`), and `modinfo`
+    reads a module's appended signature through `kmod_module_signature_info`. For the PKCS#7 id
+    type that runs `d2i_PKCS7_bio`, `PKCS7_get_signer_info`, `X509_NAME_*`, `ASN1_INTEGER_to_BN`
+    and `OBJ_obj2txt` from the subject's libcrypto, and reports the signer, key id, digest name and
+    id type. The fixture is an ELF relocatable with a `.modinfo` section plus a PKCS#7 produced by
+    the authority's `smime -sign`, laid out exactly as the kernel's sign-file does (module,
+    signature, the 12-byte module_signature, the magic). The certificate serial is fixed so the
+    reported key id is deterministic. A flipped signature byte must yield no signature metadata
+    while the module's own `.modinfo` fields still parse.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    source = d / "module.c"
+    source.write_text(
+        'const char __modinfo[] __attribute__((section(".modinfo"),used)) =\n'
+        '    "license=GPL\\0description=kmod l7 fixture\\0";\n', encoding="utf-8")
+    module = d / "module.ko"
+    compiled = census._run(["cc", "-c", "-o", str(module), "-x", "c", str(source)], cwd=d,
+                           env=ctx["build_env"])
+    if not compiled["ok"]:
+        return _wl_fail([("cc module.c", compiled)],
+                        f"the kmod module fixture did not compile: {census._error_line(compiled)}",
+                        "harness-failure", d)
+    signer_key, signer_crt = d / "signer.key", d / "signer.crt"
+    der, tampered = d / "signature.der", d / "tampered.ko"
+    steps = [
+        (["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(signer_key),
+          "-out", str(signer_crt), "-days", "7", "-subj", "/CN=kmod-l7-signer",
+          "-set_serial", "0x6b6d6f64"], "signer certificate"),
+        (["smime", "-sign", "-nocerts", "-noattr", "-binary", "-md", "sha256", "-in",
+          str(module), "-signer", str(signer_crt), "-inkey", str(signer_key), "-outform",
+          "DER", "-out", str(der)], "module signature"),
+    ]
+    for argv, what in steps:
+        res = _ossl(ap, argv, cwd=d, timeout=60)
+        if not res["ok"]:
+            return _wl_fail([(f"openssl {argv[0]}", res)],
+                            f"generating the {what} failed: {census._error_line(res)}",
+                            "harness-failure", d)
+
+    module_bytes, der_bytes = module.read_bytes(), der.read_bytes()
+    magic = b"~Module signature appended~\n"
+    # struct module_signature: algo=RSA(1), hash=SHA256(4), id_type=PKCS7(2), signer/key id
+    # carried by the PKCS#7, sig_len big-endian.
+    header = struct.pack(">BBBBBBBBI", 1, 4, 2, 0, 0, 0, 0, 0, len(der_bytes))
+    (d / "signed.ko").write_bytes(module_bytes + der_bytes + header + magic)
+    flipped = bytes([der_bytes[0] ^ 0xFF]) + der_bytes[1:]
+    tampered.write_bytes(module_bytes + flipped + header + magic)
+
+    def field(name: str, path: Path) -> dict:
+        return _run_captured([prog, "-F", name, str(path)], cwd=d, env=ctx["env"], timeout=60)
+
+    description = field("description", module)
+    signer = field("signer", d / "signed.ko")
+    key_id = field("sig_key", d / "signed.ko")
+    hash_algo = field("sig_hashalgo", d / "signed.ko")
+    id_type = field("sig_id", d / "signed.ko")
+    unsigned_signer = field("signer", module)
+    tampered_signer = field("signer", tampered)
+
+    def text(res: dict) -> str:
+        return (res["stdout"] + res["stderr"]).strip()
+    runtime_ok = bool(description["ok"] and text(description) == "kmod l7 fixture"
+                      and unsigned_signer["ok"] and text(unsigned_signer) == "")
+    functional_ok = bool(
+        runtime_ok and text(signer) == "kmod-l7-signer" and text(key_id) == "6B:6D:6F:64"
+        and text(hash_algo) == "sha256" and text(id_type) == "PKCS#7"
+        and tampered_signer["ok"] and text(tampered_signer) == "")
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "modinfo did not read the fixture's .modinfo section" if not runtime_ok else
+            "libkmod did not report the PKCS#7 signer/key-id/digest the fixture carries, or "
+            "reported it for a corrupted signature"),
+        "transcript": _transcript(
+            ("modinfo -F description module.ko", description),
+            ("modinfo -F signer module.ko (unsigned)", unsigned_signer),
+            ("modinfo -F signer signed.ko", signer),
+            ("modinfo -F sig_key signed.ko", key_id),
+            ("modinfo -F sig_hashalgo signed.ko", hash_algo),
+            ("modinfo -F sig_id signed.ko", id_type),
+            ("modinfo -F signer tampered.ko (must report nothing)", tampered_signer)),
+        "workload": ("kmod: modinfo parses a signed module fixture's appended PKCS#7 through "
+                     "libcrypto (signer, key id, digest name, id type) + corrupted-signature "
+                     "reject"),
+        "note": ("kmod 33 is built --with-openssl and reports +LIBCRYPTO; libkmod's signature "
+                 "path uses d2i_PKCS7/PKCS7_get_signer_info/X509_NAME/OBJ_obj2txt"),
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -2783,6 +3185,9 @@ RUNNERS = {
     "libevent": _wl_libevent,
     "libretls": _wl_libretls,
     "libarchive": _wl_libarchive,
+    "fetchmail": _wl_fetchmail,
+    "iperf3": _wl_iperf3,
+    "kmod": _wl_kmod,
 }
 
 
