@@ -697,6 +697,179 @@ _L7_SERVER_SPECS: tuple[dict, ...] = (
     },
 )
 
+# The Phase-25 L7 expansion batch (b4): the client/server utilities the campaign's
+# expansion image can build once their non-OpenSSL dependencies are pinned. Each is
+# a pristine released archive built against the subject prefix; `aux_sources` carries
+# only dependencies the image does not ship, never an OpenSSL.
+_PCRE2_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935"),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,), bin_dirs=("usr/bin",)),
+)
+
+# u-boot's mkimage shells out to `dtc` to compile its FIT source; the image has no
+# device-tree compiler, so the pinned bookworm package is extracted beside it (dtc
+# itself needs the pinned libyaml runtime).
+_DTC_AUX: tuple[dict, ...] = (
+    _aux_deb("liby/libyaml", "libyaml-0-2_0.2.5-1_amd64.deb",
+             "207b539919a47c85bcf738677f0ccf5bbac9844f2d3f158696f518be4c4ba6c4",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("d/device-tree-compiler", "device-tree-compiler_1.6.1-4+b1_amd64.deb",
+             "f56fbb1e1da6545619dd2a17b7a85b2c4c674bd276d1b844e01a8b9901dd349d",
+             bin_dirs=("usr/bin",)),
+)
+
+# opendkim needs strlcpy/strlcat (libbsd). Debian's libbsd.so is a linker script
+# that names an absolute /usr path and `-lmd`; the extracted development symlink is
+# therefore replaced with a plain symlink to the package's own ELF, and libmd's
+# headers/runtime are pinned alongside it.
+_LIBBSD_AUX: tuple[dict, ...] = (
+    _aux_deb("libm/libmd", "libmd0_1.1.0-2+b1_amd64.deb",
+             "7244ec3839b61fac0c1884fe08aaa040f26e8f1f35f1f5d3482eacefd30d1b44",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libm/libmd", "libmd-dev_1.1.0-2+b1_amd64.deb",
+             "94904db4c531e3a7ec42a1ad0be8a2a9a2b6d2ac8c4e3b1c1d24853ea0be49c8",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libb/libbsd", "libbsd0_0.11.7-2_amd64.deb",
+             "bb31cc8b40f962a85b2cec970f7f79cc704a1ae4bad24257a822055404b2c60b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    {
+        "url": ("http://deb.debian.org/debian/pool/main/libb/libbsd/"
+                "libbsd-dev_0.11.7-2_amd64.deb"),
+        "sha256": "788ec28ca78eab1ba14d2e1a50727efb7276c6b034163dca40931d8ab3d94aab",
+        "archive": "deb", "extract": ["dpkg-deb", "-x"],
+        "include_dirs": ["usr/include"],
+        "library_dirs": [_AUX_MULTIARCH],
+        "pkgconfig_dirs": [_AUX_MULTIARCH_PC],
+        "links": {"usr/lib/x86_64-linux-gnu/libbsd.so": "libbsd.so.0.11.7"},
+        "note": ("pinned bookworm libbsd-dev; its ld script is replaced with a symlink "
+                 "to the package's own ELF so the extracted paths are self-contained"),
+    },
+)
+
+# The u-boot host-tools configuration is generated, not patched: U-Boot's own
+# `make tools-only` reads include/config/auto.conf and include/generated/autoconf.h,
+# which its Kconfig build normally generates with bison/flex (absent here). The
+# pre-build step writes exactly the host-tool switches this recipe asks make for.
+_UBOOT_CONFIG = (
+    "mkdir -p include/config include/generated && "
+    ": > include/config/auto.conf.cmd && "
+    "printf 'CONFIG_TOOLS_LIBCRYPTO=y\\nCONFIG_TOOLS_FIT_SIGNATURE=y\\n"
+    "CONFIG_TOOLS_FIT_SIGNATURE_MAX_SIZE=0xffffffff\\nCONFIG_TOOLS_FIT_CIPHER=y\\n"
+    "CONFIG_TOOLS_FIT_RSASSA_PSS=y\\nCONFIG_TOOLS_SHA256=y\\nCONFIG_TOOLS_SHA1=y\\n"
+    "CONFIG_MKIMAGE_DTC_PATH=dtc\\n' > include/config/auto.conf && "
+    "printf '#define CONFIG_TOOLS_LIBCRYPTO 1\\n#define CONFIG_TOOLS_FIT_SIGNATURE 1\\n"
+    "#define CONFIG_TOOLS_FIT_SIGNATURE_MAX_SIZE 0xffffffff\\n"
+    "#define CONFIG_TOOLS_FIT_CIPHER 1\\n#define CONFIG_TOOLS_FIT_RSASSA_PSS 1\\n"
+    "#define CONFIG_TOOLS_SHA256 1\\n#define CONFIG_TOOLS_SHA1 1\\n' "
+    "> include/generated/autoconf.h && touch include/config/auto.conf"
+)
+
+_L7_UTILITY_SPECS: tuple[dict, ...] = (
+    {
+        "family": "axel", "version": "2.17.14",
+        "url": ("https://github.com/axel-download-accelerator/axel/releases/download/"
+                "v2.17.14/axel-2.17.14.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "575f73f640ee836a95d27b54aeed216c45bc1e914cad92da6f00b907d1c94925",
+        "configure": ["--with-ssl=openssl"], "make": [MAKE_JOBS],
+        "artifact": "axel", "launch": ["--version"],
+        "note": ("axel 2.17.14 with --with-ssl=openssl: the build environment's CPPFLAGS/"
+                 "LDFLAGS/PKG_CONFIG_PATH point at the subject prefix, so its TLS downloader "
+                 "links the subject libssl/libcrypto"),
+    },
+    {
+        "family": "apache2-utils", "version": "2.4.63",
+        "url": "http://archive.apache.org/dist/httpd/httpd-2.4.63.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "88fc236ab99b2864b248de7d49a008ec2afd7551e64dce8b95f58f32f94c46ab",
+        "configure": ["--with-apr=/usr/bin/apr-1-config",
+                      "--with-apr-util=/usr/bin/apu-1-config",
+                      "--with-ssl={prefix}", "--enable-ssl",
+                      "--disable-dav", "--disable-cgi", "--disable-negotiation",
+                      "--disable-actions", "--disable-userdir", "--disable-autoindex",
+                      "--disable-status", "--disable-asis", "--disable-imagemap",
+                      "--disable-env", "--disable-mime-magic"],
+        "make": [MAKE_JOBS, "-C", "support", "ab"],
+        "artifact": "support/ab", "launch": ["-V"],
+        "aux_sources": list(_PCRE2_AUX),
+        "note": ("apache2-utils' `ab` from httpd 2.4.63: configure links it with --with-ssl"
+                 " against the subject prefix (ab_LIBS = -lssl -lcrypto), and only support/ab "
+                 "is built; PCRE2 comes from the pinned bookworm packages"),
+    },
+    {
+        "family": "osslsigncode", "version": "2.9",
+        "url": "https://github.com/mtrojnar/osslsigncode/archive/refs/tags/2.9.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "3fe5488e442ad99f91410efeb7b029275366b5df9aa02371dcc89a8f8569ff55",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include"],
+        "make": [], "artifact": "b/osslsigncode", "launch": ["--version"],
+        "note": ("osslsigncode 2.9 (the tag archive; upstream publishes only binaries as "
+                 "release assets) built with CMake against the subject prefix"),
+    },
+    {
+        "family": "u-boot-tools", "version": "2025.01",
+        "url": "https://ftp.denx.de/pub/u-boot/u-boot-2025.01.tar.bz2",
+        "archive": "tar.bz2", "build_system": "make",
+        "sha256": "cdef7d507c93f1bbd9f015ea9bc21fa074268481405501945abc6f854d5b686f",
+        "configure": None,
+        "pre_build": [["sh", "-c", _UBOOT_CONFIG]],
+        "make": [MAKE_JOBS, "tools-only", "NO_SDL=1",
+                 "HOSTCFLAGS=-I{prefix}/include",
+                 "HOSTLDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "tools/mkimage", "launch": ["-V"],
+        "aux_sources": list(_DTC_AUX),
+        "note": ("u-boot 2025.01's host tools (mkimage, fit_check_sign) built by tools-only "
+                 "with CONFIG_TOOLS_LIBCRYPTO and FIT signing enabled through the generated "
+                 "host-tools config; dtc is the pinned bookworm package"),
+    },
+    {
+        "family": "sslsplit", "version": "0.5.5",
+        "url": "https://mirror.roe.ch/rel/sslsplit/sslsplit-0.5.5.tar.bz2",
+        "archive": "tar.bz2", "build_system": "make",
+        "sha256": "ba0473fd01428439e0cf22fae80fdd26d08a0bcf85e17c82177cb0810b700faf",
+        "configure": None,
+        "make": [MAKE_JOBS, "FEATURES=-DWITHOUT_MIRROR"],
+        # sslsplit 0.5.5 calls ERR_GET_FUNC, removed in OpenSSL 3.0 (OpenSSL 3 keeps no
+        # function code at all); the define reproduces the 3.x value, and sslsplit uses it
+        # only in a diagnostic message. This is a build-environment compatibility switch,
+        # not a source patch. WITHOUT_MIRROR drops the pcap mirror (a transparency feature),
+        # leaving the TLS interception path this workload drives intact.
+        "env_extra": {"CFLAGS": "-DERR_GET_FUNC\\(x\\)=0"},
+        "artifact": "sslsplit", "launch": ["-V"],
+        "aux_sources": list(_LIBEVENT_AUX),
+        "note": ("SSLsplit 0.5.5 built against the subject prefix (OpenSSL 3.0 removed "
+                 "ERR_GET_FUNC; the recipe supplies its meaning for 3.x as a compile-time "
+                 "compatibility switch) with libevent from the pinned packages"),
+    },
+    {
+        "family": "opendkim", "version": "2.10.3",
+        "url": ("https://sourceforge.net/projects/opendkim/files/"
+                "opendkim-2.10.3.tar.gz/download"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "43a0ba57bf942095fe159d0748d8933c6b1dd1117caf0273fa9a0003215e681b",
+        "configure": ["--with-openssl={prefix}", "--disable-filter",
+                      "--disable-live-testing", "--without-db"],
+        "make": [MAKE_JOBS],
+        # opendkim's configure probes SSL_library_init as a symbol; it is a macro in
+        # OpenSSL 3, so the cached answer keeps the shared build path the project itself
+        # documents for a shared libssl.
+        "env_extra": {"ac_cv_search_SSL_library_init": "-lssl"},
+        "artifact": "libopendkim/.libs/libopendkim.so*", "launch": None,
+        "aux_sources": list(_LIBBSD_AUX),
+        "note": ("opendkim 2.10.3's libopendkim built against the subject libcrypto; the "
+                 "filter (and its milter dependency) is disabled, libbsd supplies "
+                 "strlcpy/strlcat from the pinned packages"),
+    },
+)
+
 # The Phase-17 downstream harnesses' pinned releases, added to widen the direct-consumer set. nginx
 # 1.26.3 is the TLS-server slice (its own `configure`, so it is treated like autotools).
 _PHASE17_PINS: dict[str, str] = {
@@ -771,6 +944,13 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
     for spec in _L7_SERVER_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 utility batch: axel, ab (apache2-utils), osslsigncode,
+    # u-boot-tools, sslsplit and opendkim. Pristine released archives built against
+    # the subject prefix, with any non-OpenSSL dependency pinned through aux_sources.
+    for spec in _L7_UTILITY_SPECS:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
@@ -1046,6 +1226,26 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
     level = L1
     build_system = str(recipe["build_system"])
     build_dir = str(recipe.get("build_dir") or "b")
+
+    # A recipe may need generated build inputs before its own configure/make runs
+    # (u-boot-tools seeds the host-tools Kconfig files its bison/flex-free build
+    # cannot generate here). These are build outputs, never source edits, and the
+    # same argv is run for both subjects.
+    for step in recipe.get("pre_build") or []:
+        argv = [str(a).format(prefix=prefix) for a in step]
+        pre = stage("pre-build", census._run(argv, cwd=root, env=env))
+        if not pre["ok"]:
+            return _subject_row(
+                fam, recipe, subject, level=L1, outcome="failed", residual="unbuildable",
+                failure_class="configure-failure",
+                reason=f"the pre-build step failed: {census._error_line(pre)}",
+                specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
+                evidence=[f"family:{fam.get('family_id')}",
+                          f"recipe:{recipe['recipe_id']}",
+                          f"source:{recipe['url']}#{archive_sha}"],
+                steps=steps, canvas=None, limits=limits, prefix=prefix,
+                source_root_hash=root_hash)
+
     if build_system in ("autotools", "configure"):
         argv = ["./configure"] + [a.format(prefix=prefix) for a in recipe["configure"]]
         conf = stage("configure", census._run(argv, cwd=root, env=env))
