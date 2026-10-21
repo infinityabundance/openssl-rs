@@ -86,6 +86,7 @@ import hashlib
 import http.server
 import json
 import os
+import pty
 import re
 import select
 import shutil
@@ -614,6 +615,50 @@ PROGRAMS: dict[str, dict] = {
         "note": ("partclone.extfs's torrent_info path: the generated SHA-1 matches the block-file "
                  "digest, the restored filesystem payload matches, and a corrupted image block is "
                  "detected by the CRC"),
+    },
+    # The Phase-25 L7 expansion batch (b6): three TLS servers, two IRC clients and an SNMP agent.
+    "exim": {
+        "program": "build-Linux-x86_64/exim", "launch": ["--version"],
+        "version_re": r"Exim version 4\.100\.1",
+        "note": ("Exim's SMTP STARTTLS submission path: a message is submitted over a verified "
+                 "TLS 1.3 session and queued (250 OK); a client trusting only the unrelated CA is "
+                 "refused at certificate verification"),
+    },
+    "nsd": {
+        "program": "nsd", "launch": ["-v"],
+        "version_re": r"NSD version 4\.10\.1",
+        "note": ("NSD's DNS-over-TLS listener: a length-framed A query for the fixture zone is "
+                 "answered authoritatively over TLS; the same query sent as plaintext to the TLS "
+                 "port yields no DNS answer"),
+    },
+    "net-snmp": {
+        "program": "agent/snmpd", "launch": ["-v"],
+        "version_re": r"NET-SNMP version:\s*5\.9\.4",
+        "note": ("net-snmp's SNMPv3 USM authentication path (HMAC-SHA-1 through the subject "
+                 "libcrypto): snmpget returns the fixture sysLocation; a wrong authentication "
+                 "password is refused with `Authentication failure`"),
+    },
+    "eggdrop": {
+        "program": "eggdrop", "launch": ["-v"],
+        "version_re": r"Eggdrop v1\.9\.5",
+        "note": ("eggdrop's IRC-over-TLS client: it registers and joins the fixture channel over "
+                 "a verified TLS session against a local IRC stub; pointed at a plaintext "
+                 "listener it never registers"),
+    },
+    "irssi": {
+        "program": "src/fe-text/irssi", "launch": ["--version"],
+        "version_re": r"irssi 1\.4\.5",
+        "note": ("irssi's IRC-over-TLS client: it connects, registers, joins the fixture channel "
+                 "and receives the fixture message over a verified TLS session; with only the "
+                 "unrelated CA the TLS verification fails and it never registers"),
+    },
+    "openssh-server": {
+        "program": "sshd", "launch": ["-V"],
+        "version_re": r"OpenSSH_9\.9p1",
+        "note": ("sshd 9.9p1's server direction: a host key and a fixture client key are "
+                 "generated, sshd -D serves, and ssh with StrictHostKeyChecking=yes runs `echo "
+                 "ok`; a known_hosts entry for a different host key is rejected with `Host key "
+                 "verification failed`"),
     },
 }
 
@@ -5813,6 +5858,653 @@ def _wl_prosody(ctx: dict) -> dict:
     }
 
 
+def _spawn_as(argv: list[str], cwd: Path, env: dict, out_path: Path, err_path: Path,
+              uid: int = 65534, gid: int = 65534):
+    """Spawn a program as an unprivileged user (a client that refuses to run as root)."""
+    outf = open(out_path, "w", encoding="utf-8")
+    errf = open(err_path, "w", encoding="utf-8")
+
+    def demote() -> None:
+        try:
+            os.setgroups([])
+        except OSError:
+            pass
+        os.setgid(gid)
+        os.setuid(uid)
+
+    proc = subprocess.Popen([str(a) for a in argv], cwd=str(cwd), env=env, stdout=outf,
+                            stderr=errf, stdin=subprocess.DEVNULL, preexec_fn=demote, text=True)
+    return proc, outf, errf
+
+
+def _chown_tree(root: Path, uid: int = 65534, gid: int = 65534) -> None:
+    """Hand a fixture directory to the unprivileged user a client runs as."""
+    for p in [root, *root.rglob("*")]:
+        try:
+            os.chown(p, uid, gid)
+        except OSError:
+            pass
+    try:
+        os.chmod(root, 0o755)
+    except OSError:
+        pass
+
+
+def _l7_irc_stub(ctx: dict) -> tuple[Path, dict]:
+    """Compile the local IRC peer harness against the *authority* prefix.
+
+    The stub is a peer, not the subject under test: linking it to the admitted authority keeps the
+    peer's OpenSSL independent of the program it drives, exactly as the s_server/s_client peers are.
+    """
+    ap = ctx["authority_prefix"]
+    out = ctx["workdir"] / ".l7-irc-stub"
+    res = _run_captured(["cc", str(REPO_ROOT / "forensics" / "tools" / "l7_irc_stub.c"),
+                         "-o", str(out), "-O2", "-Wall", "-Wextra",
+                         f"-I{ap / 'include'}", f"-L{ap / 'lib'}",
+                         f"-Wl,-rpath,{ap / 'lib'}", "-lssl", "-lcrypto"],
+                        env=_auth_env(ap), timeout=120)
+    return out, res
+
+
+def _wait_marker(path: Path, needle: str, timeout: float) -> bool:
+    """Wait for a marker in a peer's log (a marker line, never a bare substring of evidence)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if any(line == needle or line.startswith(needle + " ") for line in _read(path).splitlines()):
+            return True
+        time.sleep(0.25)
+    return False
+
+
+# --------------------------------------------------------------------------------------------
+# b6 workloads: exim STARTTLS submission, nsd DoT, net-snmp USM, eggdrop/irssi IRC-over-TLS and
+# the sshd server direction
+# --------------------------------------------------------------------------------------------
+
+def _wl_exim(ctx: dict) -> dict:
+    """An SMTP STARTTLS submission: a verified session queues a message; an unrelated CA is refused."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    spool, logd, confd = d / "spool", d / "log", d / "etc"
+    for p in (spool, logd, confd):
+        p.mkdir(parents=True, exist_ok=True)
+    conf = confd / "exim.conf"
+    conf.write_text(f"""primary_hostname = l7.test
+domainlist local_domains = l7.test
+spool_directory = {spool}
+log_file_path = {logd}/%slog
+queue_only = true
+never_users =
+acl_smtp_mail = accept
+acl_smtp_rcpt = accept
+acl_smtp_data = accept
+tls_advertise_hosts = *
+tls_certificate = {pki['srv_crt']}
+tls_privatekey = {pki['srv_key']}
+local_interfaces = 127.0.0.1
+""", encoding="utf-8")
+    # The daemon runs as root but each SMTP child runs as the compiled EXIM_USER; the fixture
+    # certificate and the spool/log directories must therefore be usable by that user.
+    for f in (pki["srv_crt"], pki["srv_key"], pki["ca_crt"], pki["other_crt"]):
+        os.chmod(f, 0o644)
+    for p in (spool, logd):
+        os.chmod(p, 0o777)
+    exchange = ("EHLO client\r\nMAIL FROM:<a@l7.test>\r\nRCPT TO:<b@l7.test>\r\nDATA\r\n"
+                "Subject: fixture\r\n\r\nphase24 runtime exim fixture\r\n.\r\nQUIT\r\n")
+    srv, of, ef = _spawn([str(ctx["program"]), "-bd", "-oX", str(port), "-C", str(conf)], d,
+                         ctx["env"], d / "exim.out", d / "exim.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("exim daemon", {"exit_code": 0, "stdout": _read(d / "exim.err")})],
+                            "the exim daemon did not listen on its submission port",
+                            "runtime-failure", d)
+        ok = _s_client(ap, port, pki["ca_crt"],
+                       ["-starttls", "smtp", "-verify_return_error", "-quiet"],
+                       stdin_text=exchange, timeout=45)
+        neg = _s_client(ap, port, pki["other_crt"],
+                        ["-starttls", "smtp", "-verify_return_error", "-quiet"],
+                        stdin_text="EHLO client\r\nQUIT\r\n", timeout=45)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    accepted = "250 OK id=" in ok["stdout"]
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stdout"] + neg["stderr"]))
+    runtime_ok = accepted
+    functional_ok = accepted and neg_rejected
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the message was not queued over STARTTLS (no `250 OK id=`)" if not accepted else
+             "the unrelated CA was not rejected, so the submission does not verify"),
+            "transcript": _transcript(("authority s_client STARTTLS submission", ok),
+                                      ("authority s_client unrelated-ca (must fail)", neg),
+                                      ("exim mainlog", {"exit_code": 0,
+                                                        "stdout": _read(logd / "mainlog")[-2000:]})),
+            "workload": "exim: SMTP STARTTLS submission queued; unrelated CA refused",
+            "local_only": True}
+
+
+_DOT_QUERY = (struct.pack(">HHHHHH", 0x1234, 0x0100, 1, 0, 0, 0)
+              + b"\x03www\x07example\x04test\x00" + struct.pack(">HH", 1, 1))
+_DOT_ANSWER = b"\xc0\x00\x02\x7b"  # 192.0.2.123, the fixture A record
+
+
+def _dot_query(ap: Path, port: int, ca: Path, wire: bytes) -> tuple[bytes, dict]:
+    """One DNS-over-TLS query through the authority s_client; the raw answer bytes are returned."""
+    argv = [str(_auth_ossl(ap)), "s_client", "-connect", f"127.0.0.1:{port}", "-CAfile",
+            str(ca), "-verify_return_error", "-quiet", "-tls1_3"]
+    proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, env=_auth_env(ap))
+    data = b""
+    try:
+        proc.stdin.write(wire)
+        proc.stdin.flush()
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            ready, _, _ = select.select([proc.stdout], [], [], 0.5)
+            if not ready:
+                continue
+            chunk = os.read(proc.stdout.fileno(), 4096)
+            if not chunk:
+                break
+            data += chunk
+            if len(data) >= 2 and len(data) >= struct.unpack(">H", data[:2])[0] + 2:
+                break
+    finally:
+        _stop(proc)
+        try:
+            err = proc.stderr.read().decode("utf-8", "ignore")
+        except Exception:  # noqa: BLE001
+            err = ""
+    return data, {"exit_code": proc.returncode, "stdout": "", "stderr": err}
+
+
+def _plain_dns_query(port: int, wire: bytes) -> bytes:
+    """The same length-framed query sent as plaintext to the TLS port; no DNS answer is expected."""
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=5) as s:
+            s.settimeout(4)
+            s.sendall(wire)
+            try:
+                return s.recv(512)
+            except socket.timeout:
+                return b""
+    except OSError:
+        return b""
+
+
+def _wl_nsd(ctx: dict) -> dict:
+    """An authoritative answer over DNS-over-TLS; plaintext on the TLS port gets no answer."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    zone = d / "fixture.zone"
+    zone.write_text("$ORIGIN example.test.\n$TTL 300\n"
+                    "@ IN SOA ns.example.test. hostmaster.example.test. 1 3600 600 86400 300\n"
+                    "@ IN NS ns.example.test.\nns IN A 127.0.0.1\nwww IN A 192.0.2.123\n",
+                    encoding="utf-8")
+    conf = d / "nsd.conf"
+    conf.write_text(f"""server:
+  ip-address: 127.0.0.1@{port}
+  tls-port: {port}
+  tls-service-key: {pki['srv_key']}
+  tls-service-pem: {pki['srv_crt']}
+  do-ip6: no
+  username: ""
+  database: ""
+  zonesdir: {d}
+  pidfile: {d}/nsd.pid
+  xfrdfile: {d}/xfrd.state
+  xfrdir: {d}/xfrd
+  zonelistfile: {d}/zone.list
+  logfile: {d}/nsd.log
+zone:
+  name: example.test
+  zonefile: {zone}
+""", encoding="utf-8")
+    for f in (pki["srv_crt"], pki["srv_key"], pki["ca_crt"]):
+        os.chmod(f, 0o600)
+    srv, of, ef = _spawn([str(ctx["program"]), "-c", str(conf), "-d"], d, ctx["env"],
+                         d / "nsd.out", d / "nsd.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("nsd", {"exit_code": 0, "stdout": _read(d / "nsd.err")})],
+                            "nsd did not open its DNS-over-TLS listener", "runtime-failure", d)
+        wire = struct.pack(">H", len(_DOT_QUERY)) + _DOT_QUERY
+        answer, tls = _dot_query(ap, port, pki["ca_crt"], wire)
+        plain = _plain_dns_query(port, wire)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    tls_ok = _DOT_ANSWER in answer
+    plain_failed = _DOT_ANSWER not in plain
+    runtime_ok = bool(answer) and "verify return" in tls["stderr"]
+    functional_ok = tls_ok and plain_failed
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the DoT query was not answered over a verified TLS session" if not runtime_ok else
+             "the fixture A record was not in the DoT answer" if not tls_ok else
+             "plaintext on the TLS port produced a DNS answer"),
+            "transcript": _transcript(("authority s_client DoT (raw)",
+                                       {"exit_code": tls["exit_code"],
+                                        "stdout": answer[:64].hex(),
+                                        "stderr": tls["stderr"]}),
+                                      ("plaintext on the TLS port (raw)",
+                                       {"exit_code": 0, "stdout": plain[:64].hex()}),
+                                      ("nsd log", {"exit_code": 0,
+                                                    "stdout": _read(d / "nsd.log")[-1500:]})),
+            "workload": "nsd: DNS-over-TLS authoritative answer; plaintext on the TLS port fails",
+            "local_only": True}
+
+
+def _wl_net_snmp(ctx: dict) -> dict:
+    """SNMPv3 USM authentication through the subject libcrypto, with the OID value asserted."""
+    ap, port, d, root = ctx["authority_prefix"], ctx["port"], ctx["workdir"], ctx["root"]
+    del ap
+    state = root / ".l7-state"
+    state.mkdir(parents=True, exist_ok=True)
+    conf = d / "snmpd.conf"
+    conf.write_text(f"agentaddress 127.0.0.1:{port}\n"
+                    "syslocation phase24-runtime-netsnmp-ok\n"
+                    "syscontact nobody@l7.test\n"
+                    "createUser l7user SHA \"l7authpass\"\n"
+                    "rwuser l7user auth\n", encoding="utf-8")
+    get = root / "apps" / "snmpget"
+    if not get.is_file():
+        return {"runtime_ok": False, "functional_ok": False,
+                "failure_class": "harness-failure", "residual": "out-of-scope",
+                "reason": f"the recipe built no snmpget at {get}",
+                "transcript": "", "workload": "net-snmp: USM authenticated GET",
+                "local_only": True}
+    srv, of, ef = _spawn([str(ctx["program"]), "-f", "-C", "-c", str(conf), "-p",
+                          str(d / "snmpd.pid"), "-Lo"], d, ctx["env"],
+                         d / "snmpd.out", d / "snmpd.err")
+    oid = ".1.3.6.1.2.1.1.6.0"
+    try:
+        # SNMP runs over UDP, so there is no TCP listener to wait for: the authenticated GET is
+        # retried briefly while the agent completes its start-up.
+        pos = {"exit_code": -1, "stdout": "", "stderr": "", "ok": False}
+        for _ in range(10):
+            pos = _run_captured([str(get), "-v3", "-l", "authNoPriv", "-u", "l7user", "-a",
+                                 "SHA", "-A", "l7authpass", "-On", "-m", "", "-t", "4",
+                                 "-r", "1", f"127.0.0.1:{port}", oid],
+                                cwd=d, env=ctx["env"], timeout=40)
+            if pos["exit_code"] == 0:
+                break
+            time.sleep(1)
+        neg = _run_captured([str(get), "-v3", "-l", "authNoPriv", "-u", "l7user", "-a", "SHA",
+                             "-A", "wrongpass", "-On", "-m", "", "-t", "2", "-r", "0",
+                             f"127.0.0.1:{port}", oid],
+                            cwd=d, env=ctx["env"], timeout=40)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    value_ok = pos["exit_code"] == 0 and "phase24-runtime-netsnmp-ok" in pos["stdout"]
+    neg_refused = (neg["exit_code"] != 0
+                   and "Authentication failure" in (neg["stdout"] + neg["stderr"]))
+    runtime_ok = pos["exit_code"] == 0
+    functional_ok = value_ok and neg_refused
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the authenticated GET did not return the fixture sysLocation" if not value_ok else
+             "a wrong authentication password was not refused"),
+            "transcript": _transcript(("snmpget v3 authNoPriv", pos),
+                                      ("snmpget v3 wrong password (must fail)", neg),
+                                      ("snmpd", {"exit_code": 0,
+                                                  "stdout": _read(d / "snmpd.out")[-1200:]})),
+            "workload": "net-snmp: SNMPv3 SHA-authenticated GET returns the fixture OID value",
+            "local_only": True}
+
+
+def _eggdrop_config(path: Path, root: Path, d: Path, port: int, cafile: Path,
+                    userfile: Path, ssl: bool) -> None:
+    path.write_text(f"""set username "l7bot"
+set nick "l7bot"
+set altnick "l7bot_"
+set realname "l7 fixture"
+set admin "l7 <l7@l7.test>"
+set network "l7net"
+set default-port 6667
+set userfile "{userfile}"
+set chanfile "{d}/l7bot.chan"
+set motd "{d}/motd.txt"
+set help-path "{root}/help/"
+set text-path "{root}/text/"
+set mod-path "{root}/"
+set ssl-verify-server {'1' if ssl else '0'}
+set ssl-cafile "{cafile}"
+set ssl-capath ""
+loadmodule pbkdf2
+loadmodule blowfish
+loadmodule channels
+loadmodule server
+loadmodule ctcp
+loadmodule irc
+loadmodule notes
+loadmodule console
+loadmodule uptime
+server add 127.0.0.1 {'+' if ssl else ''}{port}
+channel add #l7
+""", encoding="utf-8")
+
+
+def _wl_eggdrop(ctx: dict) -> dict:
+    """IRC-over-TLS registration and join; the same client against plaintext never registers."""
+    ap, port, d, root = ctx["authority_prefix"], ctx["port"], ctx["workdir"], ctx["root"]
+    pki = _gen_pki(ap, d)
+    (d / "motd.txt").write_text("l7 fixture motd\n", encoding="utf-8")
+    stub, built = _l7_irc_stub(ctx)
+    if not built["ok"] or not stub.is_file():
+        return {"runtime_ok": False, "functional_ok": False, "failure_class": "harness-failure",
+                "residual": "out-of-scope",
+                "reason": f"the IRC stub harness did not compile: {census._error_line(built)}",
+                "transcript": _transcript(("cc l7_irc_stub.c", built)),
+                "workload": "eggdrop: IRC-over-TLS registration", "local_only": True}
+    log = d / "stub.log"
+    srv, of, ef = _spawn([str(stub), str(port), str(log), "tls", str(pki["srv_crt"]),
+                          str(pki["srv_key"])], d, _auth_env(ap), d / "stub.out",
+                         d / "stub.err")
+    try:
+        if not _wait_marker(log, "READY", 20):
+            return _wl_fail([("irc stub", {"exit_code": 0, "stdout": _read(d / "stub.err")})],
+                            "the local IRC stub did not listen", "harness-failure", d)
+        conf = d / "egg.conf"
+        _eggdrop_config(conf, root, d, port, pki["ca_crt"], d / "l7bot.user", ssl=True)
+        _chown_tree(d)
+        proc, of2, ef2 = _spawn_as([str(ctx["program"]), "-n", "-m", "-c", str(conf)], d,
+                                   dict(ctx["env"], HOME=str(d)), d / "egg.out",
+                                   d / "egg.err")
+        try:
+            joined = _wait_marker(log, "JOINED #l7", 30)
+        finally:
+            _stop(proc)
+            of2.close()
+            ef2.close()
+        registered = any(line.startswith("REGISTERED ") for line in _read(log).splitlines())
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    # The plaintext control: the same client still asks for TLS, so a plaintext listener never
+    # receives a registration.
+    pport = _free_port()
+    plainlog = d / "plain.log"
+    stub2, of3, ef3 = _spawn([str(stub), str(pport), str(plainlog), "plain"], d, _auth_env(ap),
+                             d / "plain.out", d / "plain.err")
+    plain_conf = d / "egg-plain.conf"
+    _eggdrop_config(plain_conf, root, d, pport, pki["ca_crt"], d / "l7bot-plain.user", ssl=True)
+    _chown_tree(d)
+    proc2, of4, ef4 = _spawn_as([str(ctx["program"]), "-n", "-m", "-c", str(plain_conf)], d,
+                                dict(ctx["env"], HOME=str(d)), d / "egg-plain.out",
+                                d / "egg-plain.err")
+    try:
+        time.sleep(8)
+    finally:
+        _stop(proc2)
+        of4.close()
+        ef4.close()
+        _stop(stub2)
+        of3.close()
+        ef3.close()
+    plain_text = _read(plainlog)
+    plain_refused = "REGISTERED" not in plain_text and "USER " not in plain_text
+    runtime_ok = registered
+    functional_ok = registered and joined and plain_refused
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the bot did not register over TLS" if not registered else
+             "the bot registered but never joined the fixture channel" if not joined else
+             "a plaintext listener received a registration, so TLS is not load-bearing"),
+            "transcript": _transcript(("irc stub (TLS) log", {"exit_code": 0, "stdout": _read(log)}),
+                                      ("irc stub (plaintext) log",
+                                       {"exit_code": 0, "stdout": plain_text}),
+                                      ("eggdrop", {"exit_code": 0,
+                                                    "stdout": _read(d / "egg.out")[-1500:]})),
+            "workload": "eggdrop: IRC-over-TLS registration and join; plaintext never registers",
+            "local_only": True}
+
+
+def _irssi_config(path: Path, d: Path, port: int, cafile: Path) -> None:
+    path.write_text(f"""servers = (
+  {{ address = "127.0.0.1"; port = "{port}"; chatnet = "l7net"; autoconnect = "yes";
+     use_tls = "yes"; ssl_verify = "yes"; ssl_cafile = "{cafile}"; ssl_capath = ""; }}
+);
+chatnets = {{ l7net = {{ type = "IRC"; }}; }};
+settings = {{ core = {{ nick = "l7irssi"; user_name = "l7user"; real_name = "l7 fixture"; }}; }};
+""", encoding="utf-8")
+
+
+def _run_irssi(ctx: dict, config: Path, log: Path, join: bool, timeout: float) -> tuple[bool, bool, bytes]:
+    """Run irssi on a pty; return (registered, joined, screen bytes)."""
+    master, slave = pty.openpty()
+    env = dict(ctx["env"], TERM="xterm", HOME=str(config.parent))
+    proc = subprocess.Popen([str(ctx["program"]), f"--home={config.parent}"],
+                            stdin=slave, stdout=slave, stderr=slave, env=env,
+                            cwd=str(ctx["workdir"]))
+    os.close(slave)
+    screen = b""
+    sent = False
+    joined = False
+    registered = False
+    try:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            ready, _, _ = select.select([master], [], [], 0.3)
+            if ready:
+                try:
+                    chunk = os.read(master, 65536)
+                except OSError:
+                    chunk = b""
+                if not chunk:
+                    break
+                screen += chunk
+            text = _read(log)
+            if "REGISTERED " in text:
+                registered = True
+                if join and not sent:
+                    os.write(master, b"/join #l7\n")
+                    sent = True
+            if sent and "JOINED #l7" in text:
+                joined = True
+                # Drain the pty a little longer: the join is rendered asynchronously by the
+                # client, and the screen assertion must not race the terminal write.
+                drain = time.monotonic() + 3.0
+                while time.monotonic() < drain:
+                    ready, _, _ = select.select([master], [], [], 0.3)
+                    if not ready:
+                        continue
+                    try:
+                        chunk = os.read(master, 65536)
+                    except OSError:
+                        break
+                    if not chunk:
+                        break
+                    screen += chunk
+                break
+    finally:
+        _stop(proc)
+        try:
+            os.close(master)
+        except OSError:
+            pass
+    return registered, joined, screen
+
+
+def _wl_irssi(ctx: dict) -> dict:
+    """IRC-over-TLS registration and a channel join; the unrelated CA is refused."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    stub, built = _l7_irc_stub(ctx)
+    if not built["ok"] or not stub.is_file():
+        return {"runtime_ok": False, "functional_ok": False, "failure_class": "harness-failure",
+                "residual": "out-of-scope",
+                "reason": f"the IRC stub harness did not compile: {census._error_line(built)}",
+                "transcript": _transcript(("cc l7_irc_stub.c", built)),
+                "workload": "irssi: IRC-over-TLS registration", "local_only": True}
+    home = d / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    log = d / "stub.log"
+    srv, of, ef = _spawn([str(stub), str(port), str(log), "tls", str(pki["srv_crt"]),
+                          str(pki["srv_key"])], d, _auth_env(ap), d / "stub.out",
+                         d / "stub.err")
+    try:
+        if not _wait_marker(log, "READY", 20):
+            return _wl_fail([("irc stub", {"exit_code": 0, "stdout": _read(d / "stub.err")})],
+                            "the local IRC stub did not listen", "harness-failure", d)
+        config = home / "config"
+        _irssi_config(config, d, port, pki["ca_crt"])
+        registered, joined, screen = _run_irssi(ctx, config, log, join=True, timeout=35)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    # The control: a client trusting only the unrelated CA must never complete TLS, so it never
+    # registers. A fresh stub and log isolate this from the positive run's evidence.
+    nport = _free_port()
+    nlog = d / "stub-neg.log"
+    stub2, of3, ef3 = _spawn([str(stub), str(nport), str(nlog), "tls", str(pki["srv_crt"]),
+                              str(pki["srv_key"])], d, _auth_env(ap), d / "stub-neg.out",
+                             d / "stub-neg.err")
+    nhome = d / "home-neg"
+    nhome.mkdir(parents=True, exist_ok=True)
+    nconfig = nhome / "config"
+    _irssi_config(nconfig, d, nport, pki["other_crt"])
+    try:
+        if not _wait_marker(nlog, "READY", 20):
+            nregistered = True
+        else:
+            nregistered, _njoined, _nscreen = _run_irssi(ctx, nconfig, nlog, join=False,
+                                                         timeout=15)
+    finally:
+        _stop(stub2)
+        of3.close()
+        ef3.close()
+    neg_text = _read(nlog)
+    # irssi verifies the peer after the TLS handshake and closes before registering, so the
+    # control asserts the absence of registration rather than the absence of a handshake.
+    neg_refused = (not nregistered and "REGISTERED" not in neg_text
+                   and "C: NICK" not in neg_text and "C: USER" not in neg_text)
+    screen_text = screen.decode("utf-8", "ignore")
+    screen_join = ("has joined #l7" in screen_text
+                   or "phase24 runtime irc fixture" in screen_text)
+    runtime_ok = registered
+    functional_ok = registered and joined and screen_join and neg_refused
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("irssi did not register over TLS" if not registered else
+             "irssi registered but did not join the fixture channel" if not joined else
+             "the joined channel is not on irssi's screen" if not screen_join else
+             "a client with only the unrelated CA was not refused"),
+            "transcript": _transcript(("irc stub (TLS) log", {"exit_code": 0, "stdout": _read(log)}),
+                                      ("irc stub (unrelated CA) log",
+                                       {"exit_code": 0, "stdout": neg_text}),
+                                      ("irssi screen (tail)",
+                                       {"exit_code": 0, "stdout": screen_text[-1500:]})),
+            "workload": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+            "local_only": True}
+
+
+def _wl_openssh_server(ctx: dict) -> dict:
+    """The sshd server direction: a fixture host key, a verified exec, and a host-key mismatch."""
+    ap, port, d, root = ctx["authority_prefix"], ctx["port"], ctx["workdir"], ctx["root"]
+    del ap
+    ssh = root / "ssh"
+    keygen = root / "ssh-keygen"
+    session = root / "sshd-session"
+    if not (ssh.is_file() and keygen.is_file() and session.is_file()):
+        return {"runtime_ok": False, "functional_ok": False,
+                "failure_class": "harness-failure", "residual": "out-of-scope",
+                "reason": "the recipe built no ssh/ssh-keygen/sshd-session to drive sshd",
+                "transcript": "", "workload": "openssh-server: sshd server direction",
+                "local_only": True}
+    priv = root / ".l7-privsep"
+    priv.mkdir(parents=True, exist_ok=True)
+    os.chmod(priv, 0o755)
+    host_key, client_key = d / "hostkey", d / "clientkey"
+    other_key = d / "otherhost"
+    for key in (host_key, client_key, other_key):
+        gen = _run_captured([str(keygen), "-t", "ed25519", "-f", str(key), "-N", "", "-q",
+                             "-C", "runtime"], cwd=d, env=ctx["env"], timeout=40)
+        if not gen["ok"]:
+            return {"runtime_ok": False, "functional_ok": False,
+                    "failure_class": "harness-failure", "residual": "out-of-scope",
+                    "reason": f"ssh-keygen failed: {census._error_line(gen)}",
+                    "transcript": _transcript(("ssh-keygen", gen)),
+                    "workload": "openssh-server: sshd server direction", "local_only": True}
+    authorized = d / "authorized_keys"
+    authorized.write_text(_read(d / "clientkey.pub"), encoding="utf-8")
+    known_good, known_bad = d / "known_hosts", d / "known_bad"
+    known_good.write_text(f"[127.0.0.1]:{port} " + _read(d / "hostkey.pub"), encoding="utf-8")
+    known_bad.write_text(f"[127.0.0.1]:{port} " + _read(d / "otherhost.pub"), encoding="utf-8")
+    conf = d / "sshd_config"
+    conf.write_text(f"Port {port}\nListenAddress 127.0.0.1\nHostKey {host_key}\n"
+                    f"PidFile {d}/sshd.pid\nAuthorizedKeysFile {authorized}\nStrictModes no\n"
+                    "PasswordAuthentication no\nKbdInteractiveAuthentication no\n"
+                    "PubkeyAuthentication yes\nPermitRootLogin yes\nLogLevel VERBOSE\n"
+                    f"SshdSessionPath {session}\n", encoding="utf-8")
+    srv, of, ef = _spawn([str(ctx["program"]), "-D", "-e", "-f", str(conf)], d, ctx["env"],
+                         d / "sshd.out", d / "sshd.err")
+    common = ["-F", "/dev/null", "-o", "StrictHostKeyChecking=yes", "-o", "BatchMode=yes",
+              "-o", "IdentitiesOnly=yes", "-o", "IdentityAgent=none",
+              "-o", "ConnectTimeout=8", "-o", f"IdentityFile={client_key}",
+              "-p", str(port)]
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("sshd", {"exit_code": 0, "stdout": _read(d / "sshd.err")})],
+                            "sshd did not listen on its fixture port", "runtime-failure", d)
+        pos = _run_captured([str(ssh)] + common + ["-o", f"UserKnownHostsFile={known_good}",
+                                                   "127.0.0.1", "echo ok"],
+                            cwd=d, env=ctx["env"], timeout=40)
+        neg = _run_captured([str(ssh)] + common + ["-o", f"UserKnownHostsFile={known_bad}",
+                                                   "127.0.0.1", "echo ok"],
+                            cwd=d, env=ctx["env"], timeout=40)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    exec_ok = pos["exit_code"] == 0 and "ok" in pos["stdout"]
+    neg_rejected = (neg["exit_code"] != 0
+                    and "Host key verification failed" in (neg["stdout"] + neg["stderr"]))
+    runtime_ok = exec_ok
+    functional_ok = exec_ok and neg_rejected
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the verified `ssh ... echo ok` did not run on sshd" if not exec_ok else
+             "a known_hosts entry for a different host key was not rejected"),
+            "transcript": _transcript(("ssh exec over sshd", pos),
+                                      ("ssh host-key mismatch (must fail)", neg),
+                                      ("sshd", {"exit_code": 0,
+                                                 "stdout": _read(d / "sshd.err")[-1500:]})),
+            "workload": "openssh-server: sshd -D, verified exec, host-key mismatch rejected",
+            "local_only": True}
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -5877,6 +6569,13 @@ RUNNERS = {
     "mumble-server": _wl_mumble,
     "prosody": _wl_prosody,
     "partclone": _wl_partclone,
+    # The Phase-25 L7 expansion batch (b6).
+    "exim": _wl_exim,
+    "nsd": _wl_nsd,
+    "net-snmp": _wl_net_snmp,
+    "eggdrop": _wl_eggdrop,
+    "irssi": _wl_irssi,
+    "openssh-server": _wl_openssh_server,
 }
 
 

@@ -470,7 +470,8 @@ _AUX_MULTIARCH_PC = "usr/lib/x86_64-linux-gnu/pkgconfig"
 
 def _aux_deb(pool: str, filename: str, sha256: str, *, include_dirs: tuple[str, ...] = (),
              library_dirs: tuple[str, ...] = (), pkgconfig_dirs: tuple[str, ...] = (),
-             bin_dirs: tuple[str, ...] = ()) -> dict:
+             bin_dirs: tuple[str, ...] = (),
+             links: dict[str, str] | None = None) -> dict:
     """One pinned bookworm dependency package, extracted under the family scratch."""
     spec: dict = {
         "url": f"http://deb.debian.org/debian/pool/main/{pool}/{filename}",
@@ -478,9 +479,10 @@ def _aux_deb(pool: str, filename: str, sha256: str, *, include_dirs: tuple[str, 
         "note": f"pinned bookworm {filename}",
     }
     for key, value in (("include_dirs", include_dirs), ("library_dirs", library_dirs),
-                       ("pkgconfig_dirs", pkgconfig_dirs), ("bin_dirs", bin_dirs)):
+                       ("pkgconfig_dirs", pkgconfig_dirs), ("bin_dirs", bin_dirs),
+                       ("links", links)):
         if value:
-            spec[key] = list(value)
+            spec[key] = dict(value) if key == "links" else list(value)
     return spec
 
 
@@ -1347,6 +1349,183 @@ _L7_EXPAND2_SPECS: tuple[dict, ...] = (
 )
 
 
+# The Phase-25 L7 expansion batch (b6): two TLS servers (exim, nsd) and three OpenSSL consumers
+# whose build needs a non-subject dependency the venue does not ship as a development package
+# (net-snmp, eggdrop, irssi); openssh-server reuses the openssh release and exercises the server
+# direction. Every package is a pinned bookworm build; the subject prefix remains the only OpenSSL.
+#
+# exim 4.100.1 requires PCRE2 and, on Linux, the Berkeley DB hints database (OS/Makefile-Linux
+# sets USE_DB=yes), so both headers are acquired; the recipe keeps the release tarball's own
+# OS/Makefile-Linux defaults and only writes Local/Makefile (a generated build input).
+_L7_EXIM_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("d/db5.3", "libdb5.3_5.3.28+dfsg2-1_amd64.deb",
+             "7dc5127b8dd0da80e992ba594954c005ae4359d839a24eb65d0d8129b5235c84",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("d/db5.3", "libdb5.3-dev_5.3.28+dfsg2-1_amd64.deb",
+             "f792f095deecb4f990f695e0d33f75f70b92491eab649adf91ea8574885d157c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# eggdrop 1.9.5 embeds Tcl; the image carries neither tcl.h nor libtcl8.6. `TCLSH=...` is avoided:
+# the release's `make config` finds `tclsh8.6` on PATH, which the recipe exposes from the pinned
+# tcl8.6 package.
+_L7_EGGDROP_AUX: tuple[dict, ...] = (
+    _aux_deb("t/tcl8.6", "libtcl8.6_8.6.13+dfsg-2_amd64.deb",
+             "976c4235b816635e1756016f3adbabb634e8b97a9f6b97cf901be099e4fd2487",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("t/tcl8.6", "tcl8.6-dev_8.6.13+dfsg-2_amd64.deb",
+             "e37b3f8888003ca9a34b85452885662bb9885b17f70cf7dfe4ec821a48328509",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# irssi 1.4.5 needs GLib (headers and .pc) and ncurses headers. The image carries the GLib runtime
+# library but not its development symlink, so the pinned dev package's `libglib-2.0.so` is repointed
+# at the already-installed runtime (same 2.74.6 build); libpcre2-dev supplies the `libpcre2-8`
+# pkg-config module glib-2.0.pc requires.
+_L7_IRSSI_AUX: tuple[dict, ...] = (
+    _aux_deb("g/glib2.0", "libglib2.0-dev_2.74.6-2+deb12u9_amd64.deb",
+             "217766f170553e14884f7d67c0636b833da43c1e4a65dfe41268ba1292001ccd",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
+             links={"usr/lib/x86_64-linux-gnu/libglib-2.0.so":
+                    "/lib/x86_64-linux-gnu/libglib-2.0.so.0"}),
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# exim 4.100.1's own release `make` (no configure script): Local/Makefile is a generated build
+# input, written from the pristine src/EDITME with the subject prefix and the pinned PCRE2/DB.
+_L7_EXIM_LOCAL_MAKEFILE = (
+    "set -e; mkdir -p Local; cp src/EDITME Local/Makefile; "
+    "sed -i "
+    "-e 's|^BIN_DIRECTORY=.*|BIN_DIRECTORY={root}/.l7-install/bin|' "
+    "-e 's|^CONFIGURE_FILE=.*|CONFIGURE_FILE={root}/.l7-install/etc/exim.conf|' "
+    "-e 's|^SPOOL_DIRECTORY=.*|SPOOL_DIRECTORY={root}/.l7-state/spool|' "
+    "-e 's|^# USE_OPENSSL=yes|USE_OPENSSL=yes|' "
+    "-e 's|^PCRE2_CONFIG=yes|PCRE2_CONFIG=|' "
+    "-e 's|^# PCRE_LIBS=.*|PCRE_LIBS=-L{aux}/usr/lib/x86_64-linux-gnu -lpcre2-8|' "
+    "-e 's|^EXIM_USER=$|EXIM_USER=nobody|' "
+    "Local/Makefile; "
+    "printf '%s\\n' "
+    "'INCLUDE=-I{prefix}/include -I{aux}/usr/include' "
+    "'TLS_LIBS=-L{prefix}/lib -lssl -lcrypto' "
+    "'EXIM_GROUP=nogroup' "
+    "'LOG_FILE_PATH={root}/.l7-state/log/%slog' "
+    "'LFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+    "-L{aux}/usr/lib/x86_64-linux-gnu -Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu' "
+    ">> Local/Makefile"
+)
+
+_L7_EXPAND3_SPECS: tuple[dict, ...] = (
+    {
+        "family": "exim", "version": "4.100.1",
+        "url": "https://ftp.exim.org/pub/exim/exim4/exim-4.100.1.tar.xz",
+        "archive": "tar.xz", "build_system": "make",
+        "sha256": "e9fb41f6724a5b136d64c9d19dbc5f26494af879a3e7e3190f91639eaa79fa0d",
+        "configure": [], "make": [MAKE_JOBS],
+        "artifact": "build-Linux-x86_64/exim", "launch": ["--version"],
+        "aux_sources": list(_L7_EXIM_AUX),
+        "pre_build": [["sh", "-c", _L7_EXIM_LOCAL_MAKEFILE]],
+        "note": ("Exim 4.100.1 built from the pristine release with USE_OPENSSL=yes; the SMTP "
+                 "daemon's STARTTLS path links the subject libssl, and PCRE2/Berkeley DB are the "
+                 "pinned packages its mandatory regex and hints-database paths need"),
+    },
+    {
+        "family": "nsd", "version": "4.10.1",
+        "url": "https://www.nlnetlabs.nl/downloads/nsd/nsd-4.10.1.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c0190f923f0095995f2e6331dacd92c6e1f4d578b880d61690602b43a5acfd84",
+        "configure": ["--with-ssl={prefix}", "--with-libevent={aux}/usr",
+                      "--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS], "artifact": "nsd", "launch": ["-v"],
+        "aux_sources": list(_LIBEVENT_AUX),
+        "note": ("NSD 4.10.1's DNS-over-TLS listener (tls-service-key/tls-service-pem) linked "
+                 "against the subject libssl; libevent is the pinned bookworm package"),
+    },
+    {
+        "family": "net-snmp", "version": "5.9.4",
+        "url": ("https://downloads.sourceforge.net/project/net-snmp/net-snmp/5.9.4/"
+                "net-snmp-5.9.4.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "8b4de01391e74e3c7014beb43961a2d6d6fa03acc34280b9585f4930745b0544",
+        "configure": ["--with-openssl={prefix}", "--with-defaults", "--disable-shared",
+                      "--without-pcre", "--disable-embedded-perl", "--without-perl-modules",
+                      "--without-python-modules",
+                      "--with-persistent-directory={root}/.l7-state",
+                      "--with-logfile={root}/.l7-state/snmpd.log",
+                      "--with-sys-contact=nobody@l7.test", "--with-sys-location=l7",
+                      "--with-default-snmp-version=3"],
+        "make": [MAKE_JOBS], "artifact": "agent/snmpd", "launch": ["-v"],
+        "env_extra": {"OPENSSL_CFLAGS": "-I{prefix}/include",
+                      "OPENSSL_LIBS": "-L{prefix}/lib -lssl -lcrypto"},
+        "note": ("net-snmp 5.9.4's agent and snmpget with the USM authentication path built on "
+                 "the subject libcrypto (SHA-1 HMAC); the prefix ships no openssl.pc, so the "
+                 "recipe supplies OPENSSL_CFLAGS/OPENSSL_LIBS as the admitted workaround"),
+    },
+    {
+        "family": "eggdrop", "version": "1.9.5",
+        "url": ("https://github.com/eggheads/eggdrop/releases/download/v1.9.5/"
+                "eggdrop-1.9.5.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "e26918ea8a64d9857579c5b60c661a337f20773edd83086b356525beb581736a",
+        "configure": ["--with-tclinc={aux}/usr/include/tcl8.6/tcl.h",
+                      "--with-tcllib={aux}/usr/lib/x86_64-linux-gnu/libtcl8.6.so",
+                      "--with-sslinc={prefix}/include", "--with-ssllib={prefix}/lib"],
+        "make": ["config", "all"], "artifact": "eggdrop", "launch": ["-v"],
+        "aux_sources": list(_L7_EGGDROP_AUX),
+        "env_extra": {"PATH": "{aux}/usr/bin:" + os.environ.get("PATH", "")},
+        "note": ("eggdrop 1.9.5's IRC-over-TLS client links the subject libssl; Tcl is the "
+                 "pinned package, and `make config` (the release's module selection) is part of "
+                 "the recipe's single make invocation"),
+    },
+    {
+        "family": "irssi", "version": "1.4.5",
+        "url": "https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz",
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062",
+        "configure": ["--with-perl=no", "--with-proxy", "--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS], "artifact": "src/fe-text/irssi", "launch": ["--version"],
+        "aux_sources": list(_L7_IRSSI_AUX),
+        "env_extra": {"OPENSSL_CFLAGS": "-I{prefix}/include",
+                      "OPENSSL_LIBS": "-L{prefix}/lib -lssl -lcrypto"},
+        "note": ("irssi 1.4.5's IRC-over-TLS client links the subject libssl; GLib (with its "
+                 "pcre2 dependency) and ncurses headers are the pinned packages"),
+    },
+    {
+        "family": "openssh-server", "version": "9.9p1",
+        "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "configure": ["--with-ssl-dir={prefix}", "--without-openssl-header-check",
+                      "--without-pam", "--without-selinux", "--without-libedit",
+                      "--without-ldns", "--without-kerberos5",
+                      "--with-privsep-user=nobody", "--with-privsep-path={root}/.l7-privsep",
+                      "--silent"],
+        "make": [MAKE_JOBS, "ssh", "sshd", "sshd-session", "ssh-keygen"],
+        "artifact": "sshd", "launch": ["-V"],
+        "note": ("OpenSSH 9.9p1's sshd (the server direction of the same release the client-only "
+                 "openssh family builds) linked against the subject libcrypto; the privsep user "
+                 "is the venue's nobody, and sshd-session is the split helper 9.9 requires"),
+    },
+)
+
+
 # The Phase-17 downstream harnesses' pinned releases, added to widen the direct-consumer set. nginx
 # 1.26.3 is the TLS-server slice (its own `configure`, so it is treated like autotools).
 _PHASE17_PINS: dict[str, str] = {
@@ -1435,6 +1614,13 @@ def _build_catalogue() -> tuple[dict, ...]:
     # partclone. Same pristine-source/aux seam; `{root}`, `{aux}` and `{repo}` are substituted
     # alongside `{prefix}` for the recipes whose build or runtime state lives in the tree.
     for spec in _L7_EXPAND2_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b6): exim, nsd, net-snmp, eggdrop, irssi and
+    # openssh-server. Same pristine-source/aux seam; `{root}` is the extracted tree the build
+    # writes its generated inputs and runtime state into.
+    for spec in _L7_EXPAND3_SPECS:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
