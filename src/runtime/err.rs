@@ -78,16 +78,16 @@
 //! live — and turns what would be two aliasing `&mut` references into a defined
 //! failure (the nested raise is dropped; the outer operation completes).
 
-use core::cell::{Cell, UnsafeCell};
+use core::cell::{Cell, RefCell, UnsafeCell};
 use core::ffi::{c_char, c_int, c_ulong, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crate::ffi::guard_ffi;
+use crate::runtime::dso_shared;
 use crate::runtime::init;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::mem_coords::SeamFile;
-use crate::runtime::owned_str::OwnedStr;
 
 #[path = "err_strings.rs"]
 mod err_strings;
@@ -327,7 +327,7 @@ impl ErrState {
                 // SAFETY: the MALLOCED flag says this state owns the pointer, and no other
                 // handle has released it.
                 unsafe {
-                    drop(OwnedStr::adopt(
+                    drop(SlotStr::adopt(
                         self.err_data[i],
                         SeamFile::new(ERR_LOCAL_FILE),
                         L_FREE_DATA_DEALL,
@@ -359,13 +359,13 @@ impl ErrState {
         // SAFETY: these pointers are always either NULL or owned by this state, and no
         // other handle has released them.
         unsafe {
-            drop(OwnedStr::adopt(
+            drop(SlotStr::adopt(
                 self.err_file[i],
                 SeamFile::new(ERR_LOCAL_FILE),
                 L_FREE_FILE_CLEAR,
             ));
             self.err_file[i] = core::ptr::null_mut();
-            drop(OwnedStr::adopt(
+            drop(SlotStr::adopt(
                 self.err_func[i],
                 SeamFile::new(ERR_LOCAL_FILE),
                 L_FREE_FUNC_CLEAR,
@@ -387,47 +387,41 @@ impl ErrState {
         };
     }
 
-    /// `err_set_debug`. The strings are **duplicated**: the authority notes they
-    /// "may be provider owned", and a provider can be unloaded while the error
-    /// is still queued. A NULL or empty string is stored as NULL, and the read
-    /// side turns NULL back into `""`.
-    /// # Safety
-    /// `file` and `func` are each NULL or a NUL-terminated C string. The strings are
-    /// duplicated through `CRYPTO_strdup`, whose allocation-failure path reads `file`
-    /// as a C string; a non-NUL-terminated pointer is therefore undefined behaviour.
-    /// This cannot be `SeamFile`: an external C caller's coordinates need only be
-    /// valid for the call, not for static storage.
-    pub(crate) unsafe fn set_debug(
-        &mut self,
-        i: usize,
-        file: *const c_char,
-        line: c_int,
-        func: *const c_char,
-    ) {
-        // SAFETY: the slot's string pointers are NULL or owned by this state and no other
-        // handle has released them; `file`/`func` are NULL or NUL-terminated C strings. Each
-        // fresh duplicate is taken through the seam and stored raw, and the slot's previous
-        // buffer is released by `Drop`. The release-then-allocate order is the authority's.
+    /// `err_set_debug`, the **install** half: the strings are already duplicated by the
+    /// caller (see [`DebugParts`]), and the incumbent buffers are detached for release.
+    ///
+    /// Splitting the operation this way is what keeps every allocation out of the state
+    /// borrow. The authority frees the incumbent before it allocates the replacement; here the
+    /// allocation must precede the borrow, so it precedes the queued release too. Only the
+    /// allocator-hook *order* differs, and only for the buffered strings.
+    pub(crate) fn install_debug(&mut self, i: usize, line: c_int, parts: DebugParts) {
+        // The slot's previous buffers are queued by `SlotStr::drop` (no seam call under the
+        // borrow); each fresh duplicate was allocated before the borrow was taken.
+        // SAFETY: these pointers are those `install_debug`/`clear` left in the slot: NULL or
+        // owned by this state, and no other handle has released them.
         unsafe {
-            drop(OwnedStr::adopt(
+            drop(SlotStr::adopt(
                 self.err_file[i],
                 SeamFile::new(ERR_LOCAL_FILE),
                 L_FREE_FILE_SET_DEBUG,
             ));
-            self.err_file[i] = match dup_c(file) {
-                Some(buf) => buf.into_raw(),
-                None => core::ptr::null_mut(),
-            };
-            drop(OwnedStr::adopt(
+        }
+        self.err_file[i] = match parts.file {
+            Some(buf) => buf.into_raw(),
+            None => core::ptr::null_mut(),
+        };
+        // SAFETY: as above, for the function slot.
+        unsafe {
+            drop(SlotStr::adopt(
                 self.err_func[i],
                 SeamFile::new(ERR_LOCAL_FILE),
                 L_FREE_FUNC_SET_DEBUG,
             ));
-            self.err_func[i] = match dup_c(func) {
-                Some(buf) => buf.into_raw(),
-                None => core::ptr::null_mut(),
-            };
         }
+        self.err_func[i] = match parts.func {
+            Some(buf) => buf.into_raw(),
+            None => core::ptr::null_mut(),
+        };
         self.err_line[i] = line;
     }
 
@@ -446,7 +440,7 @@ impl ErrState {
             // SAFETY: the MALLOCED flag says this state owns the pointer and no other
             // handle has released it; the new `data` is adopted raw below.
             unsafe {
-                drop(OwnedStr::adopt(
+                drop(SlotStr::adopt(
                     self.err_data[i],
                     SeamFile::new(ERR_LOCAL_FILE),
                     L_FREE_DATA_REPLACE,
@@ -618,23 +612,176 @@ const L_FREE_FUNC_CLEAR: c_int = 94;
 const L_FREE_STATE: c_int = 209;
 
 // A per-slot buffer: the allocation a ring slot keeps in `err_data` (when
-// `ERR_TXT_MALLOCED`), `err_file` or `err_func`, owned by `OwnedStr`.
+// `ERR_TXT_MALLOCED`), `err_file` or `err_func`, owned by `SlotStr`.
 //
 // The slot keeps the authority's `#[repr(C)]` raw `*mut c_char` — that layout is public and
-// cannot change — so ownership crosses the slot as a raw pointer. The shared owner allocates
-// through the crate's allocator seam and its `Drop` is the single release, through the same
-// seam. `slot_buf_alloc` and `dup_c` are the only allocating constructors; `OwnedStr::into_raw`
-// stores one into a slot and `OwnedStr::adopt` reclaims a slot's pointer for release, so the
-// `CRYPTO_malloc`/`CRYPTO_free` pair is no longer written by hand at a call site. The recorded
-// `__FILE__`/`__LINE__` are unchanged, so the hook observes the same file and line as it
-// observes for the authority's own `err_*` helpers: `NULL`/`0` for allocations and the
-// `err_local.h` site for each release.
+// cannot change — so ownership crosses the slot as a raw pointer. `SlotStr` allocates and
+// releases through the **process-global** `CRYPTO_*` seam (libcrypto's exported entry points,
+// resolved once) rather than this DSO's private copy: the ring is shared across DSOs, so a
+// buffer written by libssl can be released by libcrypto's `ERR_clear_error` and must come from
+// the same allocator table the application's `CRYPTO_set_mem_functions` hook writes. Using the
+// local copy made that release an invalid free under an installed hook. `slot_buf_alloc` and
+// `dup_c` are the only allocating constructors; `SlotStr::into_raw` stores one into a slot and
+// `SlotStr::adopt` reclaims a slot's pointer for release. The recorded `__FILE__`/`__LINE__`
+// are unchanged, so the hook observes the same file and line as it observes for the
+// authority's own `err_*` helpers: `NULL`/`0` for allocations and the `err_local.h` site for
+// each release.
 
-/// Allocate a fresh slot buffer of `len` bytes through the installed allocator at the inert
-/// `NULL`/`0` coordinates, or `None` when it answers NULL (the authority's refused
+/// A per-slot buffer owned by the process-wide error ring.
+///
+/// The release is `CRYPTO_free` at the authority's `err_local.h` site for the operation that
+/// dropped the slot; both halves are the process-global seam, so the block is always
+/// `OPENSSL_free`-able by whichever DSO's `clear`/`set_debug`/`set_data` runs.
+pub(crate) struct SlotStr {
+    ptr: *mut c_char,
+    file: SeamFile,
+    line: c_int,
+}
+
+impl SlotStr {
+    /// `CRYPTO_malloc(len, NULL, 0)`, or `None` when the seam answers NULL (the authority's
+    /// refused allocation).
+    fn new(len: usize) -> Option<SlotStr> {
+        // SAFETY: the allocation coordinate is NULL per this constructor's contract.
+        let raw = unsafe { dso_shared::crypto_malloc(len, SeamFile::NULL.as_ptr(), ERR_LINE) }
+            .cast::<c_char>();
+        if raw.is_null() {
+            return None;
+        }
+        Some(SlotStr {
+            ptr: raw,
+            file: SeamFile::NULL,
+            line: ERR_LINE,
+        })
+    }
+
+    /// Adopt a slot pointer for release, or `None` for NULL (the authority's no-op
+    /// `free(NULL)`).
+    ///
+    /// # Safety
+    /// `ptr` is NULL or the base of one whole block the process-global `CRYPTO_*` seam
+    /// allocated, exclusively owned by the calling state, and `file`/`line` name the
+    /// authority's own plain `CRYPTO_free` site for it.
+    unsafe fn adopt(ptr: *mut c_char, file: SeamFile, line: c_int) -> Option<SlotStr> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(SlotStr { ptr, file, line })
+        }
+    }
+
+    /// The writable block, for the constructor that fills it.
+    pub(crate) fn as_ptr(&self) -> *mut c_char {
+        self.ptr
+    }
+
+    /// Give the block to a ring slot; the slot's later `adopt` is its single release.
+    pub(crate) fn into_raw(self) -> *mut c_char {
+        let p = self.ptr;
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl SlotStr {
+    /// Release this block now. Called either when no state borrow is live, or by the deferred
+    /// flush, which runs after the borrow has ended.
+    fn release_now(mut self) {
+        let p = core::mem::replace(&mut self.ptr, core::ptr::null_mut());
+        if !p.is_null() {
+            // SAFETY: `p` is a live seam block this handle exclusively owns, and `file`/`line`
+            // are the authority's release coordinates for the dropping operation.
+            unsafe { dso_shared::crypto_free(p.cast(), self.file.as_ptr(), self.line) };
+        }
+    }
+}
+
+impl Drop for SlotStr {
+    fn drop(&mut self) {
+        if state_borrowed() {
+            // A `&mut ErrState` is live in this DSO. Releasing here would run the process-global
+            // `CRYPTO_free` (and an application's installed `free` hook) under that borrow; the
+            // hook could re-enter ERR and form a second borrow. Queue instead: `with_state`
+            // flushes the queue after the borrow ends.
+            let queued = PENDING_RELEASES
+                .try_with(|q| match q.try_borrow_mut() {
+                    Ok(mut q) => {
+                        q.push(SlotStr {
+                            ptr: self.ptr,
+                            file: self.file,
+                            line: self.line,
+                        });
+                        true
+                    }
+                    Err(_) => false,
+                })
+                .unwrap_or(false);
+            if queued {
+                self.ptr = core::ptr::null_mut();
+                return;
+            }
+        }
+        let p = self.ptr;
+        if !p.is_null() {
+            // SAFETY: `p` is a live seam block this handle exclusively owns, and `file`/`line`
+            // are the authority's release coordinates for the dropping operation.
+            unsafe { dso_shared::crypto_free(p.cast(), self.file.as_ptr(), self.line) };
+        }
+        self.ptr = core::ptr::null_mut();
+    }
+}
+
+/// The duplicated strings `install_debug` needs, built **before** the state borrow is taken.
+///
+/// `err_set_debug` duplicates both strings. Doing that through [`dup_c`] can allocate through
+/// the process-global seam, whose failure path may raise another error; that must happen while
+/// no `&mut ErrState` is live, or the nested raise would form a second borrow (in the other DSO
+/// has no guard for this one).
+pub(crate) struct DebugParts {
+    pub(crate) file: Option<SlotStr>,
+    pub(crate) func: Option<SlotStr>,
+}
+
+/// Duplicate the file/function strings for a raise, before entering `with_state`.
+///
+/// # Safety
+/// `file`/`func` are NULL or NUL-terminated C strings.
+pub(crate) unsafe fn debug_parts(file: *const c_char, func: *const c_char) -> DebugParts {
+    DebugParts {
+        // SAFETY: each pointer is NULL or NUL-terminated per the caller's contract.
+        file: unsafe { dup_c(file) },
+        // SAFETY: as above.
+        func: unsafe { dup_c(func) },
+    }
+}
+
+/// An owned copy of an error message, built before entering `with_state`.
+///
+/// Returns the buffer and its extent (`strlen + 1`), or `None` for NULL/empty/refused/overflow.
+///
+/// # Safety
+/// `msg` is NULL or a NUL-terminated C string.
+pub(crate) unsafe fn message_copy(msg: *const c_char) -> Option<(SlotStr, usize)> {
+    if msg.is_null() {
+        return None;
+    }
+    // SAFETY: `msg` is NUL-terminated per the caller's contract.
+    let len = unsafe { c_strlen(msg) };
+    let alloc = len.checked_add(1)?;
+    let buf = slot_buf_alloc(alloc)?;
+    // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
+    unsafe {
+        core::ptr::copy_nonoverlapping(msg, buf.as_ptr(), len);
+        *buf.as_ptr().add(len) = 0;
+    }
+    Some((buf, len + 1))
+}
+
+/// Allocate a fresh slot buffer of `len` bytes through the process-global allocator at the
+/// inert `NULL`/`0` coordinates, or `None` when it answers NULL (the authority's refused
 /// `CRYPTO_malloc`).
-pub(crate) fn slot_buf_alloc(len: usize) -> Option<OwnedStr> {
-    OwnedStr::new(len, SeamFile::NULL, ERR_LINE, SeamFile::NULL, ERR_LINE)
+pub(crate) fn slot_buf_alloc(len: usize) -> Option<SlotStr> {
+    SlotStr::new(len)
 }
 
 /// A NUL-terminated duplicate of `s`, or `None` for NULL or empty input — the rule
@@ -642,7 +789,7 @@ pub(crate) fn slot_buf_alloc(len: usize) -> Option<OwnedStr> {
 ///
 /// # Safety
 /// `s` must be NULL or a NUL-terminated C string.
-unsafe fn dup_c(s: *const c_char) -> Option<OwnedStr> {
+unsafe fn dup_c(s: *const c_char) -> Option<SlotStr> {
     if s.is_null() {
         return None;
     }
@@ -749,6 +896,40 @@ thread_local! {
     /// hands its closure. A nested ERR call sees `true` and is refused instead
     /// of forming a second `&mut` (NEO-ERR-7).
     static STATE_IN_USE: Cell<bool> = const { Cell::new(false) };
+    /// Slot buffers detached while a `with_state` borrow is live. Their release is deferred to
+    /// the end of the borrow, so no process-global `CRYPTO_free` (and no application free hook)
+    /// runs while `&mut ErrState` is held. The `Vec` is an ordinary Rust allocation: it cannot
+    /// re-enter ERR.
+    static PENDING_RELEASES: RefCell<Vec<SlotStr>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Whether this DSO currently holds the `&mut ErrState` that `with_state` hands its closure.
+pub(crate) fn state_borrowed() -> bool {
+    STATE_IN_USE.try_with(|b| b.get()).unwrap_or(false)
+}
+
+/// Release every queued slot buffer. Runs with the borrow already ended (normally from
+/// `with_state`'s exit guard, or explicitly after `f` returns).
+fn flush_pending_releases() {
+    let pending = PENDING_RELEASES
+        .try_with(|q| core::mem::take(&mut *q.borrow_mut()))
+        .ok();
+    if let Some(queued) = pending {
+        for handle in queued {
+            handle.release_now();
+        }
+    }
+}
+
+/// Flushes [`PENDING_RELEASES`] on every exit path, including an unwinding closure. Declared
+/// **before** [`StateAccessGuard`] in `with_state`, so it drops after the guard has cleared the
+/// borrow flag.
+struct PendingReleaseGuard;
+
+impl Drop for PendingReleaseGuard {
+    fn drop(&mut self) {
+        flush_pending_releases();
+    }
 }
 
 /// Clears [`STATE_IN_USE`] on every exit path, including an unwinding closure.
@@ -869,16 +1050,27 @@ pub extern "C" fn err_free_strings_int() {}
 ///
 /// ## Reentrancy
 ///
-/// The closure runs with `&mut ErrState`, and several callers allocate or release inside it, so
-/// the installed `CRYPTO_set_mem_functions` hooks run while that reference is live. A hook that
-/// re-enters the ERR API on the same thread is therefore refused by [`StateAccessGuard`]: the
-/// nested call returns `None` without touching the state, so the raise it attempted is dropped
-/// and the outer operation completes. This is a defined failure, not UB, and it is the only
-/// reentrancy edge here — no application callback is invoked from the closure.
+/// The closure runs with `&mut ErrState`. No seam call — allocation, reallocation or release —
+/// may run under that borrow: a `CRYPTO_malloc` failure raises, and a release runs an
+/// application's installed `free` hook, and either could re-enter this DSO's ERR code or, worse,
+/// the *other* DSO's copy, where this guard is not held, forming a second `&mut` on the shared
+/// state. The discipline is therefore:
+///
+/// * **allocations** are hoisted above the borrow: every allocating helper (`debug_parts`,
+///   `message_copy`, `slot_buf_alloc` in the append paths) runs first, and the closure only
+///   installs what it was handed;
+/// * **releases** are queued by [`SlotStr::drop`] into [`PENDING_RELEASES`] while the flag is
+///   set, and [`PendingReleaseGuard`] frees them once the borrow has ended.
+///
+/// A hook that still re-enters ERR during the queued flush is refused by [`StateAccessGuard`]
+/// when it reaches this DSO (the borrow flag has not been cleared yet) and, when it reaches the
+/// other DSO through an exported entry point, sees no live `&mut` because `f` has returned.
 pub(crate) fn with_state<R>(f: impl FnOnce(&mut ErrState) -> R) -> Option<R> {
     if init::stopped() {
         return None;
     }
+    // Declared before the access guard so it drops after the borrow flag is cleared.
+    let _pending = PendingReleaseGuard;
     // Refuse a nested access before loading strings or touching the state: those
     // steps may themselves allocate, and a hook that re-enters ERR must not see a
     // second `&mut`. The guard resets even if `f` unwinds.
@@ -920,12 +1112,14 @@ pub(crate) fn with_state<R>(f: impl FnOnce(&mut ErrState) -> R) -> Option<R> {
 /// # Safety
 /// `file` must be NULL or a NUL-terminated C string.
 pub(crate) unsafe fn raise_with(lib: c_int, reason: c_int, file: *const c_char, line: c_int) {
+    // SAFETY: `file` is NULL or NUL-terminated per this function's contract; `EMPTY_C` is the
+    // authority's empty function name (stored as NULL).
+    let parts = unsafe { debug_parts(file, EMPTY_C) };
     with_state(|s| {
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        // SAFETY: `file` is NULL or NUL-terminated per this function's contract.
-        unsafe { s.set_debug(t, file, line, EMPTY_C) };
+        s.install_debug(t, line, parts);
         s.set_error(t, lib, reason);
     });
 }
@@ -941,12 +1135,13 @@ pub(crate) unsafe fn raise_with(lib: c_int, reason: c_int, file: *const c_char, 
 /// # Safety
 /// The `ErrSite` is a compile-time constant whose pointers are static.
 pub(crate) unsafe fn raise_site(site: &err_sites::ErrSite) {
+    // SAFETY: the site's pointers are static NUL-terminated C strings.
+    let parts = unsafe { debug_parts(site.file.as_ptr(), site.func.as_ptr()) };
     with_state(|s| {
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        // SAFETY: the site's pointers are static NUL-terminated C strings.
-        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
+        s.install_debug(t, site.line, parts);
         s.set_error(t, site.lib, site.reason);
     });
 }
@@ -971,48 +1166,15 @@ pub(crate) unsafe fn raise_site_dynamic(site: &err_sites::ErrSite, reason: c_int
         site.dynamic_reason,
         "raise_site_dynamic used with a constant-reason site"
     );
+    // SAFETY: the site's pointers are static NUL-terminated C strings.
+    let parts = unsafe { debug_parts(site.file.as_ptr(), site.func.as_ptr()) };
     with_state(|s| {
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        // SAFETY: the site's pointers are static NUL-terminated C strings.
-        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
+        s.install_debug(t, site.line, parts);
         s.set_error(t, site.lib, reason);
     });
-}
-
-/// The data half of `ERR_raise_data`: an allocated, NUL-terminated copy of `msg`
-/// marked `ERR_TXT_MALLOCED | ERR_TXT_STRING`.
-///
-/// # Safety
-/// `msg` must be NULL or a NUL-terminated C string.
-unsafe fn attach_message(s: &mut ErrState, t: usize, msg: *const c_char) {
-    if msg.is_null() {
-        return;
-    }
-    // SAFETY: `msg` is NUL-terminated per the caller's contract.
-    let len = unsafe { c_strlen(msg) };
-    // The buffer is built through the owned handle and then handed to the slot raw; the
-    // handle's `Drop` owns its release. A refused allocation attaches nothing, as the
-    // authority's own NULL `CRYPTO_malloc` does. An unrepresentable extent cannot be
-    // allocated either, so it is treated the same way.
-    let Some(alloc) = len.checked_add(1) else {
-        return;
-    };
-    let Some(buf) = slot_buf_alloc(alloc) else {
-        return;
-    };
-    // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
-    unsafe {
-        core::ptr::copy_nonoverlapping(msg, buf.as_ptr(), len);
-        *buf.as_ptr().add(len) = 0;
-    }
-    s.set_data(
-        t,
-        buf.into_raw(),
-        len + 1,
-        ERR_TXT_MALLOCED | ERR_TXT_STRING,
-    );
 }
 
 /// `ERR_raise_data(lib, reason, "...")` at a recorded authority site.
@@ -1024,15 +1186,20 @@ unsafe fn attach_message(s: &mut ErrState, t: usize, msg: *const c_char) {
 /// # Safety
 /// `msg` must be NULL or a NUL-terminated C string.
 pub(crate) unsafe fn raise_site_data(site: &err_sites::ErrSite, msg: *const c_char) {
+    // SAFETY: the site's pointers are static NUL-terminated C strings, and `msg` is NULL or
+    // NUL-terminated per this function's contract.
+    let parts = unsafe { debug_parts(site.file.as_ptr(), site.func.as_ptr()) };
+    // SAFETY: as above.
+    let data = unsafe { message_copy(msg) };
     with_state(|s| {
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        // SAFETY: the site's pointers are static NUL-terminated C strings.
-        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
+        s.install_debug(t, site.line, parts);
         s.set_error(t, site.lib, site.reason);
-        // SAFETY: `msg` is NUL-terminated per the caller's contract.
-        unsafe { attach_message(s, t, msg) };
+        if let Some((buf, len)) = data {
+            s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+        }
     });
 }
 
@@ -1056,15 +1223,20 @@ pub(crate) unsafe fn raise_site_dynamic_data(
         site.dynamic_reason,
         "raise_site_dynamic_data used with a constant-reason site"
     );
+    // SAFETY: the site's pointers are static NUL-terminated C strings, and `msg` is NULL or
+    // NUL-terminated per this function's contract.
+    let parts = unsafe { debug_parts(site.file.as_ptr(), site.func.as_ptr()) };
+    // SAFETY: as above.
+    let data = unsafe { message_copy(msg) };
     with_state(|s| {
         s.get_slot();
         let t = s.top as usize;
         s.clear(t, false);
-        // SAFETY: the site's pointers are static NUL-terminated C strings.
-        unsafe { s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr()) };
+        s.install_debug(t, site.line, parts);
         s.set_error(t, site.lib, reason);
-        // SAFETY: `msg` is NUL-terminated per the caller's contract.
-        unsafe { attach_message(s, t, msg) };
+        if let Some((buf, len)) = data {
+            s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+        }
     });
 }
 
@@ -1102,10 +1274,11 @@ pub extern "C" fn ERR_new() {
 #[no_mangle]
 pub unsafe extern "C" fn ERR_set_debug(file: *const c_char, line: c_int, func: *const c_char) {
     guard_ffi((), || {
+        // SAFETY: `file`/`func` are NULL or NUL-terminated per this function's contract.
+        let parts = unsafe { debug_parts(file, func) };
         with_state(|s| {
             let t = s.top as usize;
-            // SAFETY: `file`/`func` are NULL or NUL-terminated per this function's contract.
-            unsafe { s.set_debug(t, file, line, func) };
+            s.install_debug(t, line, parts);
         });
     })
 }
@@ -1122,33 +1295,15 @@ pub unsafe extern "C" fn ERR_set_debug(file: *const c_char, line: c_int, func: *
 #[no_mangle]
 pub unsafe extern "C" fn openssl_rs_err_set_error(lib: c_int, reason: c_int, msg: *const c_char) {
     guard_ffi((), || {
+        // SAFETY: `msg` is NULL or NUL-terminated per this function's contract.
+        let data = unsafe { message_copy(msg) };
         with_state(|s| {
             let t = s.top as usize;
             s.clear_data(t, false);
             s.set_error(t, lib, reason);
-            if msg.is_null() {
-                return;
+            if let Some((buf, len)) = data {
+                s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING);
             }
-            // SAFETY: `msg` is NUL-terminated per the caller's contract.
-            let len = unsafe { c_strlen(msg) };
-            // The owned buffer's `Drop` owns the release once the slot holds it.
-            let Some(alloc) = len.checked_add(1) else {
-                return;
-            };
-            let Some(buf) = slot_buf_alloc(alloc) else {
-                return;
-            };
-            // SAFETY: `buf` is `len + 1` fresh bytes and `msg` is valid for `len`.
-            unsafe {
-                core::ptr::copy_nonoverlapping(msg, buf.as_ptr(), len);
-                *buf.as_ptr().add(len) = 0;
-            }
-            s.set_data(
-                t,
-                buf.into_raw(),
-                len + 1,
-                ERR_TXT_MALLOCED | ERR_TXT_STRING,
-            );
         });
     })
 }
@@ -1184,7 +1339,9 @@ pub unsafe extern "C" fn openssl_rs_err_set_error(lib: c_int, reason: c_int, msg
 #[no_mangle]
 pub unsafe extern "C" fn openssl_rs_err_take_data(size: *mut usize) -> *mut c_char {
     guard_ffi(core::ptr::null_mut(), || {
-        with_state(|s| {
+        // Phase 1, under the borrow: detach the slot and remember what it held. No seam call
+        // happens here.
+        let detached = with_state(|s| {
             let t = s.top as usize;
             let p = s.err_data[t];
             let p_size = s.err_data_size[t];
@@ -1192,45 +1349,71 @@ pub unsafe extern "C" fn openssl_rs_err_take_data(size: *mut usize) -> *mut c_ch
             s.err_data[t] = core::ptr::null_mut();
             s.err_data_size[t] = 0;
             s.err_data_flags[t] = 0;
-            let owned = if p.is_null() {
-                core::ptr::null_mut()
-            } else if (p_flags & ERR_TXT_MALLOCED) != 0 {
-                // The queue owned this block; ownership transfers to the caller.
-                p
-            } else if p_size == 0 {
-                // A borrowed slot with no recorded extent cannot be copied and
-                // owns nothing; the adapter's NULL arm is the authority's
-                // no-message path.
-                core::ptr::null_mut()
-            } else {
-                // Borrowed slot: copy into a fresh seam block so the caller's
-                // `CRYPTO_realloc` never receives a pointer the queue did not
-                // allocate. `ERR_set_error_data` recorded `strlen + 1` as the
-                // extent, so `p_size` bytes are readable and NUL-terminated.
-                let Some(buf) = slot_buf_alloc(p_size) else {
-                    return core::ptr::null_mut();
-                };
-                // SAFETY: `buf` is `p_size` fresh bytes and the borrowed slot is
-                // readable for `p_size` bytes per its `ERR_set_error_data`
-                // contract. The blocks cannot overlap.
-                unsafe {
-                    core::ptr::copy_nonoverlapping(
-                        p.cast::<u8>(),
-                        buf.as_ptr().cast::<u8>(),
-                        p_size,
-                    )
-                };
-                buf.into_raw()
+            (p, p_size, p_flags)
+        });
+        let (p, p_size, p_flags) = match detached {
+            Some(v) => v,
+            None => return core::ptr::null_mut(),
+        };
+        // Phase 2, outside the borrow: the only allocation is the copy a borrowed slot needs.
+        let owned = if p.is_null() {
+            core::ptr::null_mut()
+        } else if (p_flags & ERR_TXT_MALLOCED) != 0 {
+            // The queue owned this block; ownership transfers to the caller.
+            p
+        } else if p_size == 0 {
+            // A borrowed slot with no recorded extent cannot be copied and
+            // owns nothing; the adapter's NULL arm is the authority's
+            // no-message path.
+            core::ptr::null_mut()
+        } else {
+            // Borrowed slot: copy into a fresh seam block so the caller's
+            // `CRYPTO_realloc` never receives a pointer the queue did not
+            // allocate. `ERR_set_error_data` recorded `strlen + 1` as the
+            // extent, so `p_size` bytes are readable and NUL-terminated.
+            let Some(buf) = slot_buf_alloc(p_size) else {
+                return core::ptr::null_mut();
             };
-            if !size.is_null() {
-                // SAFETY: writable per the caller's contract.
-                unsafe {
-                    *size = if owned.is_null() { 0 } else { p_size };
-                }
+            // SAFETY: `buf` is `p_size` fresh bytes and the borrowed slot is
+            // readable for `p_size` bytes per its `ERR_set_error_data`
+            // contract. The blocks cannot overlap.
+            unsafe {
+                core::ptr::copy_nonoverlapping(p.cast::<u8>(), buf.as_ptr().cast::<u8>(), p_size)
+            };
+            buf.into_raw()
+        };
+        if !size.is_null() {
+            // SAFETY: writable per the caller's contract.
+            unsafe {
+                *size = if owned.is_null() { 0 } else { p_size };
             }
-            owned
-        })
-        .unwrap_or(core::ptr::null_mut())
+        }
+        owned
+    })
+}
+
+/// `CRYPTO_realloc` for the variadic adapter, through the same process-global seam the ring
+/// uses for its slot buffers.
+///
+/// The adapter grows and shrinks the block `openssl_rs_err_take_data` handed it. That block may
+/// come from this DSO's ring or from the other DSO's (the queue is shared) and is owned by the
+/// process-global allocator, so the realloc must be that allocator's too: this DSO's private
+/// `CRYPTO_realloc` would be a foreign realloc whenever an application installed memory
+/// functions.
+///
+/// # Safety
+/// `addr` is NULL or a live block the process-global `CRYPTO_*` seam allocated; `file` is NULL
+/// or a NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn openssl_rs_err_realloc(
+    addr: *mut c_char,
+    num: usize,
+    file: *const c_char,
+    line: c_int,
+) -> *mut c_char {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `addr`/`file` are per the caller's contract.
+        unsafe { dso_shared::crypto_realloc(addr.cast(), num, file, line).cast::<c_char>() }
     })
 }
 
@@ -1275,7 +1458,7 @@ pub unsafe extern "C" fn openssl_rs_err_finish_data(
                     // release it and keep the slot data-free.
                     // SAFETY: `data` is one whole seam block owned by this call.
                     unsafe {
-                        drop(OwnedStr::adopt(
+                        drop(SlotStr::adopt(
                             data,
                             SeamFile::new(ERR_LOCAL_FILE),
                             L_FREE_DATA_DEALL,
@@ -1305,44 +1488,106 @@ pub unsafe extern "C" fn openssl_rs_err_add_data(msg: *const c_char) {
         if add_len == 0 {
             return;
         }
-        with_state(|s| {
-            let t = s.top as usize;
-            // The result must be a MALLOCED buffer, because that is what the
-            // flags will claim and what the next clear will act on.
-            let old_len =
-                if (s.err_data_flags[t] & ERR_TXT_MALLOCED) != 0 && !s.err_data[t].is_null() {
-                    // SAFETY: MALLOCED means the buffer is ours and NUL-terminated.
-                    unsafe { c_strlen(s.err_data[t]) }
-                } else {
-                    0
-                };
-            let Some(total) = old_len.checked_add(add_len) else {
-                return;
-            };
-            let Some(alloc) = total.checked_add(1) else {
-                return;
-            };
-            let Some(buf) = slot_buf_alloc(alloc) else {
-                return;
-            };
-            // SAFETY: `buf` is `total + 1` fresh bytes; the old buffer (when `old_len` > 0)
-            // is valid for `old_len` and `msg` for `add_len`.
-            unsafe {
-                let p = buf.as_ptr();
-                if old_len > 0 {
-                    core::ptr::copy_nonoverlapping(s.err_data[t], p, old_len);
-                }
-                core::ptr::copy_nonoverlapping(msg, p.add(old_len), add_len);
-                *p.add(total) = 0;
-            }
-            s.set_data(
-                t,
-                buf.into_raw(),
-                total + 1,
-                ERR_TXT_MALLOCED | ERR_TXT_STRING,
-            );
-        });
+        // SAFETY: `msg` is NUL-terminated per the caller's contract; no separator.
+        unsafe { append_current(core::ptr::null(), msg) };
     })
+}
+
+/// Append `sep` and `suffix` to the current slot's data without any seam call under the state
+/// borrow.
+///
+/// The old data is **detached** under a short borrow, the replacement is allocated while no
+/// borrow is live, and the new block is installed under a second short borrow. A re-entrant raise
+/// during the allocation advances the ring's `top`; it cannot write this already-detached slot,
+/// so the install still targets the slot this call started with. On allocation failure the old
+/// value is put back, which is the authority's behaviour (its `err_set_data` is not reached).
+///
+/// # Safety
+/// `sep` and `suffix` are NULL or NUL-terminated C strings.
+unsafe fn append_current(sep: *const c_char, suffix: *const c_char) {
+    // Phase 1, under the borrow: detach the current data. No seam call.
+    let Some((t, old_p, old_size, old_flags)) = with_state(|s| {
+        let t = s.top as usize;
+        let p = s.err_data[t];
+        let size = s.err_data_size[t];
+        let flags = s.err_data_flags[t];
+        s.err_data[t] = core::ptr::null_mut();
+        s.err_data_size[t] = 0;
+        s.err_data_flags[t] = 0;
+        (t, p, size, flags)
+    }) else {
+        return;
+    };
+    // The queue owned the detached block when the MALLOCED flag is set; this handle is now its
+    // single owner and releases it after the install (outside every borrow).
+    let old_owned = if (old_flags & ERR_TXT_MALLOCED) != 0 {
+        // SAFETY: the flag says the slot owned this block and phase 1 detached it.
+        unsafe { SlotStr::adopt(old_p, SeamFile::new(ERR_LOCAL_FILE), L_FREE_DATA_REPLACE) }
+    } else {
+        None
+    };
+    // Only an owned, string-flagged block is reused: the authority appends to a borrowed slot's
+    // text by starting a fresh buffer, and a MALLOCED slot without `ERR_TXT_STRING` is replaced.
+    let old_len = if (old_flags & ERR_TXT_MALLOCED) != 0 && !old_p.is_null() {
+        // SAFETY: MALLOCED means the detached block is a NUL-terminated seam block.
+        unsafe { c_strlen(old_p) }
+    } else {
+        0
+    };
+    // SAFETY: `sep` is non-NULL on this arm and NUL-terminated per the contract.
+    let sepr_present = !sep.is_null() && unsafe { *sep != 0 };
+    // The separator is suppressed when there is no existing *string* data.
+    let sep_len = if sepr_present && (old_flags & ERR_TXT_STRING) != 0 {
+        // SAFETY: `sep` is non-empty here and NUL-terminated per the contract.
+        unsafe { c_strlen(sep) }
+    } else {
+        0
+    };
+    // SAFETY: `suffix` is NUL-terminated per the contract.
+    let add_len = unsafe { c_strlen(suffix) };
+    let total = old_len
+        .checked_add(sep_len)
+        .and_then(|n| n.checked_add(add_len));
+    let alloc = total.and_then(|n| n.checked_add(1));
+    let buf = match alloc.and_then(slot_buf_alloc) {
+        Some(buf) => buf,
+        None => {
+            // Put the old value back: the authority's failure path leaves the slot unchanged.
+            with_state(|s| {
+                s.err_data[t] = old_p;
+                s.err_data_size[t] = old_size;
+                s.err_data_flags[t] = old_flags;
+            });
+            core::mem::forget(old_owned);
+            return;
+        }
+    };
+    let total = total.unwrap_or(0);
+    // SAFETY: `buf` is `total + 1` fresh bytes; the old buffer (when non-NULL) is valid for
+    // `old_len`, `sep` for `sep_len` and `suffix` for `add_len`.
+    unsafe {
+        let p = buf.as_ptr();
+        if old_len > 0 {
+            core::ptr::copy_nonoverlapping(old_p, p, old_len);
+        }
+        if sep_len > 0 {
+            core::ptr::copy_nonoverlapping(sep, p.add(old_len), sep_len);
+        }
+        core::ptr::copy_nonoverlapping(suffix, p.add(old_len + sep_len), add_len);
+        *p.add(total) = 0;
+    }
+    // Phase 2, under a short borrow: install. `set_data` queues the incumbent's release, but the
+    // slot is empty here.
+    with_state(|s| {
+        s.set_data(
+            t,
+            buf.into_raw(),
+            total + 1,
+            ERR_TXT_MALLOCED | ERR_TXT_STRING,
+        )
+    });
+    // Outside the borrow: release the block the slot used to own.
+    drop(old_owned);
 }
 
 /// `void ERR_set_error_data(char *data, int flags)`
@@ -1424,67 +1669,8 @@ pub unsafe extern "C" fn ERR_add_error_txt(sepr: *const c_char, txt: *const c_ch
         if txt.is_null() {
             return;
         }
-        let sepr_nonempty = if sepr.is_null() {
-            false
-        } else {
-            // SAFETY: `sepr` is NUL-terminated.
-            unsafe { *sepr != 0 }
-        };
-        with_state(|s| {
-            let t = s.top as usize;
-            // The separator is suppressed when there is no existing *string* data
-            // to separate from, which is the authority's `leading_separator = ""`.
-            let has_sepr = sepr_nonempty && (s.err_data_flags[t] & ERR_TXT_STRING) != 0;
-            // SAFETY: `txt` is NUL-terminated.
-            let txt_len = unsafe { c_strlen(txt) };
-            let sep_len = if has_sepr {
-                // SAFETY: `sepr` was checked non-empty above, so it is a valid
-                // NUL-terminated string.
-                unsafe { c_strlen(sepr) }
-            } else {
-                0
-            };
-            let old_len =
-                if (s.err_data_flags[t] & ERR_TXT_MALLOCED) != 0 && !s.err_data[t].is_null() {
-                    // SAFETY: MALLOCED means ours and NUL-terminated.
-                    unsafe { c_strlen(s.err_data[t]) }
-                } else {
-                    0
-                };
-            let Some(total) = old_len
-                .checked_add(sep_len)
-                .and_then(|n| n.checked_add(txt_len))
-            else {
-                return;
-            };
-            let Some(alloc) = total.checked_add(1) else {
-                return;
-            };
-            let Some(buf) = slot_buf_alloc(alloc) else {
-                return;
-            };
-            // SAFETY: `buf` is `total + 1` fresh bytes; the old data is valid for `old_len`,
-            // `sepr` for `sep_len` and `txt` for `txt_len`.
-            unsafe {
-                let p = buf.as_ptr();
-                if old_len > 0 {
-                    core::ptr::copy_nonoverlapping(s.err_data[t], p, old_len);
-                }
-                if sep_len > 0 {
-                    core::ptr::copy_nonoverlapping(sepr, p.add(old_len), sep_len);
-                }
-                if txt_len > 0 {
-                    core::ptr::copy_nonoverlapping(txt, p.add(old_len + sep_len), txt_len);
-                }
-                *p.add(total) = 0;
-            }
-            s.set_data(
-                t,
-                buf.into_raw(),
-                total + 1,
-                ERR_TXT_MALLOCED | ERR_TXT_STRING,
-            );
-        });
+        // SAFETY: `sepr`/`txt` are NULL or NUL-terminated per this function's contract.
+        unsafe { append_current(sepr, txt) };
     })
 }
 
@@ -2578,6 +2764,122 @@ mod tests {
 
     fn drain() {
         ERR_clear_error();
+    }
+
+    /// A refused error-string allocation must happen **before** the `&mut ErrState` borrow is
+    /// taken. Under the borrow it would call the process-global `CRYPTO_malloc`, whose failure
+    /// path raises through libcrypto's own ERR code — where this DSO's reentrancy guard is not
+    /// held — forming a second `&mut` on the shared state.
+    ///
+    /// The seam probe counts every allocation/release made while [`state_borrowed`] is true; the
+    /// assertion is that the count stays zero. Reintroducing an allocation inside a
+    /// `with_state` closure (or an eager release instead of the deferred queue) makes it fail.
+    #[test]
+    fn a_failed_error_string_allocation_runs_before_the_state_borrow() {
+        let _g = lock();
+        drain();
+        let _ = dso_shared::take_seam_probe();
+        let _ = dso_shared::take_in_borrow_probe();
+        // Arm exactly one refusal: the file-string duplicate cannot be allocated.
+        dso_shared::arm_malloc_failure(1);
+        // SAFETY: a static NUL-terminated string.
+        unsafe { raise_with(15, 42, c"ssl/ssl_rsa.c".as_ptr(), 515) };
+        let (mallocs, _) = dso_shared::take_seam_probe();
+        assert!(mallocs >= 1, "the armed allocation attempt must have run");
+        assert_eq!(
+            dso_shared::take_in_borrow_probe(),
+            0,
+            "no seam call (and so no allocator callback) may run while the ErrState borrow is live"
+        );
+        // The raise still completed; the refused duplicate is stored as NULL, which the read side
+        // renders as `""`, and the line is the site's own.
+        let mut file: *const c_char = ptr::null();
+        let mut line = 0;
+        let mut func: *const c_char = ptr::null();
+        let mut data: *const c_char = ptr::null();
+        let mut flags = 0;
+        // SAFETY: every output pointer is this frame's own variable.
+        let e = unsafe {
+            get_error_values(
+                Action::Pop,
+                Outputs {
+                    file: &mut file,
+                    line: &mut line,
+                    func: &mut func,
+                    data: &mut data,
+                    flags: &mut flags,
+                },
+            )
+        };
+        assert_ne!(e, 0, "the raise must still be recorded");
+        assert_eq!(
+            file, EMPTY_C,
+            "a refused duplicate reads as the empty string"
+        );
+        assert_eq!(func, EMPTY_C);
+        assert_eq!(line, 515);
+
+        // A successful raise allocates both strings before the borrow and releases them after it.
+        // SAFETY: a static NUL-terminated string.
+        unsafe { raise_with(15, 43, c"ssl/ssl_rsa.c".as_ptr(), 516) };
+        ERR_clear_error();
+        assert_eq!(
+            dso_shared::take_in_borrow_probe(),
+            0,
+            "releases are deferred to after the borrow"
+        );
+        let (_, frees) = dso_shared::take_seam_probe();
+        assert!(
+            frees >= 1,
+            "clear must release the strings through the seam"
+        );
+    }
+
+    /// The stunnel 5.73 path: `SSL_CTX_use_certificate_chain_file` on an empty file fails,
+    /// the PEM/libssl raises queue `err_file`/`err_func` strings, and the application calls
+    /// `ERR_clear_error`.
+    ///
+    /// The defect was that those strings were allocated through the raising DSO's private
+    /// `CRYPTO_malloc` while the clear released them through the other DSO's table; once an
+    /// application installed memory functions the release was an invalid free. The error ring
+    /// now allocates and releases through the process-global seam on both halves, which the
+    /// probe observes. Reverting either half (the writer to a local `CRYPTO_malloc`, the reader
+    /// to a local `CRYPTO_free`) makes one of the assertions below fail.
+    #[test]
+    fn certificate_chain_parse_failure_then_clear_error_uses_one_allocator_seam() {
+        let _g = lock();
+        drain();
+        let path = std::env::temp_dir().join(format!(
+            "openssl-rs-empty-cert-chain-{}.pem",
+            std::process::id()
+        ));
+        std::fs::write(&path, b"").expect("an empty temporary certificate file");
+        let cpath = std::ffi::CString::new(path.to_str().expect("utf-8 temp path"))
+            .expect("no interior NUL");
+        let _ = dso_shared::take_seam_probe();
+        // SAFETY: the method table is a static; the context is this frame's own object and is
+        // released below. The path is a live NUL-terminated C string.
+        let ctx = unsafe { crate::ssl::ssl_lib::SSL_CTX_new(crate::ssl::methods::TLS_method()) };
+        assert!(!ctx.is_null(), "SSL_CTX_new must succeed");
+        // SAFETY: both pointers are live per the comment above.
+        let loaded =
+            unsafe { crate::ssl::ssl_rsa::SSL_CTX_use_certificate_chain_file(ctx, cpath.as_ptr()) };
+        assert_eq!(loaded, 0, "an empty certificate chain file must not load");
+        assert_ne!(ERR_peek_error(), 0, "the parse failure must be queued");
+        let (mallocs, _) = dso_shared::take_seam_probe();
+        assert!(
+            mallocs > 0,
+            "the queued error strings must be allocated through the process-global seam"
+        );
+        ERR_clear_error();
+        let (_, frees) = dso_shared::take_seam_probe();
+        assert!(
+            frees > 0,
+            "ERR_clear_error must release them through the same process-global seam"
+        );
+        // SAFETY: `ctx` is this frame's own live context and this is its single release.
+        unsafe { crate::ssl::ssl_lib::SSL_CTX_free(ctx) };
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
