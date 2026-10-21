@@ -1432,6 +1432,196 @@ _L7_EXIM_LOCAL_MAKEFILE = (
     ">> Local/Makefile"
 )
 
+# The Phase-25 L7 expansion batch (b7): tcpdump, slrn, epic5, bannergrab, httperf and makepasswd.
+# The four small utilities are direct libcrypto/libssl consumers; tcpdump's capture needs libpcap
+# (with the dbus runtime its Debian build depends on), slrn/epic5 need a terminal library, and
+# httperf's upstream repository is autotools-only at the pinned commit.  Every non-OpenSSL
+# dependency is a pinned bookworm package acquired through the same `aux_sources` seam.
+_L7_TCPDUMP_AUX: tuple[dict, ...] = (
+    _aux_deb("libp/libpcap", "libpcap0.8_1.10.3-1_amd64.deb",
+             "856014904c4d7ec9a9ba864c546d91c059b9bf00c7c89eda6fd0a16045f8faac",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libp/libpcap", "libpcap0.8-dev_1.10.3-1_amd64.deb",
+             "5f66e87262e42cc42a77d6acdb41098e4ff3e6db3bdba1b73189dea5a3afb88c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             bin_dirs=("usr/bin",)),
+    _aux_deb("d/dbus", "libdbus-1-3_1.14.10-1~deb12u1_amd64.deb",
+             "18ee0ce5fab9f7b671e87da1e9fa18660e36e04a3402f24bdb8635e0ba1d35f6",
+             library_dirs=("lib/x86_64-linux-gnu",)),
+)
+
+_L7_SLRN_AUX: tuple[dict, ...] = (
+    _aux_deb("s/slang2", "libslang2_2.3.3-3_amd64.deb",
+             "5b3cecc829ef229125b340ccd2ca45ced75d24e9aa191912105016b1af94413f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("s/slang2", "libslang2-dev_2.3.3-3_amd64.deb",
+             "2ad29ca0fe5adacff4d7174c5d20a104fc8e0470723e6f7dda2c5cf049bd6631",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_L7_EPIC5_AUX: tuple[dict, ...] = (
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# httperf's pinned upstream commit has no generated `configure`; the recipe bootstraps it with the
+# same pinned bookworm autotools the partclone recipe uses, rewriting each tool's compiled-in
+# `/usr/share` prefix under the extracted auxiliary root exactly once.
+_L7_HTTPERF_AUX: tuple[dict, ...] = (
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gettext", "gettext_0.21-12_amd64.deb",
+             "8c1f9d43575373ce311f51d00a13afbb4888d63aa559a93a3472f5d77513b60c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gettext", "autopoint_0.21-12_all.deb",
+             "9864777e777f1f641858e27396bf7dd53c9b38197b7ac47388995ec60bb9789f",
+             bin_dirs=("usr/bin",)),
+)
+
+_L7_HTTPERF_BOOTSTRAP = (
+    "set -e; W={root}/.autotools; mkdir -p $W; "
+    "sed -i 's#/usr/share#{aux}/usr/share#g' {aux}/usr/bin/libtoolize; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/share/autoconf/autom4te.cfg; "
+    "sed -i 's#/usr/share/automake-1.16#{aux}/usr/share/automake-1.16#g' "
+    "{aux}/usr/bin/aclocal-1.16 {aux}/usr/bin/automake-1.16; "
+    "sed -i 's#/usr/share/aclocal#{aux}/usr/share/aclocal#g' {aux}/usr/bin/aclocal-1.16; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/bin/autoconf {aux}/usr/bin/autoheader; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+    "--system-acdir={aux}/usr/share/aclocal-1.16 "
+    "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+    "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+    "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+    "autoreconf -fi"
+)
+
+_L7_EXPAND4_SPECS: tuple[dict, ...] = (
+    {
+        "family": "tcpdump", "version": "4.99.6",
+        "url": "https://www.tcpdump.org/release/tcpdump-4.99.6.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "5839921a0f67d7d8fa3dacd9cd41e44c89ccb867e8a6db216d62628c7fd14b09",
+        "configure": ["--prefix={root}/.l7-install", "--with-crypto={prefix}",
+                      "--disable-local-libpcap"],
+        "make": [MAKE_JOBS], "artifact": "tcpdump", "launch": ["--version"],
+        "aux_sources": list(_L7_TCPDUMP_AUX),
+        "ldflags_extra": ("-Wl,-rpath-link,{aux}/usr/lib/x86_64-linux-gnu "
+                          "-Wl,-rpath-link,{aux}/lib/x86_64-linux-gnu"),
+        "env_extra": {"PATH": "{aux}/usr/bin:" + os.environ.get("PATH", ""),
+                      "LIBCRYPTO_CFLAGS": "-I{prefix}/include",
+                      "LIBCRYPTO_LIBS": "-L{prefix}/lib -lcrypto"},
+        "pre_build": [["sh", "-c", (
+            "set -e; "
+            "sed -i 's|^prefix=\"/usr\"|prefix=\"{aux}/usr\"|' "
+            "{aux}/usr/bin/pcap-config"
+        )]],
+        "note": ("tcpdump 4.99.6 with its libcrypto link and the pristine libpcap 1.10.3 build "
+                 "(plus the dbus runtime Debian's libpcap needs); the L7 workload captures a local "
+                 "TLS handshake and reads the handshake record bytes back"),
+    },
+    {
+        "family": "slrn", "version": "1.0.3a",
+        "url": "https://jedsoft.org/releases/slrn/slrn-1.0.3a.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "3ba8a4d549201640f2b82d53fb1bec1250f908052a7983f0061c983c634c2dac",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}", "--with-slrnpull",
+                      "--with-slanglib={aux}/usr/lib/x86_64-linux-gnu",
+                      "--with-slanginc={aux}/usr/include"],
+        "make": [MAKE_JOBS], "artifact": "src/objs/slrn", "launch": ["--version"],
+        "aux_sources": list(_L7_SLRN_AUX),
+        "note": ("slrn 1.0.3a and its slrnpull offline NNTP client built with --with-ssl against "
+                 "the subject libssl; slang and ncurses headers are the pinned packages"),
+    },
+    {
+        "family": "epic5", "version": "3.0.3",
+        "url": "https://ftp.epicsol.org/pub/epic/EPIC5-PRODUCTION/epic5-3.0.3.tar.xz",
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "63a411215c14040b65b5d728aff10f7523d55e170f6298fb01e1cf958d79d326",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}",
+                      "--without-libarchive", "--without-perl", "--with-ipv6"],
+        "make": [MAKE_JOBS], "artifact": "source/epic5", "launch": ["-v"],
+        "aux_sources": list(_L7_EPIC5_AUX),
+        "env_extra": {"CFLAGS": "-I{aux}/usr/include"},
+        "note": ("epic5 3.0.3's IRC-over-TLS client (type=irc-ssl) linked against the subject "
+                 "libssl; ncurses is the pinned package and libarchive/perl are disabled"),
+    },
+    {
+        "family": "bannergrab", "version": "3.5",
+        "url": "https://downloads.sourceforge.net/bannergrab/bannergrab-3.5.tgz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "f9995bc1f750234b08034d4bc8c214ec505690a8d939eeda176da46328a7638d",
+        "configure": [],
+        "make": ["CFLAGS=-I{prefix}/include -lcrypto -lssl",
+                 "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "bannergrab", "launch": ["--version"],
+        "note": ("bannergrab 3.5's TLS banner path linked against the subject libssl/libcrypto; "
+                 "its Makefile is used verbatim with only the prefix flags supplied"),
+    },
+    {
+        "family": "httperf", "version": "0.9.0+git.de8cd6ad",
+        "url": ("https://codeload.github.com/httperf/httperf/tar.gz/"
+                "de8cd6ad8a79779a0cb74a4aa2175afa9e24df57"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "ba1c68b8eed4fcdae72e932c8810faf76bde77c50c5791b3a3d88d0f4f7e69b2",
+        "configure": ["--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS], "artifact": "src/httperf", "launch": ["--version"],
+        "aux_sources": list(_L7_HTTPERF_AUX),
+        "pre_build": [["sh", "-c", _L7_HTTPERF_BOOTSTRAP]],
+        "env_extra": {
+            "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+            "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+            "ACLOCAL_PATH": ("/usr/share/aclocal:{aux}/usr/share/aclocal:"
+                             "{aux}/usr/share/libtool/m4"),
+            "AUTOMAKE": "{root}/.autotools/automake",
+            "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+            "AUTOCONF": "{aux}/usr/bin/autoconf",
+            "AUTOHEADER": "{aux}/usr/bin/autoheader",
+            "AUTOM4TE": "{aux}/usr/bin/autom4te",
+            "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+            "AC_MACRODIR": "{aux}/usr/share/autoconf",
+            "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+            "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+            "M4": "{aux}/usr/bin/m4",
+        },
+        "note": ("httperf at upstream commit de8cd6ad (the OpenSSL-3 SSL_CIPHER accessors); its "
+                 "repository carries no generated configure, so the pinned autotools bootstrap it"),
+    },
+    {
+        "family": "makepasswd", "version": "0.5.4",
+        "url": ("https://codeload.github.com/khorben/makepasswd/tar.gz/"
+                "refs/tags/makepasswd_0-5-4"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "7c68f42f810144c4380c795106a38cbb3cea20816b8903cdbc822cae99996e75",
+        "configure": [],
+        "make": ["CFLAGSF=-I{prefix}/include",
+                 "LDFLAGSF=-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lcrypto"],
+        "artifact": "src/makepasswd", "launch": ["--help"],
+        "note": ("makepasswd 0.5.4's OpenSSL MD5 digest path (`-e md5`); the release Makefile is "
+                 "used verbatim with the prefix's pkg-config replacement variables supplied"),
+    },
+)
+
 _L7_EXPAND3_SPECS: tuple[dict, ...] = (
     {
         "family": "exim", "version": "4.100.1",
@@ -1621,6 +1811,13 @@ def _build_catalogue() -> tuple[dict, ...]:
     # openssh-server. Same pristine-source/aux seam; `{root}` is the extracted tree the build
     # writes its generated inputs and runtime state into.
     for spec in _L7_EXPAND3_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b7): tcpdump, slrn, epic5, bannergrab, httperf and
+    # makepasswd.  Same pristine-source/aux seam; httperf's autotools bootstrap is a generated
+    # build input, and tcpdump's libpcap-config is repointed under the extracted aux root.
+    for spec in _L7_EXPAND4_SPECS:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
