@@ -82,6 +82,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import http.server
 import json
 import os
 import re
@@ -308,6 +309,41 @@ PROGRAMS: dict[str, dict] = {
         "note": ("libarchive's own create/read path: an in-memory tar carries a payload and its "
                  "libcrypto SHA-256 digest, the read-back verifies it, and a tampered payload "
                  "byte is rejected"),
+    },
+    # The Phase-25 L7-expansion batch. mosquitto's recipe builds only lib/, so the broker and its
+    # own clients are built here from the same pristine tree and prefix. cyrus-sasl ships no
+    # executable: the harness drives its client/server SASL APIs with DIGEST-MD5. links is a
+    # non-interactive HTTPS consumer (its interactive UI never terminates in a pipe).
+    "mosquitto": {
+        "program": "src/mosquitto", "launch": ["-h"],
+        "version_re": r"mosquitto version 2\.0", "lib_paths": ["lib"],
+        "make_steps": [
+            ["-C", "client", "WITH_TLS=yes", "WITH_CJSON=no"],
+            ["-C", "src", "WITH_TLS=yes", "WITH_BUNDLED_DEPS=yes"],
+        ],
+        "note": ("mosquitto's own broker and clients: TLS1.3 listener with the fixture CA, a "
+                 "retained publish and a subscribe over TLS returning the payload, and a client "
+                 "trusting only the unrelated CA rejected with `unknown ca`"),
+    },
+    "cyrus-sasl": {
+        "program": ".l7-cyrus-sasl-harness", "launch": ["--version"],
+        "version_re": r"cyrus-sasl-l7-harness", "lib_paths": ["lib/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_cyrus_sasl.c",
+            "cflags": ["-I{root}/include", "-Wno-cast-function-type"],
+            "ldflags": ["-L{root}/lib/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/lib/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lsasl2", "-lssl", "-lcrypto"],
+        },
+        "note": ("the cyrus-sasl client and server APIs over a socketpair authenticate with "
+                 "DIGEST-MD5 (libcrypto MD5/HMAC), and a wrong password is rejected"),
+    },
+    "links": {
+        "program": "links", "launch": ["-version"],
+        "version_re": r"Links 2\.30",
+        "note": ("links' non-interactive HTTPS consumer path: `-dump` of a local TLS server "
+                 "verifies the fixture CA and renders the payload; the unrelated CA is rejected "
+                 "with `Invalid certificate`"),
     },
 }
 
@@ -2772,6 +2808,193 @@ def _wl_libarchive(ctx: dict) -> dict:
     }
 
 
+def _wl_mosquitto(ctx: dict) -> dict:
+    """The mosquitto broker and its own clients over TLS1.3, with a trust negative control.
+
+    The broker listens on loopback with the fixture CA/cert/key, a retained publish is made by
+    `mosquitto_pub`, and `mosquitto_sub -C 1` must receive the exact payload over its own TLS
+    client. A publish whose client trusts only the unrelated CA must fail, and the broker's own
+    transcript must show the rejected handshake (`unknown ca`).
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    root, prog = ctx["root"], str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    payload = "phase25-mosquitto-payload"
+    topic = "phase25/runtime"
+    port = ctx["port"]
+    conf = d / "mosquitto.conf"
+    conf.write_text(
+        f"listener {port} 127.0.0.1\n"
+        "allow_anonymous true\n"
+        "user root\n"
+        f"cafile {pki['ca_crt']}\n"
+        f"certfile {pki['srv_crt']}\n"
+        f"keyfile {pki['srv_key']}\n"
+        "log_dest stderr\n",
+        encoding="utf-8")
+    broker, out, err = _spawn([prog, "-c", str(conf), "-v"], d, ctx["env"],
+                              d / "broker.out", d / "broker.err")
+    pub = sub = neg = None
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("mosquitto", {"exit_code": 0, "stdout": _read(d / "broker.err")})],
+                            "the mosquitto broker did not open its TLS listener",
+                            "runtime-failure", d)
+        common = ["-h", "127.0.0.1", "-p", str(port)]
+        pub = _run_captured([str(root / "client/mosquitto_pub")] + common +
+                            ["--cafile", str(pki["ca_crt"]), "-t", topic, "-m", payload,
+                             "-r"], cwd=d, env=ctx["env"], timeout=30)
+        sub = _run_captured([str(root / "client/mosquitto_sub")] + common +
+                            ["--cafile", str(pki["ca_crt"]), "-t", topic, "-C", "1"],
+                            cwd=d, env=ctx["env"], timeout=30)
+        neg = _run_captured([str(root / "client/mosquitto_pub")] + common +
+                            ["--cafile", str(pki["other_crt"]), "-t", topic, "-m", "x"],
+                            cwd=d, env=ctx["env"], timeout=30)
+    finally:
+        _stop(broker)
+        out.close()
+        err.close()
+
+    broker_log = _read(d / "broker.err")
+    received = (sub["stdout"] or "").strip()
+    payload_ok = bool(pub and pub["ok"] and sub and sub["ok"] and received == payload)
+    neg_rejected = bool(neg and not neg["ok"] and "unknown ca" in broker_log)
+    functional_ok = payload_ok and neg_rejected
+    return {
+        "runtime_ok": payload_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if payload_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if payload_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the retained publish/subscribe over TLS did not return the payload"
+            if not payload_ok else
+            "a client trusting only the unrelated CA was not rejected"),
+        "transcript": _transcript(("mosquitto_pub over TLS", pub),
+                                  ("mosquitto_sub over TLS", sub),
+                                  ("mosquitto_pub unrelated-ca (must fail)", neg),
+                                  ("mosquitto broker", {"exit_code": 0,
+                                                        "stderr": broker_log})),
+        "workload": ("mosquitto: broker TLS listener + retained publish + subscribe over TLS "
+                     "+ exact payload match + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_cyrus_sasl(ctx: dict) -> dict:
+    """cyrus-sasl's client and server APIs authenticating with DIGEST-MD5.
+
+    The harness runs both SASL roles in one process over a socketpair (the response is computed
+    through the family's libcrypto MD5/HMAC path) and resolves the fixture user through an
+    in-process auxprop plugin. A second session with the wrong password must be rejected.
+    """
+    d = ctx["workdir"]
+    prog = str(ctx["program"])
+    env = dict(ctx["env"], SASL_PATH=str(ctx["root"] / "plugins" / ".libs"))
+    good = _run_captured([prog], cwd=d, env=env, timeout=60)
+    text = good["stdout"] + good["stderr"]
+    runtime_ok = bool(good["ok"] and "mech=DIGEST-MD5" in text and "auth=ok" in text)
+    rejected = "wrong-password=rejected" in text
+    functional_ok = runtime_ok and rejected
+    return {
+        "runtime_ok": runtime_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the DIGEST-MD5 client/server exchange did not authenticate" if not runtime_ok else
+            "the wrong password was not rejected"),
+        "transcript": _transcript(("cyrus-sasl DIGEST-MD5 client/server", good)),
+        "workload": ("cyrus-sasl: client+server SASL over a socketpair + DIGEST-MD5 "
+                     "authentication + wrong-password reject"),
+        "local_only": True,
+    }
+
+
+def _wl_links(ctx: dict) -> dict:
+    """links' non-interactive HTTPS consumer path against a local TLS server.
+
+    `links -dump` fetches a page over TLS from a loopback HTTPS server, verifying the server
+    certificate against the fixture CA (its OpenSSL client honours SSL_CERT_FILE), and the page
+    body is the functional assertion. The same request trusting only the unrelated CA must be
+    rejected with `Invalid certificate`. The workload is deliberately the `-dump` client path:
+    links' interactive UI does not terminate when driven from a pipe.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = b"phase25-links-https-payload\n"
+    port = ctx["port"]
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802 — the base class names the verb
+            if self.path != "/probe.txt":
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            self.wfile.flush()
+            # A TLS close_notify is what makes links see a clean end of stream; without it the
+            # body is still rendered but the client reports `SSL error` and exits non-zero.
+            self.request.settimeout(0.3)
+            try:
+                self.request.unwrap()
+            except OSError:
+                pass
+            self.close_connection = True
+
+        def log_message(self, *args: object) -> None:
+            return
+
+    server = http.server.HTTPServer(("127.0.0.1", port), Handler)
+    sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    sctx.load_cert_chain(str(pki["srv_crt"]), str(pki["srv_key"]))
+    server.socket = sctx.wrap_socket(server.socket, server_side=True)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"https://127.0.0.1:{port}/probe.txt"
+    try:
+        good = _run_captured([prog, "-dump", url], cwd=d,
+                             env=dict(ctx["env"], SSL_CERT_FILE=str(pki["ca_crt"])),
+                             timeout=60)
+        neg = _run_captured([prog, "-dump", url], cwd=d,
+                            env=dict(ctx["env"], SSL_CERT_FILE=str(pki["other_crt"])),
+                            timeout=60)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    payload_ok = bool(good["ok"] and body.decode().strip() in good_text)
+    neg_rejected = bool(not neg["ok"] and body.decode().strip() not in neg_text
+                        and "Invalid certificate" in neg_text)
+    functional_ok = payload_ok and neg_rejected
+    return {
+        "runtime_ok": payload_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if payload_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if payload_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "links did not render the HTTPS page body" if not payload_ok else
+            "the unrelated CA was not rejected with `Invalid certificate`"),
+        "transcript": _transcript(("links -dump over HTTPS", good),
+                                  ("links -dump unrelated-ca (must fail)", neg)),
+        "workload": ("links: non-interactive `-dump` HTTPS fetch + fixture-CA verify + page "
+                     "body match + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
 def _wl_fetchmail(ctx: dict) -> dict:
     """fetchmail's IMAPS retrieve path against a local IMAP stub, with a trust negative control.
 
@@ -3185,6 +3408,9 @@ RUNNERS = {
     "libevent": _wl_libevent,
     "libretls": _wl_libretls,
     "libarchive": _wl_libarchive,
+    "mosquitto": _wl_mosquitto,
+    "cyrus-sasl": _wl_cyrus_sasl,
+    "links": _wl_links,
     "fetchmail": _wl_fetchmail,
     "iperf3": _wl_iperf3,
     "kmod": _wl_kmod,
@@ -3339,6 +3565,23 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
                 evidence=evidence + [f"build:{','.join(targets)}"], canvas=None, limits=limits,
                 prefix=prefix, source_root_hash=source_root_hash, launch=None, workload=None,
                 transcript=_transcript(("make " + " ".join(targets), prep)), local_only=True)
+
+    # Some trees need more than one make invocation to produce the workload program (mosquitto's
+    # recipe builds lib/ only, while the broker and clients are separate sub-makes). Each step is
+    # run with the same prefix environment and must succeed before the load proof is attempted.
+    for step in prog.get("make_steps") or []:
+        prep = census._run(["make", *(prog.get("make_jobs") or [MAKE_JOBS]), *step], cwd=root,
+                           env=build_env)
+        if not prep["ok"]:
+            return _runtime_row(
+                fam, recipe, subject, level=L4, outcome="failed", residual="runtime-failure",
+                failure_class="load-failure",
+                reason=(f"the workload build step {step} did not build: "
+                        f"{census._error_line(prep)}"),
+                specimen_id=spec_id, variant_id=variant_id, source_sha256=source_sha256,
+                evidence=evidence + ["build:" + ",".join(step)], canvas=None, limits=limits,
+                prefix=prefix, source_root_hash=source_root_hash, launch=None, workload=None,
+                transcript=_transcript(("make " + " ".join(step), prep)), local_only=True)
 
     # A library-only family has no program of its own: compile the admitted workload harness
     # against the library rebuilt in this source tree and the subject prefix. The harness is the
