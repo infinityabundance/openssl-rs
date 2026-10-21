@@ -1023,14 +1023,20 @@ pub(crate) unsafe fn tls_construct_client_hello(s: *mut Ssl, pkt: *mut Wpacket) 
 /// # Safety
 /// `s` must be a live connection whose write BIO is the caller's to write.
 pub(crate) unsafe fn write_client_hello(s: *mut Ssl) -> c_int {
-    let mut buf = [0u8; 4096];
+    // The packet buffer is heap-allocated through the crate's allocator seam: a 4 KiB frame on
+    // every ClientHello, on top of the record and handshake read frames, is what pushed a 32 KiB
+    // accept/connect thread over its guard page.
+    let Some(buf_block) = OwnedBuf::new(4096, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    let buf = buf_block.as_ptr();
     // SAFETY: a zeroed `WPACKET` is a valid starting state for `WPACKET_init_static_len`.
     let mut pkt: Wpacket = unsafe { core::mem::zeroed() };
     let mut msglen: usize = 0;
 
     // SAFETY: `pkt`/`buf` are live locals; the buffer outlives the packet.
     unsafe {
-        if crate::packet::WPACKET_init_static_len(&mut pkt, buf.as_mut_ptr(), buf.len(), 0) == 0 {
+        if crate::packet::WPACKET_init_static_len(&mut pkt, buf, 4096, 0) == 0 {
             return 0;
         }
         if ssl3_set_handshake_header(&mut pkt, SSL3_MT_CLIENT_HELLO) == 0
@@ -1041,16 +1047,12 @@ pub(crate) unsafe fn write_client_hello(s: *mut Ssl) -> c_int {
             crate::packet::WPACKET_cleanup(&mut pkt);
             return 0;
         }
-        let r = crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
-            s,
-            SSL3_RT_HANDSHAKE,
-            buf.as_ptr(),
-            msglen,
-        );
+        let r =
+            crate::ssl::record::rec_layer_s3::ssl3_write_bytes(s, SSL3_RT_HANDSHAKE, buf, msglen);
         // The transcript begins with the ClientHello; while the cipher is unknown this buffers
         // (`transcript_update`), to be replayed by `tls_process_server_hello`.
         if r > 0 {
-            crate::ssl::tls13_enc::transcript_update(s, buf.as_ptr(), msglen);
+            crate::ssl::tls13_enc::transcript_update(s, buf, msglen);
         }
         r
     }
@@ -2692,14 +2694,16 @@ unsafe fn tls12_construct_cert_verify(s: *mut Ssl) -> c_int {
     }
     // SAFETY: `s` is live.
     let hl = unsafe { (*s).hs_md_len };
-    let mut sig = [0u8; 1024];
+    // Heap-allocated for the same reason as the server's `tls12_construct_server_key_exchange`:
+    // this flight must fit a small connect thread's stack.
+    let mut sig = vec![0u8; 1024];
     // SAFETY: `s` is live; `hash` is readable; `sig` is writable.
     let Some((sigalg, siglen)) =
         (unsafe { crate::ssl::statem::statem_srvr::tls12_sign(s, &hash[..hl], &mut sig) })
     else {
         return 0;
     };
-    let mut body = [0u8; 1030];
+    let mut body = vec![0u8; 1030];
     body[0] = (sigalg >> 8) as u8;
     body[1] = sigalg as u8;
     body[2] = (siglen >> 8) as u8;
@@ -3040,7 +3044,9 @@ unsafe fn tls12_client_read_ccs(s: *mut Ssl) -> c_int {
     // SAFETY: `s` is live per the contract.
     unsafe {
         loop {
-            let mut buf = [0u8; 16384];
+            // Heap-allocated: the TLS1.2 client's change-cipher-spec read may consume a full
+            // record, and a record-sized stack array would overflow a small connect thread.
+            let mut buf = vec![0u8; 16384];
             let mut rt = 0u8;
             let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
                 s,
@@ -3454,8 +3460,9 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
 ///
 /// # Safety
 /// `s` is live.
-unsafe fn client_read(s: *mut Ssl) -> Option<([u8; 16384], usize)> {
-    let mut buf = [0u8; 16384];
+unsafe fn client_read(s: *mut Ssl) -> Option<(Vec<u8>, usize)> {
+    // Heap-allocated for the same reason as `tls12_read_handshake`.
+    let mut buf = vec![0u8; 16384];
     // SAFETY: `s` is live; `buf` is writable. The helper splits a record that carries several
     // handshake messages (the authority coalesces its flight) and skips a middlebox-compat
     // `ChangeCipherSpec` record.
