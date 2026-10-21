@@ -74,6 +74,8 @@ use crate::ssl::statem::statem_lib::{ssl_get_min_max_version, ssl_version_cmp};
 
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
+/// `ERR_R_PASSED_INVALID_ARGUMENT` — `err.h.in:360` (`262 | ERR_RFLAG_COMMON`).
+const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 262 | (2 << 18);
 /// `OPENSSL_FILE` of this translation unit.
 const FILE: *const c_char = c"ssl/t1_lib.c".as_ptr();
 const FILE_SEAM: SeamFile = SeamFile::new(c"ssl/t1_lib.c");
@@ -757,8 +759,9 @@ pub(crate) unsafe fn tls_use_ticket(s: *const Ssl) -> bool {
 /// `size_t *pgroupslen)` — `t1_lib.c:784-816`, reduced to the built-in default list or the
 /// connection's configured list.
 ///
-/// The Suite B arms need `SSL_CTX_set1_groups_list` (`t1_lib.c`), which is not landed; a connection
-/// that never called a group setter reaches exactly the authority's default arm.
+/// The `SSL_CTX_set1_groups_list`/`SSL_set1_groups_list` parser installs the connection's list
+/// (`tls1_set_groups_list` below); a connection that never called a group setter reaches exactly the
+/// authority's default arm.
 ///
 /// # Safety
 /// `s` must be NULL or a live connection. The returned slice borrows the connection's
@@ -791,6 +794,222 @@ pub(crate) fn tls1_nid2group_id(nid: c_int) -> u16 {
         o::NID_secp256k1 => 22,
         _ => 0,
     }
+}
+
+/// `uint16_t tls1_group_name2id(SSL_CTX *ctx, const char *name)` — `t1_lib.c:709-719`, reduced to
+/// the provider names the admitted group table publishes (`providers/common/capabilities.c:150-260`).
+///
+/// The authority compares the string case-insensitively against both the TLS name and the
+/// provider-internal name, which is why `secp256r1`, `prime256v1` and `P-256` all resolve to the
+/// same group. Names outside this reduced table (the deprecated curves and the hybrid KEMs) are
+/// unknown here, so an unprefixed use of one fails and a `?`-prefixed one is ignored.
+fn tls1_group_name2id(name: &[u8]) -> u16 {
+    const NAMES: &[(&[u8], u16)] = &[
+        (b"x25519", OSSL_TLS_GROUP_ID_x25519),
+        (b"x448", OSSL_TLS_GROUP_ID_x448),
+        (b"secp256r1", OSSL_TLS_GROUP_ID_secp256r1),
+        (b"prime256v1", OSSL_TLS_GROUP_ID_secp256r1),
+        (b"p-256", OSSL_TLS_GROUP_ID_secp256r1),
+        (b"secp384r1", OSSL_TLS_GROUP_ID_secp384r1),
+        (b"p-384", OSSL_TLS_GROUP_ID_secp384r1),
+        (b"secp521r1", OSSL_TLS_GROUP_ID_secp521r1),
+        (b"p-521", OSSL_TLS_GROUP_ID_secp521r1),
+        (b"secp256k1", 22),
+        (b"ffdhe2048", OSSL_TLS_GROUP_ID_ffdhe2048),
+        (b"ffdhe3072", OSSL_TLS_GROUP_ID_ffdhe3072),
+    ];
+    for (n, id) in NAMES {
+        if name.eq_ignore_ascii_case(n) {
+            return *id;
+        }
+    }
+    0
+}
+
+/// `CONF_parse_list`'s `nospc` trimming: leading and trailing ASCII whitespace around an element is
+/// removed before the element is interpreted (`crypto/conf/conf_mod.c:739-757`).
+fn trim_ascii(mut s: &[u8]) -> &[u8] {
+    while let [first, rest @ ..] = s {
+        if !first.is_ascii_whitespace() {
+            break;
+        }
+        s = rest;
+    }
+    while let [rest @ .., last] = s {
+        if !last.is_ascii_whitespace() {
+            break;
+        }
+        s = rest;
+    }
+    s
+}
+
+/// One `gid_cb` invocation (`t1_lib.c:1261-1560`): apply the per-group prefixes and add, remove or
+/// ignore the group. Returns `None` for the authority's syntax/unknown-group failure.
+fn parse_group_element(mut elem: &[u8], out: &mut Vec<u16>) -> Option<()> {
+    let mut add_keyshare = false;
+    let mut ignore_unknown = false;
+    let mut remove_group = false;
+    loop {
+        match elem.first().copied() {
+            // `*` requests a key share for the group. This reduction regenerates its single share
+            // from the negotiated group, so the prefix only has to be accepted.
+            Some(b'*') => {
+                if add_keyshare {
+                    return None;
+                }
+                add_keyshare = true;
+                elem = &elem[1..];
+            }
+            Some(b'?') => {
+                if ignore_unknown {
+                    return None;
+                }
+                ignore_unknown = true;
+                elem = &elem[1..];
+            }
+            Some(b'-') => {
+                if remove_group {
+                    return None;
+                }
+                remove_group = true;
+                elem = &elem[1..];
+            }
+            // Neither delimiter is a valid prefix for a single group name.
+            Some(b'/') | Some(b':') => return None,
+            _ => break,
+        }
+    }
+    if elem.is_empty() {
+        return None;
+    }
+
+    // The `DEFAULT`/`DEFAULT_SUITE_B` pseudo groups expand to a built-in list (`t1_lib.c:1163-1166`).
+    // The reduced default omits the hybrid KEM the admitted provider cannot complete.
+    if elem.eq_ignore_ascii_case(b"default") {
+        if ignore_unknown || remove_group {
+            return None;
+        }
+        for &gid in DEFAULT_GROUPS.iter() {
+            if !out.contains(&gid) {
+                out.push(gid);
+            }
+        }
+        return Some(());
+    }
+    if elem.eq_ignore_ascii_case(b"default_suite_b") {
+        if ignore_unknown || remove_group {
+            return None;
+        }
+        for &gid in [OSSL_TLS_GROUP_ID_secp256r1, OSSL_TLS_GROUP_ID_secp384r1].iter() {
+            if !out.contains(&gid) {
+                out.push(gid);
+            }
+        }
+        return Some(());
+    }
+
+    let gid = tls1_group_name2id(elem);
+    if gid == 0 {
+        return if ignore_unknown { Some(()) } else { None };
+    }
+    if remove_group {
+        if let Some(pos) = out.iter().position(|&g| g == gid) {
+            out.remove(pos);
+        }
+    } else if !out.contains(&gid) {
+        out.push(gid);
+    }
+    Some(())
+}
+
+/// `tls1_set_groups_list`'s parser (`t1_lib.c:1633-1746`), reduced to the flat supported-groups list.
+/// Tuples (`/`) and groups (`:`) are parsed with the authority's separators and whitespace rules; a
+/// duplicate group is ignored, an empty element is a syntax error, and an unknown group fails unless
+/// it carries `?`.
+fn parse_groups_list(input: &[u8]) -> Option<Vec<u16>> {
+    let mut out: Vec<u16> = Vec::new();
+    let input = trim_ascii(input);
+    if input.is_empty() {
+        // The authority's `empty_list` arm reports success with a zero-length list.
+        return Some(out);
+    }
+    for tuple in input.split(|b| *b == b'/') {
+        let tuple = trim_ascii(tuple);
+        if tuple.is_empty() {
+            return None;
+        }
+        for elem in tuple.split(|b| *b == b':') {
+            parse_group_element(trim_ascii(elem), &mut out)?;
+        }
+    }
+    Some(out)
+}
+
+/// `int tls1_set_groups_list(SSL_CTX *ctx, uint16_t **grpext, size_t *grpextlen, ..., const char *str)`
+/// — `t1_lib.c:1633-1746`, reduced to the flat supported-groups list (the key-share and tuple
+/// extensions are regenerated from the negotiated group rather than stored).
+///
+/// # Safety
+/// `str` must be NULL or a NUL-terminated C string. When `grpext`/`grpextlen` are non-NULL they
+/// must be writable and `*grpext` must be NULL or a block this crate allocated from the `CRYPTO_*`
+/// malloc seam that this call exclusively owns.
+pub(crate) unsafe fn tls1_set_groups_list(
+    grpext: *mut *mut u16,
+    grpextlen: *mut usize,
+    str: *const c_char,
+) -> c_int {
+    if str.is_null() {
+        return 0;
+    }
+    // SAFETY: `str` is a NUL-terminated C string per the contract.
+    let input = unsafe { CStr::from_ptr(str) }.to_bytes();
+    let Some(ids) = parse_groups_list(input) else {
+        // SAFETY: a constant site; the authority raises `ERR_R_PASSED_INVALID_ARGUMENT` for both a
+        // syntax error and a group it cannot resolve without `?` (`t1_lib.c:1683-1687`).
+        unsafe { raise_with(ERR_LIB_SSL, ERR_R_PASSED_INVALID_ARGUMENT, FILE, 1690) };
+        return 0;
+    };
+    if grpext.is_null() || grpextlen.is_null() {
+        // The authority's syntax-check arm (`t1_lib.c:1723-1728`).
+        return 1;
+    }
+    let n = ids.len();
+    if n == 0 {
+        // SAFETY: the pointers are writable per the contract; the previous list is owned here.
+        unsafe {
+            drop(OwnedBuf::adopt_plain_nullable(
+                (*grpext).cast(),
+                FILE_SEAM,
+                0,
+            ));
+            *grpext = ptr::null_mut();
+            *grpextlen = 0;
+        }
+        return 1;
+    }
+    let Some(bytes) = n.checked_mul(core::mem::size_of::<u16>()) else {
+        return 0;
+    };
+    let Some(mem) = OwnedBuf::new(bytes, FILE_SEAM, 0) else {
+        return 0;
+    };
+    for (i, gid) in ids.iter().enumerate() {
+        // SAFETY: `mem` is a fresh `n`-element allocation.
+        unsafe { *mem.as_ptr().cast::<u16>().add(i) = *gid };
+    }
+    // SAFETY: `grpext`/`grpextlen` are writable per the contract, and the previous `*grpext` is a
+    // plain block this crate allocated that no one else owns.
+    unsafe {
+        drop(OwnedBuf::adopt_plain_nullable(
+            (*grpext).cast(),
+            FILE_SEAM,
+            0,
+        ));
+        *grpext = mem.into_raw().cast();
+        *grpextlen = n;
+    }
+    1
 }
 
 /// `int tls1_set_groups(uint16_t **grpext, size_t *grpextlen, ... int *groups, size_t ngroups)` —

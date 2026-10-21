@@ -1124,8 +1124,8 @@ pub(crate) unsafe fn ssl_cert_add1_chain_cert(
 /// parameters (which carry the hostname/IP `PYTHON` set through `SSL_get0_param`), runs
 /// `X509_verify_cert`, installs the resulting error in `s->verify_result` and the validated chain
 /// in `s->verified_chain`, and moves the checked hostname (`vpm.peername`) back to the SSL's
-/// parameters. The RPK and DANE arms, the SSL ex-data slot and the OCSP response are not modelled
-/// here (the reduced client presents certificates, not raw public keys).
+/// parameters. The RPK and DANE arms and the OCSP response are not modelled here (the reduced
+/// client presents certificates, not raw public keys).
 ///
 /// # Safety
 /// `s` must be a live connection; `sk` must be NULL or a live `STACK_OF(X509)` of live certs.
@@ -1136,8 +1136,8 @@ pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -
     use crate::x509::x509_vfy::{
         X509_STORE_CTX_free, X509_STORE_CTX_get0_chain, X509_STORE_CTX_get0_param,
         X509_STORE_CTX_get1_chain, X509_STORE_CTX_get_error, X509_STORE_CTX_init,
-        X509_STORE_CTX_new_ex, X509_STORE_CTX_set_default, X509_STORE_CTX_set_verify_cb,
-        X509_verify_cert,
+        X509_STORE_CTX_new_ex, X509_STORE_CTX_set_default, X509_STORE_CTX_set_ex_data,
+        X509_STORE_CTX_set_verify_cb, X509_verify_cert,
     };
     use crate::x509::x509_vpm::{
         X509_VERIFY_PARAM_move_peername, X509_VERIFY_PARAM_set1, X509_VERIFY_PARAM_set_auth_level,
@@ -1169,6 +1169,16 @@ pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -
         // The `@SECLEVEL` maps onto the verification auth level (`:472-478`).
         let param = X509_STORE_CTX_get0_param(ctx);
         X509_VERIFY_PARAM_set_auth_level(param, SSL_get_security_level(s));
+
+        // `X509_STORE_CTX_set_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx(), s)` —
+        // `ssl_cert.c:482-484`. The verification callback retrieves the `SSL` from this slot
+        // (`ssl_verify_openssl.c:61` in openvpn asserts on it); without the slot, every callback
+        // that reads it sees NULL.
+        if X509_STORE_CTX_set_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx(), s.cast()) == 0 {
+            raise_ssl(ERR_R_X509_LIB, 484);
+            X509_STORE_CTX_free(ctx);
+            return 0;
+        }
 
         // `X509_STORE_CTX_set_default(ctx, s->server ? "ssl_client" : "ssl_server")` — `:517`.
         let dflt = if (*s).server != 0 {
