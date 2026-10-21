@@ -4604,7 +4604,7 @@ mod tls12_group_tests {
     #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use core::ffi::{c_int, c_long, c_void, CStr};
+    use core::ffi::{c_int, c_long, c_uint, c_void, CStr};
 
     use crate::evp::asymcipher::{EVP_PKEY_encrypt, EVP_PKEY_encrypt_init};
     use crate::evp::legacy_sha::EVP_sha256;
@@ -4627,6 +4627,7 @@ mod tls12_group_tests {
         SSL_set_bio, SSL_set_connect_state, SSL_set_options, SslCtx,
     };
     use crate::ssl::ssl_rsa::{SSL_CTX_use_PrivateKey, SSL_CTX_use_certificate};
+    use crate::ssl::ssl_sess::{SSL_SESSION_get_compress_id, SSL_get_session};
     use crate::ssl::t1_enc::tls12_setup_cipher;
     use crate::x509::x509_set::{
         X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
@@ -5505,6 +5506,52 @@ mod tls12_group_tests {
                 "expected SSL_R_NO_SUITABLE_KEY_SHARE (101), got {reasons:?}"
             );
         }
+    }
+
+    /// `sslscan` 2.1.5 reads `SSL_SESSION_get_compress_id(SSL_get_session(ssl))` after
+    /// `SSL_connect` answers 1. The client's handshake session must therefore exist at that
+    /// point, for both TLS1.3 and TLS1.2.
+    fn assert_session_after_handshake(cipher: &CStr, version: c_int) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(cipher, version, Some(o::NID_X25519), Some(o::NID_X25519));
+            let (client_ok, server_ok) = drive(&p);
+            let client_session = SSL_get_session(p.c);
+            let server_session = SSL_get_session(p.s);
+            let compress = if client_session.is_null() {
+                c_uint::MAX
+            } else {
+                SSL_SESSION_get_compress_id(client_session)
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "the {cipher:?} handshake must complete (client={client_ok}, server={server_ok})"
+            );
+            assert!(
+                !client_session.is_null(),
+                "SSL_get_session must answer the negotiated session after a completed handshake"
+            );
+            assert!(
+                !server_session.is_null(),
+                "the server's completed handshake must retain its session"
+            );
+            // `sslscan` reaches this accessor through the returned pointer; it must read the
+            // negotiated session rather than fault.
+            assert_eq!(compress, 0, "no compression is negotiated");
+        }
+    }
+
+    #[test]
+    fn ssl_get_session_after_tls13_handshake_is_non_null() {
+        assert_session_after_handshake(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION);
+    }
+
+    #[test]
+    fn ssl_get_session_after_tls12_handshake_is_non_null() {
+        assert_session_after_handshake(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION);
     }
 
     #[test]
