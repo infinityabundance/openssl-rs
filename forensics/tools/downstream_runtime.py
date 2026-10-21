@@ -512,6 +512,59 @@ PROGRAMS: dict[str, dict] = {
                  "the page body; the same request with the unrelated CA fails certificate "
                  "verification"),
     },
+    # The Phase-25 L7 utility batch: a TLS downloader, an HTTPS benchmark, an Authenticode
+    # signer/verifier, a FIT signer/verifier, a TLS interception proxy and the DKIM engine.
+    "axel": {
+        "program": "axel", "launch": ["--version"],
+        "version_re": r"Axel 2\.17\.14",
+        "note": ("axel's HTTPS downloader: a fixture file is fetched with the fixture CA and "
+                 "byte-compared; a run trusting only the unrelated CA fails verification"),
+    },
+    "apache2-utils": {
+        "program": "support/ab", "launch": ["-V"],
+        "version_re": r"ApacheBench",
+        "note": ("apache2-utils' `ab`: 20 HTTPS requests complete with 0 failures against the "
+                 "authority's TLS server; the same benchmark against a plaintext listener "
+                 "reports an SSL handshake failure on every request"),
+    },
+    "osslsigncode": {
+        "program": "b/osslsigncode", "launch": ["--version"],
+        "version_re": r"osslsigncode 2\.9",
+        "note": ("osslsigncode's Authenticode path: a pristine PE from the release's tests is "
+                 "signed and verified with a code-signing certificate, and a modified PE is "
+                 "rejected with a digest mismatch"),
+    },
+    "u-boot-tools": {
+        "program": "tools/mkimage", "launch": ["-V"],
+        "version_re": r"mkimage version 2025\.01",
+        "note": ("u-boot's FIT signing: `mkimage -F` signs a FIT image with an RSA key and the "
+                 "public-key dtb, `fit_check_sign` accepts it, and a tampered payload is "
+                 "rejected"),
+    },
+    "sslsplit": {
+        "program": "sslsplit", "launch": ["-V"],
+        "version_re": r"SSLsplit 0\.5\.5",
+        "note": ("sslsplit's TLS interception: a customer connection is terminated with a "
+                 "forged certificate from the fixture CA and forwarded to a local TLS backend; "
+                 "a client trusting only the unrelated CA is rejected"),
+    },
+    "opendkim": {
+        # opendkim's filter is a milter client (needs a sendmail milter peer this venue does
+        # not admit); its DKIM engine is libopendkim, so the admitted program is a harness over
+        # the libopendkim built from the same pristine tree.
+        "program": ".l7-opendkim-harness", "launch": ["--version"],
+        "version_re": r"opendkim-l7-harness", "lib_paths": ["libopendkim/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_opendkim.c",
+            "cflags": ["-I{root}/libopendkim", "-I{prefix}/include", "-Wno-pointer-sign"],
+            "ldflags": ["-L{root}/libopendkim/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/libopendkim/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-lopendkim", "-lcrypto", "-lssl"],
+        },
+        "note": ("libopendkim's DKIM path: a message is signed with an RSA key and verified "
+                 "through the library's key-lookup callback; a modified body fails "
+                 "verification"),
+    },
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -791,7 +844,8 @@ def _gen_pki(authority_prefix: Path, d: Path) -> dict:
         res = _ossl(authority_prefix, argv, timeout=60)
         if not res["ok"]:
             raise RuntimeError(f"generating the {what} failed: {census._error_line(res)}")
-    ext.write_text("subjectAltName=IP:127.0.0.1\nbasicConstraints=CA:FALSE\n"
+    ext.write_text("subjectAltName=IP:127.0.0.1,DNS:127.0.0.1,DNS:localhost\n"
+                   "basicConstraints=CA:FALSE\n"
                    "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n",
                    encoding="utf-8")
     res = _ossl(authority_prefix, ["x509", "-req", "-in", str(srv_csr), "-CA", str(ca_crt),
@@ -4824,6 +4878,449 @@ def _wl_w3m(ctx: dict) -> dict:
             "local_only": True}
 
 
+def _wl_axel(ctx: dict) -> dict:
+    """axel's HTTPS download path: a fixture file fetched with the fixture CA, byte-compared.
+
+    axel verifies both the chain and the hostname (`SSL_CTX_set_default_verify_paths` honours
+    `SSL_CERT_FILE`), so the fixture CA is the positive run's trust anchor and the unrelated CA
+    must fail before any bytes are written.
+    """
+    ap, d, port = ctx["authority_prefix"], ctx["workdir"], ctx["port"]
+    pki = _gen_pki(ap, d)
+    body = b"phase25-axel-fixture-" + b"A" * 4096 + b"\n"
+    out = d / "fixture.bin"
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802 -- the base class names the verb
+            if self.path != "/probe.bin":
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            self.wfile.flush()
+
+        def log_message(self, *args: object) -> None:
+            return
+
+    server = http.server.HTTPServer(("127.0.0.1", port), Handler)
+    sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    sctx.load_cert_chain(str(pki["srv_crt"]), str(pki["srv_key"]))
+    server.socket = sctx.wrap_socket(server.socket, server_side=True)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"https://127.0.0.1:{port}/probe.bin"
+    try:
+        good = _run_captured([str(ctx["program"]), "-n", "1", "-o", str(out), url], cwd=d,
+                             env=dict(ctx["env"], SSL_CERT_FILE=str(pki["ca_crt"])), timeout=60)
+        good_bytes = out.read_bytes() if out.is_file() else b""
+        out.unlink(missing_ok=True)
+        neg = _run_captured([str(ctx["program"]), "-n", "1", "-o", str(out), url], cwd=d,
+                            env=dict(ctx["env"], SSL_CERT_FILE=str(pki["other_crt"])), timeout=60)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    downloaded = bool(good["ok"] and good_bytes == body and
+                      "certificate verify failed" not in good_text)
+    neg_rejected = (not neg["ok"] and not out.exists()
+                    and "certificate verify failed" in neg_text)
+    functional_ok = downloaded and neg_rejected
+    return {
+        "runtime_ok": downloaded,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if downloaded else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if downloaded else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "axel did not fetch the fixture file byte-for-byte" if not downloaded else
+            "the unrelated CA was not rejected, so the download is not certificate-verified"),
+        "transcript": _transcript(("axel download (fixture CA)", good),
+                                  ("axel download (unrelated CA, must fail)", neg)),
+        "workload": ("axel: HTTPS download of a local fixture with the fixture CA + byte match + "
+                     "unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_apache2_utils(ctx: dict) -> dict:
+    """apache2-utils' `ab`: a completed HTTPS benchmark and a plaintext-listener control.
+
+    `ab` does not verify the peer certificate, so the negative control is a plaintext listener on
+    the target port: a run that actually speaks TLS must fail its handshake on every request (and
+    transfer zero bytes), which a run that silently fell back to cleartext could not do.
+    """
+    ap, d, port = ctx["authority_prefix"], ctx["workdir"], ctx["port"]
+    pki = _gen_pki(ap, d)
+    requests = 20
+    plain_port = _free_port()
+    srv, of, ef = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(port), "-cert",
+                          str(pki["srv_crt"]), "-key", str(pki["srv_key"]), "-www", "-quiet"],
+                         d, _auth_env(ap), d / "srv.out", d / "srv.err")
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802 -- the base class names the verb
+            payload = b"phase25-ab-plaintext\n"
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args: object) -> None:
+            return
+
+    plain = http.server.HTTPServer(("127.0.0.1", plain_port), Handler)
+    plain_thread = threading.Thread(target=plain.serve_forever, daemon=True)
+    plain_thread.start()
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("openssl s_server", {"exit_code": 0,
+                                                    "stdout": _read(d / "srv.err")})],
+                            "the local TLS server did not open its port", "runtime-failure", d)
+        good = _run_captured([str(ctx["program"]), "-n", str(requests), "-c", "1",
+                              f"https://127.0.0.1:{port}/"], cwd=d, env=ctx["env"], timeout=90)
+        neg = _run_captured([str(ctx["program"]), "-n", "5", "-c", "1",
+                             f"https://127.0.0.1:{plain_port}/"], cwd=d, env=ctx["env"],
+                            timeout=60)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+        plain.shutdown()
+        plain.server_close()
+        plain_thread.join(timeout=5)
+
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    completed = bool(good["ok"] and
+                     re.search(rf"Complete requests:\s+{requests}\b", good_text) is not None and
+                     re.search(r"Failed requests:\s+0\b", good_text) is not None and
+                     "SSL handshake failed" not in good_text)
+    neg_rejected = (neg_text.count("SSL handshake failed") == 5 and
+                    re.search(r"Document Length:\s+0 bytes", neg_text) is not None)
+    functional_ok = completed and neg_rejected
+    return {
+        "runtime_ok": completed,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if completed else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if completed else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "ab did not complete its HTTPS request count without failures" if not completed else
+            "ab did not report a TLS handshake failure against the plaintext listener"),
+        "transcript": _transcript((f"ab -n {requests} https (fixture TLS server)", good),
+                                  ("ab https against a plaintext listener (must fail)", neg)),
+        "workload": (f"apache2-utils ab: {requests} completed HTTPS requests, 0 failed, and a "
+                     "plaintext listener rejected by the TLS handshake"),
+        "local_only": True,
+    }
+
+
+def _wl_osslsigncode(ctx: dict) -> dict:
+    """osslsigncode's Authenticode path: sign a pristine PE, verify it, reject a modified one.
+
+    The PE fixture is the release's own `tests/files/unsigned.exe`; the signing certificate is a
+    local code-signing certificate from the fixture PKI. A byte in the middle of the file (inside a
+    section, not a header or the certificate table) makes the Authenticode digest disagree, which
+    `verify` must report.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    unsigned = ctx["root"] / "tests" / "files" / "unsigned.exe"
+    if not unsigned.is_file():
+        return _wl_fail([("osslsigncode", {"exit_code": 0, "stdout": ""})],
+                        "the release's tests/files/unsigned.exe fixture is absent",
+                        "runtime-failure", d)
+    key, crt = d / "codesign.key", d / "codesign.crt"
+    gen = _ossl(ap, ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(key),
+                     "-out", str(crt), "-days", "7", "-subj", "/CN=phase25-code-signing",
+                     "-addext", "basicConstraints=critical,CA:FALSE",
+                     "-addext", "extendedKeyUsage=codeSigning"], timeout=60)
+    if not gen["ok"]:
+        return _wl_fail([("openssl req", gen)], "generating the code-signing certificate failed",
+                        "runtime-failure", d)
+    signed, tampered = d / "signed.exe", d / "tampered.exe"
+    sign = _run_captured([prog, "sign", "-certs", str(crt), "-key", str(key), "-h", "sha256",
+                          "-in", str(unsigned), "-out", str(signed)], cwd=d, env=ctx["env"],
+                         timeout=120)
+    verify = _run_captured([prog, "verify", "-CAfile", str(crt), "-in", str(signed)], cwd=d,
+                           env=ctx["env"], timeout=120)
+    data = bytearray(signed.read_bytes()) if signed.is_file() else bytearray()
+    if len(data) > 0x400:
+        data[len(data) // 2] ^= 0xFF
+        tampered.write_bytes(data)
+    neg = _run_captured([prog, "verify", "-CAfile", str(crt), "-in", str(tampered)], cwd=d,
+                        env=ctx["env"], timeout=120)
+
+    signed_ok = bool(sign["ok"] and signed.is_file() and
+                     verify["ok"] and "Succeeded" in (verify["stdout"] + verify["stderr"]))
+    neg_text = neg["stdout"] + neg["stderr"]
+    neg_rejected = (not neg["ok"] and ("MISMATCH" in neg_text or "Failed" in neg_text))
+    functional_ok = signed_ok and neg_rejected
+    return {
+        "runtime_ok": signed_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if signed_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if signed_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "osslsigncode did not sign and verify the pristine PE" if not signed_ok else
+            "the modified PE was not rejected by signature verification"),
+        "transcript": _transcript(("osslsigncode sign", sign),
+                                  ("osslsigncode verify (signed PE)", verify),
+                                  ("osslsigncode verify (modified PE, must fail)", neg)),
+        "workload": ("osslsigncode: Authenticode sign of a pristine PE + verified signature + "
+                     "digest mismatch on a modified PE"),
+        "local_only": True,
+    }
+
+
+def _wl_u_boot_tools(ctx: dict) -> dict:
+    """u-boot-tools' FIT signing: mkimage signs, fit_check_sign verifies, a tamper is rejected."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    mkimage = str(ctx["program"])
+    fit_check = ctx["program"].parent / "fit_check_sign"
+    if not fit_check.is_file():
+        return _wl_fail([("mkimage", {"exit_code": 0, "stdout": ""})],
+                        "the host-tools build produced no fit_check_sign", "runtime-failure", d)
+    payload = b"phase25-fit-payload\n"
+    (d / "payload.bin").write_bytes(payload)
+    (d / "image.its").write_text(
+        "/dts-v1/;\n"
+        "/ {\n"
+        "\tdescription = \"phase25 L7 FIT\";\n"
+        "\t#address-cells = <1>;\n"
+        "\timages {\n"
+        "\t\tpayload {\n"
+        "\t\t\tdescription = \"phase25 payload\";\n"
+        "\t\t\tdata = /incbin/(\"payload.bin\");\n"
+        "\t\t\ttype = \"kernel\";\n"
+        "\t\t\tarch = \"x86\";\n"
+        "\t\t\tos = \"linux\";\n"
+        "\t\t\tcompression = \"none\";\n"
+        "\t\t\tload = <0x100000>;\n"
+        "\t\t\tentry = <0x100000>;\n"
+        "\t\t\thash-1 { algo = \"sha256\"; };\n"
+        "\t\t};\n"
+        "\t};\n"
+        "\tconfigurations {\n"
+        "\t\tdefault = \"conf-1\";\n"
+        "\t\tconf-1 {\n"
+        "\t\t\tkernel = \"payload\";\n"
+        "\t\t\tsignature-1 {\n"
+        "\t\t\t\talgo = \"sha256,rsa2048\";\n"
+        "\t\t\t\tkey-name-hint = \"dev\";\n"
+        "\t\t\t\tsign-images = \"kernel\";\n"
+        "\t\t\t};\n"
+        "\t\t};\n"
+        "\t};\n"
+        "};\n", encoding="utf-8")
+    keys = d / "keys"
+    keys.mkdir(exist_ok=True)
+    gen = _ossl(ap, ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout",
+                     str(keys / "dev.key"), "-out", str(keys / "dev.crt"), "-days", "7",
+                     "-subj", "/CN=phase25 FIT key"], timeout=60)
+    if not gen["ok"]:
+        return _wl_fail([("openssl req", gen)], "generating the FIT key failed",
+                        "runtime-failure", d)
+    (d / "keys.dts").write_text("/dts-v1/;\n/ {\n};\n", encoding="utf-8")
+    dtc = _run_captured(["dtc", "-I", "dts", "-O", "dtb", "-o", str(d / "keys.dtb"),
+                         str(d / "keys.dts")], cwd=d, env=ctx["env"], timeout=60)
+    itb, tampered = d / "image.itb", d / "tampered.itb"
+    made = _run_captured([mkimage, "-f", str(d / "image.its"), str(itb)], cwd=d,
+                         env=ctx["env"], timeout=120)
+    signed = _run_captured([mkimage, "-F", "-k", str(keys), "-K", str(d / "keys.dtb"),
+                            str(itb)], cwd=d, env=ctx["env"], timeout=120)
+    verify = _run_captured([str(fit_check), "-f", str(itb), "-k", str(d / "keys.dtb")],
+                           cwd=d, env=ctx["env"], timeout=120)
+    data = bytearray(itb.read_bytes()) if itb.is_file() else bytearray()
+    index = data.find(payload.strip())
+    if index > 0:
+        data[index] ^= 0x01
+        tampered.write_bytes(data)
+    neg = _run_captured([str(fit_check), "-f", str(tampered), "-k", str(d / "keys.dtb")],
+                        cwd=d, env=ctx["env"], timeout=120)
+
+    verify_text = verify["stdout"] + verify["stderr"]
+    signed_ok = bool(dtc["ok"] and made["ok"] and signed["ok"] and itb.is_file() and
+                     verify["ok"] and "Signature check OK" in verify_text)
+    neg_text = neg["stdout"] + neg["stderr"]
+    neg_rejected = (not neg["ok"] and "Signature check bad" in neg_text)
+    functional_ok = signed_ok and neg_rejected
+    return {
+        "runtime_ok": signed_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if signed_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if signed_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "mkimage did not sign a FIT image that fit_check_sign accepts" if not signed_ok else
+            "the tampered FIT payload was not rejected by signature verification"),
+        "transcript": _transcript(("dtc (public-key dtb)", dtc),
+                                  ("mkimage -f (FIT)", made),
+                                  ("mkimage -F (sign)", signed),
+                                  ("fit_check_sign (signed)", verify),
+                                  ("fit_check_sign (tampered, must fail)", neg)),
+        "workload": ("u-boot-tools: RSA-signed FIT image (mkimage -F) verified by fit_check_sign "
+                     "+ tampered payload rejected"),
+        "local_only": True,
+    }
+
+
+def _wl_sslsplit(ctx: dict) -> dict:
+    """sslsplit's TLS interception: forge with the fixture CA, forward to a local TLS backend."""
+    ap, d, port = ctx["authority_prefix"], ctx["workdir"], ctx["port"]
+    pki = _gen_pki(ap, d)
+    body = b"phase25-sslsplit-backend-payload\n"
+    backend_port = 443
+    probe = socket.socket()
+    try:
+        probe.bind(("127.0.0.1", backend_port))
+    except OSError:
+        probe.close()
+        return _wl_fail([("sslsplit", {"exit_code": 0, "stdout": ""})],
+                        f"the local TLS backend port {backend_port} is not free",
+                        "runtime-failure", d)
+    probe.close()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802 -- the base class names the verb
+            if self.path != "/probe":
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            self.wfile.flush()
+
+        def log_message(self, *args: object) -> None:
+            return
+
+    backend = http.server.HTTPServer(("127.0.0.1", backend_port), Handler)
+    bctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    bctx.load_cert_chain(str(pki["srv_crt"]), str(pki["srv_key"]))
+    backend.socket = bctx.wrap_socket(backend.socket, server_side=True)
+    thread = threading.Thread(target=backend.serve_forever, daemon=True)
+    thread.start()
+    conn_log = d / "connections.log"
+    argv = [str(ctx["program"]), "-D", "-p", str(d / "sslsplit.pid"), "-l", str(conn_log),
+            "-c", str(pki["ca_crt"]), "-k", str(pki["ca_key"])]
+    if os.geteuid() == 0:
+        argv += ["-u", "root"]
+    argv += ["https", "127.0.0.1", str(port), "127.0.0.1", str(backend_port)]
+    srv, of, ef = _spawn(argv, d, ctx["env"], d / "sslsplit.out", d / "sslsplit.err")
+    request = "GET /probe HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n"
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("sslsplit", {"exit_code": 0, "stdout": _read(d / "sslsplit.err")})],
+                            "sslsplit did not open its listening port", "runtime-failure", d)
+        good = _s_client(ap, port, pki["ca_crt"], ["-quiet", "-verify_return_error"],
+                         stdin_text=request, timeout=45)
+        neg = _s_client(ap, port, pki["other_crt"],
+                        ["-quiet", "-verify_return_error"], stdin_text=request, timeout=45)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+        backend.shutdown()
+        backend.server_close()
+        thread.join(timeout=5)
+
+    good_text = good["stdout"] + good["stderr"]
+    log_text = _read(conn_log)
+    forwarded = bool(body.decode().strip() in good_text and "200 OK" in good_text and
+                     re.search(r"GET /probe 200", log_text) is not None)
+    neg_text = neg["stdout"] + neg["stderr"]
+    neg_rejected = (body.decode().strip() not in neg_text
+                    and "certificate verify failed" in neg_text)
+    functional_ok = forwarded and neg_rejected
+    return {
+        "runtime_ok": forwarded,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if forwarded else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if forwarded else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the intercepted request did not reach the TLS backend and return its body"
+            if not forwarded else
+            "the unrelated CA was not rejected, so the forged certificate does not verify"),
+        "transcript": _transcript(("authority s_client through sslsplit", good),
+                                  ("authority s_client unrelated CA (must fail)", neg),
+                                  ("sslsplit connection log", {"exit_code": 0,
+                                                               "stdout": log_text})),
+        "workload": ("sslsplit: TLS interception with a fixture-CA forged certificate, "
+                     "forwarded GET /probe 200 and body returned + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_opendkim(ctx: dict) -> dict:
+    """libopendkim's DKIM path: sign a message, verify it, reject a modified body."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    key, pub = d / "dev.key", d / "dev.pub"
+    gen = _ossl(ap, ["genrsa", "-out", str(key), "2048"], timeout=60)
+    exported = _ossl(ap, ["rsa", "-in", str(key), "-pubout", "-out", str(pub)], timeout=60)
+    if not gen["ok"] or not exported["ok"]:
+        return _wl_fail([("openssl genrsa", gen), ("openssl rsa", exported)],
+                        "generating the DKIM key failed", "runtime-failure", d)
+    record = d / "dev.txt"
+    b64 = "".join(line for line in _read(pub).splitlines() if not line.startswith("---"))
+    record.write_text("v=DKIM1; k=rsa; p=" + b64, encoding="utf-8")
+    msg, signed, tampered = d / "msg.txt", d / "signed.txt", d / "tampered.txt"
+    message = ("From: a@example.test\r\nTo: b@example.test\r\nSubject: phase25 opendkim\r\n"
+               "Date: Thu, 01 Jan 2026 00:00:00 +0000\r\nMessage-ID: <l7@example.test>\r\n"
+               "\r\nphase25-opendkim-body\r\n")
+    msg.write_bytes(message.encode("utf-8"))
+    sign = _run_captured([prog, "sign", str(msg), str(key), "example.test", "l7sel",
+                          str(signed)], cwd=d, env=ctx["env"], timeout=120)
+    verify = _run_captured([prog, "verify", str(signed), str(record)], cwd=d, env=ctx["env"],
+                           timeout=120)
+    data = signed.read_bytes() if signed.is_file() else b""
+    index = data.find(b"phase25-opendkim-body")
+    if index > 0:
+        altered = bytearray(data)
+        altered[index] = ord("P")
+        tampered.write_bytes(altered)
+    neg = _run_captured([prog, "verify", str(tampered), str(record)], cwd=d, env=ctx["env"],
+                        timeout=120)
+
+    signed_ok = bool(sign["ok"] and data.startswith(b"DKIM-Signature:") and
+                     verify["ok"] and "verify=ok" in verify["stdout"])
+    neg_text = neg["stdout"] + neg["stderr"]
+    neg_rejected = (not neg["ok"] and
+                    ("verify=fail" in neg["stdout"] or "Bad signature" in neg_text))
+    functional_ok = signed_ok and neg_rejected
+    return {
+        "runtime_ok": signed_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if signed_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if signed_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "libopendkim did not sign and verify the message" if not signed_ok else
+            "the modified message body was not rejected by DKIM verification"),
+        "transcript": _transcript(("opendkim harness sign", sign),
+                                  ("opendkim harness verify (signed)", verify),
+                                  ("opendkim harness verify (modified body, must fail)", neg)),
+        "workload": ("opendkim: libopendkim signs a message with RSA-SHA256 and verifies it via "
+                     "its key-lookup callback + modified-body reject"),
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -4874,6 +5371,13 @@ RUNNERS = {
     "znc": _wl_znc,
     "s-nail": _wl_s_nail,
     "w3m": _wl_w3m,
+    # The Phase-25 L7 utility batch.
+    "axel": _wl_axel,
+    "apache2-utils": _wl_apache2_utils,
+    "osslsigncode": _wl_osslsigncode,
+    "u-boot-tools": _wl_u_boot_tools,
+    "sslsplit": _wl_sslsplit,
+    "opendkim": _wl_opendkim,
 }
 
 
@@ -5006,6 +5510,20 @@ def _aux_runtime_lib_dirs(recipe: dict, root: Path) -> list[str]:
     return dirs
 
 
+def _aux_runtime_bin_dirs(recipe: dict, root: Path) -> list[str]:
+    """The extracted auxiliary programs a workload invokes (u-boot-tools' mkimage runs dtc)."""
+    if not recipe.get("aux_sources"):
+        return []
+    aux_root = root.parents[1] / "aux" / "root"
+    dirs: list[str] = []
+    for spec in recipe["aux_sources"]:
+        for entry in spec.get("bin_dirs") or []:
+            candidate = aux_root / entry
+            if candidate.is_dir() and str(candidate) not in dirs:
+                dirs.append(str(candidate))
+    return dirs
+
+
 def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path,
                              authority_prefix: Path, root: Path, source_sha256: str | None,
                              source_root_hash: str | None, limits: dict) -> dict:
@@ -5021,6 +5539,9 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     lib_paths = [str(prefix / "lib")] + [str(root / p) for p in prog.get("lib_paths", [])]
     lib_paths += _aux_runtime_lib_dirs(recipe, root)
     env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(lib_paths))
+    aux_bins = _aux_runtime_bin_dirs(recipe, root)
+    if aux_bins:
+        env["PATH"] = os.pathsep.join([*aux_bins, env.get("PATH", "")])
     evidence = [f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
                 f"artifact:{prog['program']}", "local_only:loopback"]
     build_env = dict(os.environ, PKG_CONFIG_PATH=f"{prefix}/lib/pkgconfig",
