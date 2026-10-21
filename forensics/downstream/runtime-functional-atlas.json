@@ -16,6 +16,7 @@
         "family:curl": "L7-functional",
         "family:cyrus-sasl": "L7-functional",
         "family:dovecot": "L7-functional",
+        "family:fastd": "L6-runtime",
         "family:fetchmail": "L7-functional",
         "family:fido2": "L7-functional",
         "family:fossil": "L7-functional",
@@ -26,6 +27,7 @@
         "family:iperf3": "L7-functional",
         "family:isync": "L7-functional",
         "family:jwt": "L7-functional",
+        "family:kea": "L7-functional",
         "family:keepalived": "L7-functional",
         "family:kmod": "L7-functional",
         "family:ldns": "L7-functional",
@@ -42,12 +44,16 @@
         "family:mini-httpd": "L7-functional",
         "family:monit": "L7-functional",
         "family:mosquitto": "L7-functional",
+        "family:mumble-server": "L7-functional",
         "family:nginx": "L7-functional",
+        "family:nmap": "L7-functional",
         "family:opendkim": "L7-functional",
         "family:openssh": "L7-functional",
         "family:openvpn": "L7-functional",
         "family:osslsigncode": "L7-functional",
+        "family:partclone": "L7-functional",
         "family:proftpd": "L7-functional",
+        "family:prosody": "L7-functional",
         "family:proxytunnel": "L7-functional",
         "family:pure-ftpd": "L7-functional",
         "family:radsecproxy": "L7-functional",
@@ -69,32 +75,99 @@
       "by_subject": {
         "authority": {
           "failed": 0,
-          "functional": 53,
-          "loaded": 53,
-          "not_attempted": 947,
-          "runtime": 53
+          "functional": 58,
+          "loaded": 59,
+          "not_attempted": 941,
+          "runtime": 59
         },
         "candidate": {
           "failed": 0,
-          "functional": 53,
-          "loaded": 53,
-          "not_attempted": 947,
-          "runtime": 53
+          "functional": 58,
+          "loaded": 59,
+          "not_attempted": 941,
+          "runtime": 59
         }
       },
       "candidate_baseline_not_linked": 2,
       "candidate_below_baseline": 0,
       "candidate_failures": {
-        "acquire-failure": 945,
+        "acquire-failure": 939,
         "link-failure": 2
       },
-      "candidate_reaches_baseline": 55,
-      "candidate_reaches_linked_baseline": 53,
+      "candidate_reaches_baseline": 61,
+      "candidate_reaches_linked_baseline": 59,
       "candidate_specific_patch_count": 0,
-      "no_recipe": 945,
+      "no_recipe": 939,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 55
+      "with_recipe": 61
+    },
+    "evidence_reuse": {
+      "candidate_identity_match": true,
+      "families_reused": 60,
+      "mode": "committed-rows",
+      "reused_families": [
+        "apache2-utils",
+        "apr-util",
+        "axel",
+        "curl",
+        "cyrus-sasl",
+        "dovecot",
+        "fastd",
+        "fetchmail",
+        "fido2",
+        "fossil",
+        "haproxy",
+        "hiredis-ssl",
+        "hitch",
+        "icecast",
+        "iperf3",
+        "isync",
+        "jwt",
+        "kea",
+        "keepalived",
+        "kmod",
+        "ldns",
+        "libarchive",
+        "libevent",
+        "libjose",
+        "librdkafka",
+        "libretls",
+        "libssh",
+        "libzip",
+        "lighttpd",
+        "links",
+        "memcached",
+        "mini-httpd",
+        "monit",
+        "mosquitto",
+        "mumble-server",
+        "nginx",
+        "nmap",
+        "opendkim",
+        "openssh",
+        "openvpn",
+        "osslsigncode",
+        "partclone",
+        "proftpd",
+        "proxytunnel",
+        "pure-ftpd",
+        "radsecproxy",
+        "redis",
+        "rsync",
+        "s-nail",
+        "socat",
+        "squid",
+        "sslscan",
+        "sslsplit",
+        "ssmtp",
+        "stunnel",
+        "tinc",
+        "tnftp",
+        "u-boot-tools",
+        "w3m",
+        "znc"
+      ]
     },
     "non_claims": [
       "a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software",
@@ -433,6 +506,42 @@
         "program": ".l7-opendkim-harness",
         "recipe_id": "recipe:opendkim:2.10.3",
         "version": "2.10.3"
+      },
+      {
+        "family": "nmap",
+        "program": "nmap",
+        "recipe_id": "recipe:nmap:7.95",
+        "version": "7.95"
+      },
+      {
+        "family": "fastd",
+        "program": "b/src/fastd",
+        "recipe_id": "recipe:fastd:22",
+        "version": "22"
+      },
+      {
+        "family": "kea",
+        "program": "src/bin/agent/.libs/kea-ctrl-agent",
+        "recipe_id": "recipe:kea:2.6.3",
+        "version": "2.6.3"
+      },
+      {
+        "family": "mumble-server",
+        "program": "b/mumble-server",
+        "recipe_id": "recipe:mumble-server:1.5.735",
+        "version": "1.5.735"
+      },
+      {
+        "family": "prosody",
+        "program": ".l7-prosody-harness",
+        "recipe_id": "recipe:prosody:0.12.4",
+        "version": "0.12.4"
+      },
+      {
+        "family": "partclone",
+        "program": "src/partclone.extfs",
+        "recipe_id": "recipe:partclone:0.3.27",
+        "version": "0.3.27"
       }
     ],
     "resource_limits": {
@@ -42596,7 +42705,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L6-runtime",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "fastd",
@@ -42604,18 +42713,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:fastd"
+          "family:family:fastd",
+          "recipe:recipe:fastd:22",
+          "artifact:b/src/fastd",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:fastd",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L6-runtime",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3614580:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3614580:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3614580:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -42634,14 +42775,15 @@
           ],
           "tag": "runtime-transcript-normalisation/1"
         },
+        "note": "the launcher exits at open_iface_linux with ENODEV; asserted absence: False",
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 223,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": "fastd's data path requires a TUN interface; the court container has no /dev/net/tun device and no CAP_NET_ADMIN (TUNSETIFF is refused), so the two-peer handshake workload cannot run in this venue",
+        "recipe_id": "recipe:fastd:22",
+        "residual_class": "out-of-scope",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -42651,10 +42793,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:fastd",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cd0f0b11ed709bb86cc1d71992714ac7c5c0fbc2fe429eac9c109be1c5ebd586",
+        "source_sha256": "19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951",
+        "source_url": "https://github.com/neocturne/fastd/releases/download/v22/fastd-22.tar.xz",
+        "specimen_id": "specimen:fastd:22",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -42662,13 +42804,28 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "fastd v22",
+          "== workload ==",
+          "exit=0",
+          "== fastd --version ==",
+          "exit=0",
+          "fastd v22"
+        ],
+        "transcript_sha256": "383079bba7a9e13f8f0767b29c218a8887771b4ac1640a79cdaac75496018ded",
+        "variant_id": "variant:fastd:22:pristine",
+        "workload": "fastd: TUN-backed peer handshake unavailable (no /dev/net/tun)",
+        "workload_result": {
+          "functional_ok": false,
+          "local_only": true,
+          "name": "fastd: TUN-backed peer handshake unavailable (no /dev/net/tun)",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L6-runtime",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "fastd",
@@ -42676,18 +42833,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:fastd"
+          "family:family:fastd",
+          "recipe:recipe:fastd:22",
+          "artifact:b/src/fastd",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:fastd",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L6-runtime",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3614590:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3614590:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3614590:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -42706,13 +42895,14 @@
           ],
           "tag": "runtime-transcript-normalisation/1"
         },
+        "note": "the launcher exits at open_iface_linux with ENODEV; asserted absence: False",
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 223,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "fastd's data path requires a TUN interface; the court container has no /dev/net/tun device and no CAP_NET_ADMIN (TUNSETIFF is refused), so the two-peer handshake workload cannot run in this venue",
+        "recipe_id": "recipe:fastd:22",
+        "residual_class": "out-of-scope",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -42723,10 +42913,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:fastd",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cd0f0b11ed709bb86cc1d71992714ac7c5c0fbc2fe429eac9c109be1c5ebd586",
+        "source_sha256": "19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951",
+        "source_url": "https://github.com/neocturne/fastd/releases/download/v22/fastd-22.tar.xz",
+        "specimen_id": "specimen:fastd:22",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -42734,10 +42924,25 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "fastd v22",
+          "== workload ==",
+          "exit=0",
+          "== fastd --version ==",
+          "exit=0",
+          "fastd v22"
+        ],
+        "transcript_sha256": "383079bba7a9e13f8f0767b29c218a8887771b4ac1640a79cdaac75496018ded",
+        "variant_id": "variant:fastd:22:pristine",
+        "workload": "fastd: TUN-backed peer handshake unavailable (no /dev/net/tun)",
+        "workload_result": {
+          "functional_ok": false,
+          "local_only": true,
+          "name": "fastd: TUN-backed peer handshake unavailable (no /dev/net/tun)",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -79898,7 +80103,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "kea",
@@ -79906,18 +80111,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:kea"
+          "family:family:kea",
+          "recipe:recipe:kea:2.6.3",
+          "artifact:src/bin/agent/.libs/kea-ctrl-agent",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:kea",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3707039:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3707039:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "3707039:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3707039:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "3707039:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "3707039:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -79937,13 +80187,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 258,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:kea:2.6.3",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -79953,10 +80203,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:kea",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "c674f5766de5ed935cae8d1d1f1454c69a7e24f082604381861bbc8f3c4d3d78",
+        "source_sha256": "00241a5955ffd3d215a2c098c4527f9d7f4b203188b276f9a36250dd3d9dd612",
+        "source_url": "https://downloads.isc.org/isc/kea/2.6.3/kea-2.6.3.tar.gz",
+        "specimen_id": "specimen:kea:2.6.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -79964,13 +80214,36 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "2.6.3",
+          "== workload ==",
+          "exit=0",
+          "== kea HTTPS list-commands (fixture CA) ==",
+          "exit=0",
+          "HTTP/1.1 200 OK",
+          "Content-Length: 205",
+          "Content-Type: application/json",
+          "Date: Wed, 21 Oct 2026 {clock} GMT",
+          "",
+          "[ { \"arguments\": [ \"build-report\", \"config-get\", \"config-hash-get\", \"config-reload\", \"config-set\", \"config-test\", \"config-write\", \"list-commands\", \"shutdown\", \"status-get\", \"version-get\" ], \"result\": 0 } ]",
+          "== kea HTTPS list-commands (unrelated CA, must fail) ==",
+          "exit=1",
+          "SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:992)"
+        ],
+        "transcript_sha256": "a49aa43fc81753bacd4ff9a6c573d953e33e56143c882ce2407ca318f653edec",
+        "variant_id": "variant:kea:2.6.3:pristine",
+        "workload": "kea: HTTPS control-channel list-commands with the fixture CA; unrelated-CA client rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "kea: HTTPS control-channel list-commands with the fixture CA; unrelated-CA client rejected",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "kea",
@@ -79978,18 +80251,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:kea"
+          "family:family:kea",
+          "recipe:recipe:kea:2.6.3",
+          "artifact:src/bin/agent/.libs/kea-ctrl-agent",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:kea",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3707067:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3707067:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "3707067:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3707067:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "3707067:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "3707067:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -80009,12 +80327,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 258,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:kea:2.6.3",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -80025,10 +80343,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:kea",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "c674f5766de5ed935cae8d1d1f1454c69a7e24f082604381861bbc8f3c4d3d78",
+        "source_sha256": "00241a5955ffd3d215a2c098c4527f9d7f4b203188b276f9a36250dd3d9dd612",
+        "source_url": "https://downloads.isc.org/isc/kea/2.6.3/kea-2.6.3.tar.gz",
+        "specimen_id": "specimen:kea:2.6.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -80036,10 +80354,33 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "2.6.3",
+          "== workload ==",
+          "exit=0",
+          "== kea HTTPS list-commands (fixture CA) ==",
+          "exit=0",
+          "HTTP/1.1 200 OK",
+          "Content-Length: 205",
+          "Content-Type: application/json",
+          "Date: Wed, 21 Oct 2026 {clock} GMT",
+          "",
+          "[ { \"arguments\": [ \"build-report\", \"config-get\", \"config-hash-get\", \"config-reload\", \"config-set\", \"config-test\", \"config-write\", \"list-commands\", \"shutdown\", \"status-get\", \"version-get\" ], \"result\": 0 } ]",
+          "== kea HTTPS list-commands (unrelated CA, must fail) ==",
+          "exit=1",
+          "SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:992)"
+        ],
+        "transcript_sha256": "4ee04910d99673e4398b86ac09fffb6fc484bd947a3965c87b7e44b3c0221138",
+        "variant_id": "variant:kea:2.6.3:pristine",
+        "workload": "kea: HTTPS control-channel list-commands with the fixture CA; unrelated-CA client rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "kea: HTTPS control-channel list-commands with the fixture CA; unrelated-CA client rejected",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -111253,7 +111594,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "mumble-server",
@@ -111261,18 +111602,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:mumble-server"
+          "family:family:mumble-server",
+          "recipe:recipe:mumble-server:1.5.735",
+          "artifact:b/mumble-server",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:mumble-server",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3709260:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "3709260:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3709260:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3709260:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "3709260:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so",
+            "3709260:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so",
+            "3709260:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "3709260:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -111292,13 +111680,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 299,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:mumble-server:1.5.735",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -111308,10 +111696,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:mumble-server",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "7a7912419a79fec83b1f5beacb8942ffa5a268a8d19d69ced13de148db8297b8",
+        "source_sha256": "db8990079f556a877218d471bcf2c24eb5e4520b652f3c20793d0aadedaae6ae",
+        "source_url": "https://github.com/mumble-voip/mumble/releases/download/v1.5.735/mumble-1.5.735.tar.gz",
+        "specimen_id": "specimen:mumble-server:1.5.735",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -111319,13 +111707,32 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "Mumble server version 1.5.735",
+          "Failed to set initial capabilities",
+          "== workload ==",
+          "exit=0",
+          "== murmur TLS session (fixture CA) ==",
+          "exit=0",
+          "tls=TLSv1.3 data='b\\'\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00B\\\\x08\\\\xff\\\\x8b\\\\x04\\\\x12\\\\x071.5.735\\\\x1a\\\\x05Linux\"$Debian GNU/Linux 12 (bookworm) [x64](\\\\x80\\\\x80\\\\xfc\\\\x' framed=Version release=1.5.735",
+          "== murmur TLS session (unrelated CA, must fail) ==",
+          "exit=1",
+          "SSLCertVerificationError"
+        ],
+        "transcript_sha256": "7aab2d352526e0967799ba48537d8d2e248e256d0cff6d71c29dd5a45bc668f4",
+        "variant_id": "variant:mumble-server:1.5.735:pristine",
+        "workload": "mumble-server: TLS handshake + framed Version (release 1.5.735) over a verified session; unrelated CA rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "mumble-server: TLS handshake + framed Version (release 1.5.735) over a verified session; unrelated CA rejected",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "mumble-server",
@@ -111333,18 +111740,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:mumble-server"
+          "family:family:mumble-server",
+          "recipe:recipe:mumble-server:1.5.735",
+          "artifact:b/mumble-server",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:mumble-server",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3709276:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "3709276:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3709276:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3709276:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "3709276:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so",
+            "3709276:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so",
+            "3709276:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so",
+            "3709276:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -111364,12 +111818,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 299,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:mumble-server:1.5.735",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -111380,10 +111834,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:mumble-server",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "7a7912419a79fec83b1f5beacb8942ffa5a268a8d19d69ced13de148db8297b8",
+        "source_sha256": "db8990079f556a877218d471bcf2c24eb5e4520b652f3c20793d0aadedaae6ae",
+        "source_url": "https://github.com/mumble-voip/mumble/releases/download/v1.5.735/mumble-1.5.735.tar.gz",
+        "specimen_id": "specimen:mumble-server:1.5.735",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -111391,10 +111845,29 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "Mumble server version 1.5.735",
+          "Failed to set initial capabilities",
+          "== workload ==",
+          "exit=0",
+          "== murmur TLS session (fixture CA) ==",
+          "exit=0",
+          "tls=TLSv1.3 data='b\\'\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00B\\\\x08\\\\xff\\\\x8b\\\\x04\\\\x12\\\\x071.5.735\\\\x1a\\\\x05Linux\"$Debian GNU/Linux 12 (bookworm) [x64](\\\\x80\\\\x80\\\\xfc\\\\x' framed=Version release=1.5.735",
+          "== murmur TLS session (unrelated CA, must fail) ==",
+          "exit=1",
+          "SSLCertVerificationError"
+        ],
+        "transcript_sha256": "7aab2d352526e0967799ba48537d8d2e248e256d0cff6d71c29dd5a45bc668f4",
+        "variant_id": "variant:mumble-server:1.5.735:pristine",
+        "workload": "mumble-server: TLS handshake + framed Version (release 1.5.735) over a verified session; unrelated CA rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "mumble-server: TLS handshake + framed Version (release 1.5.735) over a verified session; unrelated CA rejected",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -115323,7 +115796,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "nmap",
@@ -115331,18 +115804,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:nmap"
+          "family:family:nmap",
+          "recipe:recipe:nmap:7.95",
+          "artifact:nmap",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:nmap",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3608388:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "3608388:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3608388:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3608388:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "3608388:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "3608388:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -115362,13 +115880,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 31,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:nmap:7.95",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -115378,10 +115896,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:nmap",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cb1e69d90a16e48f82ecdb08c8d8d04f4c59e91368117e450269ecc631616805",
+        "source_sha256": "e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
+        "source_url": "https://nmap.org/dist/nmap-7.95.tar.bz2",
+        "specimen_id": "specimen:nmap:7.95",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -115389,13 +115907,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "|       TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 (dh 2048) - A",
+          "|       TLS_DHE_RSA_WITH_AES_256_CBC_SHA (dh 2048) - A",
+          "|       TLS_DHE_RSA_WITH_AES_256_CBC_SHA256 (dh 2048) - A",
+          "|       TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 (dh 2048) - A",
+          "|       TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256 (dh 2048) - A",
+          "|       TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (secp256r1) - A",
+          "|       TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256 (secp256r1) - A",
+          "|       TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 (secp256r1) - A",
+          "|       TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (secp256r1) - A",
+          "|       TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384 (secp256r1) - A",
+          "|       TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (secp256r1) - A",
+          "|       TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 (secp256r1) - A",
+          "|       TLS_RSA_WITH_AES_128_CBC_SHA (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_128_CBC_SHA256 (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_128_GCM_SHA256 (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_256_CBC_SHA (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_256_CBC_SHA256 (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_256_GCM_SHA384 (rsa 2048) - A",
+          "|     compressors: ",
+          "|       NULL",
+          "|     cipher preference: client",
+          "|   TLSv1.3: ",
+          "|     ciphers: ",
+          "|       TLS_AKE_WITH_AES_128_GCM_SHA256 (secp256r1) - A",
+          "|       TLS_AKE_WITH_AES_256_GCM_SHA384 (secp256r1) - A",
+          "|       TLS_AKE_WITH_CHACHA20_POLY1305_SHA256 (secp256r1) - A",
+          "|     cipher preference: client",
+          "|_  least strength: A",
+          "",
+          "Nmap done: 1 IP address (1 host up) scanned in 1.70 seconds",
+          "== nmap ssl-cert with no listener (negative control) ==",
+          "exit=0",
+          "Starting Nmap 7.95 ( https://nmap.org ) at 2026-10-21 15:27 UTC",
+          "Nmap scan report for localhost ({addr})",
+          "Host is up (0.000028s latency).",
+          "",
+          "PORT      STATE  SERVICE",
+          "{port}/tcp closed unknown",
+          "",
+          "Nmap done: 1 IP address (1 host up) scanned in 0.03 seconds"
+        ],
+        "transcript_sha256": "2a12295a8f510e98b282fe72212986897aa6d80376d9eb41ba60449a3b864992",
+        "variant_id": "variant:nmap:7.95:pristine",
+        "workload": "nmap: NSE ssl-cert + ssl-enum-ciphers against a local TLS server; no-listener negative control",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "nmap: NSE ssl-cert + ssl-enum-ciphers against a local TLS server; no-listener negative control",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "nmap",
@@ -115403,18 +115968,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:nmap"
+          "family:family:nmap",
+          "recipe:recipe:nmap:7.95",
+          "artifact:nmap",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:nmap",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3608406:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "3608406:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3608406:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3608406:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "3608406:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "3608406:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -115434,12 +116044,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 31,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:nmap:7.95",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -115450,10 +116060,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:nmap",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cb1e69d90a16e48f82ecdb08c8d8d04f4c59e91368117e450269ecc631616805",
+        "source_sha256": "e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
+        "source_url": "https://nmap.org/dist/nmap-7.95.tar.bz2",
+        "specimen_id": "specimen:nmap:7.95",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -115461,10 +116071,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "|       TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (secp256r1) - A",
+          "|       TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 (secp256r1) - A",
+          "|       TLS_RSA_WITH_AES_128_CBC_SHA (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_128_CBC_SHA256 (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_128_GCM_SHA256 (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_256_CBC_SHA (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_256_CBC_SHA256 (rsa 2048) - A",
+          "|       TLS_RSA_WITH_AES_256_GCM_SHA384 (rsa 2048) - A",
+          "|     compressors: ",
+          "|       NULL",
+          "|     cipher preference: client",
+          "|   TLSv1.3: ",
+          "|     ciphers: ",
+          "|       TLS_AKE_WITH_AES_128_GCM_SHA256 (secp256r1) - A",
+          "|       TLS_AKE_WITH_AES_256_GCM_SHA384 (secp256r1) - A",
+          "|       TLS_AKE_WITH_CHACHA20_POLY1305_SHA256 (secp256r1) - A",
+          "|     cipher preference: client",
+          "|_  least strength: A",
+          "| ssl-cert: Subject: commonName={addr}",
+          "| Subject Alternative Name: IP Address:{addr}, DNS:{addr}, DNS:localhost",
+          "| Issuer: commonName=runtime test CA",
+          "| Public Key type: rsa",
+          "| Public Key bits: 2048",
+          "| Signature Algorithm: sha256WithRSAEncryption",
+          "| Not valid before: {timestamp}",
+          "| Not valid after:  {timestamp}",
+          "| MD5:   7f5b:e04e:2e12:62c2:989f:317d:c73f:2bc0",
+          "|_SHA-1: 4e06:4c6e:99d7:df0a:8254:68d9:d431:db7b:3922:4fac",
+          "",
+          "Nmap done: 1 IP address (1 host up) scanned in 1.70 seconds",
+          "== nmap ssl-cert with no listener (negative control) ==",
+          "exit=0",
+          "Starting Nmap 7.95 ( https://nmap.org ) at 2026-10-21 15:27 UTC",
+          "Nmap scan report for localhost ({addr})",
+          "Host is up (0.000028s latency).",
+          "",
+          "PORT      STATE  SERVICE",
+          "{port}/tcp closed unknown",
+          "",
+          "Nmap done: 1 IP address (1 host up) scanned in 0.03 seconds"
+        ],
+        "transcript_sha256": "39433f47bf7a83825dfa72aeace78c54b8ce1f946d8044be8cf1adfe96274bfa",
+        "variant_id": "variant:nmap:7.95:pristine",
+        "workload": "nmap: NSE ssl-cert + ssl-enum-ciphers against a local TLS server; no-listener negative control",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "nmap: NSE ssl-cert + ssl-enum-ciphers against a local TLS server; no-listener negative control",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -122451,7 +123108,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "partclone",
@@ -122459,18 +123116,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:partclone"
+          "family:family:partclone",
+          "recipe:recipe:partclone:0.3.27",
+          "artifact:src/partclone.extfs",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:partclone",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3613009:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3613009:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3613009:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -122490,13 +123179,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 94,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:partclone:0.3.27",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -122506,10 +123195,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:partclone",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "b9de14a73dfb454e307d011d6429918ac694c3fa1f3fe10eff1190968a610c80",
+        "source_sha256": "933e81dceb9c05bd2cb6027ef115a4422eb35b2bc05ed9a5fd42f637dfba5c17",
+        "source_url": "https://github.com/Thomas-Tsai/partclone/archive/refs/tags/0.3.27.tar.gz",
+        "specimen_id": "specimen:partclone:0.3.27",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -122517,13 +123206,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "Partclone successfully restored the image ({scratch}/image.pcl) to the device ({scratch}/blocks/part)",
+          "Cloned successfully.",
+          "== partclone restore ==",
+          "exit=0",
+          "Partclone v0.3.27 http://partclone.org",
+          "Starting to restore image ({scratch}/image.pcl) to device ({scratch}/restored.img)",
+          "Calculating bitmap... Please wait...",
+          "done!",
+          "File system:  EXTFS",
+          "Device size:   16.8 MB = 16384 Blocks",
+          "Space in use:   2.4 MB = 2326 Blocks",
+          "Free Space:    14.4 MB = 14058 Blocks",
+          "Block size:   1024 Byte",
+          "",
+          "                                                                                ",
+          "Elapsed: {clock}, Remaining: {clock}, Completed: 100.00%, Rate:  71.45MB/min,",
+          "",
+          "                                                                                ",
+          "Current block:       9346, Total block:      16384, Complete: 100.00%",
+          "Total Time: {clock}, Ave. Rate:  71.45MB/min, 100.00% completed!",
+          "Syncing... OK!",
+          "Partclone successfully restored the image ({scratch}/image.pcl) to the device ({scratch}/restored.img)",
+          "Cloned successfully.",
+          "== debugfs payload read ==",
+          "exit=0",
+          "phase25-partclone-payload",
+          "debugfs 1.47.0 (5-Feb-2023)",
+          "== partclone restore of a corrupted block (must fail) ==",
+          "exit=1",
+          "Partclone v0.3.27 http://partclone.org",
+          "Starting to restore image ({scratch}/corrupt.pcl) to device ({scratch}/corrupt.img)",
+          "Calculating bitmap... Please wait...",
+          "done!",
+          "File system:  EXTFS",
+          "Device size:   16.8 MB = 16384 Blocks",
+          "Space in use:   2.4 MB = 2326 Blocks",
+          "Free Space:    14.4 MB = 14058 Blocks",
+          "Block size:   1024 Byte",
+          "CRC error, block_id=1161...",
+          " Partclone fail, please check /var/log/partclone.log !"
+        ],
+        "transcript_sha256": "5c006933a124fac440e7f044d7885480850b64c4bc39b8a43fb3fda3b0bae9b6",
+        "variant_id": "variant:partclone:0.3.27:pristine",
+        "workload": "partclone.extfs: torrent_info SHA-1 equals the block-file digest, restored payload matches, corrupted block detected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "partclone.extfs: torrent_info SHA-1 equals the block-file digest, restored payload matches, corrupted block detected",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "partclone",
@@ -122531,18 +123267,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:partclone"
+          "family:family:partclone",
+          "recipe:recipe:partclone:0.3.27",
+          "artifact:src/partclone.extfs",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:partclone",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3613028:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3613028:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3613028:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -122562,12 +123330,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 94,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:partclone:0.3.27",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -122578,10 +123346,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:partclone",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "b9de14a73dfb454e307d011d6429918ac694c3fa1f3fe10eff1190968a610c80",
+        "source_sha256": "933e81dceb9c05bd2cb6027ef115a4422eb35b2bc05ed9a5fd42f637dfba5c17",
+        "source_url": "https://github.com/Thomas-Tsai/partclone/archive/refs/tags/0.3.27.tar.gz",
+        "specimen_id": "specimen:partclone:0.3.27",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -122589,10 +123357,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "Partclone successfully restored the image ({scratch}/image.pcl) to the device ({scratch}/blocks/part)",
+          "Cloned successfully.",
+          "== partclone restore ==",
+          "exit=0",
+          "Partclone v0.3.27 http://partclone.org",
+          "Starting to restore image ({scratch}/image.pcl) to device ({scratch}/restored.img)",
+          "Calculating bitmap... Please wait...",
+          "done!",
+          "File system:  EXTFS",
+          "Device size:   16.8 MB = 16384 Blocks",
+          "Space in use:   2.4 MB = 2326 Blocks",
+          "Free Space:    14.4 MB = 14058 Blocks",
+          "Block size:   1024 Byte",
+          "",
+          "                                                                                ",
+          "Elapsed: {clock}, Remaining: {clock}, Completed: 100.00%, Rate:  71.45MB/min,",
+          "",
+          "                                                                                ",
+          "Current block:       9346, Total block:      16384, Complete: 100.00%",
+          "Total Time: {clock}, Ave. Rate:  71.45MB/min, 100.00% completed!",
+          "Syncing... OK!",
+          "Partclone successfully restored the image ({scratch}/image.pcl) to the device ({scratch}/restored.img)",
+          "Cloned successfully.",
+          "== debugfs payload read ==",
+          "exit=0",
+          "phase25-partclone-payload",
+          "debugfs 1.47.0 (5-Feb-2023)",
+          "== partclone restore of a corrupted block (must fail) ==",
+          "exit=1",
+          "Partclone v0.3.27 http://partclone.org",
+          "Starting to restore image ({scratch}/corrupt.pcl) to device ({scratch}/corrupt.img)",
+          "Calculating bitmap... Please wait...",
+          "done!",
+          "File system:  EXTFS",
+          "Device size:   16.8 MB = 16384 Blocks",
+          "Space in use:   2.4 MB = 2326 Blocks",
+          "Free Space:    14.4 MB = 14058 Blocks",
+          "Block size:   1024 Byte",
+          "CRC error, block_id=1161...",
+          " Partclone fail, please check /var/log/partclone.log !"
+        ],
+        "transcript_sha256": "5c006933a124fac440e7f044d7885480850b64c4bc39b8a43fb3fda3b0bae9b6",
+        "variant_id": "variant:partclone:0.3.27:pristine",
+        "workload": "partclone.extfs: torrent_info SHA-1 equals the block-file digest, restored payload matches, corrupted block detected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "partclone.extfs: torrent_info SHA-1 equals the block-file digest, restored payload matches, corrupted block detected",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -127963,7 +128778,7 @@
         }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "prosody",
@@ -127971,18 +128786,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:prosody"
+          "family:family:prosody",
+          "recipe:recipe:prosody:0.12.4",
+          "artifact:.l7-prosody-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:prosody",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3712548:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "3712548:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3712548:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "3712548:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "3712548:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "3712548:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -128002,13 +128862,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 99,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:prosody:0.12.4",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -128018,10 +128878,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:prosody",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "9e7dfadcded7cc8984482cf767e1c2272a03b56d1110f8fc574dc792f4542293",
+        "source_sha256": "47d712273c2f29558c412f6cdaec073260bbc26b7dda243db580330183d65856",
+        "source_url": "https://prosody.im/downloads/source/prosody-0.12.4.tar.gz",
+        "specimen_id": "specimen:prosody:0.12.4",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -128029,13 +128889,48 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "prosody-l7-harness 0.12.4",
+          "== workload ==",
+          "exit=0",
+          "== prosodyctl register ==",
+          "exit=0",
+          "Warning: Couldn't switch to Prosody user/group 'prosody'/'prosody': no-such-group",
+          "",
+          "**************************",
+          "Prosody was unable to find lua-unbound",
+          "This package can be obtained in the following ways:",
+          "",
+          "  Debian/Ubuntu | sudo apt install lua-unbound                                  ",
+          "       luarocks | luarocks install luaunbound                                   ",
+          "         Source | https://www.zash.se/luaunbound.html                           ",
+          "",
+          "Old DNS resolver library will be used",
+          "More help can be found on our website, at https://prosody.im/doc/depends",
+          "**************************",
+          "",
+          "certmanager         error\tError indexing certificate directory {scratch}/certs: cannot open {scratch}/certs: No such file or directory",
+          "== XMPP STARTTLS session ==",
+          "exit=0",
+          "starttls-offered=True proceed=True tls=TLSv1.3 sasl-success=True bind-result=True ping-result=True",
+          "== XMPP session with the unrelated CA ==",
+          "exit=0",
+          "rejected"
+        ],
+        "transcript_sha256": "731341ddb95fa7e08224409b1369367135035cdccf826acce3652ed16583b817",
+        "variant_id": "variant:prosody:0.12.4:pristine",
+        "workload": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA rejected",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "prosody",
@@ -128043,18 +128938,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:prosody"
+          "family:family:prosody",
+          "recipe:recipe:prosody:0.12.4",
+          "artifact:.l7-prosody-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:prosody",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "3712565:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "3712565:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3712565:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "3712565:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "3712565:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "3712565:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -128074,12 +129014,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 99,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:prosody:0.12.4",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -128090,10 +129030,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:prosody",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "9e7dfadcded7cc8984482cf767e1c2272a03b56d1110f8fc574dc792f4542293",
+        "source_sha256": "47d712273c2f29558c412f6cdaec073260bbc26b7dda243db580330183d65856",
+        "source_url": "https://prosody.im/downloads/source/prosody-0.12.4.tar.gz",
+        "specimen_id": "specimen:prosody:0.12.4",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -128101,10 +129041,45 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "prosody-l7-harness 0.12.4",
+          "== workload ==",
+          "exit=0",
+          "== prosodyctl register ==",
+          "exit=0",
+          "Warning: Couldn't switch to Prosody user/group 'prosody'/'prosody': no-such-group",
+          "",
+          "**************************",
+          "Prosody was unable to find lua-unbound",
+          "This package can be obtained in the following ways:",
+          "",
+          "  Debian/Ubuntu | sudo apt install lua-unbound                                  ",
+          "       luarocks | luarocks install luaunbound                                   ",
+          "         Source | https://www.zash.se/luaunbound.html                           ",
+          "",
+          "Old DNS resolver library will be used",
+          "More help can be found on our website, at https://prosody.im/doc/depends",
+          "**************************",
+          "",
+          "certmanager         error\tError indexing certificate directory {scratch}/certs: cannot open {scratch}/certs: No such file or directory",
+          "== XMPP STARTTLS session ==",
+          "exit=0",
+          "starttls-offered=True proceed=True tls=TLSv1.3 sasl-success=True bind-result=True ping-result=True",
+          "== XMPP session with the unrelated CA ==",
+          "exit=0",
+          "rejected"
+        ],
+        "transcript_sha256": "731341ddb95fa7e08224409b1369367135035cdccf826acce3652ed16583b817",
+        "variant_id": "variant:prosody:0.12.4:pristine",
+        "workload": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA rejected",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -153194,6 +154169,20 @@
       },
       {
         "evidence": [
+          "source:https://github.com/neocturne/fastd/releases/download/v22/fastd-22.tar.xz#19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951",
+          "recipe:recipe:fastd:22",
+          "pinned_sha256:19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951"
+        ],
+        "family_id": "family:fastd",
+        "licence": "unknown",
+        "pristine_source_root_hash": "cd0f0b11ed709bb86cc1d71992714ac7c5c0fbc2fe429eac9c109be1c5ebd586",
+        "pristine_source_sha256": "19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951",
+        "specimen_id": "specimen:fastd:22",
+        "upstream_ref": "https://github.com/neocturne/fastd/releases/download/v22/fastd-22.tar.xz",
+        "version": "22"
+      },
+      {
+        "evidence": [
           "source:https://downloads.sourceforge.net/project/fetchmail/branch_6.5/fetchmail-6.5.0.tar.xz#42611aea4861a5311e5116843f01c203dceadf440bf2eb1b4a43a445f2977668",
           "recipe:recipe:fetchmail:6.5.0",
           "pinned_sha256:42611aea4861a5311e5116843f01c203dceadf440bf2eb1b4a43a445f2977668"
@@ -153331,6 +154320,20 @@
         "specimen_id": "specimen:jwt:2.1.3",
         "upstream_ref": "https://github.com/benmcollins/libjwt/archive/refs/tags/v2.1.3.tar.gz",
         "version": "2.1.3"
+      },
+      {
+        "evidence": [
+          "source:https://downloads.isc.org/isc/kea/2.6.3/kea-2.6.3.tar.gz#00241a5955ffd3d215a2c098c4527f9d7f4b203188b276f9a36250dd3d9dd612",
+          "recipe:recipe:kea:2.6.3",
+          "pinned_sha256:00241a5955ffd3d215a2c098c4527f9d7f4b203188b276f9a36250dd3d9dd612"
+        ],
+        "family_id": "family:kea",
+        "licence": "unknown",
+        "pristine_source_root_hash": "c674f5766de5ed935cae8d1d1f1454c69a7e24f082604381861bbc8f3c4d3d78",
+        "pristine_source_sha256": "00241a5955ffd3d215a2c098c4527f9d7f4b203188b276f9a36250dd3d9dd612",
+        "specimen_id": "specimen:kea:2.6.3",
+        "upstream_ref": "https://downloads.isc.org/isc/kea/2.6.3/kea-2.6.3.tar.gz",
+        "version": "2.6.3"
       },
       {
         "evidence": [
@@ -153530,6 +154533,20 @@
       },
       {
         "evidence": [
+          "source:https://github.com/mumble-voip/mumble/releases/download/v1.5.735/mumble-1.5.735.tar.gz#db8990079f556a877218d471bcf2c24eb5e4520b652f3c20793d0aadedaae6ae",
+          "recipe:recipe:mumble-server:1.5.735",
+          "pinned_sha256:db8990079f556a877218d471bcf2c24eb5e4520b652f3c20793d0aadedaae6ae"
+        ],
+        "family_id": "family:mumble-server",
+        "licence": "unknown",
+        "pristine_source_root_hash": "7a7912419a79fec83b1f5beacb8942ffa5a268a8d19d69ced13de148db8297b8",
+        "pristine_source_sha256": "db8990079f556a877218d471bcf2c24eb5e4520b652f3c20793d0aadedaae6ae",
+        "specimen_id": "specimen:mumble-server:1.5.735",
+        "upstream_ref": "https://github.com/mumble-voip/mumble/releases/download/v1.5.735/mumble-1.5.735.tar.gz",
+        "version": "1.5.735"
+      },
+      {
+        "evidence": [
           "source:https://nginx.org/download/nginx-1.26.3.tar.gz#69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa",
           "recipe:recipe:nginx:1.26.3",
           "pinned_sha256:69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa"
@@ -153541,6 +154558,20 @@
         "specimen_id": "specimen:nginx:1.26.3",
         "upstream_ref": "https://nginx.org/download/nginx-1.26.3.tar.gz",
         "version": "1.26.3"
+      },
+      {
+        "evidence": [
+          "source:https://nmap.org/dist/nmap-7.95.tar.bz2#e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
+          "recipe:recipe:nmap:7.95",
+          "pinned_sha256:e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778"
+        ],
+        "family_id": "family:nmap",
+        "licence": "unknown",
+        "pristine_source_root_hash": "cb1e69d90a16e48f82ecdb08c8d8d04f4c59e91368117e450269ecc631616805",
+        "pristine_source_sha256": "e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
+        "specimen_id": "specimen:nmap:7.95",
+        "upstream_ref": "https://nmap.org/dist/nmap-7.95.tar.bz2",
+        "version": "7.95"
       },
       {
         "evidence": [
@@ -153600,6 +154631,20 @@
       },
       {
         "evidence": [
+          "source:https://github.com/Thomas-Tsai/partclone/archive/refs/tags/0.3.27.tar.gz#933e81dceb9c05bd2cb6027ef115a4422eb35b2bc05ed9a5fd42f637dfba5c17",
+          "recipe:recipe:partclone:0.3.27",
+          "pinned_sha256:933e81dceb9c05bd2cb6027ef115a4422eb35b2bc05ed9a5fd42f637dfba5c17"
+        ],
+        "family_id": "family:partclone",
+        "licence": "unknown",
+        "pristine_source_root_hash": "b9de14a73dfb454e307d011d6429918ac694c3fa1f3fe10eff1190968a610c80",
+        "pristine_source_sha256": "933e81dceb9c05bd2cb6027ef115a4422eb35b2bc05ed9a5fd42f637dfba5c17",
+        "specimen_id": "specimen:partclone:0.3.27",
+        "upstream_ref": "https://github.com/Thomas-Tsai/partclone/archive/refs/tags/0.3.27.tar.gz",
+        "version": "0.3.27"
+      },
+      {
+        "evidence": [
           "source:https://github.com/proftpd/proftpd/archive/refs/tags/v1.3.8b.tar.gz#183ab7c6107de271a2959ff268f55c9b6c76b2cf0029e6584fccc019686601e0",
           "recipe:recipe:proftpd:1.3.8b",
           "pinned_sha256:183ab7c6107de271a2959ff268f55c9b6c76b2cf0029e6584fccc019686601e0"
@@ -153611,6 +154656,20 @@
         "specimen_id": "specimen:proftpd:1.3.8b",
         "upstream_ref": "https://github.com/proftpd/proftpd/archive/refs/tags/v1.3.8b.tar.gz",
         "version": "1.3.8b"
+      },
+      {
+        "evidence": [
+          "source:https://prosody.im/downloads/source/prosody-0.12.4.tar.gz#47d712273c2f29558c412f6cdaec073260bbc26b7dda243db580330183d65856",
+          "recipe:recipe:prosody:0.12.4",
+          "pinned_sha256:47d712273c2f29558c412f6cdaec073260bbc26b7dda243db580330183d65856"
+        ],
+        "family_id": "family:prosody",
+        "licence": "unknown",
+        "pristine_source_root_hash": "9e7dfadcded7cc8984482cf767e1c2272a03b56d1110f8fc574dc792f4542293",
+        "pristine_source_sha256": "47d712273c2f29558c412f6cdaec073260bbc26b7dda243db580330183d65856",
+        "specimen_id": "specimen:prosody:0.12.4",
+        "upstream_ref": "https://prosody.im/downloads/source/prosody-0.12.4.tar.gz",
+        "version": "0.12.4"
       },
       {
         "evidence": [
@@ -153926,6 +154985,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "meson-pristine-shared",
+        "evidence": [
+          "recipe:recipe:fastd:22",
+          "build_system:meson"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:fastd:22",
+        "variant_id": "variant:fastd:22:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
           "recipe:recipe:fetchmail:6.5.0",
@@ -154043,6 +155114,18 @@
         "platform": "linux",
         "specimen_id": "specimen:jwt:2.1.3",
         "variant_id": "variant:jwt:2.1.3:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:kea:2.6.3",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:kea:2.6.3",
+        "variant_id": "variant:kea:2.6.3:pristine"
       },
       {
         "arch": "x86_64",
@@ -154214,6 +155297,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:mumble-server:1.5.735",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:mumble-server:1.5.735",
+        "variant_id": "variant:mumble-server:1.5.735:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
           "recipe:recipe:nginx:1.26.3",
@@ -154223,6 +155318,18 @@
         "platform": "linux",
         "specimen_id": "specimen:nginx:1.26.3",
         "variant_id": "variant:nginx:1.26.3:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:nmap:7.95",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:nmap:7.95",
+        "variant_id": "variant:nmap:7.95:pristine"
       },
       {
         "arch": "x86_64",
@@ -154276,6 +155383,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:partclone:0.3.27",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:partclone:0.3.27",
+        "variant_id": "variant:partclone:0.3.27:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:proftpd:1.3.8b",
           "build_system:configure"
         ],
@@ -154283,6 +155402,18 @@
         "platform": "linux",
         "specimen_id": "specimen:proftpd:1.3.8b",
         "variant_id": "variant:proftpd:1.3.8b:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:prosody:0.12.4",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:prosody:0.12.4",
+        "variant_id": "variant:prosody:0.12.4:pristine"
       },
       {
         "arch": "x86_64",
@@ -154490,7 +155621,7 @@
       }
     ]
   },
-  "body_hash": "d0423b959f8b1abb0a10fd87ce3ac3f60f398455834b23bfdd58ca8ee82241f9",
+  "body_hash": "91ab4fb6f85f33707e1966ffb92834a4b96d4acd4efe0eafd340a4038bc782a7",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
@@ -154506,12 +155637,12 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "d686c21fd08ddfbfd9a5165dc8585d9bb1f0c60622f646111ab8ea30edf88756"
+      "sha256": "d905916a4aab9a6e1f205a024f6bc25de0dab74e9b80f8698d8d46f26746b327"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "660d2f8ef2e4ddb20014b4c9d9fc8a1f8f2d9cf74d03b93883647cc690ac2492"
+      "sha256": "aacbf252b50335ef9aae964f7a60259d820feac0f62262009bc07d82c9b158b0"
     },
     {
       "name": "downstream-census",
