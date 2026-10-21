@@ -541,6 +541,94 @@ _ICECAST_AUX: tuple[dict, ...] = (
              include_dirs=("usr/include",)),
 )
 
+# radsecproxy 1.9.1 and w3m both need a non-OpenSSL library the venue ships only as a runtime
+# soname. Each is acquired through the pinned `aux_sources` seam above; nothing in either package
+# is OpenSSL, so the subject prefix stays the only OpenSSL on the link line.
+_NETTLE_AUX: tuple[dict, ...] = (
+    _aux_deb("n/nettle", "libnettle8_3.8.1-2_amd64.deb",
+             "45922e6e289ffd92f0f92d2bb9159e84236ff202d552a461bf10e5335b3f0261",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("n/nettle", "nettle-dev_3.8.1-2_amd64.deb",
+             "aa8e4331a974f00db23a14389c67dfe66bc359b09b6c2dbfe555230942feb6be",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_W3M_AUX: tuple[dict, ...] = (
+    _aux_deb("libg/libgc", "libgc-dev_8.2.2-3_amd64.deb",
+             "a7b8a113d5a0152959af593d681282ef4a3177fae826096f530a1d3cf00cdaa9",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# The Phase-25 L7 client/proxy batch: a RadSec proxy, an IRC bouncer, a mail client and a text
+# browser. Each is a pristine released archive pinned by digest and built against the subject
+# prefix; the two that need a non-OpenSSL runtime library acquire it through `aux_sources`.
+_L7_CLIENT_SPECS: tuple[dict, ...] = (
+    {
+        "family": "radsecproxy", "version": "1.10.1",
+        "url": ("https://github.com/radsecproxy/radsecproxy/releases/download/1.10.1/"
+                "radsecproxy-1.10.1.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "a8fd5ca1df5e00ce34c9170a085d311b1da155a8e006f0cce46f6e95caa6af7b",
+        "configure": ["--with-openssl={prefix}"], "make": [MAKE_JOBS],
+        "artifact": "radsecproxy", "launch": ["-v"],
+        "aux_sources": list(_NETTLE_AUX),
+        "note": ("radsecproxy 1.10.1 with its TLS (RadSec) transport linked against the subject "
+                 "libssl; nettle is the pinned bookworm package above (the F-Ticks MAC hash), "
+                 "not an OpenSSL dependency"),
+    },
+    {
+        "family": "znc", "version": "1.10.3",
+        "url": "https://znc.in/releases/znc-1.10.3.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "68f3f6641b480c041010c5596e1234043e05c9137eda06233845017603095f5b",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DWANT_OPENSSL=ON",
+                      "-DWANT_PYTHON=OFF", "-DWANT_PERL=OFF", "-DWANT_ICU=OFF",
+                      "-DWANT_CYRUS=OFF", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/src/znc", "launch": ["--version"],
+        "note": ("ZNC 1.10.3's released tarball (which bundles the submodules its CMake build "
+                 "requires) built with its SSL listener against the subject libssl"),
+    },
+    {
+        "family": "s-nail", "version": "14.9.25",
+        "url": "https://ftp.sdaoden.eu/s-nail-14.9.25.tar.xz",
+        "archive": "tar.xz", "build_system": "make",
+        "sha256": "20ff055be9829b69d46ebc400dfe516a40d287d7ce810c74355d6bdc1a28d8a9",
+        "configure": None,
+        # s-nail has no configure: `make all` runs its own mk/make-config.sh probe, and
+        # `CONFIG=MAXIMAL` selects the documented maximal feature set (which includes TLS).
+        "make": [MAKE_JOBS, "all", "CONFIG=MAXIMAL",
+                 "EXTRA_CFLAGS=-I{prefix}/include",
+                 "EXTRA_LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": ".obj/s-nail", "launch": ["-V"],
+        "note": ("s-nail 14.9.25 built by its own make with CONFIG=MAXIMAL; the TLS probe "
+                 "compiles and links the subject libssl through EXTRA_CFLAGS/EXTRA_LDFLAGS"),
+    },
+    {
+        "family": "w3m", "version": "0.5.3+git20230121",
+        "url": ("http://deb.debian.org/debian/pool/main/w/w3m/"
+                "w3m_0.5.3+git20230121.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "974d1095a47f1976150a792fe9c5a44cc821c02b6bdd714a37a098386250e03a",
+        "configure": ["--with-ssl={prefix}", "--disable-nls", "--enable-image=no"],
+        "make": [MAKE_JOBS], "artifact": "w3m", "launch": ["-version"],
+        "aux_sources": list(_W3M_AUX),
+        "env_extra": {"SSL_CFLAGS": "-I{prefix}/include",
+                      "SSL_LIBS": "-L{prefix}/lib -lssl -lcrypto"},
+        "note": ("w3m's Debian-maintained pristine snapshot of 0.5.3 (which carries the glibc "
+                 "`struct file_handle` fix the 2016 release predates) against the subject libssl; "
+                 "libgc and ncurses headers come from the pinned packages above"),
+    },
+)
+
 _L7_SERVER_SPECS: tuple[dict, ...] = (
     {
         "family": "memcached", "version": "1.6.32",
@@ -675,6 +763,13 @@ def _build_catalogue() -> tuple[dict, ...]:
     # The Phase-25 L7 server batch: memcached, icecast, proftpd, mini-httpd and hitch. Each is a
     # pristine released archive built against the subject prefix, with any non-OpenSSL dependency
     # acquired through the pinned `aux_sources` seam.
+    # The Phase-25 L7 client/proxy batch: radsecproxy, znc, s-nail and w3m. Pristine released
+    # archives built against the subject prefix, with any non-OpenSSL dependency acquired through
+    # the pinned `aux_sources` seam.
+    for spec in _L7_CLIENT_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     for spec in _L7_SERVER_SPECS:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
