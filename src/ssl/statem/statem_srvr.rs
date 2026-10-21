@@ -4775,15 +4775,19 @@ mod tls12_group_tests {
     };
     use crate::rsa::ctrl::EVP_PKEY_CTX_set_rsa_padding;
     use crate::runtime::bio::Bio;
-    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_ctrl_pending, BIO_new, BIO_read, BIO_write};
+    use crate::runtime::bio::{
+        bss_mem::BIO_s_mem, BIO_ctrl_pending, BIO_free, BIO_new, BIO_new_bio_pair, BIO_read,
+        BIO_write,
+    };
     use crate::runtime::err::{ERR_clear_error, ERR_get_error, ERR_peek_error};
     use crate::runtime::obj as o;
     use crate::ssl::methods::TLS_method;
     use crate::ssl::ssl_ciph::{ssl3_get_cipher_by_id, SSL_CIPHER_get_name};
     use crate::ssl::ssl_lib::{
         SSL_CTX_callback_ctrl, SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_cipher_list,
-        SSL_CTX_set_verify, SSL_ctrl, SSL_do_handshake, SSL_free, SSL_get_current_cipher, SSL_new,
-        SSL_set_accept_state, SSL_set_bio, SSL_set_connect_state, SSL_set_options, Ssl, SslCtx,
+        SSL_CTX_set_verify, SSL_ctrl, SSL_do_handshake, SSL_free, SSL_get_current_cipher,
+        SSL_get_error, SSL_new, SSL_peek, SSL_pending, SSL_read, SSL_set_accept_state, SSL_set_bio,
+        SSL_set_connect_state, SSL_set_options, SSL_write, Ssl, SslCtx,
     };
     use crate::ssl::ssl_rsa::{SSL_CTX_use_PrivateKey, SSL_CTX_use_certificate};
     use crate::ssl::ssl_sess::{SSL_SESSION_get_compress_id, SSL_get_session};
@@ -5963,6 +5967,146 @@ mod tls12_group_tests {
                 &STATUS_CB_RESP
             );
             free_pair(p);
+        }
+    }
+
+    // --- `SSL_peek` ------------------------------------------------------------------------
+
+    /// `SSL_ERROR_WANT_READ` (`ssl.h`), the class `SSL_get_error` answers for a retryable read.
+    const SSL_ERROR_WANT_READ: c_int = 2;
+
+    /// Complete a handshake, send `payload` from the client and assert that a peek returns it
+    /// without consuming it, that repeated peeks are identical, that a zero-length peek answers 0
+    /// and that the following read returns exactly the peeked bytes.
+    fn assert_peek_matches_read(cipher: &CStr, version: c_int) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(cipher, version, None, None);
+            let (client_ok, server_ok) = drive(&p);
+            assert!(
+                client_ok && server_ok,
+                "the {cipher:?} handshake must complete (client={client_ok}, server={server_ok})"
+            );
+
+            let payload = b"peek-returns-this";
+            let w = SSL_write(p.c, payload.as_ptr().cast(), payload.len() as c_int);
+            assert_eq!(w, payload.len() as c_int, "the client write must complete");
+            drain(p.c_w, p.s_r);
+
+            let mut buf = [0u8; 64];
+            // A peek shorter than the record returns that prefix and consumes nothing.
+            let n = SSL_peek(p.s, buf.as_mut_ptr().cast(), 4);
+            assert_eq!(n, 4, "a short peek returns the requested prefix");
+            assert_eq!(&buf[..4], &payload[..4]);
+
+            // A second, larger peek starts at the record's first byte again.
+            let n = SSL_peek(p.s, buf.as_mut_ptr().cast(), buf.len() as c_int);
+            assert_eq!(n, payload.len() as c_int, "peek returns the whole record");
+            assert_eq!(&buf[..payload.len()], payload);
+            assert_eq!(
+                SSL_pending(p.s),
+                payload.len() as c_int,
+                "a peek leaves the plaintext pending"
+            );
+
+            // A zero-length peek answers 0 and still consumes nothing.
+            assert_eq!(
+                SSL_peek(p.s, buf.as_mut_ptr().cast(), 0),
+                0,
+                "a zero-length peek answers 0"
+            );
+
+            // The following read returns exactly the bytes the peek reported.
+            let r = SSL_read(p.s, buf.as_mut_ptr().cast(), buf.len() as c_int);
+            assert_eq!(
+                r,
+                payload.len() as c_int,
+                "the read after a peek sees the data"
+            );
+            assert_eq!(&buf[..payload.len()], payload);
+            assert_eq!(SSL_pending(p.s), 0, "the read consumes the record");
+
+            free_pair(p);
+        }
+    }
+
+    #[test]
+    fn peek_matches_read_tls12() {
+        assert_peek_matches_read(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION);
+    }
+
+    #[test]
+    fn peek_matches_read_tls13() {
+        assert_peek_matches_read(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION);
+    }
+
+    /// A peek before the handshake finishes must drive the handshake and report the blocked
+    /// transport as `WANT_READ`, not `SYSCALL` (`ssl3_read_bytes`, `rec_layer_s3.c:673-680`).
+    #[test]
+    fn peek_unfinished_handshake_reports_want_read() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released by this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let ssl = SSL_new(ctx);
+            assert!(!ssl.is_null());
+            SSL_set_connect_state(ssl);
+
+            let mut b1: *mut Bio = ptr::null_mut();
+            let mut b2: *mut Bio = ptr::null_mut();
+            assert_eq!(BIO_new_bio_pair(&mut b1, 0, &mut b2, 0), 1);
+            assert!(!b1.is_null() && !b2.is_null());
+            SSL_set_bio(ssl, b1, b1);
+
+            let mut buf = [0u8; 16];
+            let ret = SSL_peek(ssl, buf.as_mut_ptr().cast(), buf.len() as c_int);
+            assert!(ret <= 0, "an unfinished handshake must not yield data");
+            assert_eq!(
+                SSL_get_error(ssl, ret),
+                SSL_ERROR_WANT_READ,
+                "SSL_peek must drive the handshake exactly as SSL_read does"
+            );
+
+            SSL_free(ssl);
+            BIO_free(b2);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// A peek on an empty, non-blocking transport after the handshake reports `WANT_READ`.
+    #[test]
+    fn peek_with_no_data_reports_want_read() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION, None, None);
+            let (client_ok, server_ok) = drive(&p);
+            assert!(client_ok && server_ok, "the TLS1.3 handshake must complete");
+
+            // Replace the server's drained memory BIO with an empty non-blocking pair. The old
+            // BIOs are released by `SSL_set_bio`; `free_pair` only releases the connections and
+            // contexts, so the stored pointers are not touched again.
+            let mut b1: *mut Bio = ptr::null_mut();
+            let mut b2: *mut Bio = ptr::null_mut();
+            assert_eq!(BIO_new_bio_pair(&mut b1, 0, &mut b2, 0), 1);
+            assert!(!b1.is_null() && !b2.is_null());
+            SSL_set_bio(p.s, b1, b1);
+
+            let mut buf = [0u8; 16];
+            let ret = SSL_peek(p.s, buf.as_mut_ptr().cast(), buf.len() as c_int);
+            assert!(ret <= 0, "an empty transport must not yield data");
+            assert_eq!(
+                SSL_get_error(p.s, ret),
+                SSL_ERROR_WANT_READ,
+                "an empty non-blocking transport must report WANT_READ"
+            );
+
+            free_pair(p);
+            BIO_free(b2);
         }
     }
 }
