@@ -481,6 +481,37 @@ PROGRAMS: dict[str, dict] = {
                  "backend stub and its payload returned; a client trusting only the unrelated CA "
                  "is rejected"),
     },
+    # The Phase-25 L7 client/proxy batch: a RadSec proxy, an IRC bouncer, a STARTTLS mail client and
+    # an HTTPS text browser. Each workload is a real local protocol exchange with a concrete
+    # observable and a negative control.
+    "radsecproxy": {
+        "program": "radsecproxy", "launch": ["-v"],
+        "version_re": r"radsecproxy revision 1\.[19]",
+        "note": ("radsecproxy's RadSec listener: a TLS client presents a fixture-CA certificate, "
+                 "the Access-Request is relayed to a local UDP RADIUS backend and its "
+                 "Access-Accept with the fixture Reply-Message returns over TLS; a client "
+                 "trusting only the unrelated CA is rejected"),
+    },
+    "znc": {
+        "program": "b/src/znc", "launch": ["--version"],
+        "version_re": r"ZNC 1\.10",
+        "note": ("ZNC's IRC-over-TLS listener: a verified client registers (001) and a PING is "
+                 "answered with PONG; a plaintext client on the TLS port never registers"),
+    },
+    "s-nail": {
+        "program": ".obj/s-nail", "launch": ["-V"],
+        "version_re": r"s-nail v14\.9",
+        "note": ("s-nail's SMTP submit path over STARTTLS to a local stub: the message is accepted "
+                 "(250) and the stub records the exact body; a run trusting only the unrelated CA "
+                 "fails certificate verification and is never accepted"),
+    },
+    "w3m": {
+        "program": "w3m", "launch": ["-version"],
+        "version_re": r"w3m version w3m/0\.5",
+        "note": ("w3m's HTTPS consumer path: `-dump` of a local page with the fixture CA renders "
+                 "the page body; the same request with the unrelated CA fails certificate "
+                 "verification"),
+    },
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -614,12 +645,45 @@ def _run_captured(argv: list[str], *, cwd: Path | None = None, env: dict | None 
     }
 
 
-def _spawn(argv: list[str], cwd: Path, env: dict, out_path: Path, err_path: Path):
+def _spawn(argv: list[str], cwd: Path, env: dict, out_path: Path, err_path: Path,
+           stdin_path: Path | None = None):
     outf = open(out_path, "w", encoding="utf-8")
     errf = open(err_path, "w", encoding="utf-8")
-    proc = subprocess.Popen([str(a) for a in argv], cwd=str(cwd), env=env, stdout=outf,
-                            stderr=errf, text=True)
+    inf = open(stdin_path, encoding="utf-8") if stdin_path else subprocess.DEVNULL
+    try:
+        proc = subprocess.Popen([str(a) for a in argv], cwd=str(cwd), env=env, stdout=outf,
+                                stderr=errf, stdin=inf, text=True)
+    finally:
+        if stdin_path:
+            inf.close()
     return proc, outf, errf
+
+
+def _run_captured_bytes(argv: list[str], *, cwd: Path | None = None, env: dict | None = None,
+                        timeout: int = STEP_TIMEOUT, stdin_bytes: bytes = b"") -> dict:
+    """`_run_captured` for a protocol whose request is binary (a RADIUS packet over s_client)."""
+    start = time.monotonic()
+    try:
+        proc = subprocess.run([str(a) for a in argv], cwd=str(cwd) if cwd else None, env=env,
+                              input=stdin_bytes, capture_output=True, timeout=timeout,
+                              check=False)
+        code, out, err = proc.returncode, proc.stdout, proc.stderr
+    except subprocess.TimeoutExpired as exc:
+        code = -1
+        out = exc.stdout or b""
+        err = (exc.stderr or b"") + f"\nTIMEOUT after {timeout}s".encode()
+    except FileNotFoundError as exc:
+        code, out, err = 127, b"", str(exc).encode()
+    return {
+        "argv": [os.path.basename(str(argv[0]))] + [str(a) for a in argv[1:]],
+        "exit_code": code,
+        "ok": code == 0,
+        # latin-1 is byte-transparent for the transcript; the RADIUS bytes are parsed from `raw`.
+        "stdout": out.decode("latin-1"),
+        "stderr": err.decode("latin-1"),
+        "raw": out,
+        "elapsed_seconds": round(time.monotonic() - start, 3),
+    }
 
 
 def _stop(proc) -> None:
@@ -4247,6 +4311,519 @@ group = "nogroup"
             "local_only": True}
 
 
+def _tls_context(pki: dict, *, client: bool = False, ca: Path | None = None) -> ssl.SSLContext:
+    """A client TLS context that verifies the peer against the fixture CA (or the control CA)."""
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    ctx.verify_mode = ssl.CERT_REQUIRED
+    ctx.load_verify_locations(cafile=str(ca or pki["ca_crt"]))
+    if client:
+        ctx.load_cert_chain(certfile=str(pki["client_crt"]), keyfile=str(pki["client_key"]))
+    return ctx
+
+
+def _radius_packet(code: int, ident: int, attributes: bytes = b"") -> bytes:
+    return struct.pack("!BBH", code, ident, 20 + len(attributes)) + b"\x00" * 16 + attributes
+
+
+def _radius_attribute(kind: int, value: bytes) -> bytes:
+    return bytes((kind, len(value) + 2)) + value
+
+
+def _radius_reply_message(reply: bytes) -> bytes:
+    """The Reply-Message (type 18) value of a RADIUS reply, or b'' if it carries none."""
+    if len(reply) < 20:
+        return b""
+    pos = 20
+    while pos + 2 <= len(reply):
+        kind, length = reply[pos], reply[pos + 1]
+        if length < 2 or pos + length > len(reply):
+            return b""
+        if kind == 18:
+            return reply[pos + 2:pos + length]
+        pos += length
+    return b""
+
+
+def _udp_radius_backend(port: int, reply_body: bytes, state: dict,
+                        stop: threading.Event) -> threading.Thread:
+    """A loopback UDP RADIUS server: one Access-Request in, one Access-Accept out."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("127.0.0.1", port))
+    sock.settimeout(0.5)
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                data, peer = sock.recvfrom(4096)
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            state["request"] = data
+            attributes = _radius_attribute(18, reply_body)
+            ident = data[1] if len(data) > 1 else 0
+            request_authenticator = data[4:20] if len(data) >= 20 else b"\x00" * 16
+            header = struct.pack("!BBH", 2, ident, 20 + len(attributes))
+            # RFC 2865 Response Authenticator: MD5(Code+ID+Length+RequestAuth+Attributes+Secret).
+            authenticator = hashlib.md5(header + request_authenticator + attributes
+                                        + b"phase25secret").digest()
+            try:
+                sock.sendto(header + authenticator + attributes, peer)
+            except OSError:
+                return
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["socket"] = sock
+    return thread
+
+
+def _wl_radsecproxy(ctx: dict) -> dict:
+    """radsecproxy's RadSec listener relaying one Access-Request to a local UDP backend.
+
+    radsecproxy always verifies the peer certificate in both directions, so the workload's client
+    presents a certificate from the fixture CA and the server's own certificate is issued by it.
+    The negative control is a client that trusts only the unrelated CA: the handshake must fail.
+    """
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    backend_port = _free_port()
+    body = b"phase25-l7-radsecproxy-accept"
+    state: dict = {}
+    stop = threading.Event()
+    thread = _udp_radius_backend(backend_port, body, state, stop)
+    conf = d / "radsecproxy.conf"
+    conf.write_text(f"""LogLevel 5
+ListenTLS 127.0.0.1:{port}
+tls default {{
+    CACertificateFile {pki['ca_crt']}
+    CertificateFile {pki['srv_crt']}
+    CertificateKeyFile {pki['srv_key']}
+}}
+client 127.0.0.1 {{
+    type tls
+}}
+server 127.0.0.1 {{
+    type udp
+    port {backend_port}
+    secret phase25secret
+}}
+realm * {{
+    server 127.0.0.1
+}}
+""", encoding="utf-8")
+    proc, of, ef = _spawn([str(ctx["program"]), "-f", "-d", "5", "-c", str(conf)], d,
+                          ctx["env"], d / "radsecproxy.out", d / "radsecproxy.err")
+    good: dict = {"exit_code": -1, "stdout": "", "stderr": ""}
+    neg: dict = {"exit_code": -1, "stdout": "", "stderr": ""}
+    reply = b""
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("radsecproxy", {"exit_code": 0,
+                                              "stdout": _read(d / "radsecproxy.err")})],
+                            "radsecproxy did not open its RadSec port", "runtime-failure", d)
+        request = _radius_packet(1, 7, _radius_attribute(1, b"phase25"))
+        cert_argv = ["s_client", "-connect", f"127.0.0.1:{port}", "-cert",
+                     str(pki["client_crt"]), "-key", str(pki["client_key"]),
+                     "-servername", "127.0.0.1", "-quiet", "-ign_eof"]
+        good = _run_captured_bytes([str(_auth_ossl(ap)), *cert_argv, "-CAfile",
+                                    str(pki["ca_crt"])],
+                                   env=_auth_env(ap), timeout=15, stdin_bytes=request)
+        # The socket is held open by -ign_eof, so the client is stopped by the timeout; the
+        # bytes it read before that are the evidence, and the reply must parse as one.
+        reply = good.get("raw") or b""
+        if reply:
+            good["exit_code"] = 0
+        neg = _run_captured_bytes([str(_auth_ossl(ap)), *cert_argv, "-CAfile",
+                                   str(pki["other_crt"]), "-verify_return_error"],
+                                  env=_auth_env(ap), timeout=15, stdin_bytes=request)
+        neg["raw"] = b""
+    finally:
+        _stop(proc)
+        stop.set()
+        state.get("socket", socket.socket()).close()
+        thread.join(timeout=2)
+        of.close()
+        ef.close()
+    accepted = (len(reply) >= 20 and reply[0] == 2
+                and body in _radius_reply_message(reply))
+    relayed = bool(state.get("request"))
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = accepted and relayed and neg_rejected
+    return {"runtime_ok": relayed, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else
+            ("functional-failure" if relayed else "runtime-failure"),
+            "residual": "none" if functional_ok else
+            ("functional-divergence" if relayed else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the RadSec client did not receive the Access-Accept with the fixture Reply-Message"
+             if not accepted else
+             ("the Access-Request was not relayed to the UDP backend" if not relayed else
+              "the unrelated CA was not rejected, so the peer certificate does not verify")),
+            "transcript": _transcript(
+                ("RadSec client (fixture CA) Access-Accept", good),
+                ("RadSec client (unrelated CA, must fail)", neg),
+                ("radsecproxy", {"exit_code": 0,
+                                  "stdout": _read(d / "radsecproxy.err")})),
+            "workload": ("radsecproxy: RadSec Access-Request relayed to a local UDP backend, "
+                         "Access-Accept with the fixture Reply-Message returned over TLS + "
+                         "unrelated-CA reject"),
+            "local_only": True}
+
+
+def _znc_readline(tls, buf: dict) -> str:
+    while b"\r\n" not in buf["data"]:
+        chunk = tls.recv(4096)
+        if not chunk:
+            break
+        buf["data"] += chunk
+    line, _, rest = buf["data"].partition(b"\r\n")
+    buf["data"] = rest
+    return line.decode("utf-8", "ignore")
+
+
+def _wl_znc(ctx: dict) -> dict:
+    """ZNC's IRC-over-TLS listener: a verified client registers and a PING is answered."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    datadir = d / "znc-data"
+    (datadir / "configs").mkdir(parents=True, exist_ok=True)
+    (datadir / "configs" / "znc.conf").write_text(f"""Version = 1.10.3
+AnonIPLimit = 10
+MaxBufferSize = 500
+ConnectDelay = 5
+ServerThrottle = 30
+SSLCertFile = {pki['srv_pem']}
+<Listener listener0>
+\tPort = +{port}
+\tIPv4 = true
+\tSSL = true
+</Listener>
+<User phase25>
+\tPass = plain#phase25secret
+\tAdmin = true
+\tNick = phase25
+	Buffer = 50
+</User>
+""", encoding="utf-8")
+    (d / "znc.stdin").write_text("yes\n", encoding="utf-8")
+    proc, of, ef = _spawn([str(ctx["program"]), "-f", "-D", "-r", "-d", str(datadir)], d,
+                          ctx["env"], d / "znc.out", d / "znc.err",
+                          # ZNC asks whether to run without a system module directory; the
+                          # build tree is not installed, so answer the documented prompt.
+                          stdin_path=d / "znc.stdin")
+    good: dict = {"exit_code": -1, "stdout": "", "stderr": ""}
+    neg: dict = {"exit_code": -1, "stdout": "", "stderr": ""}
+    registered = False
+    pong = False
+    plain_registered = False
+    try:
+        # ZNC warns for 30 s before it starts when run as root (the court runs as root); the
+        # listener is opened only after that countdown.
+        if not _wait_tcp("127.0.0.1", port, timeout=50):
+            return _wl_fail([("znc", {"exit_code": 0, "stdout": _read(d / "znc.err")})],
+                            "znc did not open its TLS listener", "runtime-failure", d)
+        try:
+            raw = socket.create_connection(("127.0.0.1", port), timeout=10)
+            with _tls_context(pki).wrap_socket(raw, server_hostname="127.0.0.1") as tls:
+                tls.settimeout(10)
+                tls.sendall(b"PASS phase25:phase25secret\r\nNICK phase25\r\n"
+                            b"USER phase25 0 * :phase25\r\n")
+                buf = {"data": b""}
+                banner: list[str] = []
+                for _ in range(20):
+                    line = _znc_readline(tls, buf)
+                    if not line:
+                        break
+                    banner.append(line)
+                    if " 001 " in line:
+                        registered = True
+                        break
+                tls.sendall(b"PING phase25-l7\r\n")
+                for _ in range(10):
+                    line = _znc_readline(tls, buf)
+                    if not line:
+                        break
+                    banner.append(line)
+                    if "PONG" in line and "phase25-l7" in line:
+                        pong = True
+                        break
+                good = {"exit_code": 0 if (registered and pong) else 1,
+                        "stdout": "\n".join(banner), "stderr": ""}
+        except OSError as exc:
+            good = {"exit_code": 1, "stdout": "", "stderr": f"znc client failed: {exc}"}
+        # The negative control: a plaintext client on the TLS port must never register.
+        try:
+            raw = socket.create_connection(("127.0.0.1", port), timeout=10)
+            raw.settimeout(5)
+            raw.sendall(b"PASS phase25:phase25secret\r\nNICK phase25\r\n"
+                        b"USER phase25 0 * :phase25\r\n")
+            seen = ""
+            for _ in range(8):
+                chunk = raw.recv(4096)
+                if not chunk:
+                    break
+                seen += chunk.decode("utf-8", "ignore")
+                if " 001 " in seen:
+                    plain_registered = True
+                    break
+            raw.close()
+            neg = {"exit_code": 0 if plain_registered else 1, "stdout": seen, "stderr": ""}
+        except OSError as exc:
+            neg = {"exit_code": 1, "stdout": "", "stderr": f"plaintext connection failed: {exc}"}
+    finally:
+        _stop(proc)
+        of.close()
+        ef.close()
+    functional_ok = registered and pong and not plain_registered
+    runtime_ok = registered and pong
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else
+            ("functional-failure" if runtime_ok else "runtime-failure"),
+            "residual": "none" if functional_ok else
+            ("functional-divergence" if runtime_ok else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS client did not complete registration (001) and PING/PONG" if not runtime_ok
+             else "a plaintext client registered on the TLS listener"),
+            "transcript": _transcript(
+                ("znc TLS client registration + PING", good),
+                ("znc plaintext client (must not register)", neg),
+                ("znc", {"exit_code": 0, "stdout": _read(d / "znc.err")})),
+            "workload": ("znc: IRC-over-TLS registration (001) + PING/PONG with the fixture CA + "
+                         "plaintext-on-TLS-port reject"),
+            "local_only": True}
+
+
+def _smtp_starttls_stub(port: int, pki: dict, state: dict,
+                        stop: threading.Event) -> threading.Thread:
+    """A loopback SMTP submission server that upgrades to TLS on STARTTLS."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile=str(pki["srv_pem"]))
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(4)
+    listener.settimeout(0.5)
+
+    def read_line(conn, buf: dict) -> str:
+        while b"\r\n" not in buf["data"]:
+            chunk = conn.recv(4096)
+            if not chunk:
+                break
+            buf["data"] += chunk
+        line, _, rest = buf["data"].partition(b"\r\n")
+        buf["data"] = rest
+        return line.decode("utf-8", "ignore")
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            with conn:
+                try:
+                    conn.settimeout(15)
+                    buf = {"data": b""}
+                    conn.sendall(b"220 phase25-l7 ESMTP\r\n")
+                    while True:
+                        line = read_line(conn, buf)
+                        if not line:
+                            break
+                        verb = line.split(" ", 1)[0].upper()
+                        if verb in ("EHLO", "HELO"):
+                            conn.sendall(b"250-phase25-l7\r\n250-STARTTLS\r\n250 8BITMIME\r\n")
+                        elif verb == "STARTTLS":
+                            conn.sendall(b"220 Ready to start TLS\r\n")
+                            conn = context.wrap_socket(conn, server_side=True)
+                            buf = {"data": b""}
+                            state["tls"] = True
+                        elif verb in ("MAIL", "RCPT"):
+                            conn.sendall(b"250 2.1.0 Ok\r\n")
+                        elif verb == "DATA":
+                            conn.sendall(b"354 End data with <CR><LF>.<CR><LF>\r\n")
+                            data = b""
+                            while b"\r\n.\r\n" not in data:
+                                chunk = conn.recv(4096)
+                                if not chunk:
+                                    break
+                                data += chunk
+                            state["message"] = data.split(b"\r\n.\r\n")[0]
+                            conn.sendall(b"250 2.0.0 Ok: queued as phase25\r\n")
+                        elif verb == "QUIT":
+                            conn.sendall(b"221 2.0.0 Bye\r\n")
+                            break
+                        elif verb == "RSET":
+                            conn.sendall(b"250 2.0.0 Ok\r\n")
+                        else:
+                            conn.sendall(b"250 2.0.0 Ok\r\n")
+                except (OSError, ssl.SSLError):
+                    continue
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
+def _wl_s_nail(ctx: dict) -> dict:
+    """s-nail submitting a message over STARTTLS to a local stub, with a wrong-CA control."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    body = "phase25-l7-s-nail-body"
+    state: dict = {}
+    stop = threading.Event()
+    thread = _smtp_starttls_stub(port, pki, state, stop)
+    message = d / "message.txt"
+    message.write_text(f"Subject: phase25-l7\n\n{body}\n", encoding="utf-8")
+
+    def submit(ca: Path, tag: str) -> dict:
+        argv = [str(ctx["program"]), "-S", f"smtp=127.0.0.1:{port}",
+                "-S", "smtp-use-starttls", "-S", "smtp-auth=none",
+                "-S", "ssl-verify=strict", "-S", f"ssl-ca-file={ca}",
+                "-S", "from=phase25@example.invalid",
+                "-S", "hostname=phase25.invalid",
+                "-s", "phase25-l7", "phase25@example.invalid"]
+        run_env = {k: v for k, v in ctx["env"].items()
+                   if k.lower() not in ("http_proxy", "https_proxy", "all_proxy")}
+        run_env["HOME"] = str(d)
+        return _run_captured(argv, cwd=d, env=run_env, timeout=60,
+                             stdin_text=message.read_text(encoding="utf-8"))
+
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("smtp stub", {"exit_code": 0, "stdout": ""})],
+                            "the SMTP STARTTLS stub did not open its port",
+                            "runtime-failure", d)
+        good = submit(pki["ca_crt"], "good")
+        accepted = state.get("message") or b""
+        state.pop("message", None)
+        neg = submit(pki["other_crt"], "neg")
+        rejected_after_neg = state.get("message") is None
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    delivered = body.encode() in accepted
+    neg_rejected = (neg["exit_code"] != 0 and rejected_after_neg
+                    and "certificate" in (neg["stdout"] + neg["stderr"]).lower())
+    functional_ok = good["exit_code"] == 0 and delivered and neg_rejected
+    return {"runtime_ok": good["exit_code"] == 0, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else
+            ("functional-failure" if good["exit_code"] == 0 else "runtime-failure"),
+            "residual": "none" if functional_ok else
+            ("functional-divergence" if good["exit_code"] == 0 else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the message was not accepted (or not delivered) over STARTTLS" if not delivered
+             else "the unrelated CA was not rejected"),
+            "transcript": _transcript(
+                ("s-nail submission over STARTTLS (fixture CA)", good),
+                ("s-nail submission (unrelated CA, must fail)", neg)),
+            "workload": ("s-nail: SMTP submission over STARTTLS to a local stub, message body "
+                         "recorded + unrelated-CA reject"),
+            "local_only": True}
+
+
+def _https_fixture(port: int, pki: dict, body: str, state: dict,
+                   stop: threading.Event) -> threading.Thread:
+    """A minimal loopback HTTPS/1.0 server presenting the fixture server certificate."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile=str(pki["srv_pem"]))
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(8)
+    listener.settimeout(0.5)
+    payload = body.encode()
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            try:
+                with context.wrap_socket(conn, server_side=True) as tls:
+                    tls.settimeout(10)
+                    request = b""
+                    while b"\r\n\r\n" not in request:
+                        chunk = tls.recv(4096)
+                        if not chunk:
+                            break
+                        request += chunk
+                    state["request"] = request
+                    tls.sendall(b"HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n"
+                                b"Content-Length: " + str(len(payload)).encode() + b"\r\n"
+                                b"Connection: close\r\n\r\n" + payload)
+            except (OSError, ssl.SSLError):
+                continue
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
+def _wl_w3m(ctx: dict) -> dict:
+    """w3m dumping a local HTTPS page with the fixture CA, and the wrong-CA control."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    body = "phase25-l7-w3m-fixture"
+    state: dict = {}
+    stop = threading.Event()
+    thread = _https_fixture(port, pki, body, state, stop)
+    url = f"https://127.0.0.1:{port}/phase25.txt"
+    run_env = {k: v for k, v in ctx["env"].items()
+               if k.lower() not in ("http_proxy", "https_proxy", "all_proxy")}
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("https fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local HTTPS fixture did not open its port",
+                            "runtime-failure", d)
+        good = _run_captured([str(ctx["program"]), "-dump", "-o",
+                              f"ssl_ca_file={pki['ca_crt']}", "-o", "ssl_verify_server=1",
+                              "-o", "http_proxy=", "-o", "https_proxy=", url],
+                             cwd=d, env=run_env, timeout=45)
+        neg = _run_captured([str(ctx["program"]), "-dump", "-o",
+                             f"ssl_ca_file={pki['other_crt']}", "-o", "ssl_verify_server=1",
+                             "-o", "http_proxy=", "-o", "https_proxy=", url],
+                            cwd=d, env=run_env, timeout=45)
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    text = good["stdout"] + good["stderr"]
+    rendered = good["exit_code"] == 0 and body in text
+    # w3m asks before accepting an unverifiable certificate and, with no terminal on `-dump`,
+    # rejects it while still exiting 0; the rejection text and the absent body are the evidence.
+    neg_text = neg["stdout"] + neg["stderr"]
+    neg_rejected = (body not in neg_text
+                    and ("SSL session was rejected" in neg_text
+                         or "unable to get local issuer certificate" in neg_text))
+    functional_ok = rendered and neg_rejected
+    return {"runtime_ok": rendered, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else
+            ("functional-failure" if rendered else "runtime-failure"),
+            "residual": "none" if functional_ok else
+            ("functional-divergence" if rendered else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the HTTPS page body was not rendered" if not rendered
+             else "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(
+                ("w3m -dump https (fixture CA)", good),
+                ("w3m -dump https (unrelated CA, must fail)", neg)),
+            "workload": ("w3m: `-dump` of a local HTTPS page with the fixture CA renders its "
+                         "body + unrelated-CA reject"),
+            "local_only": True}
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -4292,6 +4869,11 @@ RUNNERS = {
     "proftpd": _wl_proftpd,
     "mini-httpd": _wl_mini_httpd,
     "hitch": _wl_hitch,
+    # The Phase-25 L7 client/proxy batch.
+    "radsecproxy": _wl_radsecproxy,
+    "znc": _wl_znc,
+    "s-nail": _wl_s_nail,
+    "w3m": _wl_w3m,
 }
 
 
