@@ -76,6 +76,8 @@ const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
 const TLSEXT_TYPE_SERVERNAME: u16 = 0;
 /// `TLSEXT_NAMETYPE_host_name` — `tls1.h:171`.
 const TLSEXT_NAMETYPE_HOST_NAME: u8 = 0;
+/// `TLSEXT_TYPE_status_request` — `tls1.h:88`.
+const TLSEXT_TYPE_STATUS_REQUEST: u16 = 5;
 /// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
 const TLSEXT_TYPE_ALPN: u16 = 16;
 
@@ -114,6 +116,34 @@ const EXT_RETURN_NOT_SENT: c_int = 0;
 const EXT_RETURN_SENT: c_int = 1;
 /// `EXT_RETURN_FAIL`.
 const EXT_RETURN_FAIL: c_int = -1;
+
+/// `EXT_RETURN tls_construct_ctos_status_request(SSL_CONNECTION *s, WPACKET *pkt, ...)` —
+/// `extensions_clnt.c:364-395`: sends the empty responder-id and extension lists the reduced
+/// client supports when `SSL_set_tlsext_status_type(s, TLSEXT_STATUSTYPE_ocsp)` has been called.
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_status_request(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `s` is live.
+    if unsafe { (*s).ext_status_type } != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP {
+        return EXT_RETURN_NOT_SENT;
+    }
+    // SAFETY: `pkt` is live.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_STATUS_REQUEST) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_put_bytes_u8(pkt, crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP as u8) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_close(pkt) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_close(pkt) == 0
+            || WPACKET_close(pkt) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+    }
+    EXT_RETURN_SENT
+}
 
 /// `EXT_RETURN tls_construct_ctos_server_name(SSL_CONNECTION *s, WPACKET *pkt, ...)` —
 /// `extensions_clnt.c:62-88`.
@@ -575,6 +605,12 @@ pub(crate) unsafe fn tls_construct_extensions(s: *mut Ssl, pkt: *mut Wpacket) ->
     // `server_name` is the first `ext_defs[]` row (`extensions.c:155`).
     // SAFETY: live per the contract.
     ret = unsafe { tls_construct_ctos_server_name(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
+    // `status_request` (`extensions.c:215`), sent only when the application asked for OCSP status.
+    // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_status_request(s, pkt) };
     if ret == EXT_RETURN_FAIL {
         return 0;
     }

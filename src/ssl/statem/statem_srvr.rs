@@ -98,6 +98,7 @@ const TLS_ST_SW_CERT_VRFY: c_int = 44;
 
 // --- message types (`include/openssl/ssl3.h`) --------------------------------
 const SSL3_MT_CLIENT_HELLO: c_int = 1;
+const SSL3_MT_CERTIFICATE_STATUS: c_int = 22;
 const SSL3_MT_CERTIFICATE: c_int = 11;
 const SSL3_MT_CERTIFICATE_REQUEST: c_int = 13;
 const SSL3_MT_CLIENT_KEY_EXCHANGE: c_int = 16;
@@ -188,6 +189,8 @@ const SSL_TLSEXT_ERR_NOACK: c_int = 3;
 const SSL_TLSEXT_ERR_OK: c_int = 0;
 /// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
 const TLSEXT_TYPE_ALPN: u16 = 16;
+/// `TLSEXT_TYPE_status_request` — `tls1.h:88`.
+const TLSEXT_TYPE_STATUS_REQUEST: u16 = 5;
 /// `TLSEXT_TYPE_post_handshake_auth` — `tls1.h:157`.
 const TLSEXT_TYPE_POST_HANDSHAKE_AUTH: u16 = 49;
 /// `TLSEXT_TYPE_session_ticket` — `tls1.h:148`.
@@ -812,6 +815,60 @@ unsafe fn final_server_name(s: *mut Ssl, sent: bool) -> c_int {
     }
 }
 
+/// `int tls_handle_status_request(SSL_CONNECTION *s)` — `statem_srvr.c:2336-2384`.
+///
+/// Invokes the context's OCSP status callback after the certificate has been chosen, maps the
+/// return code to the `status_expected` flag (and the fatal alert), and records whether a response
+/// was supplied through `SSL_set_tlsext_status_ocsp_resp` (`SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP`).
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn tls_handle_status_request(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe { (*s).ext_status_expected = 0 };
+    // SAFETY: `s` is live; `ctx` is its context.
+    let (status_type, ctx) = unsafe { ((*s).ext_status_type, (*s).ctx) };
+    if status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING && !ctx.is_null() {
+        // SAFETY: `ctx` is the live context just read.
+        if let Some(cb) = unsafe { (*ctx).status_cb } {
+            // The authority only calls the callback when a certificate was selected
+            // (`s->s3.tmp.cert != NULL`); the reduced connection's active certificate answers that.
+            // SAFETY: `s` is live.
+            if unsafe { cert_active_present(s) } {
+                // SAFETY: the callback is the application's `int (*)(SSL *, void *)`; `s` and the
+                // stored argument are the ones it was installed to receive.
+                let ret = unsafe { cb(s, (*ctx).status_arg) };
+                match ret {
+                    SSL_TLSEXT_ERR_NOACK => {
+                        // SAFETY: `s` is live.
+                        unsafe { (*s).ext_status_expected = 0 };
+                    }
+                    SSL_TLSEXT_ERR_OK => {
+                        // SAFETY: `s` is live.
+                        if unsafe { !(*s).ext_ocsp_resp.is_null() && (*s).ext_ocsp_resp_len > 0 } {
+                            // SAFETY: `s` is live.
+                            unsafe { (*s).ext_status_expected = 1 };
+                        }
+                    }
+                    _ => {
+                        // `SSL_TLSEXT_ERR_ALERT_FATAL` and the default arm.
+                        // SAFETY: `s` is live.
+                        unsafe {
+                            ossl_statem_fatal(
+                                s,
+                                SSL_AD_INTERNAL_ERROR,
+                                crate::runtime::err::err_reasons::SSL_R_CLIENTHELLO_TLSEXT,
+                            )
+                        };
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
+    1
+}
+
 /// `int tls_handle_alpn(SSL_CONNECTION *s)` — `ssl/statem/statem_srvr.c:2390-2480`, reduced to the
 /// `alpn_select_cb` dispatch and the `NSELECT`/`NOACK` arms.
 ///
@@ -1066,6 +1123,44 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 empty.store(dup);
             }
             sni_sent = true;
+        }
+        if etype == TLSEXT_TYPE_STATUS_REQUEST {
+            // `tls_parse_ctos_status_request` (`extensions_srvr.c:329-424`):
+            // `status_type(1) || responder_id_list<2> || request_extensions<2>`. The responder-id
+            // and extension bodies are validated for length but not retained: the reduced server
+            // only needs the status type for `tls_handle_status_request`.
+            if eb.is_empty() {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                return 0;
+            }
+            let status_type = eb[0] as c_int;
+            if status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP {
+                // Unknown type: the authority resets it to nothing and ignores the extension.
+                // SAFETY: `s` is live.
+                unsafe { (*s).ext_status_type = crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING };
+            } else {
+                if eb.len() < 5 {
+                    // SAFETY: `s` is live.
+                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                    return 0;
+                }
+                let ids_len = ((eb[1] as usize) << 8) | eb[2] as usize;
+                let exts_at = 3 + ids_len;
+                if exts_at + 2 > eb.len() {
+                    // SAFETY: `s` is live.
+                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                    return 0;
+                }
+                let req_len = ((eb[exts_at] as usize) << 8) | eb[exts_at + 1] as usize;
+                if exts_at + 2 + req_len != eb.len() {
+                    // SAFETY: `s` is live.
+                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                    return 0;
+                }
+                // SAFETY: `s` is live.
+                unsafe { (*s).ext_status_type = crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP };
+            }
         }
         if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS && eb.len() >= 3 {
             // The body is `list_len || (version_hi || version_lo)...`.
@@ -1625,6 +1720,13 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         }
     }
 
+    // `tls_handle_status_request` (`statem_srvr.c:2551-2554`): runs after the certificate is
+    // selected and before ALPN, so the application's OCSP callback sees the chosen certificate.
+    // SAFETY: `s` is live.
+    if unsafe { tls_handle_status_request(s) } == 0 {
+        return 0;
+    }
+
     // `final_alpn` -> `tls_handle_alpn` (`extensions.c:1147`, `statem_srvr.c:2390-2480`): runs the
     // `alpn_select_cb` now that the cipher is chosen.
     // SAFETY: `s` is live.
@@ -1893,6 +1995,42 @@ pub(crate) unsafe fn cert_active_present(s: *mut Ssl) -> bool {
     let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
     // SAFETY: `cpk` is non-NULL per the left operand; its `x509` slot is read.
     !cpk.is_null() && unsafe { !(*cpk).x509.is_null() }
+}
+
+/// `CON_FUNC_RETURN tls_construct_cert_status(SSL_CONNECTION *s, WPACKET *pkt)` —
+/// `statem_srvr.c:4538-4553` over `tls_construct_cert_status_body` (`:4514-4536`): the TLS1.2
+/// `CertificateStatus` body is `status_type(1) || response<3>`.
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn tls12_construct_cert_status(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc::write_handshake_message;
+    // SAFETY: `s` is live.
+    let (resp, len, status_type) = unsafe {
+        (
+            (*s).ext_ocsp_resp,
+            (*s).ext_ocsp_resp_len,
+            (*s).ext_status_type,
+        )
+    };
+    if resp.is_null() || len == 0 || len > 0xff_ffff {
+        // `ossl_get_ocsp_response` answered NULL: the message is not sent.
+        return 1;
+    }
+    // A bounded body block: one type byte plus the u24 length plus the response.
+    let Some(body) = OwnedBuf::new(4 + len, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    let body_ptr = body.as_ptr();
+    // SAFETY: `body_ptr` is writable for `4 + len` bytes; `resp` names `len` readable bytes.
+    unsafe {
+        *body_ptr = status_type as u8;
+        *body_ptr.add(1) = (len >> 16) as u8;
+        *body_ptr.add(2) = (len >> 8) as u8;
+        *body_ptr.add(3) = len as u8;
+        core::ptr::copy_nonoverlapping(resp, body_ptr.add(4), len);
+        write_handshake_message(s, SSL3_MT_CERTIFICATE_STATUS as u8, body_ptr, 4 + len)
+    }
 }
 
 /// `CON_FUNC_RETURN tls_construct_server_certificate(...)` — `statem_srvr.c:4019-4055` over
@@ -2652,6 +2790,18 @@ unsafe fn tls12_construct_server_hello(s: *mut Ssl) -> c_int {
     {
         body[p] = 0;
         body[p + 1] = 35;
+        p += 2;
+        body[p] = 0;
+        body[p + 1] = 0;
+        p += 2;
+    }
+    // `tls_construct_stoc_status_request` (`extensions_srvr.c:1759-1798`): in TLS1.2 the
+    // acknowledgement is an empty `status_request` extension, with the status itself in the
+    // following `CertificateStatus` message.
+    // SAFETY: `s` is live.
+    if unsafe { (*s).ext_status_expected } != 0 {
+        body[p] = 0;
+        body[p + 1] = 5;
         p += 2;
         body[p] = 0;
         body[p + 1] = 0;
@@ -3865,6 +4015,15 @@ unsafe fn tls12_server_drive(s: *mut Ssl) -> c_int {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
+                    // `ossl_statem_server_write_transition`'s `TLS_ST_SW_CERT ->
+                    // TLS_ST_SW_CERT_STATUS` arm (`statem_srvr.c:658-670`) when the OCSP callback
+                    // armed `status_expected`; the reduced driver emits the message here rather
+                    // than through a separate state.
+                    // SAFETY: `s` is live.
+                    if (*s).ext_status_expected != 0 && tls12_construct_cert_status(s) <= 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
                     // Only suites whose key exchange needs ephemeral parameters send a
                     // `ServerKeyExchange` (`send_server_key_exchange`, `statem_srvr.c:353-386`).
                     // A static-RSA suite goes straight to CertificateRequest/ServerHelloDone;
@@ -4622,9 +4781,9 @@ mod tls12_group_tests {
     use crate::ssl::methods::TLS_method;
     use crate::ssl::ssl_ciph::{ssl3_get_cipher_by_id, SSL_CIPHER_get_name};
     use crate::ssl::ssl_lib::{
-        SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_cipher_list, SSL_CTX_set_verify,
-        SSL_do_handshake, SSL_free, SSL_get_current_cipher, SSL_new, SSL_set_accept_state,
-        SSL_set_bio, SSL_set_connect_state, SSL_set_options, SslCtx,
+        SSL_CTX_callback_ctrl, SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_cipher_list,
+        SSL_CTX_set_verify, SSL_ctrl, SSL_do_handshake, SSL_free, SSL_get_current_cipher, SSL_new,
+        SSL_set_accept_state, SSL_set_bio, SSL_set_connect_state, SSL_set_options, Ssl, SslCtx,
     };
     use crate::ssl::ssl_rsa::{SSL_CTX_use_PrivateKey, SSL_CTX_use_certificate};
     use crate::ssl::ssl_sess::{SSL_SESSION_get_compress_id, SSL_get_session};
@@ -5579,6 +5738,231 @@ mod tls12_group_tests {
             assert_eq!((*ctx).supportedgroups_len, 0);
             EC_KEY_free(key);
             SSL_CTX_free(ctx);
+        }
+    }
+
+    // --- OCSP status callback (`SSL_CTX_set_tlsext_status_cb`) -----------------------------
+
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    static STATUS_CB_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static STATUS_CB_ARG: AtomicUsize = AtomicUsize::new(0);
+    static STATUS_CB_RESP: [u8; 4] = [0x30, 0x02, 0x0a, 0x00];
+
+    /// `int (*)(SSL *, void *)` — records the argument and answers `SSL_TLSEXT_ERR_NOACK`.
+    unsafe extern "C" fn status_noack_cb(_ssl: *mut Ssl, arg: *mut c_void) -> c_int {
+        STATUS_CB_CALLS.fetch_add(1, Ordering::SeqCst);
+        STATUS_CB_ARG.store(arg as usize, Ordering::SeqCst);
+        3 // SSL_TLSEXT_ERR_NOACK
+    }
+
+    /// Supplies a (minimal, non-empty) response through the connection ctrl.
+    unsafe extern "C" fn status_respond_cb(ssl: *mut Ssl, arg: *mut c_void) -> c_int {
+        STATUS_CB_CALLS.fetch_add(1, Ordering::SeqCst);
+        STATUS_CB_ARG.store(arg as usize, Ordering::SeqCst);
+        // SAFETY: `ssl` is the live connection the callback received; `STATUS_CB_RESP` is
+        // readable for its length.
+        unsafe {
+            assert_eq!(
+                SSL_ctrl(
+                    ssl,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP */ 71,
+                    STATUS_CB_RESP.len() as c_long,
+                    STATUS_CB_RESP.as_ptr() as *mut c_void,
+                ),
+                1
+            );
+        }
+        0 // SSL_TLSEXT_ERR_OK
+    }
+
+    fn void_cb(
+        cb: unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int,
+    ) -> Option<unsafe extern "C" fn()> {
+        // SAFETY: a `void (*)(void)` and this callback are both pointer-sized; only the pointer
+        // bits are stored and compared.
+        Some(unsafe {
+            core::mem::transmute::<
+                unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int,
+                unsafe extern "C" fn(),
+            >(cb)
+        })
+    }
+
+    #[test]
+    fn ssl_ctx_set_tlsext_status_cb_returns_one() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the context is this frame's own object.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_callback_ctrl(
+                    ctx,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB */ 63,
+                    void_cb(status_noack_cb),
+                ),
+                1,
+                "SSL_CTX_set_tlsext_status_cb's macro must observe 1"
+            );
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn tlsext_status_cb_and_arg_round_trip() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the context is this frame's own object; the out-slots are live locals.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_callback_ctrl(
+                    ctx,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB */ 63,
+                    void_cb(status_noack_cb),
+                ),
+                1
+            );
+            let arg = 0x5a5a_usize as *mut c_void;
+            assert_eq!(
+                SSL_CTX_ctrl(ctx, /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG */ 64, 0, arg),
+                1
+            );
+            let mut got_cb: Option<unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int> = None;
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    /* SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB */ 128,
+                    0,
+                    (&mut got_cb
+                        as *mut Option<unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int>)
+                        .cast(),
+                ),
+                1
+            );
+            assert_eq!(
+                got_cb.map(|f| f as usize),
+                Some(status_noack_cb as *const () as usize)
+            );
+            let mut got_arg: *mut c_void = core::ptr::null_mut();
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    /* SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB_ARG */ 129,
+                    0,
+                    (&mut got_arg as *mut *mut c_void).cast(),
+                ),
+                1
+            );
+            assert_eq!(got_arg, arg);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    fn assert_status_cb_invoked(cipher: &CStr, version: c_int) {
+        let _g = crate::test_support::lock_global_state();
+        STATUS_CB_CALLS.store(0, Ordering::SeqCst);
+        STATUS_CB_ARG.store(0, Ordering::SeqCst);
+        let arg = 0x1234_usize as *mut c_void;
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(cipher, version, None, None);
+            assert_eq!(
+                SSL_CTX_callback_ctrl(
+                    p.sctx,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB */ 63,
+                    void_cb(status_noack_cb),
+                ),
+                1
+            );
+            assert_eq!(
+                SSL_CTX_ctrl(p.sctx, /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG */ 64, 0, arg),
+                1
+            );
+            // The client asks for OCSP status (`SSL_set_tlsext_status_type`).
+            assert_eq!(
+                SSL_ctrl(
+                    p.c,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE */ 65,
+                    1,
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = error_reasons();
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "handshake failed (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert_eq!(
+                STATUS_CB_CALLS.load(Ordering::SeqCst),
+                1,
+                "the server's status callback must be invoked exactly once"
+            );
+            assert_eq!(STATUS_CB_ARG.load(Ordering::SeqCst), arg as usize);
+        }
+    }
+
+    #[test]
+    fn tlsext_status_cb_invoked_tls12() {
+        assert_status_cb_invoked(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION);
+    }
+
+    #[test]
+    fn tlsext_status_cb_invoked_tls13() {
+        assert_status_cb_invoked(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION);
+    }
+
+    #[test]
+    fn tlsext_status_response_included_tls12() {
+        let _g = crate::test_support::lock_global_state();
+        STATUS_CB_CALLS.store(0, Ordering::SeqCst);
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION, None, None);
+            assert_eq!(
+                SSL_CTX_callback_ctrl(
+                    p.sctx,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB */ 63,
+                    void_cb(status_respond_cb),
+                ),
+                1
+            );
+            assert_eq!(
+                SSL_ctrl(
+                    p.c,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE */ 65,
+                    1,
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = error_reasons();
+            assert!(
+                client_ok && server_ok,
+                "handshake failed (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert_eq!(STATUS_CB_CALLS.load(Ordering::SeqCst), 1);
+            let mut got: *mut u8 = core::ptr::null_mut();
+            let len = SSL_ctrl(
+                p.c,
+                /* SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP */ 70,
+                0,
+                (&mut got as *mut *mut u8).cast(),
+            );
+            assert_eq!(len, STATUS_CB_RESP.len() as c_long);
+            assert!(!got.is_null());
+            assert_eq!(
+                core::slice::from_raw_parts(got, len as usize),
+                &STATUS_CB_RESP
+            );
+            free_pair(p);
         }
     }
 }
