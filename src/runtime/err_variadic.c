@@ -34,13 +34,18 @@ extern void openssl_rs_err_add_data(const char *msg);
 extern char *openssl_rs_err_take_data(size_t *size);
 extern void openssl_rs_err_finish_data(int lib, int reason, char *data,
     size_t size, int flags);
+/*
+ * `CRYPTO_realloc` through the process-global allocator seam. The slot buffer this adapter
+ * grows may have been built by the other DSO's error-ring code (the queue is process-wide),
+ * and it is owned by the allocator table the application's `CRYPTO_set_mem_functions` hook
+ * writes; this DSO's private `CRYPTO_realloc` can be a different table, which would be a
+ * foreign realloc.
+ */
+extern char *openssl_rs_err_realloc(char *addr, size_t num, const char *file,
+    int line);
 
 /* Provided by src/runtime/bio/bio_variadic.c — the authority's own printf. */
 extern int BIO_vsnprintf(char *buf, size_t n, const char *format, va_list ap);
-
-/* Provided by src/runtime/mem.rs: the allocator the ERR queue owns data with. */
-extern void *CRYPTO_realloc(void *addr, size_t num, const char *file, int line);
-extern void CRYPTO_free(void *ptr, const char *file, int line);
 
 /*
  * `ERR_MAX_DATA_SIZE` from openssl/err.h.in. It is written out here rather than
@@ -137,15 +142,15 @@ void ERR_vset_error(int lib, int reason, const char *fmt, va_list args)
     if (fmt != NULL) {
         /*
          * `openssl_rs_err_take_data` detaches the slot and always returns NULL
-         * or a block this crate's allocator owns, copying borrowed slot data
-         * into a fresh block first. The `CRYPTO_realloc` calls below are
-         * therefore sound for every slot shape; do not weaken that invariant
-         * on the Rust side without changing this adapter.
+         * or a block the process-global allocator owns, copying borrowed slot
+         * data into a fresh block first. The `openssl_rs_err_realloc` calls
+         * below are therefore sound for every slot shape; do not weaken that
+         * invariant on the Rust side without changing this adapter.
          */
         buf = openssl_rs_err_take_data(&buf_size);
 
         if (buf_size < ERR_MAX_DATA_SIZE
-            && (rbuf = CRYPTO_realloc(buf, ERR_MAX_DATA_SIZE, NULL, 0)) != NULL) {
+            && (rbuf = openssl_rs_err_realloc(buf, ERR_MAX_DATA_SIZE, NULL, 0)) != NULL) {
             buf = rbuf;
             buf_size = ERR_MAX_DATA_SIZE;
         }
@@ -157,7 +162,7 @@ void ERR_vset_error(int lib, int reason, const char *fmt, va_list args)
         if (buf != NULL)
             buf[printed_len] = '\0';
 
-        if ((rbuf = CRYPTO_realloc(buf, (size_t)printed_len + 1, NULL, 0)) != NULL) {
+        if ((rbuf = openssl_rs_err_realloc(buf, (size_t)printed_len + 1, NULL, 0)) != NULL) {
             buf = rbuf;
             buf_size = (size_t)printed_len + 1;
             buf[printed_len] = '\0';
