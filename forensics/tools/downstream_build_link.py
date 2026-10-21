@@ -459,6 +459,156 @@ _L7_EXPANSION_SPECS: tuple[dict, ...] = (
     },
 )
 
+# The Phase-25 L7 server batch: three TLS servers/terminators and an FTPS server that the venue's
+# minimal image cannot build alone, each pinned by its released archive digest. Every non-OpenSSL
+# dependency is a pinned bookworm `.deb` acquired through the same `aux_sources` seam fido2 uses
+# (headers/dev symlinks/`.pc`/`-config` scripts), so no distribution OpenSSL can be pulled in and
+# the subject prefix remains the only OpenSSL on every link line.
+_AUX_MULTIARCH = "usr/lib/x86_64-linux-gnu"
+_AUX_MULTIARCH_PC = "usr/lib/x86_64-linux-gnu/pkgconfig"
+
+
+def _aux_deb(pool: str, filename: str, sha256: str, *, include_dirs: tuple[str, ...] = (),
+             library_dirs: tuple[str, ...] = (), pkgconfig_dirs: tuple[str, ...] = (),
+             bin_dirs: tuple[str, ...] = ()) -> dict:
+    """One pinned bookworm dependency package, extracted under the family scratch."""
+    spec: dict = {
+        "url": f"http://deb.debian.org/debian/pool/main/{pool}/{filename}",
+        "sha256": sha256, "archive": "deb", "extract": ["dpkg-deb", "-x"],
+        "note": f"pinned bookworm {filename}",
+    }
+    for key, value in (("include_dirs", include_dirs), ("library_dirs", library_dirs),
+                       ("pkgconfig_dirs", pkgconfig_dirs), ("bin_dirs", bin_dirs)):
+        if value:
+            spec[key] = list(value)
+    return spec
+
+
+# memcached 1.6.32 links libevent; the image has neither its headers nor its runtime library.
+_LIBEVENT_AUX: tuple[dict, ...] = (
+    _aux_deb("libe/libevent", "libevent-2.1-7_2.1.12-stable-8_amd64.deb",
+             "ca8858a7095ade7776c9f73437812423a45ccd90de2079e8c34830d291df290f"),
+    _aux_deb("libe/libevent", "libevent-dev_2.1.12-stable-8_amd64.deb",
+             "ed7f550d6cc03f3cf7dfa80d739e13350d8a2cdb25f9dfcbf11fbe66cd1d4b89",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# hitch 1.8.0 links libev; neither ev.h nor libev.so.4 is in the image.
+_LIBEV_AUX: tuple[dict, ...] = (
+    _aux_deb("libe/libev", "libev4_4.33-1_amd64.deb",
+             "1b35aebfabf4f1dba891c9cc0b7352e8402dac4efef1e34a41359ce5bd68aacf"),
+    _aux_deb("libe/libev", "libev-dev_4.33-1_amd64.deb",
+             "d317551ed50e70e3c98141b7a215b31c8c334b7a3a610d3337d0dcd540bad0a1",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# icecast 2.4.4 requires libxml2, libxslt and Ogg Vorbis. The dev packages are extracted with
+# their matching runtime libraries (the image carries libxml2 but not libxslt/libogg/libvorbis),
+# and libicu-dev supplies the ICU headers Debian's libxml2 is built against. libxslt's
+# `xsltconfig.h` lives in the multiarch include directory, named below.
+_ICECAST_AUX: tuple[dict, ...] = (
+    _aux_deb("libo/libogg", "libogg0_1.3.5-3_amd64.deb",
+             "f67acb0477aed0354f411172e37af338f3ac6bd4f3766134a2cf5539884b5a28"),
+    _aux_deb("libo/libogg", "libogg-dev_1.3.5-3_amd64.deb",
+             "ece2ef4d087d27b77b6c1a240efdb8b32dc2d19f69f7ce7fbb184c83a132d49c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libv/libvorbis", "libvorbis0a_1.3.7-1_amd64.deb",
+             "01c14f9d1109650077a4c5c337c285476a6932d4d448f5a190c2b845724dbf21"),
+    _aux_deb("libv/libvorbis", "libvorbisenc2_1.3.7-1_amd64.deb",
+             "75dd4d6f904c7db82f5112e60d8efea9e81dfedf94e970c5da7af2b3d81643c0"),
+    _aux_deb("libv/libvorbis", "libvorbis-dev_1.3.7-1_amd64.deb",
+             "2be095b51700abae4ad89b81560bfa65240745275e0ef6474ab1de857cfeea92",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libx/libxml2", "libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "4460e39dda10a815881374217cde08474747cfa018358cd8612c14b390eff53b"),
+    _aux_deb("libx/libxml2", "libxml2-dev_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "e8ceacf656b1720e7a310e1d159439a356bfcb9f5fb0325907f26aa8590e5f70",
+             include_dirs=("usr/include", "usr/include/libxml2"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libx/libxslt", "libxslt1.1_1.1.35-1+deb12u4_amd64.deb",
+             "5bf795dc6374f744906d39a786024d98b2cb6b885c7776f5dc64eb4092b550a6"),
+    _aux_deb("libx/libxslt", "libxslt1-dev_1.1.35-1+deb12u4_amd64.deb",
+             "f7f5686127331d97a65e2abac1953e32b1ed8eb774cdf1749a849090b2f75ccb",
+             include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
+             bin_dirs=("usr/bin",)),
+    _aux_deb("i/icu", "libicu-dev_72.1-3+deb12u1_amd64.deb",
+             "08bd4e3f4bd4fc725cf25e739edf0e7df5ac1826bdac9a7d990eea8f93b2d7a0",
+             include_dirs=("usr/include",)),
+)
+
+_L7_SERVER_SPECS: tuple[dict, ...] = (
+    {
+        "family": "memcached", "version": "1.6.32",
+        "url": "https://memcached.org/files/memcached-1.6.32.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "4ab234219865191e8d1ba57a2f9167d8b573248fa4ff00b4d8296be13d24a82c",
+        "configure": ["--enable-tls"], "make": [MAKE_JOBS],
+        "artifact": "memcached", "launch": ["-h"],
+        "aux_sources": list(_LIBEVENT_AUX),
+        "note": ("memcached 1.6.32 with --enable-tls against the subject prefix; libevent comes "
+                 "from the pinned bookworm packages above (headers, libevent.so and the runtime "
+                 "libevent-2.1.so.7 the configure version probe executes)"),
+    },
+    {
+        "family": "icecast", "version": "2.4.4",
+        "url": "https://downloads.xiph.org/releases/icecast/icecast-2.4.4.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "49b5979f9f614140b6a38046154203ee28218d8fc549888596a683ad604e4d44",
+        "configure": ["--with-openssl={prefix}", "--without-curl", "--without-speex",
+                      "--without-theora", "--disable-yp"],
+        "make": [MAKE_JOBS], "artifact": "src/icecast", "launch": ["-v"],
+        "aux_sources": list(_ICECAST_AUX),
+        "note": ("icecast 2.4.4's own configure links the subject libssl (--with-openssl); the "
+                 "XML/XSLT/Vorbis dependencies are the pinned bookworm packages above, and the "
+                 "optional curl/speex/theora/YP paths are disabled so the recipe needs no more"),
+    },
+    {
+        "family": "proftpd", "version": "1.3.8b",
+        "url": "https://github.com/proftpd/proftpd/archive/refs/tags/v1.3.8b.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "183ab7c6107de271a2959ff268f55c9b6c76b2cf0029e6584fccc019686601e0",
+        "configure": ["--enable-openssl", "--with-modules=mod_tls", "--disable-auth-pam"],
+        "make": [MAKE_JOBS], "artifact": "proftpd", "launch": ["-v"],
+        "note": ("proftpd 1.3.8b with --enable-openssl and mod_tls linked statically into the "
+                 "server binary; --disable-auth-pam keeps the build independent of PAM headers"),
+    },
+    {
+        "family": "mini-httpd", "version": "1.30",
+        "url": "http://www.acme.com/software/mini_httpd/mini_httpd-1.30.tar.gz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "9c4481802af8dde2e164062185c279e9274525c3af93d014fdc0b80cf30bca6e",
+        "configure": None,
+        "make": [MAKE_JOBS, "SSL_TREE={prefix}", "SSL_DEFS=-DUSE_SSL",
+                 "SSL_INC=-I{prefix}/include",
+                 "SSL_LIBS=-L{prefix}/lib -lssl -lcrypto",
+                 # The release predates glibc's <sys/types.h> int64_t declaration; its own
+                 # HAVE_INT64T guard is the upstream switch for that, not a source patch.
+                 "CFLAGS=-O -DUSE_SSL -I{prefix}/include -ansi -pedantic -U__STRICT_ANSI__ "
+                 "-DHAVE_INT64T -Wall"],
+        "artifact": "mini_httpd", "launch": ["-h"],
+        "note": ("mini_httpd 1.30 built by its own Makefile with the SSL_* definitions pointed at "
+                 "the subject prefix; -DHAVE_INT64T selects the upstream int64_t branch instead of "
+                 "its pre-C99 typedef"),
+    },
+    {
+        "family": "hitch", "version": "1.8.0",
+        "url": "https://hitch-tls.org/source/hitch-1.8.0.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "dfc99484bc7ffea27a3169e84d6c217988eda47b208ab2e5524dc2a5dd158f4e",
+        "configure": ["--disable-documentation"], "make": [MAKE_JOBS],
+        "artifact": "src/hitch", "launch": ["--version"],
+        "aux_sources": list(_LIBEV_AUX),
+        "note": ("hitch 1.8.0 from its published dist tarball (which ships the generated "
+                 "configure) against the subject libssl; libev comes from the pinned bookworm "
+                 "packages above"),
+    },
+)
+
 # The Phase-17 downstream harnesses' pinned releases, added to widen the direct-consumer set. nginx
 # 1.26.3 is the TLS-server slice (its own `configure`, so it is treated like autotools).
 _PHASE17_PINS: dict[str, str] = {
@@ -519,6 +669,13 @@ def _build_catalogue() -> tuple[dict, ...]:
     # The Phase-25 L7 expansion batch (cmake/meson/autotools families that the expansion venue
     # admits). Each recipe is pristine and carries its own pinned archive digest.
     for spec in _L7_EXPANSION_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 server batch: memcached, icecast, proftpd, mini-httpd and hitch. Each is a
+    # pristine released archive built against the subject prefix, with any non-OpenSSL dependency
+    # acquired through the pinned `aux_sources` seam.
+    for spec in _L7_SERVER_SPECS:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
@@ -673,6 +830,7 @@ def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
     include_dirs: list[str] = []
     library_dirs: list[str] = []
     pkgconfig_dirs: list[str] = []
+    bin_dirs: list[str] = []
     for spec in specs:
         aux_root.mkdir(parents=True, exist_ok=True)
         name = str(spec["url"]).rsplit("/", 1)[-1]
@@ -693,6 +851,7 @@ def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
                         f"{census._error_line(extract)}")
         include_dirs += [str(root / d) for d in spec.get("include_dirs") or []]
         library_dirs += [str(root / d) for d in spec.get("library_dirs") or []]
+        bin_dirs += [str(root / d) for d in spec.get("bin_dirs") or []]
         for rel_dir in spec.get("pkgconfig_dirs") or []:
             pc_dir = root / rel_dir
             # The package's .pc names /usr as its prefix; move it under the extracted root so the
@@ -708,7 +867,7 @@ def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
                 link_path.unlink()
             link_path.symlink_to(str(target))
     return {"include_dirs": include_dirs, "library_dirs": library_dirs,
-            "pkgconfig_dirs": pkgconfig_dirs}, None
+            "pkgconfig_dirs": pkgconfig_dirs, "bin_dirs": bin_dirs}, None
 
 
 def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, subject: str,
@@ -768,6 +927,15 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
     if aux.get("pkgconfig_dirs"):
         env["PKG_CONFIG_PATH"] = os.pathsep.join(
             [*aux["pkgconfig_dirs"], env["PKG_CONFIG_PATH"]])
+    # A package whose `configure` probes a dependency by *running* a linked program (memcached's
+    # libevent version check) needs that dependency loadable at probe time, and a package whose
+    # build invokes a dependency's own `-config` script (icecast's xslt-config) needs it on PATH.
+    if aux.get("library_dirs"):
+        env["LD_LIBRARY_PATH"] = os.pathsep.join(
+            [*aux["library_dirs"], str(prefix / "lib"),
+             env.get("LD_LIBRARY_PATH", "")]).rstrip(os.pathsep)
+    if aux.get("bin_dirs"):
+        env["PATH"] = os.pathsep.join([*aux["bin_dirs"], env.get("PATH", "")])
     # A recipe may extend the link environment (24.17's isync override adds -Wl,-rpath-link so the
     # subject lib dir resolves libssl's transitive libcrypto dependency). Substituted identically for
     # both subjects, so the identical-build-intent rule holds.
