@@ -46,8 +46,8 @@
 //!   how a lazy clear is honoured across the boundary.
 
 use crate::runtime::err::{
-    slot_buf_alloc, with_state, ErrState, OwnedErrState, ERR_FLAG_CLEAR_FLAG, ERR_STATE_SLOTS,
-    ERR_TXT_MALLOCED_FLAG,
+    debug_parts, slot_buf_alloc, with_state, DebugParts, ErrState, OwnedErrState, SlotStr,
+    ERR_FLAG_CLEAR_FLAG, ERR_STATE_SLOTS, ERR_TXT_MALLOCED_FLAG,
 };
 
 /// `ERR_STATE *OSSL_ERR_STATE_new(void)`
@@ -260,7 +260,18 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
     if src.bottom == src.top {
         return;
     }
-    let _ = with_state(|thread_es| {
+    // Phase 1, **outside** the state borrow: duplicate every string and copy every data block.
+    // Restore is a pure duplication, so nothing here depends on the destination state, and an
+    // allocation failure (which raises) cannot re-enter ERR under a live `&mut`.
+    struct SlotPlan {
+        flags: core::ffi::c_int,
+        buffer: core::ffi::c_ulong,
+        line: core::ffi::c_int,
+        debug: DebugParts,
+        data: Option<(SlotStr, usize, core::ffi::c_int)>,
+    }
+    let mut plans: Vec<SlotPlan> = Vec::new();
+    {
         let n = ERR_STATE_SLOTS as i32;
         let mut i = src.bottom;
         while i != src.top {
@@ -269,29 +280,14 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
             if (src.err_flags[from] & ERR_FLAG_CLEAR_FLAG) != 0 {
                 continue;
             }
-            thread_es.get_slot();
-            let top = thread_es.top as usize;
-            thread_es.clear(top, false);
-
-            thread_es.err_flags[top] = src.err_flags[from];
-            thread_es.err_buffer[top] = src.err_buffer[from];
-            // SAFETY: the source slots hold NULL or NUL-terminated strings owned by
-            // the caller's state, per restore's contract.
-            unsafe {
-                thread_es.set_debug(
-                    top,
-                    src.err_file[from],
-                    src.err_line[from],
-                    src.err_func[from],
-                )
-            };
-
-            if !src.err_data[from].is_null() && src.err_data_size[from] != 0 {
+            // SAFETY: the source slots hold NULL or NUL-terminated strings owned by the
+            // caller's state, per restore's contract.
+            let debug = unsafe { debug_parts(src.err_file[from], src.err_func[from]) };
+            let data = if !src.err_data[from].is_null() && src.err_data_size[from] != 0 {
                 let size = src.err_data_size[from];
-                // The copy is a fresh seam allocation handed to the slot raw; its release is the
-                // slot's `Drop` path. A refused allocation skips the copy, as the authority's own
-                // NULL `CRYPTO_malloc` does.
-                if let Some(copy) = slot_buf_alloc(size) {
+                // A refused allocation skips the copy, as the authority's own NULL
+                // `CRYPTO_malloc` does.
+                slot_buf_alloc(size).map(|copy| {
                     // SAFETY: `copy` is `size` fresh bytes and the source holds at least that
                     // many, per its own size field.
                     unsafe {
@@ -301,15 +297,33 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
                             size,
                         )
                     };
-                    thread_es.set_data(
-                        top,
-                        copy.into_raw(),
-                        size,
-                        src.err_data_flags[from] | ERR_TXT_MALLOCED_FLAG,
-                    );
-                }
+                    (copy, size, src.err_data_flags[from] | ERR_TXT_MALLOCED_FLAG)
+                })
             } else {
-                thread_es.clear_data(top, false);
+                None
+            };
+            plans.push(SlotPlan {
+                flags: src.err_flags[from],
+                buffer: src.err_buffer[from],
+                line: src.err_line[from],
+                debug,
+                data,
+            });
+        }
+    }
+    // Phase 2, under the borrow: install only.
+    let _ = with_state(|thread_es| {
+        for plan in plans {
+            thread_es.get_slot();
+            let top = thread_es.top as usize;
+            thread_es.clear(top, false);
+
+            thread_es.err_flags[top] = plan.flags;
+            thread_es.err_buffer[top] = plan.buffer;
+            thread_es.install_debug(top, plan.line, plan.debug);
+
+            if let Some((copy, size, flags)) = plan.data {
+                thread_es.set_data(top, copy.into_raw(), size, flags);
             }
         }
     });
