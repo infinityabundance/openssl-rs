@@ -108,8 +108,8 @@ use crate::ssl::statem::extensions_cust::{
 };
 use crate::ssl::statem::statem::{
     ossl_statem_accept, ossl_statem_check_finish_init, ossl_statem_clear, ossl_statem_connect,
-    ossl_statem_get_in_handshake, ossl_statem_in_error, ossl_statem_set_in_init, SSL_in_before,
-    SSL_in_init, SSL_is_init_finished,
+    ossl_statem_get_in_handshake, ossl_statem_in_error, ossl_statem_set_in_handshake,
+    ossl_statem_set_in_init, SSL_in_before, SSL_in_init, SSL_is_init_finished,
 };
 use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled};
 use crate::x509::by_dir::X509_LOOKUP_hash_dir;
@@ -5661,9 +5661,10 @@ pub unsafe extern "C" fn SSL_get_error(s: *const Ssl, i: c_int) -> c_int {
 
 /// `int SSL_pending(const SSL *s)` — `ssl/ssl_lib.c:1926-1941`.
 ///
-/// The authority's body is `s->method->ssl_pending(s)` (`ssl3_pending`), which reports the bytes
-/// buffered in the record layer; this slice has no record layer, and `ssl3_pending` reports 0 for
-/// an empty one.
+/// The authority's body is `s->method->ssl_pending(s)` (`ssl3_pending`, `rec_layer_s3.c:176-201`),
+/// which sums the application plaintext buffered in the record layer. This slice keeps the
+/// unread tail of the current record in `rx_buf[rx_off..rx_len]`, so that is the pending count; a
+/// peek leaves it untouched (`rec_layer_s3.c:791-808`) and the count reports the peeked bytes.
 ///
 /// # Safety
 /// `s` must point to a live connection.
@@ -5673,13 +5674,18 @@ pub unsafe extern "C" fn SSL_pending(s: *const Ssl) -> c_int {
         if s.is_null() {
             return 0;
         }
-        0
+        // SAFETY: `s` is live per the caller's contract.
+        let pending = unsafe { (*s).rx_len.saturating_sub((*s).rx_off) };
+        // `ssl_lib.c:1939`: values at or above `INT_MAX` answer `INT_MAX`.
+        pending.min(c_int::MAX as usize) as c_int
     })
 }
 
 /// `int SSL_has_pending(const SSL *s)` — `ssl/ssl_lib.c:1943-1977`.
 ///
-/// As [`SSL_pending`], the record layer is 14.4's and an empty one reports 0.
+/// As [`SSL_pending`], the record layer is the reduced one: processed (decrypted) application
+/// plaintext is buffered in `rx_buf` and reports 1. Unprocessed bytes still in the read BIO are
+/// not visible without reading a record in this slice.
 ///
 /// # Safety
 /// `s` must be NULL or a live connection.
@@ -5689,7 +5695,8 @@ pub unsafe extern "C" fn SSL_has_pending(s: *const Ssl) -> c_int {
         if s.is_null() {
             return 0;
         }
-        0
+        // SAFETY: `s` is live per the caller's contract.
+        c_int::from(unsafe { (*s).rx_off < (*s).rx_len })
     })
 }
 
@@ -6740,6 +6747,74 @@ pub(crate) unsafe fn ssl_read_internal(
         if ossl_statem_check_finish_init(s, 0) == 0 {
             return -1;
         }
+        // `s3_lib.c:5117-5159`: `ssl3_read` and `ssl3_peek` are both `ssl3_read_internal`; only
+        // the `peek` flag differs.
+        ssl3_read_internal(s, _buf, _num, false, _readbytes)
+    }
+}
+
+/// `ssl3_read_internal` — `ssl/s3_lib.c:5117-5153`, the shared body of `ssl3_read`/`ssl3_peek`.
+///
+/// The renegotiation check and the `s3.in_read_app_data` re-entry bookkeeping are the authority's
+/// (`s3_lib.c:5121-5140`). The application-data body is [`ssl3_read_app_data`]; the retry arm is
+/// retained for parity with the authority and is unreachable in this reduced record layer, which
+/// never sets `s3.in_read_app_data` to 2.
+///
+/// # Safety
+/// `s` must be a live connection; `buf` must hold `num` writable bytes and `readbytes` be
+/// writable.
+unsafe fn ssl3_read_internal(
+    s: *mut Ssl,
+    _buf: *mut c_void,
+    _num: usize,
+    peek: bool,
+    _readbytes: *mut usize,
+) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
+        // `s3_lib.c:5124-5125`: a pending renegotiation request is checked before the read.
+        if (*s).s3_renegotiate != 0 {
+            let _ = crate::ssl::s3_lib::ssl3_renegotiate_check(s, 0);
+        }
+        (*s).s3_in_read_app_data = 1;
+    }
+    // SAFETY: `s` is live per the caller's contract; `_buf`/`_num`/`_readbytes` are the caller's.
+    let ret = unsafe { ssl3_read_app_data(s, _buf, _num, peek, _readbytes) };
+    // SAFETY: `s` is live.
+    unsafe {
+        if ret == -1 && (*s).s3_in_read_app_data == 2 {
+            // `s3_lib.c:5127-5137`: a handshake re-entered from the record layer found
+            // application data; retry with handshake processing disabled.
+            ossl_statem_set_in_handshake(s, 1);
+            let retry = ssl3_read_app_data(s, _buf, _num, peek, _readbytes);
+            ossl_statem_set_in_handshake(s, 0);
+            retry
+        } else {
+            (*s).s3_in_read_app_data = 0;
+            ret
+        }
+    }
+}
+
+/// The application-data body of [`ssl3_read_internal`] — `s3_lib.c:5127-5153` and the reduced
+/// `ssl3_read_bytes`.
+///
+/// When `peek` is true the record is copied to the caller but **not** consumed
+/// (`rec_layer_s3.c:791-810`): the plaintext stays in `rx_buf` so the next `SSL_read` returns the
+/// same bytes.
+///
+/// # Safety
+/// `s` must be a live connection; `_buf` must hold `_num` writable bytes and `_readbytes` be
+/// writable.
+unsafe fn ssl3_read_app_data(
+    s: *mut Ssl,
+    _buf: *mut c_void,
+    _num: usize,
+    peek: bool,
+    _readbytes: *mut usize,
+) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
         // Phase 17: once the handshake has finished, read through the reduced record layer the way
         // the authority reaches `ssl3_read_bytes` from `ssl3_read` with `SSL3_RT_APPLICATION_DATA`
         // (`s3_lib.c:5151-5154`, `s3_lib.c:5118-5149` -> `rec_layer_s3.c:622`). A post-handshake
@@ -6777,15 +6852,23 @@ pub(crate) unsafe fn ssl_read_internal(
                     n,
                 );
             }
-            (*s).rx_off += n;
-            if (*s).rx_off >= (*s).rx_len {
-                (*s).rx_off = 0;
-                (*s).rx_len = 0;
+            // `rec_layer_s3.c:791-808`: a peek copies from the record but leaves its offset and
+            // remaining length untouched, so the following read returns the same bytes.
+            if !peek {
+                (*s).rx_off += n;
+                if (*s).rx_off >= (*s).rx_len {
+                    (*s).rx_off = 0;
+                    (*s).rx_len = 0;
+                }
             }
             if !_readbytes.is_null() {
                 *_readbytes = n;
             }
             (*s).rwstate = SSL_NOTHING;
+            // `rec_layer_s3.c:774-781`: a zero-length request answers 0 without consuming.
+            if _num == 0 {
+                return 0;
+            }
             return 1;
         }
         loop {
@@ -6819,9 +6902,12 @@ pub(crate) unsafe fn ssl_read_internal(
                     if !_buf.is_null() && want != 0 {
                         ptr::copy_nonoverlapping((*s).rx_buf.as_ptr(), _buf.cast::<u8>(), want);
                     }
-                    (*s).rx_off = want;
+                    // A read advances past the delivered bytes and keeps the remainder; a peek
+                    // keeps the whole record so the next read (or peek) starts at its first byte
+                    // (`rec_layer_s3.c:791-810`).
                     (*s).rx_len = avail;
-                    if (*s).rx_off >= (*s).rx_len {
+                    (*s).rx_off = if peek { 0 } else { want };
+                    if !peek && (*s).rx_off >= (*s).rx_len {
                         (*s).rx_off = 0;
                         (*s).rx_len = 0;
                     }
@@ -6829,6 +6915,10 @@ pub(crate) unsafe fn ssl_read_internal(
                         *_readbytes = want;
                     }
                     (*s).rwstate = SSL_NOTHING;
+                    // `rec_layer_s3.c:774-781`: a zero-length request answers 0 without consuming.
+                    if _num == 0 {
+                        return 0;
+                    }
                     return 1;
                 }
                 // `SSL3_RT_HANDSHAKE` (22): a post-handshake message. `NewSessionTicket` and
@@ -6920,6 +7010,12 @@ pub(crate) unsafe fn ssl_read_internal(
         }
     }
 }
+/// `ssl_peek_internal` — `ssl/ssl_lib.c:2461-2497`.
+///
+/// Unlike `ssl_read_internal` the authority does **not** check the early-data retry states or
+/// call `ossl_statem_check_finish_init` here; the unfinished handshake is driven from
+/// `ssl3_read_bytes` exactly as it is for a read, so a retry answers `-1` with
+/// `rwstate = SSL_READING` and `SSL_get_error` reports `SSL_ERROR_WANT_READ`.
 ///
 /// # Safety
 /// As [`ssl_read_internal`].
@@ -6929,16 +7025,23 @@ unsafe fn ssl_peek_internal(
     _num: usize,
     _readbytes: *mut usize,
 ) -> c_int {
+    // `ssl_lib.c:2465-2471`: `SSL_CONNECTION_FROM_SSL` NULL answers 0 (QUIC is not modelled).
     if s.is_null() {
-        return -1;
+        return 0;
     }
     // SAFETY: `s` is live.
-    if unsafe { (*s).handshake_func }.is_none() {
-        // SAFETY: a constant site.
-        unsafe { raise_ssl(SSL_R_UNINITIALIZED, 2474) };
-        return -1;
+    unsafe {
+        if (*s).handshake_func.is_none() {
+            raise_ssl(SSL_R_UNINITIALIZED, 2469);
+            return -1;
+        }
+        if (*s).shutdown & SSL_RECEIVED_SHUTDOWN != 0 {
+            return 0;
+        }
+        // Async mode (`ssl_lib.c:2484-2494`) is not modelled. `ssl3_peek` is `ssl3_read_internal`
+        // with `peek = 1` (`s3_lib.c:5156-5159`).
+        ssl3_read_internal(s, _buf, _num, true, _readbytes)
     }
-    -1
 }
 
 /// `ssl_write_internal` — `ssl/ssl_lib.c:2530-2585`, reduced at the record layer's write.
