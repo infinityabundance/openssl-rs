@@ -243,6 +243,57 @@ PROGRAMS: dict[str, dict] = {
               "version_re": r"sSMTP 2\.64"},
     "tnftp": {"program": "src/tnftp", "launch": ["-?"],
               "version_re": r"usage: tnftp"},
+    # The 24.24 L7-expansion batch: three LIBRARY-only families. They ship no executable of their
+    # own, so the admitted workload is a small harness under forensics/tools/ built against the
+    # rebuilt library and the subject prefix. `harness` compiles it into the source tree before the
+    # launch/load proof, exactly as `make_targets` builds a workload target for an upstream tree.
+    "libevent": {
+        "program": ".l7-libevent-harness", "launch": ["--version"],
+        "version_re": r"libevent-l7-harness", "lib_paths": [".libs"],
+        "harness": {
+            "source": "forensics/tools/l7_libevent.c",
+            "cflags": ["-I{root}/include", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-levent_openssl", "-levent", "-lssl", "-lcrypto", "-pthread"],
+        },
+        "note": ("libevent's own libevent_openssl consumer path: two bufferevents over a "
+                 "socketpair negotiate TLS1.3, verify the peer against the fixture CA and carry "
+                 "a payload round trip; an unrelated CA is rejected"),
+    },
+    "libretls": {
+        # Known candidate blocker (2026-10-21): every libtls context calls
+        # SSL_CTX_set_tlsext_status_cb, whose macro reaches
+        # SSL_CTX_callback_ctrl(SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB); the candidate falls through to
+        # `_ => 0` (src/ssl/ssl_lib.rs:5022), so tls_configure fails before the handshake. The
+        # workload is recorded honestly at L5 until that control arm lands.
+        "program": ".l7-libretls-harness", "launch": ["--version"],
+        "version_re": r"libretls-l7-harness", "lib_paths": [".libs"],
+        "harness": {
+            "source": "forensics/tools/l7_libretls.c",
+            "cflags": ["-I{root}/include", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-ltls", "-lssl", "-lcrypto"],
+        },
+        "note": ("libtls (libretls) consumer path: client+server over a socketpair complete a "
+                 "verified TLS1.3 handshake and a payload round trip; an unrelated CA is "
+                 "rejected"),
+    },
+    "libarchive": {
+        "program": ".l7-libarchive-harness", "launch": ["--version"],
+        "version_re": r"libarchive-l7-harness", "lib_paths": [".libs"],
+        "harness": {
+            "source": "forensics/tools/l7_libarchive.c",
+            "cflags": ["-I{root}/libarchive", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-larchive", "-lcrypto", "-lz"],
+        },
+        "note": ("libarchive's own create/read path: an in-memory tar carries a payload and its "
+                 "libcrypto SHA-256 digest, the read-back verifies it, and a tampered payload "
+                 "byte is rejected"),
+    },
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -2590,6 +2641,122 @@ def _wl_fail(notes: list, reason: str, failure_class: str | None, d: Path) -> di
             "workload": "unavailable", "local_only": True}
 
 
+def _wl_libevent(ctx: dict) -> dict:
+    """A libevent_openssl socketpair session: TLS1.3, verified peer, byte round trip.
+
+    Both endpoints are bufferevents created with `bufferevent_openssl_socket_new`; the client
+    verifies the server certificate against the fixture CA and the payload must return unchanged.
+    A session whose client trusts only the unrelated CA must fail the handshake.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"])]
+    good = _run_captured([prog] + common + ["--ca", str(pki["ca_crt"])], cwd=d,
+                         env=ctx["env"], timeout=60)
+    neg = _run_captured([prog, "--negative"] + common + ["--ca", str(pki["other_crt"])],
+                        cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    verified = "handshake=TLSv1.3" in text and "peer_verify=ok" in text
+    runtime_ok = bool(good["ok"] and verified)
+    payload_ok = "payload=ok" in text
+    neg_rejected = bool(neg["ok"] and "negative=rejected" in neg_text)
+    functional_ok = runtime_ok and payload_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the bufferevent socketpair did not complete a verified TLS1.3 handshake"
+            if not runtime_ok else
+            "the encrypted round trip did not return the payload" if not payload_ok else
+            "the unrelated CA was not rejected, so the peer certificate does not verify"),
+        "transcript": _transcript(("libevent bufferevent TLS1.3 round trip", good),
+                                  ("libevent unrelated-ca (must fail)", neg)),
+        "workload": ("libevent: bufferevent_openssl client+server over a socketpair + TLS1.3 + "
+                     "peer-certificate verify + payload round trip + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_libretls(ctx: dict) -> dict:
+    """A libtls (libretls) client/server session over a socketpair.
+
+    The client configures the fixture CA, completes a TLS1.3 handshake, asserts the peer
+    certificate was provided and verifies it, then exchanges a payload with a libtls server. A
+    client configured with only the unrelated CA must fail the handshake.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"])]
+    good = _run_captured([prog] + common + ["--ca", str(pki["ca_crt"])], cwd=d,
+                         env=ctx["env"], timeout=60)
+    neg = _run_captured([prog, "--negative"] + common + ["--ca", str(pki["other_crt"])],
+                        cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    verified = "handshake=TLSv1.3" in text and "peer_verify=ok" in text
+    runtime_ok = bool(good["ok"] and verified)
+    payload_ok = "payload=ok" in text
+    neg_rejected = bool(neg["ok"] and "negative=rejected" in neg_text)
+    functional_ok = runtime_ok and payload_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the libtls socketpair session did not complete a verified TLS1.3 handshake"
+            if not runtime_ok else
+            "the libtls round trip did not return the payload" if not payload_ok else
+            "the unrelated CA was not rejected, so the peer certificate does not verify"),
+        "transcript": _transcript(("libtls client/server TLS1.3 round trip", good),
+                                  ("libtls unrelated-ca (must fail)", neg)),
+        "workload": ("libretls: libtls client+server over a socketpair + TLS1.3 + peer-certificate "
+                     "verify + payload round trip + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_libarchive(ctx: dict) -> dict:
+    """A libarchive create/read cycle whose integrity is a libcrypto SHA-256 digest.
+
+    The archive holds a payload and its SHA-256 digest (computed through EVP); reading it back
+    must reproduce the payload and verify the digest. One payload byte flipped inside the archive
+    must be rejected by the digest check, so a reader that ignores integrity is a recorded failure.
+    """
+    d = ctx["workdir"]
+    prog = str(ctx["program"])
+    good = _run_captured([prog], cwd=d, env=ctx["env"], timeout=60)
+    tamper = _run_captured([prog, "--tamper"], cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    tamper_text = tamper["stdout"] + tamper["stderr"]
+    runtime_ok = bool(good["ok"] and "archive=read" in text and "digest=ok" in text)
+    tamper_rejected = bool(tamper["ok"] and "tampered=rejected" in tamper_text)
+    functional_ok = runtime_ok and tamper_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "libarchive did not create and read back the archive with a matching SHA-256 digest"
+            if not runtime_ok else
+            "the tampered payload byte was not rejected by the digest check"),
+        "transcript": _transcript(("libarchive create/read + SHA-256", good),
+                                  ("libarchive tampered payload (must reject)", tamper)),
+        "workload": ("libarchive: in-memory tar create/read + libcrypto SHA-256 digest verify + "
+                     "tampered-byte reject"),
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -2613,6 +2780,9 @@ RUNNERS = {
     "keepalived": _wl_keepalived,
     "ssmtp": _wl_ssmtp,
     "tnftp": _wl_tnftp,
+    "libevent": _wl_libevent,
+    "libretls": _wl_libretls,
+    "libarchive": _wl_libarchive,
 }
 
 
@@ -2705,6 +2875,22 @@ def _runtime_row(fam: dict, recipe: dict | None, subject: str, *, level: str, ou
     return row
 
 
+def _build_harness(prog: dict, root: Path, prefix: Path, out: Path,
+                   build_env: dict) -> dict:
+    """Compile a library-only family's admitted workload harness against the rebuilt library.
+
+    The harness is a test-only consumer of the family library (which was itself built against the
+    subject prefix by the shared recipe), so the program the load proof resolves links both the
+    rebuilt family library and the subject's libssl/libcrypto.
+    """
+    spec = prog["harness"]
+    source = REPO_ROOT / str(spec["source"])
+    argv = ["cc", str(source), "-o", str(out), "-O2", "-Wall", "-Wextra"]
+    argv += [str(a).format(root=root, prefix=prefix) for a in spec.get("cflags") or []]
+    argv += [str(a).format(root=root, prefix=prefix) for a in spec.get("ldflags") or []]
+    return census._run(argv, cwd=root, env=build_env)
+
+
 def _specimen_variant(recipe: dict, name: str) -> tuple[str, str]:
     return f"specimen:{name}:{recipe['version']}", f"variant:{name}:{recipe['version']}:pristine"
 
@@ -2748,6 +2934,23 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
                 evidence=evidence + [f"build:{','.join(targets)}"], canvas=None, limits=limits,
                 prefix=prefix, source_root_hash=source_root_hash, launch=None, workload=None,
                 transcript=_transcript(("make " + " ".join(targets), prep)), local_only=True)
+
+    # A library-only family has no program of its own: compile the admitted workload harness
+    # against the library rebuilt in this source tree and the subject prefix. The harness is the
+    # program the load proof then resolves, so the L5 evidence is the library's own load, not a
+    # fabricated banner.
+    if prog.get("harness"):
+        built = _build_harness(prog, root, prefix, program, build_env)
+        if not built["ok"]:
+            return _runtime_row(
+                fam, recipe, subject, level=L4, outcome="failed", residual="runtime-failure",
+                failure_class="load-failure",
+                reason=(f"the L7 workload harness did not compile: {census._error_line(built)}"),
+                specimen_id=spec_id, variant_id=variant_id, source_sha256=source_sha256,
+                evidence=evidence + ["build:l7-harness"], canvas=None, limits=limits,
+                prefix=prefix, source_root_hash=source_root_hash, launch=None, workload=None,
+                transcript=_transcript(("cc " + prog["harness"]["source"], built)),
+                local_only=True)
 
     if not program.is_file():
         return _runtime_row(
