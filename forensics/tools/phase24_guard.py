@@ -159,11 +159,12 @@ def evaluate(
             f"container"
         )
     image = env.get(image_var)
+    admitted_images = [str(man.get("image"))] + [str(i) for i in man.get("additional_images") or []]
     if image is None:
         reasons.append(f"{image_var} is not recorded in the environment")
-    elif image != man.get("image"):
+    elif image not in admitted_images:
         reasons.append(
-            f"{image_var}={image!r} is not the admitted image {man.get('image')!r}"
+            f"{image_var}={image!r} is not an admitted image {admitted_images!r}"
         )
     platform = env.get(platform_var)
     if platform is None:
@@ -179,7 +180,8 @@ def evaluate(
         "entry_point": ep,
         "reasons": reasons,
         "identity": {
-            "image": man.get("image"),
+            "image": image,
+            "admitted_images": admitted_images,
             "platform": man.get("platform"),
             "marker": man.get("marker") or str(DOCKERENV),
             "flag": flag,
