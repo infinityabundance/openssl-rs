@@ -2192,6 +2192,16 @@ def _wl_keepalived(ctx: dict) -> dict:
     prints the MD5 of the body, which must equal the served file's digest. A plaintext server
     serving the same bytes must not satisfy the SSL request. keepalived 2.3.1 sets no verify mode
     (`SSL_VERIFY_NONE`), so an unrelated CA is not a discriminator this build can be held to.
+
+    The two legs must be provably distinct: `_free_port` closes its probe socket, so the kernel can
+    return the same port twice, and a shared port would point the "plaintext" control at the TLS
+    listener, whose correct digest then reads as "a plaintext server satisfied the SSL request".
+    The plaintext listener therefore binds an ephemeral port *first* and holds it, and only then is
+    the TLS port chosen -- the kernel cannot hand out a port that is already in LISTEN. Both
+    endpoints are probed for their actual payload before either leg launches, and the negative leg
+    is judged on content alone: any body digest returned for the SSL request aimed at the plaintext
+    peer means cleartext was accepted, while the error text the TLS client prints is transcribed
+    and never used as the predicate.
     """
     ap, d = ctx["authority_prefix"], ctx["workdir"]
     prog = str(ctx["program"])
@@ -2200,19 +2210,24 @@ def _wl_keepalived(ctx: dict) -> dict:
     (d / "probe.txt").write_bytes(body)
     expected = hashlib.md5(body).hexdigest()
 
-    tls_port, plain_port = _free_port(), _free_port()
-    server, out, err = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(tls_port),
-                               "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]),
-                               "-WWW", "-quiet"], d, _auth_env(ap), d / "tls.out", d / "tls.err")
+    plain_state: dict = {"ready": threading.Event(), "error": None, "port": None}
     stop = threading.Event()
 
     def plain() -> None:
         """Serve the same bytes without TLS: the SSL request must not be satisfied by it."""
         listener = socket.socket()
-        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        listener.bind(("127.0.0.1", plain_port))
-        listener.listen(4)
-        listener.settimeout(0.5)
+        try:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(("127.0.0.1", 0))
+            listener.listen(4)
+            listener.settimeout(0.5)
+        except OSError as exc:
+            listener.close()
+            plain_state["error"] = exc
+            plain_state["ready"].set()
+            return
+        plain_state["port"] = int(listener.getsockname()[1])
+        plain_state["ready"].set()
         while not stop.is_set():
             try:
                 client, _ = listener.accept()
@@ -2221,24 +2236,88 @@ def _wl_keepalived(ctx: dict) -> dict:
             except OSError:
                 return
             with client:
-                client.settimeout(5.0)
-                try:
-                    client.recv(4096)
-                except OSError:
-                    pass
+                # Drain the request first. A TLS client sends a ClientHello this listener will not
+                # understand; closing with those bytes still unread turns the close into a reset,
+                # which makes the client's own error text depend on a race rather than on the
+                # protocol. The close below is therefore preceded by a bounded drain and followed
+                # by a half-close, so the peer's interpretation is not timing-dependent.
+                deadline = time.monotonic() + 0.5
+                client.settimeout(0.3)
+                while time.monotonic() < deadline:
+                    try:
+                        if not client.recv(4096):
+                            break
+                    except OSError:
+                        break
                 try:
                     client.sendall(b"HTTP/1.0 200 OK\r\nContent-Length: "
                                    + str(len(body)).encode() + b"\r\n\r\n" + body)
+                    client.shutdown(socket.SHUT_WR)
+                    client.settimeout(0.3)
+                    while client.recv(4096):
+                        pass
                 except OSError:
                     pass
         listener.close()
 
+    def plain_fetch(port: int) -> bytes:
+        """A plaintext GET against `port`, returning its body (empty when the peer is not HTTP)."""
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=5.0) as client:
+                client.settimeout(5.0)
+                client.sendall(b"GET /probe.txt HTTP/1.0\r\n\r\n")
+                chunks = []
+                while True:
+                    chunk = client.recv(4096)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+        except OSError:
+            return b""
+        raw = b"".join(chunks)
+        return raw.split(b"\r\n\r\n", 1)[-1] if b"\r\n\r\n" in raw else b""
+
     thread = threading.Thread(target=plain, daemon=True)
     thread.start()
+    server = out = err = None
     try:
+        if not plain_state["ready"].wait(timeout=10.0) or plain_state["error"] is not None:
+            return _wl_fail([("plaintext control", {"exit_code": 0, "stdout": str(
+                                plain_state["error"])})],
+                            "the plaintext control could not bind its port",
+                            "runtime-failure", d)
+        plain_port = int(plain_state["port"])
+        # Chosen only now, with the plaintext listener already in LISTEN, so the kernel cannot return
+        # the same port and the two legs cannot silently become one endpoint.
+        tls_port = _free_port()
+        if tls_port == plain_port:
+            return _wl_fail([("plaintext control", {"exit_code": 0,
+                                                    "stdout": f"bound {plain_port}"})],
+                            "the TLS and plaintext legs were not provably distinct",
+                            "runtime-failure", d)
+        server, out, err = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(tls_port),
+                                   "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]),
+                                   "-WWW", "-quiet"], d, _auth_env(ap), d / "tls.out",
+                                  d / "tls.err")
         if not _wait_tcp("127.0.0.1", tls_port):
             return _wl_fail([("s_server", {"exit_code": 0, "stdout": _read(d / "tls.err")})],
                             "the TLS destination did not open its port",
+                            "runtime-failure", d)
+        # Fixture integrity, asserted on content rather than on a connection: the plaintext leg
+        # really serves the page over plain HTTP, and the TLS listener does not serve it in the
+        # clear. A port collision or a dead plaintext listener fails here loudly instead of being
+        # reported as a subject divergence.
+        plain_body = plain_fetch(plain_port)
+        tls_cleartext_body = plain_fetch(tls_port)
+        if not (tls_port != plain_port and plain_body == body
+                and tls_cleartext_body != body):
+            return _wl_fail([("plaintext control", {
+                                 "exit_code": 0,
+                                 "stdout": plain_body.decode("utf-8", "replace")}),
+                             ("tls listener cleartext probe", {
+                                 "exit_code": 0,
+                                 "stdout": tls_cleartext_body.decode("utf-8", "replace")})],
+                            "the TLS and plaintext legs were not provably distinct",
                             "runtime-failure", d)
         base = [prog, "-T", "-S", "-s", "127.0.0.1", "-u", "/probe.txt", "-t", "5", "-p"]
         good = _run_captured(base + [str(tls_port)], env=ctx["env"], timeout=40)
@@ -2246,14 +2325,21 @@ def _wl_keepalived(ctx: dict) -> dict:
     finally:
         stop.set()
         thread.join(timeout=2)
-        _stop(server)
-        out.close()
-        err.close()
+        if server is not None:
+            _stop(server)
+        if out is not None:
+            out.close()
+        if err is not None:
+            err.close()
 
     digest = good["stdout"].strip()
     fetched = re.fullmatch(r"[0-9a-f]{32}", digest) is not None
-    neg_rejected = (re.fullmatch(r"[0-9a-f]{32}", neg["stdout"].strip()) is None
-                    and "SSL handshake/communication error" in neg["stdout"] + neg["stderr"])
+    # The control asserts on content, not on a connection or an error string: the plaintext peer is
+    # proven alive and serving this exact payload above, so any body digest from the SSL request
+    # aimed at it is a real acceptance of cleartext. Which error message the TLS client prints while
+    # rejecting the peer is its own choice (a reset and a TLS alert are both rejections), so the
+    # message is transcribed and never used as the predicate.
+    neg_rejected = re.fullmatch(r"[0-9a-f]{32}", neg["stdout"].strip()) is None
     functional_ok = fetched and digest == expected and neg_rejected
     return {
         "runtime_ok": fetched,
