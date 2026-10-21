@@ -1622,6 +1622,116 @@ _L7_EXPAND4_SPECS: tuple[dict, ...] = (
     },
 )
 
+# The Phase-25 L7 expansion batch (b8): two WPA KDF tools, the aircrack-ng cracking path, NRPE
+# over TLS and mktorrent's SHA-1 piece hashing.  cowpatty needs libpcap only for its capture
+# tool, but its Makefile links it for genpmk too, so the pinned libpcap/dbus aux is used;
+# aircrack-ng is autotools-only at this pin and reuses the same autotools bootstrap as httperf;
+# NRPE's configure would otherwise invoke the authority's `openssl dhparam`, so DH logic is
+# disabled (`--with-need-dh=no`) and the TLS path uses ECDHE.
+_L7_EXPAND5_SPECS: tuple[dict, ...] = (
+    {
+        "family": "cowpatty", "version": "4.8",
+        "url": ("https://deb.debian.org/debian/pool/main/c/cowpatty/"
+                "cowpatty_4.8.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+        "configure": [],
+        "make": ["CC=cc",
+                 "CFLAGS=-pipe -Wall -DOPENSSL -O2 -I{prefix}/include -I{aux}/usr/include",
+                 "LDLIBS=-L{prefix}/lib -L{aux}/usr/lib/x86_64-linux-gnu "
+                 "-Wl,-rpath,{prefix}/lib -Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu "
+                 "-Wl,-rpath,{aux}/lib/x86_64-linux-gnu -lcrypto -lpcap"],
+        "artifact": "genpmk", "launch": ["-V"],
+        "aux_sources": list(_L7_TCPDUMP_AUX),
+        "note": ("cowpatty 4.8's genpmk built against the subject libcrypto; its WPA PMK "
+                 "path uses OpenSSL SHA-1 through PBKDF2-HMAC-SHA1, and libpcap is the pinned "
+                 "package its shared utils link needs"),
+    },
+    {
+        "family": "hcxtools", "version": "6.2.7",
+        "url": ("https://deb.debian.org/debian/pool/main/h/hcxtools/"
+                "hcxtools_6.2.7.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+        "configure": [],
+        "make": ["hcxpmktool", "CC=cc",
+                 "OPENSSL_LIBS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lcrypto",
+                 "OPENSSL_CFLAGS=-I{prefix}/include"],
+        "artifact": "hcxpmktool", "launch": ["--version"],
+        "note": ("hcxtools 6.2.7's hcxpmktool built against the subject libcrypto; its PMK "
+                 "derivation uses OpenSSL EVP PBKDF2-HMAC-SHA1, and the prefix ships no "
+                 "openssl.pc so OPENSSL_LIBS/OPENSSL_CFLAGS are supplied directly"),
+    },
+    {
+        "family": "aircrack-ng", "version": "1.7",
+        "url": ("https://deb.debian.org/debian/pool/main/a/aircrack-ng/"
+                "aircrack-ng_1.7.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+        "configure": ["--prefix={root}/.l7-install",
+                      "--with-libpcap-include={aux}/usr/include",
+                      "--with-libpcap-lib={aux}/usr/lib/x86_64-linux-gnu"],
+        "make": [MAKE_JOBS, "install"],
+        "artifact": ".libs/aircrack-ng", "launch": ["--help"],
+        "aux_sources": list(_L7_HTTPERF_AUX) + list(_L7_TCPDUMP_AUX),
+        "pre_build": [["sh", "-c", _L7_HTTPERF_BOOTSTRAP]],
+        "env_extra": {
+            "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+            "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+            "ACLOCAL_PATH": ("/usr/share/aclocal:{aux}/usr/share/aclocal:"
+                             "{aux}/usr/share/libtool/m4"),
+            "AUTOMAKE": "{root}/.autotools/automake",
+            "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+            "AUTOCONF": "{aux}/usr/bin/autoconf",
+            "AUTOHEADER": "{aux}/usr/bin/autoheader",
+            "AUTOM4TE": "{aux}/usr/bin/autom4te",
+            "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+            "AC_MACRODIR": "{aux}/usr/share/autoconf",
+            "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+            "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+            "M4": "{aux}/usr/bin/m4",
+        },
+        "note": ("aircrack-ng 1.7's WPA key-cracking path linked against the subject "
+                 "libcrypto; the pinned release is autotools-only, so the httperf bootstrap "
+                 "regenerates configure, and libpcap is the pinned package its capture tools "
+                 "link"),
+    },
+    {
+        "family": "nrpe", "version": "4.1.0",
+        "url": ("https://deb.debian.org/debian/pool/main/n/nagios-nrpe/"
+                "nagios-nrpe_4.1.0.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}",
+                      "--with-ssl-inc={prefix}", "--with-ssl-lib={prefix}/lib",
+                      "--with-need-dh=no", "--with-nrpe-user=nobody",
+                      "--with-nrpe-group=nogroup",
+                      "--with-piddir={root}/.l7-install/var",
+                      "--with-logdir={root}/.l7-install/var"],
+        "make": ["all", MAKE_JOBS],
+        "artifact": "src/nrpe", "launch": ["-V"],
+        "note": ("NRPE 4.1.0's daemon and check_nrpe plugin linked against the subject "
+                 "libssl; --with-need-dh=no avoids configure's `openssl dhparam` invocation "
+                 "(the authority-applicable TLS path is ECDHE), and the daemon runs as nobody"),
+    },
+    {
+        "family": "mktorrent", "version": "1.1",
+        "url": ("https://deb.debian.org/debian/pool/main/m/mktorrent/"
+                "mktorrent_1.1.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+        "configure": [],
+        "make": ["USE_OPENSSL=1", "CC=cc",
+                 "CFLAGS=-O2 -Wall -I{prefix}/include",
+                 "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib",
+                 "LDLIBS=-lcrypto"],
+        "artifact": "mktorrent", "launch": ["-h"],
+        "note": ("mktorrent 1.1 built with USE_OPENSSL=1 so every piece hash is OpenSSL "
+                 "SHA-1; the workload asserts the exact info hash and its change for a "
+                 "modified file"),
+    },
+)
+
 _L7_EXPAND3_SPECS: tuple[dict, ...] = (
     {
         "family": "exim", "version": "4.100.1",
@@ -1818,6 +1928,13 @@ def _build_catalogue() -> tuple[dict, ...]:
     # makepasswd.  Same pristine-source/aux seam; httperf's autotools bootstrap is a generated
     # build input, and tcpdump's libpcap-config is repointed under the extracted aux root.
     for spec in _L7_EXPAND4_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b8): cowpatty, hcxtools, aircrack-ng, nrpe and
+    # mktorrent.  Same pristine-source/aux seam; aircrack-ng regenerates its configure with the
+    # pinned autotools, and NRPE disables its dhparam-generating configure step.
+    for spec in _L7_EXPAND5_SPECS:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)

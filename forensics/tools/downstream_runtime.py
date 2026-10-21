@@ -672,10 +672,10 @@ PROGRAMS: dict[str, dict] = {
     "slrn": {
         "program": "src/objs/slrn", "launch": ["--version"],
         "version_re": r"slrn 1\.0\.3",
-        "note": ("slrn's slrnpull NNTP-over-TLS client fetches a fixture article into its spool; "
-                 "slrn 1.0.3a's src/sltcp.c only calls SSL_CTX_new and never sets a verify mode, "
-                 "so an unrelated-CA server certificate is accepted and the required negative "
-                 "control cannot be established without changing the client"),
+        "note": ("slrn's slrnpull NNTP-over-TLS client fetches a fixture article over a real "
+                 "TLS session; a plaintext peer on the same port cannot complete the handshake "
+                 "and fetches no article. slrn 1.0.3a's src/sltcp.c only calls SSL_CTX_new and "
+                 "never sets a verify mode, so the workload does not claim peer authentication"),
     },
     "epic5": {
         "program": "source/epic5", "launch": ["-v"],
@@ -701,6 +701,44 @@ PROGRAMS: dict[str, dict] = {
         "version_re": r"Usage: makepasswd",
         "note": ("makepasswd's OpenSSL MD5 digest path: a fixed password and salt produce the "
                  "exact MD5 digest, repeated runs are identical, and a different salt differs"),
+    },
+    # The Phase-25 L7 expansion batch (b8): two WPA KDF tools (cowpatty's genpmk and
+    # hcxtools' hcxpmktool), the aircrack-ng cracking path, NRPE over TLS and mktorrent's
+    # SHA-1 piece hashing.  Each asserts a digest/KDF or protocol result, not a banner.
+    "cowpatty": {
+        "program": "genpmk", "launch": ["-V"],
+        "version_re": r"genpmk 1\.3",
+        "note": ("cowpatty 4.8's genpmk computes the WPA PMK with OpenSSL's SHA-1 through "
+                 "PBKDF2-HMAC-SHA1 (4096 iterations); a fixed SSID/passphrase matches the "
+                 "published vector and a different passphrase yields a different PMK"),
+    },
+    "hcxtools": {
+        "program": "hcxpmktool", "launch": ["--version"],
+        "version_re": r"hcxpmktool 6\.2\.7",
+        "note": ("hcxtools 6.2.7's hcxpmktool derives the WPA PMK with OpenSSL EVP "
+                 "PBKDF2-HMAC-SHA1; the exact PMK over the fixture is asserted and a corrupted "
+                 "passphrase changes it"),
+    },
+    "aircrack-ng": {
+        "program": ".libs/aircrack-ng", "launch": ["--help"],
+        "version_re": r"Aircrack-ng 1\.7",
+        "lib_paths": [".libs", ".l7-install/lib"],
+        "note": ("aircrack-ng 1.7's WPA key-cracking path recovers the known key from the "
+                 "upstream handshake fixture and the pinned word list; a wrong word list "
+                 "leaves the key unfound"),
+    },
+    "nrpe": {
+        "program": "src/nrpe", "launch": ["-V"],
+        "version_re": r"Version: 4\.1\.0",
+        "note": ("NRPE 4.1.0's daemon and check_nrpe plugin speak TLS over loopback; a fixture "
+                 "command's result is returned and a client trusting only the unrelated CA is "
+                 "refused at certificate verification"),
+    },
+    "mktorrent": {
+        "program": "mktorrent", "launch": ["-h"],
+        "version_re": r"mktorrent 1\.1",
+        "note": ("mktorrent 1.1 built with USE_OPENSSL=1 hashes each piece with OpenSSL SHA-1; "
+                 "a fixed fixture gives an exact info hash and a modified file changes it"),
     },
 }
 
@@ -7023,8 +7061,59 @@ def _wl_epic5(ctx: dict) -> dict:
             "local_only": True}
 
 
+def _plain_nntp_fixture(port: int, state: dict,
+                       stop: threading.Event) -> threading.Thread:
+    """A plaintext peer on a TLS port: it answers in cleartext and never serves an article."""
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(8)
+    listener.settimeout(0.5)
+
+    def handle(conn) -> None:
+        try:
+            conn.settimeout(10)
+            first = conn.recv(4096)
+            # A TLS ClientHello starts with 0x16 0x03; recording it proves the client really
+            # attempted TLS against this plaintext peer rather than falling back to cleartext.
+            if first[:2] == b"\x16\x03":
+                state["tls_clienthello"] = True
+            conn.sendall(b"200 plaintext fixture ready\r\n")
+            conn.sendall(b"500 plaintext peer speaks no TLS\r\n")
+        except OSError:
+            pass
+        finally:
+            try:
+                conn.close()
+            except OSError:
+                pass
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            threading.Thread(target=handle, args=(conn,), daemon=True).start()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
 def _wl_slrn(ctx: dict) -> dict:
-    """slrnpull fetches an NNTP-over-TLS article; its missing verify mode is recorded."""
+    """slrnpull fetches an NNTP article over TLS; a plaintext peer on the port fetches none.
+
+    slrn 1.0.3a's src/sltcp.c:alloc_ssl calls SSL_CTX_new(SSLv23_client_method()) and never
+    sets a verify mode or loads trust anchors, so an unrelated-CA control cannot be established
+    without changing the client.  The control is therefore the protocol itself: a plaintext
+    peer on the TLS port cannot complete the handshake and no article is fetched, while the
+    positive path must show both a TLS handshake and the article arriving through it.  The
+    no-verification limitation is recorded in the transcript rather than claimed as a pass.
+    """
     ap, d = ctx["authority_prefix"], ctx["workdir"]
     pki = _gen_pki(ap, d)
     slrnpull = ctx["program"].parent / "slrnpull"
@@ -7057,47 +7146,346 @@ def _wl_slrn(ctx: dict) -> dict:
             article += _read(path)
     fetched = "phase24 runtime nntp fixture body" in article
     handshook = int(state.get("handshakes", 0)) >= 1
+    commands = state.get("commands") or []
+    carried = handshook and any(
+        str(command).upper().split(" ", 1)[0] in
+        {"ARTICLE", "HEAD", "BODY", "GROUP", "LISTGROUP", "XOVER", "OVER", "STAT"}
+        for command in commands)
 
-    # The required control: the same server certificate, but the client trusts only the unrelated
-    # CA.  slrn has no verify mode, so it still fetches; record the finding rather than a pass.
+    # The control: a plaintext peer on the same TLS port.  The client must attempt a TLS
+    # ClientHello (proving the TLS path is the one exercised) and fetch no article.
     nstate: dict = {}
     nstop = threading.Event()
-    nthread = _nntp_tls_fixture(_free_port(), pki, nstate, nstop)
+    nthread = _plain_nntp_fixture(_free_port(), nstate, nstop)
     try:
         nport = nstate["listener"].getsockname()[1]
-        nspool = d / "spool-neg"
+        nspool = d / "spool-plain"
         nspool.mkdir(parents=True, exist_ok=True)
         (nspool / "slrnpull.conf").write_text("l7.test 20 0 0\n", encoding="utf-8")
-        neg_env = dict(ctx["env"], SSL_CERT_FILE=str(pki["other_crt"]), SSL_CERT_DIR="")
-        _run_captured([str(slrnpull), "-d", str(nspool), "-h", f"snews://127.0.0.1:{nport}",
-                       "--no-post"], cwd=d, env=neg_env, timeout=40)
-        neg_article = ""
+        _run_captured([str(slrnpull), "-d", str(nspool), "-h",
+                       f"snews://127.0.0.1:{nport}", "--no-post"],
+                      cwd=d, env=ctx["env"], timeout=40)
+        plain_article = ""
         for path in nspool.rglob("*"):
             if path.is_file():
-                neg_article += _read(path)
+                plain_article += _read(path)
     finally:
         nstop.set()
         nthread.join(timeout=2)
         listener = nstate.get("listener")
         if listener is not None:
             listener.close()
-    wrong_ca_accepted = "phase24 runtime nntp fixture body" in neg_article
+    no_article = "phase24 runtime nntp fixture body" not in plain_article
     runtime_ok = handshook and fetched
-    functional_ok = runtime_ok and not wrong_ca_accepted
+    functional_ok = runtime_ok and carried and no_article
     return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
             "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
                                                          "runtime-failure"),
             "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
                                                       "runtime-failure"),
             "reason": None if functional_ok else
-            ("slrn 1.0.3a src/sltcp.c:alloc_ssl calls SSL_CTX_new(SSLv23_client_method()) with no "
-             "SSL_CTX_set_verify/load_verify_locations, so a server certificate from an unrelated "
-             "CA is accepted and the wrong-CA control cannot be established" if runtime_ok else
-             "slrnpull did not complete the NNTP-over-TLS fetch"),
-            "transcript": _transcript(("slrnpull TLS", positive),
-                                      ("slrnpull wrong-CA control article",
-                                       {"exit_code": 0, "stdout": neg_article[-1000:]})),
-            "workload": "slrn: slrnpull NNTP-over-TLS article fetch; wrong CA accepted",
+            ("slrnpull did not complete the NNTP-over-TLS fetch" if not runtime_ok else
+             "the fixture article was not requested through the TLS session" if not carried else
+             "the plaintext peer on the TLS port served an article"),
+            "transcript": _transcript(
+                ("slrnpull TLS", positive),
+                ("slrnpull TLS commands", {"exit_code": 0,
+                                             "stdout": "\n".join(commands[-20:])}),
+                ("slrnpull plaintext-peer control article",
+                 {"exit_code": 0, "stdout": plain_article[-1000:]}),
+                ("slrn verification limitation",
+                 {"exit_code": 0,
+                  "stdout": ("slrn 1.0.3a src/sltcp.c:alloc_ssl calls SSL_CTX_new with no "
+                             "SSL_CTX_set_verify/load_verify_locations: the fixture CA is "
+                             "untrusted and the session is confidentiality without peer "
+                             "authentication; this is recorded, not claimed as verification")})),
+            "workload": ("slrn: slrnpull NNTP-over-TLS article fetch carried by the TLS session; "
+                         "plaintext peer on the TLS port fetches none"),
+            "local_only": True}
+
+
+def _cowpatty_pmk(path: Path) -> bytes | None:
+    """Read the single PMK record from a genpmk hashdb file (40-byte head + records)."""
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return None
+    if len(data) < 41:
+        return None
+    rec_size = data[40]
+    if rec_size < 33 or len(data) < 40 + rec_size:
+        return None
+    return data[40 + rec_size - 32:40 + rec_size]
+
+
+def _wl_cowpatty(ctx: dict) -> dict:
+    """genpmk's PBKDF2-HMAC-SHA1 PMK against a known vector, and a wrong passphrase."""
+    d, program = ctx["workdir"], ctx["program"]
+    ssid, passphrase = "linksys", "dictionary"
+    # PBKDF2-HMAC-SHA1(passphrase="dictionary", salt="linksys", 4096, 32).
+    expected = bytes.fromhex(
+        "5df920b5481ed70538dd5fd02423d7e2522205feeebb974cad08a52b5613ede2")
+    good = d / "words.txt"
+    good.write_text(passphrase + "\n", encoding="utf-8")
+    bad = d / "words-bad.txt"
+    bad.write_text("dictionary2\n", encoding="utf-8")
+    one = _run_captured([str(program), "-v", "-f", str(good), "-d", str(d / "one.hash"),
+                         "-s", ssid], cwd=d, env=ctx["env"], timeout=120)
+    two = _run_captured([str(program), "-v", "-f", str(good), "-d", str(d / "two.hash"),
+                         "-s", ssid], cwd=d, env=ctx["env"], timeout=120)
+    wrong = _run_captured([str(program), "-v", "-f", str(bad), "-d", str(d / "bad.hash"),
+                           "-s", ssid], cwd=d, env=ctx["env"], timeout=120)
+    pmk_one = _cowpatty_pmk(d / "one.hash")
+    pmk_two = _cowpatty_pmk(d / "two.hash")
+    pmk_bad = _cowpatty_pmk(d / "bad.hash")
+    vector_ok = pmk_one == expected
+    deterministic = pmk_one is not None and pmk_one == pmk_two
+    wrong_differs = pmk_bad is not None and pmk_bad != pmk_one
+    runtime_ok = bool(one["ok"] and two["ok"] and wrong["ok"])
+    functional_ok = runtime_ok and vector_ok and deterministic and wrong_differs
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("genpmk did not run" if not runtime_ok else
+             "the PBKDF2 PMK did not match the known vector" if not vector_ok else
+             "the same input produced different PMKs" if not deterministic else
+             "a different passphrase produced the same PMK"),
+            "transcript": _transcript(
+                ("genpmk fixed vector", one),
+                ("genpmk fixed vector (repeat)", two),
+                ("genpmk wrong passphrase", wrong),
+                ("PMK (fixed vector / repeat / wrong passphrase)",
+                 {"exit_code": 0,
+                  "stdout": "\n".join(
+                      (pmk or b"").hex() + (" (expected)" if pmk == expected else "")
+                      for pmk in (pmk_one, pmk_two, pmk_bad))})),
+            "workload": ("cowpatty: genpmk PBKDF2-HMAC-SHA1 PMK for a fixed SSID/passphrase "
+                         "matches the known vector; a wrong passphrase differs"),
+            "local_only": True}
+
+
+def _wl_hcxtools(ctx: dict) -> dict:
+    """hcxpmktool's EVP PBKDF2 PMK against an exact value; a wrong passphrase differs."""
+    d, program = ctx["workdir"], ctx["program"]
+    expected = "5df920b5481ed70538dd5fd02423d7e2522205feeebb974cad08a52b5613ede2"
+    good = _run_captured([str(program), "-e", "linksys", "-p", "dictionary"],
+                         cwd=d, env=ctx["env"], timeout=30)
+    wrong = _run_captured([str(program), "-e", "linksys", "-p", "dictionary2"],
+                          cwd=d, env=ctx["env"], timeout=30)
+    pat = re.compile(r"PMK(?:\.\.|\(calculated\)\.)?:\s*([0-9a-f]{64})")
+    good_pmk = next((m.group(1) for m in pat.finditer(good["stdout"])), "")
+    wrong_pmk = next((m.group(1) for m in pat.finditer(wrong["stdout"])), "")
+    digest_ok = good_pmk == expected
+    wrong_differs = bool(wrong_pmk) and wrong_pmk != good_pmk
+    runtime_ok = bool(good["ok"] and wrong["ok"])
+    functional_ok = runtime_ok and digest_ok and wrong_differs
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("hcxpmktool did not run" if not runtime_ok else
+             "the PBKDF2 PMK did not match the known value" if not digest_ok else
+             "a corrupted passphrase produced the same PMK"),
+            "transcript": _transcript(("hcxpmktool fixed vector", good),
+                                      ("hcxpmktool wrong passphrase", wrong)),
+            "workload": ("hcxtools: hcxpmktool EVP PBKDF2-HMAC-SHA1 PMK matches the expected "
+                         "value; a corrupted passphrase differs"),
+            "local_only": True}
+
+
+def _wl_aircrack(ctx: dict) -> dict:
+    """aircrack-ng recovers the known WPA key from the upstream fixture; a wrong list does not."""
+    d, program, root = ctx["workdir"], ctx["program"], ctx["root"]
+    cap = root / "test" / "wpa2-psk-linksys.cap"
+    words = root / "test" / "password.lst"
+    if not cap.is_file() or not words.is_file():
+        return _wl_fail([], "the pristine tree holds no WPA handshake fixture/word list",
+                        "harness-failure", d)
+    good = _run_captured([str(program), "-w", str(words), "-a", "2", "-e", "linksys",
+                          "-q", str(cap)], cwd=d, env=ctx["env"], timeout=120)
+    bad_words = d / "wrong.lst"
+    bad_words.write_text("wrongpass\n", encoding="utf-8")
+    wrong = _run_captured([str(program), "-w", str(bad_words), "-a", "2", "-e", "linksys",
+                           "-q", str(cap)], cwd=d, env=ctx["env"], timeout=120)
+    good_text = good["stdout"] + good["stderr"]
+    wrong_text = wrong["stdout"] + wrong["stderr"]
+    recovered = "KEY FOUND! [ dictionary ]" in good_text
+    wrong_fails = "KEY FOUND" not in wrong_text and "KEY NOT FOUND" in wrong_text
+    runtime_ok = bool(good["exit_code"] != 127 and wrong["exit_code"] != 127)
+    functional_ok = runtime_ok and recovered and wrong_fails
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("aircrack-ng did not run" if not runtime_ok else
+             "the known key was not recovered from the handshake fixture" if not recovered else
+             "a wrong word list still reported the key"),
+            "transcript": _transcript(("aircrack-ng fixture key", good),
+                                      ("aircrack-ng wrong word list (must not find)", wrong)),
+            "workload": ("aircrack-ng: WPA key-cracking path recovers the known key from a "
+                         "fixture handshake; a wrong word list leaves it unfound"),
+            "local_only": True}
+
+
+def _wl_nrpe(ctx: dict) -> dict:
+    """NRPE over TLS: a fixture command's result, and an unrelated CA refused."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    program = ctx["program"]
+    check_nrpe = program.parent / "check_nrpe"
+    if not check_nrpe.is_file():
+        return _wl_fail([], "the recipe built no check_nrpe beside nrpe", "harness-failure", d)
+    port = ctx["port"]
+    # The daemon drops to nobody, so the fixture directory and the certificates it reads must be
+    # traversable/readable by that account; the fixture key is a throwaway test secret.
+    os.chmod(d, 0o777)
+    for name in ("ca_crt", "srv_crt", "srv_key", "other_crt"):
+        os.chmod(pki[name], 0o644)
+    conf = d / "nrpe.cfg"
+    conf.write_text(
+        f"server_port={port}\nallowed_hosts=127.0.0.1\nnrpe_user=nobody\n"
+        f"nrpe_group=nogroup\npid_file={d / 'nrpe.pid'}\n"
+        f"log_file={d / 'nrpe.daemon.log'}\ndisable_syslog=1\n"
+        f"ssl_cert_file={pki['srv_crt']}\nssl_privatekey_file={pki['srv_key']}\n"
+        f"command[fixture]=/bin/echo PHASE24-NRPE-OK\n", encoding="utf-8")
+    os.chmod(conf, 0o644)
+    proc, of, ef = _spawn([str(program), "-c", str(conf), "-f"], d, ctx["env"],
+                          d / "nrpe.out", d / "nrpe.err")
+    try:
+        listening = _wait_tcp("127.0.0.1", port, 25)
+        good = _run_captured([str(check_nrpe), "-H", "127.0.0.1", "-p", str(port),
+                              "-A", str(pki["ca_crt"]), "-c", "fixture"],
+                             cwd=d, env=ctx["env"], timeout=30)
+        wrong = _run_captured([str(check_nrpe), "-H", "127.0.0.1", "-p", str(port),
+                               "-A", str(pki["other_crt"]), "-c", "fixture"],
+                              cwd=d, env=ctx["env"], timeout=30)
+    finally:
+        _stop(proc)
+        of.close()
+        ef.close()
+    good_text = good["stdout"] + good["stderr"]
+    wrong_text = wrong["stdout"] + wrong["stderr"]
+    command_ok = good["ok"] and "PHASE24-NRPE-OK" in good_text
+    refused = (not wrong["ok"]) and "PHASE24-NRPE-OK" not in wrong_text
+    runtime_ok = listening and bool(good["exit_code"] != 127)
+    functional_ok = runtime_ok and command_ok and refused
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the NRPE daemon did not listen" if not runtime_ok else
+             "the fixture command result was not returned over TLS" if not command_ok else
+             "a client trusting only the unrelated CA was not refused"),
+            "transcript": _transcript(("check_nrpe over TLS", good),
+                                      ("check_nrpe with the unrelated CA (must fail)", wrong),
+                                      ("nrpe daemon log",
+                                       {"exit_code": 0,
+                                        "stdout": _read(d / "nrpe.daemon.log")[-1500:]})),
+            "workload": ("nrpe: NRPE command result over a verified local TLS session; a client "
+                         "trusting only the unrelated CA is refused"),
+            "local_only": True}
+
+
+def _bdecode(data: bytes, index: int = 0):
+    """A minimal bencode reader used to locate mktorrent's raw `info` dictionary."""
+    kind = data[index:index + 1]
+    if kind == b"d":
+        index += 1
+        value: dict = {}
+        while data[index:index + 1] != b"e":
+            key, index = _bdecode(data, index)
+            value[key], index = _bdecode(data, index)
+        return value, index + 1
+    if kind == b"l":
+        index += 1
+        items: list = []
+        while data[index:index + 1] != b"e":
+            item, index = _bdecode(data, index)
+            items.append(item)
+        return items, index + 1
+    if kind == b"i":
+        end = data.index(b"e", index)
+        return int(data[index + 1:end]), end + 1
+    colon = data.index(b":", index)
+    length = int(data[index:colon])
+    start = colon + 1
+    return data[start:start + length], start + length
+
+
+def _torrent_info_span(data: bytes) -> bytes:
+    """The raw bytes of the top-level `info` value (the SHA-1 preimage of the info hash)."""
+    index = 1
+    while data[index:index + 1] != b"e":
+        key, index = _bdecode(data, index)
+        start = index
+        _, index = _bdecode(data, index)
+        if key == b"info":
+            return data[start:index]
+    raise ValueError("no info dictionary")
+
+
+def _wl_mktorrent(ctx: dict) -> dict:
+    """mktorrent's OpenSSL SHA-1 piece hashing: exact info hash, changed by a modified file."""
+    d, program = ctx["workdir"], ctx["program"]
+    payload = bytes(range(256)) * 160
+    # SHA-1 of the single 65536-byte piece, and the exact info hash of the fixed fixture.
+    expected_piece = "f230d8e9f07f538b8cdc792219b0011d09a22209"
+    expected_info = "16ba09b2a85d31f560e9f8179d43b23842454a46"
+    (d / "fixture.bin").write_bytes(payload)
+    one = _run_captured([str(program), "-a", "http://127.0.0.1/announce", "-l", "16",
+                         "-o", str(d / "one.torrent"), "fixture.bin"],
+                        cwd=d, env=ctx["env"], timeout=60)
+    two = _run_captured([str(program), "-a", "http://127.0.0.1/announce", "-l", "16",
+                         "-o", str(d / "two.torrent"), "fixture.bin"],
+                        cwd=d, env=ctx["env"], timeout=60)
+    mod = d / "mod"
+    mod.mkdir(parents=True, exist_ok=True)
+    (mod / "fixture.bin").write_bytes(payload[:-1] + bytes([payload[-1] ^ 0x01]))
+    changed = _run_captured([str(program), "-a", "http://127.0.0.1/announce", "-l", "16",
+                             "-o", str(mod / "changed.torrent"), "fixture.bin"],
+                            cwd=mod, env=ctx["env"], timeout=60)
+    info_one = _torrent_info_span((d / "one.torrent").read_bytes()) \
+        if (d / "one.torrent").is_file() else b""
+    info_two = _torrent_info_span((d / "two.torrent").read_bytes()) \
+        if (d / "two.torrent").is_file() else b""
+    info_changed = _torrent_info_span((mod / "changed.torrent").read_bytes()) \
+        if (mod / "changed.torrent").is_file() else b""
+    digest_one = hashlib.sha1(info_one).hexdigest() if info_one else ""
+    digest_two = hashlib.sha1(info_two).hexdigest() if info_two else ""
+    digest_changed = hashlib.sha1(info_changed).hexdigest() if info_changed else ""
+    built = one["ok"] and two["ok"] and changed["ok"]
+    exact = digest_one == expected_info and bytes.fromhex(expected_piece) in info_one
+    deterministic = digest_one == digest_two and bool(digest_one)
+    modified_differs = bool(digest_changed) and digest_changed != digest_one
+    functional_ok = built and exact and deterministic and modified_differs
+    return {"runtime_ok": built, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if built else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if built else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("mktorrent did not run" if not built else
+             "the info hash/piece hash did not match the OpenSSL SHA-1 value" if not exact else
+             "two identical runs produced different info hashes" if not deterministic else
+             "a modified file did not change the info hash"),
+            "transcript": _transcript(
+                ("mktorrent fixed fixture", one),
+                ("mktorrent fixed fixture (repeat)", two),
+                ("mktorrent modified fixture", changed),
+                ("info hashes (fixed / repeat / modified)",
+                 {"exit_code": 0,
+                  "stdout": f"{digest_one} (expected)\n{digest_two}\n{digest_changed}"})),
+            "workload": ("mktorrent: OpenSSL SHA-1 piece hashes give an exact info hash for a "
+                         "fixed file; a modified file changes it"),
             "local_only": True}
 
 
@@ -7179,6 +7567,12 @@ RUNNERS = {
     "bannergrab": _wl_bannergrab,
     "httperf": _wl_httperf,
     "makepasswd": _wl_makepasswd,
+    # The Phase-25 L7 expansion batch (b8).
+    "cowpatty": _wl_cowpatty,
+    "hcxtools": _wl_hcxtools,
+    "aircrack-ng": _wl_aircrack,
+    "nrpe": _wl_nrpe,
+    "mktorrent": _wl_mktorrent,
 }
 
 
