@@ -204,12 +204,32 @@ PROGRAMS: dict[str, dict] = {
                "version_re": r"fossil version"},
     "ldns": {"program": "examples/.libs/ldns-signzone", "launch": ["-h"],
              "version_re": r"ldns-signzone", "lib_paths": [".libs"],
-             "make_targets": ["examples"]},
+             "make_targets": ["examples"],
+             # `make -j8 examples` races on libtool's .loT temporary names (observed:
+             # `mv: cannot stat examples/ldns-*.loT`); the workload target is built serially.
+             "make_jobs": ["-j1"]},
     "rsync": {"program": "rsync", "launch": ["--version"],
               "version_re": r"rsync\s+version"},
     "socat": {"program": "socat", "launch": ["-V"], "version_re": r"socat version"},
     "squid": {"program": "src/squid", "launch": ["-v"],
               "version_re": r"Squid Cache: Version"},
+    # The 24.21 L7-expansion batch: two TLS servers (stunnel/openvpn), a TLS scanner (sslscan), a
+    # VPN key-exchange daemon (tinc) and a TLS Redis client (hiredis-ssl).
+    "stunnel": {"program": "src/stunnel", "launch": ["-version"],
+                "version_re": r"stunnel 5"},
+    "sslscan": {"program": "sslscan", "launch": ["--version"],
+                "version_re": r"OpenSSL \d"},
+    "openvpn": {"program": "src/openvpn/openvpn", "launch": ["--version"],
+                "version_re": r"OpenVPN 2"},
+    "tinc": {"program": "src/tincd", "launch": ["--version"],
+             "version_re": r"tinc version 1\.0"},
+    # hiredis ships no TLS CLI; its own upstream example is the admitted program. The default
+    # recipe make builds the libraries and the unit test but not the example, so the example target
+    # is built here with the recipe's own OpenSSL environment (`USE_SSL=1`, `OPENSSL_PREFIX`).
+    "hiredis-ssl": {"program": "examples/hiredis-example-ssl", "launch": ["--help"],
+                    "version_re": r"Usage:",
+                    "make_targets": ["hiredis-example-ssl"],
+                    "make_env": {"OPENSSL_PREFIX": "{prefix}", "USE_SSL": "1"}},
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -395,6 +415,16 @@ def _wait_tcp(host: str, port: int, timeout: float = 25.0) -> bool:
     return False
 
 
+def _wait_log(path: Path, needle: str, timeout: float = 25.0) -> bool:
+    """Wait for a literal line/marker in a spawned program's log; the workload's own evidence."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if needle in _read(path):
+            return True
+        time.sleep(0.2)
+    return False
+
+
 def _read(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8", errors="ignore")
@@ -458,8 +488,25 @@ def _gen_pki(authority_prefix: Path, d: Path) -> dict:
     # pure-ftpd/redis all accept separate files, but the combined form is portable)
     srv_pem = d / "server.pem"
     srv_pem.write_text(_read(srv_crt) + _read(srv_key), encoding="utf-8")
+    # A client certificate from the same CA, for the workloads whose client authenticates to the
+    # server with a certificate (hiredis-ssl's example, openvpn's client). It is an extra fixture
+    # file only: it changes no workload that does not read it.
+    cli_key, cli_csr, cli_crt = d / "client.key", d / "client.csr", d / "client.crt"
+    cli_ext = d / "client.ext"
+    res = _ossl(authority_prefix, ["req", "-newkey", "rsa:2048", "-nodes", "-keyout", str(cli_key),
+                                   "-out", str(cli_csr), "-subj", "/CN=127.0.0.1"], timeout=60)
+    if not res["ok"]:
+        raise RuntimeError(f"generating the client csr failed: {census._error_line(res)}")
+    cli_ext.write_text("subjectAltName=IP:127.0.0.1\nbasicConstraints=CA:FALSE\n"
+                       "extendedKeyUsage=clientAuth\n", encoding="utf-8")
+    res = _ossl(authority_prefix, ["x509", "-req", "-in", str(cli_csr), "-CA", str(ca_crt),
+                                   "-CAkey", str(ca_key), "-CAcreateserial", "-out", str(cli_crt),
+                                   "-days", "7", "-extfile", str(cli_ext)], timeout=60)
+    if not res["ok"]:
+        raise RuntimeError(f"signing the client certificate failed: {census._error_line(res)}")
     return {"ca_crt": ca_crt, "ca_key": ca_key, "srv_crt": srv_crt, "srv_key": srv_key,
-            "srv_pem": srv_pem, "other_crt": other_crt}
+            "srv_pem": srv_pem, "other_crt": other_crt,
+            "client_crt": cli_crt, "client_key": cli_key}
 
 
 def _s_client(authority_prefix: Path, port: int, ca: Path, extra: list[str],
@@ -1597,6 +1644,360 @@ def _wl_ldns(ctx: dict) -> dict:
             "local_only": True}
 
 
+def _wl_stunnel(ctx: dict) -> dict:
+    """A TLS stunnel: a verified TLS 1.3 accept-forward round trip to a local plain peer.
+
+    stunnel's `accept`/`connect` service is its own libssl server path: the authority's `s_client`
+    verifies the certificate and sends a line that a one-shot loopback peer answers, so a broken
+    accept path, record layer or forwarding path is distinguishable from a broken handshake. A
+    client trusting only the unrelated CA must be rejected.
+    """
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    back = _free_port()
+    peer = socket.socket()
+    peer.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    peer.bind(("127.0.0.1", back))
+    peer.listen(5)
+    done = threading.Event()
+
+    def echo() -> None:
+        while not done.is_set():
+            try:
+                conn, _ = peer.accept()
+            except OSError:
+                return
+            with conn:
+                data = conn.recv(4096)
+                conn.sendall(b"stunnel-echo:" + data.strip() + b"\n")
+
+    thread = threading.Thread(target=echo, daemon=True)
+    thread.start()
+    conf = d / "stunnel.conf"
+    conf.write_text(
+        "foreground = yes\n"
+        f"pid = {d}/stunnel.pid\n"
+        "debug = 4\n"
+        "[probe]\n"
+        f"accept = 127.0.0.1:{port}\n"
+        f"connect = 127.0.0.1:{back}\n"
+        f"cert = {pki['srv_crt']}\n"
+        f"key = {pki['srv_key']}\n"
+        "sslVersionMin = TLSv1.3\n", encoding="utf-8")
+    srv, of, ef = _spawn([str(ctx["program"]), str(conf)], d, ctx["env"], d / "stunnel.out",
+                         d / "stunnel.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("stunnel", {"exit_code": 0, "stdout": _read(d / "stunnel.err")})],
+                            "stunnel did not open its accept port", "runtime-failure", d)
+        echo_res = _s_client(ap, port, pki["ca_crt"], ["-tls1_3", "-quiet"],
+                             stdin_text="phase24-stunnel\n", timeout=25)
+        neg = _s_client(ap, port, pki["other_crt"],
+                        ["-tls1_3", "-brief", "-verify_return_error"], stdin_text="", timeout=25)
+    finally:
+        _stop(srv)
+        done.set()
+        peer.close()
+        thread.join(timeout=2)
+        of.close()
+        ef.close()
+    runtime_ok = "stunnel-echo:phase24-stunnel" in echo_res["stdout"]
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = runtime_ok and neg_rejected
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS session did not carry the peer's echo" if not runtime_ok else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(("authority s_client echo", echo_res),
+                                      ("authority s_client unrelated-ca (must fail)", neg),
+                                      ("stunnel", {"exit_code": 0, "stdout": _read(
+                                          d / "stunnel.err")})),
+            "workload": ("stunnel: verified TLS1.3 accept-forward round trip + unrelated-CA reject"),
+            "local_only": True}
+
+
+def _wl_sslscan(ctx: dict) -> dict:
+    """A TLS scan of a local candidate server: the reported protocol and cipher are the evidence.
+
+    sslscan's own libssl client probes the authority's `s_server` on loopback and must report the
+    negotiated TLS 1.3 protocol and an accepted TLS 1.3 cipher. The negative control is a server
+    with TLS 1.3 disabled: `--tls13` must then report `TLSv1.3 disabled` rather than a fabricated
+    result. sslscan performs no certificate-chain verification of its own (its verify mode is NONE,
+    so every private chain reports a missing issuer), so an unrelated-CA rejection is not a
+    discriminating negative control for this program and is deliberately not claimed.
+    """
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    neg_port = _free_port()
+    srv, of, ef = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(port), "-cert",
+                          str(pki["srv_crt"]), "-key", str(pki["srv_key"]), "-tls1_3", "-www"],
+                         d, _auth_env(ap), d / "srv.out", d / "srv.err")
+    neg, nof, nef = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(neg_port), "-cert",
+                            str(pki["srv_crt"]), "-key", str(pki["srv_key"]), "-tls1_2", "-www"],
+                           d, _auth_env(ap), d / "neg.out", d / "neg.err")
+    try:
+        if not (_wait_tcp("127.0.0.1", port) and _wait_tcp("127.0.0.1", neg_port)):
+            return _wl_fail([], "a local authority TLS server did not listen", "runtime-failure", d)
+        scan = _run_captured([str(ctx["program"]), "--tls13", "--no-colour",
+                              f"127.0.0.1:{port}"], env=ctx["env"], timeout=90)
+        neg_scan = _run_captured([str(ctx["program"]), "--tls13", "--no-colour",
+                                  f"127.0.0.1:{neg_port}"], env=ctx["env"], timeout=90)
+    finally:
+        _stop(srv)
+        _stop(neg)
+        of.close()
+        ef.close()
+        nof.close()
+        nef.close()
+    runtime_ok = ("TLSv1.3   enabled" in scan["stdout"]
+                  and "TLS_AES_256_GCM_SHA384" in scan["stdout"])
+    neg_ok = ("TLSv1.3   disabled" in neg_scan["stdout"]
+              and "TLSv1.3   enabled" not in neg_scan["stdout"])
+    functional_ok = runtime_ok and neg_ok
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("sslscan did not report the local server's TLS1.3 protocol and cipher"
+             if not runtime_ok else
+             "sslscan did not report TLSv1.3 as disabled on a TLS1.2-only server"),
+            "transcript": _transcript(("sslscan --tls13", scan),
+                                      ("sslscan --tls13 tls1.2-only (must be disabled)", neg_scan)),
+            "workload": ("sslscan: TLS1.3 protocol/cipher scan of a local server + TLS1.2-only "
+                         "negative control"),
+            "local_only": True}
+
+
+def _wl_openvpn(ctx: dict) -> dict:
+    """A local OpenVPN TLS session: peer certificate verification and a completed handshake.
+
+    Two subject-linked daemons run point-to-point over TCP with `--dev null` (no kernel device is
+    created or configured): the client verifies the server certificate against the CA, the control
+    channel negotiates TLS 1.3, and both sides reach `Initialization Sequence Completed`. A client
+    trusting only the unrelated CA must fail verification, so an unverifiable peer certificate is a
+    recorded failure rather than a silent pass.
+    """
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--dev", "null", "--dev-type", "null", "--ifconfig-noexec", "--route-noexec",
+              "--dh", "none", "--verb", "4", "--cipher", "AES-256-GCM",
+              "--data-ciphers", "AES-256-GCM:AES-128-GCM", "--data-ciphers-fallback",
+              "AES-256-GCM"]
+    srv_log, cli_log, neg_log = d / "srv.log", d / "cli.log", d / "neg.log"
+    srv, of, ef = _spawn([prog, "--tls-server", "--ifconfig", "10.8.0.1", "10.8.0.2", "--proto",
+                          "tcp-server", "--local", "127.0.0.1", "--port", str(port), "--ca",
+                          str(pki["ca_crt"]), "--cert", str(pki["srv_crt"]), "--key",
+                          str(pki["srv_key"])] + common, d, ctx["env"], srv_log,
+                         d / "srv.err")
+    cli = neg = None
+    cf = nf = cfe = nfe = None
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("openvpn server", {"exit_code": 0, "stdout": _read(srv_log)})],
+                            "the openvpn server did not open its TCP port", "runtime-failure", d)
+        cli, cf, cfe = _spawn([prog, "--tls-client", "--ifconfig", "10.8.0.2", "10.8.0.1",
+                               "--proto", "tcp-client", "--remote", "127.0.0.1", str(port),
+                               "--nobind", "--ca", str(pki["ca_crt"]), "--cert",
+                               str(pki["client_crt"]), "--key", str(pki["client_key"]),
+                               "--remote-cert-tls", "server"] + common, d, ctx["env"], cli_log,
+                              d / "cli.err")
+        connected = _wait_log(cli_log, "Initialization Sequence Completed", timeout=25)
+        _stop(cli)
+        time.sleep(1.0)
+        neg, nf, nfe = _spawn([prog, "--tls-client", "--ifconfig", "10.8.0.2", "10.8.0.1",
+                               "--proto", "tcp-client", "--remote", "127.0.0.1", str(port),
+                               "--nobind", "--ca", str(pki["other_crt"]), "--cert",
+                               str(pki["client_crt"]), "--key", str(pki["client_key"]),
+                               "--remote-cert-tls", "server"] + common, d, ctx["env"], neg_log,
+                              d / "neg.err")
+        _wait_log(neg_log, "VERIFY ERROR", timeout=15)
+    finally:
+        for proc in (cli, neg, srv):
+            if proc is not None:
+                _stop(proc)
+        for handle in (of, ef, cf, cfe, nf, nfe):
+            if handle is not None:
+                handle.close()
+    cli_text, neg_text = _read(cli_log), _read(neg_log)
+    runtime_ok = ("Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384" in cli_text
+                  and "Initialization Sequence Completed" in cli_text)
+    neg_rejected = ("VERIFY ERROR" in neg_text
+                    and "Initialization Sequence Completed" not in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the local TLS control channel did not verify and initialise" if not runtime_ok else
+             "the unrelated CA was not rejected, so the peer certificate does not verify"),
+            "transcript": _transcript(("openvpn client", {"exit_code": 0, "stdout": cli_text}),
+                                      ("openvpn client unrelated-ca (must fail)",
+                                       {"exit_code": 0, "stdout": neg_text}),
+                                      ("openvpn server", {"exit_code": 0, "stdout": _read(
+                                          srv_log)})),
+            "workload": ("openvpn: mutual certificate verify + TLS1.3 control channel + "
+                         "Initialization Sequence + unrelated-CA reject"),
+            "local_only": True}
+
+
+def _wl_tinc(ctx: dict) -> dict:
+    """A two-node tinc meta connection: RSA key generation, key exchange and a data packet.
+
+    Both subject-linked `tincd` daemons use `DeviceType = dummy` (no kernel device), generate their
+    RSA keys through the subject's libcrypto, authenticate the meta connection with those keys and
+    complete the symmetric key exchange; the peer then sends a data packet over the established
+    connection. A tinc without a reachable peer must not report an exchange, so the negative control
+    runs the same node with its peer absent.
+    """
+    d = ctx["workdir"]
+    prog = str(ctx["program"])
+    ports = {"n1": ctx["port"], "n2": _free_port()}
+    subnets = {"n1": 1, "n2": 2}
+    conf: dict[str, Path] = {}
+    keys: dict[str, str] = {}
+    for node in ("n1", "n2"):
+        conf[node] = d / node
+        (conf[node] / "hosts").mkdir(parents=True, exist_ok=True)
+        text = (f"Name = {node}\nDeviceType = dummy\nAddressFamily = ipv4\n"
+                f"ListenAddress = 127.0.0.1\nPort = {ports[node]}\n")
+        if node == "n1":
+            text += "ConnectTo = n2\n"
+        (conf[node] / "tinc.conf").write_text(text, encoding="utf-8")
+        keygen = _run_captured([prog, "-c", str(conf[node]), "-K", "2048"], env=ctx["env"],
+                               timeout=60)
+        if not keygen["ok"]:
+            return _wl_fail([("tincd -K", keygen)],
+                            f"tincd could not generate an RSA key: {census._error_line(keygen)}",
+                            "runtime-failure", d)
+        keys[node] = _read(conf[node] / "hosts" / node)
+    if not all(keys.values()):
+        return _wl_fail([], "tincd generated no public key", "runtime-failure", d)
+
+    def address(node: str) -> str:
+        return (f"Address = 127.0.0.1\nPort = {ports[node]}\n"
+                f"Subnet = 10.9.0.{subnets[node]}/32\n")
+
+    for node in ("n1", "n2"):
+        for peer in ("n1", "n2"):
+            (conf[node] / "hosts" / peer).write_text(keys[peer] + address(peer), encoding="utf-8")
+    logs = {node: d / f"{node}.log" for node in ("n1", "n2")}
+    procs: dict[str, subprocess.Popen] = {}
+    handles: dict[str, list] = {}
+
+    def start(node: str, log: Path) -> None:
+        out = open(log, "w", encoding="utf-8")
+        procs[node] = subprocess.Popen(
+            [prog, "-c", str(conf[node]), "-D", "-d", "3", "--pidfile", str(d / f"{node}.pid")],
+            cwd=str(d), env=ctx["env"], stdout=out, stderr=subprocess.STDOUT, text=True)
+        handles[node] = [out]
+
+    try:
+        start("n2", logs["n2"])
+        time.sleep(1.0)
+        start("n1", logs["n1"])
+        exchanged = _wait_log(logs["n1"], "Got ANS_KEY from n2", timeout=25)
+        _wait_log(logs["n1"], "Got PACKET from n2", timeout=5)
+        _stop(procs["n1"])
+        _stop(procs["n2"])
+        neg_log = d / "n1-absent-peer.log"
+        start("n1", neg_log)
+        _wait_log(neg_log, "Could not set up a meta connection", timeout=20)
+    finally:
+        for proc in procs.values():
+            _stop(proc)
+        for opened in handles.values():
+            for handle in opened:
+                handle.close()
+    text = _read(logs["n1"])
+    runtime_ok = exchanged and "Got PACKET from n2" in text
+    neg_text = _read(d / "n1-absent-peer.log")
+    neg_rejected = ("Could not set up a meta connection" in neg_text
+                    and "ANS_KEY" not in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the two tinc nodes did not exchange keys and a data packet" if not runtime_ok else
+             "a tinc without a reachable peer still reported an exchange"),
+            "transcript": _transcript(("tincd n1 (peer n2)", {"exit_code": 0, "stdout": text}),
+                                      ("tincd n1 absent-peer (must fail)",
+                                       {"exit_code": 0, "stdout": neg_text})),
+            "workload": ("tinc: RSA keygen + authenticated meta connection + key exchange + "
+                         "data packet + absent-peer negative control"),
+            "local_only": True}
+
+
+def _wl_hiredis(ctx: dict) -> dict:
+    """A TLS Redis session through hiredis: PING, SET and GET over a verified record layer.
+
+    hiredis ships no TLS CLI, so its own upstream `example-ssl` is the admitted program. The local
+    peer is the subject-linked `redis-server` the preceding redis family built in this same run
+    (deterministically earlier in the frozen P1000 order), started with TLS on loopback; the example
+    completes a verified TLS handshake and the PING/SET/GET round trips. A client trusting only the
+    unrelated CA must be rejected.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    peer_src = bl.SCRATCH / "redis" / ctx["subject"] / "src"
+    peer_root = census._single_source_root(peer_src) if peer_src.is_dir() else None
+    peer = (peer_root / "src" / "redis-server") if peer_root else None
+    if peer is None or not peer.is_file():
+        return _wl_fail([], "the subject-linked redis-server peer was not built by this run",
+                        "runtime-failure", d)
+    dbdir = d / "db"
+    dbdir.mkdir(parents=True, exist_ok=True)
+    srv, of, ef = _spawn([str(peer), "--port", "0", "--tls-port", str(ctx["port"]),
+                          "--tls-cert-file", str(pki["srv_crt"]), "--tls-key-file",
+                          str(pki["srv_key"]), "--tls-ca-cert-file", str(pki["ca_crt"]),
+                          "--tls-auth-clients", "no", "--save", "", "--protected-mode", "no",
+                          "--dir", str(dbdir)], d, ctx["env"], d / "redis.out",
+                         d / "redis.err")
+    try:
+        if not _wait_tcp("127.0.0.1", ctx["port"]):
+            return _wl_fail([("redis-server", {"exit_code": 0, "stdout": _read(
+                d / "redis.err")})], "the redis TLS peer did not open its port", "runtime-failure",
+                            d)
+        args = [str(ctx["program"]), "127.0.0.1", str(ctx["port"]), str(pki["client_crt"]),
+                str(pki["client_key"])]
+        good = _run_captured(args + [str(pki["ca_crt"])], env=ctx["env"], timeout=40)
+        neg = _run_captured(args + [str(pki["other_crt"])], env=ctx["env"], timeout=40)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    runtime_ok = "PING: PONG" in good["stdout"]
+    kv_ok = ("SET: OK" in good["stdout"] and "GET foo: hello world" in good["stdout"])
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stdout"] + neg["stderr"]))
+    functional_ok = runtime_ok and kv_ok and neg_rejected
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if runtime_ok else
+                                                         "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if runtime_ok else
+                                                      "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS PING did not return PONG" if not runtime_ok else
+             "the SET/GET round trip did not return the stored value" if not kv_ok else
+             "the unrelated CA was not rejected, so the peer certificate does not verify"),
+            "transcript": _transcript(("hiredis-example-ssl PING/SET/GET", good),
+                                      ("hiredis-example-ssl unrelated-ca (must fail)", neg)),
+            "workload": ("hiredis-ssl: verified TLS connect + PING + SET/GET + unrelated-CA reject"),
+            "local_only": True}
+
+
 def _wl_fail(notes: list, reason: str, failure_class: str | None, d: Path) -> dict:
     return {"runtime_ok": False, "functional_ok": False,
             "failure_class": failure_class or "runtime-failure", "residual": "runtime-failure",
@@ -1618,6 +2019,11 @@ RUNNERS = {
     "rsync": _wl_rsync,
     "socat": _wl_socat,
     "squid": _wl_squid,
+    "stunnel": _wl_stunnel,
+    "sslscan": _wl_sslscan,
+    "openvpn": _wl_openvpn,
+    "tinc": _wl_tinc,
+    "hiredis-ssl": _wl_hiredis,
 }
 
 
@@ -1738,7 +2144,11 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     # identical prefix environment, so the program loaded is the program built against the subject.
     targets = list(prog.get("make_targets") or [])
     if targets:
-        prep = census._run(["make", MAKE_JOBS, *targets], cwd=root, env=build_env)
+        target_env = dict(build_env)
+        for key, value in (prog.get("make_env") or {}).items():
+            target_env[str(key)] = str(value).format(prefix=prefix)
+        prep = census._run(["make", *(prog.get("make_jobs") or [MAKE_JOBS]), *targets], cwd=root,
+                           env=target_env)
         if not prep["ok"]:
             return _runtime_row(
                 fam, recipe, subject, level=L4, outcome="failed", residual="runtime-failure",
