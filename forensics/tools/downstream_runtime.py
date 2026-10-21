@@ -86,6 +86,7 @@ import http.server
 import json
 import os
 import re
+import select
 import shutil
 import socket
 import ssl
@@ -449,6 +450,36 @@ PROGRAMS: dict[str, dict] = {
         "note": ("libfido2's ES256 key representation: a P-256 key round-trips through "
                  "es256_pk_from_EVP_PKEY/es256_pk_to_EVP_PKEY, the ES256 signature verifies, and "
                  "an altered signature is rejected"),
+    },
+    # The Phase-25 L7 server batch: three TLS servers, an FTPS server and a TLS terminator. Each is
+    # a real local exchange with a concrete observable and a negative control, not a banner.
+    "memcached": {
+        "program": "memcached", "launch": ["-h"], "version_re": r"memcached 1\.6\.",
+        "note": ("memcached's TLS listener (-Z): a set/get over TLS returns the stored value, an "
+                 "unrelated CA is rejected, and plaintext on the TLS port never answers a get"),
+    },
+    "icecast": {
+        "program": "src/icecast", "launch": ["-v"], "version_re": r"Icecast 2\.4",
+        "note": ("icecast's HTTPS listener: a verified GET of a fixture returns 200 with its "
+                 "bytes, and an unrelated CA is rejected"),
+    },
+    "proftpd": {
+        "program": "proftpd", "launch": ["-v"], "version_re": r"ProFTPD Version 1\.3",
+        "note": ("proftpd's explicit FTPS: AUTH TLS login, PWD and a LIST over a PROT P data "
+                 "connection listing the fixture, plaintext USER refused with 550, unrelated CA "
+                 "rejected"),
+    },
+    "mini-httpd": {
+        "program": "mini_httpd", "launch": ["-h"],
+        "version_re": r"usage:.*mini_httpd",
+        "note": ("mini_httpd's HTTPS listener: a verified GET of a fixture returns 200 with its "
+                 "bytes, and an unrelated CA is rejected"),
+    },
+    "hitch": {
+        "program": "src/hitch", "launch": ["--version"], "version_re": r"hitch 1\.8",
+        "note": ("hitch's TLS terminator: a verified client handshake is proxied to a local "
+                 "backend stub and its payload returned; a client trusting only the unrelated CA "
+                 "is rejected"),
     },
 }
 
@@ -3772,6 +3803,450 @@ def _wl_aprutil(ctx: dict) -> dict:
     }
 
 
+def _plain_probe(port: int, payload: bytes, timeout: float = 5.0,
+                 needle: str | None = None) -> dict:
+    """Send bytes in the clear to a TLS-only port and record everything that comes back.
+
+    Reads until the peer closes, the read times out, or `needle` is seen. `exit_code` is 0 when
+    the peer answered and 1 when it did not: the transcript keeps the literal bytes, so a silent
+    close, a TLS alert and a protocol reply are distinguishable.
+    """
+    text = ""
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=timeout) as sock:
+            sock.settimeout(timeout)
+            sock.sendall(payload)
+            while True:
+                try:
+                    chunk = sock.recv(1024)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                text += chunk.decode("utf-8", "replace")
+                if needle is not None and needle in text:
+                    break
+    except OSError as exc:
+        text = f"<connect failed: {type(exc).__name__}>"
+    if not text:
+        text = "<no reply>"
+    return {"exit_code": 0 if not text.startswith("<") else 1,
+            "stdout": text, "stderr": ""}
+
+
+def _ftp_client_stream(ap: Path, port: int, ca: Path, *, starttls: bool = True):
+    """A line-oriented authority `s_client` for the two proftpd control/data connections."""
+    argv = [str(_auth_ossl(ap)), "s_client", "-connect", f"127.0.0.1:{port}"]
+    if starttls:
+        argv += ["-starttls", "ftp"]
+    argv += ["-CAfile", str(ca), "-servername", "127.0.0.1", "-quiet", "-ign_eof"]
+    return subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, bufsize=1, env=_auth_env(ap))
+
+
+def _read_until(proc, needle: str, timeout: float = 20.0) -> str:
+    deadline = time.monotonic() + timeout
+    text = ""
+    while time.monotonic() < deadline:
+        ready, _, _ = select.select([proc.stdout], [], [], 0.5)
+        if not ready:
+            continue
+        line = proc.stdout.readline()
+        if not line:
+            break
+        text += line
+        if needle in text:
+            break
+    return text
+
+
+def _ftp_list(ap: Path, pki: dict, port: int, user: str, passwd: str) -> dict:
+    """LIST over a PROT P data connection: the control PASV reply names the data port, and a
+    second authority `s_client` negotiates TLS on that port to read the listing."""
+    ctl = _ftp_client_stream(ap, port, pki["ca_crt"])
+    dat = None
+    try:
+        _read_until(ctl, "331")
+        ctl.stdin.write(f"USER {user}\r\nPASS {passwd}\r\nPBSZ 0\r\nPROT P\r\nPASV\r\n")
+        ctl.stdin.flush()
+        pasv = _read_until(ctl, "227")
+        match = re.search(r"\((?:[0-9]+,){4}([0-9]+),([0-9]+)\)", pasv)
+        if match is None:
+            return {"ok": False, "text": pasv}
+        data_port = int(match.group(1)) * 256 + int(match.group(2))
+        dat = _ftp_client_stream(ap, data_port, pki["ca_crt"], starttls=False)
+        ctl.stdin.write("LIST\r\n")
+        ctl.stdin.flush()
+        listing = _read_until(dat, "fixture.txt", timeout=25)
+        ctl.stdin.write("QUIT\r\n")
+        ctl.stdin.flush()
+        return {"ok": "fixture.txt" in listing, "text": listing}
+    finally:
+        for proc in (ctl, dat):
+            if proc is not None:
+                try:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+
+
+def _wl_memcached(ctx: dict) -> dict:
+    """memcached's TLS listener: set/get over TLS, plaintext refusal, unrelated-CA reject."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    argv = [str(ctx["program"]), "-Z", "-l", "127.0.0.1", "-p", str(port), "-U", "0",
+            "-u", "root", "-m", "64",
+            "-o", f"ssl_chain_cert={pki['srv_crt']},ssl_key={pki['srv_key']}"]
+    proc, of, ef = _spawn(argv, d, ctx["env"], d / "memcached.out", d / "memcached.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("memcached", {"exit_code": 0,
+                                             "stdout": _read(d / "memcached.err")})],
+                            "memcached did not open its TLS port", "runtime-failure", d)
+        good = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-CAfile",
+                          str(pki["ca_crt"]), "-servername", "127.0.0.1", "-quiet",
+                          "-ign_eof"], timeout=25,
+                     stdin_text="set l7 0 0 5\r\nvalue\r\nget l7\r\nquit\r\n")
+        neg = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-CAfile",
+                         str(pki["other_crt"]), "-servername", "127.0.0.1",
+                         "-verify_return_error", "-quiet", "-ign_eof"], timeout=25,
+                    stdin_text="get l7\r\n")
+        plain = _plain_probe(port, b"get l7\r\n")
+    finally:
+        _stop(proc)
+        of.close()
+        ef.close()
+    text = good["stdout"] + good["stderr"]
+    stored = "STORED" in text
+    round_trip = "VALUE l7 0 5" in text and "\nvalue\n" in text
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    plain_refused = "VALUE l7" not in plain["stdout"] and "STORED" not in plain["stdout"]
+    functional_ok = round_trip and stored and plain_refused and neg_rejected
+    return {"runtime_ok": round_trip, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if round_trip
+                                                         else "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if round_trip
+                                                      else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS set/get did not return the stored value" if not round_trip else
+             "the set command did not answer STORED" if not stored else
+             "plaintext on the TLS port was answered" if not plain_refused else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(
+                ("authority s_client set/get over TLS", good),
+                ("plaintext get on the TLS port (must not answer)", plain),
+                ("authority s_client unrelated CA (must fail)", neg),
+                ("memcached", {"exit_code": 0, "stdout": _read(d / "memcached.err")})),
+            "workload": ("memcached: TLS1.3 set/get round trip + plaintext refusal + "
+                         "unrelated-CA reject"),
+            "local_only": True}
+
+
+def _wl_icecast(ctx: dict) -> dict:
+    """icecast's HTTPS listener: a verified GET of a fixture, and an unrelated-CA reject."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    root = ctx["root"]
+    web, admin, logs = d / "web", d / "admin", d / "logs"
+    for path in (web, admin, logs):
+        path.mkdir(parents=True, exist_ok=True)
+    for sub, dest in (("web", web), ("admin", admin)):
+        for entry in sorted((root / sub).iterdir()):
+            if entry.is_file():
+                shutil.copy(entry, dest / entry.name)
+    (web / "phase25.txt").write_text("phase25-l7-icecast-fixture\n", encoding="utf-8")
+    # icecast refuses to run as root without a changeowner target, and the listener then writes
+    # its logs as that user.
+    _run_captured(["chown", "-R", "nobody:nogroup", str(logs)], timeout=20)
+    _run_captured(["chmod", "755", str(d), str(web), str(admin)], timeout=20)
+    conf = d / "icecast.xml"
+    conf.write_text(f"""<icecast>
+ <location>phase25-l7</location>
+ <admin>root@127.0.0.1</admin>
+ <hostname>127.0.0.1</hostname>
+ <limits><clients>10</clients><sources>2</sources><workers>2</workers>
+  <queue-size>524288</queue-size><client-timeout>30</client-timeout>
+  <header-timeout>15</header-timeout><source-timeout>10</source-timeout></limits>
+ <authentication><source-password>l7source</source-password>
+  <relay-password>l7relay</relay-password><admin-user>admin</admin-user>
+  <admin-password>l7admin</admin-password></authentication>
+ <paths><logdir>{logs}</logdir><webroot>{web}</webroot><adminroot>{admin}</adminroot>
+  <ssl-certificate>{pki['srv_pem']}</ssl-certificate>
+  <alias source="/" dest="/status.xsl"/></paths>
+ <listen-socket><port>{port}</port><bind-address>127.0.0.1</bind-address><ssl>1</ssl>
+  </listen-socket>
+ <security><chroot>0</chroot><changeowner><user>nobody</user><group>nogroup</group>
+  </changeowner></security>
+ <background>0</background>
+</icecast>
+""", encoding="utf-8")
+    proc, of, ef = _spawn([str(ctx["program"]), "-c", str(conf)], d, ctx["env"],
+                          d / "icecast.out", d / "icecast.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("icecast", {"exit_code": 0, "stdout": _read(d / "icecast.err")})],
+                            "icecast did not open its TLS port", "runtime-failure", d)
+        good = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-CAfile",
+                          str(pki["ca_crt"]), "-servername", "127.0.0.1", "-quiet",
+                          "-ign_eof"], timeout=25,
+                     stdin_text="GET /phase25.txt HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n")
+        neg = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-CAfile",
+                         str(pki["other_crt"]), "-servername", "127.0.0.1",
+                         "-verify_return_error", "-quiet", "-ign_eof"], timeout=25,
+                    stdin_text="GET /phase25.txt HTTP/1.0\r\n\r\n")
+    finally:
+        _stop(proc)
+        of.close()
+        ef.close()
+    text = good["stdout"] + good["stderr"]
+    served = "200" in text and "phase25-l7-icecast-fixture" in text
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = served and neg_rejected
+    return {"runtime_ok": served, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if served
+                                                         else "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if served
+                                                      else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the verified HTTPS GET did not return 200 with the fixture" if not served else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(
+                ("authority s_client GET over TLS", good),
+                ("authority s_client unrelated CA (must fail)", neg),
+                ("icecast", {"exit_code": 0, "stdout": _read(d / "icecast.err")})),
+            "workload": ("icecast: verified HTTPS GET of a fixture (200 + bytes) + "
+                         "unrelated-CA reject"),
+            "local_only": True}
+
+
+def _wl_proftpd(ctx: dict) -> dict:
+    """proftpd's explicit FTPS: AUTH TLS login, PWD, LIST over PROT P, plaintext and CA rejects."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    user, passwd = _ftps_account(ctx)
+    _run_captured(["chpasswd"], timeout=20, stdin_text=f"{user}:{passwd}\n")
+    home = d / "ftphome"
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "fixture.txt").write_text("phase25-l7-proftpd-fixture\n", encoding="utf-8")
+    _run_captured(["chown", "-R", user, str(home)], timeout=20)
+    _run_captured(["chmod", "755", str(d)], timeout=20)
+    conf = d / "proftpd.conf"
+    conf.write_text(f"""ServerType standalone
+ServerName "phase25-l7-proftpd"
+Port {port}
+User nobody
+Group nogroup
+DefaultRoot {home}
+RequireValidShell off
+PidFile {d}/proftpd.pid
+ScoreboardFile {d}/proftpd.score
+WtmpLog off
+TransferLog {d}/transfer.log
+AuthOrder mod_auth_unix.c
+TLSEngine on
+TLSRequired on
+TLSRSACertificateFile {pki['srv_crt']}
+TLSRSACertificateKeyFile {pki['srv_key']}
+TLSOptions NoSessionReuseRequired
+TLSVerifyClient off
+<Limit LOGIN>
+  AllowAll
+</Limit>
+""", encoding="utf-8")
+    proc, of, ef = _spawn([str(ctx["program"]), "-n", "-c", str(conf)], d, ctx["env"],
+                          d / "proftpd.out", d / "proftpd.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("proftpd", {"exit_code": 0, "stdout": _read(d / "proftpd.err")})],
+                            "proftpd did not open its control port", "runtime-failure", d)
+        session = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-starttls", "ftp",
+                             "-CAfile", str(pki["ca_crt"]), "-servername", "127.0.0.1",
+                             "-brief", "-ign_eof"], timeout=30,
+                        stdin_text=(f"USER {user}\r\nPASS {passwd}\r\nPBSZ 0\r\nPROT P\r\n"
+                                    "PWD\r\nQUIT\r\n"))
+        listing = _ftp_list(ap, pki, port, user, passwd)
+        neg = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-starttls", "ftp",
+                         "-CAfile", str(pki["other_crt"]), "-servername", "127.0.0.1",
+                         "-verify_return_error", "-brief", "-ign_eof"], timeout=25,
+                    stdin_text="")
+        plain = _plain_probe(port, f"USER {user}\r\nPASS {passwd}\r\n".encode(), needle="550")
+    finally:
+        _stop(proc)
+        of.close()
+        ef.close()
+    replies = session["stdout"] + session["stderr"]
+    login_ok = "230" in replies and "257" in replies
+    list_ok = bool(listing["ok"])
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    plain_refused = "550" in plain["stdout"] and "230" not in plain["stdout"]
+    functional_ok = login_ok and list_ok and plain_refused and neg_rejected
+    return {"runtime_ok": login_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if login_ok
+                                                         else "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if login_ok
+                                                      else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the authenticated explicit-TLS login/PWD did not complete" if not login_ok else
+             "LIST over the PROT P data connection did not list the fixture" if not list_ok else
+             "plaintext USER was not refused with 550" if not plain_refused else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(
+                ("authority s_client -starttls ftp (USER/PASS/PBSZ/PROT/PWD)", session),
+                ("authority s_client LIST over PROT P data connection",
+                 {"exit_code": 0 if list_ok else 1, "stdout": listing["text"]}),
+                ("plaintext USER on the FTPS port (must be refused)", plain),
+                ("authority s_client unrelated CA (must fail)", neg),
+                ("proftpd", {"exit_code": 0, "stdout": _read(d / "proftpd.err")})),
+            "workload": ("proftpd: explicit FTPS login + PWD + LIST over PROT P + plaintext "
+                         "refusal + unrelated-CA reject"),
+            "local_only": True}
+
+
+def _wl_mini_httpd(ctx: dict) -> dict:
+    """mini_httpd's HTTPS listener: a verified GET of a fixture and an unrelated-CA reject."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    docroot = d / "docroot"
+    docroot.mkdir(parents=True, exist_ok=True)
+    (docroot / "phase25.txt").write_text("phase25-l7-mini-httpd-fixture\n", encoding="utf-8")
+    _run_captured(["chmod", "755", str(d), str(docroot)], timeout=20)
+    argv = [str(ctx["program"]), "-D", "-S", "-E", str(pki["srv_pem"]), "-d", str(docroot),
+            "-p", str(port), "-u", "nobody", "-i", str(d / "mini.pid"),
+            "-l", str(d / "mini.log")]
+    proc, of, ef = _spawn(argv, d, ctx["env"], d / "mini.out", d / "mini.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("mini_httpd", {"exit_code": 0, "stdout": _read(d / "mini.err")})],
+                            "mini_httpd did not open its TLS port", "runtime-failure", d)
+        good = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-CAfile",
+                          str(pki["ca_crt"]), "-servername", "127.0.0.1", "-quiet",
+                          "-ign_eof"], timeout=25,
+                     stdin_text="GET /phase25.txt HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n")
+        neg = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{port}", "-CAfile",
+                         str(pki["other_crt"]), "-servername", "127.0.0.1",
+                         "-verify_return_error", "-quiet", "-ign_eof"], timeout=25,
+                    stdin_text="GET /phase25.txt HTTP/1.0\r\n\r\n")
+    finally:
+        _stop(proc)
+        of.close()
+        ef.close()
+    text = good["stdout"] + good["stderr"]
+    served = "200" in text and "phase25-l7-mini-httpd-fixture" in text
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = served and neg_rejected
+    return {"runtime_ok": served, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if served
+                                                         else "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if served
+                                                      else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the verified HTTPS GET did not return 200 with the fixture" if not served else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(
+                ("authority s_client GET over TLS", good),
+                ("authority s_client unrelated CA (must fail)", neg),
+                ("mini_httpd", {"exit_code": 0,
+                                "stdout": _read(d / "mini.err") + _read(d / "mini.log")})),
+            "workload": ("mini_httpd: verified HTTPS GET of a fixture (200 + bytes) + "
+                         "unrelated-CA reject"),
+            "local_only": True}
+
+
+def _wl_hitch(ctx: dict) -> dict:
+    """hitch terminating TLS in front of a local backend, with an unrelated-CA reject.
+
+    hitch 1.8 aborts in `sni_try_lookup` when a ClientHello carries SNI and no SNI table was built,
+    so this workload (and its control) connects without `-servername`; the fixture certificate's
+    SAN IP still makes the verification meaningful. A bare TCP probe also trips hitch's accept-loop
+    assertion, so readiness is the log line, not a socket connect.
+    """
+    ap, front, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    backend = _free_port()
+    payload = b"phase25-l7-hitch-backend\n"
+    stop = threading.Event()
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", backend))
+    listener.listen(8)
+    listener.settimeout(0.5)
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                client, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            with client:
+                try:
+                    client.settimeout(5.0)
+                    client.recv(4096)
+                    client.sendall(payload)
+                except OSError:
+                    pass
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    conf = d / "hitch.conf"
+    conf.write_text(f"""frontend = {{
+    host = "127.0.0.1"
+    port = "{front}"
+}}
+backend = "[127.0.0.1]:{backend}"
+pem-file = "{pki['srv_pem']}"
+workers = 1
+daemon = off
+user = "nobody"
+group = "nogroup"
+""", encoding="utf-8")
+    proc, of, ef = _spawn([str(ctx["program"]), "--config", str(conf), "-q"], d, ctx["env"],
+                          d / "hitch.out", d / "hitch.err")
+    try:
+        if not _wait_log(d / "hitch.err", "Process 0 online"):
+            return _wl_fail([("hitch", {"exit_code": 0, "stdout": _read(d / "hitch.err")})],
+                            "hitch did not come online", "runtime-failure", d)
+        good = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{front}", "-CAfile",
+                          str(pki["ca_crt"]), "-quiet", "-ign_eof"], timeout=25,
+                     stdin_text="GET / HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n")
+        neg = _ossl(ap, ["s_client", "-connect", f"127.0.0.1:{front}", "-CAfile",
+                         str(pki["other_crt"]), "-verify_return_error", "-quiet",
+                         "-ign_eof"], timeout=25, stdin_text="GET / HTTP/1.0\r\n\r\n")
+    finally:
+        _stop(proc)
+        stop.set()
+        listener.close()
+        thread.join(timeout=2)
+        of.close()
+        ef.close()
+    text = good["stdout"] + good["stderr"]
+    proxied = "phase25-l7-hitch-backend" in text
+    neg_rejected = (neg["exit_code"] != 0
+                    and "certificate verify failed" in (neg["stderr"] + neg["stdout"]))
+    functional_ok = proxied and neg_rejected
+    return {"runtime_ok": proxied, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else ("functional-failure" if proxied
+                                                         else "runtime-failure"),
+            "residual": "none" if functional_ok else ("functional-divergence" if proxied
+                                                      else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the TLS-terminated request did not return the backend payload" if not proxied else
+             "the unrelated CA was not rejected, so the server certificate does not verify"),
+            "transcript": _transcript(
+                ("authority s_client GET through hitch to the backend", good),
+                ("authority s_client unrelated CA (must fail)", neg),
+                ("hitch", {"exit_code": 0, "stdout": _read(d / "hitch.err")})),
+            "workload": ("hitch: verified TLS termination + proxied backend payload + "
+                         "unrelated-CA reject"),
+            "local_only": True}
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -3811,6 +4286,12 @@ RUNNERS = {
     "libzip": _wl_libzip,
     "apr-util": _wl_aprutil,
     "fido2": _wl_fido2,
+    # The Phase-25 L7 server batch.
+    "memcached": _wl_memcached,
+    "icecast": _wl_icecast,
+    "proftpd": _wl_proftpd,
+    "mini-httpd": _wl_mini_httpd,
+    "hitch": _wl_hitch,
 }
 
 
@@ -3923,6 +4404,26 @@ def _specimen_variant(recipe: dict, name: str) -> tuple[str, str]:
     return f"specimen:{name}:{recipe['version']}", f"variant:{name}:{recipe['version']}:pristine"
 
 
+def _aux_runtime_lib_dirs(recipe: dict, root: Path) -> list[str]:
+    """The extracted auxiliary libraries the program needs at load time, in order, deduplicated.
+
+    `bl._prepare_aux` extracts each pinned dependency under `<family work>/aux/root`; the source
+    root is `<family work>/<subject>/src/<archive>`, so the auxiliary root is two directories above
+    it. Only directories that exist are added, so a recipe with non-library auxiliary sources is
+    unaffected.
+    """
+    if not recipe.get("aux_sources"):
+        return []
+    aux_root = root.parents[1] / "aux" / "root"
+    dirs: list[str] = []
+    for spec in recipe["aux_sources"]:
+        for entry in spec.get("library_dirs") or []:
+            candidate = aux_root / entry
+            if candidate.is_dir() and str(candidate) not in dirs:
+                dirs.append(str(candidate))
+    return dirs
+
+
 def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path,
                              authority_prefix: Path, root: Path, source_sha256: str | None,
                              source_root_hash: str | None, limits: dict) -> dict:
@@ -3936,6 +4437,7 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
         shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True, exist_ok=True)
     lib_paths = [str(prefix / "lib")] + [str(root / p) for p in prog.get("lib_paths", [])]
+    lib_paths += _aux_runtime_lib_dirs(recipe, root)
     env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(lib_paths))
     evidence = [f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
                 f"artifact:{prog['program']}", "local_only:loopback"]
