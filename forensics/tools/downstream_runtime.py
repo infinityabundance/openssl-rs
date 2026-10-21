@@ -237,6 +237,12 @@ PROGRAMS: dict[str, dict] = {
                     "version_re": r"proxytunnel \d"},
     "keepalived": {"program": "keepalived/keepalived", "launch": ["-v"],
                    "version_re": r"Keepalived v\d"},
+    # The 24.23 L7-expansion batch: an SMTP submitter that speaks STARTTLS and an FTP/HTTP client
+    # whose HTTPS fetch path is its libssl consumer path.
+    "ssmtp": {"program": "ssmtp", "launch": ["-V"],
+              "version_re": r"sSMTP 2\.64"},
+    "tnftp": {"program": "src/tnftp", "launch": ["-?"],
+              "version_re": r"usage: tnftp"},
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -2266,6 +2272,231 @@ def _wl_keepalived(ctx: dict) -> dict:
         "local_only": True}
 
 
+def _wl_ssmtp(ctx: dict) -> dict:
+    """An end-to-end message submission over SMTP STARTTLS to a local stub.
+
+    `s_server -starttls smtp` does not exist, so the stub is a tiny loopback SMTP server: `220`,
+    `250-STARTTLS` on EHLO, then it answers STARTTLS and hands the accepted socket to a TLS server
+    context using the fixture certificate. The message must be accepted (`250` after DATA) and its
+    body must arrive intact over the TLS leg.
+
+    ssmtp 2.64 calls no `SSL_CTX_set_verify` and only checks that `SSL_get_peer_certificate`
+    returned a certificate, so the TLS leg is confidentiality without authentication. The fixture
+    CA is freshly generated and is not in any default trust store; the accepted submission records
+    that limitation explicitly (it is not claimed as certificate verification).
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = b"phase24-ssmtp-starttls-payload\n"
+    port = _free_port()
+    conf = d / "ssmtp.conf"
+    conf.write_text(f"mailhub=127.0.0.1:{port}\nUseSTARTTLS=YES\nFromLineOverride=YES\n"
+                    f"hostname=localhost\nroot=root@example.test\n", encoding="utf-8")
+    server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_ctx.load_cert_chain(str(pki["srv_pem"]))
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(1)
+    listener.settimeout(40.0)
+    peer: list[str] = []
+    messages: list[bytes] = []
+    tls_versions: list[str] = []
+
+    def serve() -> None:
+        """One SMTP submission: greeting, EHLO/STARTTLS, TLS handoff, DATA, QUIT."""
+        try:
+            client, _ = listener.accept()
+        except OSError:
+            return
+        conn = client
+        buffer = bytearray()
+
+        def read_line() -> bytes | None:
+            while b"\n" not in buffer:
+                try:
+                    chunk = conn.recv(4096)
+                except OSError:
+                    return None
+                if not chunk:
+                    return None
+                buffer.extend(chunk)
+            raw, _, rest = buffer.partition(b"\n")
+            buffer[:] = rest
+            return bytes(raw).rstrip(b"\r")
+
+        def send(payload: bytes) -> None:
+            peer.append("S: " + payload.decode("utf-8", "replace").strip())
+            conn.sendall(payload)
+
+        with client:
+            client.settimeout(20.0)
+            send(b"220 smtp-fixture ESMTP\r\n")
+            while True:
+                line = read_line()
+                if line is None:
+                    return
+                peer.append("C: " + line.decode("utf-8", "replace"))
+                verb = line.split(b" ", 1)[0].upper()
+                if verb == b"EHLO":
+                    send(b"250-smtp-fixture\r\n250 STARTTLS\r\n")
+                elif verb == b"STARTTLS":
+                    send(b"220 Ready to start TLS\r\n")
+                    try:
+                        conn = server_ctx.wrap_socket(client, server_side=True)
+                    except ssl.SSLError as exc:
+                        peer.append(f"TLS-FAILED {exc}")
+                        return
+                    tls_versions.append(conn.version() or "")
+                    peer.append("TLS-ESTABLISHED " + (conn.version() or ""))
+                    buffer.clear()
+                elif verb == b"DATA":
+                    send(b"354 End data with <CR><LF>.<CR><LF>\r\n")
+                    data = bytearray()
+                    while True:
+                        entry = read_line()
+                        if entry is None:
+                            return
+                        if entry == b".":
+                            break
+                        data.extend(entry + b"\n")
+                    messages.append(bytes(data))
+                    send(b"250 OK queued\r\n")
+                elif verb == b"QUIT":
+                    send(b"221 Bye\r\n")
+                    return
+                else:
+                    send(b"250 OK\r\n")
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    try:
+        # No SSL_CERT_FILE/SSL_CERT_DIR is injected: the default trust store must be the one the
+        # program uses, so acceptance records ssmtp's missing verification rather than assuming it.
+        sent = _run_captured([prog, "-v", "root@example.test", "-C", str(conf)], cwd=d,
+                             env=dict(ctx["env"]), timeout=60,
+                             stdin_text="Subject: phase24 ssmtp probe\n\n" + body.decode())
+    finally:
+        thread.join(timeout=5)
+        listener.close()
+
+    delivered = bool(messages) and body.strip() in messages[0]
+    starttls = any(line.startswith("C: STARTTLS") for line in peer) and bool(tls_versions)
+    functional_ok = bool(delivered and starttls and sent["ok"])
+    return {
+        "runtime_ok": bool(delivered or (sent["ok"] and starttls)),
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if delivered else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if delivered else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the message was not accepted end to end" if not delivered else
+            "the submission was accepted without a negotiated STARTTLS/TLS leg" if not starttls else
+            "the submitting client exited non-zero"),
+        "transcript": _transcript(("ssmtp submission", sent),
+                                  ("SMTP STARTTLS stub", {"exit_code": 0,
+                                                          "stdout": "\n".join(peer)})),
+        "workload": ("ssmtp: SMTP submission through a local STARTTLS stub + TLS handoff + "
+                     "end-to-end message acceptance"),
+        "note": ("ssmtp 2.64 performs no certificate verification (no SSL_CTX_set_verify; only a "
+                 "presence check on SSL_get_peer_certificate). The fixture CA is untrusted, so "
+                 "acceptance records the upstream TODO; it is not a verification result."),
+        "local_only": True,
+    }
+
+
+def _wl_tnftp(ctx: dict) -> dict:
+    """tnftp's HTTPS fetch path against a local TLS server, with a plaintext negative control.
+
+    tnftp is an FTP client that also fetches `http://`/`https://` URLs through its libssl client.
+    A local `s_server -WWW` serves a fixed payload, tnftp is told to trust only the fixture CA (its
+    `SSL_CTX_set_default_verify_paths` honours `SSL_CERT_FILE`), and the saved file must be
+    byte-identical. The same `https://` URL aimed at a plaintext server must not yield the payload.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = b"phase24-tnftp-https-payload\n"
+    (d / "probe.txt").write_bytes(body)
+    tls_port = _free_port()
+    plain_port = _free_port()
+    # `_free_port` closes the probe socket, so the kernel may hand the same port back for the next
+    # call; a shared port would silently point the "plaintext" control at the TLS server.
+    while plain_port == tls_port:
+        plain_port = _free_port()
+    server, out, err = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(tls_port),
+                               "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]),
+                               "-WWW", "-quiet"], d, _auth_env(ap), d / "tls.out", d / "tls.err")
+    stop = threading.Event()
+
+    def plain() -> None:
+        """Accept and drop: a TLS client must not be satisfied by this plaintext peer."""
+        listener = socket.socket()
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", plain_port))
+        listener.listen(4)
+        listener.settimeout(0.5)
+        while not stop.is_set():
+            try:
+                client, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            with client:
+                client.settimeout(5.0)
+                try:
+                    client.recv(4096)
+                except OSError:
+                    pass
+        listener.close()
+
+    thread = threading.Thread(target=plain, daemon=True)
+    thread.start()
+    env = dict(ctx["env"], SSL_CERT_FILE=str(pki["ca_crt"]))
+    fetched, rejected = d / "fetched.txt", d / "plain-fetched.txt"
+    try:
+        if not _wait_tcp("127.0.0.1", tls_port):
+            return _wl_fail([("s_server", {"exit_code": 0, "stdout": _read(d / "tls.err")})],
+                            "the TLS destination did not open its port", "runtime-failure", d)
+        good = _run_captured([prog, "-V", "-o", str(fetched),
+                              f"https://127.0.0.1:{tls_port}/probe.txt"], cwd=d, env=env,
+                             timeout=60)
+        neg = _run_captured([prog, "-V", "-o", str(rejected),
+                             f"https://127.0.0.1:{plain_port}/probe.txt"], cwd=d, env=env,
+                            timeout=60)
+    finally:
+        stop.set()
+        thread.join(timeout=2)
+        _stop(server)
+        out.close()
+        err.close()
+
+    payload_ok = fetched.is_file() and fetched.read_bytes() == body
+    neg_rejected = not rejected.is_file() or rejected.read_bytes() != body
+    functional_ok = bool(good["ok"] and payload_ok and neg_rejected)
+    return {
+        "runtime_ok": payload_ok,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if payload_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if payload_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the HTTPS fetch returned no saved payload" if not payload_ok else
+            "a plaintext peer satisfied the HTTPS request"),
+        "transcript": _transcript(("tnftp https fetch", good),
+                                  ("tnftp https fetch from a plaintext peer (must fail)", neg)),
+        "workload": ("tnftp: HTTPS GET over TLS to a local server + byte-identical payload match "
+                     "+ plaintext-peer reject"),
+        "note": ("tnftp verifies the peer against the default verify paths, narrowed here to the "
+                 "fixture CA through SSL_CERT_FILE, and matches the URL host against the SAN."),
+        "local_only": True,
+    }
+
+
 def _wl_fail(notes: list, reason: str, failure_class: str | None, d: Path) -> dict:
     return {"runtime_ok": False, "functional_ok": False,
             "failure_class": failure_class or "runtime-failure", "residual": "runtime-failure",
@@ -2294,6 +2525,8 @@ RUNNERS = {
     "hiredis-ssl": _wl_hiredis,
     "proxytunnel": _wl_proxytunnel,
     "keepalived": _wl_keepalived,
+    "ssmtp": _wl_ssmtp,
+    "tnftp": _wl_tnftp,
 }
 
 
