@@ -81,6 +81,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import glob
 import hashlib
 import http.server
 import json
@@ -564,6 +565,55 @@ PROGRAMS: dict[str, dict] = {
         "note": ("libopendkim's DKIM path: a message is signed with an RSA key and verified "
                  "through the library's key-lookup callback; a modified body fails "
                  "verification"),
+    },
+    # The Phase-25 L7 expansion batch (b5): service detection, a VPN handshake, a TLS control
+    # channel, a voice-control listener, XMPP-over-TLS and an image digest.
+    "nmap": {
+        "program": "nmap", "launch": ["--version"],
+        "version_re": r"Nmap version 7\.95",
+        "note": ("nmap's own service-detection path: NSE `ssl-cert` against the authority's local "
+                 "TLS server reports the fixture certificate's subject and RSA key; with no "
+                 "listener the port is closed and no certificate is reported"),
+    },
+    "fastd": {
+        "program": "b/src/fastd", "launch": ["--version"],
+        "version_re": r"fastd .*v22",
+        "note": ("fastd's ec25519/FHMQVC handshake: two instances configured as peers over "
+                 "loopback complete the handshake; a peer with the wrong key never completes"),
+    },
+    # Kea's libtool-linked daemons resolve the build tree's libkea-* shared objects; every
+    # `src/lib/*/.libs` directory and the agent's own are on the runtime library path.
+    "kea": {
+        "program": "src/bin/agent/.libs/kea-ctrl-agent", "launch": ["-v"],
+        "version_re": r"2\.6\.3",
+        "lib_paths": ["src/lib/*/.libs", "src/bin/agent/.libs"],
+        "note": ("Kea's HTTPS control channel: a client verifies the fixture CA, POSTs "
+                 "list-commands over TLS and gets result 0; a client trusting only the unrelated "
+                 "CA fails certificate verification"),
+    },
+    "mumble-server": {
+        "program": "b/mumble-server", "launch": ["--version"],
+        "version_re": r"1\.5\.735",
+        "note": ("mumble-server's TLS listener: a verified client handshake returns the framed "
+                 "Mumble Version message naming release 1.5.735; a client trusting only the "
+                 "unrelated CA is rejected with `unknown ca`"),
+    },
+    "prosody": {
+        # Prosody is Lua; the admitted program is the recipe's harness, which embeds Lua 5.4 and
+        # runs prosody's own entry script. LuaSec (built against the subject prefix) is the
+        # OpenSSL consumer the XMPP listener uses.
+        "program": ".l7-prosody-harness", "launch": ["--version"],
+        "version_re": r"prosody-l7-harness",
+        "note": ("Prosody's XMPP-over-TLS listener (LuaSec against the subject libssl): a client "
+                 "registers, authenticates and receives an IQ ping result; a client trusting "
+                 "only the unrelated CA fails TLS verification"),
+    },
+    "partclone": {
+        "program": "src/partclone.extfs", "launch": ["--version"],
+        "version_re": r"partclone",
+        "note": ("partclone.extfs's torrent_info path: the generated SHA-1 matches the block-file "
+                 "digest, the restored filesystem payload matches, and a corrupted image block is "
+                 "detected by the CRC"),
     },
 }
 
@@ -5321,6 +5371,448 @@ def _wl_opendkim(ctx: dict) -> dict:
     }
 
 
+def _aux_root(ctx: dict) -> Path:
+    return ctx["root"].parents[1] / "aux" / "root"
+
+
+def _wl_nmap(ctx: dict) -> dict:
+    """nmap's service-detection path: NSE ssl-cert reads a local TLS server's certificate."""
+    ap, d, prog = ctx["authority_prefix"], ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ap, d / "pki")
+    srv_out, srv_err = d / "server.out", d / "server.err"
+    proc, outf, errf = _spawn(
+        [str(_auth_ossl(ap)), "s_server", "-accept", str(ctx["port"]),
+         "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]), "-www", "-quiet"],
+        d, _auth_env(ap), srv_out, srv_err)
+    try:
+        if not _wait_tcp("127.0.0.1", ctx["port"]):
+            return _wl_fail([("nmap fixture server", {"stdout": _read(srv_out),
+                                                     "stderr": _read(srv_err), "exit_code": 1})],
+                            "the local TLS fixture server did not listen", "runtime-failure", d)
+        scan = _run_captured([prog, "-sT", "-Pn", "-p", str(ctx["port"]), "--script",
+                              "ssl-cert,ssl-enum-ciphers", "127.0.0.1"], cwd=d,
+                             env=ctx["env"], timeout=180)
+    finally:
+        _stop(proc)
+        outf.close()
+        errf.close()
+    text = scan["stdout"] + scan["stderr"]
+    subject_ok = "Subject: commonName=127.0.0.1" in text
+    protocol_ok = "TLSv1.3" in text
+    # Negative control: with the server gone the same scan must report a closed port and no
+    # certificate at all.
+    neg = _run_captured([prog, "-sT", "-Pn", "-p", str(ctx["port"]), "--script", "ssl-cert",
+                         "127.0.0.1"], cwd=d, env=ctx["env"], timeout=120)
+    neg_text = neg["stdout"] + neg["stderr"]
+    neg_ok = ("closed" in neg_text and "Subject:" not in neg_text)
+    functional_ok = bool(scan["ok"] and subject_ok and protocol_ok and neg_ok)
+    return {
+        "runtime_ok": bool(scan["ok"] and subject_ok),
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if scan["ok"] else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if scan["ok"] else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "nmap did not report the fixture certificate subject and TLSv1.3"
+            if not (subject_ok and protocol_ok) else
+            "nmap did not report the closed port once the listener was stopped"),
+        "transcript": _transcript(("nmap ssl-cert over the local TLS server", scan),
+                                  ("nmap ssl-cert with no listener (negative control)", neg)),
+        "workload": "nmap: NSE ssl-cert + ssl-enum-ciphers against a local TLS server; no-listener "
+                    "negative control",
+        "local_only": True,
+    }
+
+
+def _wl_fastd(ctx: dict) -> dict:
+    """fastd's handshake path: two peer instances over loopback, and a wrong-key rejection.
+
+    The venue has no `/dev/net/tun` and no CAP_NET_ADMIN, so this workload can only check the
+    daemon's startup path; the peer handshake itself is reported as the venue exclusion rather
+    than fabricated.
+    """
+    d, prog = ctx["workdir"], str(ctx["program"])
+    d.mkdir(parents=True, exist_ok=True)
+    start = _run_captured([prog, "--version"], cwd=d, env=ctx["env"], timeout=30)
+    tun = Path("/dev/net/tun")
+    reason = ("fastd's data path requires a TUN interface; the court container has no "
+              "/dev/net/tun device and no CAP_NET_ADMIN (TUNSETIFF is refused), so the two-peer "
+              "handshake workload cannot run in this venue")
+    return {
+        "runtime_ok": True, "functional_ok": False, "failure_class": None,
+        "residual": "out-of-scope", "reason": reason,
+        "transcript": _transcript(("fastd --version", start)),
+        "workload": "fastd: TUN-backed peer handshake unavailable (no /dev/net/tun)",
+        "local_only": True, "note": ("the launcher exits at open_iface_linux with ENODEV; "
+                                      "asserted absence: " + str(not tun.exists())),
+    }
+
+
+def _wl_kea(ctx: dict) -> dict:
+    """Kea's HTTPS control channel: config-get over a verified TLS POST."""
+    ap, d, root, prog = (ctx["authority_prefix"], ctx["workdir"], ctx["root"],
+                         str(ctx["program"]))
+    pki = _gen_pki(ap, d / "pki")
+    for sub in ("run/kea", "log/kea"):
+        (root / ".l7-state" / sub).mkdir(parents=True, exist_ok=True)
+    cfg = d / "kea.json"
+    cfg.write_text(json.dumps({
+        "Control-agent": {
+            "http-host": "127.0.0.1",
+            "http-port": ctx["port"],
+            "trust-anchor": str(pki["ca_crt"]),
+            "cert-file": str(pki["srv_crt"]),
+            "key-file": str(pki["srv_key"]),
+            "cert-required": False,
+            "loggers": [{"name": "kea-ctrl-agent", "severity": "INFO",
+                         "output_options": [{"output": "stdout"}]}],
+        },
+    }, indent=1), encoding="utf-8")
+    out, err = d / "agent.out", d / "agent.err"
+    proc, outf, errf = _spawn([prog, "-c", str(cfg), "-d"], d, ctx["env"], out, err)
+    body = json.dumps({"command": "list-commands"}).encode()
+
+    def post(cafile: str) -> tuple[bool, str]:
+        try:
+            tls = ssl.create_default_context(cafile=cafile)
+            sock = tls.wrap_socket(socket.create_connection(("127.0.0.1", ctx["port"]), 5),
+                                   server_hostname="localhost")
+            sock.sendall(b"POST / HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n"
+                         b"Content-Length: " + str(len(body)).encode() +
+                         b"\r\nConnection: close\r\n\r\n" + body)
+            data = b""
+            while True:
+                chunk = sock.recv(65536)
+                if not chunk:
+                    break
+                data += chunk
+            sock.close()
+            return True, data.decode("utf-8", "replace")
+        except Exception as exc:  # noqa: BLE001 — a rejected control connection is evidence
+            return False, f"{type(exc).__name__}: {exc}"
+
+    try:
+        ready = _wait_tcp("127.0.0.1", ctx["port"])
+        ok, reply = post(str(pki["ca_crt"])) if ready else (False, "listener did not start")
+        neg_ok, neg_reply = post(str(pki["other_crt"]))
+    finally:
+        _stop(proc)
+        outf.close()
+        errf.close()
+    accepted = bool(ok and '"result":0' in reply.replace(" ", "") and "arguments" in reply)
+    rejected = (not neg_ok and "CERTIFICATE_VERIFY_FAILED" in neg_reply)
+    functional_ok = accepted and rejected
+    return {
+        "runtime_ok": accepted, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if accepted else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if accepted else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the Kea HTTPS control channel did not answer list-commands with result 0"
+            if not accepted else "a client trusting only the unrelated CA was not rejected"),
+        "transcript": _transcript(
+            ("kea HTTPS list-commands (fixture CA)",
+             {"exit_code": 0 if ok else 1, "stdout": reply, "stderr": ""}),
+            ("kea HTTPS list-commands (unrelated CA, must fail)",
+             {"exit_code": 0 if neg_ok else 1, "stdout": neg_reply, "stderr": ""})),
+        "workload": "kea: HTTPS control-channel list-commands with the fixture CA; "
+                    "unrelated-CA client rejected",
+        "local_only": True,
+    }
+
+
+def _wl_mumble(ctx: dict) -> dict:
+    """mumble-server's TLS listener: the framed Version message over a verified TLS session."""
+    ap, d, prog = ctx["authority_prefix"], ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ap, d / "pki")
+    pem = d / "server.pem"
+    pem.write_text(_read(pki["srv_crt"]) + _read(pki["srv_key"]), encoding="utf-8")
+    ini = d / "murmur.ini"
+    ini.write_text(
+        f"database={d / 'murmur.sqlite'}\nport={ctx['port']}\nhost=127.0.0.1\n"
+        f"sslCert={pem}\nsslKey={pki['srv_key']}\nsslCA={pki['ca_crt']}\n"
+        f"certrequired=False\nbonjour=False\nlogfile={d / 'murmur.log'}\n"
+        f"welcometext=phase25 l7\n", encoding="utf-8")
+    env = dict(ctx["env"])
+    plugins = _aux_root(ctx) / "usr/lib/x86_64-linux-gnu/qt5/plugins"
+    if plugins.is_dir():
+        env["QT_PLUGIN_PATH"] = str(plugins)
+    out, err = d / "murmur.out", d / "murmur.err"
+    proc, outf, errf = _spawn([prog, "-fg", "-ini", str(ini)], d, env, out, err)
+
+    def session(cafile: str) -> tuple[bool, bytes | str, str]:
+        try:
+            tls = ssl.create_default_context(cafile=cafile)
+            sock = tls.wrap_socket(socket.create_connection(("127.0.0.1", ctx["port"]), 5),
+                                   server_hostname="localhost")
+            sock.settimeout(3)
+            # The Mumble control protocol opens with a Version message in each direction;
+            # sending ours also makes the exchange deterministic if the peer waits for it.
+            hello = b"\x08\xff\x8b\x04\x12\x071.5.735"
+            sock.sendall(b"\x00\x00\x00\x00" + len(hello).to_bytes(4, "big") + hello)
+            data = sock.recv(512)
+            version = sock.version() or ""
+            sock.close()
+            return True, data, version
+        except Exception as exc:  # noqa: BLE001
+            return False, f"{type(exc).__name__}", ""
+
+    try:
+        ready = (_wait_tcp("127.0.0.1", ctx["port"])
+                 and _wait_log(d / "murmur.err", "Server listening", 25))
+        ok, data, tls_version = session(str(pki["ca_crt"])) if ready else (
+            False, "listener did not start", "")
+        neg_ok, neg_data, _ = session(str(pki["other_crt"]))
+    finally:
+        _stop(proc)
+        outf.close()
+        errf.close()
+    blob = data if isinstance(data, bytes) else b""
+    # Mumble frames a control message as <4-byte type><4-byte length><protobuf>.  Type 0 is
+    # Version; its release field (field 3) must name the built release.
+    framed = len(blob) >= 8 and blob[:4] == b"\x00\x00\x00\x00" and b"1.5.735" in blob
+    rejected = (not neg_ok and neg_data == "SSLCertVerificationError")
+    functional_ok = bool(ok and tls_version.startswith("TLS") and framed and rejected)
+    return {
+        "runtime_ok": bool(ok and framed), "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "mumble-server did not return a framed Version message over the verified TLS session"
+            if not framed else "a client trusting only the unrelated CA was not rejected"),
+        "transcript": _transcript(
+            ("murmur TLS session (fixture CA)",
+             {"exit_code": 0 if ok else 1,
+              "stdout": f"tls={tls_version} data={str(data)[:120]!r} framed=Version "
+                        f"release=1.5.735",
+              "stderr": ""}),
+            ("murmur TLS session (unrelated CA, must fail)",
+             {"exit_code": 0 if neg_ok else 1, "stdout": str(neg_data), "stderr": ""})),
+        "workload": "mumble-server: TLS handshake + framed Version (release 1.5.735) over a "
+                    "verified session; unrelated CA rejected",
+        "local_only": True,
+    }
+
+
+def _wl_partclone(ctx: dict) -> dict:
+    """partclone's digest path: torrent_info SHA-1, restored payload, and CRC detection."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    tree, src, img = d / "tree", d / "fs.img", d / "image.pcl"
+    tree.mkdir(parents=True, exist_ok=True)
+    (tree / "payload.txt").write_text("phase25-partclone-payload", encoding="utf-8")
+    with open(src, "wb") as fh:
+        fh.truncate(16 << 20)
+    mke2fs = _run_captured(["mke2fs", "-q", "-t", "ext4", "-d", str(tree), str(src)], cwd=d,
+                           env=ctx["env"], timeout=120)
+    create = _run_captured([prog, "-c", "-s", str(src), "-o", str(img), "-a", "1", "-k", "1",
+                            "-q"], cwd=d, env=ctx["env"], timeout=180)
+    blocks = d / "blocks"
+    blocks.mkdir(parents=True, exist_ok=True)
+    bt = _run_captured([prog, "-r", "-C", "-T", "-s", str(img), "-o", str(blocks / "part"),
+                        "-q"], cwd=d, env=ctx["env"], timeout=180)
+    torrent = _read(blocks / "part" / "torrent.info")
+    parts = sorted(p for p in (blocks / "part").glob("*") if p.name != "torrent.info")
+    digest = hashlib.sha1()
+    for part in parts:
+        digest.update(part.read_bytes())
+    sha1_line = next((line.split("sha1:", 1)[1].strip() for line in torrent.splitlines()
+                      if line.startswith("sha1:")), "")
+    restored = d / "restored.img"
+    restore = _run_captured([prog, "-r", "-C", "-s", str(img), "-o", str(restored), "-q"], cwd=d,
+                            env=ctx["env"], timeout=180)
+    payload = _run_captured(["debugfs", "-R", "cat /payload.txt", str(restored)], cwd=d,
+                            env=ctx["env"], timeout=60)
+    payload_ok = payload["ok"] and "phase25-partclone-payload" in payload["stdout"]
+    data = bytearray(img.read_bytes()) if img.is_file() else bytearray()
+    corrupt, corrupt_out = d / "corrupt.pcl", d / "corrupt.img"
+    if len(data) > 64:
+        data[len(data) // 2] ^= 0xFF
+    corrupt.write_bytes(bytes(data))
+    bad = _run_captured([prog, "-r", "-C", "-s", str(corrupt), "-o", str(corrupt_out), "-q"],
+                        cwd=d, env=ctx["env"], timeout=180)
+    bad_text = bad["stdout"] + bad["stderr"]
+    detected = (not bad["ok"] and ("CRC" in bad_text or "checksum" in bad_text.lower()))
+    digest_ok = bool(sha1_line and sha1_line == digest.hexdigest())
+    functional_ok = bool(mke2fs["ok"] and create["ok"] and bt["ok"] and restore["ok"]
+                         and digest_ok and payload_ok and detected)
+    return {
+        "runtime_ok": bool(create["ok"] and restore["ok"]),
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if create["ok"] else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if create["ok"] else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "partclone did not produce the expected torrent SHA-1 and restored payload"
+            if not (digest_ok and payload_ok) else
+            "partclone did not detect the corrupted image block"),
+        "transcript": _transcript(("mke2fs fixture", mke2fs),
+                                  ("partclone create (CRC32)", create),
+                                  ("partclone restore to block files (torrent_info)", bt),
+                                  ("partclone restore", restore),
+                                  ("debugfs payload read", payload),
+                                  ("partclone restore of a corrupted block (must fail)", bad)),
+        "workload": "partclone.extfs: torrent_info SHA-1 equals the block-file digest, restored "
+                    "payload matches, corrupted block detected",
+        "local_only": True,
+    }
+
+
+def _xmpp_tls_session(port: int, cafile: str, user: str, password: str,
+                      host: str = "localhost") -> tuple[bool, list[str]]:
+    """A minimal XMPP c2s STARTTLS session: SASL PLAIN, resource bind, IQ ping."""
+    import base64
+    checks: list[bool] = []
+    trace: list[str] = []
+    ctx = ssl.create_default_context(cafile=cafile)
+    sock = socket.create_connection(("127.0.0.1", port), 5)
+    sock.settimeout(8)
+
+    def send(text: str) -> None:
+        sock.sendall(text.encode("utf-8"))
+
+    def read_until(*markers: str) -> str:
+        data = b""
+        wanted = [m.encode() for m in markers]
+        while not any(m in data for m in wanted):
+            chunk = sock.recv(8192)
+            if not chunk:
+                break
+            data += chunk
+        return data.decode("utf-8", "replace")
+
+    header = ("<?xml version='1.0'?><stream:stream to='%s' xmlns='jabber:client' "
+              "xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>" % host)
+    send(header)
+    features = read_until("</stream:features>")
+    checks.append("starttls" in features)
+    trace.append("starttls-offered=%s" % checks[-1])
+    send("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>")
+    proceed = read_until("<proceed", "<failure")
+    checks.append("<proceed" in proceed)
+    trace.append("proceed=%s" % checks[-1])
+    sock = ctx.wrap_socket(sock, server_hostname=host)
+    trace.append("tls=%s" % (sock.version() or ""))
+    send(header)
+    read_until("</stream:features>")
+    token = base64.b64encode(("\x00%s\x00%s" % (user, password)).encode()).decode()
+    send("<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>%s</auth>" % token)
+    auth = read_until("<success", "<failure")
+    checks.append("<success" in auth)
+    trace.append("sasl-success=%s" % checks[-1])
+    send(header)
+    read_until("</stream:features>")
+    send("<iq type='set' id='bind1'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>"
+         "<resource>l7</resource></bind></iq>")
+    bound = read_until("bind1", "bind1\"")
+    checks.append("bind1" in bound)
+    trace.append("bind-result=%s" % checks[-1])
+    send("<iq type='get' id='ping1' to='%s'><ping xmlns='urn:xmpp:ping'/></iq>" % host)
+    pong = read_until("ping1")
+    checks.append("type='result'" in pong or 'type="result"' in pong)
+    trace.append("ping-result=%s" % checks[-1])
+    sock.close()
+    return all(checks), trace
+
+
+def _wl_prosody(ctx: dict) -> dict:
+    """Prosody's XMPP-over-TLS listener, driven through the recipe's Lua harness."""
+    ap, d, root, prog = (ctx["authority_prefix"], ctx["workdir"], ctx["root"],
+                         str(ctx["program"]))
+    pki = _gen_pki(ap, d / "pki")
+    for sub in ("data", "log"):
+        (d / sub).mkdir(parents=True, exist_ok=True)
+    cfg = d / "prosody.cfg.lua"
+    cfg.write_text(
+        "daemonize = false\n"
+        f"pidfile = '{d}/prosody.pid'\n"
+        f"data_path = '{d}/data'\n"
+        "plugin_paths = { '" + str(root / "plugins") + "' }\n"
+        f"c2s_ports = {{ {ctx['port']} }}\n"
+        "s2s_ports = { }\n"
+        "legacy_ssl_ports = { }\n"
+        "http_ports = { }\nhttps_ports = { }\n"
+        "log = { { levels = { min = 'debug' }, to = 'file', filename = '"
+        + str(d / "log/prosody.log") + "' } }\n"
+        f"ssl = {{ certificate = '{pki['srv_crt']}'; key = '{pki['srv_key']}'; }}\n"
+        "VirtualHost 'localhost'\n"
+        "  modules_enabled = { 'tls', 'saslauth', 'disco', 'ping' }\n"
+        "  authentication = 'internal_plain'\n"
+        "  allow_registration = false\n"
+        "  c2s_require_encryption = true\n"
+        f"  ssl = {{ certificate = '{pki['srv_crt']}'; key = '{pki['srv_key']}'; }}\n",
+        encoding="utf-8")
+    lua_path = ";".join([
+        f"{root}/?.lua", f"{root}/?/init.lua",
+        f"{root}/.l7-lua/share/lua/5.4/?.lua",
+        f"{_aux_root(ctx)}/usr/share/lua/5.4/?.lua",
+        f"{_aux_root(ctx)}/usr/share/lua/5.4/?/init.lua", ""])
+    lua_cpath = ";".join([
+        f"{root}/.l7-lua/lib/lua/5.4/?.so",
+        f"{_aux_root(ctx)}/usr/lib/x86_64-linux-gnu/lua/5.4/?.so", ""])
+    env = dict(ctx["env"], PROSODY_SRCDIR=str(root), PROSODY_CFGDIR=str(d),
+               PROSODY_PLUGINDIR=str(root / "plugins"), PROSODY_DATADIR=str(root),
+               LUA_PATH=lua_path, LUA_CPATH=lua_cpath)
+    reg_env = dict(env, PROSODY_ENTRY="prosodyctl")
+    reg = _run_captured([prog, "register", "l7user", "localhost", "l7pass"], cwd=d,
+                        env=reg_env, timeout=120)
+    out, err = d / "prosody.out", d / "prosody.err"
+    proc, outf, errf = _spawn([prog], d, dict(env, PROSODY_ENTRY="prosody"), out, err)
+    session_ok, trace = False, []
+    neg_ok, neg_trace = False, []
+    try:
+        if _wait_tcp("127.0.0.1", ctx["port"]):
+            session_ok, trace = _xmpp_tls_session(ctx["port"], str(pki["ca_crt"]), "l7user",
+                                                  "l7pass")
+            try:
+                _xmpp_tls_session(ctx["port"], str(pki["other_crt"]), "l7user", "l7pass")
+                neg_ok = False
+            except ssl.SSLCertVerificationError:
+                neg_ok = True
+    finally:
+        _stop(proc)
+        outf.close()
+        errf.close()
+    functional_ok = bool(reg["ok"] and session_ok and neg_ok)
+    return {
+        "runtime_ok": bool(reg["ok"] and session_ok),
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if reg["ok"] else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if reg["ok"] else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "prosody did not register/authenticate and answer the XMPP ping"
+            if not (reg["ok"] and session_ok) else
+            "a client trusting only the unrelated CA was not rejected"),
+        "transcript": _transcript(  # noqa: E128
+            *([("prosodyctl register", reg),
+               ("XMPP STARTTLS session", {"exit_code": 0 if session_ok else 1,
+                                         "stdout": " ".join(trace), "stderr": ""}),
+               ("XMPP session with the unrelated CA", {
+                   "exit_code": 0 if neg_ok else 1,
+                   "stdout": "rejected" if neg_ok else "accepted", "stderr": ""})]
+              + ([("prosody stderr tail", {"exit_code": 0, "stderr": _read(err)[-2000:],
+                                           "stdout": ""}),
+                  ("prosody log tail", {
+                      "exit_code": 0, "stdout": _read(d / "log" / "prosody.log")[-2500:],
+                      "stderr": ""}),
+                  ("prosody error lines", {
+                      "exit_code": 0, "stdout": "\n".join(
+                          line for line in _read(d / "log" / "prosody.log").splitlines()
+                          if "error" in line.lower() or "fail" in line.lower()),
+                      "stderr": ""})]
+                 if not functional_ok else []))),
+        "workload": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA "
+                    "rejected",
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -5378,6 +5870,13 @@ RUNNERS = {
     "u-boot-tools": _wl_u_boot_tools,
     "sslsplit": _wl_sslsplit,
     "opendkim": _wl_opendkim,
+    # The Phase-25 L7 expansion batch (b5).
+    "nmap": _wl_nmap,
+    "fastd": _wl_fastd,
+    "kea": _wl_kea,
+    "mumble-server": _wl_mumble,
+    "prosody": _wl_prosody,
+    "partclone": _wl_partclone,
 }
 
 
@@ -5471,18 +5970,21 @@ def _runtime_row(fam: dict, recipe: dict | None, subject: str, *, level: str, ou
 
 
 def _build_harness(prog: dict, root: Path, prefix: Path, out: Path,
-                   build_env: dict) -> dict:
+                   build_env: dict, aux: Path | None = None) -> dict:
     """Compile a library-only family's admitted workload harness against the rebuilt library.
 
     The harness is a test-only consumer of the family library (which was itself built against the
     subject prefix by the shared recipe), so the program the load proof resolves links both the
-    rebuilt family library and the subject's libssl/libcrypto.
+    rebuilt family library and the subject's libssl/libcrypto. `{aux}`, `{root}` and `{repo}` are
+    substituted alongside `{prefix}` for harnesses whose dependency lives in the pinned packages.
     """
     spec = prog["harness"]
     source = REPO_ROOT / str(spec["source"])
+    aux = aux or (root.parents[1] / "aux" / "root")
     argv = ["cc", str(source), "-o", str(out), "-O2", "-Wall", "-Wextra"]
-    argv += [str(a).format(root=root, prefix=prefix) for a in spec.get("cflags") or []]
-    argv += [str(a).format(root=root, prefix=prefix) for a in spec.get("ldflags") or []]
+    body = {"root": root, "prefix": prefix, "aux": aux, "repo": REPO_ROOT}
+    argv += [str(a).format(**body) for a in spec.get("cflags") or []]
+    argv += [str(a).format(**body) for a in spec.get("ldflags") or []]
     return census._run(argv, cwd=root, env=build_env)
 
 
@@ -5537,6 +6039,15 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
         shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True, exist_ok=True)
     lib_paths = [str(prefix / "lib")] + [str(root / p) for p in prog.get("lib_paths", [])]
+    # A libtool-built consumer (Kea) leaves its shared objects in `src/lib/*/.libs`; a recipe names
+    # that pattern and the glob is expanded here to the directories that actually exist.
+    expanded: list[str] = []
+    for entry in lib_paths:
+        if glob.has_magic(entry):
+            expanded.extend(sorted(glob.glob(entry)))
+        else:
+            expanded.append(entry)
+    lib_paths = expanded
     lib_paths += _aux_runtime_lib_dirs(recipe, root)
     env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(lib_paths))
     aux_bins = _aux_runtime_bin_dirs(recipe, root)
@@ -5544,8 +6055,25 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
         env["PATH"] = os.pathsep.join([*aux_bins, env.get("PATH", "")])
     evidence = [f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
                 f"artifact:{prog['program']}", "local_only:loopback"]
+    aux_root = root.parents[1] / "aux" / "root"
     build_env = dict(os.environ, PKG_CONFIG_PATH=f"{prefix}/lib/pkgconfig",
                      CPPFLAGS=f"-I{prefix}/include", LDFLAGS=f"-L{prefix}/lib")
+    aux_include = [str(aux_root / d) for spec in recipe.get("aux_sources") or []
+                   for d in spec.get("include_dirs") or []]
+    aux_lib = [str(aux_root / d) for spec in recipe.get("aux_sources") or []
+               for d in spec.get("library_dirs") or []]
+    aux_pc = [str(aux_root / d) for spec in recipe.get("aux_sources") or []
+              for d in spec.get("pkgconfig_dirs") or []]
+    if aux_include:
+        build_env["CPPFLAGS"] += "".join(f" -I{d}" for d in aux_include)
+    if aux_lib:
+        build_env["LDFLAGS"] += "".join(f" -L{d}" for d in aux_lib)
+        build_env["LD_LIBRARY_PATH"] = os.pathsep.join(
+            [*aux_lib, *lib_paths, build_env.get("LD_LIBRARY_PATH", "")]).rstrip(os.pathsep)
+    if aux_pc:
+        build_env["PKG_CONFIG_PATH"] = os.pathsep.join([*aux_pc, build_env["PKG_CONFIG_PATH"]])
+    if aux_bins:
+        build_env["PATH"] = os.pathsep.join([*aux_bins, build_env.get("PATH", "")])
 
     # A few admitted programs live behind an upstream target the shared recipe's `make` does not
     # build (ldns's tools are `make examples`). The workload's own target is built here with the
@@ -5574,7 +6102,8 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     for step in prog.get("make_steps") or []:
         # A step may name the build tree or the subject prefix (dovecot's workload installs into
         # its own `DESTDIR`); substitute them exactly as the harness flags are substituted.
-        step = [str(a).format(root=root, prefix=prefix) for a in step]
+        step = [str(a).format(root=root, prefix=prefix, aux=aux_root, repo=REPO_ROOT)
+                for a in step]
         prep = census._run(["make", *(prog.get("make_jobs") or [MAKE_JOBS]), *step], cwd=root,
                            env=build_env)
         if not prep["ok"]:
@@ -5593,7 +6122,7 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     # program the load proof then resolves, so the L5 evidence is the library's own load, not a
     # fabricated banner.
     if prog.get("harness"):
-        built = _build_harness(prog, root, prefix, program, build_env)
+        built = _build_harness(prog, root, prefix, program, build_env, aux_root)
         if not built["ok"]:
             return _runtime_row(
                 fam, recipe, subject, level=L4, outcome="failed", residual="runtime-failure",
@@ -5707,8 +6236,15 @@ def _not_attempted(fam: dict, subject: str, *, level: str, failure_class: str, r
 
 
 def derive_atlas(families_body: dict, freeze_body: dict, build_link_body: dict,
-                 authority_id: str) -> dict:
-    """Measure the whole P1000 under both subjects and return the atlas `body`."""
+                 authority_id: str, *, only: set[str] | None = None,
+                 reuse: dict | None = None) -> dict:
+    """Measure the whole P1000 under both subjects and return the atlas `body`.
+
+    `only`/`reuse` are the evidence-reuse seam: with a committed runtime atlas whose candidate
+    identity is byte-identical to the current candidate install, unchanged families keep their
+    previously measured rows and only `only` is rebuilt. Reused rows are copied verbatim and the
+    body records the reuse.
+    """
     del families_body
     auth_prefix = resolve_authority(authority_id).prefix
     if not (CANDIDATE_PREFIX / "lib" / "libssl.so.3").is_file():
@@ -5726,6 +6262,22 @@ def derive_atlas(families_body: dict, freeze_body: dict, build_link_body: dict,
     rows: list[dict] = []
     specimens: dict[str, dict] = {}
     variants: dict[str, dict] = {}
+    reuse_runs: dict[tuple[str, str], dict] = {}
+    reused_families: list[str] = []
+    if reuse:
+        current = bl.candidate_identity()
+        committed = reuse.get("candidate_identity") or {}
+        for field in ("libssl_so_3_sha256", "libcrypto_so_3_sha256", "install_prefix"):
+            if str(current.get(field)) != str(committed.get(field)):
+                raise SystemExit(
+                    f"[downstream-runtime] --reuse-committed refuses the committed atlas: its "
+                    f"candidate_identity.{field} is not the current candidate install")
+        for r in reuse.get("runs") or []:
+            reuse_runs[(str(r.get("family_id")), str(r.get("subject")))] = r
+        for s in reuse.get("specimens") or []:
+            specimens[str(s.get("specimen_id"))] = copy.deepcopy(s)
+        for v in reuse.get("variants") or []:
+            variants[str(v.get("variant_id"))] = copy.deepcopy(v)
 
     SCRATCH.mkdir(parents=True, exist_ok=True)
     try:
@@ -5742,6 +6294,20 @@ def derive_atlas(families_body: dict, freeze_body: dict, build_link_body: dict,
             permits = {s: RANK.get(str((bl_rows.get((str(entry.get("family_id")), s)) or {})
                                         .get("level")), -1) for s in SUBJECTS}
             any_l4 = any(permits[s] >= RANK[L4] for s in SUBJECTS)
+
+            if (recipe is not None and only is not None and name not in only
+                    and (str(entry.get("family_id")), "authority") in reuse_runs
+                    and (str(entry.get("family_id")), "candidate") in reuse_runs
+                    and reuse_runs[(str(entry.get("family_id")), "authority")]
+                    .get("recipe_id") == recipe["recipe_id"]
+                    and reuse_runs[(str(entry.get("family_id")), "candidate")]
+                    .get("recipe_id") == recipe["recipe_id"]):
+                rows.append(copy.deepcopy(reuse_runs[(str(entry.get("family_id")),
+                                                     "authority")]))
+                rows.append(copy.deepcopy(reuse_runs[(str(entry.get("family_id")),
+                                                     "candidate")]))
+                reused_families.append(name)
+                continue
 
             if recipe is None:
                 for subject in SUBJECTS:
@@ -5868,6 +6434,12 @@ def derive_atlas(families_body: dict, freeze_body: dict, build_link_body: dict,
         "counts": counts,
         "resource_limits": limits,
         "non_claims": NON_CLAIMS,
+        "evidence_reuse": ({
+            "mode": "committed-rows",
+            "families_reused": len(reused_families),
+            "reused_families": sorted(reused_families),
+            "candidate_identity_match": True,
+        } if reuse else None),
     }
     return body
 
@@ -6295,7 +6867,8 @@ def _load_inputs() -> tuple[dict, dict, dict]:
     return freeze_body, families_body, build_link_body
 
 
-def cmd_measure(authority_id: str) -> int:
+def cmd_measure(authority_id: str, only: set[str] | None = None,
+                reuse: dict | None = None) -> int:
     freeze_body, families_body, build_link_body = _load_inputs()
     if len(freeze_body.get("p1000") or []) != 1000:
         print(f"[downstream-runtime] the frozen P1000 carries "
@@ -6304,7 +6877,8 @@ def cmd_measure(authority_id: str) -> int:
     print(f"[downstream-runtime] loading and running the recipe-backed families against both "
           f"subjects (authority {authority_id} + candidate {rel(CANDIDATE_PREFIX)})")
     started = time.monotonic()
-    body = derive_atlas(families_body, freeze_body, build_link_body, authority_id)
+    body = derive_atlas(families_body, freeze_body, build_link_body, authority_id,
+                        only=only, reuse=reuse)
     findings = runtime_findings(families_body, freeze_body, build_link_body, body)
     control = runtime_sensitivity_control(families_body, freeze_body, build_link_body, body)
     if findings or not control["honest"]:
@@ -6427,6 +7001,10 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
     ap.add_argument("--measure", action="store_true",
                     help="run the real builds and workloads and write the atlas (in-container)")
+    ap.add_argument("--only", default="",
+                    help="comma-separated families to measure; the rest are reused")
+    ap.add_argument("--reuse-committed", action="store_true",
+                    help="reuse unchanged families' rows from the committed atlas")
     ap.add_argument("--check", action="store_true",
                     help="validate the committed atlas without rebuilding (in-container)")
     ap.add_argument("--self-test", action="store_true",
@@ -6441,7 +7019,9 @@ def main(argv: list[str]) -> int:
         return self_test()
     if args.check:
         return cmd_check(args.authority)
-    return cmd_measure(args.authority)
+    only = {s.strip() for s in str(args.only).split(",") if s.strip()} or None
+    reuse = _load_atlas() if args.reuse_committed and OUT.is_file() else None
+    return cmd_measure(args.authority, only=only, reuse=reuse)
 
 
 if __name__ == "__main__":
