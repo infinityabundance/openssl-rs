@@ -1067,6 +1067,16 @@ const SSL3_MT_EE_BODY: u8 = 8;
 const TLSEXT_TYPE_SUPPORTED_VERSIONS: u16 = 43;
 /// `TLSEXT_TYPE_session_ticket` — `tls1.h` (35).
 const TLSEXT_TYPE_SESSION_TICKET: u16 = 35;
+/// `TLSEXT_TYPE_status_request` — `tls1.h:88`.
+const TLSEXT_TYPE_STATUS_REQUEST: u16 = 5;
+/// `SSL_AD_UNSUPPORTED_EXTENSION` — `ssl.h:1236`.
+const SSL_AD_UNSUPPORTED_EXTENSION: c_int = 110;
+/// `SSL_AD_DECODE_ERROR` — `ssl3.h` (50).
+const SSL_AD_DECODE_ERROR: c_int = 50;
+/// `SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE` — `tls1.h:77` (113).
+const SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE: c_int = 113;
+/// `SSL_R_BAD_EXTENSION` — `sslerr.h`.
+const SSL_R_BAD_EXTENSION: c_int = 110;
 /// `TLSEXT_TYPE_key_share` — `tls1.h:165`.
 const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
 /// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
@@ -2191,6 +2201,22 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
                     // SAFETY: `s` is live.
                     unsafe { (*s).ext_ticket_expected = 1 };
                 }
+                if etype == TLSEXT_TYPE_STATUS_REQUEST {
+                    // `tls_parse_stoc_status_request` (`extensions_clnt.c:1492-1528`): the server's
+                    // TLS1.2 `status_request` acknowledgement is empty and means a
+                    // `CertificateStatus` follows.
+                    // SAFETY: `s` is live.
+                    let status_type = unsafe { (*s).ext_status_type };
+                    if elen != 0 || status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP {
+                        // SAFETY: `s` is live.
+                        unsafe {
+                            ossl_statem_fatal(s, SSL_AD_UNSUPPORTED_EXTENSION, SSL_R_BAD_EXTENSION)
+                        };
+                        return 0;
+                    }
+                    // SAFETY: `s` is live.
+                    unsafe { (*s).ext_status_expected = 1 };
+                }
                 off += elen;
             }
         }
@@ -2690,6 +2716,48 @@ unsafe fn tls12_construct_cert_verify(s: *mut Ssl) -> c_int {
     }
 }
 
+/// `int tls_process_initial_server_flight(SSL_CONNECTION *s)`'s OCSP-callback tail —
+/// `statem_clnt.c:3003-3040`. Invoked once the server's initial flight has been processed, so a
+/// client that requested status receives the callback whether or not a response was sent.
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn status_callback_initial_flight(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    let (status_type, ctx) = unsafe { ((*s).ext_status_type, (*s).ctx) };
+    if status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING && !ctx.is_null() {
+        // SAFETY: `ctx` is the live context just read.
+        if let Some(cb) = unsafe { (*ctx).status_cb } {
+            // SAFETY: the callback is the application's `int (*)(SSL *, void *)`; `s` and the
+            // stored argument are the ones it was installed to receive.
+            let ret = unsafe { cb(s, (*ctx).status_arg) };
+            if ret == 0 {
+                // SAFETY: `s` is live.
+                unsafe {
+                    ossl_statem_fatal(
+                        s,
+                        SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE,
+                        crate::runtime::err::err_reasons::SSL_R_INVALID_STATUS_RESPONSE,
+                    )
+                };
+                return 0;
+            }
+            if ret < 0 {
+                // SAFETY: `s` is live.
+                unsafe {
+                    ossl_statem_fatal(
+                        s,
+                        SSL_AD_INTERNAL_ERROR,
+                        crate::runtime::err::err_reasons::SSL_R_OCSP_CALLBACK_FAILURE,
+                    )
+                };
+                return 0;
+            }
+        }
+    }
+    1
+}
+
 /// The TLS1.2 client read/write driver (`statem.c`'s read/write sub-state machines, reduced).
 /// Returns `1` when the handshake finishes and `-1` while waiting for the peer.
 ///
@@ -2721,6 +2789,57 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                     // A `ServerKeyExchange` follows the Certificate only for the suites whose
                     // key exchange needs it (`send_server_key_exchange`, `statem_srvr.c:353`).
                     // A static-RSA server goes straight to CertificateRequest/ServerHelloDone.
+                    (*s).hand_state = if (*s).ext_status_expected != 0 {
+                        TLS_ST_CR_CERT_STATUS
+                    } else if crate::ssl::statem::statem_srvr::send_server_key_exchange(s) {
+                        TLS_ST_CR_KEY_EXCH
+                    } else {
+                        TLS_ST_CR_CERT_REQ
+                    };
+                }
+                TLS_ST_CR_CERT_STATUS => {
+                    let Some((buf, n)) = tls12_read_handshake(s) else {
+                        return tls12_client_wait(s);
+                    };
+                    if buf[0] != SSL3_MT_CERTIFICATE_STATUS as u8 {
+                        ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
+                        return -1;
+                    }
+                    // `tls_process_cert_status` (`statem_clnt.c`):
+                    // `status_type(1) || response<3>`.
+                    let blen =
+                        ((buf[1] as usize) << 16) | ((buf[2] as usize) << 8) | buf[3] as usize;
+                    if 4 + blen > n || blen < 4 {
+                        ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
+                        return -1;
+                    }
+                    let body = &buf[4..4 + blen];
+                    let rlen =
+                        ((body[1] as usize) << 16) | ((body[2] as usize) << 8) | body[3] as usize;
+                    if body[0] as c_int != (*s).ext_status_type || 4 + rlen != body.len() {
+                        ossl_statem_fatal(
+                            s,
+                            SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE,
+                            SSL_R_BAD_EXTENSION,
+                        );
+                        return -1;
+                    }
+                    // SAFETY: `s` is live; `body[4..]` names `rlen` readable bytes. The ctrl copies
+                    // them, so the transcript buffer may be reused afterwards.
+                    if crate::ssl::ssl_lib::SSL_ctrl(
+                        s,
+                        crate::ssl::ssl_lib::SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP,
+                        rlen as core::ffi::c_long,
+                        body[4..].as_ptr().cast_mut().cast(),
+                    ) != 1
+                    {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    if crate::ssl::tls13_enc::transcript_update(s, buf.as_ptr(), n) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
                     (*s).hand_state =
                         if crate::ssl::statem::statem_srvr::send_server_key_exchange(s) {
                             TLS_ST_CR_KEY_EXCH
@@ -2762,6 +2881,11 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                     // (`statem_clnt.c`); the Finished MAC covers it.
                     if crate::ssl::tls13_enc::transcript_update(s, buf.as_ptr(), n) == 0 {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    // `tls_process_server_done` (`statem_clnt.c:3050-3070`) ends with
+                    // `tls_process_initial_server_flight`, whose OCSP callback runs here.
+                    if status_callback_initial_flight(s) == 0 {
                         return -1;
                     }
                     (*s).hand_state = TLS_ST_CW_CERT;
@@ -3297,6 +3421,11 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
                     };
                     if tls13_process_server_finished(s, &buf[..n]) == 0 {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    // `tls_process_finished` (`statem_lib.c:961`) runs
+                    // `tls_process_initial_server_flight` once the server's flight is complete.
+                    if status_callback_initial_flight(s) == 0 {
                         return -1;
                     }
                     (*s).hand_state = TLS_ST_OK;
