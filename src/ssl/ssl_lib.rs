@@ -6931,7 +6931,9 @@ unsafe fn ssl3_read_app_data(
                     // connection (they send the client's response), so `rx_buf` must not be
                     // aliased by `msg`.
                     let mlen = n as usize;
-                    let mut scratch = [0u8; 16384];
+                    // Heap-allocated: `SSL_read` may dispatch a record-sized post-handshake
+                    // message, and a 16 KiB stack array here would overflow a small read thread.
+                    let mut scratch = vec![0u8; 16384];
                     if mlen > scratch.len() {
                         return -1;
                     }

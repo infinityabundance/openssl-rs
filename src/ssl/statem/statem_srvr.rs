@@ -1825,13 +1825,19 @@ unsafe fn tls_construct_server_hello(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
 pub(crate) unsafe fn write_server_hello(s: *mut Ssl) -> c_int {
     use crate::ssl::statem::statem_clnt::{ssl3_set_handshake_header, tls_close_construct_packet};
 
-    let mut buf = [0u8; 4096];
+    // The packet buffer is heap-allocated through the crate's allocator seam for the same reason
+    // as the client's: a 4 KiB frame here sits directly above the record encoder on the accept
+    // path.
+    let Some(buf_block) = OwnedBuf::new(4096, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    let buf = buf_block.as_ptr();
     // SAFETY: a zeroed `WPACKET` is a valid starting state for `WPACKET_init_static_len`.
     let mut pkt: Wpacket = unsafe { core::mem::zeroed() };
     let mut msglen: usize = 0;
     // SAFETY: `pkt`/`buf` are live locals; the buffer outlives the packet.
     unsafe {
-        if crate::packet::WPACKET_init_static_len(&mut pkt, buf.as_mut_ptr(), buf.len(), 0) == 0 {
+        if crate::packet::WPACKET_init_static_len(&mut pkt, buf, 4096, 0) == 0 {
             return 0;
         }
         if ssl3_set_handshake_header(&mut pkt, SSL3_MT_SERVER_HELLO) == 0
@@ -1842,16 +1848,12 @@ pub(crate) unsafe fn write_server_hello(s: *mut Ssl) -> c_int {
             crate::packet::WPACKET_cleanup(&mut pkt);
             return 0;
         }
-        let r = crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
-            s,
-            SSL3_RT_HANDSHAKE,
-            buf.as_ptr(),
-            msglen,
-        );
+        let r =
+            crate::ssl::record::rec_layer_s3::ssl3_write_bytes(s, SSL3_RT_HANDSHAKE, buf, msglen);
         // The transcript's second message (`tls_construct_server_hello`); the transcript was
         // initialised with the ClientHello by `tls_process_client_hello`.
         if r > 0 {
-            crate::ssl::tls13_enc::transcript_update(s, buf.as_ptr(), msglen);
+            crate::ssl::tls13_enc::transcript_update(s, buf, msglen);
         }
         r
     }
@@ -2232,28 +2234,37 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
             && EVP_DigestSign(mctx, core::ptr::null_mut(), &mut siglen, tbs.as_ptr(), pos) > 0
             && siglen <= 1024
         {
-            let mut sig = [0u8; 1024];
-            if EVP_DigestSign(mctx, sig.as_mut_ptr(), &mut siglen, tbs.as_ptr(), pos) > 0 {
-                let mut body = [0u8; 1030];
-                // `ecdsa_secp256r1_sha256` (0x0403) for an EC key, else `rsa_pss_rsae_sha256` (0x0804).
-                let sigalg: [u8; 2] = if is_ec {
-                    [0x04, 0x03]
-                } else {
-                    // TLS 1.3 requires an RSASSA-PSS scheme for an RSA key
-                    // (`tls12_check_peer_sigalg`, `tls1_lib.c:2700-2739`; RFC 8446 §4.2.3).
-                    [0x08, 0x04]
-                };
-                body[0] = sigalg[0];
-                body[1] = sigalg[1];
-                body[2] = (siglen >> 8) as u8;
-                body[3] = siglen as u8;
-                core::ptr::copy_nonoverlapping(sig.as_ptr(), body.as_mut_ptr().add(4), siglen);
-                ok = crate::ssl::tls13_enc::write_handshake_message(
-                    s,
-                    SSL3_MT_CERT_VRFY,
-                    body.as_ptr(),
-                    4 + siglen,
-                ) > 0;
+            // The signature and its framed body are heap-allocated through the crate's allocator
+            // seam; the two ~1 KiB arrays otherwise stack above the record encoder on every
+            // post-ClientHello flight and help push a 32 KiB accept thread over its guard page.
+            if let Some(sig_block) = OwnedBuf::new(1024, SeamFile::NULL, 0) {
+                let sig = sig_block.as_ptr();
+                if EVP_DigestSign(mctx, sig, &mut siglen, tbs.as_ptr(), pos) > 0 {
+                    if let Some(body_block) = OwnedBuf::new(1030, SeamFile::NULL, 0) {
+                        let body = body_block.as_ptr();
+                        // `ecdsa_secp256r1_sha256` (0x0403) for an EC key, else
+                        // `rsa_pss_rsae_sha256` (0x0804).
+                        let sigalg: [u8; 2] = if is_ec {
+                            [0x04, 0x03]
+                        } else {
+                            // TLS 1.3 requires an RSASSA-PSS scheme for an RSA key
+                            // (`tls12_check_peer_sigalg`, `tls1_lib.c:2700-2739`; RFC 8446
+                            // §4.2.3).
+                            [0x08, 0x04]
+                        };
+                        *body = sigalg[0];
+                        *body.add(1) = sigalg[1];
+                        *body.add(2) = (siglen >> 8) as u8;
+                        *body.add(3) = siglen as u8;
+                        core::ptr::copy_nonoverlapping(sig, body.add(4), siglen);
+                        ok = crate::ssl::tls13_enc::write_handshake_message(
+                            s,
+                            SSL3_MT_CERT_VRFY,
+                            body,
+                            4 + siglen,
+                        ) > 0;
+                    }
+                }
             }
         }
     }
@@ -3149,7 +3160,9 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
         core::ptr::copy_nonoverlapping((*s).server_random.as_ptr(), tbs.as_mut_ptr().add(32), 32);
     }
     tbs[64..64 + params_len].copy_from_slice(&params_buf[..params_len]);
-    let mut sig = [0u8; 1024];
+    // The signature and framed body are heap-allocated so this pre-Finished flight does not place
+    // ~3 KiB of arrays on the accept thread's stack.
+    let mut sig = vec![0u8; 1024];
     // SAFETY: `s` is live; `tbs`/`sig` are writable locals.
     let sigalg_len = unsafe { tls12_sign(s, &tbs[..64 + params_len], &mut sig) };
     // The `get1` block's single release is this drop, at the authority's own release point.
@@ -3157,7 +3170,7 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
     let Some((sigalg, siglen)) = sigalg_len else {
         return 0;
     };
-    let mut body = [0u8; 2048];
+    let mut body = vec![0u8; 2048];
     body[..params_len].copy_from_slice(&params_buf[..params_len]);
     let mut p = params_len;
     body[p] = (sigalg >> 8) as u8;
@@ -3370,19 +3383,15 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
         if iv_len > EVP_MAX_IV_LENGTH {
             return None;
         }
-        // Encrypt (`EVP_EncryptUpdate`/`EVP_EncryptFinal`, `statem_srvr.c:4294-4306`).
-        let mut enc = [0u8; 0xFF00 + 32];
+        // Encrypt (`EVP_EncryptUpdate`/`EVP_EncryptFinal`, `statem_srvr.c:4294-4306`). The
+        // ciphertext block is heap-allocated through the crate's allocator seam: `0xFF00 + 32`
+        // bytes on the stack would overflow a 32 KiB accept thread on its own.
+        let enc_block = OwnedBuf::new(0xFF00 + 32, SeamFile::NULL, 0)?;
+        let enc = enc_block.as_ptr();
         let mut enc1: c_int = 0;
         let mut enc2: c_int = 0;
-        if EVP_EncryptUpdate(
-            ctx.as_ptr(),
-            enc.as_mut_ptr(),
-            &mut enc1,
-            senc.as_ptr(),
-            slen as c_int,
-        ) <= 0
-            || EVP_EncryptFinal_ex(ctx.as_ptr(), enc.as_mut_ptr().add(enc1 as usize), &mut enc2)
-                <= 0
+        if EVP_EncryptUpdate(ctx.as_ptr(), enc, &mut enc1, senc.as_ptr(), slen as c_int) <= 0
+            || EVP_EncryptFinal_ex(ctx.as_ptr(), enc.add(enc1 as usize), &mut enc2) <= 0
         {
             return None;
         }
@@ -3401,7 +3410,8 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
         ticket[TLSEXT_KEYNAME_LENGTH..TLSEXT_KEYNAME_LENGTH + iv_len]
             .copy_from_slice(&iv[..iv_len]);
         ticket[TLSEXT_KEYNAME_LENGTH + iv_len..TLSEXT_KEYNAME_LENGTH + iv_len + enclen]
-            .copy_from_slice(&enc[..enclen]);
+            // SAFETY: `EVP_EncryptUpdate`/`Final` wrote `enclen` bytes into the `enc` block.
+            .copy_from_slice(core::slice::from_raw_parts(enc, enclen));
         let mac_at = TLSEXT_KEYNAME_LENGTH + iv_len + enclen;
         let mut hlen: c_uint = 0;
         if HMAC_Update(hctx.as_ptr(), ticket.as_ptr(), mac_at) <= 0
@@ -3681,8 +3691,10 @@ pub(crate) unsafe fn tls12_write_change_cipher_spec(s: *mut Ssl, is_client: bool
 ///
 /// # Safety
 /// `s` is live.
-pub(crate) unsafe fn tls12_read_handshake(s: *mut Ssl) -> Option<([u8; 16384], usize)> {
-    let mut buf = [0u8; 16384];
+pub(crate) unsafe fn tls12_read_handshake(s: *mut Ssl) -> Option<(Vec<u8>, usize)> {
+    // Heap-allocated: a record-sized stack array here (on the TLS1.2 accept/connect path) would
+    // overflow a small accept thread.
+    let mut buf = vec![0u8; 16384];
     let mut rt = 0u8;
     // SAFETY: `s` is live; `buf` is writable; `rt` is writable.
     let n = unsafe {
@@ -4265,23 +4277,38 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc as k;
     // SAFETY: `s` is live.
     unsafe {
-        // A TLS1.2 handshake that returned a wait must resume in its own driver on re-entry.
+        // A TLS1.2 handshake that returned a wait must resume in its own driver on re-entry, and
+        // it needs no handshake read buffer here.
         if (*s).tls12_driver != 0 {
             return tls12_server_drive(s);
         }
+    }
+    // The handshake-message read buffer is heap-allocated for the whole drive: a 16 KiB stack
+    // array here (plus the record encoder's frame) overflows a 32 KiB accept thread. Its single
+    // release is the handle's `Drop` on every return below.
+    let Some(msg_buf) = OwnedBuf::new(crate::ssl::ssl_lib::TLS13_HS_BUF_LEN, SeamFile::NULL, 0)
+    else {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR) };
+        return -1;
+    };
+    // SAFETY: `s` is live.
+    unsafe {
         loop {
             match (*s).hand_state {
                 TLS_ST_BEFORE => {
-                    let mut buf = [0u8; 16384];
                     let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        buf.as_mut_ptr(),
-                        buf.len(),
+                        msg_buf.as_ptr(),
+                        crate::ssl::ssl_lib::TLS13_HS_BUF_LEN,
                     );
-                    if n <= 0 || buf[0] != SSL3_MT_CLIENT_HELLO_BODY {
+                    if n <= 0 || *msg_buf.as_ptr() != SSL3_MT_CLIENT_HELLO_BODY {
                         return server_wait(s);
                     }
-                    let pr = tls_process_client_hello(s, &buf[..n as usize]);
+                    let pr = tls_process_client_hello(
+                        s,
+                        core::slice::from_raw_parts(msg_buf.as_ptr(), n as usize),
+                    );
                     if pr == 0 {
                         // `tls_process_client_hello` raises its own alert/reason (for example
                         // `SSL_R_NO_SHARED_CIPHER`); only a parse failure with no reason queued gets
@@ -4316,28 +4343,27 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     };
                 }
                 TLS_ST_SR_CERT => {
-                    let mut buf = [0u8; 16384];
                     let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        buf.as_mut_ptr(),
-                        buf.len(),
+                        msg_buf.as_ptr(),
+                        crate::ssl::ssl_lib::TLS13_HS_BUF_LEN,
                     );
                     if n <= 0 {
                         return server_wait(s);
                     }
-                    if buf[0] == SSL3_MT_CERTIFICATE_VERIFY as u8 {
+                    if *msg_buf.as_ptr() == SSL3_MT_CERTIFICATE_VERIFY as u8 {
                         // The client sent an empty Certificate, so per `received_client_cert`
                         // (`statem_srvr.c:122-135`) a CertificateVerify cannot follow; reject it.
                         ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
                         return -1;
                     }
-                    if buf[0] != SSL3_MT_CERT {
+                    if *msg_buf.as_ptr() != SSL3_MT_CERT {
                         ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
                         return -1;
                     }
                     if crate::ssl::statem::statem_clnt::tls13_process_peer_certificate(
                         s,
-                        &buf[..n as usize],
+                        core::slice::from_raw_parts(msg_buf.as_ptr(), n as usize),
                         true,
                     ) == 0
                     {
@@ -4353,18 +4379,17 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     };
                 }
                 TLS_ST_SR_CERT_VRFY => {
-                    let mut buf = [0u8; 16384];
                     let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        buf.as_mut_ptr(),
-                        buf.len(),
+                        msg_buf.as_ptr(),
+                        crate::ssl::ssl_lib::TLS13_HS_BUF_LEN,
                     );
-                    if n <= 0 || buf[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+                    if n <= 0 || *msg_buf.as_ptr() != SSL3_MT_CERTIFICATE_VERIFY as u8 {
                         return server_wait(s);
                     }
                     if crate::ssl::statem::statem_clnt::tls_process_cert_verify(
                         s,
-                        &buf[..n as usize],
+                        core::slice::from_raw_parts(msg_buf.as_ptr(), n as usize),
                         true,
                     ) == 0
                     {
@@ -4374,17 +4399,21 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     (*s).hand_state = TLS_ST_SR_FINISHED;
                 }
                 TLS_ST_SR_FINISHED => {
-                    let mut buf = [0u8; 16384];
                     let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        buf.as_mut_ptr(),
-                        buf.len(),
+                        msg_buf.as_ptr(),
+                        crate::ssl::ssl_lib::TLS13_HS_BUF_LEN,
                     );
-                    if n <= 0 || buf[0] != SSL3_MT_FIN {
+                    if n <= 0 || *msg_buf.as_ptr() != SSL3_MT_FIN {
                         return server_wait(s);
                     }
                     let secret = (*s).client_hs_traffic.as_ptr();
-                    if k::tls13_process_finished(s, &buf[..n as usize], secret) == 0 {
+                    if k::tls13_process_finished(
+                        s,
+                        core::slice::from_raw_parts(msg_buf.as_ptr(), n as usize),
+                        secret,
+                    ) == 0
+                    {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
@@ -4862,7 +4891,9 @@ mod tls12_group_tests {
     /// # Safety
     /// `from`/`to` are live memory BIOs owned by the two connections.
     unsafe fn drain(from: *mut Bio, to: *mut Bio) {
-        let mut buf = [0u8; 16_384];
+        // 4 KiB is enough to move a full record in a few iterations and keeps this helper's frame
+        // small enough for the 32 KiB-stack regression thread.
+        let mut buf = [0u8; 4096];
         loop {
             // SAFETY: `buf` is writable; `from` is live.
             let n = unsafe { BIO_read(from, buf.as_mut_ptr().cast(), buf.len() as c_int) };
@@ -6107,6 +6138,98 @@ mod tls12_group_tests {
 
             free_pair(p);
             BIO_free(b2);
+        }
+    }
+
+    /// The server handshake plus one application write must fit radsecproxy's 32 KiB thread stack
+    /// (`THREAD_STACK_SIZE 32768`). Before the record scratch and handshake framing buffers were
+    /// moved to the allocator seam, `ssl3_write_one_record` alone took a ~17 KiB frame, so an
+    /// `SSL_accept` inside such a thread crossed the guard page and SIGSEGVed.
+    ///
+    /// Only the server side runs on the small stack: that is radsecproxy's shape (one
+    /// `SSL_accept`/`SSL_write` thread). The client is driven by the test thread, which hands the
+    /// server a token per step so the two never touch the memory BIOs concurrently. A regression
+    /// faults the test process instead of reporting a clean failure.
+    #[test]
+    fn tls13_handshake_and_write_fit_a_32_kib_thread_stack() {
+        use std::sync::mpsc::channel;
+
+        const THREAD_STACK_SIZE: usize = 32 * 1024;
+        enum Cmd {
+            Handshake,
+            Write,
+            Stop,
+        }
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created here; the worker is handed the server's addresses, and the
+        // two sides rendezvous on the channels so neither touches a shared BIO concurrently. The
+        // pair is released on this frame after the worker has stopped.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION, None, None);
+            let (s, s_w) = (p.s as usize, p.s_w as usize);
+            let c_r = p.c_r as usize;
+            let (cmd_tx, cmd_rx) = channel::<Cmd>();
+            let (res_tx, res_rx) = channel::<isize>();
+            let worker = std::thread::Builder::new()
+                .stack_size(THREAD_STACK_SIZE)
+                .spawn(move || {
+                    // SAFETY: the addresses name the live server side of the pair this frame
+                    // created; this thread is its only user while it runs.
+                    let s = s as *mut Ssl;
+                    let s_w = s_w as *mut Bio;
+                    let c_r = c_r as *mut Bio;
+                    while let Ok(cmd) = cmd_rx.recv() {
+                        let r = match cmd {
+                            Cmd::Handshake => SSL_do_handshake(s),
+                            Cmd::Write => {
+                                let data = b"radsecproxy-sized application record";
+                                SSL_write(s, data.as_ptr().cast(), data.len() as c_int)
+                            }
+                            Cmd::Stop => break,
+                        };
+                        drain(s_w, c_r);
+                        if res_tx.send(r as isize).is_err() {
+                            break;
+                        }
+                    }
+                })
+                .expect("the 32 KiB worker thread must spawn");
+
+            let mut client_ok = false;
+            let mut server_ok = false;
+            for _ in 0..128 {
+                let cr = SSL_do_handshake(p.c);
+                if cr == 1 {
+                    client_ok = true;
+                }
+                drain(p.c_w, p.s_r);
+                cmd_tx.send(Cmd::Handshake).expect("server step channel");
+                if res_rx.recv().expect("server step reply") == 1 {
+                    server_ok = true;
+                }
+                if client_ok && server_ok {
+                    break;
+                }
+            }
+            assert!(client_ok && server_ok, "the TLS1.3 handshake must complete");
+
+            let data = b"radsecproxy-sized application record";
+            cmd_tx.send(Cmd::Write).expect("write channel");
+            let written = res_rx.recv().expect("write reply");
+            assert_eq!(
+                written,
+                data.len() as isize,
+                "one application record must be written"
+            );
+            let mut got = [0u8; 64];
+            let read = SSL_read(p.c, got.as_mut_ptr().cast(), got.len() as c_int);
+            assert_eq!(read, data.len() as c_int, "the client must read the record");
+            assert_eq!(&got[..read as usize], data);
+
+            cmd_tx.send(Cmd::Stop).expect("stop channel");
+            worker.join().expect("the 32 KiB worker must not fault");
+            free_pair(p);
         }
     }
 }
