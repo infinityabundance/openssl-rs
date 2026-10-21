@@ -378,6 +378,78 @@ PROGRAMS: dict[str, dict] = {
                  "a TLS handshake with a local broker stub, reports the connection UP and sends "
                  "its Metadata request; an unrelated CA fails certificate verification"),
     },
+    # The Phase-25 L7-expansion batch: five LIBRARY-only families. Each ships no executable, so
+    # the admitted workload is a harness under forensics/tools/ built against the family library
+    # rebuilt in this source tree and the subject prefix. The harnesses assert the family's own
+    # crypto consumer path and a negative control (a tampered signature, wrong key/password, or a
+    # mutated digest).
+    "jwt": {
+        "program": ".l7-jwt-harness", "launch": ["--version"],
+        "version_re": r"jwt-l7-harness", "lib_paths": ["b/libjwt"],
+        "harness": {
+            "source": "forensics/tools/l7_jwt.c",
+            "cflags": ["-I{root}/include", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b/libjwt", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b/libjwt", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-ljwt", "-lssl", "-lcrypto"],
+        },
+        "note": ("libjwt's RS256 and ES256 sign/decode paths: a claims set is signed and decoded "
+                 "with locally generated keys, and a tampered signature is rejected"),
+    },
+    "libjose": {
+        "program": ".l7-jose-harness", "launch": ["--version"],
+        "version_re": r"jose-l7-harness", "lib_paths": ["b/lib"],
+        "harness": {
+            "source": "forensics/tools/l7_jose.c",
+            "cflags": ["-I{root}/b", "-I{root}", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b/lib", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b/lib", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-ljose", "-ljansson", "-lssl", "-lcrypto"],
+        },
+        "note": ("jose's JWS path: an ES256 JWK signs a payload, the JWS verifies with the same "
+                 "key, and a second key is rejected"),
+    },
+    "libzip": {
+        "program": ".l7-libzip-harness", "launch": ["--version"],
+        "version_re": r"libzip-l7-harness", "lib_paths": ["b/lib"],
+        "harness": {
+            "source": "forensics/tools/l7_libzip.c",
+            "cflags": ["-I{root}/lib", "-I{root}/b", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b/lib", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b/lib", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lzip", "-lssl", "-lcrypto"],
+        },
+        "note": ("libzip's AES-256 encrypted archive path: write/read with the right password and "
+                 "a wrong-password reject"),
+    },
+    "apr-util": {
+        "program": ".l7-aprutil-harness", "launch": ["--version"],
+        "version_re": r"apr-util-l7-harness", "lib_paths": [".libs"],
+        "harness": {
+            "source": "forensics/tools/l7_aprutil.c",
+            "cflags": ["-I{root}/include", "-I/usr/include/apr-1.0", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-laprutil-1", "-lapr-1", "-lssl", "-lcrypto",
+                        "-lpthread"],
+        },
+        "note": ("apr-util's MD5 digest vector plus a real libssl handshake over an apr_socket to "
+                 "a local server, with a mutated-digest mismatch control"),
+    },
+    "fido2": {
+        "program": ".l7-fido2-harness", "launch": ["--version"],
+        "version_re": r"fido2-l7-harness", "lib_paths": ["b/src"],
+        "harness": {
+            "source": "forensics/tools/l7_fido2.c",
+            "cflags": ["-I{root}/src", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b/src", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b/src", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lfido2", "-lssl", "-lcrypto"],
+        },
+        "note": ("libfido2's ES256 key representation: a P-256 key round-trips through "
+                 "es256_pk_from_EVP_PKEY/es256_pk_to_EVP_PKEY, the ES256 signature verifies, and "
+                 "an altered signature is rejected"),
+    },
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -3613,6 +3685,93 @@ def _wl_kmod(ctx: dict) -> dict:
     }
 
 
+def _wl_markers(ctx: dict, markers: list[str], workload: str, timeout: int = 120) -> dict:
+    """Run a library-only family's harness and require every named observable marker."""
+    d = ctx["workdir"]
+    res = _run_captured([str(ctx["program"])], cwd=d, env=ctx["env"], timeout=timeout)
+    text = res["stdout"] + res["stderr"]
+    missing = [m for m in markers if m not in text]
+    ok = bool(res["ok"] and not missing)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else (
+            f"the workload did not report {', '.join(missing)}"),
+        "transcript": _transcript((workload, res)),
+        "workload": workload,
+        "local_only": True,
+    }
+
+
+def _wl_jwt(ctx: dict) -> dict:
+    """libjwt's RS256 and ES256 sign/verify/decode with a tampered-signature control."""
+    return _wl_markers(ctx, [
+        "rs256_sign=ok", "rs256_verify=ok", "rs256_claims=phase25-l7-jwt",
+        "rs256_tamper=rejected", "es256_sign=ok", "es256_verify=ok",
+        "es256_claims=phase25-l7-jwt", "es256_tamper=rejected",
+    ], ("libjwt: RS256 + ES256 sign/verify/claims decode + tampered-signature reject"))
+
+
+def _wl_libjose(ctx: dict) -> dict:
+    """jose's ES256 JWS sign/verify with a wrong-key reject."""
+    return _wl_markers(ctx, ["jws_sign=ok", "jws_verify=ok", "wrong_key=rejected"],
+                       "jose: ES256 JWS sign/verify round trip + wrong-key reject")
+
+
+def _wl_libzip(ctx: dict) -> dict:
+    """libzip's AES-256 archive write/read with a wrong-password reject."""
+    return _wl_markers(ctx, ["aes256_write=ok", "aes256_read=ok", "wrong_password=rejected"],
+                       "libzip: AES-256 archive write/read + wrong-password reject")
+
+
+def _wl_fido2(ctx: dict) -> dict:
+    """libfido2's ES256 key round trip with an altered-signature reject."""
+    return _wl_markers(ctx, ["es256_sign=ok", "es256_verify=ok",
+                             "altered_signature=rejected"],
+                       "libfido2: ES256 key round trip + sign/verify + altered-signature reject")
+
+
+def _wl_aprutil(ctx: dict) -> dict:
+    """apr-util's digest vector plus a real TLS handshake to a local server."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    port = _free_port()
+    server, out, err = _spawn(
+        [str(_auth_ossl(ap)), "s_server", "-accept", str(port),
+         "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]), "-www", "-quiet"],
+        d, _auth_env(ap), d / "s_server.out", d / "s_server.err")
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("openssl s_server", {"exit_code": -1, "stdout": "",
+                                                    "stderr": "the local server did not start"})],
+                            "the local TLS server did not start", "harness-failure", d)
+        res = _run_captured([str(ctx["program"]), "--ca", str(pki["ca_crt"]),
+                             "--port", str(port)], cwd=d, env=ctx["env"], timeout=120)
+    finally:
+        _stop(server)
+        out.close()
+        err.close()
+    srv_rc = server.returncode if server.returncode is not None else -15
+    text = res["stdout"] + res["stderr"]
+    markers = ["digest=ok", "mutated_digest=mismatch", "tls_handshake=ok", "peer_verify=ok"]
+    missing = [m for m in markers if m not in text]
+    ok = bool(res["ok"] and not missing)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else f"the workload did not report {', '.join(missing)}",
+        "transcript": _transcript(
+            ("apr-util digest + TLS handshake", res),
+            ("openssl s_server", {"exit_code": srv_rc,
+                                  "stdout": _read(d / "s_server.err")})),
+        "workload": ("apr-util: MD5 digest vector + mutated-digest mismatch + libssl TLS "
+                     "handshake over apr_socket to a local server"),
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -3647,6 +3806,11 @@ RUNNERS = {
     "fetchmail": _wl_fetchmail,
     "iperf3": _wl_iperf3,
     "kmod": _wl_kmod,
+    "jwt": _wl_jwt,
+    "libjose": _wl_libjose,
+    "libzip": _wl_libzip,
+    "apr-util": _wl_aprutil,
+    "fido2": _wl_fido2,
 }
 
 
