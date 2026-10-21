@@ -9,54 +9,57 @@
       "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
     },
     "counts": {
-      "authority_linkage_proven": 71,
+      "authority_linkage_proven": 76,
       "by_subject": {
         "authority": {
-          "built": 71,
-          "configured": 71,
+          "built": 76,
+          "configured": 76,
           "failed": 2,
-          "linked": 71,
-          "not_attempted": 927
+          "linked": 76,
+          "not_attempted": 922
         },
         "candidate": {
-          "built": 71,
-          "configured": 71,
+          "built": 76,
+          "configured": 76,
           "failed": 2,
-          "linked": 71,
-          "not_attempted": 927
+          "linked": 76,
+          "not_attempted": 922
         }
       },
       "candidate_failures": {
-        "acquire-failure": 927,
+        "acquire-failure": 922,
         "configure-failure": 2
       },
-      "candidate_linkage_proven": 71,
+      "candidate_linkage_proven": 76,
       "candidate_specific_patch_count": 0,
-      "measured_families": 73,
-      "no_recipe": 927,
+      "measured_families": 78,
+      "no_recipe": 922,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 73
+      "with_recipe": 78
     },
     "evidence_reuse": {
       "candidate_identity_match": true,
-      "families_reused": 72,
+      "families_reused": 77,
       "mode": "committed-rows",
       "reused_families": [
         "apache2-utils",
         "apr-util",
         "axel",
         "bannergrab",
+        "cowpatty",
         "curl",
         "cyrus-sasl",
         "dovecot",
         "eggdrop",
+        "epic5",
         "exim",
         "fastd",
         "fetchmail",
         "fido2",
         "fossil",
         "haproxy",
+        "hcxtools",
         "hiredis-ssl",
         "hitch",
         "httperf",
@@ -81,12 +84,14 @@
         "makepasswd",
         "memcached",
         "mini-httpd",
+        "mktorrent",
         "monit",
         "mosquitto",
         "mumble-server",
         "net-snmp",
         "nginx",
         "nmap",
+        "nrpe",
         "nsd",
         "opendkim",
         "openssh",
@@ -1121,6 +1126,80 @@
         "sha256": "7c68f42f810144c4380c795106a38cbb3cea20816b8903cdbc822cae99996e75",
         "url": "https://codeload.github.com/khorben/makepasswd/tar.gz/refs/tags/makepasswd_0-5-4",
         "version": "0.5.4"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "genpmk",
+        "build_system": "make",
+        "env_extra": null,
+        "family": "cowpatty",
+        "note": "cowpatty 4.8's genpmk built against the subject libcrypto; its WPA PMK path uses OpenSSL SHA-1 through PBKDF2-HMAC-SHA1, and libpcap is the pinned package its shared utils link needs",
+        "recipe_id": "recipe:cowpatty:4.8",
+        "sha256": "b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+        "url": "https://deb.debian.org/debian/pool/main/c/cowpatty/cowpatty_4.8.orig.tar.gz",
+        "version": "4.8"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "hcxpmktool",
+        "build_system": "make",
+        "env_extra": null,
+        "family": "hcxtools",
+        "note": "hcxtools 6.2.7's hcxpmktool built against the subject libcrypto; its PMK derivation uses OpenSSL EVP PBKDF2-HMAC-SHA1, and the prefix ships no openssl.pc so OPENSSL_LIBS/OPENSSL_CFLAGS are supplied directly",
+        "recipe_id": "recipe:hcxtools:6.2.7",
+        "sha256": "c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+        "url": "https://deb.debian.org/debian/pool/main/h/hcxtools/hcxtools_6.2.7.orig.tar.gz",
+        "version": "6.2.7"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": ".libs/aircrack-ng",
+        "build_system": "configure",
+        "env_extra": {
+          "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal:{aux}/usr/share/libtool/m4",
+          "AC_MACRODIR": "{aux}/usr/share/autoconf",
+          "AUTOCONF": "{aux}/usr/bin/autoconf",
+          "AUTOHEADER": "{aux}/usr/bin/autoheader",
+          "AUTOM4TE": "{aux}/usr/bin/autom4te",
+          "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+          "AUTOMAKE": "{root}/.autotools/automake",
+          "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+          "M4": "{aux}/usr/bin/m4",
+          "PATH": "{root}/.autotools:{aux}/usr/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+          "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+          "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4"
+        },
+        "family": "aircrack-ng",
+        "note": "aircrack-ng 1.7's WPA key-cracking path linked against the subject libcrypto; the pinned release is autotools-only, so the httperf bootstrap regenerates configure, and libpcap is the pinned package its capture tools link",
+        "recipe_id": "recipe:aircrack-ng:1.7",
+        "sha256": "05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+        "url": "https://deb.debian.org/debian/pool/main/a/aircrack-ng/aircrack-ng_1.7.orig.tar.gz",
+        "version": "1.7"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "src/nrpe",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "nrpe",
+        "note": "NRPE 4.1.0's daemon and check_nrpe plugin linked against the subject libssl; --with-need-dh=no avoids configure's `openssl dhparam` invocation (the authority-applicable TLS path is ECDHE), and the daemon runs as nobody",
+        "recipe_id": "recipe:nrpe:4.1.0",
+        "sha256": "500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+        "url": "https://deb.debian.org/debian/pool/main/n/nagios-nrpe/nagios-nrpe_4.1.0.orig.tar.gz",
+        "version": "4.1.0"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "mktorrent",
+        "build_system": "make",
+        "env_extra": null,
+        "family": "mktorrent",
+        "note": "mktorrent 1.1 built with USE_OPENSSL=1 so every piece hash is OpenSSL SHA-1; the workload asserts the exact info hash and its change for a modified file",
+        "recipe_id": "recipe:mktorrent:1.1",
+        "sha256": "d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+        "url": "https://deb.debian.org/debian/pool/main/m/mktorrent/mktorrent_1.1.orig.tar.gz",
+        "version": "1.1"
       }
     ],
     "resource_limits": {
@@ -2511,24 +2590,51 @@
         "canonical_name": "aircrack-ng",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:aircrack-ng"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libgcc_s.so.1",
+          "libm.so.6",
+          "libstdc++.so.6"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:aircrack-ng",
+          "recipe:recipe:aircrack-ng:1.7",
+          "source:https://deb.debian.org/debian/pool/main/a/aircrack-ng/aircrack-ng_1.7.orig.tar.gz#05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+          "artifact:.libs/aircrack-ng"
+        ],
+        "failure_class": null,
         "family_id": "family:aircrack-ng",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 15,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": ".libs/aircrack-ng",
+          "artifact_sha256": "4003571a094ab2d46e50765cf69d406a6a988130193faab30e56dda0c12c9ec3",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 175,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:aircrack-ng:1.7",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -2538,41 +2644,116 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:aircrack-ng",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "34fd90e88e57b986dd0f75d2c0e2135db388d5e03c586f467fe01485fdd74259",
+        "source_sha256": "05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+        "source_url": "https://deb.debian.org/debian/pool/main/a/aircrack-ng/aircrack-ng_1.7.orig.tar.gz",
+        "specimen_id": "specimen:aircrack-ng:1.7",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/aircrack-ng/source.tar.gz",
+              "-C",
+              "{scratch}/aircrack-ng/authority/src"
+            ],
+            "elapsed_seconds": 0.084,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "set -e; W={scratch}/aircrack-ng/authority/src/aircrack-ng-1.7/.autotools; mkdir -p $W; sed -i 's#/usr/share#{scratch}/aircrack-ng/authority/aux/root/usr/share#g' {scratch}/aircrack-ng/authority/aux/root/usr/bin/libtoolize; sed -i 's#/usr/share/autoconf#{scratch}/aircrack-ng/authority/aux/root/usr/share/autoconf#g' {scratch}/aircrack-ng/authority/aux/root/usr/share/autoconf/autom4te.cfg; sed -i 's#/usr/share/automake-1.16#{scratch}/aircrack-ng/authority/aux/root/usr/share/automake-1.16#g' {scratch}/aircrack-ng/authority/aux/root/usr/bin/aclocal-1.16 {scratch}/aircrack-ng/authority/aux/root/usr/bin/automake-1.16; sed -i 's#/usr/share/aclocal#{scratch}/aircrack-ng/authority/aux/root/usr/share/aclocal#g' {scratch}/aircrack-ng/authority/aux/root/usr/bin/aclocal-1.16; sed -i 's#/usr/share/autoconf#{scratch}/aircrack-ng/authority/aux/root/usr/share/autoconf#g' {scratch}/aircrack-ng/authority/aux/root/usr/bin/autoconf {scratch}/aircrack-ng/authority/aux/root/usr/bin/autoheader; printf '#!/bin/sh\\nexec {scratch}/aircrack-ng/authority/aux/root/usr/bin/aclocal-1.16 --system-acdir={scratch}/aircrack-ng/authority/aux/root/usr/share/aclocal-1.16 --automake-acdir={scratch}/aircrack-ng/authority/aux/root/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; printf '#!/bin/sh\\nexec {scratch}/aircrack-ng/authority/aux/root/usr/bin/automake-1.16 --libdir={scratch}/aircrack-ng/authority/aux/root/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; printf '#!/bin/sh\\nexec {scratch}/aircrack-ng/authority/aux/root/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; chmod +x $W/aclocal $W/automake $W/libtoolize; autoreconf -fi"
+            ],
+            "elapsed_seconds": 4.425,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/aircrack-ng/authority/src/aircrack-ng-1.7/.l7-install",
+              "--with-libpcap-include={scratch}/aircrack-ng/authority/aux/root/usr/include",
+              "--with-libpcap-lib={scratch}/aircrack-ng/authority/aux/root/usr/lib/x86_64-linux-gnu"
+            ],
+            "elapsed_seconds": 2.994,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j8",
+              "install"
+            ],
+            "elapsed_seconds": 4.389,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:aircrack-ng:1.7:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "aircrack-ng",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:aircrack-ng"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libgcc_s.so.1",
+          "libm.so.6",
+          "libstdc++.so.6"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:aircrack-ng",
+          "recipe:recipe:aircrack-ng:1.7",
+          "source:https://deb.debian.org/debian/pool/main/a/aircrack-ng/aircrack-ng_1.7.orig.tar.gz#05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+          "artifact:.libs/aircrack-ng"
+        ],
+        "failure_class": null,
         "family_id": "family:aircrack-ng",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 15,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": ".libs/aircrack-ng",
+          "artifact_sha256": "b8338004597674e8f4b4cafe9fd6bd9b288fb215d8eeedd0b7feb1cad8e8793d",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 175,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:aircrack-ng:1.7",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -2583,18 +2764,66 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:aircrack-ng",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "34fd90e88e57b986dd0f75d2c0e2135db388d5e03c586f467fe01485fdd74259",
+        "source_sha256": "05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+        "source_url": "https://deb.debian.org/debian/pool/main/a/aircrack-ng/aircrack-ng_1.7.orig.tar.gz",
+        "specimen_id": "specimen:aircrack-ng:1.7",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/aircrack-ng/source.tar.gz",
+              "-C",
+              "{scratch}/aircrack-ng/candidate/src"
+            ],
+            "elapsed_seconds": 0.073,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "set -e; W={scratch}/aircrack-ng/candidate/src/aircrack-ng-1.7/.autotools; mkdir -p $W; sed -i 's#/usr/share#{scratch}/aircrack-ng/candidate/aux/root/usr/share#g' {scratch}/aircrack-ng/candidate/aux/root/usr/bin/libtoolize; sed -i 's#/usr/share/autoconf#{scratch}/aircrack-ng/candidate/aux/root/usr/share/autoconf#g' {scratch}/aircrack-ng/candidate/aux/root/usr/share/autoconf/autom4te.cfg; sed -i 's#/usr/share/automake-1.16#{scratch}/aircrack-ng/candidate/aux/root/usr/share/automake-1.16#g' {scratch}/aircrack-ng/candidate/aux/root/usr/bin/aclocal-1.16 {scratch}/aircrack-ng/candidate/aux/root/usr/bin/automake-1.16; sed -i 's#/usr/share/aclocal#{scratch}/aircrack-ng/candidate/aux/root/usr/share/aclocal#g' {scratch}/aircrack-ng/candidate/aux/root/usr/bin/aclocal-1.16; sed -i 's#/usr/share/autoconf#{scratch}/aircrack-ng/candidate/aux/root/usr/share/autoconf#g' {scratch}/aircrack-ng/candidate/aux/root/usr/bin/autoconf {scratch}/aircrack-ng/candidate/aux/root/usr/bin/autoheader; printf '#!/bin/sh\\nexec {scratch}/aircrack-ng/candidate/aux/root/usr/bin/aclocal-1.16 --system-acdir={scratch}/aircrack-ng/candidate/aux/root/usr/share/aclocal-1.16 --automake-acdir={scratch}/aircrack-ng/candidate/aux/root/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; printf '#!/bin/sh\\nexec {scratch}/aircrack-ng/candidate/aux/root/usr/bin/automake-1.16 --libdir={scratch}/aircrack-ng/candidate/aux/root/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; printf '#!/bin/sh\\nexec {scratch}/aircrack-ng/candidate/aux/root/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; chmod +x $W/aclocal $W/automake $W/libtoolize; autoreconf -fi"
+            ],
+            "elapsed_seconds": 4.342,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/aircrack-ng/candidate/src/aircrack-ng-1.7/.l7-install",
+              "--with-libpcap-include={scratch}/aircrack-ng/candidate/aux/root/usr/include",
+              "--with-libpcap-lib={scratch}/aircrack-ng/candidate/aux/root/usr/lib/x86_64-linux-gnu"
+            ],
+            "elapsed_seconds": 3.038,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j8",
+              "install"
+            ],
+            "elapsed_seconds": 4.566,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:aircrack-ng:1.7:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -16371,24 +16600,49 @@
         "canonical_name": "cowpatty",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:cowpatty"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libpcap.so.0.8"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:cowpatty",
+          "recipe:recipe:cowpatty:4.8",
+          "source:https://deb.debian.org/debian/pool/main/c/cowpatty/cowpatty_4.8.orig.tar.gz#b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+          "artifact:genpmk"
+        ],
+        "failure_class": null,
         "family_id": "family:cowpatty",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 3,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "genpmk",
+          "artifact_sha256": "623f8e0b39505f2e8b7f6ece7ee211673de9d511beca62254263bc1f56f76b8f",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 199,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:cowpatty:4.8",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -16398,41 +16652,92 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:cowpatty",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "d851b80a492d0f09e43b694723cf93d06a9954d064fd87f53aaff0f5b3055c38",
+        "source_sha256": "b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+        "source_url": "https://deb.debian.org/debian/pool/main/c/cowpatty/cowpatty_4.8.orig.tar.gz",
+        "specimen_id": "specimen:cowpatty:4.8",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/cowpatty/source.tar.gz",
+              "-C",
+              "{scratch}/cowpatty/authority/src"
+            ],
+            "elapsed_seconds": 0.004,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "CC=cc",
+              "CFLAGS=-pipe -Wall -DOPENSSL -O2 -I{prefix}/include -I{scratch}/cowpatty/authority/aux/root/usr/include",
+              "LDLIBS=-L{prefix}/lib -L{scratch}/cowpatty/authority/aux/root/usr/lib/x86_64-linux-gnu -Wl,-rpath,{prefix}/lib -Wl,-rpath,{scratch}/cowpatty/authority/aux/root/usr/lib/x86_64-linux-gnu -Wl,-rpath,{scratch}/cowpatty/authority/aux/root/lib/x86_64-linux-gnu -lcrypto -lpcap"
+            ],
+            "elapsed_seconds": 0.464,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:cowpatty:4.8:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "cowpatty",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:cowpatty"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libpcap.so.0.8"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:cowpatty",
+          "recipe:recipe:cowpatty:4.8",
+          "source:https://deb.debian.org/debian/pool/main/c/cowpatty/cowpatty_4.8.orig.tar.gz#b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+          "artifact:genpmk"
+        ],
+        "failure_class": null,
         "family_id": "family:cowpatty",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 3,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "genpmk",
+          "artifact_sha256": "134ffc948ae0ecea9801257517de6b90f39da305e6c1e215c4c0672f1a99a457",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 199,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:cowpatty:4.8",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -16443,18 +16748,44 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:cowpatty",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "d851b80a492d0f09e43b694723cf93d06a9954d064fd87f53aaff0f5b3055c38",
+        "source_sha256": "b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+        "source_url": "https://deb.debian.org/debian/pool/main/c/cowpatty/cowpatty_4.8.orig.tar.gz",
+        "specimen_id": "specimen:cowpatty:4.8",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/cowpatty/source.tar.gz",
+              "-C",
+              "{scratch}/cowpatty/candidate/src"
+            ],
+            "elapsed_seconds": 0.003,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "CC=cc",
+              "CFLAGS=-pipe -Wall -DOPENSSL -O2 -I{prefix}/include -I{scratch}/cowpatty/candidate/aux/root/usr/include",
+              "LDLIBS=-L{prefix}/lib -L{scratch}/cowpatty/candidate/aux/root/usr/lib/x86_64-linux-gnu -Wl,-rpath,{prefix}/lib -Wl,-rpath,{scratch}/cowpatty/candidate/aux/root/usr/lib/x86_64-linux-gnu -Wl,-rpath,{scratch}/cowpatty/candidate/aux/root/lib/x86_64-linux-gnu -lcrypto -lpcap"
+            ],
+            "elapsed_seconds": 0.467,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:cowpatty:4.8:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -43735,24 +44066,48 @@
         "canonical_name": "hcxtools",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:hcxtools"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:hcxtools",
+          "recipe:recipe:hcxtools:6.2.7",
+          "source:https://deb.debian.org/debian/pool/main/h/hcxtools/hcxtools_6.2.7.orig.tar.gz#c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+          "artifact:hcxpmktool"
+        ],
+        "failure_class": null,
         "family_id": "family:hcxtools",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 23,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "hcxpmktool",
+          "artifact_sha256": "a8dc5f33f027b727ff5edb6792607565ac1071e2570d71d7b88dcea804338051",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 137,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:hcxtools:6.2.7",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -43762,41 +44117,92 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:hcxtools",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "2f33586acd75121a7d58ea287b686ec3619e0c84bd264332a9b6b8a8b2a955ec",
+        "source_sha256": "c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+        "source_url": "https://deb.debian.org/debian/pool/main/h/hcxtools/hcxtools_6.2.7.orig.tar.gz",
+        "specimen_id": "specimen:hcxtools:6.2.7",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/hcxtools/source.tar.gz",
+              "-C",
+              "{scratch}/hcxtools/authority/src"
+            ],
+            "elapsed_seconds": 0.005,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "hcxpmktool",
+              "CC=cc",
+              "OPENSSL_LIBS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lcrypto",
+              "OPENSSL_CFLAGS=-I{prefix}/include"
+            ],
+            "elapsed_seconds": 0.194,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:hcxtools:6.2.7:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "hcxtools",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:hcxtools"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:hcxtools",
+          "recipe:recipe:hcxtools:6.2.7",
+          "source:https://deb.debian.org/debian/pool/main/h/hcxtools/hcxtools_6.2.7.orig.tar.gz#c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+          "artifact:hcxpmktool"
+        ],
+        "failure_class": null,
         "family_id": "family:hcxtools",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 23,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "hcxpmktool",
+          "artifact_sha256": "65d9d8732e9df38f8cd66aabc71dae278ac68f211fdad7bc9778e1fb9e8bd132",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 137,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:hcxtools:6.2.7",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -43807,18 +44213,45 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:hcxtools",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "2f33586acd75121a7d58ea287b686ec3619e0c84bd264332a9b6b8a8b2a955ec",
+        "source_sha256": "c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+        "source_url": "https://deb.debian.org/debian/pool/main/h/hcxtools/hcxtools_6.2.7.orig.tar.gz",
+        "specimen_id": "specimen:hcxtools:6.2.7",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/hcxtools/source.tar.gz",
+              "-C",
+              "{scratch}/hcxtools/candidate/src"
+            ],
+            "elapsed_seconds": 0.005,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "hcxpmktool",
+              "CC=cc",
+              "OPENSSL_LIBS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lcrypto",
+              "OPENSSL_CFLAGS=-I{prefix}/include"
+            ],
+            "elapsed_seconds": 0.171,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:hcxtools:6.2.7:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -71521,24 +71954,48 @@
         "canonical_name": "mktorrent",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:mktorrent"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:mktorrent",
+          "recipe:recipe:mktorrent:1.1",
+          "source:https://deb.debian.org/debian/pool/main/m/mktorrent/mktorrent_1.1.orig.tar.gz#d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+          "artifact:mktorrent"
+        ],
+        "failure_class": null,
         "family_id": "family:mktorrent",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 3,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "mktorrent",
+          "artifact_sha256": "c9c1239fd5fd0f04e089b5113ed21e9c6c4e89fc06d72dacf9502ee76d77a9cf",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 294,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:mktorrent:1.1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -71548,41 +72005,93 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:mktorrent",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "3719a1a265d3c9af43d9d2352fceac080b0b553432ae1570c8a120f573f5c672",
+        "source_sha256": "d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+        "source_url": "https://deb.debian.org/debian/pool/main/m/mktorrent/mktorrent_1.1.orig.tar.gz",
+        "specimen_id": "specimen:mktorrent:1.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/mktorrent/source.tar.gz",
+              "-C",
+              "{scratch}/mktorrent/authority/src"
+            ],
+            "elapsed_seconds": 0.004,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "USE_OPENSSL=1",
+              "CC=cc",
+              "CFLAGS=-O2 -Wall -I{prefix}/include",
+              "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib",
+              "LDLIBS=-lcrypto"
+            ],
+            "elapsed_seconds": 0.217,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:mktorrent:1.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "mktorrent",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:mktorrent"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:mktorrent",
+          "recipe:recipe:mktorrent:1.1",
+          "source:https://deb.debian.org/debian/pool/main/m/mktorrent/mktorrent_1.1.orig.tar.gz#d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+          "artifact:mktorrent"
+        ],
+        "failure_class": null,
         "family_id": "family:mktorrent",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 3,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "mktorrent",
+          "artifact_sha256": "02cc2265b700f0104736c174438d0b67b2d82bbd94bfda8fabb98e23546e7fbd",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 294,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:mktorrent:1.1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -71593,18 +72102,46 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:mktorrent",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "3719a1a265d3c9af43d9d2352fceac080b0b553432ae1570c8a120f573f5c672",
+        "source_sha256": "d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+        "source_url": "https://deb.debian.org/debian/pool/main/m/mktorrent/mktorrent_1.1.orig.tar.gz",
+        "specimen_id": "specimen:mktorrent:1.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/mktorrent/source.tar.gz",
+              "-C",
+              "{scratch}/mktorrent/candidate/src"
+            ],
+            "elapsed_seconds": 0.003,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "USE_OPENSSL=1",
+              "CC=cc",
+              "CFLAGS=-O2 -Wall -I{prefix}/include",
+              "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib",
+              "LDLIBS=-lcrypto"
+            ],
+            "elapsed_seconds": 0.21,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:mktorrent:1.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -76909,24 +77446,55 @@
         "canonical_name": "nrpe",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:nrpe"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:nrpe",
+          "recipe:recipe:nrpe:4.1.0",
+          "source:https://deb.debian.org/debian/pool/main/n/nagios-nrpe/nagios-nrpe_4.1.0.orig.tar.gz#500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+          "artifact:src/nrpe"
+        ],
+        "failure_class": null,
         "family_id": "family:nrpe",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 48,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/nrpe",
+          "artifact_sha256": "38e1e87527db636decff3748ba6386cdb2a79883129eea703ef8b9e712191e72",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 155,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:nrpe:4.1.0",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -76936,41 +77504,115 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:nrpe",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "7e0747b6f94ecacac6865ab01360a08dd0de88741f16d4ee172952fa31823cb1",
+        "source_sha256": "500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+        "source_url": "https://deb.debian.org/debian/pool/main/n/nagios-nrpe/nagios-nrpe_4.1.0.orig.tar.gz",
+        "specimen_id": "specimen:nrpe:4.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/nrpe/source.tar.gz",
+              "-C",
+              "{scratch}/nrpe/authority/src"
+            ],
+            "elapsed_seconds": 0.007,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/nrpe/authority/src/nrpe-nrpe-4.1.0/.l7-install",
+              "--with-ssl={prefix}",
+              "--with-ssl-inc={prefix}",
+              "--with-ssl-lib={prefix}/lib",
+              "--with-need-dh=no",
+              "--with-nrpe-user=nobody",
+              "--with-nrpe-group=nogroup",
+              "--with-piddir={scratch}/nrpe/authority/src/nrpe-nrpe-4.1.0/.l7-install/var",
+              "--with-logdir={scratch}/nrpe/authority/src/nrpe-nrpe-4.1.0/.l7-install/var"
+            ],
+            "elapsed_seconds": 2.038,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "all",
+              "-j8"
+            ],
+            "elapsed_seconds": 0.715,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:nrpe:4.1.0:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "nrpe",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:nrpe"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:nrpe",
+          "recipe:recipe:nrpe:4.1.0",
+          "source:https://deb.debian.org/debian/pool/main/n/nagios-nrpe/nagios-nrpe_4.1.0.orig.tar.gz#500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+          "artifact:src/nrpe"
+        ],
+        "failure_class": null,
         "family_id": "family:nrpe",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 48,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/nrpe",
+          "artifact_sha256": "adfa5a82798e2e82943e88322e2110b89b90df9ece2178300cae3df286fe8ccf",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 155,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:nrpe:4.1.0",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -76981,18 +77623,61 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:nrpe",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "7e0747b6f94ecacac6865ab01360a08dd0de88741f16d4ee172952fa31823cb1",
+        "source_sha256": "500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+        "source_url": "https://deb.debian.org/debian/pool/main/n/nagios-nrpe/nagios-nrpe_4.1.0.orig.tar.gz",
+        "specimen_id": "specimen:nrpe:4.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/nrpe/source.tar.gz",
+              "-C",
+              "{scratch}/nrpe/candidate/src"
+            ],
+            "elapsed_seconds": 0.007,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/nrpe/candidate/src/nrpe-nrpe-4.1.0/.l7-install",
+              "--with-ssl={prefix}",
+              "--with-ssl-inc={prefix}",
+              "--with-ssl-lib={prefix}/lib",
+              "--with-need-dh=no",
+              "--with-nrpe-user=nobody",
+              "--with-nrpe-group=nogroup",
+              "--with-piddir={scratch}/nrpe/candidate/src/nrpe-nrpe-4.1.0/.l7-install/var",
+              "--with-logdir={scratch}/nrpe/candidate/src/nrpe-nrpe-4.1.0/.l7-install/var"
+            ],
+            "elapsed_seconds": 1.861,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "all",
+              "-j8"
+            ],
+            "elapsed_seconds": 0.617,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:nrpe:4.1.0:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -100946,6 +101631,20 @@
     "specimens": [
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/a/aircrack-ng/aircrack-ng_1.7.orig.tar.gz#05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+          "recipe:recipe:aircrack-ng:1.7",
+          "pinned_sha256:05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3"
+        ],
+        "family_id": "family:aircrack-ng",
+        "licence": "unknown",
+        "pristine_source_root_hash": "34fd90e88e57b986dd0f75d2c0e2135db388d5e03c586f467fe01485fdd74259",
+        "pristine_source_sha256": "05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+        "specimen_id": "specimen:aircrack-ng:1.7",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/a/aircrack-ng/aircrack-ng_1.7.orig.tar.gz",
+        "version": "1.7"
+      },
+      {
+        "evidence": [
           "source:http://archive.apache.org/dist/httpd/httpd-2.4.63.tar.bz2#88fc236ab99b2864b248de7d49a008ec2afd7551e64dce8b95f58f32f94c46ab",
           "recipe:recipe:apache2-utils:2.4.63",
           "pinned_sha256:88fc236ab99b2864b248de7d49a008ec2afd7551e64dce8b95f58f32f94c46ab"
@@ -100999,6 +101698,20 @@
         "specimen_id": "specimen:bannergrab:3.5",
         "upstream_ref": "https://downloads.sourceforge.net/bannergrab/bannergrab-3.5.tgz",
         "version": "3.5"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/c/cowpatty/cowpatty_4.8.orig.tar.gz#b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+          "recipe:recipe:cowpatty:4.8",
+          "pinned_sha256:b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164"
+        ],
+        "family_id": "family:cowpatty",
+        "licence": "unknown",
+        "pristine_source_root_hash": "d851b80a492d0f09e43b694723cf93d06a9954d064fd87f53aaff0f5b3055c38",
+        "pristine_source_sha256": "b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+        "specimen_id": "specimen:cowpatty:4.8",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/c/cowpatty/cowpatty_4.8.orig.tar.gz",
+        "version": "4.8"
       },
       {
         "evidence": [
@@ -101153,6 +101866,20 @@
         "specimen_id": "specimen:haproxy:3.0.6",
         "upstream_ref": "https://www.haproxy.org/download/3.0/src/haproxy-3.0.6.tar.gz",
         "version": "3.0.6"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/h/hcxtools/hcxtools_6.2.7.orig.tar.gz#c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+          "recipe:recipe:hcxtools:6.2.7",
+          "pinned_sha256:c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1"
+        ],
+        "family_id": "family:hcxtools",
+        "licence": "unknown",
+        "pristine_source_root_hash": "2f33586acd75121a7d58ea287b686ec3619e0c84bd264332a9b6b8a8b2a955ec",
+        "pristine_source_sha256": "c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+        "specimen_id": "specimen:hcxtools:6.2.7",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/h/hcxtools/hcxtools_6.2.7.orig.tar.gz",
+        "version": "6.2.7"
       },
       {
         "evidence": [
@@ -101492,6 +102219,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/m/mktorrent/mktorrent_1.1.orig.tar.gz#d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+          "recipe:recipe:mktorrent:1.1",
+          "pinned_sha256:d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9"
+        ],
+        "family_id": "family:mktorrent",
+        "licence": "unknown",
+        "pristine_source_root_hash": "3719a1a265d3c9af43d9d2352fceac080b0b553432ae1570c8a120f573f5c672",
+        "pristine_source_sha256": "d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+        "specimen_id": "specimen:mktorrent:1.1",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/m/mktorrent/mktorrent_1.1.orig.tar.gz",
+        "version": "1.1"
+      },
+      {
+        "evidence": [
           "source:https://mmonit.com/monit/dist/monit-5.34.3.tar.gz#669d8b95ddec124d1444ba5264f67fdeae8e90e53b2929719f4750fc5ff3ba60",
           "recipe:recipe:monit:5.34.3",
           "pinned_sha256:669d8b95ddec124d1444ba5264f67fdeae8e90e53b2929719f4750fc5ff3ba60"
@@ -101573,6 +102314,20 @@
         "specimen_id": "specimen:nmap:7.95",
         "upstream_ref": "https://nmap.org/dist/nmap-7.95.tar.bz2",
         "version": "7.95"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/n/nagios-nrpe/nagios-nrpe_4.1.0.orig.tar.gz#500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+          "recipe:recipe:nrpe:4.1.0",
+          "pinned_sha256:500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259"
+        ],
+        "family_id": "family:nrpe",
+        "licence": "unknown",
+        "pristine_source_root_hash": "7e0747b6f94ecacac6865ab01360a08dd0de88741f16d4ee172952fa31823cb1",
+        "pristine_source_sha256": "500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+        "specimen_id": "specimen:nrpe:4.1.0",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/n/nagios-nrpe/nagios-nrpe_4.1.0.orig.tar.gz",
+        "version": "4.1.0"
       },
       {
         "evidence": [
@@ -101972,6 +102727,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:aircrack-ng:1.7",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:aircrack-ng:1.7",
+        "variant_id": "variant:aircrack-ng:1.7:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:apache2-utils:2.4.63",
           "build_system:configure"
         ],
@@ -102015,6 +102782,18 @@
         "platform": "linux",
         "specimen_id": "specimen:bannergrab:3.5",
         "variant_id": "variant:bannergrab:3.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:cowpatty:4.8",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:cowpatty:4.8",
+        "variant_id": "variant:cowpatty:4.8:pristine"
       },
       {
         "arch": "x86_64",
@@ -102147,6 +102926,18 @@
         "platform": "linux",
         "specimen_id": "specimen:haproxy:3.0.6",
         "variant_id": "variant:haproxy:3.0.6:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:hcxtools:6.2.7",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:hcxtools:6.2.7",
+        "variant_id": "variant:hcxtools:6.2.7:pristine"
       },
       {
         "arch": "x86_64",
@@ -102438,6 +103229,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:mktorrent:1.1",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:mktorrent:1.1",
+        "variant_id": "variant:mktorrent:1.1:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "autotools-pristine-shared",
         "evidence": [
           "recipe:recipe:monit:5.34.3",
@@ -102507,6 +103310,18 @@
         "platform": "linux",
         "specimen_id": "specimen:nmap:7.95",
         "variant_id": "variant:nmap:7.95:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:nrpe:4.1.0",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:nrpe:4.1.0",
+        "variant_id": "variant:nrpe:4.1.0:pristine"
       },
       {
         "arch": "x86_64",
@@ -102846,7 +103661,7 @@
       }
     ]
   },
-  "body_hash": "8843315ab16dc847367e54f5f31aa237a1959961cdfd4e07bb93cba4f6002f14",
+  "body_hash": "7e66a2a8ebb51e033444efd05f9199da659387e72c5941c271a03f37559d8218",
   "generator": "forensics/tools/downstream_build_link.py",
   "inputs": [
     {
