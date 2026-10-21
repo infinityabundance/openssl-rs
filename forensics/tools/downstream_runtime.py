@@ -81,6 +81,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import os
 import re
@@ -230,6 +231,12 @@ PROGRAMS: dict[str, dict] = {
                     "version_re": r"Usage:",
                     "make_targets": ["hiredis-example-ssl"],
                     "make_env": {"OPENSSL_PREFIX": "{prefix}", "USE_SSL": "1"}},
+    # The 24.22 L7-expansion batch: a CONNECT-tunnel client and a health checker whose TLS evidence
+    # is a fetched-page digest rather than a banner.
+    "proxytunnel": {"program": "proxytunnel", "launch": ["-h"],
+                    "version_re": r"proxytunnel \d"},
+    "keepalived": {"program": "keepalived/keepalived", "launch": ["-v"],
+                   "version_re": r"Keepalived v\d"},
 }
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
@@ -529,6 +536,71 @@ def _transcript(*parts: tuple[str, dict | None]) -> str:
             if blob:
                 lines.append(blob)
     return "\n".join(lines)
+
+
+def _http_connect_proxy(port: int, stop: threading.Event) -> threading.Thread:
+    """A minimal loopback HTTP CONNECT proxy on `port`, relaying bytes both ways.
+
+    It answers `CONNECT host:port HTTP/1.x` with `200 Connection established` and then pipes the
+    client and the origin until either side closes, exactly the one hop a CONNECT-tunnel workload
+    needs. Every connection is handled on its own thread so a rejected tunnel cannot stall the next.
+    """
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(8)
+    listener.settimeout(0.5)
+
+    def relay(src: socket.socket, dst: socket.socket) -> None:
+        try:
+            while True:
+                chunk = src.recv(65536)
+                if not chunk:
+                    break
+                dst.sendall(chunk)
+        except OSError:
+            pass
+        try:
+            dst.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass
+
+    def handle(client: socket.socket) -> None:
+        with client:
+            client.settimeout(15.0)
+            head = b""
+            try:
+                while b"\r\n\r\n" not in head:
+                    chunk = client.recv(4096)
+                    if not chunk:
+                        return
+                    head += chunk
+                target = head.split(b"\r\n", 1)[0].decode("utf-8", "ignore").split()[1]
+                host, _, num = target.rpartition(":")
+                origin = socket.create_connection((host, int(num)), timeout=5.0)
+            except (OSError, IndexError, ValueError):
+                return
+            with origin:
+                client.sendall(b"HTTP/1.0 200 Connection established\r\n\r\n")
+                upstream = threading.Thread(target=relay, args=(client, origin), daemon=True)
+                upstream.start()
+                relay(origin, client)
+                upstream.join(timeout=2)
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                client, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            threading.Thread(target=handle, args=(client,), daemon=True).start()
+        listener.close()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    return thread
 
 
 # --------------------------------------------------------------------------------------------
@@ -1998,6 +2070,202 @@ def _wl_hiredis(ctx: dict) -> dict:
             "local_only": True}
 
 
+def _wl_proxytunnel(ctx: dict) -> dict:
+    """A CONNECT tunnel through a local HTTP proxy whose destination leg is TLS.
+
+    proxytunnel's documented ProxyCommand mode is driven over a socketpair: it CONNECTs to a local
+    proxy, wraps the tunnelled stream in TLS to the authority's `s_server` (`-e`) and forwards a
+    real HTTP GET whose fixed page comes back through the tunnel. A destination certificate whose
+    SAN names a different address must not tunnel. proxytunnel 1.12.2 never calls
+    `SSL_CTX_set_verify`, so an unrelated CA would not be rejected by this build; the certificate
+    decision it does enforce is the host/SAN match, and that is the control driven here.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = b"phase24-proxytunnel-tls-probe\n"
+    (d / "probe.txt").write_bytes(body)
+
+    bad_key, bad_csr, bad_crt = d / "bad.key", d / "bad.csr", d / "bad.crt"
+    bad_ext = d / "bad.ext"
+    csr = _ossl(ap, ["req", "-newkey", "rsa:2048", "-nodes", "-keyout", str(bad_key), "-out",
+                     str(bad_csr), "-subj", "/CN=127.0.0.2"], timeout=60)
+    bad_ext.write_text("subjectAltName=IP:127.0.0.2\nbasicConstraints=CA:FALSE\n"
+                       "keyUsage=digitalSignature,keyEncipherment\n"
+                       "extendedKeyUsage=serverAuth\n", encoding="utf-8")
+    signed = _ossl(ap, ["x509", "-req", "-in", str(bad_csr), "-CA", str(pki["ca_crt"]),
+                        "-CAkey", str(pki["ca_key"]), "-CAcreateserial", "-out", str(bad_crt),
+                        "-days", "7", "-extfile", str(bad_ext)], timeout=60)
+    if not (csr["ok"] and signed["ok"]):
+        return _wl_fail([("mismatched-SAN certificate", signed if not signed["ok"] else csr)],
+                        "the mismatched-SAN certificate fixture could not be generated",
+                        "runtime-failure", d)
+
+    tls_port, bad_port, proxy_port = _free_port(), _free_port(), _free_port()
+    servers = []
+    for port, crt, key, tag in ((tls_port, pki["srv_crt"], pki["srv_key"], "tls"),
+                                (bad_port, bad_crt, bad_key, "mismatch")):
+        servers.append(_spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(port), "-cert",
+                               str(crt), "-key", str(key), "-WWW", "-quiet"], d,
+                              _auth_env(ap), d / f"{tag}.out", d / f"{tag}.err"))
+    stop = threading.Event()
+    proxy = _http_connect_proxy(proxy_port, stop)
+
+    def tunnel(dest_port: int, tag: str) -> tuple[bytes, dict]:
+        """Drive one proxytunnel worker over a socketpair and return its bytes and transcript."""
+        local, peer = socket.socketpair()
+        log = d / f"proxytunnel-{tag}.err"
+        with open(log, "w", encoding="utf-8") as handle:
+            proc = subprocess.Popen(
+                [prog, "-p", f"127.0.0.1:{proxy_port}", "-d", f"127.0.0.1:{dest_port}",
+                 "-e", "-C", str(pki["ca_crt"]), "-v"],
+                stdin=peer.fileno(), stdout=peer.fileno(), stderr=handle,
+                cwd=str(d), env=ctx["env"], text=True)
+            peer.close()
+            try:
+                local.settimeout(20.0)
+                local.sendall(b"GET /probe.txt HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n")
+                data = b""
+                while True:
+                    chunk = local.recv(65536)
+                    if not chunk:
+                        break
+                    data += chunk
+            except OSError:
+                data = b""
+            finally:
+                local.close()
+                try:
+                    proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    _stop(proc)
+        return data, {"exit_code": proc.returncode or 0, "stdout": _read(log)}
+
+    try:
+        if not (_wait_tcp("127.0.0.1", tls_port) and _wait_tcp("127.0.0.1", bad_port)):
+            return _wl_fail([("s_server", {"exit_code": 0, "stdout": _read(d / "tls.err")})],
+                            "the TLS destinations did not open their ports",
+                            "runtime-failure", d)
+        good, good_log = tunnel(tls_port, "tunnel")
+        bad, bad_log = tunnel(bad_port, "mismatched-san")
+    finally:
+        stop.set()
+        proxy.join(timeout=2)
+        for proc, out, err in servers:
+            _stop(proc)
+            out.close()
+            err.close()
+
+    tunnelled = body.strip() in good
+    neg_rejected = (body.strip() not in bad
+                    and "does not match certificate subject alternative names" in bad_log["stdout"])
+    functional_ok = tunnelled and neg_rejected
+    return {
+        "runtime_ok": tunnelled,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else ("functional-failure" if tunnelled else
+                                                     "runtime-failure"),
+        "residual": "none" if functional_ok else ("functional-divergence" if tunnelled else
+                                                  "runtime-failure"),
+        "reason": None if functional_ok else
+        ("the GET did not come back through the CONNECT tunnel" if not tunnelled else
+         "a destination certificate naming another address was still tunnelled to"),
+        "transcript": _transcript(("proxytunnel CONNECT + TLS destination", good_log),
+                                  ("proxytunnel mismatched-SAN destination (must fail)", bad_log)),
+        "workload": ("proxytunnel: HTTP CONNECT through a local proxy + TLS 1.3 to the destination "
+                     "+ GET round trip + mismatched-SAN reject"),
+        "local_only": True}
+
+
+def _wl_keepalived(ctx: dict) -> dict:
+    """keepalived's HTTP/SSL check path against a local TLS server, in `-T` genhash mode.
+
+    The daemon's IPVS virtual-server checkers cannot start in this venue (there is no
+    `/proc/net/ip_vs`), so the admitted workload drives the same check implementation the checker
+    uses: `-T` genhash fetches a fixed page over TLS through keepalived's own libssl client and
+    prints the MD5 of the body, which must equal the served file's digest. A plaintext server
+    serving the same bytes must not satisfy the SSL request. keepalived 2.3.1 sets no verify mode
+    (`SSL_VERIFY_NONE`), so an unrelated CA is not a discriminator this build can be held to.
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = b"phase24-keepalived-tls-probe\n"
+    (d / "probe.txt").write_bytes(body)
+    expected = hashlib.md5(body).hexdigest()
+
+    tls_port, plain_port = _free_port(), _free_port()
+    server, out, err = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(tls_port),
+                               "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]),
+                               "-WWW", "-quiet"], d, _auth_env(ap), d / "tls.out", d / "tls.err")
+    stop = threading.Event()
+
+    def plain() -> None:
+        """Serve the same bytes without TLS: the SSL request must not be satisfied by it."""
+        listener = socket.socket()
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", plain_port))
+        listener.listen(4)
+        listener.settimeout(0.5)
+        while not stop.is_set():
+            try:
+                client, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            with client:
+                client.settimeout(5.0)
+                try:
+                    client.recv(4096)
+                except OSError:
+                    pass
+                try:
+                    client.sendall(b"HTTP/1.0 200 OK\r\nContent-Length: "
+                                   + str(len(body)).encode() + b"\r\n\r\n" + body)
+                except OSError:
+                    pass
+        listener.close()
+
+    thread = threading.Thread(target=plain, daemon=True)
+    thread.start()
+    try:
+        if not _wait_tcp("127.0.0.1", tls_port):
+            return _wl_fail([("s_server", {"exit_code": 0, "stdout": _read(d / "tls.err")})],
+                            "the TLS destination did not open its port",
+                            "runtime-failure", d)
+        base = [prog, "-T", "-S", "-s", "127.0.0.1", "-u", "/probe.txt", "-t", "5", "-p"]
+        good = _run_captured(base + [str(tls_port)], env=ctx["env"], timeout=40)
+        neg = _run_captured(base + [str(plain_port)], env=ctx["env"], timeout=40)
+    finally:
+        stop.set()
+        thread.join(timeout=2)
+        _stop(server)
+        out.close()
+        err.close()
+
+    digest = good["stdout"].strip()
+    fetched = re.fullmatch(r"[0-9a-f]{32}", digest) is not None
+    neg_rejected = (re.fullmatch(r"[0-9a-f]{32}", neg["stdout"].strip()) is None
+                    and "SSL handshake/communication error" in neg["stdout"] + neg["stderr"])
+    functional_ok = fetched and digest == expected and neg_rejected
+    return {
+        "runtime_ok": fetched,
+        "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else ("functional-failure" if fetched else
+                                                     "runtime-failure"),
+        "residual": "none" if functional_ok else ("functional-divergence" if fetched else
+                                                  "runtime-failure"),
+        "reason": None if functional_ok else
+        ("the TLS page fetch returned no body digest" if not fetched else
+         "the fetched body digest did not match the served page" if digest != expected else
+         "a plaintext server satisfied the SSL request"),
+        "transcript": _transcript(("genhash TLS fetch", good),
+                                  ("genhash SSL request to a plaintext server (must fail)", neg)),
+        "workload": ("keepalived: TLS page fetch + body-digest match + plaintext-peer reject"),
+        "local_only": True}
+
+
 def _wl_fail(notes: list, reason: str, failure_class: str | None, d: Path) -> dict:
     return {"runtime_ok": False, "functional_ok": False,
             "failure_class": failure_class or "runtime-failure", "residual": "runtime-failure",
@@ -2024,6 +2292,8 @@ RUNNERS = {
     "openvpn": _wl_openvpn,
     "tinc": _wl_tinc,
     "hiredis-ssl": _wl_hiredis,
+    "proxytunnel": _wl_proxytunnel,
+    "keepalived": _wl_keepalived,
 }
 
 
