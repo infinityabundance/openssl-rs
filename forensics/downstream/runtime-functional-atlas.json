@@ -41,17 +41,23 @@
         "family:kmod": "L7-functional",
         "family:ldns": "L7-functional",
         "family:libarchive": "L7-functional",
+        "family:libcoap": "L7-functional",
+        "family:libesmtp": "L7-functional",
         "family:libevent": "L7-functional",
         "family:libjose": "L7-functional",
         "family:librdkafka": "L7-functional",
         "family:libretls": "L7-functional",
         "family:libssh": "L1-admitted-source",
+        "family:libstrophe": "L7-functional",
+        "family:libtins": "L7-functional",
+        "family:libwebsockets": "L7-functional",
         "family:libzip": "L7-functional",
         "family:lighttpd": "L1-admitted-source",
         "family:links": "L7-functional",
         "family:makepasswd": "L7-functional",
         "family:memcached": "L7-functional",
         "family:mini-httpd": "L7-functional",
+        "family:minizip-ng": "L7-functional",
         "family:mktorrent": "L7-functional",
         "family:monit": "L7-functional",
         "family:mosquitto": "L7-functional",
@@ -92,38 +98,39 @@
       "by_subject": {
         "authority": {
           "failed": 0,
-          "functional": 75,
-          "loaded": 76,
-          "not_attempted": 924,
-          "runtime": 76
+          "functional": 81,
+          "loaded": 82,
+          "not_attempted": 918,
+          "runtime": 82
         },
         "candidate": {
           "failed": 0,
-          "functional": 75,
-          "loaded": 76,
-          "not_attempted": 924,
-          "runtime": 76
+          "functional": 81,
+          "loaded": 82,
+          "not_attempted": 918,
+          "runtime": 82
         }
       },
       "candidate_baseline_not_linked": 2,
       "candidate_below_baseline": 0,
       "candidate_failures": {
-        "acquire-failure": 922,
+        "acquire-failure": 916,
         "link-failure": 2
       },
-      "candidate_reaches_baseline": 78,
-      "candidate_reaches_linked_baseline": 76,
+      "candidate_reaches_baseline": 84,
+      "candidate_reaches_linked_baseline": 82,
       "candidate_specific_patch_count": 0,
-      "no_recipe": 922,
+      "no_recipe": 916,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 78
+      "with_recipe": 84
     },
     "evidence_reuse": {
       "candidate_identity_match": true,
-      "families_reused": 77,
+      "families_reused": 78,
       "mode": "committed-rows",
       "reused_families": [
+        "aircrack-ng",
         "apache2-utils",
         "apr-util",
         "axel",
@@ -678,6 +685,42 @@
         "program": "mktorrent",
         "recipe_id": "recipe:mktorrent:1.1",
         "version": "1.1"
+      },
+      {
+        "family": "libwebsockets",
+        "program": ".l7-libwebsockets-harness",
+        "recipe_id": "recipe:libwebsockets:4.3.3",
+        "version": "4.3.3"
+      },
+      {
+        "family": "libstrophe",
+        "program": ".l7-libstrophe-harness",
+        "recipe_id": "recipe:libstrophe:0.13.1",
+        "version": "0.13.1"
+      },
+      {
+        "family": "libcoap",
+        "program": ".l7-libcoap-harness",
+        "recipe_id": "recipe:libcoap:4.3.5",
+        "version": "4.3.5"
+      },
+      {
+        "family": "libesmtp",
+        "program": ".l7-libesmtp-harness",
+        "recipe_id": "recipe:libesmtp:1.1.0",
+        "version": "1.1.0"
+      },
+      {
+        "family": "minizip-ng",
+        "program": ".l7-minizip-ng-harness",
+        "recipe_id": "recipe:minizip-ng:4.0.10",
+        "version": "4.0.10"
+      },
+      {
+        "family": "libtins",
+        "program": ".l7-libtins-harness",
+        "recipe_id": "recipe:libtins:4.5",
+        "version": "4.5"
       }
     ],
     "resource_limits": {
@@ -91985,7 +92028,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libcoap",
@@ -91993,18 +92036,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libcoap"
+          "family:family:libcoap",
+          "recipe:recipe:libcoap:4.3.5",
+          "artifact:.l7-libcoap-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libcoap",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "194174:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "194174:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "194174:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "194174:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "194174:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "194174:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -92024,13 +92112,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 76,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libcoap:4.3.5",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -92040,10 +92128,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libcoap",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "c555db7b0a9a4aef6894822c9959f0f54f4bdc91523013841f5c2b9135c0afd2",
+        "source_sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "source_url": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "specimen_id": "specimen:libcoap:4.3.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -92051,13 +92139,30 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libcoap-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== coap over TLS ==",
+          "exit=0",
+          "coap_tls=ok",
+          "payload=phase25-l7-coap-response",
+          "negative=rejected"
+        ],
+        "transcript_sha256": "99d54798fb0a9be62e5501e0dfe825d3c93244d1dbd6be43f7942efb9757635b",
+        "variant_id": "variant:libcoap:4.3.5:pristine",
+        "workload": "libcoap: CoAP-over-TLS GET /l7 with a verified session and an exact payload, plus an unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libcoap: CoAP-over-TLS GET /l7 with a verified session and an exact payload, plus an unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libcoap",
@@ -92065,18 +92170,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libcoap"
+          "family:family:libcoap",
+          "recipe:recipe:libcoap:4.3.5",
+          "artifact:.l7-libcoap-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libcoap",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "194195:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "194195:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "194195:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "194195:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "194195:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "194195:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -92096,12 +92246,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 76,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libcoap:4.3.5",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -92112,10 +92262,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libcoap",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "c555db7b0a9a4aef6894822c9959f0f54f4bdc91523013841f5c2b9135c0afd2",
+        "source_sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "source_url": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "specimen_id": "specimen:libcoap:4.3.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -92123,10 +92273,27 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libcoap-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== coap over TLS ==",
+          "exit=0",
+          "coap_tls=ok",
+          "payload=phase25-l7-coap-response",
+          "negative=rejected"
+        ],
+        "transcript_sha256": "99d54798fb0a9be62e5501e0dfe825d3c93244d1dbd6be43f7942efb9757635b",
+        "variant_id": "variant:libcoap:4.3.5:pristine",
+        "workload": "libcoap: CoAP-over-TLS GET /l7 with a verified session and an exact payload, plus an unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libcoap: CoAP-over-TLS GET /l7 with a verified session and an exact payload, plus an unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -97745,7 +97912,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libesmtp",
@@ -97753,18 +97920,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libesmtp"
+          "family:family:libesmtp",
+          "recipe:recipe:libesmtp:1.1.0",
+          "artifact:.l7-libesmtp-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libesmtp",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "194779:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "194779:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "194779:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "194779:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "194779:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "194779:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -97784,13 +97996,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 264,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libesmtp:1.1.0",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -97800,10 +98012,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libesmtp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "ba1bde35a8d87aeaebcb4d4a66ba8531fe0c67e905603dacee26f5017d7644b4",
+        "source_sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "source_url": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "specimen_id": "specimen:libesmtp:1.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -97811,13 +98023,34 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libesmtp-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== STARTTLS submission ==",
+          "exit=0",
+          "tls=TLSv1.3",
+          "message=accepted",
+          "starttls=ok",
+          "session=ok",
+          "== unrelated CA ==",
+          "exit=0",
+          "negative=rejected"
+        ],
+        "transcript_sha256": "6dc40de6f6f7bf7528e42bc5091a6989eeb00a89a363cd47c2ee3d17892dc9df",
+        "variant_id": "variant:libesmtp:1.1.0:pristine",
+        "workload": "libesmtp: SMTP submission over STARTTLS against a local stub (verified TLS1.3, message accepted) + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libesmtp: SMTP submission over STARTTLS against a local stub (verified TLS1.3, message accepted) + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libesmtp",
@@ -97825,18 +98058,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libesmtp"
+          "family:family:libesmtp",
+          "recipe:recipe:libesmtp:1.1.0",
+          "artifact:.l7-libesmtp-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libesmtp",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "194803:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "194803:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "194803:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "194803:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "194803:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "194803:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -97856,12 +98134,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 264,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libesmtp:1.1.0",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -97872,10 +98150,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libesmtp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "ba1bde35a8d87aeaebcb4d4a66ba8531fe0c67e905603dacee26f5017d7644b4",
+        "source_sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "source_url": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "specimen_id": "specimen:libesmtp:1.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -97883,10 +98161,31 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libesmtp-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== STARTTLS submission ==",
+          "exit=0",
+          "tls=TLSv1.3",
+          "message=accepted",
+          "starttls=ok",
+          "session=ok",
+          "== unrelated CA ==",
+          "exit=0",
+          "negative=rejected"
+        ],
+        "transcript_sha256": "6dc40de6f6f7bf7528e42bc5091a6989eeb00a89a363cd47c2ee3d17892dc9df",
+        "variant_id": "variant:libesmtp:1.1.0:pristine",
+        "workload": "libesmtp: SMTP submission over STARTTLS against a local stub (verified TLS1.3, message accepted) + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libesmtp: SMTP submission over STARTTLS against a local stub (verified TLS1.3, message accepted) + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L7-functional",
@@ -105946,7 +106245,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libstrophe",
@@ -105954,18 +106253,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libstrophe"
+          "family:family:libstrophe",
+          "recipe:recipe:libstrophe:0.13.1",
+          "artifact:.l7-libstrophe-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libstrophe",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "188290:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "188290:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "188290:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "188290:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "188290:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "188290:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -105985,13 +106329,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 23,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libstrophe:0.13.1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -106001,10 +106345,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libstrophe",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "994bc81e59f406b234911936ce24d97743595819de678b575bc40bcfbdf0107c",
+        "source_sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "source_url": "https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz",
+        "specimen_id": "specimen:libstrophe:0.13.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -106012,13 +106356,37 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libstrophe-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== STARTTLS + stanza ==",
+          "exit=0",
+          "tls=TLSv1.3",
+          "stanza=ok",
+          "[xmpp:0:conn] Connecting via altdomain.[xmpp:0:sock] Connecting to {addr} via {addr}[xmpp:0:sock] sock_connect() result 3[xmpp:0:xmpp] connection successful[xmpp:0:conn] SENT: <?xml version=\"1.0\"?><stream:stream to=\"localhost\" xml:lang=\"en\" version=\"1.0\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\">[xmpp:0:xmpp] RECV: <stream:stream from=\"localhost\" id=\"l7stream\" version=\"1.0\">[xmpp:0:xmpp] RECV: <features xmlns=\"http://etherx.jabber.org/streams\"><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"><required/></starttls></features>[xmpp:0:conn] SENT: <starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"/>[xmpp:0:xmpp] RECV: <proceed xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"/>[xmpp:0:xmpp] handle proceedtls called for proceed[xmpp:0:xmpp] proceeding with TLS[xmpp:0:tls] Certificate verification passed[xmpp:0:tls] Subject=/CN={addr}[xmpp:0:tls] Issuer=/CN=runtime test CA[xmpp:0:conn] SENT: <?xml version=\"1.0\"?><stream:stream to=\"localhost\" xml:lang=\"en\" version=\"1.0\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" from=\"l7@localhost\">[xmpp:0:xmpp] RECV: <stream:stream from=\"localhost\" id=\"l7stream\" version=\"1.0\">[xmpp:0:xmpp] RECV: <features xmlns=\"http://etherx.jabber.org/streams\"><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"><mechanism>PLAIN</mechanism></mechanisms></features>[xmpp:0:conn] SENT: <auth mechanism=\"PLAIN\" xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">AGw3AHBoYXNlMjUtc2VjcmV0</auth>[xmpp:0:xmpp] RECV: <success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"/>[xmpp:0:xmpp] SASL PLAIN auth successful[xmpp:0:conn] SENT: <?xml version=\"1.0\"?><stream:stream to=\"localhost\" xml:lang=\"en\" version=\"1.0\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" from=\"l7@localhost\">[xmpp:0:xmpp] RECV: <stream:stream from=\"localhost\" id=\"l7stream\" version=\"1.0\">[xmpp:0:xmpp] Reopened stream successfully.[xmpp:0:xmpp] RECV: <features xmlns=\"http://etherx.jabber.org/streams\"><bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\"/></features>[xmpp:0:conn] SENT: <iq id=\"_xmpp_bind1\" type=\"set\"><bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\"/></iq>[xmpp:0:xmpp] RECV: <iq id=\"_xmpp_bind1\" type=\"result\"><bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\"><jid>l7@localhost/l7</jid></bind></iq>[xmpp:0:xmpp] Bind successful.[xmpp:0:conn] SENT: <message to='stub@localhost' type='chat'><body>phase25-l7-libstrophe-body</body></message>[xmpp:0:xmpp] RECV: <message type=\"chat\" to=\"l7@localhost\" from=\"stub@localhost\"><body>phase25-l7-libstrophe-body</body></message>[xmpp:0:xmpp] Closing socket.",
+          "== unrelated CA ==",
+          "exit=0",
+          "negative=rejected",
+          "verify_error=unable to get local issuer certificate",
+          "[xmpp:0:conn] Connecting via altdomain.[xmpp:0:sock] Connecting to {addr} via {addr}[xmpp:0:sock] sock_connect() result 3[xmpp:0:xmpp] connection successful[xmpp:0:conn] SENT: <?xml version=\"1.0\"?><stream:stream to=\"localhost\" xml:lang=\"en\" version=\"1.0\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\">[xmpp:0:xmpp] RECV: <stream:stream from=\"localhost\" id=\"l7stream\" version=\"1.0\">[xmpp:0:xmpp] RECV: <features xmlns=\"http://etherx.jabber.org/streams\"><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"><required/></starttls></features>[xmpp:0:conn] SENT: <starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"/>[xmpp:0:xmpp] RECV: <proceed xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"/>[xmpp:0:xmpp] handle proceedtls called for proceed[xmpp:0:xmpp] proceeding with TLS[xmpp:0:tls] preverify_ok:0",
+          "Subject: /CN={addr}",
+          "Issuer: /CN=runtime test CA"
+        ],
+        "transcript_sha256": "747cc56af94daa2eda906d83c70ca6226efea0e2ffa420d21cb27b9b989a7275",
+        "variant_id": "variant:libstrophe:0.13.1:pristine",
+        "workload": "libstrophe: XMPP STARTTLS against a local stub (verified TLS1.3, SASL PLAIN, message stanza round trip) + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libstrophe: XMPP STARTTLS against a local stub (verified TLS1.3, SASL PLAIN, message stanza round trip) + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libstrophe",
@@ -106026,18 +106394,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libstrophe"
+          "family:family:libstrophe",
+          "recipe:recipe:libstrophe:0.13.1",
+          "artifact:.l7-libstrophe-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libstrophe",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "188314:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "188314:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "188314:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "188314:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "188314:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "188314:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -106057,12 +106470,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 23,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libstrophe:0.13.1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -106073,10 +106486,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libstrophe",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "994bc81e59f406b234911936ce24d97743595819de678b575bc40bcfbdf0107c",
+        "source_sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "source_url": "https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz",
+        "specimen_id": "specimen:libstrophe:0.13.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -106084,13 +106497,37 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libstrophe-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== STARTTLS + stanza ==",
+          "exit=0",
+          "tls=TLSv1.3",
+          "stanza=ok",
+          "[xmpp:0:conn] Connecting via altdomain.[xmpp:0:sock] Connecting to {addr} via {addr}[xmpp:0:sock] sock_connect() result 3[xmpp:0:xmpp] connection successful[xmpp:0:conn] SENT: <?xml version=\"1.0\"?><stream:stream to=\"localhost\" xml:lang=\"en\" version=\"1.0\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\">[xmpp:0:xmpp] RECV: <stream:stream from=\"localhost\" id=\"l7stream\" version=\"1.0\">[xmpp:0:xmpp] RECV: <features xmlns=\"http://etherx.jabber.org/streams\"><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"><required/></starttls></features>[xmpp:0:conn] SENT: <starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"/>[xmpp:0:xmpp] RECV: <proceed xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"/>[xmpp:0:xmpp] handle proceedtls called for proceed[xmpp:0:xmpp] proceeding with TLS[xmpp:0:tls] Certificate verification passed[xmpp:0:tls] Subject=/CN={addr}[xmpp:0:tls] Issuer=/CN=runtime test CA[xmpp:0:conn] SENT: <?xml version=\"1.0\"?><stream:stream to=\"localhost\" xml:lang=\"en\" version=\"1.0\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" from=\"l7@localhost\">[xmpp:0:xmpp] RECV: <stream:stream from=\"localhost\" id=\"l7stream\" version=\"1.0\">[xmpp:0:xmpp] RECV: <features xmlns=\"http://etherx.jabber.org/streams\"><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"><mechanism>PLAIN</mechanism></mechanisms></features>[xmpp:0:conn] SENT: <auth mechanism=\"PLAIN\" xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">AGw3AHBoYXNlMjUtc2VjcmV0</auth>[xmpp:0:xmpp] RECV: <success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"/>[xmpp:0:xmpp] SASL PLAIN auth successful[xmpp:0:conn] SENT: <?xml version=\"1.0\"?><stream:stream to=\"localhost\" xml:lang=\"en\" version=\"1.0\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" from=\"l7@localhost\">[xmpp:0:xmpp] RECV: <stream:stream from=\"localhost\" id=\"l7stream\" version=\"1.0\">[xmpp:0:xmpp] Reopened stream successfully.[xmpp:0:xmpp] RECV: <features xmlns=\"http://etherx.jabber.org/streams\"><bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\"/></features>[xmpp:0:conn] SENT: <iq id=\"_xmpp_bind1\" type=\"set\"><bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\"/></iq>[xmpp:0:xmpp] RECV: <iq id=\"_xmpp_bind1\" type=\"result\"><bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\"><jid>l7@localhost/l7</jid></bind></iq>[xmpp:0:xmpp] Bind successful.[xmpp:0:conn] SENT: <message to='stub@localhost' type='chat'><body>phase25-l7-libstrophe-body</body></message>[xmpp:0:xmpp] RECV: <message type=\"chat\" to=\"l7@localhost\" from=\"stub@localhost\"><body>phase25-l7-libstrophe-body</body></message>[xmpp:0:xmpp] Closing socket.",
+          "== unrelated CA ==",
+          "exit=0",
+          "negative=rejected",
+          "verify_error=unable to get local issuer certificate",
+          "[xmpp:0:conn] Connecting via altdomain.[xmpp:0:sock] Connecting to {addr} via {addr}[xmpp:0:sock] sock_connect() result 3[xmpp:0:xmpp] connection successful[xmpp:0:conn] SENT: <?xml version=\"1.0\"?><stream:stream to=\"localhost\" xml:lang=\"en\" version=\"1.0\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\">[xmpp:0:xmpp] RECV: <stream:stream from=\"localhost\" id=\"l7stream\" version=\"1.0\">[xmpp:0:xmpp] RECV: <features xmlns=\"http://etherx.jabber.org/streams\"><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"><required/></starttls></features>[xmpp:0:conn] SENT: <starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"/>[xmpp:0:xmpp] RECV: <proceed xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"/>[xmpp:0:xmpp] handle proceedtls called for proceed[xmpp:0:xmpp] proceeding with TLS[xmpp:0:tls] preverify_ok:0",
+          "Subject: /CN={addr}",
+          "Issuer: /CN=runtime test CA"
+        ],
+        "transcript_sha256": "747cc56af94daa2eda906d83c70ca6226efea0e2ffa420d21cb27b9b989a7275",
+        "variant_id": "variant:libstrophe:0.13.1:pristine",
+        "workload": "libstrophe: XMPP STARTTLS against a local stub (verified TLS1.3, SASL PLAIN, message stanza round trip) + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libstrophe: XMPP STARTTLS against a local stub (verified TLS1.3, SASL PLAIN, message stanza round trip) + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libtins",
@@ -106098,18 +106535,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libtins"
+          "family:family:libtins",
+          "recipe:recipe:libtins:4.5",
+          "artifact:.l7-libtins-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libtins",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "196124:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "196124:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "196124:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -106129,13 +106598,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 278,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libtins:4.5",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -106145,10 +106614,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libtins",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "6a1a80f21fdff1cfe82eff0411ced3ebb8a3cb539ea1ebae8875dddd651efe2a",
+        "source_sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "source_url": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "specimen_id": "specimen:libtins:4.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -106156,13 +106625,30 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libtins-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== libtins: WPA2 PMK derivation reproduces the 802.11i vector and a corrupted passphrase differs ==",
+          "exit=0",
+          "pmk=f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e",
+          "pmk_vector=ok",
+          "corrupt_input_differs=ok"
+        ],
+        "transcript_sha256": "8e4f34ee44db33f345218e69637312f72164a82ea5898d73c0deaf328fa2d34f",
+        "variant_id": "variant:libtins:4.5:pristine",
+        "workload": "libtins: WPA2 PMK derivation reproduces the 802.11i vector and a corrupted passphrase differs",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libtins: WPA2 PMK derivation reproduces the 802.11i vector and a corrupted passphrase differs",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libtins",
@@ -106170,18 +106656,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libtins"
+          "family:family:libtins",
+          "recipe:recipe:libtins:4.5",
+          "artifact:.l7-libtins-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libtins",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "196139:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "196139:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "196139:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -106201,12 +106719,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 278,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libtins:4.5",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -106217,10 +106735,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libtins",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "6a1a80f21fdff1cfe82eff0411ced3ebb8a3cb539ea1ebae8875dddd651efe2a",
+        "source_sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "source_url": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "specimen_id": "specimen:libtins:4.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -106228,10 +106746,27 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libtins-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== libtins: WPA2 PMK derivation reproduces the 802.11i vector and a corrupted passphrase differs ==",
+          "exit=0",
+          "pmk=f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e",
+          "pmk_vector=ok",
+          "corrupt_input_differs=ok"
+        ],
+        "transcript_sha256": "8e4f34ee44db33f345218e69637312f72164a82ea5898d73c0deaf328fa2d34f",
+        "variant_id": "variant:libtins:4.5:pristine",
+        "workload": "libtins: WPA2 PMK derivation reproduces the 802.11i vector and a corrupted passphrase differs",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libtins: WPA2 PMK derivation reproduces the 802.11i vector and a corrupted passphrase differs",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -106810,7 +107345,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libwebsockets",
@@ -106818,18 +107353,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libwebsockets"
+          "family:family:libwebsockets",
+          "recipe:recipe:libwebsockets:4.3.3",
+          "artifact:.l7-libwebsockets-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libwebsockets",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "192305:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "192305:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "192305:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "192305:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "192305:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "192305:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -106849,13 +107429,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 24,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libwebsockets:4.3.3",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -106865,10 +107445,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libwebsockets",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cb66a6a4db2df84632e74484380ee857a8c1411a79c4cfa7ae900816ab426929",
+        "source_sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "source_url": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "specimen_id": "specimen:libwebsockets:4.3.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -106876,13 +107456,34 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libwebsockets-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== wss client+server ==",
+          "exit=0",
+          "handshake=TLSv1.3",
+          "echo=ok",
+          "== unrelated CA ==",
+          "exit=0",
+          "handshake=TLSv1.3",
+          "echo=ok",
+          "negative=rejected"
+        ],
+        "transcript_sha256": "0aff8caf23d784d1cfc47722bfae0b27ad040fe5b092d39c565d062c9b8e32aa",
+        "variant_id": "variant:libwebsockets:4.3.3:pristine",
+        "workload": "libwebsockets: wss server+client over loopback (TLS1.3 handshake, verified peer, echo round trip) + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libwebsockets: wss server+client over loopback (TLS1.3 handshake, verified peer, echo round trip) + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libwebsockets",
@@ -106890,18 +107491,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libwebsockets"
+          "family:family:libwebsockets",
+          "recipe:recipe:libwebsockets:4.3.3",
+          "artifact:.l7-libwebsockets-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libwebsockets",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "192327:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "192327:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "192327:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "192327:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "192327:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "192327:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -106921,12 +107567,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 24,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libwebsockets:4.3.3",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -106937,10 +107583,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libwebsockets",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cb66a6a4db2df84632e74484380ee857a8c1411a79c4cfa7ae900816ab426929",
+        "source_sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "source_url": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "specimen_id": "specimen:libwebsockets:4.3.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -106948,10 +107594,31 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libwebsockets-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== wss client+server ==",
+          "exit=0",
+          "handshake=TLSv1.3",
+          "echo=ok",
+          "== unrelated CA ==",
+          "exit=0",
+          "handshake=TLSv1.3",
+          "echo=ok",
+          "negative=rejected"
+        ],
+        "transcript_sha256": "0aff8caf23d784d1cfc47722bfae0b27ad040fe5b092d39c565d062c9b8e32aa",
+        "variant_id": "variant:libwebsockets:4.3.3:pristine",
+        "workload": "libwebsockets: wss server+client over loopback (TLS1.3 handshake, verified peer, echo round trip) + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libwebsockets: wss server+client over loopback (TLS1.3 handshake, verified peer, echo round trip) + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -111166,7 +111833,7 @@
         }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "minizip-ng",
@@ -111174,18 +111841,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:minizip-ng"
+          "family:family:minizip-ng",
+          "recipe:recipe:minizip-ng:4.0.10",
+          "artifact:.l7-minizip-ng-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:minizip-ng",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "196771:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "196771:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "196771:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "196771:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "196771:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "196771:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -111205,13 +111917,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 293,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:minizip-ng:4.0.10",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -111221,10 +111933,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:minizip-ng",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "1c1aa90a4ba501c4c5b51da80ca2539d24f75c87d2037af4f5c699fa3672137a",
+        "source_sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "source_url": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "specimen_id": "specimen:minizip-ng:4.0.10",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -111232,13 +111944,30 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "minizip-ng-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== minizip-ng: WinZip AES-256 archive write/read + wrong-password reject ==",
+          "exit=0",
+          "aes256_write=ok",
+          "aes256_read=ok",
+          "wrong_password=rejected"
+        ],
+        "transcript_sha256": "f465b5475f7bb673735aa5ee9539f47e015dd4efb9fa99c89664ac7e54d7701c",
+        "variant_id": "variant:minizip-ng:4.0.10:pristine",
+        "workload": "minizip-ng: WinZip AES-256 archive write/read + wrong-password reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "minizip-ng: WinZip AES-256 archive write/read + wrong-password reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "minizip-ng",
@@ -111246,18 +111975,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:minizip-ng"
+          "family:family:minizip-ng",
+          "recipe:recipe:minizip-ng:4.0.10",
+          "artifact:.l7-minizip-ng-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:minizip-ng",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "196786:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "196786:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "196786:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "196786:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "196786:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "196786:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -111277,12 +112051,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 293,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:minizip-ng:4.0.10",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -111293,10 +112067,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:minizip-ng",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "1c1aa90a4ba501c4c5b51da80ca2539d24f75c87d2037af4f5c699fa3672137a",
+        "source_sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "source_url": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "specimen_id": "specimen:minizip-ng:4.0.10",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -111304,10 +112078,27 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "minizip-ng-l7-harness",
+          "== workload ==",
+          "exit=0",
+          "== minizip-ng: WinZip AES-256 archive write/read + wrong-password reject ==",
+          "exit=0",
+          "aes256_write=ok",
+          "aes256_read=ok",
+          "wrong_password=rejected"
+        ],
+        "transcript_sha256": "f465b5475f7bb673735aa5ee9539f47e015dd4efb9fa99c89664ac7e54d7701c",
+        "variant_id": "variant:minizip-ng:4.0.10:pristine",
+        "workload": "minizip-ng: WinZip AES-256 archive write/read + wrong-password reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "minizip-ng: WinZip AES-256 archive write/read + wrong-password reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L7-functional",
@@ -157464,6 +158255,34 @@
       },
       {
         "evidence": [
+          "source:https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz#a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+          "recipe:recipe:libcoap:4.3.5",
+          "pinned_sha256:a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f"
+        ],
+        "family_id": "family:libcoap",
+        "licence": "unknown",
+        "pristine_source_root_hash": "c555db7b0a9a4aef6894822c9959f0f54f4bdc91523013841f5c2b9135c0afd2",
+        "pristine_source_sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "specimen_id": "specimen:libcoap:4.3.5",
+        "upstream_ref": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "version": "4.3.5"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz#32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+          "recipe:recipe:libesmtp:1.1.0",
+          "pinned_sha256:32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3"
+        ],
+        "family_id": "family:libesmtp",
+        "licence": "unknown",
+        "pristine_source_root_hash": "ba1bde35a8d87aeaebcb4d4a66ba8531fe0c67e905603dacee26f5017d7644b4",
+        "pristine_source_sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "specimen_id": "specimen:libesmtp:1.1.0",
+        "upstream_ref": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "version": "1.1.0"
+      },
+      {
+        "evidence": [
           "source:https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/libevent-2.1.12-stable.tar.gz#92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb",
           "recipe:recipe:libevent:2.1.12-stable",
           "pinned_sha256:92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb"
@@ -157517,6 +158336,48 @@
         "specimen_id": "specimen:libretls:3.8.1",
         "upstream_ref": "https://causal.agency/libretls/libretls-3.8.1.tar.gz",
         "version": "3.8.1"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz#a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+          "recipe:recipe:libstrophe:0.13.1",
+          "pinned_sha256:a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa"
+        ],
+        "family_id": "family:libstrophe",
+        "licence": "unknown",
+        "pristine_source_root_hash": "994bc81e59f406b234911936ce24d97743595819de678b575bc40bcfbdf0107c",
+        "pristine_source_sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "specimen_id": "specimen:libstrophe:0.13.1",
+        "upstream_ref": "https://github.com/strophe/libstrophe/releases/download/0.13.1/libstrophe-0.13.1.tar.gz",
+        "version": "0.13.1"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz#6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+          "recipe:recipe:libtins:4.5",
+          "pinned_sha256:6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841"
+        ],
+        "family_id": "family:libtins",
+        "licence": "unknown",
+        "pristine_source_root_hash": "6a1a80f21fdff1cfe82eff0411ced3ebb8a3cb539ea1ebae8875dddd651efe2a",
+        "pristine_source_sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "specimen_id": "specimen:libtins:4.5",
+        "upstream_ref": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "version": "4.5"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz#6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+          "recipe:recipe:libwebsockets:4.3.3",
+          "pinned_sha256:6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90"
+        ],
+        "family_id": "family:libwebsockets",
+        "licence": "unknown",
+        "pristine_source_root_hash": "cb66a6a4db2df84632e74484380ee857a8c1411a79c4cfa7ae900816ab426929",
+        "pristine_source_sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "specimen_id": "specimen:libwebsockets:4.3.3",
+        "upstream_ref": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "version": "4.3.3"
       },
       {
         "evidence": [
@@ -157587,6 +158448,20 @@
         "specimen_id": "specimen:mini-httpd:1.30",
         "upstream_ref": "http://www.acme.com/software/mini_httpd/mini_httpd-1.30.tar.gz",
         "version": "1.30"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz#c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+          "recipe:recipe:minizip-ng:4.0.10",
+          "pinned_sha256:c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7"
+        ],
+        "family_id": "family:minizip-ng",
+        "licence": "unknown",
+        "pristine_source_root_hash": "1c1aa90a4ba501c4c5b51da80ca2539d24f75c87d2037af4f5c699fa3672137a",
+        "pristine_source_sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "specimen_id": "specimen:minizip-ng:4.0.10",
+        "upstream_ref": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "version": "4.0.10"
       },
       {
         "evidence": [
@@ -158468,6 +159343,30 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libcoap:4.3.5",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libcoap:4.3.5",
+        "variant_id": "variant:libcoap:4.3.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "meson-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libesmtp:1.1.0",
+          "build_system:meson"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libesmtp:1.1.0",
+        "variant_id": "variant:libesmtp:1.1.0:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "autotools-pristine-shared",
         "evidence": [
           "recipe:recipe:libevent:2.1.12-stable",
@@ -158513,6 +159412,42 @@
         "platform": "linux",
         "specimen_id": "specimen:libretls:3.8.1",
         "variant_id": "variant:libretls:3.8.1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libstrophe:0.13.1",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libstrophe:0.13.1",
+        "variant_id": "variant:libstrophe:0.13.1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libtins:4.5",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libtins:4.5",
+        "variant_id": "variant:libtins:4.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libwebsockets:4.3.3",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libwebsockets:4.3.3",
+        "variant_id": "variant:libwebsockets:4.3.3:pristine"
       },
       {
         "arch": "x86_64",
@@ -158573,6 +159508,18 @@
         "platform": "linux",
         "specimen_id": "specimen:mini-httpd:1.30",
         "variant_id": "variant:mini-httpd:1.30:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:minizip-ng:4.0.10",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:minizip-ng:4.0.10",
+        "variant_id": "variant:minizip-ng:4.0.10:pristine"
       },
       {
         "arch": "x86_64",
@@ -159008,7 +159955,7 @@
       }
     ]
   },
-  "body_hash": "14d49b56f6bb0d92996ea8cbf19399bb3991262749b803ee4cf91d5739934d91",
+  "body_hash": "0588d689ee896286b1be3974498b05387cd8c8161ce9f7ea58ea4d8d2fe404d8",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
@@ -159024,12 +159971,12 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "e75882b20b503e41049e31f0d1a5e1cb7f1a0cab54d7f23f0a63467961ac0f90"
+      "sha256": "184ef65ce83ef8d94072ed2456c81a2fe496c7d8527f648e6a15c2761ca4d9e1"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "0f7ef0eebbd8778df7349bc1b85ddc32b260ac38e61dbfcea5a01ce0ac3f5b11"
+      "sha256": "dbf461c6c86de440e291273cc5eac178bbfc8106f13a64bd195a878712b12f14"
     },
     {
       "name": "downstream-census",
