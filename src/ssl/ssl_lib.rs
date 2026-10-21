@@ -386,6 +386,25 @@ const SSL_CTRL_SET_NOT_RESUMABLE_SESS_CB: c_int = 79;
 /// `SSL_CTRL_SET_TLSEXT_SERVERNAME_CB` — `ssl.h:1266` (the `SSL_CTX_set_tlsext_servername_callback`
 /// macro's control code).
 const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB: c_int = 53;
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB` — `ssl.h.in:1276` (`SSL_CTX_set_tlsext_status_cb`'s
+/// `SSL_CTX_callback_ctrl` code).
+pub(crate) const SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB: c_int = 63;
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG` — `ssl.h.in:1277`.
+pub(crate) const SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG: c_int = 64;
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE` — `ssl.h.in:1278`.
+pub(crate) const SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE: c_int = 65;
+/// `SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP` — `ssl.h.in:1283`.
+pub(crate) const SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 70;
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP` — `ssl.h.in:1284`.
+pub(crate) const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
+/// `SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE` — `ssl.h.in:1334`.
+pub(crate) const SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE: c_int = 127;
+/// `SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB` — `ssl.h.in:1335`.
+pub(crate) const SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB: c_int = 128;
+/// `SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB_ARG` — `ssl.h.in:1336`.
+pub(crate) const SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB_ARG: c_int = 129;
+/// `TLSEXT_STATUSTYPE_ocsp` — `tls1.h`: the only status type this implementation requests.
+pub(crate) const TLSEXT_STATUSTYPE_OCSP: c_int = 1;
 /// `SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG` — `ssl.h:1267` (the `SSL_CTX_set_tlsext_servername_arg`
 /// macro's control code). It is dispatched by `ssl3_ctx_ctrl` (`s3_lib.c:4463-4465`), the
 /// `SSL_CTX_ctrl` fall-through, not by `SSL_CTX_callback_ctrl`.
@@ -521,7 +540,7 @@ const TLSEXT_NAMETYPE_HOST_NAME: c_int = 0;
 /// `SSL_CTRL_SET_TLSEXT_HOSTNAME` — `ssl.h:1268`.
 const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 /// `TLSEXT_STATUSTYPE_nothing` — `tls1.h` (the "no OCSP status request" sentinel).
-const TLSEXT_STATUSTYPE_NOTHING: c_int = -1;
+pub(crate) const TLSEXT_STATUSTYPE_NOTHING: c_int = -1;
 /// `TLSEXT_cert_type_x509` — `tls1.h:240`.
 const TLSEXT_CERT_TYPE_X509: u8 = 0;
 /// `TLSEXT_cert_type_rpk` — `tls1.h:242`.
@@ -1398,6 +1417,12 @@ pub struct SslCtx {
     /// `void *ext.servername_arg` — the callback's argument (NULL for nginx, which uses the
     /// two-argument macro).
     pub servername_arg: *mut c_void,
+    /// `int (*ext.status_cb)(SSL *, void *)` — the OCSP status callback
+    /// `SSL_CTX_set_tlsext_status_cb` installs through `SSL_CTX_callback_ctrl`
+    /// (`s3_lib.c:4673-4675`).
+    pub status_cb: Option<StatusCb>,
+    /// `void *ext.status_arg` — the callback's argument (`s3_lib.c:4505-4507`).
+    pub status_arg: *mut c_void,
     /// `SSL_async_callback_fn async_cb`.
     #[allow(dead_code)] // stored for the setter's contract; read by the async path (14.5)
     pub async_cb: Option<AsyncCb>,
@@ -1770,6 +1795,12 @@ pub struct Ssl {
     pub ext_ticket_expected: c_int,
     /// `int ext.status_expected` — the OCSP status-request extension flag (`statem_*.c`, 16.5).
     pub ext_status_expected: c_int,
+    /// `unsigned char *ext.ocsp.resp` — the single OCSP response, owned by this connection. The
+    /// authority aliases the caller's pointer (`s3_lib.c:4110-4132`); this crate copies the bytes
+    /// and releases them in `destroy_body`, the recorded ownership repair.
+    pub ext_ocsp_resp: *mut u8,
+    /// `size_t ext.ocsp.resp_len` — the response length, zero when none is held.
+    pub ext_ocsp_resp_len: usize,
     /// `int ext.compress_certificate_sent` — the certificate-compression flag (`statem_*.c`, 16.5).
     pub ext_compress_certificate_sent: c_int,
     /// `uint8_t ext.compress_certificate_from_peer[0]` — the peer's first compression
@@ -2375,6 +2406,9 @@ pub type SessionTicketCb =
 /// `int (*)(SSL *, int *, void *)` — the server-name callback
 /// `SSL_CTX_set_tlsext_servername_callback` installs (`ssl_local.h:994`).
 pub type ServernameCb = unsafe extern "C" fn(*mut Ssl, *mut c_int, *mut c_void) -> c_int;
+/// `int (*)(SSL *, void *)` — the OCSP status callback `SSL_CTX_set_tlsext_status_cb` installs
+/// (`ssl_local.h:1012`).
+pub type StatusCb = unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int;
 /// `int (*)(SSL *, unsigned char *, unsigned char *, EVP_CIPHER_CTX *, HMAC_CTX *, int)` — the
 /// deprecated ticket-key callback `SSL_CTX_set_tlsext_ticket_key_cb` installs (`ssl_local.h:1001`).
 /// The cipher and MAC contexts are opaque here, as they are for [`TicketKeyEvpCb`].
@@ -3559,6 +3593,7 @@ unsafe impl CtxDestroy for Ssl {
             (*s).s3_alpn_selected_slot().clear(FILE, 0);
             (*s).s3_alpn_proposed_slot().clear(FILE, 0);
             CRYPTO_free((*s).supportedgroups.cast(), FILE, 0);
+            CRYPTO_free((*s).ext_ocsp_resp.cast(), FILE, 0);
             (*s).pha_context_slot().clear(FILE, 0);
             crate::evp::digest::EVP_MD_CTX_free((*s).pha_dgst.cast());
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data);
@@ -4436,6 +4471,35 @@ fn ssl_check_allowed_versions(min_version: c_int, max_version: c_int) -> bool {
     true
 }
 
+/// Replace the connection's single OCSP response with an owned copy of `data`.
+///
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP` (`s3_lib.c:4110-4136`) stores the caller's pointer;
+/// this crate copies the bytes so the connection never aliases application memory (recorded
+/// ownership repair). A NULL `data` clears the response, as the authority's `parg == NULL` arm does.
+///
+/// # Safety
+/// `s` must be live; `data` must name `len` readable bytes when non-NULL.
+unsafe fn set_ocsp_response(s: *mut Ssl, data: *mut u8, len: c_long) -> c_long {
+    // SAFETY: `s` is live per the contract.
+    unsafe {
+        if !(*s).ext_ocsp_resp.is_null() {
+            CRYPTO_free((*s).ext_ocsp_resp.cast(), FILE, 0);
+            (*s).ext_ocsp_resp = ptr::null_mut();
+        }
+        (*s).ext_ocsp_resp_len = 0;
+        if data.is_null() || len <= 0 {
+            return 1;
+        }
+        let dup = CRYPTO_memdup(data.cast(), len as usize, FILE, 0).cast::<u8>();
+        if dup.is_null() {
+            return 0;
+        }
+        (*s).ext_ocsp_resp = dup;
+        (*s).ext_ocsp_resp_len = len as usize;
+        1
+    }
+}
+
 /// `long SSL_ctrl(SSL *s, int cmd, long larg, void *parg)` — `ssl/ssl_lib.c:2943-2946`, via
 /// `ossl_ctrl_internal` (`:2948-3074`).
 ///
@@ -4510,6 +4574,28 @@ pub unsafe extern "C" fn SSL_ctrl(
                     sc.max_pipelines = larg as usize;
                     1
                 }
+            }
+            // `ssl3_ctrl`'s OCSP status arms (`s3_lib.c:4061-4068`, `:4087-4136`).
+            SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE => sc.ext_status_type as c_long,
+            SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE => {
+                sc.ext_status_type = larg as c_int;
+                1
+            }
+            SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP => {
+                // `s3_lib.c:4087-4107`: answer the held DER (NULL/`-1` when none).
+                // SAFETY: `parg` is a writable `unsigned char *` slot for this command.
+                unsafe { *parg.cast::<*mut u8>() = sc.ext_ocsp_resp };
+                if sc.ext_ocsp_resp.is_null() {
+                    -1
+                } else {
+                    sc.ext_ocsp_resp_len as c_long
+                }
+            }
+            SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP => {
+                // `s3_lib.c:4110-4136`: replace the held response. The authority stores the
+                // caller's pointer; this crate copies it (recorded ownership repair).
+                // SAFETY: `s` is live; `parg` names `larg` readable bytes when non-NULL.
+                unsafe { set_ocsp_response(s, parg.cast::<u8>(), larg) }
             }
             // `s3_lib.c:4561-4569`: install the per-connection supported-groups list parsed from a
             // colon-separated group string.
@@ -4827,6 +4913,33 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
             c.servername_arg = parg;
             1
         }
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG => {
+            // `s3_lib.c:4505-4507`: store the OCSP status callback argument.
+            c.status_arg = parg;
+            1
+        }
+        SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB_ARG => {
+            // `s3_lib.c:4509-4511`: answer the stored argument through the caller's slot.
+            // SAFETY: `parg` is a writable `void *` slot for this command.
+            unsafe { *parg.cast::<*mut c_void>() = c.status_arg };
+            // The authority's `break` falls through to the function's trailing `return 1`.
+            1
+        }
+        SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB => {
+            // `s3_lib.c:4513-4515`: answer the stored callback pointer through the caller's slot.
+            // SAFETY: `parg` is a writable function-pointer slot for this command.
+            unsafe { *parg.cast::<Option<StatusCb>>() = c.status_cb };
+            1
+        }
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE => {
+            // `s3_lib.c:4498-4500`: the context's OCSP request type.
+            c.ext_status_type = larg as c_int;
+            1
+        }
+        SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE => {
+            // `s3_lib.c:4495-4497`.
+            c.ext_status_type as c_long
+        }
         SSL_CTRL_SET_GROUPS => {
             // `s3_lib.c:4552-4560`: install the supported-groups list.
             // SAFETY: `parg` holds `larg` ints per the command's contract; `c`'s fields are
@@ -5097,6 +5210,15 @@ pub unsafe extern "C" fn SSL_CTX_callback_ctrl(
             // SAFETY: `ctx` is live; the pointer bits are stored as the callback.
             unsafe {
                 (*ctx).ticket_key_cb = fp.map(|f| core::mem::transmute::<_, TicketKeyCb>(f));
+            }
+            1
+        }
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB => {
+            // `ssl3_ctx_callback_ctrl`, `s3_lib.c:4673-4675`: the OCSP status callback libtls and
+            // every other libtls consumer install with `SSL_CTX_set_tlsext_status_cb`.
+            // SAFETY: `ctx` is live; only the pointer bits are stored (`ssl_local.h:1012`).
+            unsafe {
+                (*ctx).status_cb = fp.map(|f| core::mem::transmute::<_, StatusCb>(f));
             }
             1
         }
