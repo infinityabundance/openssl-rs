@@ -157,6 +157,7 @@ RANK = downstream_schemas.EXECUTION_LEVEL_RANK
 STEP_TIMEOUT = census.STEP_TIMEOUT
 FETCH_TIMEOUT = census.FETCH_TIMEOUT
 MAKE_JOBS = census.MAKE_JOBS
+MAKE_JOB_COUNT = int(MAKE_JOBS.lstrip("-j") or "1")
 
 # The frozen build/link-intent rule, recorded verbatim in the artefact and re-derived by the court.
 RULE: dict = {
@@ -361,6 +362,103 @@ _EXTRA_SPECS: tuple[dict, ...] = (
     },
 )
 
+# The Phase-25 L7 expansion batch: five library families that were previously blocked only because
+# the minimal venue lacked cmake/meson and their non-OpenSSL dependency headers. Each is pinned by
+# its released archive digest and built against the subject prefix. The recipes carry no
+# candidate-specific flag: `{prefix}` is the only substitution, exactly as for every earlier batch.
+_L7_EXPANSION_SPECS: tuple[dict, ...] = (
+    {
+        "family": "jwt", "version": "2.1.3",
+        "url": "https://github.com/benmcollins/libjwt/archive/refs/tags/v2.1.3.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "ea13f42713edd113e65c05f9601ba25383f89b34a644b64f30ee0ecbf282dc83",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTS=OFF",
+                      "-DCMAKE_C_FLAGS=-DHAVE_OPENSSL",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}"],
+        "make": [], "artifact": "b/libjwt/libjwt.so*", "launch": None,
+        "note": ("libjwt 2.1.3 (family jwt) built with CMake against the subject prefix; "
+                 "-DHAVE_OPENSSL is required because the CMake build does not run "
+                 "configure.ac's AC_DEFINE, and jansson comes from the venue's pkg-config"),
+    },
+    {
+        "family": "libjose", "version": "11",
+        "url": "https://github.com/latchset/jose/releases/download/v11/jose-11.tar.xz",
+        "archive": "tar.xz", "build_system": "meson",
+        "sha256": "e272afe7717e22790c383f3164480627a567c714ccb80c1ee96f62c9929d8225",
+        "configure": ["--buildtype=release", "-Dwerror=false"],
+        "make": [], "artifact": "b/lib/libjose.so.0*", "launch": None,
+        "note": ("jose 11 (family libjose) built with meson/ninja against the subject prefix; "
+                 "jansson and zlib come from the venue, libcrypto from the subject"),
+    },
+    {
+        "family": "libzip", "version": "1.11.1",
+        "url": "https://libzip.org/download/libzip-1.11.1.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "c0e6fa52a62ba11efd30262290dc6970947aef32e0cc294ee50e9005ceac092a",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_OPENSSL=ON",
+                      "-DENABLE_GNUTLS=OFF", "-DENABLE_MBEDTLS=OFF",
+                      "-DENABLE_COMMONCRYPTO=OFF", "-DENABLE_ZSTD=OFF",
+                      "-DBUILD_TOOLS=OFF", "-DBUILD_REGRESS=OFF",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_OSSFUZZ=OFF", "-DBUILD_DOC=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}"],
+        "make": [], "artifact": "b/lib/libzip.so.5*", "launch": None,
+        "note": ("libzip 1.11.1 built with CMake; AES-256 support uses the subject libcrypto "
+                 "(the zstd backend is disabled because the venue carries no zstd headers)"),
+    },
+    {
+        "family": "apr-util", "version": "1.6.3",
+        "url": "https://archive.apache.org/dist/apr/apr-util-1.6.3.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "2b74d8932703826862ca305b094eef2983c27b39d5c9414442e9976a9acf1983",
+        "configure": ["--with-apr=/usr/bin/apr-1-config", "--with-crypto",
+                      "--with-openssl={prefix}", "--disable-util-dso"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libaprutil-1.so*", "launch": None,
+        "note": ("apr-util 1.6.3 with --with-crypto --disable-util-dso: the OpenSSL crypto "
+                 "driver is linked into libaprutil-1 and the library carries a libcrypto "
+                 "DT_NEEDED; APR comes from the venue's apr-1-config"),
+    },
+    {
+        "family": "fido2", "version": "1.15.0",
+        "url": "https://github.com/Yubico/libfido2/archive/refs/tags/1.15.0.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "32e3e431cfe29b45f497300fdb7076971cb77fc584fcfa80084d823a6ed94fbb",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DBUILD_TOOLS=OFF", "-DBUILD_MANPAGES=OFF",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTS=OFF", "-DNFC_LINUX=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/src/libfido2.so.1*", "launch": None,
+        # libfido2's Linux CMakeLists requires libudev unconditionally (even with NFC off). The
+        # venue provides libudev.so.1 but not libudev-dev, so the harness acquires the matching
+        # bookworm -dev package by pinned digest and extracts only its header/.pc into the build
+        # scratch. This is a venue dependency, not part of the subject or the family source.
+        "aux_sources": [
+            {
+                "url": ("http://deb.debian.org/debian/pool/main/s/systemd/"
+                        "libudev-dev_252.39-1~deb12u2_amd64.deb"),
+                "sha256": "b8795a05b96799cb25ed3677eef8e8b1f1facdf07ad4527e06ef8f82ca164fbd",
+                "archive": "deb", "extract": ["dpkg-deb", "-x"],
+                "include_dirs": ["usr/include"],
+                "library_dirs": ["usr/lib/x86_64-linux-gnu"],
+                "pkgconfig_dirs": ["usr/lib/x86_64-linux-gnu/pkgconfig"],
+                "links": {"usr/lib/x86_64-linux-gnu/libudev.so.1":
+                          "/usr/lib/x86_64-linux-gnu/libudev.so.1"},
+                "note": ("matching bookworm libudev-dev 252.39-1~deb12u2; libudev.so.1 "
+                         "itself is the venue's already-installed runtime library"),
+            },
+        ],
+        "note": ("libfido2 1.15.0 built with CMake against the subject prefix (ES256 uses the "
+                 "subject libcrypto); libcbor comes from the venue and libudev-dev from the "
+                 "pinned auxiliary package above"),
+    },
+)
+
 # The Phase-17 downstream harnesses' pinned releases, added to widen the direct-consumer set. nginx
 # 1.26.3 is the TLS-server slice (its own `configure`, so it is treated like autotools).
 _PHASE17_PINS: dict[str, str] = {
@@ -418,6 +516,12 @@ def _build_catalogue() -> tuple[dict, ...]:
     # single source of truth in `close_batch.admitted_recipe_specs()`.
     for spec in close_batch.admitted_recipe_specs():
         recipes.append(dict(spec))
+    # The Phase-25 L7 expansion batch (cmake/meson/autotools families that the expansion venue
+    # admits). Each recipe is pristine and carries its own pinned archive digest.
+    for spec in _L7_EXPANSION_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -553,6 +657,60 @@ def _no_recipe_row(fam: dict, subject: str, limits: dict) -> dict:
         limits=limits, prefix=Path("/"))
 
 
+def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
+    """Acquire and extract a recipe's pinned auxiliary dependency packages.
+
+    A recipe may name `aux_sources` (a non-subject dependency the venue does not ship as a
+    development package). Each is fetched by URL, refused unless its bytes match the authored
+    SHA-256, extracted under the family's scratch directory, and exposed to the build through
+    include/library/pkg-config paths. The subject OpenSSL is still the only OpenSSL: nothing here
+    provides or replaces libssl/libcrypto.
+    """
+    specs = recipe.get("aux_sources") or []
+    if not specs:
+        return {}, None
+    aux_root = work / "aux"
+    include_dirs: list[str] = []
+    library_dirs: list[str] = []
+    pkgconfig_dirs: list[str] = []
+    for spec in specs:
+        aux_root.mkdir(parents=True, exist_ok=True)
+        name = str(spec["url"]).rsplit("/", 1)[-1]
+        archive = aux_root / name
+        fetch = census._fetch(str(spec["url"]), archive)
+        if not fetch["ok"] or not archive.is_file():
+            return {}, (f"fetching the auxiliary package {name} failed: "
+                        f"{census._error_line(fetch)}")
+        observed = sha256_file(archive)
+        if observed != spec["sha256"]:
+            return {}, (f"the auxiliary package {name} digest {observed} does not match the "
+                        f"pinned {spec['sha256']}")
+        root = aux_root / "root"
+        extract = census._run([*(spec.get("extract") or ["tar", "xf"]), str(archive),
+                               str(root)], timeout=STEP_TIMEOUT)
+        if not extract["ok"]:
+            return {}, (f"extracting the auxiliary package {name} failed: "
+                        f"{census._error_line(extract)}")
+        include_dirs += [str(root / d) for d in spec.get("include_dirs") or []]
+        library_dirs += [str(root / d) for d in spec.get("library_dirs") or []]
+        for rel_dir in spec.get("pkgconfig_dirs") or []:
+            pc_dir = root / rel_dir
+            # The package's .pc names /usr as its prefix; move it under the extracted root so the
+            # compiler and linker see exactly the pinned header and development symlink.
+            for pc in sorted(pc_dir.glob("*.pc")):
+                pc.write_text(pc.read_text(encoding="utf-8").replace("/usr", f"{root}/usr"),
+                              encoding="utf-8")
+            pkgconfig_dirs.append(str(pc_dir))
+        for link, target in (spec.get("links") or {}).items():
+            link_path = root / link
+            link_path.parent.mkdir(parents=True, exist_ok=True)
+            if link_path.is_symlink() or link_path.exists():
+                link_path.unlink()
+            link_path.symlink_to(str(target))
+    return {"include_dirs": include_dirs, "library_dirs": library_dirs,
+            "pkgconfig_dirs": pkgconfig_dirs}, None
+
+
 def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, subject: str,
                      prefix: Path, defined: set[str], authority_prefix: Path, limits: dict) -> dict:
     """Build one family's pristine source against one subject and return its run row."""
@@ -590,6 +748,26 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
                PKG_CONFIG_PATH=f"{prefix}/lib/pkgconfig",
                CPPFLAGS=f"-I{prefix}/include",
                LDFLAGS=f"-L{prefix}/lib")
+    # A recipe may name pinned auxiliary dependency packages the venue does not ship as
+    # development headers (fido2's libudev-dev). They are acquired by digest and added to the
+    # build environment; the subject prefix remains the only OpenSSL.
+    aux, aux_err = _prepare_aux(recipe, work)
+    if aux_err:
+        return _subject_row(
+            fam, recipe, subject, level=L1, outcome="failed", residual="unavailable",
+            failure_class="acquire-failure", reason=aux_err,
+            specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
+            evidence=[f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
+                      f"source:{recipe['url']}#{archive_sha}"],
+            steps=steps, canvas=None, limits=limits, prefix=prefix,
+            source_root_hash=root_hash)
+    if aux.get("include_dirs"):
+        env["CPPFLAGS"] += "".join(f" -I{d}" for d in aux["include_dirs"])
+    if aux.get("library_dirs"):
+        env["LDFLAGS"] += "".join(f" -L{d}" for d in aux["library_dirs"])
+    if aux.get("pkgconfig_dirs"):
+        env["PKG_CONFIG_PATH"] = os.pathsep.join(
+            [*aux["pkgconfig_dirs"], env["PKG_CONFIG_PATH"]])
     # A recipe may extend the link environment (24.17's isync override adds -Wl,-rpath-link so the
     # subject lib dir resolves libssl's transitive libcrypto dependency). Substituted identically for
     # both subjects, so the identical-build-intent rule holds.
@@ -603,7 +781,9 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
         env[str(key)] = str(val).format(prefix=prefix)
 
     level = L1
-    if recipe["build_system"] in ("autotools", "configure"):
+    build_system = str(recipe["build_system"])
+    build_dir = str(recipe.get("build_dir") or "b")
+    if build_system in ("autotools", "configure"):
         argv = ["./configure"] + [a.format(prefix=prefix) for a in recipe["configure"]]
         conf = stage("configure", census._run(argv, cwd=root, env=env))
         if not conf["ok"]:
@@ -617,8 +797,52 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
                 steps=steps, canvas=None, limits=limits, prefix=prefix,
                 source_root_hash=root_hash)
         level = L2
+    elif build_system == "cmake":
+        argv = (["cmake", "-S", ".", "-B", build_dir]
+                + [a.format(prefix=prefix) for a in recipe.get("configure") or []])
+        # An auxiliary package exposes a development symlink under the extracted root; CMake's
+        # pkg-config module emits `-ludev` but not the producing `-L`, so the shared-link flags
+        # must name it explicitly (the recipe's own flags remain the defaults for subprocesses).
+        if aux.get("library_dirs"):
+            link_flags = (f"-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+                          + "".join(f" -L{d}" for d in aux["library_dirs"]))
+            argv.append(f"-DCMAKE_SHARED_LINKER_FLAGS={link_flags}")
+        conf = stage("configure", census._run(argv, cwd=root, env=env))
+        if not conf["ok"]:
+            return _subject_row(
+                fam, recipe, subject, level=L1, outcome="failed", residual="unbuildable",
+                failure_class="configure-failure",
+                reason=f"cmake configure failed: {census._error_line(conf)}",
+                specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
+                evidence=[f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
+                          f"source:{recipe['url']}#{archive_sha}"],
+                steps=steps, canvas=None, limits=limits, prefix=prefix,
+                source_root_hash=root_hash)
+        level = L2
+    elif build_system == "meson":
+        argv = (["meson", "setup", build_dir]
+                + [a.format(prefix=prefix) for a in recipe.get("configure") or []])
+        conf = stage("configure", census._run(argv, cwd=root, env=env))
+        if not conf["ok"]:
+            return _subject_row(
+                fam, recipe, subject, level=L1, outcome="failed", residual="unbuildable",
+                failure_class="configure-failure",
+                reason=f"meson setup failed: {census._error_line(conf)}",
+                specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
+                evidence=[f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
+                          f"source:{recipe['url']}#{archive_sha}"],
+                steps=steps, canvas=None, limits=limits, prefix=prefix,
+                source_root_hash=root_hash)
+        level = L2
+    # Any other recipe is the established plain-`make` form: no configure step, the recipe's
+    # own make argv runs directly in the extracted tree.
 
-    make_argv = ["make"] + [a.format(prefix=prefix) for a in recipe["make"]]
+    if build_system == "cmake":
+        make_argv = ["cmake", "--build", build_dir, "--parallel", str(MAKE_JOB_COUNT)]
+    elif build_system == "meson":
+        make_argv = ["ninja", "-C", build_dir]
+    else:
+        make_argv = ["make"] + [a.format(prefix=prefix) for a in recipe["make"]]
     build = stage("make", census._run(make_argv, cwd=root, env=env))
     if not build["ok"]:
         return _subject_row(
