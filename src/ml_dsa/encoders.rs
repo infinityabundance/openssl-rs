@@ -18,9 +18,10 @@
 //!
 //! ## The byte-order helpers are the header's own
 //!
-//! `OPENSSL_load_u16_le`/`u32`/`u64` and their `store` counterparts (`<openssl/byteorder.h>`) are
-//! transcribed as [`load_u16_le`]/[`load_u32_le`]/[`load_u64_le`] and
-//! [`store_u16_le`]/[`store_u32_le`]/[`store_u64_le`], each returning the advanced pointer exactly
+//! The little-endian loads and stores the authority expresses with `<openssl/byteorder.h>` are
+//! ordinary slice reads and `to_le_bytes`/`from_le_bytes` here: the packing functions form one
+//! bounded slice over the packet's allocation and the polynomial's coefficient array, so no
+//! advancing pointer or manual index store remains.
 //! as the macro does. `PACKET_*` has no crate symbol (`include/internal/packet.h` is all
 //! `static ossl_inline`), so the read half is [`Packet`]'s methods and the one helper the file
 //! needs beyond them, `PACKET_copy_bytes`, is [`packet_copy_bytes`].
@@ -199,91 +200,6 @@ type EncodeFn = unsafe fn(*const Poly, *mut Wpacket) -> c_int;
 type DecodeFn = unsafe fn(*mut Poly, *mut Packet) -> c_int;
 
 // ---------------------------------------------------------------------------------------------
-// `<openssl/byteorder.h>`'s little-endian loads and stores
-// ---------------------------------------------------------------------------------------------
-
-/// `OPENSSL_load_u16_le(&accum, in)` — `<openssl/byteorder.h>`, returns `in + 2`.
-///
-/// # Safety
-/// `in_` must be readable for two bytes.
-#[inline]
-unsafe fn load_u16_le(in_: *const u8, accum: &mut u16) -> *const u8 {
-    let mut bytes = [0u8; 2];
-    // SAFETY: `in_` is readable for two bytes per the contract.
-    unsafe { ptr::copy_nonoverlapping(in_, bytes.as_mut_ptr(), 2) };
-    *accum = u16::from_le_bytes(bytes);
-    // SAFETY: the pointer arithmetic stays within the object `in_` names.
-    unsafe { in_.add(2) }
-}
-
-/// `OPENSSL_load_u32_le(&accum, in)` — `<openssl/byteorder.h>`, returns `in + 4`.
-///
-/// # Safety
-/// `in_` must be readable for four bytes.
-#[inline]
-unsafe fn load_u32_le(in_: *const u8, accum: &mut u32) -> *const u8 {
-    let mut bytes = [0u8; 4];
-    // SAFETY: `in_` is readable for four bytes per the contract.
-    unsafe { ptr::copy_nonoverlapping(in_, bytes.as_mut_ptr(), 4) };
-    *accum = u32::from_le_bytes(bytes);
-    // SAFETY: the pointer arithmetic stays within the object `in_` names.
-    unsafe { in_.add(4) }
-}
-
-/// `OPENSSL_load_u64_le(&accum, in)` — `<openssl/byteorder.h>`, returns `in + 8`.
-///
-/// # Safety
-/// `in_` must be readable for eight bytes.
-#[inline]
-unsafe fn load_u64_le(in_: *const u8, accum: &mut u64) -> *const u8 {
-    let mut bytes = [0u8; 8];
-    // SAFETY: `in_` is readable for eight bytes per the contract.
-    unsafe { ptr::copy_nonoverlapping(in_, bytes.as_mut_ptr(), 8) };
-    *accum = u64::from_le_bytes(bytes);
-    // SAFETY: the pointer arithmetic stays within the object `in_` names.
-    unsafe { in_.add(8) }
-}
-
-/// `OPENSSL_store_u16_le(out, v)` — `<openssl/byteorder.h>`, returns `out + 2`.
-///
-/// # Safety
-/// `out` must be writable for two bytes.
-#[inline]
-unsafe fn store_u16_le(out: *mut u8, v: u16) -> *mut u8 {
-    let bytes = v.to_le_bytes();
-    // SAFETY: `out` is writable for two bytes per the contract.
-    unsafe { ptr::copy_nonoverlapping(bytes.as_ptr(), out, 2) };
-    // SAFETY: the pointer arithmetic stays within the object `out` names.
-    unsafe { out.add(2) }
-}
-
-/// `OPENSSL_store_u32_le(out, v)` — `<openssl/byteorder.h>`, returns `out + 4`.
-///
-/// # Safety
-/// `out` must be writable for four bytes.
-#[inline]
-unsafe fn store_u32_le(out: *mut u8, v: u32) -> *mut u8 {
-    let bytes = v.to_le_bytes();
-    // SAFETY: `out` is writable for four bytes per the contract.
-    unsafe { ptr::copy_nonoverlapping(bytes.as_ptr(), out, 4) };
-    // SAFETY: the pointer arithmetic stays within the object `out` names.
-    unsafe { out.add(4) }
-}
-
-/// `OPENSSL_store_u64_le(out, v)` — `<openssl/byteorder.h>`, returns `out + 8`.
-///
-/// # Safety
-/// `out` must be writable for eight bytes.
-#[inline]
-unsafe fn store_u64_le(out: *mut u8, v: u64) -> *mut u8 {
-    let bytes = v.to_le_bytes();
-    // SAFETY: `out` is writable for eight bytes per the contract.
-    unsafe { ptr::copy_nonoverlapping(bytes.as_ptr(), out, 8) };
-    // SAFETY: the pointer arithmetic stays within the object `out` names.
-    unsafe { out.add(8) }
-}
-
-// ---------------------------------------------------------------------------------------------
 // The two file-local helpers the translation unit pulls in
 // ---------------------------------------------------------------------------------------------
 
@@ -350,30 +266,19 @@ unsafe fn raise_with_alg(
 /// # Safety
 /// `pkt` must be a live packet and `p` must name 256 coefficients.
 unsafe fn poly_encode_4_bits(p: *const Poly, pkt: *mut Wpacket) -> c_int {
-    let mut out: *mut u8 = ptr::null_mut();
-
-    // SAFETY: `pkt` is live per the contract and `out` is a live local.
-    if unsafe { WPACKET_allocate_bytes(pkt, poly_coeff_num_bytes(4), &mut out) } == 0 {
+    let n = poly_coeff_num_bytes(4);
+    let mut out_ptr: *mut u8 = ptr::null_mut();
+    // SAFETY: `pkt` is live and `out_ptr` is a live local.
+    if unsafe { WPACKET_allocate_bytes(pkt, n, &mut out_ptr) } == 0 {
         return 0;
     }
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut inp = unsafe { (*p).coeff.as_ptr() };
-    // SAFETY: `inp` is that array's first element, so `inp + 256` is its one-past-the-end pointer.
-    let end = unsafe { inp.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        // SAFETY: `inp` names two coefficients of `p` and `out` names one writable byte of the
-        // `poly_coeff_num_bytes(4)` just allocated.
-        unsafe {
-            let z0 = *inp;
-            inp = inp.add(1);
-            let z1 = *inp;
-            inp = inp.add(1);
-            *out = (z0 | (z1 << 4)) as u8;
-            out = out.add(1);
-        }
-        if !(inp < end) {
-            break;
-        }
+    // SAFETY: the packet just allocated exactly `n` writable bytes at `out_ptr`, and the packet
+    // outlives this call's borrow.
+    let out = unsafe { core::slice::from_raw_parts_mut(out_ptr, n) };
+    // SAFETY: `p` names one `Poly`, whose `coeff` is exactly 256 `u32`s.
+    let coeffs = unsafe { &(*p).coeff };
+    for (pair, byte) in coeffs.as_chunks::<2>().0.iter().zip(out.iter_mut()) {
+        *byte = (pair[0] | (pair[1] << 4)) as u8;
     }
     1
 }
@@ -383,37 +288,26 @@ unsafe fn poly_encode_4_bits(p: *const Poly, pkt: *mut Wpacket) -> c_int {
 /// # Safety
 /// `pkt` must be a live packet and `p` must name 256 coefficients.
 unsafe fn poly_encode_6_bits(p: *const Poly, pkt: *mut Wpacket) -> c_int {
-    let mut out: *mut u8 = ptr::null_mut();
-
-    // SAFETY: `pkt` is live per the contract and `out` is a live local.
-    if unsafe { WPACKET_allocate_bytes(pkt, poly_coeff_num_bytes(6), &mut out) } == 0 {
+    let n = poly_coeff_num_bytes(6);
+    let mut out_ptr: *mut u8 = ptr::null_mut();
+    // SAFETY: `pkt` is live and `out_ptr` is a live local.
+    if unsafe { WPACKET_allocate_bytes(pkt, n, &mut out_ptr) } == 0 {
         return 0;
     }
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut inp = unsafe { (*p).coeff.as_ptr() };
-    // SAFETY: `inp` is that array's first element, so `inp + 256` is its one-past-the-end pointer.
-    let end = unsafe { inp.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        // SAFETY: `inp` names four coefficients of `p` and `out` names three writable bytes.
-        unsafe {
-            let c0 = *inp;
-            inp = inp.add(1);
-            let c1 = *inp;
-            inp = inp.add(1);
-            let c2 = *inp;
-            inp = inp.add(1);
-            let c3 = *inp;
-            inp = inp.add(1);
-            *out = (c0 | (c1 << 6)) as u8;
-            out = out.add(1);
-            *out = ((c1 >> 2) | (c2 << 4)) as u8;
-            out = out.add(1);
-            *out = ((c2 >> 4) | (c3 << 2)) as u8;
-            out = out.add(1);
-        }
-        if !(inp < end) {
-            break;
-        }
+    // SAFETY: the packet just allocated exactly `n` writable bytes at `out_ptr`.
+    let out = unsafe { core::slice::from_raw_parts_mut(out_ptr, n) };
+    // SAFETY: `p` names one `Poly`, whose `coeff` is exactly 256 `u32`s.
+    let coeffs = unsafe { &(*p).coeff };
+    for (quad, bytes) in coeffs
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(out.as_chunks_mut::<3>().0.iter_mut())
+    {
+        let (c0, c1, c2, c3) = (quad[0], quad[1], quad[2], quad[3]);
+        bytes[0] = (c0 | (c1 << 6)) as u8;
+        bytes[1] = ((c1 >> 2) | (c2 << 4)) as u8;
+        bytes[2] = ((c2 >> 4) | (c3 << 2)) as u8;
     }
     1
 }
@@ -423,41 +317,28 @@ unsafe fn poly_encode_6_bits(p: *const Poly, pkt: *mut Wpacket) -> c_int {
 /// # Safety
 /// `pkt` must be a live packet and `p` must name 256 coefficients.
 unsafe fn poly_encode_10_bits(p: *const Poly, pkt: *mut Wpacket) -> c_int {
-    let mut out: *mut u8 = ptr::null_mut();
-
-    // SAFETY: `pkt` is live per the contract and `out` is a live local.
-    if unsafe { WPACKET_allocate_bytes(pkt, poly_coeff_num_bytes(10), &mut out) } == 0 {
+    let n = poly_coeff_num_bytes(10);
+    let mut out_ptr: *mut u8 = ptr::null_mut();
+    // SAFETY: `pkt` is live and `out_ptr` is a live local.
+    if unsafe { WPACKET_allocate_bytes(pkt, n, &mut out_ptr) } == 0 {
         return 0;
     }
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut inp = unsafe { (*p).coeff.as_ptr() };
-    // SAFETY: `inp` is that array's first element, so `inp + 256` is its one-past-the-end pointer.
-    let end = unsafe { inp.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        // SAFETY: `inp` names four coefficients of `p` and `out` names five writable bytes.
-        unsafe {
-            let c0 = *inp;
-            inp = inp.add(1);
-            let c1 = *inp;
-            inp = inp.add(1);
-            let c2 = *inp;
-            inp = inp.add(1);
-            let c3 = *inp;
-            inp = inp.add(1);
-            *out = c0 as u8;
-            out = out.add(1);
-            *out = ((c0 >> 8) | (c1 << 2)) as u8;
-            out = out.add(1);
-            *out = ((c1 >> 6) | (c2 << 4)) as u8;
-            out = out.add(1);
-            *out = ((c2 >> 4) | (c3 << 6)) as u8;
-            out = out.add(1);
-            *out = (c3 >> 2) as u8;
-            out = out.add(1);
-        }
-        if !(inp < end) {
-            break;
-        }
+    // SAFETY: the packet just allocated exactly `n` writable bytes at `out_ptr`.
+    let out = unsafe { core::slice::from_raw_parts_mut(out_ptr, n) };
+    // SAFETY: `p` names one `Poly`, whose `coeff` is exactly 256 `u32`s.
+    let coeffs = unsafe { &(*p).coeff };
+    for (quad, bytes) in coeffs
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(out.as_chunks_mut::<5>().0.iter_mut())
+    {
+        let (c0, c1, c2, c3) = (quad[0], quad[1], quad[2], quad[3]);
+        bytes[0] = c0 as u8;
+        bytes[1] = ((c0 >> 8) | (c1 << 2)) as u8;
+        bytes[2] = ((c1 >> 6) | (c2 << 4)) as u8;
+        bytes[3] = ((c2 >> 4) | (c3 << 6)) as u8;
+        bytes[4] = (c3 >> 2) as u8;
     }
     1
 }
@@ -467,36 +348,22 @@ unsafe fn poly_encode_10_bits(p: *const Poly, pkt: *mut Wpacket) -> c_int {
 /// # Safety
 /// `pkt` must be a live cursor and `p` must name 256 coefficients.
 unsafe fn poly_decode_10_bits(p: *mut Poly, pkt: *mut Packet) -> c_int {
-    let mask: u32 = 0x3ff; /* 10 bits */
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut out = unsafe { (*p).coeff.as_mut_ptr() };
-    // SAFETY: `out` is that array's first element, so `out + 256` is its one-past-the-end pointer.
-    let end = unsafe { out.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        // SAFETY: `pkt` is a live cursor per the contract.
+    const MASK: u32 = 0x3ff;
+    // SAFETY: `p` names one `Poly`.
+    let coeffs = unsafe { &mut (*p).coeff };
+    for quads in coeffs.as_chunks_mut::<4>().0.iter_mut() {
+        // SAFETY: `pkt` is a live cursor.
         let Some(in_) = (unsafe { (*pkt).get_bytes(5) }) else {
             return 0;
         };
-        let mut v: u32 = 0;
-        // SAFETY: `in_` is readable for the five bytes just taken.
-        let in_ = unsafe { load_u32_le(in_, &mut v) };
-        // SAFETY: `in_` now names the fifth byte of the span.
-        let w = unsafe { *in_ } as u32;
-
-        // SAFETY: `out` names the next four coefficients of `p`, and `p` has 256 of them.
-        unsafe {
-            *out = v & mask;
-            out = out.add(1);
-            *out = (v >> 10) & mask;
-            out = out.add(1);
-            *out = (v >> 20) & mask;
-            out = out.add(1);
-            *out = (v >> 30) | (w << 2);
-            out = out.add(1);
-        }
-        if !(out < end) {
-            break;
-        }
+        // SAFETY: `get_bytes(5)` returned five readable bytes.
+        let in_ = unsafe { &*in_.cast::<[u8; 5]>() };
+        let v = u32::from_le_bytes([in_[0], in_[1], in_[2], in_[3]]);
+        let w = u32::from(in_[4]);
+        quads[0] = v & MASK;
+        quads[1] = (v >> 10) & MASK;
+        quads[2] = (v >> 20) & MASK;
+        quads[3] = (v >> 30) | (w << 2);
     }
     1
 }
@@ -506,29 +373,19 @@ unsafe fn poly_decode_10_bits(p: *mut Poly, pkt: *mut Packet) -> c_int {
 /// # Safety
 /// `pkt` must be a live packet and `p` must name 256 coefficients.
 unsafe fn poly_encode_signed_4(p: *const Poly, pkt: *mut Wpacket) -> c_int {
-    let mut out: *mut u8 = ptr::null_mut();
-
-    // SAFETY: `pkt` is live per the contract and `out` is a live local.
-    if unsafe { WPACKET_allocate_bytes(pkt, 32 * 4, &mut out) } == 0 {
+    let mut out_ptr: *mut u8 = ptr::null_mut();
+    // SAFETY: `pkt` is live and `out_ptr` is a live local.
+    if unsafe { WPACKET_allocate_bytes(pkt, 32 * 4, &mut out_ptr) } == 0 {
         return 0;
     }
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut inp = unsafe { (*p).coeff.as_ptr() };
-    // SAFETY: `inp` is that array's first element, so `inp + 256` is its one-past-the-end pointer.
-    let end = unsafe { inp.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        // SAFETY: `inp` names two coefficients of `p` and `out` names one writable byte.
-        unsafe {
-            let z = mod_sub(4, *inp);
-            inp = inp.add(1);
-            let z1 = mod_sub(4, *inp);
-            inp = inp.add(1);
-            *out = (z | (z1 << 4)) as u8;
-            out = out.add(1);
-        }
-        if !(inp < end) {
-            break;
-        }
+    // SAFETY: the packet just allocated exactly `32 * 4` writable bytes.
+    let out = unsafe { core::slice::from_raw_parts_mut(out_ptr, 32 * 4) };
+    // SAFETY: `p` names one `Poly`, whose `coeff` is exactly 256 `u32`s.
+    let coeffs = unsafe { &(*p).coeff };
+    for (pair, byte) in coeffs.as_chunks::<2>().0.iter().zip(out.iter_mut()) {
+        let z = mod_sub(4, pair[0]);
+        let z1 = mod_sub(4, pair[1]);
+        *byte = (z | (z1 << 4)) as u8;
     }
     1
 }
@@ -538,46 +395,26 @@ unsafe fn poly_encode_signed_4(p: *const Poly, pkt: *mut Wpacket) -> c_int {
 /// # Safety
 /// `pkt` must be a live cursor and `p` must name 256 coefficients.
 unsafe fn poly_decode_signed_4(p: *mut Poly, pkt: *mut Packet) -> c_int {
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut out = unsafe { (*p).coeff.as_mut_ptr() };
-    for _ in 0..(ML_DSA_NUM_POLY_COEFFICIENTS / 8) {
-        // SAFETY: `pkt` is a live cursor per the contract.
+    // SAFETY: `p` names one `Poly`.
+    let coeffs = unsafe { &mut (*p).coeff };
+    for octs in coeffs.as_chunks_mut::<8>().0.iter_mut() {
+        // SAFETY: `pkt` is a live cursor.
         let Some(in_) = (unsafe { (*pkt).get_bytes(4) }) else {
             return 0;
         };
-        let mut v: u32 = 0;
-        // SAFETY: `in_` is readable for the four bytes just taken.
-        let _ = unsafe { load_u32_le(in_, &mut v) };
+        // SAFETY: `get_bytes(4)` returned four readable bytes.
+        let in_ = unsafe { &*in_.cast::<[u8; 4]>() };
+        let v = u32::from_le_bytes(*in_);
 
         /* None of the nibbles may be >= 9: if a nibble's MSB is set, no other bit may be. */
         let msbs = v & 0x8888_8888u32;
         let mask = (msbs >> 1) | (msbs >> 2) | (msbs >> 3);
-        /*
-         * A nibble is only out of range for invalid input, in which case it is okay to leak the
-         * value; `black_box` is the crate's spelling of the authority's `value_barrier_32`.
-         */
         if core::hint::black_box(mask & v) != 0 {
             return 0;
         }
 
-        // SAFETY: `out` names the next eight coefficients of `p`, and `p` has 256 of them.
-        unsafe {
-            *out = mod_sub(4, v & 15);
-            out = out.add(1);
-            *out = mod_sub(4, (v >> 4) & 15);
-            out = out.add(1);
-            *out = mod_sub(4, (v >> 8) & 15);
-            out = out.add(1);
-            *out = mod_sub(4, (v >> 12) & 15);
-            out = out.add(1);
-            *out = mod_sub(4, (v >> 16) & 15);
-            out = out.add(1);
-            *out = mod_sub(4, (v >> 20) & 15);
-            out = out.add(1);
-            *out = mod_sub(4, (v >> 24) & 15);
-            out = out.add(1);
-            *out = mod_sub(4, v >> 28);
-            out = out.add(1);
+        for (i, c) in octs.iter_mut().enumerate() {
+            *c = mod_sub(4, (v >> (4 * i)) & 15);
         }
     }
     1
@@ -588,46 +425,29 @@ unsafe fn poly_decode_signed_4(p: *mut Poly, pkt: *mut Packet) -> c_int {
 /// # Safety
 /// `pkt` must be a live packet and `p` must name 256 coefficients.
 unsafe fn poly_encode_signed_2(p: *const Poly, pkt: *mut Wpacket) -> c_int {
-    let mut out: *mut u8 = ptr::null_mut();
-
-    // SAFETY: `pkt` is live per the contract and `out` is a live local.
-    if unsafe { WPACKET_allocate_bytes(pkt, poly_coeff_num_bytes(3), &mut out) } == 0 {
+    let n = poly_coeff_num_bytes(3);
+    let mut out_ptr: *mut u8 = ptr::null_mut();
+    // SAFETY: `pkt` is live and `out_ptr` is a live local.
+    if unsafe { WPACKET_allocate_bytes(pkt, n, &mut out_ptr) } == 0 {
         return 0;
     }
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut inp = unsafe { (*p).coeff.as_ptr() };
-    // SAFETY: `inp` is that array's first element, so `inp + 256` is its one-past-the-end pointer.
-    let end = unsafe { inp.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        let mut z: u32;
-        // SAFETY: `inp` names eight coefficients of `p`; the reads advance within them.
-        unsafe {
-            z = mod_sub(2, *inp);
-            inp = inp.add(1);
-            z |= mod_sub(2, *inp) << 3;
-            inp = inp.add(1);
-            z |= mod_sub(2, *inp) << 6;
-            inp = inp.add(1);
-            z |= mod_sub(2, *inp) << 9;
-            inp = inp.add(1);
-            z |= mod_sub(2, *inp) << 12;
-            inp = inp.add(1);
-            z |= mod_sub(2, *inp) << 15;
-            inp = inp.add(1);
-            z |= mod_sub(2, *inp) << 18;
-            inp = inp.add(1);
-            z |= mod_sub(2, *inp) << 21;
-            inp = inp.add(1);
+    // SAFETY: the packet just allocated exactly `n` writable bytes.
+    let out = unsafe { core::slice::from_raw_parts_mut(out_ptr, n) };
+    // SAFETY: `p` names one `Poly`, whose `coeff` is exactly 256 `u32`s.
+    let coeffs = unsafe { &(*p).coeff };
+    for (octs, bytes) in coeffs
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .zip(out.as_chunks_mut::<3>().0.iter_mut())
+    {
+        let mut z: u32 = 0;
+        for (i, &c) in octs.iter().enumerate() {
+            z |= mod_sub(2, c) << (3 * i);
         }
-        // SAFETY: `out` names the next three writable bytes of the `poly_coeff_num_bytes(3)`.
-        unsafe {
-            let next = store_u16_le(out, z as u16);
-            *next = (z >> 16) as u8;
-            out = next.add(1);
-        }
-        if !(inp < end) {
-            break;
-        }
+        bytes[0] = z as u8;
+        bytes[1] = (z >> 8) as u8;
+        bytes[2] = (z >> 16) as u8;
     }
     1
 }
@@ -637,51 +457,30 @@ unsafe fn poly_encode_signed_2(p: *const Poly, pkt: *mut Wpacket) -> c_int {
 /// # Safety
 /// `pkt` must be a live cursor and `p` must name 256 coefficients.
 unsafe fn poly_decode_signed_2(p: *mut Poly, pkt: *mut Packet) -> c_int {
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut out = unsafe { (*p).coeff.as_mut_ptr() };
-    for _ in 0..(ML_DSA_NUM_POLY_COEFFICIENTS / 8) {
-        // SAFETY: `pkt` is a live cursor per the contract.
+    // SAFETY: `p` names one `Poly`.
+    let coeffs = unsafe { &mut (*p).coeff };
+    for octs in coeffs.as_chunks_mut::<8>().0.iter_mut() {
+        // SAFETY: `pkt` is a live cursor.
         let Some(in_) = (unsafe { (*pkt).get_bytes(3) }) else {
             return 0;
         };
+        // SAFETY: `get_bytes(3)` returned three readable bytes.
+        let in_ = unsafe { &*in_.cast::<[u8; 3]>() };
         /*
          * The authority copies three bytes into a zeroed `uint32_t` and reads it little-endian;
-         * that is exactly the little-endian word the three bytes (plus a zero high byte) name, so
-         * the endianness of the host does not enter.
+         * that is exactly the little-endian word the three bytes (plus a zero high byte) name.
          */
-        // SAFETY: `in_` is readable for the three bytes just taken.
-        let (b0, b1, b2) = unsafe { (*in_, *in_.add(1), *in_.add(2)) };
-        let v = u32::from_le_bytes([b0, b1, b2, 0]);
+        let v = u32::from_le_bytes([in_[0], in_[1], in_[2], 0]);
 
         /* Each 3-bit value must be <= 4: if its MSB is set, its bottom two bits must not be. */
         let msbs = v & 0o4444_4444u32;
         let mask = (msbs >> 1) | (msbs >> 2);
-        /*
-         * A value is only out of range for invalid input, in which case it is okay to leak it;
-         * `black_box` is the crate's spelling of the authority's `value_barrier_32`.
-         */
         if core::hint::black_box(mask & v) != 0 {
             return 0;
         }
 
-        // SAFETY: `out` names the next eight coefficients of `p`, and `p` has 256 of them.
-        unsafe {
-            *out = mod_sub(2, v & 7);
-            out = out.add(1);
-            *out = mod_sub(2, (v >> 3) & 7);
-            out = out.add(1);
-            *out = mod_sub(2, (v >> 6) & 7);
-            out = out.add(1);
-            *out = mod_sub(2, (v >> 9) & 7);
-            out = out.add(1);
-            *out = mod_sub(2, (v >> 12) & 7);
-            out = out.add(1);
-            *out = mod_sub(2, (v >> 15) & 7);
-            out = out.add(1);
-            *out = mod_sub(2, (v >> 18) & 7);
-            out = out.add(1);
-            *out = mod_sub(2, (v >> 21) & 7);
-            out = out.add(1);
+        for (i, c) in octs.iter_mut().enumerate() {
+            *c = mod_sub(2, (v >> (3 * i)) & 7);
         }
     }
     1
@@ -695,57 +494,35 @@ unsafe fn poly_decode_signed_2(p: *mut Poly, pkt: *mut Packet) -> c_int {
 /// `pkt` must be a live packet and `p` must name 256 coefficients.
 unsafe fn poly_encode_signed_two_to_power_12(p: *const Poly, pkt: *mut Wpacket) -> c_int {
     let range: u32 = 1u32 << 12;
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut inp = unsafe { (*p).coeff.as_ptr() };
-    // SAFETY: `inp` is that array's first element, so `inp + 256` is its one-past-the-end pointer.
-    let end = unsafe { inp.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        let mut out: *mut u8 = ptr::null_mut();
-
-        // SAFETY: `pkt` is live per the contract and `out` is a live local.
-        if unsafe { WPACKET_allocate_bytes(pkt, 13, &mut out) } == 0 {
-            return 0;
-        }
-        // SAFETY: `inp` names the next eight coefficients of `p`; `mod_sub` is a safe read.
-        let (c0, c1, c2, c3, c4, c5, c6, c7) = unsafe {
-            let c0 = *inp;
-            inp = inp.add(1);
-            let c1 = *inp;
-            inp = inp.add(1);
-            let c2 = *inp;
-            inp = inp.add(1);
-            let c3 = *inp;
-            inp = inp.add(1);
-            let c4 = *inp;
-            inp = inp.add(1);
-            let c5 = *inp;
-            inp = inp.add(1);
-            let c6 = *inp;
-            inp = inp.add(1);
-            let c7 = *inp;
-            inp = inp.add(1);
-            (c0, c1, c2, c3, c4, c5, c6, c7)
-        };
-
-        let mut a1: u64 = mod_sub(range, c0) as u64;
-        a1 |= (mod_sub(range, c1) as u64) << 13;
-        a1 |= (mod_sub(range, c2) as u64) << 26;
-        a1 |= (mod_sub(range, c3) as u64) << 39;
-        let mut a2: u64 = mod_sub(range, c4) as u64;
+    // SAFETY: `p` names one `Poly`, whose `coeff` is exactly 256 `u32`s.
+    let coeffs = unsafe { &(*p).coeff };
+    let mut out_ptr: *mut u8 = ptr::null_mut();
+    // SAFETY: `pkt` is live and `out_ptr` is a live local.
+    if unsafe { WPACKET_allocate_bytes(pkt, (ML_DSA_NUM_POLY_COEFFICIENTS / 8) * 13, &mut out_ptr) }
+        == 0
+    {
+        return 0;
+    }
+    // SAFETY: the packet just allocated exactly `32 * 13` writable bytes.
+    let out = unsafe { core::slice::from_raw_parts_mut(out_ptr, 32 * 13) };
+    for (oct, bytes) in coeffs
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .zip(out.as_chunks_mut::<13>().0.iter_mut())
+    {
+        let mut a1: u64 = mod_sub(range, oct[0]) as u64;
+        a1 |= (mod_sub(range, oct[1]) as u64) << 13;
+        a1 |= (mod_sub(range, oct[2]) as u64) << 26;
+        a1 |= (mod_sub(range, oct[3]) as u64) << 39;
+        let mut a2: u64 = mod_sub(range, oct[4]) as u64;
         a1 |= a2 << 52;
-        a2 = (a2 >> 12) | ((mod_sub(range, c5) as u64) << 1);
-        a2 |= (mod_sub(range, c6) as u64) << 14;
-        a2 |= (mod_sub(range, c7) as u64) << 27;
-
-        // SAFETY: `out` names the 13 writable bytes just allocated; each store advances within it.
-        unsafe {
-            let out = store_u64_le(out, a1);
-            let out = store_u32_le(out, a2 as u32);
-            *out = (a2 >> 32) as u8;
-        }
-        if !(inp < end) {
-            break;
-        }
+        a2 = (a2 >> 12) | ((mod_sub(range, oct[5]) as u64) << 1);
+        a2 |= (mod_sub(range, oct[6]) as u64) << 14;
+        a2 |= (mod_sub(range, oct[7]) as u64) << 27;
+        bytes[..8].copy_from_slice(&a1.to_le_bytes());
+        bytes[8..12].copy_from_slice(&(a2 as u32).to_le_bytes());
+        bytes[12] = (a2 >> 32) as u8;
     }
     1
 }
@@ -757,40 +534,32 @@ unsafe fn poly_encode_signed_two_to_power_12(p: *const Poly, pkt: *mut Wpacket) 
 unsafe fn poly_decode_signed_two_to_power_12(p: *mut Poly, pkt: *mut Packet) -> c_int {
     let range: u32 = 1u32 << 12;
     let mask_13_bits: u32 = (1u32 << 13) - 1;
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut out = unsafe { (*p).coeff.as_mut_ptr() };
-    for _ in 0..(ML_DSA_NUM_POLY_COEFFICIENTS / 8) {
-        // SAFETY: `pkt` is a live cursor per the contract.
+    // SAFETY: `p` names one `Poly`.
+    let coeffs = unsafe { &mut (*p).coeff };
+    for octs in coeffs.as_chunks_mut::<8>().0.iter_mut() {
+        // SAFETY: `pkt` is a live cursor.
         let Some(in_) = (unsafe { (*pkt).get_bytes(13) }) else {
             return 0;
         };
-        let mut a1: u64 = 0;
-        let mut a2: u32 = 0;
-        // SAFETY: `in_` is readable for the 13 bytes just taken.
-        let in_ = unsafe { load_u64_le(in_, &mut a1) };
-        // SAFETY: `in_` is readable for the next four bytes.
-        let in_ = unsafe { load_u32_le(in_, &mut a2) };
-        // SAFETY: `in_` now names the thirteenth byte.
-        let b13 = unsafe { *in_ } as u32;
-
-        // SAFETY: `out` names the next eight coefficients of `p`, and `p` has 256 of them.
-        unsafe {
-            *out = mod_sub(range, (a1 & u64::from(mask_13_bits)) as u32);
-            out = out.add(1);
-            *out = mod_sub(range, ((a1 >> 13) & u64::from(mask_13_bits)) as u32);
-            out = out.add(1);
-            *out = mod_sub(range, ((a1 >> 26) & u64::from(mask_13_bits)) as u32);
-            out = out.add(1);
-            *out = mod_sub(range, ((a1 >> 39) & u64::from(mask_13_bits)) as u32);
-            out = out.add(1);
-            *out = mod_sub(range, ((a1 >> 52) as u32) | ((a2 << 12) & mask_13_bits));
-            out = out.add(1);
-            *out = mod_sub(range, (a2 >> 1) & mask_13_bits);
-            out = out.add(1);
-            *out = mod_sub(range, (a2 >> 14) & mask_13_bits);
-            out = out.add(1);
-            *out = mod_sub(range, (a2 >> 27) | (b13 << 5));
-            out = out.add(1);
+        // SAFETY: `get_bytes(13)` returned thirteen readable bytes.
+        let in_ = unsafe { &*in_.cast::<[u8; 13]>() };
+        let a1 = u64::from_le_bytes([
+            in_[0], in_[1], in_[2], in_[3], in_[4], in_[5], in_[6], in_[7],
+        ]);
+        let a2 = u32::from_le_bytes([in_[8], in_[9], in_[10], in_[11]]);
+        let b13 = u32::from(in_[12]);
+        let v = [
+            (a1 & u64::from(mask_13_bits)) as u32,
+            ((a1 >> 13) & u64::from(mask_13_bits)) as u32,
+            ((a1 >> 26) & u64::from(mask_13_bits)) as u32,
+            ((a1 >> 39) & u64::from(mask_13_bits)) as u32,
+            ((a1 >> 52) as u32) | ((a2 << 12) & mask_13_bits),
+            (a2 >> 1) & mask_13_bits,
+            (a2 >> 14) & mask_13_bits,
+            (a2 >> 27) | (b13 << 5),
+        ];
+        for (c, x) in octs.iter_mut().zip(v) {
+            *c = mod_sub(range, x);
         }
     }
     1
@@ -804,46 +573,32 @@ unsafe fn poly_decode_signed_two_to_power_12(p: *mut Poly, pkt: *mut Packet) -> 
 /// `pkt` must be a live packet and `p` must name 256 coefficients.
 unsafe fn poly_encode_signed_two_to_power_19(p: *const Poly, pkt: *mut Wpacket) -> c_int {
     let range: u32 = 1u32 << 19;
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut inp = unsafe { (*p).coeff.as_ptr() };
-    // SAFETY: `inp` is that array's first element, so `inp + 256` is its one-past-the-end pointer.
-    let end = unsafe { inp.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        let mut out: *mut u8 = ptr::null_mut();
-
-        // SAFETY: `pkt` is live per the contract and `out` is a live local.
-        if unsafe { WPACKET_allocate_bytes(pkt, 10, &mut out) } == 0 {
-            return 0;
-        }
-        // SAFETY: `inp` names the next four coefficients of `p`.
-        let (c0, c1, c2, c3) = unsafe {
-            let c0 = *inp;
-            inp = inp.add(1);
-            let c1 = *inp;
-            inp = inp.add(1);
-            let c2 = *inp;
-            inp = inp.add(1);
-            let c3 = *inp;
-            inp = inp.add(1);
-            (c0, c1, c2, c3)
-        };
-
-        let mut z0 = mod_sub(range, c0);
-        let mut z1 = mod_sub(range, c1);
+    // SAFETY: `p` names one `Poly`, whose `coeff` is exactly 256 `u32`s.
+    let coeffs = unsafe { &(*p).coeff };
+    let mut out_ptr: *mut u8 = ptr::null_mut();
+    // SAFETY: `pkt` is live and `out_ptr` is a live local.
+    if unsafe { WPACKET_allocate_bytes(pkt, (ML_DSA_NUM_POLY_COEFFICIENTS / 4) * 10, &mut out_ptr) }
+        == 0
+    {
+        return 0;
+    }
+    // SAFETY: the packet just allocated exactly `64 * 10` writable bytes.
+    let out = unsafe { core::slice::from_raw_parts_mut(out_ptr, 64 * 10) };
+    for (quad, bytes) in coeffs
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(out.as_chunks_mut::<10>().0.iter_mut())
+    {
+        let mut z0 = mod_sub(range, quad[0]);
+        let mut z1 = mod_sub(range, quad[1]);
         z0 |= z1 << 20;
-        z1 = (z1 >> 12) | (mod_sub(range, c2) << 8);
-        let z2 = mod_sub(range, c3);
+        z1 = (z1 >> 12) | (mod_sub(range, quad[2]) << 8);
+        let z2 = mod_sub(range, quad[3]);
         z1 |= z2 << 28;
-
-        // SAFETY: `out` names the 10 writable bytes just allocated; each store advances within it.
-        unsafe {
-            let out = store_u32_le(out, z0);
-            let out = store_u32_le(out, z1);
-            store_u16_le(out, (z2 >> 4) as u16);
-        }
-        if !(inp < end) {
-            break;
-        }
+        bytes[..4].copy_from_slice(&z0.to_le_bytes());
+        bytes[4..8].copy_from_slice(&z1.to_le_bytes());
+        bytes[8..10].copy_from_slice(&((z2 >> 4) as u16).to_le_bytes());
     }
     1
 }
@@ -855,34 +610,22 @@ unsafe fn poly_encode_signed_two_to_power_19(p: *const Poly, pkt: *mut Wpacket) 
 unsafe fn poly_decode_signed_two_to_power_19(p: *mut Poly, pkt: *mut Packet) -> c_int {
     let range: u32 = 1u32 << 19;
     let mask_20_bits: u32 = (1u32 << 20) - 1;
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut out = unsafe { (*p).coeff.as_mut_ptr() };
-    for _ in 0..(ML_DSA_NUM_POLY_COEFFICIENTS / 4) {
-        // SAFETY: `pkt` is a live cursor per the contract.
+    // SAFETY: `p` names one `Poly`.
+    let coeffs = unsafe { &mut (*p).coeff };
+    for quads in coeffs.as_chunks_mut::<4>().0.iter_mut() {
+        // SAFETY: `pkt` is a live cursor.
         let Some(in_) = (unsafe { (*pkt).get_bytes(10) }) else {
             return 0;
         };
-        let mut a1: u32 = 0;
-        let mut a2: u32 = 0;
-        let mut a3: u16 = 0;
-        // SAFETY: `in_` is readable for the 10 bytes just taken.
-        let in_ = unsafe { load_u32_le(in_, &mut a1) };
-        // SAFETY: `in_` is readable for the next four bytes.
-        let in_ = unsafe { load_u32_le(in_, &mut a2) };
-        // SAFETY: `in_` is readable for the final two bytes.
-        let _ = unsafe { load_u16_le(in_, &mut a3) };
-
-        // SAFETY: `out` names the next four coefficients of `p`, and `p` has 256 of them.
-        unsafe {
-            *out = mod_sub(range, a1 & mask_20_bits);
-            out = out.add(1);
-            *out = mod_sub(range, (a1 >> 20) | ((a2 & 0xFF) << 12));
-            out = out.add(1);
-            *out = mod_sub(range, (a2 >> 8) & mask_20_bits);
-            out = out.add(1);
-            *out = mod_sub(range, (a2 >> 28) | (u32::from(a3) << 4));
-            out = out.add(1);
-        }
+        // SAFETY: `get_bytes(10)` returned ten readable bytes.
+        let in_ = unsafe { &*in_.cast::<[u8; 10]>() };
+        let a1 = u32::from_le_bytes([in_[0], in_[1], in_[2], in_[3]]);
+        let a2 = u32::from_le_bytes([in_[4], in_[5], in_[6], in_[7]]);
+        let a3 = u16::from_le_bytes([in_[8], in_[9]]);
+        quads[0] = mod_sub(range, a1 & mask_20_bits);
+        quads[1] = mod_sub(range, (a1 >> 20) | ((a2 & 0xFF) << 12));
+        quads[2] = mod_sub(range, (a2 >> 8) & mask_20_bits);
+        quads[3] = mod_sub(range, (a2 >> 28) | (u32::from(a3) << 4));
     }
     1
 }
@@ -895,46 +638,32 @@ unsafe fn poly_decode_signed_two_to_power_19(p: *mut Poly, pkt: *mut Packet) -> 
 /// `pkt` must be a live packet and `p` must name 256 coefficients.
 unsafe fn poly_encode_signed_two_to_power_17(p: *const Poly, pkt: *mut Wpacket) -> c_int {
     let range: u32 = 1u32 << 17;
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut inp = unsafe { (*p).coeff.as_ptr() };
-    // SAFETY: `inp` is that array's first element, so `inp + 256` is its one-past-the-end pointer.
-    let end = unsafe { inp.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        let mut out: *mut u8 = ptr::null_mut();
-
-        // SAFETY: `pkt` is live per the contract and `out` is a live local.
-        if unsafe { WPACKET_allocate_bytes(pkt, 9, &mut out) } == 0 {
-            return 0;
-        }
-        // SAFETY: `inp` names the next four coefficients of `p`.
-        let (c0, c1, c2, c3) = unsafe {
-            let c0 = *inp;
-            inp = inp.add(1);
-            let c1 = *inp;
-            inp = inp.add(1);
-            let c2 = *inp;
-            inp = inp.add(1);
-            let c3 = *inp;
-            inp = inp.add(1);
-            (c0, c1, c2, c3)
-        };
-
-        let mut z0 = mod_sub(range, c0);
-        let mut z1 = mod_sub(range, c1);
+    // SAFETY: `p` names one `Poly`, whose `coeff` is exactly 256 `u32`s.
+    let coeffs = unsafe { &(*p).coeff };
+    let mut out_ptr: *mut u8 = ptr::null_mut();
+    // SAFETY: `pkt` is live and `out_ptr` is a live local.
+    if unsafe { WPACKET_allocate_bytes(pkt, (ML_DSA_NUM_POLY_COEFFICIENTS / 4) * 9, &mut out_ptr) }
+        == 0
+    {
+        return 0;
+    }
+    // SAFETY: the packet just allocated exactly `64 * 9` writable bytes.
+    let out = unsafe { core::slice::from_raw_parts_mut(out_ptr, 64 * 9) };
+    for (quad, bytes) in coeffs
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(out.as_chunks_mut::<9>().0.iter_mut())
+    {
+        let mut z0 = mod_sub(range, quad[0]);
+        let mut z1 = mod_sub(range, quad[1]);
         z0 |= z1 << 18;
-        z1 = (z1 >> 14) | (mod_sub(range, c2) << 4);
-        let z2 = mod_sub(range, c3);
+        z1 = (z1 >> 14) | (mod_sub(range, quad[2]) << 4);
+        let z2 = mod_sub(range, quad[3]);
         z1 |= z2 << 22;
-
-        // SAFETY: `out` names the nine writable bytes just allocated; each store advances within it.
-        unsafe {
-            let out = store_u32_le(out, z0);
-            let out = store_u32_le(out, z1);
-            *out = (z2 >> 10) as u8;
-        }
-        if !(inp < end) {
-            break;
-        }
+        bytes[..4].copy_from_slice(&z0.to_le_bytes());
+        bytes[4..8].copy_from_slice(&z1.to_le_bytes());
+        bytes[8] = (z2 >> 10) as u8;
     }
     1
 }
@@ -946,38 +675,22 @@ unsafe fn poly_encode_signed_two_to_power_17(p: *const Poly, pkt: *mut Wpacket) 
 unsafe fn poly_decode_signed_two_to_power_17(p: *mut Poly, pkt: *mut Packet) -> c_int {
     let range: u32 = 1u32 << 17;
     let mask_18_bits: u32 = (1u32 << 18) - 1;
-    // SAFETY: `p` names one `Poly` per the contract, so `(*p).coeff` is a valid 256-`u32` array.
-    let mut out = unsafe { (*p).coeff.as_mut_ptr() };
-    // SAFETY: `out` is that array's first element, so `out + 256` is its one-past-the-end pointer.
-    let end = unsafe { out.add(ML_DSA_NUM_POLY_COEFFICIENTS) };
-    loop {
-        // SAFETY: `pkt` is a live cursor per the contract.
+    // SAFETY: `p` names one `Poly`.
+    let coeffs = unsafe { &mut (*p).coeff };
+    for quads in coeffs.as_chunks_mut::<4>().0.iter_mut() {
+        // SAFETY: `pkt` is a live cursor.
         let Some(in_) = (unsafe { (*pkt).get_bytes(9) }) else {
             return 0;
         };
-        let mut a1: u32 = 0;
-        let mut a2: u32 = 0;
-        // SAFETY: `in_` is readable for the nine bytes just taken.
-        let in_ = unsafe { load_u32_le(in_, &mut a1) };
-        // SAFETY: `in_` is readable for the next four bytes.
-        let in_ = unsafe { load_u32_le(in_, &mut a2) };
-        // SAFETY: `in_` now names the ninth byte.
-        let a3 = unsafe { *in_ } as u32;
-
-        // SAFETY: `out` names the next four coefficients of `p`, and `p` has 256 of them.
-        unsafe {
-            *out = mod_sub(range, a1 & mask_18_bits);
-            out = out.add(1);
-            *out = mod_sub(range, (a1 >> 18) | ((a2 & 0xF) << 14));
-            out = out.add(1);
-            *out = mod_sub(range, (a2 >> 4) & mask_18_bits);
-            out = out.add(1);
-            *out = mod_sub(range, (a2 >> 22) | (a3 << 10));
-            out = out.add(1);
-        }
-        if !(out < end) {
-            break;
-        }
+        // SAFETY: `get_bytes(9)` returned nine readable bytes.
+        let in_ = unsafe { &*in_.cast::<[u8; 9]>() };
+        let a1 = u32::from_le_bytes([in_[0], in_[1], in_[2], in_[3]]);
+        let a2 = u32::from_le_bytes([in_[4], in_[5], in_[6], in_[7]]);
+        let a3 = u32::from(in_[8]);
+        quads[0] = mod_sub(range, a1 & mask_18_bits);
+        quads[1] = mod_sub(range, (a1 >> 18) | ((a2 & 0xF) << 14));
+        quads[2] = mod_sub(range, (a2 >> 4) & mask_18_bits);
+        quads[3] = mod_sub(range, (a2 >> 22) | (a3 << 10));
     }
     1
 }
@@ -1738,6 +1451,134 @@ pub(crate) unsafe fn ossl_ml_dsa_w1_encode(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn encode_with(f: EncodeFn, p: &Poly, out: &mut [u8]) -> bool {
+        // SAFETY: `pkt` is a live local and `out` names `out.len()` writable bytes.
+        let mut pkt = unsafe { core::mem::zeroed::<Wpacket>() };
+        // SAFETY: `pkt` is initialised above; `out` is this frame's writable buffer.
+        let ok = unsafe {
+            WPACKET_init_static_len(&mut pkt, out.as_mut_ptr(), out.len(), 0) != 0
+                && f(p, &mut pkt) != 0
+        };
+        // SAFETY: `pkt` was initialised above.
+        unsafe { WPACKET_finish(&mut pkt) };
+        ok
+    }
+
+    fn decode_with(f: DecodeFn, bytes: &[u8], p: &mut Poly) -> bool {
+        // SAFETY: `bytes` is a live slice and `p` is this frame's polynomial.
+        let Some(mut pkt) = (unsafe { Packet::buf_init(bytes.as_ptr(), bytes.len()) }) else {
+            return false;
+        };
+        // SAFETY: `pkt` is a live cursor over `bytes`; `p` names 256 coefficients.
+        unsafe { f(p, &mut pkt) != 0 }
+    }
+
+    fn poly_of(v: impl Fn(usize) -> u32) -> Poly {
+        let mut p = Poly {
+            coeff: [0u32; ML_DSA_NUM_POLY_COEFFICIENTS],
+        };
+        for (i, c) in p.coeff.iter_mut().enumerate() {
+            *c = v(i);
+        }
+        p
+    }
+
+    #[test]
+    fn ten_bit_packing_is_byte_exact_and_round_trips() {
+        let p = poly_of(|i| (i % 1024) as u32);
+        let mut out = [0u8; 320];
+        assert!(encode_with(poly_encode_10_bits, &p, &mut out));
+        // Coefficients 0,1,2,3 pack as 0 | 1<<10 | 2<<20 | 3<<30, little-endian.
+        assert_eq!(&out[..5], &[0x00, 0x04, 0x20, 0xc0, 0x00]);
+        let mut q = poly_of(|_| 0);
+        assert!(decode_with(poly_decode_10_bits, &out, &mut q));
+        assert_eq!(q.coeff, p.coeff);
+    }
+
+    #[test]
+    fn all_zero_and_all_maximum_polynomials_round_trip() {
+        for &v in &[0u32, 1023] {
+            let p = poly_of(|_| v);
+            let mut out = [0u8; 320];
+            assert!(encode_with(poly_encode_10_bits, &p, &mut out));
+            let mut q = poly_of(|_| 7);
+            assert!(decode_with(poly_decode_10_bits, &out, &mut q));
+            assert_eq!(q.coeff, p.coeff);
+        }
+    }
+
+    #[test]
+    fn the_signed_packings_round_trip() {
+        // (encoder, decoder, range, encoded bytes): inputs span 0..=range, the decrement domain.
+        let cases: [(EncodeFn, DecodeFn, u32, usize); 5] = [
+            (poly_encode_signed_4, poly_decode_signed_4, 4, 128),
+            (poly_encode_signed_2, poly_decode_signed_2, 2, 96),
+            (
+                poly_encode_signed_two_to_power_12,
+                poly_decode_signed_two_to_power_12,
+                1 << 12,
+                32 * 13,
+            ),
+            (
+                poly_encode_signed_two_to_power_19,
+                poly_decode_signed_two_to_power_19,
+                1 << 19,
+                64 * 10,
+            ),
+            (
+                poly_encode_signed_two_to_power_17,
+                poly_decode_signed_two_to_power_17,
+                1 << 17,
+                64 * 9,
+            ),
+        ];
+        for (enc, dec, range, len) in cases {
+            for p in [
+                poly_of(|_| 0),
+                poly_of(|_| range),
+                poly_of(|i| (i as u32) % (range + 1)),
+            ] {
+                let mut out = std::vec![0u8; len];
+                assert!(encode_with(enc, &p, &mut out));
+                let mut q = poly_of(|_| 1);
+                assert!(decode_with(dec, &out, &mut q));
+                assert_eq!(q.coeff, p.coeff);
+            }
+        }
+    }
+
+    #[test]
+    fn a_short_output_buffer_is_refused() {
+        let p = poly_of(|_| 1);
+        let mut four_bits = [0u8; 127];
+        assert!(!encode_with(poly_encode_4_bits, &p, &mut four_bits));
+        let mut ten_bits = [0u8; 319];
+        assert!(!encode_with(poly_encode_10_bits, &p, &mut ten_bits));
+    }
+
+    #[test]
+    fn corrupted_or_truncated_bitstreams_are_refused_without_panic() {
+        let mut p = poly_of(|_| 0);
+        // A nibble >= 9 in the signed-4 packing is invalid. The stream is full length so the
+        // check, not a length refusal, is what rejects it.
+        let mut bad4 = [0u8; 128];
+        bad4[0] = 0x99;
+        assert!(!decode_with(poly_decode_signed_4, &bad4, &mut p));
+        // A 3-bit value >= 5 in the signed-2 packing is invalid, over a full 96-byte stream.
+        assert!(!decode_with(poly_decode_signed_2, &[0xFF; 96], &mut p));
+        // Truncated inputs stop at the first short step.
+        assert!(!decode_with(poly_decode_signed_4, &[0u8; 3], &mut p));
+        assert!(!decode_with(
+            poly_decode_signed_two_to_power_12,
+            &[0u8; 12],
+            &mut p
+        ));
+        // The 10-bit packing has no invalid nibble; arbitrary bytes still decode in range.
+        let mut q = poly_of(|_| 0);
+        assert!(decode_with(poly_decode_10_bits, &[0xff; 320], &mut q));
+        assert!(q.coeff.iter().all(|&c| c < 1024));
+    }
 
     /// Negative control for the hint-weight bound: one polynomial, `omega = 1`, four set
     /// coefficients and a two-byte packet. Before the guard, the third and fourth writes ran past
