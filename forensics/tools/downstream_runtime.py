@@ -954,6 +954,41 @@ PROGRAMS: dict[str, dict] = {
         "note": ("icecast's HTTPS listener: a verified GET of a fixture returns 200 with its "
                  "bytes, and an unrelated CA is rejected"),
     },
+    # Batch c1: the icecast2 package row plus the two package-split library rows.  Each reuses
+    # its parent family's admitted harness unchanged; the observable is the same upstream
+    # mechanism, measured against this family's own recipe and build.
+    "icecast2": {
+        "program": "src/icecast", "launch": ["-v"], "version_re": r"Icecast 2\.4",
+        "note": ("the icecast2 package row: verified HTTPS GET of a fixture plus an "
+                 "unrelated-CA reject over the subject libssl"),
+    },
+    "libevent-openssl-2.1-7": {
+        "program": ".l7-libevent-harness", "launch": ["--version"],
+        "version_re": r"libevent-l7-harness", "lib_paths": [".libs"],
+        "harness": {
+            "source": "forensics/tools/l7_libevent.c",
+            "cflags": ["-I{root}/include", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-levent_openssl", "-levent", "-lssl", "-lcrypto", "-pthread"],
+        },
+        "note": ("the libevent-openssl package row: a TLS1.3 bufferevent round trip that "
+                 "verifies the fixture CA and rejects an unrelated CA"),
+    },
+    "libaprutil1": {
+        "program": ".l7-aprutil-harness", "launch": ["--version"],
+        "version_re": r"apr-util-l7-harness", "lib_paths": [".libs"],
+        "harness": {
+            "source": "forensics/tools/l7_aprutil.c",
+            "cflags": ["-I{root}/include", "-I/usr/include/apr-1.0", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-laprutil-1", "-lapr-1", "-lssl", "-lcrypto",
+                        "-lpthread"],
+        },
+        "note": ("the libaprutil1 package row: apr-util's OpenSSL crypto driver plus a libssl "
+                 "handshake over an apr_socket, with a mutated-digest control"),
+    },
     "proftpd": {
         "program": "proftpd", "launch": ["-v"], "version_re": r"ProFTPD Version 1\.3",
         "note": ("proftpd's explicit FTPS: AUTH TLS login, PWD and a LIST over a PROT P data "
@@ -9966,6 +10001,9 @@ def _wl_rabbitmq(ctx: dict) -> dict:
 
 
 RUNNERS = {
+    "icecast2": _wl_icecast,
+    "libevent-openssl-2.1-7": _wl_libevent,
+    "libaprutil1": _wl_aprutil,
     "curl": _wl_curl,
     "nginx": _wl_nginx,
     "haproxy": _wl_haproxy,
