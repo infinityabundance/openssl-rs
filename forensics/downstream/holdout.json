@@ -8061,7 +8061,7 @@
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "cf7a8968d400dda2984fe772c8b8851aa732d922ad14e74bf3958eb6e2eae04a"
+      "sha256": "2c933674a7af44fbbd9fb4ce80d27d41bfe3e2b29a79b732a6d3627dc3f07381"
     },
     {
       "name": "downstream-freeze",
@@ -8071,7 +8071,7 @@
     {
       "name": "phase24-guard",
       "path": "forensics/tools/phase24_guard.py",
-      "sha256": "94ea35a66565d01f3a82dc7113e571e7f59eb5c5f378911196c0783600b41192"
+      "sha256": "cb9c5d2949c9997f4d239514225330ffac5f91f295596f413bd8604d1052b026"
     },
     {
       "name": "phase-24-plan",

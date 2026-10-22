@@ -719,14 +719,14 @@
             "kind": "build_records",
             "path": "artifacts/phase2/install/lib/pkgconfig/libcrypto.pc",
             "role": "candidate",
-            "sha256": "e8cc113396cad994778cb73539e8283fb128c3c2026e4948d8801e4e4f257159"
+            "sha256": "16901038fd960868eb2cab6a8efccf3ce9fab861f7dcd1c9917d1f2753d17795"
           },
           {
             "authority_id": "openssl-rs",
             "kind": "build_records",
             "path": "artifacts/phase2/install/lib/pkgconfig/libssl.pc",
             "role": "candidate",
-            "sha256": "736b3f97d34faeace5d53228bbeb66f7f647ea47f6827eb8a457e796925dc93f"
+            "sha256": "c407f4877056a22239dad02f4651bdd9c9d73509d92008715496d3306d11c6b9"
           }
         ],
         "evidence_kind": "build_records",
@@ -751,14 +751,14 @@
               "libs": [
                 "-lcrypto"
               ],
-              "name": "libcrypto",
+              "name": "OpenSSL-libcrypto",
               "version": "3.6.4"
             },
             "libssl": {
               "libs": [
                 "-lssl"
               ],
-              "name": "libssl",
+              "name": "OpenSSL-libssl",
               "version": "3.6.4"
             }
           },
@@ -769,8 +769,8 @@
               "-lssl"
             ],
             "names": [
-              "libcrypto",
-              "libssl"
+              "OpenSSL-libcrypto",
+              "OpenSSL-libssl"
             ],
             "sources": [
               "libcrypto.pc",
@@ -796,14 +796,14 @@
             "kind": "build_records",
             "path": "artifacts/phase2/install/lib/pkgconfig/libcrypto.pc",
             "role": "candidate",
-            "sha256": "e8cc113396cad994778cb73539e8283fb128c3c2026e4948d8801e4e4f257159"
+            "sha256": "16901038fd960868eb2cab6a8efccf3ce9fab861f7dcd1c9917d1f2753d17795"
           },
           {
             "authority_id": "openssl-rs",
             "kind": "build_records",
             "path": "artifacts/phase2/install/lib/pkgconfig/libssl.pc",
             "role": "candidate",
-            "sha256": "736b3f97d34faeace5d53228bbeb66f7f647ea47f6827eb8a457e796925dc93f"
+            "sha256": "c407f4877056a22239dad02f4651bdd9c9d73509d92008715496d3306d11c6b9"
           }
         ],
         "evidence_kind": "build_records",
@@ -1044,12 +1044,12 @@
     {
       "name": "pkg-config-libcrypto",
       "path": "artifacts/phase2/install/lib/pkgconfig/libcrypto.pc",
-      "sha256": "e8cc113396cad994778cb73539e8283fb128c3c2026e4948d8801e4e4f257159"
+      "sha256": "16901038fd960868eb2cab6a8efccf3ce9fab861f7dcd1c9917d1f2753d17795"
     },
     {
       "name": "pkg-config-libssl",
       "path": "artifacts/phase2/install/lib/pkgconfig/libssl.pc",
-      "sha256": "736b3f97d34faeace5d53228bbeb66f7f647ea47f6827eb8a457e796925dc93f"
+      "sha256": "c407f4877056a22239dad02f4651bdd9c9d73509d92008715496d3306d11c6b9"
     }
   ],
   "kind": "compatibility-views",
