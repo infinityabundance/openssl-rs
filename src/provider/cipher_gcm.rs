@@ -851,13 +851,16 @@ unsafe fn getivgen(ctx: *mut ProvGcmCtx, out: *mut c_uchar, mut olen: usize) -> 
         if olen == 0 || olen > (*ctx).ivlen {
             olen = (*ctx).ivlen;
         }
-        ptr::copy_nonoverlapping(
-            (*ctx).iv.as_ptr().add((*ctx).ivlen.wrapping_sub(olen)),
-            out,
-            olen,
-        );
+        let Some(src) = (*ctx).iv.get((*ctx).ivlen.wrapping_sub(olen)..(*ctx).ivlen) else {
+            return 0;
+        };
+        let dst = core::slice::from_raw_parts_mut(out, olen);
+        dst.copy_from_slice(src);
         // The invocation field is at least eight bytes, so only the last eight are incremented.
-        ctr64_inc((*ctx).iv.as_mut_ptr().add((*ctx).ivlen.wrapping_sub(8)));
+        let Some(tail) = (*ctx).iv.get_mut((*ctx).ivlen.wrapping_sub(8)..) else {
+            return 0;
+        };
+        ctr64_inc(tail.as_mut_ptr());
         (*ctx).iv_state = IV_STATE_COPIED;
         1
     }
@@ -881,11 +884,18 @@ unsafe fn setivinv(ctx: *mut ProvGcmCtx, in_: *mut c_uchar, inl: usize) -> c_int
         if inl > (*ctx).ivlen {
             return 0;
         }
-        ptr::copy_nonoverlapping(
-            in_,
-            (*ctx).iv.as_mut_ptr().add((*ctx).ivlen.wrapping_sub(inl)),
-            inl,
-        );
+        let src: &[u8] = if inl == 0 {
+            &[]
+        } else {
+            core::slice::from_raw_parts(in_, inl)
+        };
+        let Some(dst) = (*ctx)
+            .iv
+            .get_mut((*ctx).ivlen.wrapping_sub(inl)..(*ctx).ivlen)
+        else {
+            return 0;
+        };
+        dst.copy_from_slice(src);
         let hw = (*ctx).hw;
         if ((*hw).setiv)(ctx, (*ctx).iv.as_ptr(), (*ctx).ivlen) == 0 {
             return 0;
@@ -1259,7 +1269,12 @@ unsafe fn gcm_cipher_internal(
                 let hw = (*ctx).hw;
                 // The input is AAD if out is NULL.
                 if out.is_null() {
-                    if ((*hw).aadupdate)(ctx, in_, len) == 0 {
+                    let aad: &[u8] = if len == 0 {
+                        &[]
+                    } else {
+                        core::slice::from_raw_parts(in_, len)
+                    };
+                    if ((*hw).aadupdate)(ctx, aad.as_ptr(), aad.len()) == 0 {
                         break 'arm;
                     }
                 } else if ((*hw).cipherupdate)(ctx, in_, len, out) == 0 {
@@ -1301,10 +1316,17 @@ unsafe fn gcm_tls_init(ctx: *mut ProvGcmCtx, aad: *const c_uchar, alen: usize) -
         }
 
         /* Save the aad for later use. */
-        ptr::copy_nonoverlapping(aad, (*ctx).buf.as_mut_ptr(), alen);
+        let src = core::slice::from_raw_parts(aad, alen);
+        let Some(dst) = (*ctx).buf.get_mut(..alen) else {
+            return 0;
+        };
+        dst.copy_from_slice(src);
         (*ctx).tls_aad_len = alen;
 
-        let mut len = ((*ctx).buf[alen - 2] as usize) << 8 | (*ctx).buf[alen - 1] as usize;
+        let Some(len_bytes) = dst.get(alen - 2..alen) else {
+            return 0;
+        };
+        let mut len = u16::from_be_bytes([len_bytes[0], len_bytes[1]]) as usize;
         /* Correct length for explicit iv. */
         if len < EVP_GCM_TLS_EXPLICIT_IV_LEN {
             return 0;
@@ -1318,8 +1340,10 @@ unsafe fn gcm_tls_init(ctx: *mut ProvGcmCtx, aad: *const c_uchar, alen: usize) -
             }
             len -= EVP_GCM_TLS_TAG_LEN;
         }
-        (*ctx).buf[alen - 2] = (len >> 8) as c_uchar;
-        (*ctx).buf[alen - 1] = (len & 0xff) as c_uchar;
+        let Some(slot) = dst.get_mut(alen - 2..alen) else {
+            return 0;
+        };
+        slot.copy_from_slice(&(len as u16).to_be_bytes());
         /* Extra padding: tag appended to record. */
         EVP_GCM_TLS_TAG_LEN as c_int
     }
@@ -1336,7 +1360,11 @@ unsafe fn gcm_tls_iv_set_fixed(ctx: *mut ProvGcmCtx, iv: *const c_uchar, len: us
     unsafe {
         /* Special case: -1 length restores whole IV. */
         if len == UNINITIALISED_SIZET {
-            ptr::copy_nonoverlapping(iv, (*ctx).iv.as_mut_ptr(), (*ctx).ivlen);
+            let src = core::slice::from_raw_parts(iv, (*ctx).ivlen);
+            let Some(dst) = (*ctx).iv.get_mut(..(*ctx).ivlen) else {
+                return 0;
+            };
+            dst.copy_from_slice(src);
             (*ctx).bits.set_iv_gen();
             (*ctx).iv_state = IV_STATE_BUFFERED;
             return 1;
@@ -1355,16 +1383,17 @@ unsafe fn gcm_tls_iv_set_fixed(ctx: *mut ProvGcmCtx, iv: *const c_uchar, len: us
             return 0;
         }
         if len > 0 {
-            ptr::copy_nonoverlapping(iv, (*ctx).iv.as_mut_ptr(), len);
+            let src = core::slice::from_raw_parts(iv, len);
+            let Some(dst) = (*ctx).iv.get_mut(..len) else {
+                return 0;
+            };
+            dst.copy_from_slice(src);
         }
         if (*ctx).bits.enc() != 0 {
-            if RAND_bytes_ex(
-                (*ctx).libctx,
-                (*ctx).iv.as_mut_ptr().add(len),
-                (*ctx).ivlen.wrapping_sub(len),
-                0,
-            ) <= 0
-            {
+            let Some(dst) = (*ctx).iv.get_mut(len..(*ctx).ivlen) else {
+                return 0;
+            };
+            if RAND_bytes_ex((*ctx).libctx, dst.as_mut_ptr(), dst.len(), 0) <= 0 {
                 return 0;
             }
             (*ctx).bits.set_iv_gen_rand();
@@ -1391,7 +1420,6 @@ unsafe fn gcm_tls_cipher(
         let mut rv = 0;
         let arg = EVP_GCM_TLS_EXPLICIT_IV_LEN;
         let mut plen = 0usize;
-        let mut in_ = in_;
 
         'arm: {
             if is_running() == 0 || (*ctx).bits.key_set() == 0 {
@@ -1417,46 +1445,45 @@ unsafe fn gcm_tls_cipher(
             }
 
             /* Set IV from start of buffer or generate IV and write to start of buffer. */
+            let buf = core::slice::from_raw_parts_mut(out, len);
             if (*ctx).bits.enc() != 0 {
-                if getivgen(ctx, out, arg) == 0 {
+                if getivgen(ctx, buf.as_mut_ptr(), arg) == 0 {
                     break 'arm;
                 }
-            } else if setivinv(ctx, out, arg) == 0 {
+            } else if setivinv(ctx, buf.as_mut_ptr(), arg) == 0 {
                 break 'arm;
             }
 
-            /* Fix buffer and length to point to payload. */
-            in_ = in_.add(EVP_GCM_TLS_EXPLICIT_IV_LEN);
-            let out = out.add(EVP_GCM_TLS_EXPLICIT_IV_LEN);
-            let len = len - (EVP_GCM_TLS_EXPLICIT_IV_LEN + EVP_GCM_TLS_TAG_LEN);
-
-            let tag: *mut c_uchar = if (*ctx).bits.enc() != 0 {
-                out.add(len)
-            } else {
-                in_.add(len).cast_mut()
+            /* Fix the buffer to the payload and the tag at its exact full-record offsets. */
+            let payload_len = len - (EVP_GCM_TLS_EXPLICIT_IV_LEN + EVP_GCM_TLS_TAG_LEN);
+            let (_explicit_iv, rest) = buf.split_at_mut(EVP_GCM_TLS_EXPLICIT_IV_LEN);
+            let (payload, tag_slot) = rest.split_at_mut(payload_len);
+            let aad_len = (*ctx).tls_aad_len;
+            let Some(aad) = (*ctx).buf.get_mut(..aad_len) else {
+                break 'arm;
             };
             let hw = (*ctx).hw;
             if ((*hw).oneshot)(
                 ctx,
-                (*ctx).buf.as_mut_ptr(),
-                (*ctx).tls_aad_len,
-                in_,
-                len,
-                out,
-                tag,
+                aad.as_mut_ptr(),
+                aad.len(),
+                payload.as_ptr(),
+                payload.len(),
+                payload.as_mut_ptr(),
+                tag_slot.as_mut_ptr(),
                 EVP_GCM_TLS_TAG_LEN,
             ) == 0
             {
                 if (*ctx).bits.enc() == 0 {
-                    OPENSSL_cleanse(out.cast(), len);
+                    OPENSSL_cleanse(payload.as_mut_ptr().cast(), payload.len());
                 }
                 break 'arm;
             }
-            if (*ctx).bits.enc() != 0 {
-                plen = len + EVP_GCM_TLS_EXPLICIT_IV_LEN + EVP_GCM_TLS_TAG_LEN;
+            plen = if (*ctx).bits.enc() != 0 {
+                len
             } else {
-                plen = len;
-            }
+                payload_len
+            };
             rv = 1;
             break 'arm;
         }
@@ -2427,7 +2454,259 @@ unsafe fn gcm_key_is_null(gcm: *const GcmCtx) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::undocumented_unsafe_blocks)]
+
     use super::*;
+
+    /// Deterministic TLS1.2 GCM fixture: the fixed IV and the explicit nonce are supplied by the
+    /// test, so the record bytes are reproducible even though the encrypting constructor seeds the
+    /// invocation field from the DRBG.
+    unsafe fn tls_ctx(key: &[u8], fixed_iv: &[u8], explicit: &[u8], enc: bool) -> *mut ProvGcmCtx {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let raw = aes_gcm_newctx(ptr::null_mut(), key.len() * 8);
+            assert!(!raw.is_null());
+            let ctx = raw.cast::<ProvGcmCtx>();
+            (*ctx).bits.set_enc(if enc { 1 } else { 0 });
+            assert_eq!(aes_gcm_initkey(ctx, key.as_ptr(), key.len()), 1);
+            assert_eq!(
+                gcm_tls_iv_set_fixed(ctx, fixed_iv.as_ptr(), fixed_iv.len()),
+                1
+            );
+            if enc {
+                (&mut (*ctx).iv)
+                    [EVP_GCM_TLS_FIXED_IV_LEN..EVP_GCM_TLS_FIXED_IV_LEN + explicit.len()]
+                    .copy_from_slice(explicit);
+            }
+            ctx
+        }
+    }
+
+    /// `seq(8) || type || 0x0303 || fragment_length(2)`.
+    fn tls_aad(content_type: u8, fragment_len: usize) -> [u8; 13] {
+        let mut aad = [0u8; 13];
+        aad[0] = content_type;
+        aad[3] = 3;
+        aad[4] = 3;
+        aad[11] = (fragment_len >> 8) as u8;
+        aad[12] = fragment_len as u8;
+        aad
+    }
+
+    unsafe fn tls_seal(key: &[u8], fixed_iv: &[u8], explicit: &[u8], plain: &[u8]) -> Vec<u8> {
+        let mut rec = vec![0u8; EVP_GCM_TLS_EXPLICIT_IV_LEN + plain.len() + GCM_TAG_MAX_SIZE];
+        rec[EVP_GCM_TLS_EXPLICIT_IV_LEN..EVP_GCM_TLS_EXPLICIT_IV_LEN + plain.len()]
+            .copy_from_slice(plain);
+        let aad = tls_aad(23, plain.len() + EVP_GCM_TLS_EXPLICIT_IV_LEN);
+        // SAFETY: the fixture context and frame buffers are this test's own.
+        unsafe {
+            let ctx = tls_ctx(key, fixed_iv, explicit, true);
+            assert_eq!(
+                gcm_tls_init(ctx, aad.as_ptr(), aad.len()),
+                GCM_TAG_MAX_SIZE as c_int
+            );
+            let p = rec.as_mut_ptr();
+            let mut plen = 0usize;
+            assert_eq!(gcm_tls_cipher(ctx, p, &mut plen, p, rec.len()), 1);
+            assert_eq!(plen, rec.len());
+            aes_gcm_freectx(ctx.cast());
+        }
+        rec
+    }
+
+    unsafe fn tls_open(key: &[u8], fixed_iv: &[u8], mut rec: Vec<u8>) -> (c_int, Vec<u8>) {
+        let aad = tls_aad(23, rec.len());
+        // SAFETY: the fixture context and frame buffers are this test's own.
+        unsafe {
+            let ctx = tls_ctx(key, fixed_iv, &[], false);
+            let r = gcm_tls_init(ctx, aad.as_ptr(), aad.len());
+            if r <= 0 {
+                aes_gcm_freectx(ctx.cast());
+                return (0, rec);
+            }
+            let p = rec.as_mut_ptr();
+            let mut plen = 0usize;
+            let rc = gcm_tls_cipher(ctx, p, &mut plen, p, rec.len());
+            aes_gcm_freectx(ctx.cast());
+            (rc, rec)
+        }
+    }
+
+    /// NIST GCM test case 2 (McGrew & Viega, "The Galois/Counter Mode of Operation", §Test Case
+    /// 2): zero key, zero IV, one zero block, no AAD.
+    #[test]
+    fn nist_aes_gcm_known_answer_encrypt_decrypt() {
+        let key = [0u8; 16];
+        let iv = [0u8; 12];
+        let pt = [0u8; 16];
+        let ct = [
+            0x03, 0x88, 0xda, 0xce, 0x60, 0xb6, 0xa3, 0x92, 0xf3, 0x28, 0xc2, 0xb9, 0x71, 0xb2,
+            0xfe, 0x78,
+        ];
+        let tag = [
+            0xab, 0x6e, 0x47, 0xd4, 0x2c, 0xec, 0x13, 0xbd, 0xf5, 0x3a, 0x67, 0xb2, 0x12, 0x57,
+            0xbd, 0xdf,
+        ];
+        let (got_ct, got_tag) = gcm_encrypt(&key, &iv, &[], &pt);
+        assert_eq!(&got_ct[..], &ct[..]);
+        assert_eq!(&got_tag[..], &tag[..]);
+        let (rc, got_pt) = gcm_decrypt(&key, &iv, &[], &ct, &tag);
+        assert_eq!(rc, 1);
+        assert_eq!(&got_pt[..], &pt[..]);
+    }
+
+    #[test]
+    fn tls_gcm_tampered_tag_fails_and_cleanses_plaintext() {
+        let key = [0x11u8; 16];
+        let fixed = [0xa1, 0xa2, 0xa3, 0xa4];
+        let explicit = [0x01u8; 8];
+        let plain = b"authenticated record";
+        let mut rec = unsafe { tls_seal(&key, &fixed, &explicit, plain) };
+        let last = rec.len() - 1;
+        rec[last] ^= 1;
+        let (rc, out) = unsafe { tls_open(&key, &fixed, rec) };
+        assert_eq!(rc, 0, "tag failure is the same refusal code");
+        assert!(
+            out[EVP_GCM_TLS_EXPLICIT_IV_LEN..EVP_GCM_TLS_EXPLICIT_IV_LEN + plain.len()]
+                .iter()
+                .all(|b| *b == 0),
+            "failed tag leaves no plaintext"
+        );
+    }
+
+    #[test]
+    fn tls_gcm_truncated_tag_is_refused() {
+        let key = [0x22u8; 16];
+        let fixed = [0xb1, 0xb2, 0xb3, 0xb4];
+        let mut rec = unsafe { tls_seal(&key, &fixed, &[0u8; 8], b"") };
+        rec.pop();
+        let (rc, _) = unsafe { tls_open(&key, &fixed, rec) };
+        assert_eq!(rc, 0);
+    }
+
+    #[test]
+    fn tls_gcm_in_place_round_trip_and_out_of_place_refusal() {
+        let key = [0x33u8; 16];
+        let fixed = [0xc1, 0xc2, 0xc3, 0xc4];
+        let explicit = [9u8; 8];
+        let plain = b"in place";
+        let rec = unsafe { tls_seal(&key, &fixed, &explicit, plain) };
+        assert_eq!(&rec[..8], &explicit);
+        let (rc, out) = unsafe { tls_open(&key, &fixed, rec.clone()) };
+        assert_eq!(rc, 1);
+        assert_eq!(&out[8..8 + plain.len()], plain);
+        // The authority's TLS-GCM arm requires out == in.
+        let aad = tls_aad(23, rec.len());
+        // SAFETY: the fixture context and buffers are this test's own.
+        unsafe {
+            let ctx = tls_ctx(&key, &fixed, &[], false);
+            assert!(gcm_tls_init(ctx, aad.as_ptr(), aad.len()) > 0);
+            let src = rec.clone();
+            let mut dst = vec![0u8; rec.len()];
+            let mut plen = 0usize;
+            assert_eq!(
+                gcm_tls_cipher(ctx, dst.as_mut_ptr(), &mut plen, src.as_ptr(), rec.len()),
+                0
+            );
+            aes_gcm_freectx(ctx.cast());
+        }
+    }
+
+    #[test]
+    fn tls_gcm_zero_length_plaintext_round_trips() {
+        let key = [0x44u8; 16];
+        let fixed = [0xd1, 0xd2, 0xd3, 0xd4];
+        let rec = unsafe { tls_seal(&key, &fixed, &[0u8; 8], b"") };
+        assert_eq!(rec.len(), EVP_GCM_TLS_EXPLICIT_IV_LEN + GCM_TAG_MAX_SIZE);
+        let (rc, out) = unsafe { tls_open(&key, &fixed, rec) };
+        assert_eq!(rc, 1);
+        assert_eq!(out.len(), EVP_GCM_TLS_EXPLICIT_IV_LEN + GCM_TAG_MAX_SIZE);
+    }
+
+    #[test]
+    fn tls_gcm_max_size_record_round_trips() {
+        let key = [0x55u8; 16];
+        let fixed = [0xe1, 0xe2, 0xe3, 0xe4];
+        let plain: Vec<u8> = (0..16384).map(|i| (i % 251) as u8).collect();
+        let rec = unsafe { tls_seal(&key, &fixed, &[0u8; 8], &plain) };
+        let (rc, out) = unsafe { tls_open(&key, &fixed, rec) };
+        assert_eq!(rc, 1);
+        assert_eq!(&out[8..8 + plain.len()], &plain[..]);
+    }
+
+    #[test]
+    fn tls_gcm_record_shorter_than_iv_and_tag_is_refused() {
+        let key = [0x66u8; 16];
+        let fixed = [0xf1, 0xf2, 0xf3, 0xf4];
+        let aad = tls_aad(23, EVP_GCM_TLS_EXPLICIT_IV_LEN + GCM_TAG_MAX_SIZE);
+        // SAFETY: the fixture context and buffers are this test's own.
+        unsafe {
+            let ctx = tls_ctx(&key, &fixed, &[], false);
+            assert!(gcm_tls_init(ctx, aad.as_ptr(), aad.len()) > 0);
+            let mut short = vec![0u8; EVP_GCM_TLS_EXPLICIT_IV_LEN + GCM_TAG_MAX_SIZE - 1];
+            let p = short.as_mut_ptr();
+            let mut plen = 0usize;
+            assert_eq!(gcm_tls_cipher(ctx, p, &mut plen, p, short.len()), 0);
+            aes_gcm_freectx(ctx.cast());
+        }
+    }
+
+    /// Generic-AEAD encrypt helper: one update plus final, no AAD when `aad` is empty.
+    fn gcm_encrypt(key: &[u8], iv: &[u8], aad: &[u8], input: &[u8]) -> (Vec<u8>, [u8; 16]) {
+        let mut out = vec![0u8; input.len()];
+        let mut tag = [0u8; 16];
+        // SAFETY: the fixture context and frame buffers are this test's own.
+        unsafe {
+            let raw = aes_gcm_newctx(ptr::null_mut(), key.len() * 8);
+            assert!(!raw.is_null());
+            let ctx = raw.cast::<ProvGcmCtx>();
+            (*ctx).bits.set_enc(1);
+            assert_eq!(aes_gcm_initkey(ctx, key.as_ptr(), key.len()), 1);
+            assert_eq!(ossl_gcm_setiv(ctx, iv.as_ptr(), iv.len()), 1);
+            if !aad.is_empty() {
+                assert_eq!(ossl_gcm_aad_update(ctx, aad.as_ptr(), aad.len()), 1);
+            }
+            assert_eq!(
+                ossl_gcm_cipher_update(ctx, input.as_ptr(), input.len(), out.as_mut_ptr()),
+                1
+            );
+            assert_eq!(ossl_gcm_cipher_final(ctx, tag.as_mut_ptr()), 1);
+            aes_gcm_freectx(raw);
+        }
+        (out, tag)
+    }
+
+    /// Generic-AEAD decrypt helper; returns the tag-check result and the decrypted bytes.
+    fn gcm_decrypt(
+        key: &[u8],
+        iv: &[u8],
+        aad: &[u8],
+        input: &[u8],
+        tag: &[u8; 16],
+    ) -> (c_int, Vec<u8>) {
+        let mut out = vec![0u8; input.len()];
+        let rc;
+        // SAFETY: the fixture context and frame buffers are this test's own.
+        unsafe {
+            let raw = aes_gcm_newctx(ptr::null_mut(), key.len() * 8);
+            assert!(!raw.is_null());
+            let ctx = raw.cast::<ProvGcmCtx>();
+            (*ctx).bits.set_enc(0);
+            assert_eq!(aes_gcm_initkey(ctx, key.as_ptr(), key.len()), 1);
+            assert_eq!(ossl_gcm_setiv(ctx, iv.as_ptr(), iv.len()), 1);
+            if !aad.is_empty() {
+                assert_eq!(ossl_gcm_aad_update(ctx, aad.as_ptr(), aad.len()), 1);
+            }
+            assert_eq!(
+                ossl_gcm_cipher_update(ctx, input.as_ptr(), input.len(), out.as_mut_ptr()),
+                1
+            );
+            (*ctx).taglen = tag.len();
+            rc = ossl_gcm_cipher_final(ctx, tag.as_ptr().cast_mut());
+            aes_gcm_freectx(raw);
+        }
+        (rc, out)
+    }
 
     /// **Every provider GCM context, measured against the authority's own compiler.** The numbers
     /// are from a program compiled with `courts/layout/README.md`'s include set against the pinned
