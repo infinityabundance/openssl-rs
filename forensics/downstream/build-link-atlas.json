@@ -9,38 +9,38 @@
       "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
     },
     "counts": {
-      "authority_linkage_proven": 82,
+      "authority_linkage_proven": 88,
       "by_subject": {
         "authority": {
-          "built": 82,
-          "configured": 82,
+          "built": 88,
+          "configured": 88,
           "failed": 2,
-          "linked": 82,
-          "not_attempted": 916
+          "linked": 88,
+          "not_attempted": 910
         },
         "candidate": {
-          "built": 82,
-          "configured": 82,
+          "built": 88,
+          "configured": 88,
           "failed": 2,
-          "linked": 82,
-          "not_attempted": 916
+          "linked": 88,
+          "not_attempted": 910
         }
       },
       "candidate_failures": {
-        "acquire-failure": 916,
+        "acquire-failure": 910,
         "configure-failure": 2
       },
-      "candidate_linkage_proven": 82,
+      "candidate_linkage_proven": 88,
       "candidate_specific_patch_count": 0,
-      "measured_families": 84,
-      "no_recipe": 916,
+      "measured_families": 90,
+      "no_recipe": 910,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 84
+      "with_recipe": 90
     },
     "evidence_reuse": {
       "candidate_identity_match": true,
-      "families_reused": 78,
+      "families_reused": 84,
       "mode": "committed-rows",
       "reused_families": [
         "aircrack-ng",
@@ -74,17 +74,23 @@
         "kmod",
         "ldns",
         "libarchive",
+        "libcoap",
+        "libesmtp",
         "libevent",
         "libjose",
         "librdkafka",
         "libretls",
         "libssh",
+        "libstrophe",
+        "libtins",
+        "libwebsockets",
         "libzip",
         "lighttpd",
         "links",
         "makepasswd",
         "memcached",
         "mini-httpd",
+        "minizip-ng",
         "mktorrent",
         "monit",
         "mosquitto",
@@ -944,7 +950,7 @@
           "AUTOPOINT": "true",
           "LIBTOOLIZE": "{root}/.autotools/libtoolize",
           "M4": "{aux}/usr/bin/m4",
-          "PATH": "{root}/.autotools:{aux}/usr/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PATH": "{root}/.autotools:{aux}/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
           "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
           "autom4te_perllibdir": "{aux}/usr/share/autoconf",
           "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4"
@@ -1000,7 +1006,7 @@
         "artifact": "eggdrop",
         "build_system": "configure",
         "env_extra": {
-          "PATH": "{aux}/usr/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          "PATH": "{aux}/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         },
         "family": "eggdrop",
         "note": "eggdrop 1.9.5's IRC-over-TLS client links the subject libssl; Tcl is the pinned package, and `make config` (the release's module selection) is part of the recipe's single make invocation",
@@ -1043,7 +1049,7 @@
         "env_extra": {
           "LIBCRYPTO_CFLAGS": "-I{prefix}/include",
           "LIBCRYPTO_LIBS": "-L{prefix}/lib -lcrypto",
-          "PATH": "{aux}/usr/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          "PATH": "{aux}/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         },
         "family": "tcpdump",
         "note": "tcpdump 4.99.6 with its libcrypto link and the pristine libpcap 1.10.3 build (plus the dbus runtime Debian's libpcap needs); the L7 workload captures a local TLS handshake and reads the handshake record bytes back",
@@ -1104,7 +1110,7 @@
           "AUTOMAKE": "{root}/.autotools/automake",
           "LIBTOOLIZE": "{root}/.autotools/libtoolize",
           "M4": "{aux}/usr/bin/m4",
-          "PATH": "{root}/.autotools:{aux}/usr/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PATH": "{root}/.autotools:{aux}/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
           "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
           "autom4te_perllibdir": "{aux}/usr/share/autoconf",
           "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4"
@@ -1166,7 +1172,7 @@
           "AUTOMAKE": "{root}/.autotools/automake",
           "LIBTOOLIZE": "{root}/.autotools/libtoolize",
           "M4": "{aux}/usr/bin/m4",
-          "PATH": "{root}/.autotools:{aux}/usr/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PATH": "{root}/.autotools:{aux}/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
           "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
           "autom4te_perllibdir": "{aux}/usr/share/autoconf",
           "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4"
@@ -1278,6 +1284,95 @@
         "sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
         "url": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
         "version": "4.5"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "b/libgetdns.so*",
+        "build_system": "cmake",
+        "env_extra": null,
+        "family": "getdns",
+        "note": "getdns 1.7.3 with the stub-only resolver and the poll event loop; its DoT client uses the subject libssl, and the test apps are disabled because the workload is the harness",
+        "recipe_id": "recipe:getdns:1.7.3",
+        "sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+        "url": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz",
+        "version": "1.7.3"
+      },
+      {
+        "archive": "tar.xz",
+        "artifact": "u2f-server/.libs/libu2f-server.so*",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "libu2f-server",
+        "note": "libu2f-server 1.1.0 with its P-256/ES256 verification path linked to the subject libcrypto; json-c is the pinned parser and the two command-line helpers satisfy its configure-time checks",
+        "recipe_id": "recipe:libu2f-server:1.1.0",
+        "sha256": "8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+        "url": "https://deb.debian.org/debian/pool/main/libu/libu2f-server/libu2f-server_1.1.0.orig.tar.xz",
+        "version": "1.1.0"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "src/5.4/openssl.so",
+        "build_system": "make",
+        "env_extra": null,
+        "family": "lua-luaossl",
+        "note": "lua-luaossl 20220711 built for Lua 5.4 against the subject libssl/libcrypto; the admitted workload is the Lua digest/HMAC harness",
+        "recipe_id": "recipe:lua-luaossl:20220711",
+        "sha256": "f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+        "url": "https://deb.debian.org/debian/pool/main/l/lua-luaossl/lua-luaossl_20220711.orig.tar.gz",
+        "version": "20220711"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "src/ssl.so",
+        "build_system": "make",
+        "env_extra": null,
+        "family": "lua-sec",
+        "note": "LuaSec 1.3.2 built for Lua 5.4 against the subject libssl, with its bundled LuaSocket support; the admitted workload is the Lua TLS client harness",
+        "recipe_id": "recipe:lua-sec:1.3.2",
+        "sha256": "97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+        "url": "https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz",
+        "version": "1.3.2"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "login_duo/login_duo",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "duo_unix",
+        "note": "duo_unix 1.11.3's libduo HMAC-SHA1 request signing against the subject libcrypto; login_duo is the linked executable, and PAM is disabled because the workload drives libduo directly",
+        "recipe_id": "recipe:duo_unix:1.11.3",
+        "sha256": "0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+        "url": "https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz",
+        "version": "1.11.3"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "plugins/ssl/.libs/libsslTunnel.so",
+        "build_system": "configure",
+        "env_extra": {
+          "ACLOCAL": "{root}/.autotools/aclocal",
+          "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal:{aux}/usr/share/libtool/m4",
+          "AC_MACRODIR": "{aux}/usr/share/autoconf",
+          "AUTOCONF": "{aux}/usr/bin/autoconf",
+          "AUTOHEADER": "{aux}/usr/bin/autoheader",
+          "AUTOM4TE": "{aux}/usr/bin/autom4te",
+          "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+          "AUTOMAKE": "{root}/.autotools/automake",
+          "AUTOPOINT": "true",
+          "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+          "M4": "{aux}/usr/bin/m4",
+          "PATH": "{root}/.autotools:{aux}/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+          "_lt_pkgdatadir": "{aux}/usr/share/libtool",
+          "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+          "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4"
+        },
+        "family": "dcap-tunnel-ssl",
+        "note": "dcap-tunnel-ssl 2.47.14's libsslTunnel plugin, the family's actual OpenSSL consumer, built against the subject libssl; the source has no generated configure, so the pinned bookworm autotools bootstrap it as a build input",
+        "recipe_id": "recipe:dcap-tunnel-ssl:2.47.14",
+        "sha256": "dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+        "url": "https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz",
+        "version": "2.47.14"
       }
     ],
     "resource_limits": {
@@ -19308,24 +19403,55 @@
         "canonical_name": "dcap-tunnel-ssl",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:dcap-tunnel-ssl"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:dcap-tunnel-ssl",
+          "recipe:recipe:dcap-tunnel-ssl:2.47.14",
+          "source:https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz#dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+          "artifact:plugins/ssl/.libs/libsslTunnel.so"
+        ],
+        "failure_class": null,
         "family_id": "family:dcap-tunnel-ssl",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 12,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "plugins/ssl/.libs/libsslTunnel.so",
+          "artifact_sha256": "65800189922181774e89f4ce40546014d14802321cc84b8af698fd580f19a67d",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 205,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:dcap-tunnel-ssl:2.47.14",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -19335,41 +19461,119 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:dcap-tunnel-ssl",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "57e1998e9efbb325bbfc1003287b6711127c01f2c7a787bd08c5d22ba3a8faac",
+        "source_sha256": "dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+        "source_url": "https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz",
+        "specimen_id": "specimen:dcap-tunnel-ssl:2.47.14",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/dcap-tunnel-ssl/source.tar.gz",
+              "-C",
+              "{scratch}/dcap-tunnel-ssl/authority/src"
+            ],
+            "elapsed_seconds": 0.005,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "set -e; W={scratch}/dcap-tunnel-ssl/authority/src/dcap-2.47.14/.autotools; mkdir -p $W; printf '#!/bin/sh\\nexec {scratch}/dcap-tunnel-ssl/authority/aux/root/usr/bin/aclocal-1.16 --system-acdir={scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/aclocal-1.16 --automake-acdir={scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; printf '#!/bin/sh\\nexec {scratch}/dcap-tunnel-ssl/authority/aux/root/usr/bin/automake-1.16 --libdir={scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; printf '#!/bin/sh\\nexec {scratch}/dcap-tunnel-ssl/authority/aux/root/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; chmod +x $W/aclocal $W/automake $W/libtoolize; sed -i 's#/usr/share/autoconf#{scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/autoconf#g' {scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/autoconf/autom4te.cfg; mkdir -p {scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/libtool/m4; cp {scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/aclocal/libtool.m4 {scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/aclocal/lt*.m4 {scratch}/dcap-tunnel-ssl/authority/aux/root/usr/share/libtool/m4/; touch NEWS; autoreconf -fi"
+            ],
+            "elapsed_seconds": 2.082,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/dcap-tunnel-ssl/authority/src/dcap-2.47.14/.l7-install"
+            ],
+            "elapsed_seconds": 2.001,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4",
+              "-C",
+              "plugins/ssl"
+            ],
+            "elapsed_seconds": 0.167,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:dcap-tunnel-ssl:2.47.14:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "dcap-tunnel-ssl",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:dcap-tunnel-ssl"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:dcap-tunnel-ssl",
+          "recipe:recipe:dcap-tunnel-ssl:2.47.14",
+          "source:https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz#dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+          "artifact:plugins/ssl/.libs/libsslTunnel.so"
+        ],
+        "failure_class": null,
         "family_id": "family:dcap-tunnel-ssl",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 12,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "plugins/ssl/.libs/libsslTunnel.so",
+          "artifact_sha256": "9c6eda1ffa372be878824e85a86dc79fb06927ce8e4416f7d9f51ff3f2909133",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 205,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:dcap-tunnel-ssl:2.47.14",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -19380,18 +19584,65 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:dcap-tunnel-ssl",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "57e1998e9efbb325bbfc1003287b6711127c01f2c7a787bd08c5d22ba3a8faac",
+        "source_sha256": "dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+        "source_url": "https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz",
+        "specimen_id": "specimen:dcap-tunnel-ssl:2.47.14",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/dcap-tunnel-ssl/source.tar.gz",
+              "-C",
+              "{scratch}/dcap-tunnel-ssl/candidate/src"
+            ],
+            "elapsed_seconds": 0.005,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "set -e; W={scratch}/dcap-tunnel-ssl/candidate/src/dcap-2.47.14/.autotools; mkdir -p $W; printf '#!/bin/sh\\nexec {scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/bin/aclocal-1.16 --system-acdir={scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/aclocal-1.16 --automake-acdir={scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; printf '#!/bin/sh\\nexec {scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/bin/automake-1.16 --libdir={scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; printf '#!/bin/sh\\nexec {scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; chmod +x $W/aclocal $W/automake $W/libtoolize; sed -i 's#/usr/share/autoconf#{scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/autoconf#g' {scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/autoconf/autom4te.cfg; mkdir -p {scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/libtool/m4; cp {scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/aclocal/libtool.m4 {scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/aclocal/lt*.m4 {scratch}/dcap-tunnel-ssl/candidate/aux/root/usr/share/libtool/m4/; touch NEWS; autoreconf -fi"
+            ],
+            "elapsed_seconds": 2.074,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/dcap-tunnel-ssl/candidate/src/dcap-2.47.14/.l7-install"
+            ],
+            "elapsed_seconds": 1.994,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4",
+              "-C",
+              "plugins/ssl"
+            ],
+            "elapsed_seconds": 0.167,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:dcap-tunnel-ssl:2.47.14:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -24396,24 +24647,55 @@
         "canonical_name": "duo_unix",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:duo_unix"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:duo_unix",
+          "recipe:recipe:duo_unix:1.11.3",
+          "source:https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz#0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+          "artifact:login_duo/login_duo"
+        ],
+        "failure_class": null,
         "family_id": "family:duo_unix",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 51,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "login_duo/login_duo",
+          "artifact_sha256": "8454060916da66c0d364687d256caae9d4339a74b7f0e5405835a9f56f9b5682",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 127,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:duo_unix:1.11.3",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -24423,41 +24705,108 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:duo_unix",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "fa08d8d101922385b3fbd607b46b0a627020721435add961f594613d95f41d83",
+        "source_sha256": "0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+        "source_url": "https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz",
+        "specimen_id": "specimen:duo_unix:1.11.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/duo_unix/source.tar.gz",
+              "-C",
+              "{scratch}/duo_unix/authority/src"
+            ],
+            "elapsed_seconds": 0.009,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/duo_unix/authority/src/duo_unix-1.11.3/.l7-install",
+              "--with-openssl={prefix}",
+              "--with-pam=no"
+            ],
+            "elapsed_seconds": 1.241,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 0.678,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:duo_unix:1.11.3:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "duo_unix",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:duo_unix"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:duo_unix",
+          "recipe:recipe:duo_unix:1.11.3",
+          "source:https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz#0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+          "artifact:login_duo/login_duo"
+        ],
+        "failure_class": null,
         "family_id": "family:duo_unix",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 51,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "login_duo/login_duo",
+          "artifact_sha256": "a5b2ecac06b68808c1e78a4379e1059ab5a61f0eb513698a59795272b46a928f",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 127,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:duo_unix:1.11.3",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -24468,18 +24817,54 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:duo_unix",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "fa08d8d101922385b3fbd607b46b0a627020721435add961f594613d95f41d83",
+        "source_sha256": "0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+        "source_url": "https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz",
+        "specimen_id": "specimen:duo_unix:1.11.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/duo_unix/source.tar.gz",
+              "-C",
+              "{scratch}/duo_unix/candidate/src"
+            ],
+            "elapsed_seconds": 0.009,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/duo_unix/candidate/src/duo_unix-1.11.3/.l7-install",
+              "--with-openssl={prefix}",
+              "--with-pam=no"
+            ],
+            "elapsed_seconds": 1.24,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 0.68,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:duo_unix:1.11.3:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -34482,24 +34867,56 @@
         "canonical_name": "getdns",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:getdns"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:getdns",
+          "recipe:recipe:getdns:1.7.3",
+          "source:https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz#f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+          "artifact:b/libgetdns.so.10.2.0"
+        ],
+        "failure_class": null,
         "family_id": "family:getdns",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 114,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/libgetdns.so.10.2.0",
+          "artifact_sha256": "d21318cdd1b32860dded0d1ce7c66cd220be8e58c8a12991a1ad1768e80e8ede",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0",
+            "OPENSSL_3.4.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 133,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:getdns:1.7.3",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -34509,41 +34926,130 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:getdns",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "2f7421b9ea4460f4e21cfb6c3cff91b74ab6765c54325fee0c9a8d6834cbf185",
+        "source_sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+        "source_url": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz",
+        "specimen_id": "specimen:getdns:1.7.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/getdns/source.tar.gz",
+              "-C",
+              "{scratch}/getdns/authority/src"
+            ],
+            "elapsed_seconds": 0.013,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DENABLE_SHARED=ON",
+              "-DENABLE_STATIC=OFF",
+              "-DBUILD_TESTING=OFF",
+              "-DENABLE_STUB_ONLY=ON",
+              "-DUSE_LIBIDN2=OFF",
+              "-DBUILD_LIBEV=OFF",
+              "-DBUILD_LIBEVENT2=OFF",
+              "-DBUILD_LIBUV=OFF",
+              "-DBUILD_EXAMPLES=OFF",
+              "-DBUILD_GETDNS_QUERY=OFF",
+              "-DBUILD_GETDNS_SERVER_MON=OFF",
+              "-DBUILD_STUBBY=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_C_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 3.22,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 1.236,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:getdns:1.7.3:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "getdns",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:getdns"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:getdns",
+          "recipe:recipe:getdns:1.7.3",
+          "source:https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz#f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+          "artifact:b/libgetdns.so.10.2.0"
+        ],
+        "failure_class": null,
         "family_id": "family:getdns",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 114,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/libgetdns.so.10.2.0",
+          "artifact_sha256": "77966e1aee8452a78b68cf58c1ee7acc15a671f37a4879fc170a1337066c7c43",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0",
+            "OPENSSL_3.4.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 133,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:getdns:1.7.3",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -34554,18 +35060,75 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:getdns",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "2f7421b9ea4460f4e21cfb6c3cff91b74ab6765c54325fee0c9a8d6834cbf185",
+        "source_sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+        "source_url": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz",
+        "specimen_id": "specimen:getdns:1.7.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/getdns/source.tar.gz",
+              "-C",
+              "{scratch}/getdns/candidate/src"
+            ],
+            "elapsed_seconds": 0.013,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DENABLE_SHARED=ON",
+              "-DENABLE_STATIC=OFF",
+              "-DBUILD_TESTING=OFF",
+              "-DENABLE_STUB_ONLY=ON",
+              "-DUSE_LIBIDN2=OFF",
+              "-DBUILD_LIBEV=OFF",
+              "-DBUILD_LIBEVENT2=OFF",
+              "-DBUILD_LIBUV=OFF",
+              "-DBUILD_EXAMPLES=OFF",
+              "-DBUILD_GETDNS_QUERY=OFF",
+              "-DBUILD_GETDNS_SERVER_MON=OFF",
+              "-DBUILD_STUBBY=OFF",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_C_FLAGS=-I{prefix}/include",
+              "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 3.223,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 1.192,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:getdns:1.7.3:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -69516,24 +70079,56 @@
         "canonical_name": "libu2f-server",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libu2f-server"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libjson-c.so.5",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libu2f-server",
+          "recipe:recipe:libu2f-server:1.1.0",
+          "source:https://deb.debian.org/debian/pool/main/libu/libu2f-server/libu2f-server_1.1.0.orig.tar.xz#8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+          "artifact:u2f-server/.libs/libu2f-server.so.0.1.0"
+        ],
+        "failure_class": null,
         "family_id": "family:libu2f-server",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 37,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "u2f-server/.libs/libu2f-server.so.0.1.0",
+          "artifact_sha256": "22f71dd24969355d988999b1a020376b6c55a78215ed2ce4dfb90ec3eb7a3e60",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 82,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libu2f-server:1.1.0",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -69543,41 +70138,113 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:libu2f-server",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "abad174b7880906699918f7d7d4b9aceb36b36ef4c7af634ee5da10a7aead3d5",
+        "source_sha256": "8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+        "source_url": "https://deb.debian.org/debian/pool/main/libu/libu2f-server/libu2f-server_1.1.0.orig.tar.xz",
+        "specimen_id": "specimen:libu2f-server:1.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libu2f-server/source.tar.xz",
+              "-C",
+              "{scratch}/libu2f-server/authority/src"
+            ],
+            "elapsed_seconds": 0.011,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/libu2f-server/authority/src/libu2f-server-1.1.0/.l7-install",
+              "--disable-static",
+              "--enable-shared",
+              "--disable-tests"
+            ],
+            "elapsed_seconds": 1.191,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4",
+              "-C",
+              "u2f-server",
+              "CFLAGS=-O2 -DFALSE=0 -DTRUE=1"
+            ],
+            "elapsed_seconds": 0.374,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:libu2f-server:1.1.0:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "libu2f-server",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:libu2f-server"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libjson-c.so.5",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:libu2f-server",
+          "recipe:recipe:libu2f-server:1.1.0",
+          "source:https://deb.debian.org/debian/pool/main/libu/libu2f-server/libu2f-server_1.1.0.orig.tar.xz#8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+          "artifact:u2f-server/.libs/libu2f-server.so.0.1.0"
+        ],
+        "failure_class": null,
         "family_id": "family:libu2f-server",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 37,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "u2f-server/.libs/libu2f-server.so.0.1.0",
+          "artifact_sha256": "22f71dd24969355d988999b1a020376b6c55a78215ed2ce4dfb90ec3eb7a3e60",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 82,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libu2f-server:1.1.0",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -69588,18 +70255,58 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:libu2f-server",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "abad174b7880906699918f7d7d4b9aceb36b36ef4c7af634ee5da10a7aead3d5",
+        "source_sha256": "8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+        "source_url": "https://deb.debian.org/debian/pool/main/libu/libu2f-server/libu2f-server_1.1.0.orig.tar.xz",
+        "specimen_id": "specimen:libu2f-server:1.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/libu2f-server/source.tar.xz",
+              "-C",
+              "{scratch}/libu2f-server/candidate/src"
+            ],
+            "elapsed_seconds": 0.011,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/libu2f-server/candidate/src/libu2f-server-1.1.0/.l7-install",
+              "--disable-static",
+              "--enable-shared",
+              "--disable-tests"
+            ],
+            "elapsed_seconds": 1.189,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4",
+              "-C",
+              "u2f-server",
+              "CFLAGS=-O2 -DFALSE=0 -DTRUE=1"
+            ],
+            "elapsed_seconds": 0.375,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:libu2f-server:1.1.0:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -70762,24 +71469,56 @@
         "canonical_name": "lua-luaossl",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:lua-luaossl"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libm.so.6",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:lua-luaossl",
+          "recipe:recipe:lua-luaossl:20220711",
+          "source:https://deb.debian.org/debian/pool/main/l/lua-luaossl/lua-luaossl_20220711.orig.tar.gz#f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+          "artifact:src/5.4/openssl.so"
+        ],
+        "failure_class": null,
         "family_id": "family:lua-luaossl",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 459,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/5.4/openssl.so",
+          "artifact_sha256": "7b27dc3fcb6e39ef019e915f444be21926aeab8f90bd8a0f1aa0e9f6d38c5310",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 281,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:lua-luaossl:20220711",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -70789,41 +71528,104 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:lua-luaossl",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "10e348807af79ab2ab66a80d6decd6adf6d64ea900ff5bba8b25f945a654407b",
+        "source_sha256": "f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+        "source_url": "https://deb.debian.org/debian/pool/main/l/lua-luaossl/lua-luaossl_20220711.orig.tar.gz",
+        "specimen_id": "specimen:lua-luaossl:20220711",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/lua-luaossl/source.tar.gz",
+              "-C",
+              "{scratch}/lua-luaossl/authority/src"
+            ],
+            "elapsed_seconds": 0.006,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-f",
+              "GNUmakefile",
+              "all",
+              "LUA_APIS=5.4",
+              "LUA54_CPPFLAGS=-I{scratch}/lua-luaossl/authority/aux/root/usr/include/lua5.4 -I{scratch}/lua-luaossl/authority/aux/root/usr/include/x86_64-linux-gnu",
+              "LUAC54=true",
+              "CPPFLAGS=-I{prefix}/include",
+              "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 1.193,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:lua-luaossl:20220711:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "lua-luaossl",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:lua-luaossl"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libm.so.6",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:lua-luaossl",
+          "recipe:recipe:lua-luaossl:20220711",
+          "source:https://deb.debian.org/debian/pool/main/l/lua-luaossl/lua-luaossl_20220711.orig.tar.gz#f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+          "artifact:src/5.4/openssl.so"
+        ],
+        "failure_class": null,
         "family_id": "family:lua-luaossl",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 459,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/5.4/openssl.so",
+          "artifact_sha256": "946998c37a4f400983e3a5f57571c06d545758ad429d5ca41367e29305ff9d77",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 281,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:lua-luaossl:20220711",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -70834,42 +71636,104 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:lua-luaossl",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "10e348807af79ab2ab66a80d6decd6adf6d64ea900ff5bba8b25f945a654407b",
+        "source_sha256": "f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+        "source_url": "https://deb.debian.org/debian/pool/main/l/lua-luaossl/lua-luaossl_20220711.orig.tar.gz",
+        "specimen_id": "specimen:lua-luaossl:20220711",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/lua-luaossl/source.tar.gz",
+              "-C",
+              "{scratch}/lua-luaossl/candidate/src"
+            ],
+            "elapsed_seconds": 0.006,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-f",
+              "GNUmakefile",
+              "all",
+              "LUA_APIS=5.4",
+              "LUA54_CPPFLAGS=-I{scratch}/lua-luaossl/candidate/aux/root/usr/include/lua5.4 -I{scratch}/lua-luaossl/candidate/aux/root/usr/include/x86_64-linux-gnu",
+              "LUAC54=true",
+              "CPPFLAGS=-I{prefix}/include",
+              "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 1.19,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:lua-luaossl:20220711:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "lua-sec",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:lua-sec"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:lua-sec",
+          "recipe:recipe:lua-sec:1.3.2",
+          "source:https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz#97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+          "artifact:src/ssl.so"
+        ],
+        "failure_class": null,
         "family_id": "family:lua-sec",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 139,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/ssl.so",
+          "artifact_sha256": "62834f52d3624534ac2084b15ffb576084c51950adb47fc0c0f5cf3f5bd571b0",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 282,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:lua-sec:1.3.2",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -70879,41 +71743,100 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:lua-sec",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "f7db7c3cc7489d128bd081aa2e574de8411048aeabe106f572bdd2c1cbbb67be",
+        "source_sha256": "97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+        "source_url": "https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz",
+        "specimen_id": "specimen:lua-sec:1.3.2",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/lua-sec/source.tar.gz",
+              "-C",
+              "{scratch}/lua-sec/authority/src"
+            ],
+            "elapsed_seconds": 0.003,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "linux",
+              "EXTRA=luasocket",
+              "DEFS=-DWITH_LUASOCKET",
+              "INC_PATH=-I{scratch}/lua-sec/authority/aux/root/usr/include/lua5.4 -I{scratch}/lua-sec/authority/aux/root/usr/include/x86_64-linux-gnu -I{prefix}/include",
+              "LIB_PATH=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 0.552,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:lua-sec:1.3.2:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "lua-sec",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:lua-sec"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:lua-sec",
+          "recipe:recipe:lua-sec:1.3.2",
+          "source:https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz#97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+          "artifact:src/ssl.so"
+        ],
+        "failure_class": null,
         "family_id": "family:lua-sec",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 139,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/ssl.so",
+          "artifact_sha256": "49dab828c58a83fe2576ae3ec5ee9fa5951f5293adda555565657be450e5f58a",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 282,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:lua-sec:1.3.2",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -70924,18 +71847,46 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:lua-sec",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "f7db7c3cc7489d128bd081aa2e574de8411048aeabe106f572bdd2c1cbbb67be",
+        "source_sha256": "97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+        "source_url": "https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz",
+        "specimen_id": "specimen:lua-sec:1.3.2",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/lua-sec/source.tar.gz",
+              "-C",
+              "{scratch}/lua-sec/candidate/src"
+            ],
+            "elapsed_seconds": 0.003,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "linux",
+              "EXTRA=luasocket",
+              "DEFS=-DWITH_LUASOCKET",
+              "INC_PATH=-I{scratch}/lua-sec/candidate/aux/root/usr/include/lua5.4 -I{scratch}/lua-sec/candidate/aux/root/usr/include/x86_64-linux-gnu -I{prefix}/include",
+              "LIB_PATH=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+            ],
+            "elapsed_seconds": 0.556,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:lua-sec:1.3.2:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -102781,6 +103732,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz#dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+          "recipe:recipe:dcap-tunnel-ssl:2.47.14",
+          "pinned_sha256:dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49"
+        ],
+        "family_id": "family:dcap-tunnel-ssl",
+        "licence": "unknown",
+        "pristine_source_root_hash": "57e1998e9efbb325bbfc1003287b6711127c01f2c7a787bd08c5d22ba3a8faac",
+        "pristine_source_sha256": "dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+        "specimen_id": "specimen:dcap-tunnel-ssl:2.47.14",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz",
+        "version": "2.47.14"
+      },
+      {
+        "evidence": [
           "source:https://dovecot.org/releases/2.3/dovecot-2.3.21.tar.gz#05b11093a71c237c2ef309ad587510721cc93bbee6828251549fc1586c36502d",
           "recipe:recipe:dovecot:2.3.21",
           "pinned_sha256:05b11093a71c237c2ef309ad587510721cc93bbee6828251549fc1586c36502d"
@@ -102792,6 +103757,20 @@
         "specimen_id": "specimen:dovecot:2.3.21",
         "upstream_ref": "https://dovecot.org/releases/2.3/dovecot-2.3.21.tar.gz",
         "version": "2.3.21"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz#0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+          "recipe:recipe:duo_unix:1.11.3",
+          "pinned_sha256:0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124"
+        ],
+        "family_id": "family:duo_unix",
+        "licence": "unknown",
+        "pristine_source_root_hash": "fa08d8d101922385b3fbd607b46b0a627020721435add961f594613d95f41d83",
+        "pristine_source_sha256": "0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+        "specimen_id": "specimen:duo_unix:1.11.3",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz",
+        "version": "1.11.3"
       },
       {
         "evidence": [
@@ -102890,6 +103869,20 @@
         "specimen_id": "specimen:fossil:2.24",
         "upstream_ref": "https://fossil-scm.org/home/tarball/version-2.24/fossil-src-2.24.tar.gz",
         "version": "2.24"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz#f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+          "recipe:recipe:getdns:1.7.3",
+          "pinned_sha256:f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c"
+        ],
+        "family_id": "family:getdns",
+        "licence": "unknown",
+        "pristine_source_root_hash": "2f7421b9ea4460f4e21cfb6c3cff91b74ab6765c54325fee0c9a8d6834cbf185",
+        "pristine_source_sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+        "specimen_id": "specimen:getdns:1.7.3",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz",
+        "version": "1.7.3"
       },
       {
         "evidence": [
@@ -103229,6 +104222,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/libu/libu2f-server/libu2f-server_1.1.0.orig.tar.xz#8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+          "recipe:recipe:libu2f-server:1.1.0",
+          "pinned_sha256:8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277"
+        ],
+        "family_id": "family:libu2f-server",
+        "licence": "unknown",
+        "pristine_source_root_hash": "abad174b7880906699918f7d7d4b9aceb36b36ef4c7af634ee5da10a7aead3d5",
+        "pristine_source_sha256": "8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+        "specimen_id": "specimen:libu2f-server:1.1.0",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/libu/libu2f-server/libu2f-server_1.1.0.orig.tar.xz",
+        "version": "1.1.0"
+      },
+      {
+        "evidence": [
           "source:https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz#6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
           "recipe:recipe:libwebsockets:4.3.3",
           "pinned_sha256:6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90"
@@ -103282,6 +104289,34 @@
         "specimen_id": "specimen:links:2.30",
         "upstream_ref": "http://links.twibright.com/download/links-2.30.tar.bz2",
         "version": "2.30"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/l/lua-luaossl/lua-luaossl_20220711.orig.tar.gz#f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+          "recipe:recipe:lua-luaossl:20220711",
+          "pinned_sha256:f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b"
+        ],
+        "family_id": "family:lua-luaossl",
+        "licence": "unknown",
+        "pristine_source_root_hash": "10e348807af79ab2ab66a80d6decd6adf6d64ea900ff5bba8b25f945a654407b",
+        "pristine_source_sha256": "f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+        "specimen_id": "specimen:lua-luaossl:20220711",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/l/lua-luaossl/lua-luaossl_20220711.orig.tar.gz",
+        "version": "20220711"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz#97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+          "recipe:recipe:lua-sec:1.3.2",
+          "pinned_sha256:97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4"
+        ],
+        "family_id": "family:lua-sec",
+        "licence": "unknown",
+        "pristine_source_root_hash": "f7db7c3cc7489d128bd081aa2e574de8411048aeabe106f572bdd2c1cbbb67be",
+        "pristine_source_sha256": "97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+        "specimen_id": "specimen:lua-sec:1.3.2",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz",
+        "version": "1.3.2"
       },
       {
         "evidence": [
@@ -103943,6 +104978,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:dcap-tunnel-ssl:2.47.14",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:dcap-tunnel-ssl:2.47.14",
+        "variant_id": "variant:dcap-tunnel-ssl:2.47.14:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "autotools-pristine-shared",
         "evidence": [
           "recipe:recipe:dovecot:2.3.21",
@@ -103952,6 +104999,18 @@
         "platform": "linux",
         "specimen_id": "specimen:dovecot:2.3.21",
         "variant_id": "variant:dovecot:2.3.21:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:duo_unix:1.11.3",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:duo_unix:1.11.3",
+        "variant_id": "variant:duo_unix:1.11.3:pristine"
       },
       {
         "arch": "x86_64",
@@ -104036,6 +105095,18 @@
         "platform": "linux",
         "specimen_id": "specimen:fossil:2.24",
         "variant_id": "variant:fossil:2.24:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:getdns:1.7.3",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:getdns:1.7.3",
+        "variant_id": "variant:getdns:1.7.3:pristine"
       },
       {
         "arch": "x86_64",
@@ -104327,6 +105398,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libu2f-server:1.1.0",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libu2f-server:1.1.0",
+        "variant_id": "variant:libu2f-server:1.1.0:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "cmake-pristine-shared",
         "evidence": [
           "recipe:recipe:libwebsockets:4.3.3",
@@ -104372,6 +105455,30 @@
         "platform": "linux",
         "specimen_id": "specimen:links:2.30",
         "variant_id": "variant:links:2.30:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:lua-luaossl:20220711",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:lua-luaossl:20220711",
+        "variant_id": "variant:lua-luaossl:20220711:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:lua-sec:1.3.2",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:lua-sec:1.3.2",
+        "variant_id": "variant:lua-sec:1.3.2:pristine"
       },
       {
         "arch": "x86_64",
@@ -104855,7 +105962,7 @@
       }
     ]
   },
-  "body_hash": "75470e34ec054a088eb1e8db42a79ebbfa526b563593b50d4afe97bf28dfda9a",
+  "body_hash": "4c98b1a2f035125bf14f7e736d9e894221c72cb404ea23e963676bbbbb716ef5",
   "generator": "forensics/tools/downstream_build_link.py",
   "inputs": [
     {
