@@ -28,6 +28,7 @@
         "family:fetchmail": "L7-functional",
         "family:fido2": "L7-functional",
         "family:fossil": "L7-functional",
+        "family:gensio": "L7-functional",
         "family:getdns": "L7-functional",
         "family:haproxy": "L7-functional",
         "family:hcxtools": "L7-functional",
@@ -38,6 +39,7 @@
         "family:iperf3": "L7-functional",
         "family:irssi": "L7-functional",
         "family:isync": "L7-functional",
+        "family:jimtcl": "L7-functional",
         "family:jwt": "L7-functional",
         "family:kea": "L7-functional",
         "family:keepalived": "L7-functional",
@@ -89,6 +91,7 @@
         "family:s-nail": "L7-functional",
         "family:slrn": "L7-functional",
         "family:socat": "L7-functional",
+        "family:sofia-sip": "L5-loaded",
         "family:squid": "L7-functional",
         "family:sslscan": "L7-functional",
         "family:sslsplit": "L7-functional",
@@ -103,37 +106,38 @@
       },
       "by_subject": {
         "authority": {
-          "failed": 0,
-          "functional": 87,
-          "loaded": 88,
-          "not_attempted": 912,
-          "runtime": 88
+          "failed": 1,
+          "functional": 89,
+          "loaded": 91,
+          "not_attempted": 909,
+          "runtime": 90
         },
         "candidate": {
-          "failed": 0,
-          "functional": 87,
-          "loaded": 88,
-          "not_attempted": 912,
-          "runtime": 88
+          "failed": 2,
+          "functional": 88,
+          "loaded": 91,
+          "not_attempted": 909,
+          "runtime": 89
         }
       },
       "candidate_baseline_not_linked": 2,
-      "candidate_below_baseline": 0,
+      "candidate_below_baseline": 1,
       "candidate_failures": {
-        "acquire-failure": 910,
+        "acquire-failure": 907,
+        "functional-failure": 2,
         "link-failure": 2
       },
-      "candidate_reaches_baseline": 90,
-      "candidate_reaches_linked_baseline": 88,
+      "candidate_reaches_baseline": 92,
+      "candidate_reaches_linked_baseline": 90,
       "candidate_specific_patch_count": 0,
-      "no_recipe": 910,
+      "no_recipe": 907,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 90
+      "with_recipe": 93
     },
     "evidence_reuse": {
       "candidate_identity_match": true,
-      "families_reused": 89,
+      "families_reused": 90,
       "mode": "committed-rows",
       "reused_families": [
         "aircrack-ng",
@@ -154,6 +158,7 @@
         "fetchmail",
         "fido2",
         "fossil",
+        "getdns",
         "haproxy",
         "hcxtools",
         "hiredis-ssl",
@@ -774,6 +779,24 @@
         "program": ".l7-dcap-tunnel-ssl-harness",
         "recipe_id": "recipe:dcap-tunnel-ssl:2.47.14",
         "version": "2.47.14"
+      },
+      {
+        "family": "gensio",
+        "program": ".l7-gensio-harness",
+        "recipe_id": "recipe:gensio:2.8.6",
+        "version": "2.8.6"
+      },
+      {
+        "family": "jimtcl",
+        "program": ".l7-jimtcl-harness",
+        "recipe_id": "recipe:jimtcl:0.81+dfsg0",
+        "version": "0.81+dfsg0"
+      },
+      {
+        "family": "sofia-sip",
+        "program": ".l7-sofia-sip-harness",
+        "recipe_id": "recipe:sofia-sip:1.12.11+20110422.1",
+        "version": "1.12.11+20110422.1"
       }
     ],
     "resource_limits": {
@@ -53060,7 +53083,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "gensio",
@@ -53068,18 +53091,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:gensio"
+          "family:family:gensio",
+          "recipe:recipe:gensio:2.8.6",
+          "artifact:.l7-gensio-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:gensio",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "499906:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "499906:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "499906:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "499906:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "499906:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "499906:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -53099,13 +53167,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 132,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:gensio:2.8.6",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -53115,10 +53183,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:gensio",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "ae5a637d684811779009204b29790036555830471dee4903f66ee033defffc30",
+        "source_sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "source_url": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "specimen_id": "specimen:gensio:2.8.6",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -53126,13 +53194,32 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "gensio-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== gensio TLS session ==",
+          "exit=0",
+          "tls_session=ok",
+          "payload_round_trip=ok",
+          "wrong_ca=rejected",
+          "result=ok",
+          "gensio err: Error verifying certificate: unable to get local issuer certificate"
+        ],
+        "transcript_sha256": "cb982e12aba6742fc22a24e88317426e304a0387233f0209e0c3e1aeb3788fa2",
+        "variant_id": "variant:gensio:2.8.6:pristine",
+        "workload": "gensio: ssl gensio over loopback TCP carries a request and response with the fixture CA + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "gensio: ssl gensio over loopback TCP carries a request and response with the fixture CA + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "gensio",
@@ -53140,18 +53227,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:gensio"
+          "family:family:gensio",
+          "recipe:recipe:gensio:2.8.6",
+          "artifact:.l7-gensio-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:gensio",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "499931:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "499931:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "499931:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "499931:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "499931:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "499931:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -53171,12 +53303,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 132,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:gensio:2.8.6",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -53187,10 +53319,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:gensio",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "ae5a637d684811779009204b29790036555830471dee4903f66ee033defffc30",
+        "source_sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "source_url": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "specimen_id": "specimen:gensio:2.8.6",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -53198,10 +53330,29 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "gensio-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== gensio TLS session ==",
+          "exit=0",
+          "tls_session=ok",
+          "payload_round_trip=ok",
+          "wrong_ca=rejected",
+          "result=ok",
+          "gensio err: Error verifying certificate: unable to get local issuer certificate"
+        ],
+        "transcript_sha256": "cb982e12aba6742fc22a24e88317426e304a0387233f0209e0c3e1aeb3788fa2",
+        "variant_id": "variant:gensio:2.8.6:pristine",
+        "workload": "gensio: ssl gensio over loopback TCP carries a request and response with the fixture CA + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "gensio: ssl gensio over loopback TCP carries a request and response with the fixture CA + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L7-functional",
@@ -80272,7 +80423,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "jimtcl",
@@ -80280,18 +80431,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:jimtcl"
+          "family:family:jimtcl",
+          "recipe:recipe:jimtcl:0.81+dfsg0",
+          "artifact:.l7-jimtcl-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:jimtcl",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "501164:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "501164:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "501164:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "501164:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "501164:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "501164:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -80311,13 +80507,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 254,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:jimtcl:0.81+dfsg0",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -80327,10 +80523,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:jimtcl",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
+        "source_sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "source_url": "https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz",
+        "specimen_id": "specimen:jimtcl:0.81+dfsg0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -80338,13 +80534,35 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "jimtcl-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== jimtcl aio SSL server ==",
+          "exit=0",
+          "tls_session=ok",
+          "payload=jimtcl-l7-response",
+          "wrong_key=rejected",
+          "result=ok",
+          "jimtcl server: 0",
+          "jimtcl server ssl: error:05800074:x509 certificate routines::key values mismatch",
+          "jimtcl server: 2",
+          "jimtcl client: handshake failed: error:00000000:lib(0)::reason(0)"
+        ],
+        "transcript_sha256": "4a5047e40b8a53346df11f5b780c8a114d6054cd1abd8da8fed5436d9b344ec9",
+        "variant_id": "variant:jimtcl:0.81+dfsg0:pristine",
+        "workload": "jimtcl: the aio extension's OpenSSL server accepts a TLS request and writes the exact response + mismatched-key reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "jimtcl: the aio extension's OpenSSL server accepts a TLS request and writes the exact response + mismatched-key reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "jimtcl",
@@ -80352,18 +80570,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:jimtcl"
+          "family:family:jimtcl",
+          "recipe:recipe:jimtcl:0.81+dfsg0",
+          "artifact:.l7-jimtcl-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "functional-failure",
         "family_id": "family:jimtcl",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L5-loaded",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "501189:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "501189:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "501189:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "501189:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "501189:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "501189:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -80383,12 +80646,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "failed",
         "p1000_rank": 254,
-        "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reaches_baseline": false,
+        "reason": "jimtcl's aio SSL server did not return the exact response or accepted a mismatched private key",
+        "recipe_id": "recipe:jimtcl:0.81+dfsg0",
+        "residual_class": "functional-divergence",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -80399,10 +80662,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:jimtcl",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
+        "source_sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "source_url": "https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz",
+        "specimen_id": "specimen:jimtcl:0.81+dfsg0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -80410,10 +80673,34 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "jimtcl-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== jimtcl aio SSL server ==",
+          "exit=1",
+          "tls_session=failed",
+          "payload=absent",
+          "wrong_key=rejected",
+          "result=fail",
+          "jimtcl client: handshake failed: error:0A000410:SSL routines::ssl/tls alert handshake failure",
+          "jimtcl server ssl: error:0A0000C1:SSL routines::no shared cipher",
+          "jimtcl server: 2",
+          "jimtcl server ssl: error:05800074:x509 certificate routines::key values mismatch",
+          "jimtcl server: 2",
+          "jimtcl client: handshake failed: error:00000000:lib(0)::reason(0)"
+        ],
+        "transcript_sha256": "1f774b7989279993648c9405a25bf04cae50382c7c076bf6cc846057370aab6f",
+        "variant_id": "variant:jimtcl:0.81+dfsg0:pristine",
+        "workload": "jimtcl: the aio extension's OpenSSL server accepts a TLS request and writes the exact response + mismatched-key reject",
+        "workload_result": {
+          "functional_ok": false,
+          "local_only": true,
+          "name": "jimtcl: the aio extension's OpenSSL server accepts a TLS request and writes the exact response + mismatched-key reject",
+          "runtime_ok": false
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -143002,7 +143289,7 @@
         }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L5-loaded",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "sofia-sip",
@@ -143010,18 +143297,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:sofia-sip"
+          "family:family:sofia-sip",
+          "recipe:recipe:sofia-sip:1.12.11+20110422.1",
+          "artifact:.l7-sofia-sip-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "functional-failure",
         "family_id": "family:sofia-sip",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L5-loaded",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "478952:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "478952:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "478952:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "478952:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "478952:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "478952:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -143041,13 +143373,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "failed",
         "p1000_rank": 44,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": "the tport TLS session did not deliver the SIP payload or accepted an unrelated CA",
+        "recipe_id": "recipe:sofia-sip:1.12.11+20110422.1",
+        "residual_class": "functional-divergence",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -143057,10 +143389,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:sofia-sip",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "94a8ef12adbe29c229f32f11382bffacd935601bd4d33a5e740d1c4bdd496b02",
+        "source_sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "source_url": "https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz",
+        "specimen_id": "specimen:sofia-sip:1.12.11+20110422.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -143068,13 +143400,36 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "sofia-sip-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== sofia-sip tport TLS ==",
+          "exit=1",
+          "tls_session=failed",
+          "payload=absent",
+          "wrong_ca=rejected",
+          "result=fail",
+          "-Error with certificate at depth: 1",
+          "  issuer   = /CN=runtime test CA",
+          "  subject  = /CN=runtime test CA",
+          "  err 19:self-signed certificate in certificate chain",
+          "tls_connect({addr}): TLS setup failed (error:00000001:lib(0)::reason(1))"
+        ],
+        "transcript_sha256": "d216c9ab91e4350fbe2a0d3aee143c96770a44b480c68e92783cbed24145f86d",
+        "variant_id": "variant:sofia-sip:1.12.11+20110422.1:pristine",
+        "workload": "sofia-sip: a SIP MESSAGE over tport TLS carries its payload on loopback + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": false,
+          "local_only": true,
+          "name": "sofia-sip: a SIP MESSAGE over tport TLS carries its payload on loopback + unrelated-CA reject",
+          "runtime_ok": false
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L5-loaded",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "sofia-sip",
@@ -143082,18 +143437,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:sofia-sip"
+          "family:family:sofia-sip",
+          "recipe:recipe:sofia-sip:1.12.11+20110422.1",
+          "artifact:.l7-sofia-sip-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "functional-failure",
         "family_id": "family:sofia-sip",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L5-loaded",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "478984:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "478984:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "478984:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "478984:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "478984:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "478984:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -143113,12 +143513,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "failed",
         "p1000_rank": 44,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the tport TLS session did not deliver the SIP payload or accepted an unrelated CA",
+        "recipe_id": "recipe:sofia-sip:1.12.11+20110422.1",
+        "residual_class": "functional-divergence",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -143129,10 +143529,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:sofia-sip",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "94a8ef12adbe29c229f32f11382bffacd935601bd4d33a5e740d1c4bdd496b02",
+        "source_sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "source_url": "https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz",
+        "specimen_id": "specimen:sofia-sip:1.12.11+20110422.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -143140,10 +143540,33 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "sofia-sip-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== sofia-sip tport TLS ==",
+          "exit=1",
+          "tls_session=failed",
+          "payload=absent",
+          "wrong_ca=rejected",
+          "result=fail",
+          "-Error with certificate at depth: 0",
+          "  issuer   = /CN=runtime test CA",
+          "  subject  = /CN={addr}",
+          "  err 20:unable to get local issuer certificate",
+          "tls_connect({addr}): TLS setup failed (error:00000001:lib(0)::reason(1))"
+        ],
+        "transcript_sha256": "83054c69e1bd01ec192615793f9bf0b50965f3e44939427ae31964c1f0346f8c",
+        "variant_id": "variant:sofia-sip:1.12.11+20110422.1:pristine",
+        "workload": "sofia-sip: a SIP MESSAGE over tport TLS carries its payload on loopback + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": false,
+          "local_only": true,
+          "name": "sofia-sip: a SIP MESSAGE over tport TLS carries its payload on loopback + unrelated-CA reject",
+          "runtime_ok": false
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -158917,6 +159340,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz#3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+          "recipe:recipe:gensio:2.8.6",
+          "pinned_sha256:3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb"
+        ],
+        "family_id": "family:gensio",
+        "licence": "unknown",
+        "pristine_source_root_hash": "ae5a637d684811779009204b29790036555830471dee4903f66ee033defffc30",
+        "pristine_source_sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "specimen_id": "specimen:gensio:2.8.6",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "version": "2.8.6"
+      },
+      {
+        "evidence": [
           "source:https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz#f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
           "recipe:recipe:getdns:1.7.3",
           "pinned_sha256:f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c"
@@ -159054,6 +159491,20 @@
         "specimen_id": "specimen:isync:1.5.0",
         "upstream_ref": "https://downloads.sourceforge.net/project/isync/isync/1.5.0/isync-1.5.0.tar.gz",
         "version": "1.5.0"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz#ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+          "recipe:recipe:jimtcl:0.81+dfsg0",
+          "pinned_sha256:ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985"
+        ],
+        "family_id": "family:jimtcl",
+        "licence": "unknown",
+        "pristine_source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
+        "pristine_source_sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "specimen_id": "specimen:jimtcl:0.81+dfsg0",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz",
+        "version": "0.81+dfsg0"
       },
       {
         "evidence": [
@@ -159743,6 +160194,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz#bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+          "recipe:recipe:sofia-sip:1.12.11+20110422.1",
+          "pinned_sha256:bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab"
+        ],
+        "family_id": "family:sofia-sip",
+        "licence": "unknown",
+        "pristine_source_root_hash": "94a8ef12adbe29c229f32f11382bffacd935601bd4d33a5e740d1c4bdd496b02",
+        "pristine_source_sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "specimen_id": "specimen:sofia-sip:1.12.11+20110422.1",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz",
+        "version": "1.12.11+20110422.1"
+      },
+      {
+        "evidence": [
           "source:http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz#20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
           "recipe:recipe:squid:6.12",
           "pinned_sha256:20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625"
@@ -160115,6 +160580,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:gensio:2.8.6",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:gensio:2.8.6",
+        "variant_id": "variant:gensio:2.8.6:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "cmake-pristine-shared",
         "evidence": [
           "recipe:recipe:getdns:1.7.3",
@@ -160232,6 +160709,18 @@
         "platform": "linux",
         "specimen_id": "specimen:isync:1.5.0",
         "variant_id": "variant:isync:1.5.0:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:jimtcl:0.81+dfsg0",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:jimtcl:0.81+dfsg0",
+        "variant_id": "variant:jimtcl:0.81+dfsg0:pristine"
       },
       {
         "arch": "x86_64",
@@ -160825,6 +161314,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:sofia-sip:1.12.11+20110422.1",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:sofia-sip:1.12.11+20110422.1",
+        "variant_id": "variant:sofia-sip:1.12.11+20110422.1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:squid:6.12",
           "build_system:configure"
         ],
@@ -160955,7 +161456,7 @@
       }
     ]
   },
-  "body_hash": "57e215fd3b3392c9b0cc2f15557b5561559a9de4b9e4c51b38a5c5455460cbd6",
+  "body_hash": "924e6fe39d778b39db9266f07f661d1b2c448db1dd9494f5754f88a4e599abd3",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
@@ -160971,12 +161472,12 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "279b731b67dbf3e3effda86b06d6a6c39054881d4ad6d46592ed8aaaa1f7ecd2"
+      "sha256": "2f663edd5d579a7ae6cc5fd6af25e8e2cd9b5e4e1806d481907b6ae0509cdd65"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "e674a9935097dea695c8b379eb2913f64f393e07adfdad8f883824d11a70bbf8"
+      "sha256": "a0755451fc7dceef4ee3b8bdf98bbc72fd1a230b492374386802f87a6db4b88b"
     },
     {
       "name": "downstream-census",
