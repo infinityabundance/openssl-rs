@@ -1269,6 +1269,94 @@ PROGRAMS: dict[str, dict] = {
         "note": ("mktorrent 1.1 built with USE_OPENSSL=1 hashes each piece with OpenSSL SHA-1; "
                  "a fixed fixture gives an exact info hash and a modified file changes it"),
     },
+    # The Phase-25 L7 onboarding batch (b15).
+    "vsftpd": {
+        "program": "vsftpd", "launch": [],
+        # vsftpd has no version/usage flag: the pinned release is the recipe digest, and the
+        # load proof is the dynamic-loader resolution plus the admitted TLS workload.
+        "version_re": r"(?s).*",
+        "note": ("vsftpd's FTPS control/data path: anonymous login over AUTH TLS, PROT P data, "
+                 "and an unrelated-CA client refused"),
+    },
+    "apache2-bin": {
+        "program": "httpd", "launch": ["-v"],
+        "version_re": r"Apache/2\.4\.62",
+        "note": ("Apache httpd with static mod_ssl serves the fixture over verified TLS; an "
+                 "unrelated CA is refused"),
+    },
+    "ssldump": {
+        "program": "b/ssldump", "launch": ["-v"],
+        "version_re": r"Version: 1\.8",
+        "note": ("ssldump prints the ClientHello/ServerHello of a live loopback TLS handshake; a "
+                 "plaintext exchange produces no handshake record"),
+    },
+    "yara": {
+        "program": ".libs/yara", "lib_paths": [".libs"], "launch": ["--version"],
+        "version_re": r"4\.5\.2",
+        "note": ("YARA's hash module matches the fixture SHA-256 and a wrong digest does not"),
+    },
+    "bruteforce-salted-openssl": {
+        "program": "bruteforce-salted-openssl", "launch": ["-h"],
+        "version_re": r"bruteforce-salted-openssl 1\.4\.2",
+        "note": ("recovers the fixture password through EVP; a word list without it yields no "
+                 "candidate"),
+    },
+    "ircii": {
+        "program": "irc", "launch": ["-v"],
+        "version_re": r"ircII version 20240918",
+        "note": ("ircII registers and joins the fixture channel over verified TLS; an "
+                 "unrelated CA never registers"),
+    },
+    "neon": {
+        "program": ".l7-neon-harness", "launch": ["--version"],
+        "version_re": r"neon-l7-harness", "lib_paths": [],
+        "harness": {
+            "source": "forensics/tools/l7_neon.c",
+            "cflags": ["-I{root}/src", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/src/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/src/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lneon", "-lssl", "-lcrypto", "-lexpat", "-lz"],
+        },
+        "note": ("libneon fetches the fixture over verified TLS; an unrelated CA is refused"),
+    },
+    "cjose": {
+        "program": ".l7-cjose-harness", "launch": ["--version"],
+        "version_re": r"cjose-l7-harness", "lib_paths": [],
+        "harness": {
+            "source": "forensics/tools/l7_cjose.c",
+            "cflags": ["-I{root}/include", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/src/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/src/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lcjose", "-lssl", "-lcrypto", "-ljansson"],
+        },
+        "note": ("cjose signs and verifies an HS256 JWS and rejects a tampered signature and a "
+                 "wrong key"),
+    },
+    "libevhtp": {
+        "program": ".l7-evhtp-harness", "launch": ["--version"],
+        "version_re": r"libevhtp-l7-harness", "lib_paths": [],
+        "harness": {
+            "source": "forensics/tools/l7_evhtp.c",
+            "cflags": ["-I{root}/include", "-I{root}/b/include", "-I{prefix}/include",
+                       "-I{aux}/usr/include"],
+            "ldflags": ["{root}/b/libevhtp.so", "-L{root}/b", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b",
+                        "-L{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,--no-as-needed", "-lssl", "-lcrypto", "-levent_openssl",
+                        "-levent", "-lpthread"],
+        },
+        "note": ("libevhtp serves the fixture over verified TLS; an unrelated CA is refused"),
+    },
+    "libxmlsec1": {
+        "program": "apps/.libs/xmlsec1",
+        "lib_paths": ["src/.libs", "src/openssl/.libs"],
+        "launch": ["--version"], "version_re": r"xmlsec1 1\.3\.12",
+        "note": ("xmlsec1 signs a document with RSA-SHA256, verifies it, and rejects a tampered "
+                 "document"),
+    },
+
 }
 
 # The declarative template cohort: each entry is a config row in
@@ -10000,6 +10088,590 @@ def _wl_rabbitmq(ctx: dict) -> dict:
     }
 
 
+
+# --------------------------------------------------------------------------------------------
+# Phase-25 L7 onboarding batch (b15): ten deterministic local workloads.
+# Each fixture is loopback-only and its negative control is a real protocol/CA/input decision.
+# --------------------------------------------------------------------------------------------
+
+def _wl_vsftpd(ctx: dict) -> dict:
+    """vsftpd FTPS: anonymous AUTH TLS + PROT P retrieval; an unrelated CA is refused."""
+    import ftplib
+    import io
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d / "pki")
+    docroot, empty = d / "docroot", d / "empty"
+    docroot.mkdir(parents=True, exist_ok=True)
+    empty.mkdir(parents=True, exist_ok=True)
+    payload = "phase25-l7-vsftpd\n"
+    (docroot / "payload.txt").write_text(payload, encoding="utf-8")
+    pasv = _free_port()
+    if pasv > 60000:
+        pasv = 40000
+    conf = d / "vsftpd.conf"
+    conf.write_text("\n".join([
+        "listen=YES", f"listen_port={port}", "background=NO",
+        "anonymous_enable=YES", "local_enable=NO", "write_enable=NO",
+        f"anon_root={docroot}", "ftp_username=daemon", "nopriv_user=daemon",
+        f"secure_chroot_dir={empty}", "anon_world_readable_only=NO",
+        "ssl_enable=YES", "allow_anon_ssl=YES", "force_local_logins_ssl=NO",
+        "force_local_data_ssl=YES", "require_ssl_reuse=NO",
+        f"rsa_cert_file={pki['srv_crt']}", f"rsa_private_key_file={pki['srv_key']}",
+        "pasv_enable=YES", f"pasv_min_port={pasv}", f"pasv_max_port={pasv + 40}",
+        "pasv_address=127.0.0.1", "seccomp_sandbox=NO",
+    ]) + "\n", encoding="utf-8")
+    proc, of, ef = _spawn([str(ctx["program"]), str(conf)], d, ctx["env"],
+                          d / "vsftpd.out", d / "vsftpd.err")
+    good = ""
+    neg_text = ""
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("vsftpd", {"exit_code": 0, "stdout": _read(d / "vsftpd.err")})],
+                            "vsftpd did not open its control port", "runtime-failure", d)
+        session = ssl.create_default_context(cafile=str(pki["ca_crt"]))
+        ftp = ftplib.FTP_TLS(context=session)
+        ftp.connect("127.0.0.1", port, timeout=15)
+        ftp.login("anonymous", "l7@example")
+        ftp.prot_p()
+        buf = io.BytesIO()
+        ftp.retrbinary("RETR payload.txt", buf.write)
+        ftp.quit()
+        good = buf.getvalue().decode("utf-8", "ignore")
+        try:
+            bad = ssl.create_default_context(cafile=str(pki["other_crt"]))
+            nftp = ftplib.FTP_TLS(context=bad)
+            nftp.connect("127.0.0.1", port, timeout=15)
+            nftp.login("anonymous", "l7@example")
+            nftp.quit()
+            neg_text = "accepted"
+        except (ssl.SSLError, OSError) as exc:
+            neg_text = f"rejected: {exc}"
+    finally:
+        _stop(proc)
+        of.close()
+        ef.close()
+    ok = good == payload
+    neg_ok = neg_text.startswith("rejected")
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (
+            "the FTPS retrieval did not return the fixture" if not ok else
+            "a client trusting an unrelated CA was not refused"),
+        "transcript": _transcript(("vsftpd FTPS positive",
+                                   {"exit_code": 0, "stdout": good}),
+                                  ("vsftpd unrelated CA", {"exit_code": 0, "stdout": neg_text})),
+        "workload": ("vsftpd: anonymous AUTH TLS login and PROT P retrieval with an "
+                     "unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_apache(ctx: dict) -> dict:
+    """httpd + static mod_ssl: verified GET; an unrelated CA is refused."""
+    import http.client
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d / "pki")
+    docroot, logs = d / "docroot", d / "logs"
+    docroot.mkdir(parents=True, exist_ok=True)
+    logs.mkdir(parents=True, exist_ok=True)
+    payload = "phase25-l7-httpd\n"
+    (docroot / "payload.txt").write_text(payload, encoding="utf-8")
+    root = ctx["root"]
+    lines = [
+        f"ServerRoot {d}", f"Listen 127.0.0.1:{port}",
+        f"LoadModule authz_core_module {root}/modules/aaa/.libs/mod_authz_core.so",
+        f"LoadModule dir_module {root}/modules/mappers/.libs/mod_dir.so",
+        f"LoadModule mime_module {root}/modules/http/.libs/mod_mime.so",
+        f"LoadModule log_config_module {root}/modules/loggers/.libs/mod_log_config.so",
+        f"LoadModule unixd_module {root}/modules/arch/unix/.libs/mod_unixd.so",
+        "SSLEngine on", f"SSLCertificateFile {pki['srv_crt']}",
+        f"SSLCertificateKeyFile {pki['srv_key']}",
+        f"DocumentRoot {docroot}", f"ErrorLog {logs}/error.log",
+        f"PidFile {d}/httpd.pid", f"TypesConfig {root}/docs/conf/mime.types",
+        "LogLevel warn", "User daemon", "Group daemon",
+    ]
+    conf = d / "httpd.conf"
+    conf.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    proc, of, ef = _spawn([str(ctx["program"]), "-f", str(conf), "-DFOREGROUND"], d, ctx["env"],
+                          d / "httpd.out", d / "httpd.err")
+    good = ""
+    neg_text = ""
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("httpd", {"exit_code": 0, "stdout": _read(logs / "error.log")})],
+                            "httpd did not open its TLS port", "runtime-failure", d)
+        gctx = ssl.create_default_context(cafile=str(pki["ca_crt"]))
+        conn = http.client.HTTPSConnection("127.0.0.1", port, context=gctx, timeout=15)
+        conn.request("GET", "/payload.txt")
+        resp = conn.getresponse()
+        good = resp.read().decode("utf-8", "ignore")
+        conn.close()
+        try:
+            bctx = ssl.create_default_context(cafile=str(pki["other_crt"]))
+            bconn = http.client.HTTPSConnection("127.0.0.1", port, context=bctx, timeout=15)
+            bconn.request("GET", "/payload.txt")
+            bconn.getresponse().read()
+            bconn.close()
+            neg_text = "accepted"
+        except (ssl.SSLError, OSError) as exc:
+            neg_text = f"rejected: {exc}"
+    finally:
+        _stop(proc)
+        of.close()
+        ef.close()
+    ok = good == payload
+    neg_ok = neg_text.startswith("rejected")
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (
+            "the TLS GET did not return the fixture" if not ok else
+            "a client trusting an unrelated CA was not refused"),
+        "transcript": _transcript(("httpd TLS positive", {"exit_code": 0, "stdout": good}),
+                                  ("httpd unrelated CA", {"exit_code": 0, "stdout": neg_text})),
+        "workload": "httpd static mod_ssl serves the fixture with an unrelated-CA reject",
+        "local_only": True,
+    }
+
+
+def _wl_ssldump(ctx: dict) -> dict:
+    """ssldump prints a live loopback TLS handshake; a plaintext exchange has no handshake."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d / "pki")
+    cap = d / "cap.txt"
+    plain_port = _free_port()
+
+    def capture(kind: str, use_port: int, out: Path) -> str:
+        proc = subprocess.Popen(
+            ["stdbuf", "-oL", "-eL", str(ctx["program"]), "-i", "lo", "-a", "-A",
+             f"tcp port {use_port}"],
+            cwd=str(d), env=ctx["env"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True)
+        time.sleep(0.8)
+        try:
+            if kind == "tls":
+                server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                server_ctx.load_cert_chain(certfile=str(pki["srv_pem"]))
+                listener = socket.socket()
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                listener.bind(("127.0.0.1", use_port))
+                listener.listen(2)
+
+                def serve() -> None:
+                    try:
+                        conn, _ = listener.accept()
+                        with server_ctx.wrap_socket(conn, server_side=True) as tls:
+                            tls.recv(64)
+                    except (OSError, ssl.SSLError):
+                        pass
+
+                thread = threading.Thread(target=serve, daemon=True)
+                thread.start()
+                cctx = ssl.create_default_context()
+                cctx.check_hostname = False
+                cctx.verify_mode = ssl.CERT_NONE
+                cli = cctx.wrap_socket(socket.create_connection(("127.0.0.1", use_port),
+                                                                timeout=10),
+                                       server_hostname="127.0.0.1")
+                cli.sendall(b"hello")
+                cli.close()
+                thread.join(timeout=3)
+                listener.close()
+            else:
+                listener = socket.socket()
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                listener.bind(("127.0.0.1", use_port))
+                listener.listen(2)
+                cli = socket.create_connection(("127.0.0.1", use_port), timeout=10)
+                conn, _ = listener.accept()
+                conn.sendall(b"phase25-l7-ssldump-plaintext\n")
+                cli.recv(64)
+                cli.close()
+                conn.close()
+                listener.close()
+            time.sleep(1.2)
+        finally:
+            _stop(proc)
+        try:
+            data = proc.stdout.read() if proc.stdout else ""
+        except (OSError, ValueError):
+            data = ""
+        out.write_text(data, encoding="utf-8")
+        return data
+
+    good = capture("tls", port, cap)
+    neg = capture("plain", plain_port, d / "plain.txt")
+    ok = "ClientHello" in good and "ServerHello" in good
+    neg_ok = "Handshake" not in neg and "ClientHello" not in neg
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (
+            "ssldump did not print both handshake messages" if not ok else
+            "a plaintext exchange produced a handshake record"),
+        "transcript": _transcript(("ssldump live TLS capture", {"exit_code": 0, "stdout": good[-3000:]}),
+                                  ("ssldump plaintext capture", {"exit_code": 0, "stdout": neg[-1000:]})),
+        "workload": ("ssldump: live loopback handshake parsed and plaintext control with no "
+                     "handshake record"),
+        "local_only": True,
+    }
+
+
+def _wl_yara(ctx: dict) -> dict:
+    """YARA hash rule: the fixture's SHA-256 matches, a wrong digest does not."""
+    d = ctx["workdir"]
+    payload = d / "payload.bin"
+    payload.write_bytes(b"phase25-l7-yara\n")
+    digest = hashlib.sha256(payload.read_bytes()).hexdigest()
+    ok_rule = d / "ok.yar"
+    bad_rule = d / "bad.yar"
+    ok_rule.write_text(
+        'import "hash"\nrule l7_match { condition: hash.sha256(0, filesize) == '
+        f'"{digest}" }}\n', encoding="utf-8")
+    bad_rule.write_text(
+        'import "hash"\nrule l7_match { condition: hash.sha256(0, filesize) == '
+        f'"{("0" * 64)}" }}\n', encoding="utf-8")
+    good = _run_captured([str(ctx["program"]), str(ok_rule), str(payload)], cwd=d,
+                         env=ctx["env"], timeout=30)
+    neg = _run_captured([str(ctx["program"]), str(bad_rule), str(payload)], cwd=d,
+                        env=ctx["env"], timeout=30)
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    ok = "l7_match" in good_text
+    neg_ok = "l7_match" not in neg_text
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (
+            "the SHA-256 rule did not match the fixture" if not ok else
+            "the wrong-digest rule matched"),
+        "transcript": _transcript(("yara matching rule", good), ("yara wrong digest", neg)),
+        "workload": "yara: hash.sha256 rule matches the fixture and a wrong digest does not",
+        "local_only": True,
+    }
+
+
+def _wl_bruteforce(ctx: dict) -> dict:
+    """bruteforce-salted-openssl recovers the fixture password; a word list without it does not."""
+    d = ctx["workdir"]
+    # The ciphertext is a peer fixture produced by the admitted authority's own `openssl enc`,
+    # never by the subject: the family under test is the brute-force EVP consumer.
+    ossl = ctx["authority_prefix"] / "bin" / "openssl"
+    plain = d / "plain.bin"
+    enc = d / "enc.bin"
+    plain.write_bytes(b"phase25-l7-bruteforce\n")
+    env = _auth_env(ctx["authority_prefix"])
+    encres = _run_captured([str(ossl), "enc", "-aes-256-cbc", "-md", "sha256",
+                            "-pass", "pass:phase25", "-in", str(plain), "-out", str(enc)],
+                           cwd=d, env=env, timeout=30)
+    words = d / "words.txt"
+    words.write_text("alpha\nbeta\nphase25\n", encoding="utf-8")
+    words_bad = d / "words-bad.txt"
+    words_bad.write_text("alpha\nbeta\ngamma\n", encoding="utf-8")
+    good = _run_captured([str(ctx["program"]), "-1", "-c", "aes-256-cbc", "-d", "sha256",
+                          "-f", str(words), str(enc)], cwd=d, env=ctx["env"], timeout=30)
+    neg = _run_captured([str(ctx["program"]), "-1", "-c", "aes-256-cbc", "-d", "sha256",
+                         "-f", str(words_bad), str(enc)], cwd=d, env=ctx["env"], timeout=30)
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    ok = encres["ok"] and "Password candidate: phase25" in good_text
+    neg_ok = "Password candidate" not in neg_text
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (
+            "the fixture password was not recovered through EVP" if not ok else
+            "a word list without the password produced a candidate"),
+        "transcript": _transcript(("openssl enc fixture", encres),
+                                  ("bruteforce-salted-openssl positive", good),
+                                  ("bruteforce-salted-openssl negative", neg)),
+        "workload": ("bruteforce-salted-openssl: recover the fixture password from a word list "
+                     "and reject a list without it"),
+        "local_only": True,
+    }
+
+
+def _wl_ircii(ctx: dict) -> dict:
+    """ircII registers and joins the fixture channel over TLS; an unrelated CA never registers."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d / "pki")
+    stub, built = _l7_irc_stub(ctx)
+    if not built["ok"] or not stub.is_file():
+        return {"runtime_ok": False, "functional_ok": False, "failure_class": "harness-failure",
+                "residual": "out-of-scope",
+                "reason": f"the IRC stub harness did not compile: {census._error_line(built)}",
+                "transcript": _transcript(("cc l7_irc_stub.c", built)),
+                "workload": "ircii: IRC-over-TLS registration", "local_only": True}
+    script = d / "ircii.rc"
+    script.write_text(f"set SSL_CA_FILE {pki['ca_crt']}\n"
+                      f"server -SSL 127.0.0.1:{ctx['port']}\n", encoding="utf-8")
+    log = d / "stub.log"
+    srv, of, ef = _spawn([str(stub), str(ctx["port"]), str(log), "tls", str(pki["srv_crt"]),
+                          str(pki["srv_key"])], d, _auth_env(ap), d / "stub.out", d / "stub.err")
+    registered = joined = False
+    try:
+        if not _wait_marker(log, "READY", 20):
+            return _wl_fail([("irc stub", {"exit_code": 0, "stdout": _read(d / "stub.err")})],
+                            "the local IRC stub did not listen", "harness-failure", d)
+        master, slave = pty.openpty()
+        env = dict(ctx["env"], TERM="dumb", HOME=str(d))
+        proc = subprocess.Popen([str(ctx["program"]), "-b", "-d", "-l", str(script), "l7irc"],
+                                stdin=slave, stdout=slave, stderr=slave, env=env, cwd=str(d))
+        os.close(slave)
+        try:
+            deadline = time.monotonic() + 25
+            while time.monotonic() < deadline:
+                text = _read(log)
+                registered = registered or "REGISTERED " in text
+                joined = joined or "JOINED #l7" in text
+                if registered and not joined:
+                    os.write(master, b"/join #l7\n")
+                if registered and joined:
+                    try:
+                        os.write(master, b"/quit\n")
+                    except OSError:
+                        pass
+                    break
+                ready, _, _ = select.select([master], [], [], 0.2)
+                if ready:
+                    try:
+                        os.read(master, 65536)
+                    except OSError:
+                        pass
+        finally:
+            _stop(proc)
+            try:
+                os.close(master)
+            except OSError:
+                pass
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    nregistered = False
+    nport = _free_port()
+    nscript = d / "ircii-neg.rc"
+    nscript.write_text(f"set SSL_CA_FILE {pki['other_crt']}\n"
+                       f"server -SSL 127.0.0.1:{nport}\n", encoding="utf-8")
+    nlog = d / "stub-neg.log"
+    nsrv, nof, nef = _spawn([str(stub), str(nport), str(nlog), "tls", str(pki["srv_crt"]),
+                             str(pki["srv_key"])], d, _auth_env(ap), d / "stub-neg.out",
+                            d / "stub-neg.err")
+    try:
+        if _wait_marker(nlog, "READY", 20):
+            master, slave = pty.openpty()
+            nproc = subprocess.Popen([str(ctx["program"]), "-b", "-d", "-l", str(nscript), "l7irc"],
+                                     stdin=slave, stdout=slave, stderr=slave,
+                                     env=dict(ctx["env"], TERM="dumb", HOME=str(d)), cwd=str(d))
+            os.close(slave)
+            deadline = time.monotonic() + 8
+            while time.monotonic() < deadline:
+                if "REGISTERED " in _read(nlog):
+                    nregistered = True
+                    break
+                ready, _, _ = select.select([master], [], [], 0.2)
+                if ready:
+                    try:
+                        os.read(master, 65536)
+                    except OSError:
+                        pass
+            _stop(nproc)
+            try:
+                os.close(master)
+            except OSError:
+                pass
+    finally:
+        _stop(nsrv)
+        nof.close()
+        nef.close()
+    neg_refused = not nregistered and "REGISTERED" not in _read(nlog)
+    functional = registered and joined and neg_refused
+    return {
+        "runtime_ok": registered, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if registered else
+                                                  "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if registered else
+                                              "runtime-failure"),
+        "reason": None if functional else (
+            "ircII did not register over TLS" if not registered else
+            "ircII registered but did not join the fixture channel" if not joined else
+            "a client trusting only the unrelated CA registered"),
+        "transcript": _transcript(("irc stub (TLS) log", {"exit_code": 0, "stdout": _read(log)}),
+                                  ("irc stub (unrelated CA) log",
+                                   {"exit_code": 0, "stdout": _read(nlog)})),
+        "workload": "ircii: IRC-over-TLS registration and join; unrelated CA refused",
+        "local_only": True,
+    }
+
+
+def _wl_neon(ctx: dict) -> dict:
+    """libneon fetches the fixture over verified TLS; an unrelated CA fails the handshake."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d / "pki")
+    body = "phase25-l7-neon"
+    state: dict = {}
+    stop = threading.Event()
+    thread = _https_fixture(port, pki, body, state, stop)
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("https fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local HTTPS fixture did not open its port",
+                            "runtime-failure", d)
+        good = _run_captured([str(ctx["program"]), str(pki["ca_crt"]), str(port),
+                              "/payload.txt"], cwd=d, env=ctx["env"], timeout=30)
+        neg = _run_captured([str(ctx["program"]), str(pki["other_crt"]), str(port),
+                             "/payload.txt"], cwd=d, env=ctx["env"], timeout=30)
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    ok = "status=200" in good_text and body in good_text
+    neg_ok = "connect=failed" in neg_text or "status=0" in neg_text
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (
+            "libneon did not fetch the fixture over TLS" if not ok else
+            "an unrelated CA was not refused"),
+        "transcript": _transcript(("neon TLS fetch", good), ("neon unrelated CA", neg)),
+        "workload": "neon: verified HTTPS fetch of the fixture with an unrelated-CA reject",
+        "local_only": True,
+    }
+
+
+def _wl_cjose(ctx: dict) -> dict:
+    """cjose signs/verifies an HS256 JWS and rejects tampered and wrong-key inputs."""
+    d = ctx["workdir"]
+    res = _run_captured([str(ctx["program"])], cwd=d, env=ctx["env"], timeout=30)
+    text = res["stdout"] + res["stderr"]
+    ok = ("sign=ok" in text and "import=ok" in text and "verify=ok" in text
+          and "tamper=rejected" in text and "wrongkey=rejected" in text)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else (
+            "cjose did not sign/verify the JWS or accepted a tampered/wrong-key input"),
+        "transcript": _transcript(("cjose JWS", res)),
+        "workload": "cjose: HS256 sign/import/verify with tamper and wrong-key rejects",
+        "local_only": True,
+    }
+
+
+def _wl_evhtp(ctx: dict) -> dict:
+    """libevhtp serves the fixture over verified TLS; an unrelated CA is refused."""
+    import http.client
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d / "pki")
+    payload = "phase25-l7-libevhtp\n"
+
+    def one(port: int, ca: Path) -> tuple[str, str]:
+        proc, of, ef = _spawn([str(ctx["program"]), str(port), str(pki["srv_crt"]),
+                               str(pki["srv_key"])], d, ctx["env"],
+                              d / f"evhtp-{port}.out", d / f"evhtp-{port}.err")
+        try:
+            if not _wait_tcp("127.0.0.1", port):
+                return "", "server did not open its port"
+            gctx = ssl.create_default_context(cafile=str(ca))
+            conn = http.client.HTTPSConnection("127.0.0.1", port, context=gctx, timeout=15)
+            conn.request("GET", "/payload.txt")
+            body = conn.getresponse().read().decode("utf-8", "ignore")
+            conn.close()
+            return body, ""
+        except (ssl.SSLError, OSError) as exc:
+            return "", f"rejected: {exc}"
+        finally:
+            _stop(proc)
+            of.close()
+            ef.close()
+
+    good, good_err = one(ctx["port"], pki["ca_crt"])
+    neg_body, neg_err = one(_free_port(), pki["other_crt"])
+    ok = good == payload
+    neg_ok = neg_err.startswith("rejected")
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (
+            "libevhtp did not serve the fixture over TLS" if not ok else
+            "an unrelated CA was not refused"),
+        "transcript": _transcript(("libevhtp TLS server", {"exit_code": 0, "stdout": good}),
+                                  ("libevhtp unrelated CA", {"exit_code": 0, "stdout": neg_err})),
+        "workload": "libevhtp: TLS server serves the fixture with an unrelated-CA reject",
+        "local_only": True,
+    }
+
+
+def _wl_xmlsec(ctx: dict) -> dict:
+    """xmlsec1 signs with RSA-SHA256, verifies, and rejects a tampered document."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d / "pki")
+    key, cert = pki["srv_key"], pki["srv_crt"]
+    template = d / "template.xml"
+    template.write_text(
+        "<Envelope>\n <Data>phase25-l7-xmlsec</Data>\n"
+        ' <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">\n'
+        "  <SignedInfo>\n"
+        '   <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>\n'
+        '   <SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>\n'
+        '   <Reference URI="">\n'
+        '    <Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/></Transforms>\n'
+        '    <DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>\n'
+        "    <DigestValue/>\n"
+        "   </Reference>\n"
+        "  </SignedInfo>\n"
+        "  <SignatureValue/>\n"
+        f"  <KeyInfo><KeyName>{Path(cert).name}</KeyName></KeyInfo>\n"
+        " </Signature>\n"
+        "</Envelope>\n", encoding="utf-8")
+    signed = d / "signed.xml"
+    sign = _run_captured([str(ctx["program"]), "--sign", f"--privkey-pem:{Path(cert).name}",
+                          f"{key},{cert}", "--output", str(signed), str(template)],
+                         cwd=d, env=ctx["env"], timeout=45)
+    verify = _run_captured([str(ctx["program"]), "--verify", f"--privkey-pem:{Path(cert).name}",
+                            f"{key},{cert}", str(signed)], cwd=d, env=ctx["env"], timeout=45)
+    tampered = d / "tampered.xml"
+    text = signed.read_text(encoding="utf-8") if signed.is_file() else ""
+    tampered.write_text(text.replace("phase25-l7-xmlsec", "phase25-l7-TAMPERED"),
+                        encoding="utf-8")
+    neg = _run_captured([str(ctx["program"]), "--verify", f"--privkey-pem:{Path(cert).name}",
+                         f"{key},{cert}", str(tampered)], cwd=d, env=ctx["env"], timeout=45)
+    verify_text = verify["stdout"] + verify["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    ok = sign["ok"] and "Verification status: OK" in verify_text
+    neg_ok = "Verification status: FAILED" in neg_text or "Failure reason:" in neg_text
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (
+            "xmlsec1 did not sign and verify the document" if not ok else
+            "a tampered document verified"),
+        "transcript": _transcript(("xmlsec1 sign", sign), ("xmlsec1 verify", verify),
+                                  ("xmlsec1 tampered", neg)),
+        "workload": "xmlsec1: RSA-SHA256 sign/verify and tampered-document reject",
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "icecast2": _wl_icecast,
     "libevent-openssl-2.1-7": _wl_libevent,
@@ -10138,6 +10810,18 @@ RUNNERS = {
     "swtpm": _wl_swtpm,
     "httping": _wl_httping,
     "libssh": _wl_libssh,
+    # The Phase-25 L7 onboarding batch (b15).
+    "vsftpd": _wl_vsftpd,
+    "apache2-bin": _wl_apache,
+    "ssldump": _wl_ssldump,
+    "yara": _wl_yara,
+    "bruteforce-salted-openssl": _wl_bruteforce,
+    "ircii": _wl_ircii,
+    "neon": _wl_neon,
+    "cjose": _wl_cjose,
+    "libevhtp": _wl_evhtp,
+    "libxmlsec1": _wl_xmlsec,
+
 }
 
 # The declarative template cohort's bucket runners.  Each is the same parameterised Python
