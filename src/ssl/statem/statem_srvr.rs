@@ -4813,10 +4813,11 @@ mod tls12_group_tests {
     use crate::ssl::methods::TLS_method;
     use crate::ssl::ssl_ciph::{ssl3_get_cipher_by_id, SSL_CIPHER_get_name};
     use crate::ssl::ssl_lib::{
-        SSL_CTX_callback_ctrl, SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_cipher_list,
-        SSL_CTX_set_verify, SSL_ctrl, SSL_do_handshake, SSL_free, SSL_get_current_cipher,
-        SSL_get_error, SSL_new, SSL_peek, SSL_pending, SSL_read, SSL_set_accept_state, SSL_set_bio,
-        SSL_set_connect_state, SSL_set_options, SSL_write, Ssl, SslCtx,
+        SSL_CTX_callback_ctrl, SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_get_ciphers, SSL_CTX_new,
+        SSL_CTX_set_cipher_list, SSL_CTX_set_verify, SSL_ctrl, SSL_do_handshake, SSL_free,
+        SSL_get_ciphers, SSL_get_current_cipher, SSL_get_error, SSL_new, SSL_peek, SSL_pending,
+        SSL_read, SSL_set_accept_state, SSL_set_bio, SSL_set_cipher_list, SSL_set_connect_state,
+        SSL_set_options, SSL_write, Ssl, SslCtx,
     };
     use crate::ssl::ssl_rsa::{SSL_CTX_use_PrivateKey, SSL_CTX_use_certificate};
     use crate::ssl::ssl_sess::{SSL_SESSION_get_compress_id, SSL_get_session};
@@ -5746,6 +5747,149 @@ mod tls12_group_tests {
     #[test]
     fn ssl_get_session_after_tls12_handshake_is_non_null() {
         assert_session_after_handshake(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION);
+    }
+
+    /// The `SSL_CIPHER *` names in `sk`, in list order.
+    ///
+    /// # Safety
+    /// `sk` is NULL or a live cipher stack.
+    unsafe fn cipher_names(sk: *mut crate::runtime::stack::OpenSslStack) -> Vec<String> {
+        if sk.is_null() {
+            return Vec::new();
+        }
+        // SAFETY: `sk` is live per the caller's contract.
+        let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(sk) };
+        let mut out = Vec::new();
+        for i in 0..n {
+            // SAFETY: `i` is in range for the stack.
+            let c = unsafe { crate::runtime::stack::OPENSSL_sk_value(sk, i) }
+                as *const crate::ssl::ssl_ciph_table::SslCipher;
+            if c.is_null() {
+                continue;
+            }
+            // SAFETY: `c` is a process-lifetime table row; its name is NUL-terminated.
+            let p = unsafe { SSL_CIPHER_get_name(c) };
+            if !p.is_null() {
+                // SAFETY: `p` is NUL-terminated.
+                out.push(unsafe { CStr::from_ptr(p) }.to_string_lossy().into_owned());
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn cipher_list_all_selects_tls12_and_tls13_suites_and_handshakes() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            // The context entry point: `"ALL"` must select the TLS1.2 ciphers and the context's
+            // TLS1.3 suites, exactly as the authority's `ssl_create_cipher_list` does.
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(SSL_CTX_set_cipher_list(ctx, c"ALL".as_ptr()), 1);
+            let names = cipher_names(SSL_CTX_get_ciphers(ctx));
+            assert!(
+                names.iter().any(|n| n == "ECDHE-RSA-AES128-GCM-SHA256"),
+                "ALL must select the TLS1.2 suites: {names:?}"
+            );
+            assert!(
+                names.iter().any(|n| n == "TLS_AES_128_GCM_SHA256"),
+                "ALL must include the TLS1.3 suites: {names:?}"
+            );
+            SSL_CTX_free(ctx);
+
+            // The connection entry point: jimtcl calls `SSL_set_cipher_list(ssl, "ALL")` on a
+            // fresh `SSL_new` connection before the handshake. A NULL connection
+            // `tls13_ciphersuites` used to drop every TLS1.3 suite here, so the server answered
+            // `no shared cipher` for a TLS1.3 ClientHello.
+            let p = make_pair(c"ALL", TLS1_3_VERSION, None, None);
+            assert_eq!(SSL_set_cipher_list(p.c, c"ALL".as_ptr()), 1);
+            assert_eq!(SSL_set_cipher_list(p.s, c"ALL".as_ptr()), 1);
+            let names = cipher_names(SSL_get_ciphers(p.s));
+            assert!(
+                names.iter().any(|n| n == "TLS_AES_128_GCM_SHA256"),
+                "the connection list must keep the TLS1.3 suites: {names:?}"
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let cipher = current_cipher(p.s);
+            let reasons = if server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "TLS1.3 handshake after SSL_set_cipher_list(\"ALL\") failed \
+                 (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert!(
+                cipher.starts_with("TLS_"),
+                "a TLS1.3 suite must be negotiated, got {cipher}"
+            );
+        }
+    }
+
+    #[test]
+    fn cipher_list_default_and_explicit_suite_select_expected_suites() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the context is created and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(SSL_CTX_set_cipher_list(ctx, c"DEFAULT".as_ptr()), 1);
+            let names = cipher_names(SSL_CTX_get_ciphers(ctx));
+            assert!(
+                names.iter().any(|n| n == "ECDHE-RSA-AES128-GCM-SHA256"),
+                "DEFAULT must include the default TLS1.2 suites: {names:?}"
+            );
+            assert!(
+                names.iter().any(|n| n == "TLS_AES_128_GCM_SHA256"),
+                "DEFAULT must keep the TLS1.3 suites: {names:?}"
+            );
+
+            assert_eq!(
+                SSL_CTX_set_cipher_list(ctx, c"ECDHE-RSA-AES128-GCM-SHA256".as_ptr()),
+                1
+            );
+            let sk = SSL_CTX_get_ciphers(ctx);
+            let names = cipher_names(sk);
+            assert!(
+                names.iter().any(|n| n == "ECDHE-RSA-AES128-GCM-SHA256"),
+                "the named suite must be selected: {names:?}"
+            );
+            assert!(
+                names.iter().any(|n| n == "TLS_AES_128_GCM_SHA256"),
+                "the TLS1.3 suites stay appended: {names:?}"
+            );
+            assert_eq!(
+                crate::ssl::ssl_ciph::cipher_list_tls12_num(sk),
+                1,
+                "exactly the named TLS1.2 suite: {names:?}"
+            );
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn cipher_list_selecting_no_tls12_suite_returns_zero() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            // `!aNULL` kills every anonymous suite and activates nothing; an unknown name matches
+            // nothing. The authority raises `SSL_R_NO_CIPHER_MATCH` and returns 0 in both cases.
+            assert_eq!(SSL_CTX_set_cipher_list(ctx, c"!aNULL".as_ptr()), 0);
+            assert_eq!(SSL_CTX_set_cipher_list(ctx, c"NOT-A-CIPHER".as_ptr()), 0);
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            assert_eq!(SSL_set_cipher_list(s, c"!aNULL".as_ptr()), 0);
+            assert_eq!(SSL_set_cipher_list(s, c"NOT-A-CIPHER".as_ptr()), 0);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
     }
 
     #[test]
