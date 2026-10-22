@@ -1,5 +1,12 @@
 # Safe-33 closure inventory — `integrate/safe-c33`
 
+> **Superseded (2026-10-22).** This is a frozen inventory at `67ae7f8e9` with
+> crate 0.0.27 and the then-current 8-at-L7 split. It is retained as the freeze
+> record and is not the current status. Read
+> `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`: the current
+> atlas records 33/33 cohort families at `L7-functional`, and `Cargo.toml` is
+> 0.0.29. Every figure below remains true of the frozen inputs it cites.
+
 Task: `SAFE-C33-001` · branch `integrate/safe-c33` @ `67ae7f8e9` · base `origin/main`
 Candidate: `openssl-rs 0.0.27` reconstructing `openssl-3.6.4-production`
 (`forensics/downstream/p1000-run.json` `candidate_identity.identity_hash = fe1db3e5…`, `source_commit f0789077a`)
