@@ -85,7 +85,7 @@
       "env": {"SIEGERC": "{root}/doc/siegerc"},
       "workload": {
         "template": "http_bench",
-        "argv": ["-q", "-c1", "-r1", "-b", "{url}"],
+        "argv": ["-c1", "-r1", "-b", "{url}"],
         "expect": "Transactions:\\s+1",
         "negative": "plaintext"
       }
@@ -108,7 +108,7 @@
         "template": "http_bench",
         "argv": ["-t1", "-c1", "-d1s", "{url}"],
         "expect": "Requests/sec",
-        "negative": "plaintext"
+        "negative": "closed_port"
       }
     },
     {

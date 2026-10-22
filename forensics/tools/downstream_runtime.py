@@ -9010,6 +9010,10 @@ def _runtime_row(fam: dict, recipe: dict | None, subject: str, *, level: str, ou
     row["link"] = (canvas or {}).get("link")
     row["linkage_proven"] = bool((canvas or {}).get("linkage_proven"))
     row["resolved_under_authority"] = bool((canvas or {}).get("resolved_under_authority"))
+    # Persist the template admission verdict with the row it gated: the L7 level is only
+    # meaningful alongside the loader-closure evidence that admitted it.
+    if (canvas or {}).get("template_admission") is not None:
+        row["template_admission"] = (canvas or {})["template_admission"]
     row["launch"] = list(launch) if launch else None
     row["workload"] = workload
     row["local_only"] = bool(local_only)
