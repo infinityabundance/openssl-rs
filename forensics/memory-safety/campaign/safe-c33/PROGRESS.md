@@ -29,12 +29,14 @@ generator is measurement-only and claims no discharge.
   `atlas-refresh/mechanism-discharge-ERR.json`). These are mechanism-scope
   discharges, not file-level or consumer-level graduation; the consumer
   `SAFE_COMPATIBLE` count is unchanged at **0/33**.
-- **Scoped boundary discharges (3, separate from the mechanism list):** B23
+- **Scoped boundary discharges (5, separate from the mechanism list):** B23
   WPACKET failed-initialisation and `put_value` (`B23-WPKT-1`/`B23-WPKT-2`,
   `atlas-refresh/boundary-sweep-B23.json`); B25 record-layer `RL-4`/`RL-5`
   (`atlas-refresh/boundary-sweep-B25.json`; `RL-1..3` remain `CONTRACTED`); B29
   `UI-1`/`UI-2`/`UI-3` (`atlas-refresh/boundary-sweep-B29.json`; `UI-4` remains
-  `CONTRACTED`).
+  `CONTRACTED`); B27 `B26-X1` (`atlas-refresh/boundary-sweep-B27.json`); and B28
+  `B27-X2` (`atlas-refresh/boundary-sweep-B28.json`, the `OSSL_STORE_attach`
+  refused-params NULL dereference, with its negative control).
 - **Independently checked boundary/batch plane (separate from mechanisms and
   scoped discharges):** B39 memory-BIO constructor/destructor, B40 connect-BIO
   descriptor close/invalidate, B41/B42 allocator batches 1-2 and B43 Argon2/KDF
@@ -1420,11 +1422,11 @@ Not one percentage; report each axis honestly.
    (RC-1, OB-1 `OwnedBuf`, OB-2 `OwnedStr`, OB-3 `OwnedCtx`/`RawCtx`, and the
    ERR queue/allocator seam; subphases 84–88), each with complete contracts,
    per-caller audits with 0 unattributed rows, independent models/mutation
-   controls, and every blocker fixed rather than documented. Four **scoped
+   controls, and every blocker fixed rather than documented. Five **scoped
    boundary discharges** are recorded separately and are not mechanism-level:
-   B23 (`B23-WPKT-1/2`), B25 (`B25-RL-4/5`), B29 (`B29-UI-1/2/3`) and B27
-   (`B26-X1`); B25 `RL-1..3`, B29 `UI-4` and the open `B27-X2` remain
-   `CONTRACTED`/open. All other mechanisms remain `ESTABLISHED` or
+   B23 (`B23-WPKT-1/2`), B25 (`B25-RL-4/5`), B29 (`B29-UI-1/2/3`), B27
+   (`B26-X1`) and B28 (`B27-X2`); B25 `RL-1..3` and B29 `UI-4` remain
+   `CONTRACTED`. All other mechanisms remain `ESTABLISHED` or
    `CONTRACTED`; a converted site is not a discharged obligation. The
    761-file per-file audit is complete (761/761, 0 remaining) but is **not**
    file-level discharge: independent review/adjudication, SEAL dependency

@@ -1,5 +1,11 @@
 # Safe-33 atlas refresh — candidate-bound ownership-reconstruction status
 
+> **Superseded by `STATUS-2026-10-20.md` (current counts).** This is a frozen
+> 2026-10-17 receipt pinned to 0.0.27 and the then-current 8 L7 / 25 L4 split.
+> The current atlas records 33/33 cohort families at `L7-functional`, five
+> mechanisms are `SAFETY_DISCHARGED`, and 0.0.30 is published. The figures below
+> remain true of the frozen candidate they cite.
+
 Candidate stamp 2026-10-17T20:31:17Z (deterministic HEAD commit time; `SOURCE_DATE_EPOCH` honoured) by `{doc['generator']}` (stdlib only). **Measurement only** — no source conversion, no Phase-25 regeneration, no graduation claimed.
 
 ## Candidate pin
