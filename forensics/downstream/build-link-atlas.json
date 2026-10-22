@@ -9,38 +9,38 @@
       "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
     },
     "counts": {
-      "authority_linkage_proven": 88,
+      "authority_linkage_proven": 91,
       "by_subject": {
         "authority": {
-          "built": 88,
-          "configured": 88,
+          "built": 91,
+          "configured": 91,
           "failed": 2,
-          "linked": 88,
-          "not_attempted": 910
+          "linked": 91,
+          "not_attempted": 907
         },
         "candidate": {
-          "built": 88,
-          "configured": 88,
+          "built": 91,
+          "configured": 91,
           "failed": 2,
-          "linked": 88,
-          "not_attempted": 910
+          "linked": 91,
+          "not_attempted": 907
         }
       },
       "candidate_failures": {
-        "acquire-failure": 910,
+        "acquire-failure": 907,
         "configure-failure": 2
       },
-      "candidate_linkage_proven": 88,
+      "candidate_linkage_proven": 91,
       "candidate_specific_patch_count": 0,
-      "measured_families": 90,
-      "no_recipe": 910,
+      "measured_families": 93,
+      "no_recipe": 907,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 90
+      "with_recipe": 93
     },
     "evidence_reuse": {
       "candidate_identity_match": true,
-      "families_reused": 84,
+      "families_reused": 92,
       "mode": "committed-rows",
       "reused_families": [
         "aircrack-ng",
@@ -51,7 +51,9 @@
         "cowpatty",
         "curl",
         "cyrus-sasl",
+        "dcap-tunnel-ssl",
         "dovecot",
+        "duo_unix",
         "eggdrop",
         "epic5",
         "exim",
@@ -59,6 +61,8 @@
         "fetchmail",
         "fido2",
         "fossil",
+        "gensio",
+        "getdns",
         "haproxy",
         "hcxtools",
         "hiredis-ssl",
@@ -83,10 +87,13 @@
         "libssh",
         "libstrophe",
         "libtins",
+        "libu2f-server",
         "libwebsockets",
         "libzip",
         "lighttpd",
         "links",
+        "lua-luaossl",
+        "lua-sec",
         "makepasswd",
         "memcached",
         "mini-httpd",
@@ -116,6 +123,7 @@
         "s-nail",
         "slrn",
         "socat",
+        "sofia-sip",
         "squid",
         "sslscan",
         "sslsplit",
@@ -1373,6 +1381,44 @@
         "sha256": "dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
         "url": "https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz",
         "version": "2.47.14"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "lib/.libs/libgensio.so*",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "gensio",
+        "note": "gensio 2.8.6's ssl gensio (lib/gensio_ssl.c) built against the subject libssl; the admitted workload is the loopback TLS request/response harness",
+        "recipe_id": "recipe:gensio:2.8.6",
+        "sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "url": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "version": "2.8.6"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "libjim.so*",
+        "build_system": "configure",
+        "env_extra": {
+          "PKG_CONFIG_PATH": "{prefix}/lib/pkgconfig"
+        },
+        "family": "jimtcl",
+        "note": "jimtcl 0.81 with the aio extension's OpenSSL SSL support (jim-aio.c) built against the subject libssl; the admitted workload is the TLS server harness",
+        "recipe_id": "recipe:jimtcl:0.81+dfsg0",
+        "sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "url": "https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz",
+        "version": "0.81+dfsg0"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "libsofia-sip-ua/.libs/libsofia-sip-ua.so*",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "sofia-sip",
+        "note": "sofia-sip 1.12.11's tport TLS transport (libsofia-sip-ua/tport/tport_tls.c) built against the subject libssl; the admitted workload is the SIP-over-TLS tport harness",
+        "recipe_id": "recipe:sofia-sip:1.12.11+20110422.1",
+        "sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "url": "https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz",
+        "version": "1.12.11+20110422.1"
       }
     ],
     "resource_limits": {
@@ -34777,24 +34823,56 @@
         "canonical_name": "gensio",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:gensio"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libgensioosh.so.10",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:gensio",
+          "recipe:recipe:gensio:2.8.6",
+          "source:https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz#3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+          "artifact:lib/.libs/libgensio.so.10.0.0"
+        ],
+        "failure_class": null,
         "family_id": "family:gensio",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 70,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "lib/.libs/libgensio.so.10.0.0",
+          "artifact_sha256": "8b0ce52432f9b158512c1052f21d32b89a69c75e71b687c5fd58785e86621530",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 132,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:gensio:2.8.6",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -34804,41 +34882,112 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:gensio",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "ae5a637d684811779009204b29790036555830471dee4903f66ee033defffc30",
+        "source_sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "source_url": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "specimen_id": "specimen:gensio:2.8.6",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/gensio/source.tar.gz",
+              "-C",
+              "{scratch}/gensio/authority/src"
+            ],
+            "elapsed_seconds": 0.026,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/gensio/authority/src/gensio-2.8.6/.l7-install",
+              "--with-openssl={prefix}",
+              "--with-ssl=yes",
+              "--with-tcl=no",
+              "--with-python=no",
+              "--with-swig=no"
+            ],
+            "elapsed_seconds": 1.882,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 6.042,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:gensio:2.8.6:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "gensio",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:gensio"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libgensioosh.so.10",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:gensio",
+          "recipe:recipe:gensio:2.8.6",
+          "source:https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz#3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+          "artifact:lib/.libs/libgensio.so.10.0.0"
+        ],
+        "failure_class": null,
         "family_id": "family:gensio",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 70,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "lib/.libs/libgensio.so.10.0.0",
+          "artifact_sha256": "7bdbd9af1f8c2dad969719c1a4db843de11cb06cf29b607f16ceedd4193eeab2",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 132,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:gensio:2.8.6",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -34849,18 +34998,57 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:gensio",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "ae5a637d684811779009204b29790036555830471dee4903f66ee033defffc30",
+        "source_sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "source_url": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "specimen_id": "specimen:gensio:2.8.6",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/gensio/source.tar.gz",
+              "-C",
+              "{scratch}/gensio/candidate/src"
+            ],
+            "elapsed_seconds": 0.026,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/gensio/candidate/src/gensio-2.8.6/.l7-install",
+              "--with-openssl={prefix}",
+              "--with-ssl=yes",
+              "--with-tcl=no",
+              "--with-python=no",
+              "--with-swig=no"
+            ],
+            "elapsed_seconds": 1.883,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 6.006,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:gensio:2.8.6:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -52123,24 +52311,55 @@
         "canonical_name": "jimtcl",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:jimtcl"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:jimtcl",
+          "recipe:recipe:jimtcl:0.81+dfsg0",
+          "source:https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz#ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+          "artifact:libjim.so.0.81"
+        ],
+        "failure_class": null,
         "family_id": "family:jimtcl",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 25,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "libjim.so.0.81",
+          "artifact_sha256": "265357b8d54444bc7961676297fb627e85f320699f050b569a25f88f98b7680c",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 254,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:jimtcl:0.81+dfsg0",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -52150,41 +52369,108 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:jimtcl",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
+        "source_sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "source_url": "https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz",
+        "specimen_id": "specimen:jimtcl:0.81+dfsg0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/jimtcl/source.tar.gz",
+              "-C",
+              "{scratch}/jimtcl/authority/src"
+            ],
+            "elapsed_seconds": 0.055,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/jimtcl/authority/src/jimtcl-0.81/.l7-install",
+              "--ssl",
+              "--shared"
+            ],
+            "elapsed_seconds": 1.289,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 1.823,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:jimtcl:0.81+dfsg0:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "jimtcl",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:jimtcl"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:jimtcl",
+          "recipe:recipe:jimtcl:0.81+dfsg0",
+          "source:https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz#ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+          "artifact:libjim.so.0.81"
+        ],
+        "failure_class": null,
         "family_id": "family:jimtcl",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 25,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "libjim.so.0.81",
+          "artifact_sha256": "0485c7e9a072c931784604c40550ee21aed534f6bb6f63fd91d9bbcd960e4b78",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 254,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:jimtcl:0.81+dfsg0",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -52195,18 +52481,54 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:jimtcl",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
+        "source_sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "source_url": "https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz",
+        "specimen_id": "specimen:jimtcl:0.81+dfsg0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/jimtcl/source.tar.gz",
+              "-C",
+              "{scratch}/jimtcl/candidate/src"
+            ],
+            "elapsed_seconds": 0.054,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/jimtcl/candidate/src/jimtcl-0.81/.l7-install",
+              "--ssl",
+              "--shared"
+            ],
+            "elapsed_seconds": 1.238,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 1.822,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:jimtcl:0.81+dfsg0:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -93501,24 +93823,55 @@
         "canonical_name": "sofia-sip",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:sofia-sip"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:sofia-sip",
+          "recipe:recipe:sofia-sip:1.12.11+20110422.1",
+          "source:https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz#bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+          "artifact:libsofia-sip-ua/.libs/libsofia-sip-ua.so.0.6.0"
+        ],
+        "failure_class": null,
         "family_id": "family:sofia-sip",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 71,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "libsofia-sip-ua/.libs/libsofia-sip-ua.so.0.6.0",
+          "artifact_sha256": "b312ed6a5fa765e2f21bdca0c7059b1eb6a862df868710e939e502c077639cfc",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 44,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:sofia-sip:1.12.11+20110422.1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -93528,41 +93881,107 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:sofia-sip",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "94a8ef12adbe29c229f32f11382bffacd935601bd4d33a5e740d1c4bdd496b02",
+        "source_sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "source_url": "https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz",
+        "specimen_id": "specimen:sofia-sip:1.12.11+20110422.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/sofia-sip/source.tar.gz",
+              "-C",
+              "{scratch}/sofia-sip/authority/src"
+            ],
+            "elapsed_seconds": 0.05,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/sofia-sip/authority/src/sofia-sip-1.12.11+20110422.1/.l7-install",
+              "--with-openssl={prefix}"
+            ],
+            "elapsed_seconds": 2.463,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 15.85,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:sofia-sip:1.12.11+20110422.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "sofia-sip",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:sofia-sip"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:sofia-sip",
+          "recipe:recipe:sofia-sip:1.12.11+20110422.1",
+          "source:https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz#bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+          "artifact:libsofia-sip-ua/.libs/libsofia-sip-ua.so.0.6.0"
+        ],
+        "failure_class": null,
         "family_id": "family:sofia-sip",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 71,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "libsofia-sip-ua/.libs/libsofia-sip-ua.so.0.6.0",
+          "artifact_sha256": "0a4c08f4d7aefe83f56c78b555ebc7bd049d852be2149b29040a8daedba1115b",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 44,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:sofia-sip:1.12.11+20110422.1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -93573,18 +93992,53 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:sofia-sip",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "94a8ef12adbe29c229f32f11382bffacd935601bd4d33a5e740d1c4bdd496b02",
+        "source_sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "source_url": "https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz",
+        "specimen_id": "specimen:sofia-sip:1.12.11+20110422.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/sofia-sip/source.tar.gz",
+              "-C",
+              "{scratch}/sofia-sip/candidate/src"
+            ],
+            "elapsed_seconds": 0.049,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/sofia-sip/candidate/src/sofia-sip-1.12.11+20110422.1/.l7-install",
+              "--with-openssl={prefix}"
+            ],
+            "elapsed_seconds": 2.471,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 15.82,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:sofia-sip:1.12.11+20110422.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -103872,6 +104326,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz#3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+          "recipe:recipe:gensio:2.8.6",
+          "pinned_sha256:3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb"
+        ],
+        "family_id": "family:gensio",
+        "licence": "unknown",
+        "pristine_source_root_hash": "ae5a637d684811779009204b29790036555830471dee4903f66ee033defffc30",
+        "pristine_source_sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "specimen_id": "specimen:gensio:2.8.6",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "version": "2.8.6"
+      },
+      {
+        "evidence": [
           "source:https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz#f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
           "recipe:recipe:getdns:1.7.3",
           "pinned_sha256:f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c"
@@ -104009,6 +104477,20 @@
         "specimen_id": "specimen:isync:1.5.0",
         "upstream_ref": "https://downloads.sourceforge.net/project/isync/isync/1.5.0/isync-1.5.0.tar.gz",
         "version": "1.5.0"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz#ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+          "recipe:recipe:jimtcl:0.81+dfsg0",
+          "pinned_sha256:ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985"
+        ],
+        "family_id": "family:jimtcl",
+        "licence": "unknown",
+        "pristine_source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
+        "pristine_source_sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "specimen_id": "specimen:jimtcl:0.81+dfsg0",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/j/jimtcl/jimtcl_0.81+dfsg0.orig.tar.gz",
+        "version": "0.81+dfsg0"
       },
       {
         "evidence": [
@@ -104726,6 +105208,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz#bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+          "recipe:recipe:sofia-sip:1.12.11+20110422.1",
+          "pinned_sha256:bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab"
+        ],
+        "family_id": "family:sofia-sip",
+        "licence": "unknown",
+        "pristine_source_root_hash": "94a8ef12adbe29c229f32f11382bffacd935601bd4d33a5e740d1c4bdd496b02",
+        "pristine_source_sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "specimen_id": "specimen:sofia-sip:1.12.11+20110422.1",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/s/sofia-sip/sofia-sip_1.12.11+20110422.1.orig.tar.gz",
+        "version": "1.12.11+20110422.1"
+      },
+      {
+        "evidence": [
           "source:http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz#20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
           "recipe:recipe:squid:6.12",
           "pinned_sha256:20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625"
@@ -105098,6 +105594,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:gensio:2.8.6",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:gensio:2.8.6",
+        "variant_id": "variant:gensio:2.8.6:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "cmake-pristine-shared",
         "evidence": [
           "recipe:recipe:getdns:1.7.3",
@@ -105215,6 +105723,18 @@
         "platform": "linux",
         "specimen_id": "specimen:isync:1.5.0",
         "variant_id": "variant:isync:1.5.0:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:jimtcl:0.81+dfsg0",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:jimtcl:0.81+dfsg0",
+        "variant_id": "variant:jimtcl:0.81+dfsg0:pristine"
       },
       {
         "arch": "x86_64",
@@ -105832,6 +106352,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:sofia-sip:1.12.11+20110422.1",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:sofia-sip:1.12.11+20110422.1",
+        "variant_id": "variant:sofia-sip:1.12.11+20110422.1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:squid:6.12",
           "build_system:configure"
         ],
@@ -105962,7 +106494,7 @@
       }
     ]
   },
-  "body_hash": "4c98b1a2f035125bf14f7e736d9e894221c72cb404ea23e963676bbbbb716ef5",
+  "body_hash": "e8e64ab28d47f4a7a89181a51900cd73fd44822d4d9436f020c16f3353c73ef1",
   "generator": "forensics/tools/downstream_build_link.py",
   "inputs": [
     {
