@@ -29,12 +29,12 @@ Measured at the source identity rendered below. Every row names its own
 machine-readable evidence; none of them is a claim of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: crate version `0.0.31`; `libcrypto.so.3` sha256 `9923317327f7f190c267bfcc380c287deb6ee24dfb6a4a5a61cef4b825cbec86`; `libssl.so.3` sha256 `0a8f22674ca5375e7c3c6f0771d62e7e43dd64f8a20f3f01f1e299e9210057b4`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: crate version `0.0.31`; `libcrypto.so.3` sha256 `ae1cdd4f6a0e8960480a456a1c42538225b080a36ea83b692d800badf4de4982`; `libssl.so.3` sha256 `bdee7fda78813d4eb90dddd87073fa40dfae0d9e43bf2bbc7d6625553cdac8df`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
 | **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`) |
-| **Downstream drop-in, 1000-family corpus** | **101 / 1000 at `L7-functional`**; candidate 101 = authority 101; **0 failed**; 102 loaded; 898 not attempted | same atlas, `body.counts.by_subject` |
+| **Downstream drop-in, 1000-family corpus** | **111 / 1000 at `L7-functional`**; candidate 111 = authority 111; **0 failed**; 112 loaded; 888 not attempted | same atlas, `body.counts.by_subject` |
 | **Library test suite** | **1,747 passing, 0 failing, 42 ignored** | `atlas-refresh/publish-0.0.30.json` |
 | **Memory safety: mechanisms** | **5 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
 | **Memory safety: boundaries** | 5 scoped boundary discharges (B23, B25, B27, B28, B29); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
@@ -46,9 +46,9 @@ Source identity: crate version `0.0.31`; `libcrypto.so.3` sha256 `9923317327f7f1
 ### The families at `L7-functional`
 
 <!-- BEGIN GENERATED: readme-l7-families -->
-**101 of 1000 counted corpus families are `L7-functional`** — candidate and authority rows agree (101 = 101); 0 failed, 102 loaded, 898 not attempted.
+**111 of 1000 counted corpus families are `L7-functional`** — candidate and authority rows agree (111 = 111); 0 failed, 112 loaded, 888 not attempted.
 
-`aircrack-ng`, `apache2-utils`, `apr-util`, `arm-trusted-firmware-tools`, `axel`, `bannergrab`, `cowpatty`, `curl`, `cyrus-sasl`, `dcap-tunnel-ssl`, `dovecot`, `duo_unix`, `eggdrop`, `elinks`, `epic5`, `exim`, `fetchmail`, `fido2`, `fossil`, `gensio`, `getdns`, `haproxy`, `hcxtools`, `hiredis-ssl`, `hitch`, `httperf`, `httping`, `icecast`, `iperf3`, `irssi`, `isync`, `jimtcl`, `jwt`, `kea`, `keepalived`, `kmod`, `ldns`, `lftp`, `libarchive`, `libcoap`, `libesmtp`, `libevent`, `libjose`, `libnetconf2`, `liboauth2`, `librdkafka`, `libre`, `libretls`, `libssh`, `libstrophe`, `libtins`, `libtpms`, `libu2f-server`, `libwebsockets`, `libzip`, `links`, `lua-luaossl`, `lua-sec`, `lynx`, `makepasswd`, `memcached`, `mini-httpd`, `minizip-ng`, `mktorrent`, `monit`, `mosquitto`, `mumble-server`, `net-snmp`, `nginx`, `nmap`, `nrpe`, `nsd`, `opendkim`, `openssh`, `openssh-server`, `openvpn`, `osslsigncode`, `partclone`, `proftpd`, `prosody`, `proxytunnel`, `pure-ftpd`, `radsecproxy`, `redis`, `rsync`, `s-nail`, `slrn`, `socat`, `sofia-sip`, `squid`, `sslscan`, `sslsplit`, `ssmtp`, `stunnel`, `swtpm`, `tcpdump`, `tinc`, `tnftp`, `u-boot-tools`, `w3m`, `znc`.
+`aircrack-ng`, `apache2-utils`, `appx-util`, `apr-util`, `arm-trusted-firmware-tools`, `axel`, `bannergrab`, `cowpatty`, `curl`, `curl-minimal`, `cyrus-sasl`, `dcap-tunnel-ssl`, `dovecot`, `duo_unix`, `eggdrop`, `elinks`, `epic5`, `exim`, `fetchmail`, `fido2`, `fossil`, `fsverity-utils`, `gensio`, `getdns`, `gmnisrv`, `gostsum`, `haproxy`, `hcxtools`, `hiredis-ssl`, `hitch`, `httperf`, `httping`, `httrack`, `icecast`, `iperf3`, `irssi`, `isync`, `jimtcl`, `jwt`, `kea`, `keepalived`, `kmod`, `ldns`, `lftp`, `libarchive`, `libcoap`, `libesmtp`, `libevent`, `libjose`, `libnetconf2`, `liboauth2`, `librdkafka`, `libre`, `libretls`, `libssh`, `libstrophe`, `libtins`, `libtpms`, `libu2f-server`, `libwebsockets`, `libzip`, `links`, `lua-luaossl`, `lua-sec`, `lynx`, `makepasswd`, `memcached`, `mini-httpd`, `minizip-ng`, `mktorrent`, `monit`, `mosquitto`, `mumble-server`, `net-snmp`, `nginx`, `nmap`, `nrpe`, `nsd`, `opendkim`, `openssh`, `openssh-client`, `openssh-server`, `openvpn`, `osslsigncode`, `partclone`, `proftpd`, `prosody`, `proxytunnel`, `pure-ftpd`, `radsecproxy`, `redis`, `rhash`, `rsync`, `s-nail`, `siege`, `slrn`, `socat`, `sofia-sip`, `squid`, `sslscan`, `sslsplit`, `ssmtp`, `stunnel`, `swtpm`, `tcpdump`, `tinc`, `tnftp`, `u-boot-tools`, `w3m`, `wrk`, `znc`.
 <!-- END GENERATED: readme-l7-families -->
 
 Client, server, library, signing, interception, VPN, mail, DNS, IMAP, IRC,
