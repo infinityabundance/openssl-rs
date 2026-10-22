@@ -397,11 +397,10 @@ impl Vector {
         unsafe { VectorBuf::of(self) }.clear_secure(rank, file, line);
     }
 
-    /// `vector_zero(va)` — `ml_dsa_vector.h:66-70`.
-    pub(crate) fn zero(&mut self) {
-        if !self.poly.is_null() {
-            // SAFETY: the NULL check above means `poly` names `num_poly` polynomials.
-            unsafe { ptr::write_bytes(self.poly, 0, self.num_poly) };
+    /// `vector_zero(va)` — `ml_dsa_vector.h:66-70`, over a proven slice.
+    pub(crate) fn zero(v: &mut [Poly]) {
+        for p in v {
+            poly_zero(p);
         }
     }
 
@@ -429,29 +428,23 @@ impl Vector {
 ///
 /// # Safety
 /// Both vectors must name `num_poly` initialised polynomials, and they must not alias.
-pub(crate) unsafe fn vector_copy(dst: &mut Vector, src: &Vector) {
-    // The authority's `assert` disappears under `NDEBUG` and its `memcpy` then
-    // writes `src->num_poly` elements into `dst`. A shape mismatch is a caller
-    // error here, so refuse in release too rather than reproduce the write
-    // beyond `dst`'s extent (§17).
-    assert_eq!(dst.num_poly, src.num_poly);
-    // SAFETY: the contract says both name `num_poly` polynomials and do not alias.
-    unsafe {
-        ptr::copy_nonoverlapping(src.poly, dst.poly, src.num_poly);
-    }
+pub(crate) fn vector_copy(dst: &mut [Poly], src: &[Poly]) {
+    // The authority's `assert` disappears under `NDEBUG` and its `memcpy` then writes
+    // `src->num_poly` elements into `dst`. A shape mismatch is refused in release too rather than
+    // reproduce the write beyond `dst`'s extent (§17).
+    assert_eq!(dst.len(), src.len());
+    dst.copy_from_slice(src);
 }
 
 /// `vector_equal(a, b)` — `ml_dsa_vector.h:84-96`.
 ///
 /// # Safety
 /// Both vectors must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_equal(a: &Vector, b: &Vector) -> c_int {
-    if a.num_poly != b.num_poly {
+pub(crate) fn vector_equal(a: &[Poly], b: &[Poly]) -> c_int {
+    if a.len() != b.len() {
         return 0;
     }
-    // SAFETY: the contract says both name `num_poly` polynomials.
-    let (sa, sb) = unsafe { (a.as_slice(), b.as_slice()) };
-    for (pa, pb) in sa.iter().zip(sb.iter()) {
+    for (pa, pb) in a.iter().zip(b) {
         if poly_equal(pa, pb) == 0 {
             return 0;
         }
@@ -487,9 +480,8 @@ pub(crate) unsafe fn vector_sub(lhs: &Vector, rhs: &Vector, out: &mut Vector) {
 ///
 /// # Safety
 /// `va` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_ntt(va: &mut Vector) {
-    // SAFETY: the contract says `poly` names `num_poly` polynomials.
-    for p in unsafe { va.as_mut_slice() } {
+pub(crate) fn vector_ntt(va: &mut [Poly]) {
+    for p in va {
         ossl_ml_dsa_poly_ntt(p);
     }
 }
@@ -498,9 +490,8 @@ pub(crate) unsafe fn vector_ntt(va: &mut Vector) {
 ///
 /// # Safety
 /// `va` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_ntt_inverse(va: &mut Vector) {
-    // SAFETY: the contract says `poly` names `num_poly` polynomials.
-    for p in unsafe { va.as_mut_slice() } {
+pub(crate) fn vector_ntt_inverse(va: &mut [Poly]) {
+    for p in va {
         super::ntt::ossl_ml_dsa_poly_ntt_inverse(p);
     }
 }
@@ -528,7 +519,7 @@ pub(crate) unsafe fn vector_scale_power2_round_ntt(input: &Vector, out: &mut Vec
         poly_scale_power2_round(&si[i], &mut so[i]);
     }
     // SAFETY: `out` still names its polynomials; `poly_scale_power2_round` did not move them.
-    unsafe { vector_ntt(out) };
+    vector_ntt(unsafe { out.as_mut_slice() });
 }
 
 /// `vector_power2_round(t, t1, t0)` — `ml_dsa_vector.h:192-199`.
@@ -573,10 +564,9 @@ pub(crate) unsafe fn vector_low_bits(input: &Vector, gamma2: u32, out: &mut Vect
 ///
 /// # Safety
 /// `v` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_max(v: &Vector) -> u32 {
+pub(crate) fn vector_max(v: &[Poly]) -> u32 {
     let mut mx = 0u32;
-    // SAFETY: the contract says `v` names `num_poly` polynomials.
-    for p in unsafe { v.as_slice() } {
+    for p in v {
         poly_max(p, &mut mx);
     }
     mx
@@ -586,10 +576,9 @@ pub(crate) unsafe fn vector_max(v: &Vector) -> u32 {
 ///
 /// # Safety
 /// `v` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_max_signed(v: &Vector) -> u32 {
+pub(crate) fn vector_max_signed(v: &[Poly]) -> u32 {
     let mut mx = 0u32;
-    // SAFETY: the contract says `v` names `num_poly` polynomials.
-    for p in unsafe { v.as_slice() } {
+    for p in v {
         poly_max_signed(p, &mut mx);
     }
     mx
@@ -599,10 +588,9 @@ pub(crate) unsafe fn vector_max_signed(v: &Vector) -> u32 {
 ///
 /// # Safety
 /// `v` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_count_ones(v: &Vector) -> usize {
+pub(crate) fn vector_count_ones(v: &[Poly]) -> usize {
     let mut count = 0usize;
-    // SAFETY: the contract says `v` names `num_poly` polynomials.
-    for p in unsafe { v.as_slice() } {
+    for p in v {
         for j in 0..ML_DSA_NUM_POLY_COEFFICIENTS {
             count += p.coeff[j] as usize;
         }
@@ -874,5 +862,56 @@ mod tests {
         // SAFETY: the checked product refuses before any slice is formed, so the pointer is never
         // read.
         assert!(unsafe { matrix_as_slice(&m) }.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod slice_tests {
+    #![allow(clippy::panic, clippy::unwrap_used)]
+
+    use super::*;
+
+    fn poly(v: u32) -> Poly {
+        Poly {
+            coeff: [v; ML_DSA_NUM_POLY_COEFFICIENTS],
+        }
+    }
+
+    #[test]
+    fn the_safe_vector_operations_hold_their_preconditions() {
+        let mut a = [poly(1), poly(2)];
+        let mut b = [poly(3), poly(4)];
+
+        vector_copy(&mut b, &a);
+        assert_eq!(vector_equal(&a, &b), 1);
+        assert_eq!(
+            vector_equal(&a, &[poly(1)]),
+            0,
+            "a length mismatch is unequal"
+        );
+
+        Vector::zero(&mut b);
+        assert_eq!(vector_equal(&a, &b), 0);
+
+        assert_eq!(vector_max(&a), maximum(0, abs_mod_prime(2)));
+        assert_eq!(vector_max_signed(&a), abs_signed(2));
+        assert_eq!(
+            vector_count_ones(&[poly(1), poly(1)]),
+            2 * ML_DSA_NUM_POLY_COEFFICIENTS
+        );
+
+        // In-place NTT and its inverse are safe over the slice.
+        let before = a;
+        vector_ntt(&mut a);
+        assert_eq!(vector_equal(&a, &before), 0);
+        vector_ntt_inverse(&mut a);
+        // `poly_ntt` multiplies by the Montgomery factor; the round trip scales by R, so compare
+        // against the same scaling the crate's scalar NTT test uses.
+        let mut expected = before;
+        for p in &mut expected {
+            ossl_ml_dsa_poly_ntt(p);
+            super::super::ntt::ossl_ml_dsa_poly_ntt_inverse(p);
+        }
+        assert_eq!(vector_equal(&a, &expected), 1);
     }
 }

@@ -1213,7 +1213,7 @@ unsafe fn hint_bits_decode(hint: *mut Vector, pkt: *mut Packet, omega: u32) -> c
 
     /* Set all coefficients to zero. */
     // SAFETY: `hint` is live and names allocated polynomials.
-    unsafe { (*hint).zero() };
+    Vector::zero(unsafe { (*hint).as_mut_slice() });
 
     // SAFETY: `hint` is live per the contract.
     let mut p = unsafe { (*hint).poly };

@@ -106,7 +106,7 @@ pub(crate) fn ossl_ml_dsa_poly_ntt_inverse(p: &mut Poly) {
 /// polynomials, all initialised; `t` must not alias `s`.
 pub(crate) unsafe fn ossl_ml_dsa_matrix_mult_vector(a: &Matrix, s: &Vector, t: &mut Vector) {
     // SAFETY: the contract says `t` names `a.k` polynomials.
-    t.zero();
+    Vector::zero(unsafe { t.as_mut_slice() });
 
     // SAFETY: the contract says `a` names `k * l` polynomials and `s` names `a.l` of them.
     let poly = unsafe { matrix_as_slice(a) };
