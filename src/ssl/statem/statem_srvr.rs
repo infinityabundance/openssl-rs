@@ -2005,34 +2005,72 @@ pub(crate) unsafe fn cert_active_present(s: *mut Ssl) -> bool {
 ///
 /// # Safety
 /// `s` must be a live connection.
+/// `tls_construct_cert_status_body` (`statem_srvr.c:4514-4536`):
+/// `status_type(1) || response<0..2^24-1>`, written with bounds-checked indexing.
+///
+/// A safe interior: every length is checked here, so no caller-supplied length can
+/// make this function write out of bounds or panic. `out` is the exact body block
+/// the caller sized; a mismatch is refused rather than truncated.
+fn write_cert_status_body(out: &mut [u8], status_type: u8, resp: &[u8]) -> bool {
+    if resp.len() > 0xff_ffff {
+        return false;
+    }
+    let Some(total) = resp.len().checked_add(4) else {
+        return false;
+    };
+    if out.len() != total {
+        return false;
+    }
+    let Some((header, payload)) = out.split_at_mut_checked(4) else {
+        return false;
+    };
+    header[0] = status_type;
+    let len = resp.len();
+    header[1] = (len >> 16) as u8;
+    header[2] = (len >> 8) as u8;
+    header[3] = len as u8;
+    payload.copy_from_slice(resp);
+    true
+}
+
 unsafe fn tls12_construct_cert_status(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc::write_handshake_message;
-    // SAFETY: `s` is live.
-    let (resp, len, status_type) = unsafe {
+    // SAFETY: `s` is live per this function's contract; `ext_ocsp_resp` /
+    // `ext_ocsp_resp_len` are the allocation `SSL_set_tlsext_status_ocsp_resp`
+    // installed (a `CRYPTO_memdup` of exactly that length, or NULL/0).
+    let (resp_ptr, len, status_type) = unsafe {
         (
             (*s).ext_ocsp_resp,
             (*s).ext_ocsp_resp_len,
             (*s).ext_status_type,
         )
     };
-    if resp.is_null() || len == 0 || len > 0xff_ffff {
+    if resp_ptr.is_null() || len == 0 || len > 0xff_ffff {
         // `ossl_get_ocsp_response` answered NULL: the message is not sent.
         return 1;
     }
-    // A bounded body block: one type byte plus the u24 length plus the response.
-    let Some(body) = OwnedBuf::new(4 + len, SeamFile::NULL, 0) else {
+    let Some(body_len) = len.checked_add(4) else {
         return 0;
     };
-    let body_ptr = body.as_ptr();
-    // SAFETY: `body_ptr` is writable for `4 + len` bytes; `resp` names `len` readable bytes.
-    unsafe {
-        *body_ptr = status_type as u8;
-        *body_ptr.add(1) = (len >> 16) as u8;
-        *body_ptr.add(2) = (len >> 8) as u8;
-        *body_ptr.add(3) = len as u8;
-        core::ptr::copy_nonoverlapping(resp, body_ptr.add(4), len);
-        write_handshake_message(s, SSL3_MT_CERTIFICATE_STATUS as u8, body_ptr, 4 + len)
+    // The same `malloc_request` seam call as `CRYPTO_malloc`, but zero-initialised so a
+    // `&mut [u8]` may be derived from it without reading uninitialised memory.
+    let Some(body) = OwnedBuf::new_zeroed(body_len, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    // SAFETY: `body` owns `body_len` zero-initialised bytes from the allocator seam and
+    // this frame holds the only reference for the borrow; `resp` names `len` readable
+    // bytes from the paired allocation checked non-NULL above.
+    let (out, resp) = unsafe {
+        (
+            core::slice::from_raw_parts_mut(body.as_ptr(), body_len),
+            core::slice::from_raw_parts(resp_ptr, len),
+        )
+    };
+    if !write_cert_status_body(out, status_type as u8, resp) {
+        return 0;
     }
+    // SAFETY: `s` is live; `out` is `body_len` initialised bytes owned by `body`.
+    unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE_STATUS as u8, out.as_ptr(), body_len) }
 }
 
 /// `CON_FUNC_RETURN tls_construct_server_certificate(...)` — `statem_srvr.c:4019-4055` over
@@ -4518,6 +4556,58 @@ unsafe fn server_wait(s: *mut Ssl) -> c_int {
         (*s).rwstate = 3; // SSL_READING
     }
     -1
+}
+
+// -------------------------------------------------------------------------------------------
+// `CertificateStatus` body construction (tls_construct_cert_status_body)
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod cert_status_body_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::write_cert_status_body;
+
+    #[test]
+    fn body_is_type_then_u24_length_then_response() {
+        let resp = [0xaa, 0xbb, 0xcc];
+        let mut out = [0u8; 7];
+        assert!(write_cert_status_body(&mut out, 1, &resp));
+        assert_eq!(out, [1, 0, 0, 3, 0xaa, 0xbb, 0xcc]);
+    }
+
+    #[test]
+    fn empty_response_encodes_a_zero_length() {
+        let mut out = [0xffu8; 4];
+        assert!(write_cert_status_body(&mut out, 1, &[]));
+        assert_eq!(out, [1, 0, 0, 0]);
+    }
+
+    /// Negative control: a body block one byte short or one byte long is refused and
+    /// left untouched, rather than letting the u24 length disagree with the buffer.
+    #[test]
+    fn malformed_out_length_is_refused_without_writing() {
+        let resp = [0xaa, 0xbb, 0xcc];
+
+        let mut short = [0u8; 6];
+        assert!(!write_cert_status_body(&mut short, 1, &resp));
+        assert_eq!(short, [0u8; 6]);
+
+        let mut long = [0u8; 8];
+        assert!(!write_cert_status_body(&mut long, 1, &resp));
+        assert_eq!(long, [0u8; 8]);
+
+        let mut empty = [0u8; 0];
+        assert!(!write_cert_status_body(&mut empty, 1, &resp));
+    }
+
+    /// Negative control: a response that cannot be expressed in the wire's u24 length
+    /// is refused before any length arithmetic or write.
+    #[test]
+    fn oversized_response_is_refused() {
+        let resp = vec![0u8; 0x0100_0000];
+        let mut out = [0u8; 0];
+        assert!(!write_cert_status_body(&mut out, 1, &resp));
+    }
 }
 
 // -------------------------------------------------------------------------------------------
