@@ -23,6 +23,68 @@ LibreSSL, or `ring`.
 > which are authoritative; this page does not restate the counts. `IMPLEMENTED` is
 > neither `PARITY_VERIFIED` nor a compatibility claim.
 
+## What is achieved
+
+Measured at source identity `8c8f3c65d` (2026-10-22). Every row names its own
+machine-readable evidence; none of them is a claim of completeness.
+
+| Dimension | Result | Evidence |
+|---|---|---|
+| **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority | `forensics/downstream/runtime-functional-atlas.json` |
+| **Downstream drop-in, 1000-family corpus** | **101 / 1000 at `L7-functional`**; candidate 101 = authority 101; **0 failed**; 102 loaded; 898 not attempted | same file, `body.counts.by_subject` |
+| **ABI surface** | **5,906 / 5,906** `libcrypto` dynamic exports and **608 / 608** `libssl` exports identical in name, version, binding and visibility; SONAMEs and version nodes match | rebuilt-candidate `nm`/`readelf` differential |
+| **Library test suite** | **1,747 passing, 0 failing, 42 ignored** | `cargo test --lib -- --test-threads=4` |
+| **Memory safety: mechanisms** | **5 discharged at mechanism scope** — RC-1 refcounting, OB-1 `OwnedBuf`, OB-2 `OwnedStr`, OB-3 `OwnedCtx`, ERR | `CAMPAIGN-STATUS.json` |
+| **Memory safety: boundaries** | B23, B25, B29, B39–B44 recorded; **B39 and B40 independently checked** at boundary scope; B41–B43 batch-checked (B43 was rejected, corrected, then accepted); B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
+| **Memory safety: file census** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (all 761 audited), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json` |
+| **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure | `consumer-status-C1.json` |
+| **Release** | **0.0.30** on crates.io, 8.2 MiB, checksum `07eb9cb4…` | `atlas-refresh/publish-0.0.30.json` |
+
+### The 101 families at `L7-functional`
+
+`aircrack-ng`, `apache2-utils`, `apr-util`, `arm-trusted-firmware-tools`,
+`axel`, `bannergrab`, `cowpatty`, `curl`, `cyrus-sasl`, `dcap-tunnel-ssl`,
+`dovecot`, `duo_unix`, `eggdrop`, `elinks`, `epic5`, `exim`, `fetchmail`,
+`fido2`, `fossil`, `gensio`, `getdns`, `haproxy`, `hcxtools`, `hiredis-ssl`,
+`hitch`, `httperf`, `httping`, `icecast`, `iperf3`, `irssi`, `isync`,
+`jimtcl`, `jwt`, `kea`, `keepalived`, `kmod`, `ldns`, `lftp`, `libarchive`,
+`libcoap`, `libesmtp`, `libevent`, `libjose`, `libnetconf2`, `liboauth2`,
+`librdkafka`, `libre`, `libretls`, `libssh`, `libstrophe`, `libtins`,
+`libtpms`, `libu2f-server`, `libwebsockets`, `libzip`, `links`,
+`lua-luaossl`, `lua-sec`, `lynx`, `makepasswd`, `memcached`, `mini-httpd`,
+`minizip-ng`, `mktorrent`, `monit`, `mosquitto`, `mumble-server`,
+`net-snmp`, `nginx`, `nmap`, `nrpe`, `nsd`, `opendkim`, `openssh`,
+`openssh-server`, `openvpn`, `osslsigncode`, `partclone`, `proftpd`,
+`prosody`, `proxytunnel`, `pure-ftpd`, `radsecproxy`, `redis`, `rsync`,
+`s-nail`, `slrn`, `socat`, `sofia-sip`, `squid`, `sslscan`, `sslsplit`,
+`ssmtp`, `stunnel`, `swtpm`, `tcpdump`, `tinc`, `tnftp`, `u-boot-tools`,
+`w3m`, `znc`.
+
+Client, server, library, signing, interception, VPN, mail, DNS, IMAP, IRC,
+XMPP, FTP, MQTT, Kafka, TPM, SNMP and digest/KDF faces are all represented. Each
+was built against this crate's headers and libraries, linked with
+`-Wl,--no-as-needed` so the subject libraries are provably loaded, and exercised
+by a deterministic local workload with a negative control.
+
+### Memory safety is partial — precisely what that means
+
+This project does **not** claim to be memory-safe yet. The honest ledger:
+
+| Status | What it covers |
+|---|---|
+| **Discharged (mechanism scope)** | Reference counting (RC-1) and the four shared ownership mechanisms OB-1…OB-3 plus ERR. Their contracts are independently adjudicated and their caller populations established. |
+| **Independently checked (boundary scope)** | The memory-BIO constructor/destructor path (B39) and the connect-BIO descriptor invariant (B40), each with a firing mutation control. |
+| **Batch checked** | Allocation-ownership batches B41–B43 (PQ key material, Argon2, password KDFs) and B44's KDF width guards. B43 was **rejected** on its first claim, corrected, and accepted; B44's isolation fix is author-evidenced only. |
+| **Scoped discharges** | WPACKET failed-init (B23), record-layer alert decode (B25), UI lifecycle (B29), `OSSL_STORE` error-path release (B26-X1). |
+| **Audited but not converted** | 761 `PARTIAL` files. Every one has been read and classified; the remaining unsafe operations are catalogued by mechanism and site. |
+| **Not discharged** | `BIO`, `RUNTIME_ALLOC_OWNERSHIP`, `SSL_SESSION`, `EVP_PKEY_PROVIDER`, `RAND_CMS_STORE_KEYFMT`, `RUNTIME_CONCURRENCY` remain open in consumer closures, which is why `SAFE_COMPATIBLE` is 0/33. |
+| **Open STOP-class defect** | `B27-X2`: `OSSL_STORE_attach` can publish a `NULL` loader after a refused `loader_set_params`, which `OSSL_STORE_close`/`OSSL_STORE_load` then dereference. Recorded in `boundary-sweep-B27.json`; it blocks promotion of `src/store/store_lib.rs`. |
+
+The planned conversion order is attacker exposure × eliminability: TLS state
+machines and record processing first, then key schedule and targeted AEAD, then
+the CMS mechanisms behind the unresolved CVE replays, then ASN.1/X.509 decode
+and verification, then ML-DSA, then the remaining provider and algorithm cores.
+
 **Current state:**
 [`STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md) ·
 [`SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md) ·
@@ -47,13 +109,13 @@ which strata are complete. For shape, the strata group as:
 | 22 | authority exhaustiveness and the whole-program compatibility atlas |
 
 > **Safe-33 conversion status (2026-10-20, reconciled 2026-10-22).** The
-> generated blocker block below is stale relative to later L7 runs: it records
-> 967 blocked / 33 measurable families (25 at L4-linked, 8 above), while the
-> current `forensics/downstream/runtime-functional-atlas.json` records 103
-> recipe-backed families, 102 loaded and 100 candidate / 101 authority
-> functional rows over the 1000-family corpus, with **33/33 cohort families at
-> `L7-functional`**. For conversion, discharge, test-count and consumer claims
-> read
+> generated blocker block below is frozen at the Phase-24 derivation and is
+> superseded for current counts by
+> `forensics/downstream/runtime-functional-atlas.json`: it records **101
+> candidate and 101 authority `L7-functional` rows**, **102 loaded under each
+> subject**, **898 not attempted**, **0 failed**, and **33/33 cohort families
+> at `L7-functional`**. For conversion, discharge, test-count and consumer
+> claims read
 > [`forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`](forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md);
 > `forensics/STATUS.md` is generated and requires regeneration by
 > `forensics/tools/render_status.py` before its downstream figures can be
@@ -66,14 +128,16 @@ which strata are complete. For shape, the strata group as:
 Every one of the 1000 counted families, partitioned by its **deepest blocker** and the classes ranked by **mover potential**, with the feasible recipe queue, is in the
 [generated report](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PHASE-24-BIGGEST-MOVERS.md) (`docs/PHASE-24-BIGGEST-MOVERS.md`); the same table is cited by
 `docs/SEAL-CENSUS.md`. This block is generated from
-`forensics/downstream/shared-blockers.json` — **do not edit it by hand.**
+`forensics/downstream/shared-blockers.json` (the frozen Phase-24 derivation);
+**do not edit it by hand.** Its figures describe that frozen plane; current
+corpus counts come from `forensics/downstream/runtime-functional-atlas.json`.
 
 | blocker class | families | mover potential | fixability | per-fix leverage |
 |---|---|---|---|---|
 | `no-admitted-recipe` | 965 | 965 | `recipe-admission` | 1.0 |
 | `recipe-build-system-unsupported` | 2 | 2 | `recipe-build-system` | 2.0 |
 
-**967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung: of the 33 drop-in passes, 25 are at L4-linked with no admitted runtime workload for those families and 8 reach L5 or above.
+**Frozen Phase-24 partition: 967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable); of those 33, 25 were at L4-linked and 8 reached L5 or above in that plane. **Current atlas:** 101 candidate and 101 authority families are `L7-functional`, 102 are loaded under each subject, 898 are not attempted, 0 failed, and the 33-family cohort is **33/33 at `L7-functional`** (`runtime-functional-atlas.json`, `body.counts.by_subject`; restated in `STATUS-2026-10-20.md`). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung.
 
 * a selected population is not a random sample: the 1,000 counted families are selected from frozen ranking evidence, so their blocker shares do not generalise to all downstream software
 * 1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and the analysis makes no statement about an unmeasured consumer
