@@ -1327,6 +1327,45 @@ fn write_tls12_new_session_ticket_body(
     Some(w.written())
 }
 
+/// The TLS1.3 `NewSessionTicket` body (RFC 8446 §4.6.1, `create_ticket_prequel`,
+/// `statem_srvr.c:4085-4111`): `ticket_lifetime(4) || ticket_age_add(4) ||
+/// ticket_nonce<0..255> || ticket<0..2^16-1> || extensions<0..2^16-1>`.
+fn write_tls13_new_session_ticket_body(
+    out: &mut [u8],
+    nonce: &[u8],
+    lifetime: u32,
+    age_add: u32,
+    ticket: &[u8],
+    extensions: &[u8],
+) -> Option<usize> {
+    // Every length prefix is validated before the first byte is written, so a refused value
+    // leaves `out` untouched.
+    u8::try_from(nonce.len()).ok()?;
+    u16::try_from(ticket.len()).ok()?;
+    u16::try_from(extensions.len()).ok()?;
+    let extent = 4usize
+        .checked_add(4)?
+        .checked_add(1)?
+        .checked_add(nonce.len())?
+        .checked_add(2)?
+        .checked_add(ticket.len())?
+        .checked_add(2)?
+        .checked_add(extensions.len())?;
+    let mut w = BytesWriter::new(out);
+    if !w.has_room(extent) {
+        return None;
+    }
+    if !(w.put_bytes(&lifetime.to_be_bytes())
+        && w.put_bytes(&age_add.to_be_bytes())
+        && w.put_u8_len_prefixed(nonce)
+        && w.put_u16_len_prefixed(ticket)
+        && w.put_u16_len_prefixed(extensions))
+    {
+        return None;
+    }
+    Some(w.written())
+}
+
 /// The TLS1.2 `ServerHelloDone` body: empty (`tls_construct_server_hello_done`).
 const TLS12_SERVER_HELLO_DONE_BODY: &[u8] = &[];
 
@@ -3003,6 +3042,9 @@ const SSL_PKEY_ECC_SLOT: usize = 3;
 /// `SSL3_RT_CHANGE_CIPHER_SPEC` — `ssl3.h` (20).
 const SSL3_RT_CHANGE_CIPHER_SPEC: u8 = 20;
 
+/// The one-byte `ChangeCipherSpec` body (`SSL3_MT_CHANGE_CIPHER_SPEC`, `ssl3.h`).
+const TLS12_CHANGE_CIPHER_SPEC_BODY: [u8; 1] = [1];
+
 /// Whether the server holds a certificate in `slot` (`s->cert->pkeys[slot].x509 != NULL`).
 ///
 /// # Safety
@@ -3763,8 +3805,6 @@ unsafe fn tls12_construct_server_hello_done(s: *mut Ssl) -> c_int {
 
 /// `TLSEXT_KEYNAME_LENGTH` — `ssl_local.h:699`.
 const TLSEXT_KEYNAME_LENGTH: usize = 16;
-/// `TICKET_NONCE_SIZE` — `statem_srvr.c:37`.
-const TICKET_NONCE_SIZE: usize = 8;
 /// `ONE_WEEK_SEC` — `statem_srvr.c:4103`.
 const ONE_WEEK_SEC: u64 = 7 * 24 * 60 * 60;
 /// `EVP_MAX_IV_LENGTH` — `evp.h:171`.
@@ -4088,17 +4128,33 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
             (*s).next_ticket_nonce += 1;
             return 1;
         };
-        // The wire body.
-        let mut body = vec![0u8; 4 + 4 + 1 + TICKET_NONCE_SIZE + 2 + ticket.len() + 2];
-        body[0..4].copy_from_slice(&(hint as u32).to_be_bytes());
-        body[4..8].copy_from_slice(&age_add);
-        body[8] = TICKET_NONCE_SIZE as u8;
-        body[9..9 + TICKET_NONCE_SIZE].copy_from_slice(&nonce);
-        let tlen_at = 9 + TICKET_NONCE_SIZE;
-        body[tlen_at] = (ticket.len() >> 8) as u8;
-        body[tlen_at + 1] = ticket.len() as u8;
-        body[tlen_at + 2..tlen_at + 2 + ticket.len()].copy_from_slice(&ticket);
-        // Empty extensions vector (the trailing two bytes stay zero).
+        // The wire body. Its extent is checked before allocation and the builder refuses any
+        // length that does not fit its prefix, so no partially framed ticket is ever sent.
+        let extent = 4usize
+            .checked_add(4)
+            .and_then(|n| n.checked_add(1))
+            .and_then(|n| n.checked_add(nonce.len()))
+            .and_then(|n| n.checked_add(2))
+            .and_then(|n| n.checked_add(ticket.len()))
+            .and_then(|n| n.checked_add(2));
+        let Some(extent) = extent else {
+            return 0;
+        };
+        let mut body = vec![0u8; extent];
+        // The empty extensions vector is the authority's write for this reduction.
+        let Some(written) = write_tls13_new_session_ticket_body(
+            &mut body,
+            &nonce,
+            hint as u32,
+            u32::from_be_bytes(age_add),
+            &ticket,
+            &[],
+        ) else {
+            return 0;
+        };
+        if written != body.len() {
+            return 0;
+        }
 
         // Record the ticket on the session; the client uses `SHA256(ticket)` as its resume id
         // (`statem_clnt.c:2851`). The server session's id stays empty (the stateless ticket is
@@ -4123,8 +4179,8 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         // `new_session_cb` still fires.
         crate::ssl::ssl_sess::ssl_update_cache(s, crate::ssl::ssl_sess::SSL_SESS_CACHE_SERVER);
 
-        // SAFETY: `s` is live; `body` is fully initialised.
-        write_handshake_message(s, SSL3_MT_NEWSESSION_TICKET, body.as_ptr(), body.len())
+        // SAFETY: `s` is live; `body[..written]` is fully initialised by the builder.
+        write_handshake_message(s, SSL3_MT_NEWSESSION_TICKET, body.as_ptr(), written)
     }
 }
 
@@ -4134,7 +4190,7 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
 /// # Safety
 /// `s` is live.
 pub(crate) unsafe fn tls12_write_change_cipher_spec(s: *mut Ssl, is_client: bool) -> c_int {
-    let ccs = [1u8];
+    let ccs = TLS12_CHANGE_CIPHER_SPEC_BODY;
     // SAFETY: `s` is live; `ccs` is readable.
     let r = unsafe {
         crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
@@ -4230,6 +4286,26 @@ pub(crate) unsafe fn tls12_read_change_cipher_spec(s: *mut Ssl) -> bool {
     false
 }
 
+/// Bounds a Finished verify-data handoff to the bytes `tls12_finished_mac`/
+/// `tls13_finished_mac` reports as initialised. `None` means the callee produced no bytes or
+/// claimed more than its fixed output buffer holds.
+fn finished_verify_data(out: &[u8], produced: usize) -> Option<&[u8]> {
+    out.get(..produced)
+        .filter(|verify_data| !verify_data.is_empty())
+}
+
+/// Copies Finished verify_data into a connection's fixed `EVP_MAX_MD_SIZE` binding array.
+/// `None` means the value cannot fit; the destination is then unchanged.
+fn store_finished_verify_data(
+    dst: &mut [u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE],
+    verify_data: &[u8],
+) -> Option<usize> {
+    let len = verify_data.len();
+    let slot = dst.get_mut(..len)?;
+    slot.copy_from_slice(verify_data);
+    Some(len)
+}
+
 /// `tls_construct_finished` (`statem_lib.c:618-676`) for TLS1.2: `PRF(master_secret,
 /// "{client,server} finished", Hash(handshake))[0..12]`, written as the Finished body.
 ///
@@ -4243,20 +4319,33 @@ pub(crate) unsafe fn tls12_construct_finished(s: *mut Ssl, is_client: bool) -> c
         b"server finished"
     };
     let mut out = [0u8; 12];
-    // SAFETY: `s` is live; `out` is writable.
+    // SAFETY: `s` is live; `out` is writable for `out.len()` bytes; the callee reports how many
+    // it initialised.
     let n = unsafe { crate::ssl::t1_enc::tls12_finished_mac(s, label, out.as_mut_ptr()) };
-    if n == 0 {
+    let Some(verify_data) = finished_verify_data(&out, n) else {
+        return 0;
+    };
+    // The `tls-unique` channel binding reads this side's Finished verify_data
+    // (`SSL_get_finished`, `ssl_lib.c:1799-1812`). Refuse before writing if it cannot be stored.
+    if crate::ssl::ssl_lib::EVP_MAX_MD_SIZE < verify_data.len() {
         return 0;
     }
-    // SAFETY: `s` is live; `out` is `n` initialised bytes.
-    let r = unsafe { write_handshake_message(s, SSL3_MT_FINISHED as u8, out.as_ptr(), n) };
+    // SAFETY: `s` is live; `verify_data` is initialised and bounded by `out`.
+    let r = unsafe {
+        write_handshake_message(
+            s,
+            SSL3_MT_FINISHED as u8,
+            verify_data.as_ptr(),
+            verify_data.len(),
+        )
+    };
     if r > 0 {
-        // The `tls-unique` channel binding reads this side's Finished verify_data
-        // (`SSL_get_finished`, `ssl_lib.c:1799-1812`).
-        // SAFETY: `s` is live.
+        // SAFETY: `s` is live; the check above established that `finish_md` holds this value.
         unsafe {
-            ptr::copy_nonoverlapping(out.as_ptr(), (*s).finish_md.as_mut_ptr(), n);
-            (*s).finish_md_len = n;
+            let Some(stored) = store_finished_verify_data(&mut (*s).finish_md, verify_data) else {
+                return 0;
+            };
+            (*s).finish_md_len = stored;
         }
     }
     r
@@ -4423,24 +4512,33 @@ unsafe fn tls12_process_finished(s: *mut Ssl, msg: &[u8], is_client: bool) -> c_
         b"server finished"
     };
     let mut expected = [0u8; 12];
-    // SAFETY: `s` is live; `expected` is writable.
+    // SAFETY: `s` is live; `expected` is writable for `expected.len()` bytes; the callee reports
+    // how many it initialised.
     let n = unsafe { crate::ssl::t1_enc::tls12_finished_mac(s, label, expected.as_mut_ptr()) };
-    if n != 12 || body.len() != 12 {
+    let Some(verify_data) = finished_verify_data(&expected, n) else {
+        return 0;
+    };
+    if verify_data.len() != 12 || body.len() != 12 {
         return 0;
     }
     let mut diff = 0u8;
-    for i in 0..12 {
-        diff |= expected[i] ^ body[i];
+    for (a, b) in verify_data.iter().zip(body) {
+        diff |= a ^ b;
     }
     if diff != 0 {
         return 0;
     }
     // The `tls-unique` channel binding on the peer reads the client's Finished verify_data
-    // (`SSL_get_peer_finished`, `ssl_lib.c:1815-1828`).
-    // SAFETY: `s` is live.
+    // (`SSL_get_peer_finished`, `ssl_lib.c:1815-1828`). The binding array is fixed-size.
+    if crate::ssl::ssl_lib::EVP_MAX_MD_SIZE < verify_data.len() {
+        return 0;
+    }
+    // SAFETY: `s` is live; the check above established that `peer_finish_md` holds this value.
     unsafe {
-        ptr::copy_nonoverlapping(expected.as_ptr(), (*s).peer_finish_md.as_mut_ptr(), 12);
-        (*s).peer_finish_md_len = 12;
+        let Some(stored) = store_finished_verify_data(&mut (*s).peer_finish_md, verify_data) else {
+            return 0;
+        };
+        (*s).peer_finish_md_len = stored;
     }
     // SAFETY: `s` is live; `msg` is the full message.
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
@@ -5234,6 +5332,218 @@ mod server_hello_body_tests {
             );
             assert_eq!(tls_construct_server_hello(s, &mut pkt), 0);
             crate::packet::WPACKET_cleanup(&mut pkt);
+            crate::runtime::mem::CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// TLS1.3 NewSessionTicket framing and Finished verify-data handoff
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod tls13_ticket_finished_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::{
+        finished_verify_data, server13_write_transition, store_finished_verify_data,
+        write_tls13_new_session_ticket_body, TLS12_CHANGE_CIPHER_SPEC_BODY, TLS_ST_OK,
+        TLS_ST_SW_KEY_UPDATE, WRITE_TRAN_CONTINUE, WRITE_TRAN_FINISHED,
+    };
+
+    const SENTINEL: u8 = 0xa5;
+    const TICKET: [u8; 6] = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15];
+
+    /// A zero-length nonce and zero lifetime: `lifetime(4) || age(4) || nonce<0> ||
+    /// ticket<len(2)> || extensions<0>`.
+    #[test]
+    fn ticket_with_zero_length_nonce_and_zero_lifetime_is_byte_exact() {
+        let mut out = [SENTINEL; 19];
+        let n = write_tls13_new_session_ticket_body(&mut out, &[], 0, 0, &TICKET, &[]).unwrap();
+        assert_eq!(n, 19);
+        let mut expected = vec![0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, 0x06];
+        expected.extend_from_slice(&TICKET);
+        expected.extend_from_slice(&[0x00, 0x00]);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    /// A non-empty nonce and non-zero lifetime/age-add encode in wire order.
+    #[test]
+    fn ticket_with_nonce_and_nonzero_lifetime_is_byte_exact() {
+        let nonce = [0xaa, 0xbb, 0xcc];
+        let mut out = [SENTINEL; 22];
+        let n = write_tls13_new_session_ticket_body(
+            &mut out,
+            &nonce,
+            0x0000_0abc,
+            0x0102_0304,
+            &TICKET,
+            &[],
+        )
+        .unwrap();
+        assert_eq!(n, 22);
+        let mut expected = vec![
+            0x00, 0x00, 0x0a, 0xbc, // ticket_lifetime
+            0x01, 0x02, 0x03, 0x04, // ticket_age_add
+            0x03, 0xaa, 0xbb, 0xcc, // ticket_nonce<3>
+            0x00, 0x06,
+        ];
+        expected.extend_from_slice(&TICKET);
+        expected.extend_from_slice(&[0x00, 0x00]);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    /// Extensions are a u16 length-prefixed vector and follow the ticket exactly.
+    #[test]
+    fn ticket_with_extensions_is_byte_exact() {
+        let nonce = [0x01];
+        let extensions = [0x00, 0x2b, 0x00, 0x02];
+        let mut out = [SENTINEL; 24];
+        let n = write_tls13_new_session_ticket_body(&mut out, &nonce, 7, 9, &TICKET, &extensions)
+            .unwrap();
+        assert_eq!(n, 24);
+        let mut expected = vec![
+            0x00, 0x00, 0x00, 0x07, // ticket_lifetime
+            0x00, 0x00, 0x00, 0x09, // ticket_age_add
+            0x01, 0x01, // ticket_nonce<1>
+            0x00, 0x06,
+        ];
+        expected.extend_from_slice(&TICKET);
+        expected.extend_from_slice(&[0x00, 0x04]);
+        expected.extend_from_slice(&extensions);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    /// The u32 fields are full width: their maximum values are emitted, not truncated.
+    #[test]
+    fn ticket_encodes_full_width_u32_fields() {
+        let mut out = [SENTINEL; 19];
+        let n =
+            write_tls13_new_session_ticket_body(&mut out, &[], u32::MAX, u32::MAX, &TICKET, &[])
+                .unwrap();
+        assert_eq!(&out[..8], &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+        assert_eq!(n, 19);
+    }
+
+    /// Every length that cannot be expressed in its prefix is refused before any byte is
+    /// written, including a u16-overflowing ticket or extension vector.
+    #[test]
+    fn ticket_length_overflows_are_refused_transactionally() {
+        let mut out = [SENTINEL; 64];
+        let before = out;
+        assert!(
+            write_tls13_new_session_ticket_body(&mut out, &[0; 256], 0, 0, &TICKET, &[]).is_none()
+        );
+        assert_eq!(out, before);
+
+        let long_ticket = vec![0x5au8; u16::MAX as usize + 1];
+        let mut out = [SENTINEL; 16];
+        let before = out;
+        assert!(
+            write_tls13_new_session_ticket_body(&mut out, &[], 0, 0, &long_ticket, &[]).is_none()
+        );
+        assert_eq!(out, before);
+
+        let long_exts = vec![0u8; u16::MAX as usize + 1];
+        let mut out = [SENTINEL; 16];
+        let before = out;
+        assert!(
+            write_tls13_new_session_ticket_body(&mut out, &[], 0, 0, &TICKET, &long_exts).is_none()
+        );
+        assert_eq!(out, before);
+    }
+
+    /// One byte short of the exact extent is refused with the buffer unchanged.
+    #[test]
+    fn ticket_refuses_a_short_buffer_transactionally() {
+        let nonce = [0xaa, 0xbb, 0xcc];
+        let mut out = [SENTINEL; 21];
+        let before = out;
+        assert!(write_tls13_new_session_ticket_body(
+            &mut out,
+            &nonce,
+            0x0abc,
+            0x0102_0304,
+            &TICKET,
+            &[]
+        )
+        .is_none());
+        assert_eq!(out, before);
+    }
+
+    /// The TLS1.2 verify-data handoff (12 bytes) is bounded by the produced length and stored
+    /// byte-for-byte in the fixed binding array.
+    #[test]
+    fn tls12_finished_handoff_is_byte_exact() {
+        let produced = [0x5au8; 12];
+        let verify_data = finished_verify_data(&produced, 12).unwrap();
+        assert_eq!(verify_data, &produced[..]);
+
+        let mut binding = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+        let n = store_finished_verify_data(&mut binding, verify_data).unwrap();
+        assert_eq!(n, 12);
+        assert_eq!(&binding[..12], &produced[..]);
+        assert!(binding[12..].iter().all(|&b| b == 0));
+    }
+
+    /// The TLS1.3 verify-data handoff (a full hash, 32 bytes here) is likewise bounded and exact.
+    #[test]
+    fn tls13_finished_handoff_is_byte_exact() {
+        let mut produced = [0u8; 32];
+        for (i, b) in produced.iter_mut().enumerate() {
+            *b = i as u8;
+        }
+        let verify_data = finished_verify_data(&produced, 32).unwrap();
+        assert_eq!(verify_data, &produced[..]);
+
+        let mut binding = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+        let n = store_finished_verify_data(&mut binding, verify_data).unwrap();
+        assert_eq!(n, 32);
+        assert_eq!(&binding[..32], &produced[..]);
+    }
+
+    /// A produced length of zero, or one past the output buffer, is refused rather than sliced.
+    #[test]
+    fn finished_handoff_refuses_an_invalid_produced_length() {
+        let produced = [0u8; 12];
+        assert!(finished_verify_data(&produced, 0).is_none());
+        assert!(finished_verify_data(&produced, 13).is_none());
+
+        let mut binding = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+        let before = binding;
+        let too_long = vec![0xa5u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE + 1];
+        assert!(store_finished_verify_data(&mut binding, &too_long).is_none());
+        assert_eq!(binding, before);
+    }
+
+    /// `ChangeCipherSpec` is the single byte `0x01`.
+    #[test]
+    fn change_cipher_spec_body_is_the_byte_one() {
+        assert_eq!(TLS12_CHANGE_CIPHER_SPEC_BODY, [0x01]);
+    }
+
+    /// Both defined `SSL_key_update` request values (0 = not requested, 1 = requested) arm the
+    /// server key-update state; `SSL_KEY_UPDATE_NONE` (-1) does not.
+    #[test]
+    fn key_update_request_values_arm_the_server_key_update_state() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the connection block is this frame's allocation, released at the end.
+        unsafe {
+            for request in [0, 1] {
+                let s = crate::ssl::adv_alloc::zeroed_ssl();
+                assert!(!s.is_null());
+                (*s).hand_state = TLS_ST_OK;
+                (*s).key_update = request;
+                assert_eq!(server13_write_transition(s), WRITE_TRAN_CONTINUE);
+                assert_eq!((*s).hand_state, TLS_ST_SW_KEY_UPDATE);
+                crate::runtime::mem::CRYPTO_free(s.cast(), core::ptr::null(), 0);
+            }
+
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (*s).hand_state = TLS_ST_OK;
+            (*s).key_update = -1;
+            assert_eq!(server13_write_transition(s), WRITE_TRAN_FINISHED);
+            assert_eq!((*s).hand_state, TLS_ST_OK);
             crate::runtime::mem::CRYPTO_free(s.cast(), core::ptr::null(), 0);
         }
     }
