@@ -71,6 +71,7 @@ use crate::ssl::ssl_ciph_table::SslCipher;
 use crate::ssl::ssl_lib::{SSL_get_ciphers, Ssl};
 use crate::ssl::statem::extensions_clnt::tls_construct_extensions;
 use crate::ssl::statem::statem::{ossl_statem_fatal, ossl_statem_in_error};
+use crate::ssl::statem::statem_srvr::SliceCursor;
 use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled};
 
 // --- hand states (`include/openssl/ssl.h`) -----------------------------------
@@ -137,6 +138,10 @@ const SSL_R_BAD_SIGNATURE: c_int = 148;
 const SSL_R_BAD_KEY_SHARE: c_int = 108;
 /// `SSL_R_SSL3_SESSION_ID_TOO_LONG` — `sslerr.h:300`.
 const SSL_R_SSL3_SESSION_ID_TOO_LONG: c_int = 300;
+/// `SSL_R_WRONG_CURVE` — `sslerr.h:378`.
+const SSL_R_WRONG_CURVE: c_int = 378;
+/// `SSL_R_WRONG_SIGNATURE_TYPE` — `sslerr.h:370`.
+const SSL_R_WRONG_SIGNATURE_TYPE: c_int = 370;
 
 // --- connection flags --------------------------------------------------------
 const SSL3_VERSION: c_int = 0x0300;
@@ -1081,6 +1086,8 @@ const SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE: c_int = 113;
 const SSL_R_BAD_EXTENSION: c_int = 110;
 /// `TLSEXT_TYPE_key_share` — `tls1.h:165`.
 const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
+/// `TLSEXT_TYPE_pre_shared_key` — `tls1.h:163`.
+const TLSEXT_TYPE_PRE_SHARED_KEY: u16 = 41;
 /// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
 const TLSEXT_TYPE_ALPN: u16 = 16;
 /// `MSG_FLOW_READING` — `ssl/statem/statem.h`.
@@ -1150,6 +1157,171 @@ unsafe fn client_derive_and_install(s: *mut Ssl) -> c_int {
     1
 }
 
+/// The fixed part of a ServerHello that both version parsers read identically:
+/// `legacy_version(2) || random(32) || session_id(1+n) || cipher_suite(2) ||
+/// compression_method(1)` and the unconsumed remainder (the extension block).
+struct ServerHelloLayout<'a> {
+    version: u16,
+    random: &'a [u8],
+    session_id: &'a [u8],
+    cipher: &'a [u8],
+    compression: u8,
+    rest: &'a [u8],
+}
+
+/// Read the handshake header and the fixed ServerHello prefix.
+///
+/// `None` is exactly the set of inputs the previous offset arithmetic refused: a short header, a
+/// handshake length that runs past `msg`, a body shorter than version+random+session-id+
+/// cipher+compression, or a version/session-id/cipher field crossing the body's end. Trailing
+/// bytes after the declared handshake length are ignored, as before.
+fn read_server_hello_layout<'a>(msg: &'a [u8], expected_type: u8) -> Option<ServerHelloLayout<'a>> {
+    let mut msg_cur = SliceCursor::new(msg);
+    if msg_cur.take_u8()? != expected_type {
+        return None;
+    }
+    let blen = ((msg_cur.take_u8()? as usize) << 16)
+        | ((msg_cur.take_u8()? as usize) << 8)
+        | msg_cur.take_u8()? as usize;
+    let body = msg_cur.take(blen)?;
+    let mut cur = SliceCursor::new(body);
+    let version = cur.take_u16()?;
+    let random = cur.take(SSL3_RANDOM_SIZE)?;
+    let sid_len = cur.take_u8()? as usize;
+    let session_id = cur.take(sid_len)?;
+    let cipher = cur.take(2)?;
+    let compression = cur.take_u8()?;
+    Some(ServerHelloLayout {
+        version,
+        random,
+        session_id,
+        cipher,
+        compression,
+        rest: &body[cur.pos()..],
+    })
+}
+
+/// `Extension extensions<0..2^16-1>` at the end of a ServerHello body.
+enum ServerHelloExtensionBlock<'a> {
+    /// Fewer than two bytes remain: the previous `p + 2 <= b.len()` guard read this as "no
+    /// extension block" and accepted the message.
+    Absent,
+    Present(&'a [u8]),
+}
+
+/// Read the extension vector. `None` is a declared extent that runs past `rest`.
+fn read_extension_block(rest: &[u8]) -> Option<ServerHelloExtensionBlock<'_>> {
+    if rest.len() < 2 {
+        return Some(ServerHelloExtensionBlock::Absent);
+    }
+    let mut cur = SliceCursor::new(rest);
+    let len = cur.take_u16()? as usize;
+    let exts = cur.take(len)?;
+    Some(ServerHelloExtensionBlock::Present(exts))
+}
+
+/// Walk an `Extension extensions<2>` vector in order.
+///
+/// `None` means one extension's declared body crosses the block's end; the caller turns that into
+/// the authority's error. A trailing 1..=3 bytes are ignored, matching the previous
+/// `off + 4 <= exts.len()` loop.
+fn walk_server_hello_extensions<'a, F>(exts: &'a [u8], mut visit: F) -> Option<()>
+where
+    F: FnMut(u16, &'a [u8]),
+{
+    let mut walk = SliceCursor::new(exts);
+    while walk.remaining() >= 4 {
+        let etype = walk.take_u16()?;
+        let elen = walk.take_u16()? as usize;
+        let eb = walk.take(elen)?;
+        visit(etype, eb);
+    }
+    Some(())
+}
+
+/// `supported_versions` in a ServerHello: the selected `ProtocolVersion` (`extensions_clnt.c`).
+///
+/// A body shorter than two bytes is ignored (the previous `eb.len() >= 2` guard).
+fn read_supported_versions(eb: &[u8]) -> Option<u16> {
+    let mut cur = SliceCursor::new(eb);
+    cur.take_u16()
+}
+
+/// `key_share` in a ServerHello: `group(2) || key_exchange<2..2^16-1>`.
+///
+/// `None` is a body shorter than four bytes or a key extent crossing the body; the previous
+/// reader ignored both and kept the previously seen share.
+fn read_key_share(eb: &[u8]) -> Option<(u16, &[u8])> {
+    let mut cur = SliceCursor::new(eb);
+    let group = cur.take_u16()?;
+    let klen = cur.take_u16()? as usize;
+    Some((group, cur.take(klen)?))
+}
+
+/// `pre_shared_key` in a ServerHello: `selected_identity(2)` (`tls_parse_stoc_psk`).
+fn read_pre_shared_key(eb: &[u8]) -> Option<u16> {
+    let mut cur = SliceCursor::new(eb);
+    cur.take_u16()
+}
+
+/// The `key_share` selection a ServerHello carries (zero/empty when absent or unusable).
+struct ServerHelloKeyShare<'a> {
+    group: u16,
+    share: &'a [u8],
+}
+
+/// Read the TLS1.3 ServerHello extensions the reduced client consumes.
+///
+/// `supported_versions` and `pre_shared_key` are read for shape but their values are not applied:
+/// the reduced client marks TLS1.3 by the extension's presence (`process_server_hello_dispatch`),
+/// always installs `TLS1_3_VERSION`, and offers no PSK (`extensions_clnt.rs`, recorded boundary).
+/// A duplicate extension keeps the last value, as the previous in-order walk did.
+fn read_tls13_server_hello_extensions(exts: &[u8]) -> Option<ServerHelloKeyShare<'_>> {
+    let mut chosen = ServerHelloKeyShare {
+        group: 0,
+        share: &[],
+    };
+    walk_server_hello_extensions(exts, |etype, eb| match etype {
+        TLSEXT_TYPE_SUPPORTED_VERSIONS => {
+            let _selected = read_supported_versions(eb);
+        }
+        TLSEXT_TYPE_KEY_SHARE => {
+            if let Some((group, share)) = read_key_share(eb) {
+                chosen.group = group;
+                chosen.share = share;
+            }
+        }
+        TLSEXT_TYPE_PRE_SHARED_KEY => {
+            let _selected_identity = read_pre_shared_key(eb);
+        }
+        _ => {}
+    })?;
+    Some(chosen)
+}
+
+/// The dispatch decision used by [`process_server_hello_dispatch`].
+///
+/// `Ok(true)` means a `supported_versions` extension (type 43) is present. `Ok(false)` means it is
+/// absent; a declared extension vector that runs past the body is also treated as absent here,
+/// because the previous dispatcher fell through to the legacy arm on that input. `Err(())` is a
+/// framing or in-block extension overrun, which the previous dispatcher refused.
+fn server_hello_selects_tls13(msg: &[u8]) -> Result<bool, ()> {
+    let sh = read_server_hello_layout(msg, SSL3_MT_SERVER_HELLO as u8).ok_or(())?;
+    let mut has_supported_versions = false;
+    match read_extension_block(sh.rest) {
+        Some(ServerHelloExtensionBlock::Present(exts)) => {
+            walk_server_hello_extensions(exts, |etype, _| {
+                if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS {
+                    has_supported_versions = true;
+                }
+            })
+            .ok_or(())?;
+        }
+        Some(ServerHelloExtensionBlock::Absent) | None => {}
+    }
+    Ok(has_supported_versions)
+}
+
 /// `MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)` —
 /// `statem_clnt.c:1467-1836`, reduced to the fresh-connection, non-HRR, non-PSK path.
 ///
@@ -1157,57 +1329,33 @@ unsafe fn client_derive_and_install(s: *mut Ssl) -> c_int {
 /// `s` is live; `msg` is the full handshake message (`type || length || body`).
 pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
     use crate::ssl::tls13_enc as k;
-    if msg.len() < 4 || msg[0] != SSL3_MT_SERVER_HELLO as u8 {
+    let Some(sh) = read_server_hello_layout(msg, SSL3_MT_SERVER_HELLO as u8) else {
         return 0;
-    }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
-        return 0;
-    }
-    let b = &msg[4..4 + blen];
-    if b.len() < 2 + SSL3_RANDOM_SIZE + 1 + 2 + 1 {
-        return 0;
-    }
-    let sversion = ((b[0] as c_int) << 8) | b[1] as c_int;
-    if sversion != TLS1_2_VERSION {
+    };
+    if sh.version != TLS1_2_VERSION as u16 {
         return 0;
     }
     // server random is not used by the TLS1.3 schedule, but the authority stores it.
-    // SAFETY: `s` is live; `b[2..34]` is 32 bytes.
-    unsafe {
-        (*s).server_random
-            .copy_from_slice(&b[2..2 + SSL3_RANDOM_SIZE])
-    };
-    let mut p = 2 + SSL3_RANDOM_SIZE;
-    let sid_len = b[p] as usize;
-    p += 1;
-    if p + sid_len + 2 + 1 > b.len() {
-        return 0;
-    }
+    // SAFETY: `s` is live; the layout fixed `random` at exactly `SSL3_RANDOM_SIZE` bytes.
+    unsafe { (*s).server_random.copy_from_slice(sh.random) };
     // The authority bounds the echoed id before using it (`statem_clnt.c:1519-1524`);
     // `tmp_session_id` is `SSL_MAX_SSL_SESSION_ID_LENGTH` bytes.
-    if sid_len > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+    if sh.session_id.len() > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_SSL3_SESSION_ID_TOO_LONG) };
         return 0;
     }
     // The TLS1.3 ServerHello echoes the ClientHello session id (`statem_clnt.c:1568`).
-    let sid = &b[p..p + sid_len];
     // SAFETY: `s` is live; `tmp_session_id` is a 32-byte array.
     let (tmp_len, tmp_id) = unsafe { ((*s).tmp_session_id_len, (*s).tmp_session_id) };
-    if sid_len != tmp_len || sid != &tmp_id[..sid_len] {
+    if sh.session_id.len() != tmp_len || sh.session_id != &tmp_id[..sh.session_id.len()] {
         return 0;
     }
-    p += sid_len;
-    let cipher = &b[p..p + 2];
-    p += 2;
-    let compression = b[p];
-    p += 1;
-    if compression != 0 {
+    if sh.compression != 0 {
         return 0;
     }
-    // SAFETY: `cipher` is two readable bytes.
-    let chosen = unsafe { crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(cipher.as_ptr()) };
+    // SAFETY: `sh.cipher` is exactly two readable bytes by construction.
+    let chosen = unsafe { crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(sh.cipher.as_ptr()) };
     if chosen.is_null() {
         return 0;
     }
@@ -1215,39 +1363,19 @@ pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int 
     unsafe { (*s).pending_cipher = chosen };
 
     // supported_versions (43) confirms TLS1.3; key_share (51) carries the server share.
-    // SAFETY: `s` is live.
-    let mut group: u16 = 0;
-    let mut share: &[u8] = &[];
-    if p + 2 <= b.len() {
-        let ext_len = ((b[p] as usize) << 8) | b[p + 1] as usize;
-        p += 2;
-        if p + ext_len > b.len() {
-            return 0;
-        }
-        let exts = &b[p..p + ext_len];
-        let mut off = 0usize;
-        while off + 4 <= exts.len() {
-            let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-            let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-            off += 4;
-            if off + elen > exts.len() {
+    let ServerHelloKeyShare { group, share } = match read_extension_block(sh.rest) {
+        Some(ServerHelloExtensionBlock::Present(exts)) => {
+            let Some(chosen_share) = read_tls13_server_hello_extensions(exts) else {
                 return 0;
-            }
-            let eb = &exts[off..off + elen];
-            if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS && eb.len() >= 2 {
-                // SAFETY: `s` is live; the body is the selected version.
-                unsafe { (*s).version = ((eb[0] as c_int) << 8) | eb[1] as c_int };
-            }
-            if etype == TLSEXT_TYPE_KEY_SHARE && eb.len() >= 4 {
-                group = ((eb[0] as u16) << 8) | eb[1] as u16;
-                let klen = ((eb[2] as usize) << 8) | eb[3] as usize;
-                if 4 + klen <= eb.len() {
-                    share = &eb[4..4 + klen];
-                }
-            }
-            off += elen;
+            };
+            chosen_share
         }
-    }
+        Some(ServerHelloExtensionBlock::Absent) => ServerHelloKeyShare {
+            group: 0,
+            share: &[],
+        },
+        None => return 0,
+    };
     // SAFETY: `s` is live.
     unsafe {
         (*s).group_id = group;
@@ -1278,56 +1406,93 @@ pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int 
     unsafe { client_derive_and_install(s) }
 }
 
+/// Read one three-byte big-endian length (`u24`) through the bounds-checked cursor.
+fn take_u24(cur: &mut SliceCursor<'_>) -> Option<usize> {
+    let hi = cur.take_u8()? as usize;
+    let mid = cur.take_u8()? as usize;
+    let lo = cur.take_u8()? as usize;
+    Some((hi << 16) | (mid << 8) | lo)
+}
+
+/// `tls_parse_stoc_alpn` (`extensions_clnt.c:1665`): the body is
+/// `protocol_name_list<2..2^16-1> = list_len(2) || proto_len(1) || proto`.
+///
+/// The authority rejects an empty list, a declared list extent past the extension, and a list
+/// whose one entry does not span the list. `None` is that rejection; the caller answers the
+/// authority's `SSL_AD_DECODE_ERROR` path.
+fn read_alpn_selected(eb: &[u8]) -> Option<&[u8]> {
+    let mut cur = SliceCursor::new(eb);
+    let list_len = cur.take_u16()? as usize;
+    let plen = cur.take_u8()? as usize;
+    let list_end = list_len.checked_add(2)?;
+    if list_len == 0 || list_end > eb.len() || list_end != plen.checked_add(3)? {
+        return None;
+    }
+    cur.take(plen)
+}
+
 /// `MSG_PROCESS_RETURN tls_process_encrypted_extensions(...)` — `statem_clnt.c:4114-4140`: parse the
 /// `Extension extensions<0..2^16-1>` block (the negotiated ALPN, `tls_parse_stoc_alpn`,
 /// `extensions_clnt.c:1665`) and append the message to the transcript.
 ///
+/// The reduced client ignores the remaining `EncryptedExtensions` extensions
+/// (`supported_groups`, `early_data`, `max_fragment_length` and the rest), exactly as before:
+/// only ALPN has a reader on this path.
+///
 /// # Safety
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_encrypted_extensions(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_EE_BODY {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_EE_BODY) {
         return 0;
     }
-    let body = &msg[4..];
-    if body.len() >= 2 {
-        let ext_len = ((body[0] as usize) << 8) | body[1] as usize;
-        if 2 + ext_len > body.len() {
-            return 0;
-        }
-        let exts = &body[2..2 + ext_len];
-        let mut off = 0usize;
-        while off + 4 <= exts.len() {
-            let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-            let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-            off += 4;
-            if off + elen > exts.len() {
+    // The reduced reader never consulted `msg[1..4]`; keep ignoring the declared handshake length
+    // and parse every byte after it as the body.
+    if frame.take(3).is_none() {
+        return 0;
+    }
+    let rest = frame.remaining();
+    let Some(body) = frame.take(rest) else {
+        return 0;
+    };
+    let mut body_cur = SliceCursor::new(body);
+    let exts = match body_cur.take_u16() {
+        Some(ext_len) => {
+            let Some(exts) = body_cur.take(ext_len as usize) else {
                 return 0;
-            }
-            let eb = &exts[off..off + elen];
-            if etype == TLSEXT_TYPE_ALPN {
-                // `tls_parse_stoc_alpn`: `list_len(2) || proto_len(1) || proto`.
-                if eb.len() < 3 {
+            };
+            exts
+        }
+        // A body too short for the block length carries no extensions; that was accepted before.
+        None => &[],
+    };
+    let mut walk = SliceCursor::new(exts);
+    while walk.remaining() >= 4 {
+        let Some(etype) = walk.take_u16() else {
+            return 0;
+        };
+        let Some(elen) = walk.take_u16() else {
+            return 0;
+        };
+        let Some(eb) = walk.take(elen as usize) else {
+            return 0;
+        };
+        if etype == TLSEXT_TYPE_ALPN {
+            let Some(proto) = read_alpn_selected(eb) else {
+                return 0;
+            };
+            // SAFETY: `s` is live; `proto` borrows the message and holds `proto.len()` bytes.
+            unsafe {
+                use crate::runtime::mem::CRYPTO_memdup;
+                let mut slot = (*s).s3_alpn_selected_slot();
+                slot.clear(core::ptr::null(), 0);
+                let dup = CRYPTO_memdup(proto.as_ptr().cast(), proto.len(), core::ptr::null(), 0)
+                    .cast::<u8>();
+                if dup.is_null() {
                     return 0;
                 }
-                let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
-                let plen = eb[2] as usize;
-                if list_len == 0 || 2 + list_len > eb.len() || 2 + list_len != 3 + plen {
-                    return 0;
-                }
-                // SAFETY: `s` is live; `eb[3..3+plen]` holds `plen` readable bytes.
-                unsafe {
-                    use crate::runtime::mem::CRYPTO_memdup;
-                    let mut slot = (*s).s3_alpn_selected_slot();
-                    slot.clear(core::ptr::null(), 0);
-                    let dup = CRYPTO_memdup(eb.as_ptr().add(3).cast(), plen, core::ptr::null(), 0)
-                        .cast::<u8>();
-                    if dup.is_null() {
-                        return 0;
-                    }
-                    slot.store(dup, plen);
-                }
+                slot.store(dup, proto.len());
             }
-            off += elen;
         }
     }
     // SAFETY: `s` is live; `msg` is the full message.
@@ -1337,9 +1502,12 @@ pub(crate) unsafe fn tls_process_encrypted_extensions(s: *mut Ssl, msg: &[u8]) -
 /// `MSG_PROCESS_RETURN tls_process_certificate_request(...)` — `statem_clnt.c:2601-2720`, reduced to
 /// the TLS1.3 arm: read the `certificate_request_context<0..2^8-1>` and the
 /// `Extension extensions<2>` block and record that a client certificate is wanted
-/// (`s->s3.tmp.cert_req = 1`, `statem_clnt.c:2710`). The offered signature algorithms are not needed:
-/// the reduced signer chooses its scheme from its key type (`tls_construct_cert_verify`). The
-/// request context is kept for the client Certificate/CertificateVerify echo.
+/// (`s->s3.tmp.cert_req = 1`, `statem_clnt.c:2710`). The requested schemes are saved exactly as
+/// the server saves the ClientHello's list (`tls1_save_sigalgs`, `statem_clnt.c:2686`), because the
+/// certificate constructors check that the scheme they choose was offered; a request that omits
+/// the extension falls back to this client's own advertised list (`tls_choose_sigalg`,
+/// `t1_lib.c:4685-4713`). The request context is kept for the client Certificate/CertificateVerify
+/// echo.
 ///
 /// # Safety
 /// `s` is live; `msg` is the full handshake message.
@@ -1347,29 +1515,108 @@ pub(crate) unsafe fn tls_process_certificate_request(s: *mut Ssl, msg: &[u8]) ->
     // `SSL_AD_DECODE_ERROR` — `ssl3.h` (50); `SSL_R_LENGTH_MISMATCH` — `sslerr.h:163`.
     const SSL_AD_DECODE_ERROR: c_int = 50;
     const SSL_R_LENGTH_MISMATCH: c_int = 159;
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE_REQUEST as u8 {
+    // `SSL_R_BAD_LENGTH` — `sslerr.h` (271); `tls1_process_sigalgs`' failure alert.
+    const SSL_R_BAD_LENGTH: c_int = 271;
+    // `SSL_R_BAD_EXTENSION` — `sslerr.h` (110); what `tls_parse_ctos_sig_algs` raises.
+    const SSL_R_BAD_EXTENSION: c_int = 110;
+    /// `TLSEXT_TYPE_signature_algorithms` — `tls1.h:145`.
+    const TLSEXT_TYPE_SIG_ALGS: u16 = 13;
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE_REQUEST as u8) {
         return 0;
     }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
+    let Some(blen) = take_u24(&mut frame) else {
         return 0;
-    }
-    let body = &msg[4..4 + blen];
-    if body.is_empty() {
+    };
+    let Some(body) = frame.take(blen) else {
         return 0;
-    }
-    let ctx_len = body[0] as usize;
-    let p = 1 + ctx_len;
-    if p + 2 > body.len() {
+    };
+    let mut cur = SliceCursor::new(body);
+    // `CertificateRequest { certificate_request_context<0..2^8-1>; Extension extensions<2>; }`.
+    let Some(ctx_len) = cur.take_u8() else {
+        return 0;
+    };
+    let ctx_len = ctx_len as usize;
+    let ctx = match cur.take(ctx_len) {
+        Some(ctx) => ctx,
+        None => {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+            return 0;
+        }
+    };
+    let Some(ext_len) = cur.take_u16() else {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+        return 0;
+    };
+    let ext_len = ext_len as usize;
+    if cur.remaining() != ext_len {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
         return 0;
     }
-    let ext_len = ((body[p] as usize) << 8) | body[p + 1] as usize;
-    if p + 2 + ext_len != body.len() {
+    let Some(_extensions) = cur.take(ext_len) else {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
         return 0;
+    };
+    // `tls_parse_all_extensions(..., SSL_EXT_TLS1_3_CERTIFICATE_REQUEST)`: the one extension this
+    // client acts on is `signature_algorithms`. Its body is saved for the certificate
+    // constructors' scheme check; a malformed vector is refused before the incumbent list is
+    // touched (`tls1_save_u16` parses first), and a request that omits the extension leaves the
+    // client on its own advertised default list.
+    let extensions = _extensions;
+    let mut sigalgs_seen = false;
+    let mut walk = SliceCursor::new(extensions);
+    while walk.remaining() >= 4 {
+        let (Some(ty), Some(len)) = (walk.take_u16(), walk.take_u16()) else {
+            break;
+        };
+        let Some(eb) = walk.take(len as usize) else {
+            // The extension body runs past the block: the authority's reader refuses it.
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_LENGTH) };
+            return 0;
+        };
+        if ty == TLSEXT_TYPE_SIG_ALGS {
+            if eb.len() >= 2 && eb[0] == 0 && eb[1] == 0 {
+                // An empty vector is legal for a CertificateRequest (`PACKET_memdup` answers
+                // NULL for zero bytes), and the result is the same as an absent extension:
+                // the client stays on its defaults.
+            } else {
+                // SAFETY: `s` is live; `eb` is the extension body.
+                if unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs(s, eb) } == 0 {
+                    // SAFETY: `s` is live.
+                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                    return 0;
+                }
+                sigalgs_seen = true;
+            }
+        }
+    }
+    if walk.remaining() != 0 {
+        // 1-3 trailing bytes cannot frame another extension.
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_LENGTH) };
+        return 0;
+    }
+    if !sigalgs_seen {
+        // No `signature_algorithms`: the authority uses its defaults — for the client, the list
+        // it advertised (`tls1_get_legacy_sigalg` + `tls12_get_psigalgs(s, 1, ...)`,
+        // `t1_lib.c:4685-4713`; the NULL-`peer_sigalgs` arm of `tls1_set_shared_sigalgs`).
+        // SAFETY: `s` is live; the list is a `'static` array.
+        if unsafe {
+            crate::ssl::t1_lib::tls1_save_peer_sigalgs_default(
+                s,
+                &crate::ssl::statem::extensions_clnt::CLIENT_SIGALGS,
+            )
+        } == 0
+        {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_LENGTH) };
+            return 0;
+        }
     }
     // The request context is copied into `pha_context` (`tls_process_certificate_request`,
     // `statem_clnt.c:2637`); the reduced client stores it in `tmp_session_id`-like storage is not
@@ -1381,7 +1628,7 @@ pub(crate) unsafe fn tls_process_certificate_request(s: *mut Ssl, msg: &[u8]) ->
             let mut slot = (*s).pha_context_slot();
             slot.clear(core::ptr::null(), 0);
             let dup = crate::runtime::mem::CRYPTO_memdup(
-                body.as_ptr().add(1).cast(),
+                ctx.as_ptr().cast(),
                 ctx_len,
                 core::ptr::null(),
                 0,
@@ -1500,6 +1747,23 @@ pub(crate) fn ssl_x509err2alert(x509err: c_int) -> c_int {
     }
 }
 
+/// One TLS1.3 `CertificateEntry` — `cert_data<1..2^24-1> || extensions<0..2^16-1>` — framed
+/// through the bounds-checked cursor. The returned slices borrow the certificate list; DER decoding
+/// of `cert_data` remains with the caller's existing `d2i_X509` boundary.
+///
+/// `None` is the authority's rejection: a zero-length `cert_data`, or a declared extent past the
+/// end of the list. The caller frees the chain built so far.
+fn read_tls13_certificate_entry<'a>(cur: &mut SliceCursor<'a>) -> Option<(&'a [u8], &'a [u8])> {
+    let der_len = take_u24(cur)?;
+    let der = cur.take(der_len)?;
+    if der_len == 0 {
+        return None;
+    }
+    let ext_len = cur.take_u16()? as usize;
+    let extensions = cur.take(ext_len)?;
+    Some((der, extensions))
+}
+
 /// `MSG_PROCESS_RETURN tls_process_server_certificate(...)` — `statem_clnt.c:1995`, generalized to
 /// also serve the server's `tls_process_client_certificate` (`statem_srvr.c:3805-4002`). The reduced
 /// path parses each TLS 1.3 `CertificateEntry`'s `cert_data` into an `X509`; the leaf becomes
@@ -1515,29 +1779,30 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
     is_server: bool,
 ) -> c_int {
     use crate::x509::x_x509::{d2i_X509, X509};
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE as u8 {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE as u8) {
         return 0;
     }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
+    let Some(blen) = take_u24(&mut frame) else {
         return 0;
-    }
-    let body = &msg[4..4 + blen];
-    // `certificate_request_context<0..2^8-1> || CertificateEntry certificate_list<0..2^24-1>`.
-    if body.len() < 4 {
+    };
+    let Some(body) = frame.take(blen) else {
         return 0;
-    }
-    let ctx_len = body[0] as usize;
-    let mut p = 1 + ctx_len;
-    if p + 3 > body.len() {
+    };
+    // `certificate_request_context<0..2^8-1> || certificate_list<0..2^24-1>`.
+    let mut cur = SliceCursor::new(body);
+    let Some(ctx_len) = cur.take_u8() else {
         return 0;
-    }
-    let list_len =
-        ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
-    p += 3;
-    if p + list_len > body.len() {
+    };
+    let Some(_ctx) = cur.take(ctx_len as usize) else {
         return 0;
-    }
+    };
+    let Some(list_len) = take_u24(&mut cur) else {
+        return 0;
+    };
+    let Some(cert_list) = cur.take(list_len) else {
+        return 0;
+    };
     if list_len == 0 {
         if !is_server {
             // A server always sends a certificate; an empty list is a protocol violation here.
@@ -1575,8 +1840,6 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
         // SAFETY: `s` is live; `msg` is the full message.
         return unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) };
     }
-    let list_end = p + list_len;
-
     // The authority appends every `CertificateEntry` to `s->session->peer_chain`
     // (`tls_process_server_certificate`, `statem_clnt.c:2026-2077`); the leaf is
     // `sk_X509_value(peer_chain, 0)` and becomes `session->peer` in
@@ -1587,20 +1850,17 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
     if chain.is_null() {
         return 0;
     }
-    // Each TLS 1.3 `CertificateEntry` is `cert_data<1..2^24-1> || extensions<0..2^16-1>`.
-    while p + 3 <= list_end {
-        let derlen =
-            ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
-        p += 3;
-        if derlen == 0 || p + derlen > list_end {
+    let mut list = SliceCursor::new(cert_list);
+    while list.remaining() >= 3 {
+        let Some((der, _extensions)) = read_tls13_certificate_entry(&mut list) else {
             // SAFETY: `chain` is a live stack of the certs pushed so far.
             unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
             return 0;
-        }
-        let mut inp = body[p..p + derlen].as_ptr();
+        };
+        let mut inp = der.as_ptr();
         let mut x: *mut X509 = core::ptr::null_mut();
-        // SAFETY: `inp` points at `derlen` readable bytes; `x` is this frame's writable slot.
-        let got = unsafe { d2i_X509(&mut x, &mut inp, derlen as core::ffi::c_long) };
+        // SAFETY: `inp` points at `der.len()` readable bytes; `x` is this frame's writable slot.
+        let got = unsafe { d2i_X509(&mut x, &mut inp, der.len() as core::ffi::c_long) };
         if got.is_null() || x.is_null() {
             // SAFETY: `chain` is a live stack of the certs pushed so far.
             unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
@@ -1610,19 +1870,6 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
         if unsafe { OPENSSL_sk_push(chain, x.cast()) } == 0 {
             // SAFETY: `x` has not been pushed, so this frame still owns it.
             unsafe { crate::x509::x_x509::X509_free(x) };
-            // SAFETY: `chain` is a live stack of the certs pushed so far.
-            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
-            return 0;
-        }
-        p += derlen;
-        if p + 2 > list_end {
-            // SAFETY: `chain` is a live stack of the certs pushed so far.
-            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
-            return 0;
-        }
-        let extlen = ((body[p] as usize) << 8) | body[p + 1] as usize;
-        p += 2 + extlen;
-        if p > list_end {
             // SAFETY: `chain` is a live stack of the certs pushed so far.
             unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
             return 0;
@@ -1685,7 +1932,6 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server: bool) -> c_int {
     use crate::evp::digest::{EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_new};
-    use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
     use crate::rsa::ctrl::{
         EVP_PKEY_CTX_set_rsa_mgf1_md, EVP_PKEY_CTX_set_rsa_padding,
@@ -1710,12 +1956,14 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
         return 0;
     }
     let sig = &body[4..4 + siglen];
-    let is_pss = match sigalg {
-        0x0804 => true,
-        0x0401 => false,
-        // `ecdsa_secp256r1_sha256` (0x0403): an EC key needs no RSA padding; the reduced
-        // client's SHA-256 digest matches the scheme.
-        0x0403 => false,
+    // `tls1_lookup_sigalg` (`t1_lib.c:2367-2432`): the scheme names its key type and digest. An
+    // ECDSA scheme carries the curve it may be used with and takes no RSA padding.
+    let (is_pss, md) = match sigalg {
+        0x0804 => (true, crate::evp::legacy_sha::EVP_sha256()),
+        0x0401 => (false, crate::evp::legacy_sha::EVP_sha256()),
+        0x0403 => (false, crate::evp::legacy_sha::EVP_sha256()),
+        0x0503 => (false, crate::evp::legacy_sha::EVP_sha384()),
+        0x0603 => (false, crate::evp::legacy_sha::EVP_sha512()),
         _ => return 0,
     };
 
@@ -1727,6 +1975,27 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
     // SAFETY: `peer_cert` is a live certificate.
     let pkey = unsafe { X509_get0_pubkey(peer_cert.cast()) };
     if pkey.is_null() {
+        return 0;
+    }
+    // `tls12_check_peer_sigalg` (`t1_lib.c:2690-2770`): the scheme must be consistent with the
+    // peer's key. An EC key signs only under the scheme whose curve column names its own curve
+    // (`SSL_R_WRONG_CURVE`); an RSA key only under a PSS scheme or PKCS1-SHA256. Without this a
+    // P-384 key's signature could be labelled with the P-256 scheme (or an ECDSA signature with
+    // an RSA label) and still verify, because the TBS does not bind the scheme id.
+    // SAFETY: `pkey` is live.
+    let base_id = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) };
+    if base_id == crate::evp::pkey_ctx::EVP_PKEY_EC {
+        // SAFETY: `pkey` is live; a non-EC key answers `NID_undef`.
+        let curve = unsafe { crate::ssl::statem::statem_srvr::ssl_get_ec_curve_nid(pkey) };
+        let expected = crate::ssl::statem::statem_srvr::ec_sigalg_for_curve(curve);
+        if expected.map(|(scheme, _)| scheme) != Some(sigalg) {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_WRONG_CURVE) };
+            return 0;
+        }
+    } else if sigalg != 0x0804 && sigalg != 0x0401 {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_WRONG_SIGNATURE_TYPE) };
         return 0;
     }
 
@@ -1767,7 +2036,6 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
     // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
     // handle's `Drop` at the end of the frame.
     let mctx = mctx_owner.as_ptr();
-    let md = EVP_sha256();
     let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
     let mut ok = false;
     // SAFETY: `mctx`/`pkey` are live; `tbs`/`sig` are the caller's.
@@ -1973,6 +2241,13 @@ pub(crate) unsafe fn tls13_client_process_post_handshake(s: *mut Ssl, msg: &[u8]
     if unsafe { tls_process_certificate_request(s, msg) } == 0 {
         return 0;
     }
+    // The same hook before the post-handshake client certificate is selected. The reduced
+    // synchronous driver cannot resume a half-built PHA flight, so a negative answer is
+    // reported as failure rather than an `SSL_X509_LOOKUP` wait.
+    // SAFETY: `s` is live.
+    if unsafe { crate::ssl::statem::statem_srvr::invoke_cert_cb(s) } <= 0 {
+        return 0;
+    }
     // `tls_construct_client_certificate` (`statem_clnt.c:3851-3910`): the stored context is echoed.
     // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
     let (ctx, ctx_len) = unsafe { (*s).pha_context() };
@@ -2020,50 +2295,12 @@ pub(crate) unsafe fn tls13_client_process_post_handshake(s: *mut Ssl, msg: &[u8]
 /// # Safety
 /// `s` is live; `msg` is the full ServerHello message.
 unsafe fn process_server_hello_dispatch(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_SERVER_HELLO as u8 {
-        return 0;
-    }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
-        return 0;
-    }
-    let b = &msg[4..4 + blen];
-    if b.len() < 2 + SSL3_RANDOM_SIZE + 1 {
-        return 0;
-    }
-    let sid_len = b[2 + SSL3_RANDOM_SIZE] as usize;
-    let mut p = 2 + SSL3_RANDOM_SIZE + 1 + sid_len;
-    if p + 3 > b.len() {
-        return 0;
-    }
-    p += 3; // cipher_suite(2) + compression_method(1)
-    let mut has_supported_versions = false;
-    if p + 2 <= b.len() {
-        let ext_len = ((b[p] as usize) << 8) | b[p + 1] as usize;
-        p += 2;
-        if p + ext_len <= b.len() {
-            let exts = &b[p..p + ext_len];
-            let mut off = 0usize;
-            while off + 4 <= exts.len() {
-                let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-                let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-                off += 4;
-                if off + elen > exts.len() {
-                    return 0;
-                }
-                if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS {
-                    has_supported_versions = true;
-                }
-                off += elen;
-            }
-        }
-    }
-    if has_supported_versions {
+    match server_hello_selects_tls13(msg) {
+        Err(()) => 0,
         // SAFETY: `s`/`msg` are live.
-        unsafe { tls_process_server_hello(s, msg) }
-    } else {
+        Ok(true) => unsafe { tls_process_server_hello(s, msg) },
         // SAFETY: `s`/`msg` are live.
-        unsafe { tls12_process_server_hello(s, msg) }
+        Ok(false) => unsafe { tls12_process_server_hello(s, msg) },
     }
 }
 
@@ -2074,55 +2311,33 @@ unsafe fn process_server_hello_dispatch(s: *mut Ssl, msg: &[u8]) -> c_int {
 /// # Safety
 /// `s` is live; `msg` is the full ServerHello message.
 unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_SERVER_HELLO as u8 {
+    let Some(sh) = read_server_hello_layout(msg, SSL3_MT_SERVER_HELLO as u8) else {
         return 0;
-    }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
-        return 0;
-    }
-    let b = &msg[4..4 + blen];
-    if b.len() < 2 + SSL3_RANDOM_SIZE + 1 + 2 + 1 {
-        return 0;
-    }
-    let sversion = ((b[0] as c_int) << 8) | b[1] as c_int;
-    if sversion != TLS1_2_VERSION {
-        return 0;
-    }
-    // SAFETY: `s` is live; `b[2..34]` is 32 bytes.
-    unsafe {
-        (*s).server_random
-            .copy_from_slice(&b[2..2 + SSL3_RANDOM_SIZE])
     };
-    let mut p = 2 + SSL3_RANDOM_SIZE;
-    let sid_len = b[p] as usize;
-    p += 1;
-    if p + sid_len + 2 + 1 > b.len() {
+    if sh.version != TLS1_2_VERSION as u16 {
         return 0;
     }
+    // SAFETY: `s` is live; the layout fixed `random` at exactly `SSL3_RANDOM_SIZE` bytes.
+    unsafe { (*s).server_random.copy_from_slice(sh.random) };
     // The authority bounds the server's session id before copying it into the
     // `SSL_MAX_SSL_SESSION_ID_LENGTH`-byte `session_id` (`statem_clnt.c:1519-1524`); without
     // this check a hostile ServerHello length (up to 255) overruns the field and the
     // session block it lives in.
-    if sid_len > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+    if sh.session_id.len() > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_SSL3_SESSION_ID_TOO_LONG) };
         return 0;
     }
-    let session_id = &b[p..p + sid_len];
-    p += sid_len;
-    let cipher = &b[p..p + 2];
-    p += 2;
-    let compression = b[p];
-    p += 1;
-    if compression != 0 {
+    if sh.compression != 0 {
         return 0;
     }
-    // SAFETY: `cipher` is two readable bytes.
-    let chosen = unsafe { crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(cipher.as_ptr()) };
+    // SAFETY: `sh.cipher` is exactly two readable bytes by construction.
+    let chosen = unsafe { crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(sh.cipher.as_ptr()) };
     if chosen.is_null() {
         return 0;
     }
+    let sid_len = sh.session_id.len();
+    let session_id = sh.session_id;
     // SAFETY: `s` is live; `chosen` is a table row.
     unsafe {
         (*s).pending_cipher = chosen;
@@ -2186,19 +2401,20 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
     }
     // The `session_ticket` extension in the ServerHello announces a following ticket
     // (`tls_parse_stoc_session_ticket`, `extensions_clnt.c`).
-    if p + 2 <= b.len() {
-        let ext_len = ((b[p] as usize) << 8) | b[p + 1] as usize;
-        p += 2;
-        if p + ext_len <= b.len() {
-            let exts = &b[p..p + ext_len];
-            let mut off = 0usize;
-            while off + 4 <= exts.len() {
-                let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-                let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-                off += 4;
-                if off + elen > exts.len() {
+    match read_extension_block(sh.rest) {
+        Some(ServerHelloExtensionBlock::Present(exts)) => {
+            let mut walk = SliceCursor::new(exts);
+            while walk.remaining() >= 4 {
+                let Some(etype) = walk.take_u16() else {
                     return 0;
-                }
+                };
+                let Some(elen) = walk.take_u16() else {
+                    return 0;
+                };
+                let elen = elen as usize;
+                let Some(eb) = walk.take(elen) else {
+                    return 0;
+                };
                 if etype == TLSEXT_TYPE_SESSION_TICKET {
                     // SAFETY: `s` is live.
                     unsafe { (*s).ext_ticket_expected = 1 };
@@ -2209,7 +2425,8 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
                     // `CertificateStatus` follows.
                     // SAFETY: `s` is live.
                     let status_type = unsafe { (*s).ext_status_type };
-                    if elen != 0 || status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP {
+                    if !eb.is_empty() || status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP
+                    {
                         // SAFETY: `s` is live.
                         unsafe {
                             ossl_statem_fatal(s, SSL_AD_UNSUPPORTED_EXTENSION, SSL_R_BAD_EXTENSION)
@@ -2219,9 +2436,11 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
                     // SAFETY: `s` is live.
                     unsafe { (*s).ext_status_expected = 1 };
                 }
-                off += elen;
             }
         }
+        // A ServerHello without an extension vector, or with a malformed one, was accepted here
+        // before the conversion; the TLS1.2 processor leaves the flags unset.
+        Some(ServerHelloExtensionBlock::Absent) | None => {}
     }
     // `ssl_cipher_get_evp`: install the AEAD/hash and replay the buffered ClientHello.
     // SAFETY: `s` is live; `chosen` is the table row.
@@ -2346,6 +2565,48 @@ pub(crate) unsafe fn tls12_process_peer_certificate(
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
 }
 
+/// The `ServerECDHParams` prefix and the signature that follows it.
+///
+/// `params` is the exact signed extent (`curve_type || named_curve || point`); it stops before
+/// the signature algorithm, as `tls_process_ske_ecdhe` does when it hashes only the params.
+struct ServerEcdhParams<'a> {
+    params: &'a [u8],
+    group: u16,
+    point: &'a [u8],
+    sigalg: u16,
+    sig: &'a [u8],
+}
+
+/// `ServerECDHParams` framing: `curve_type(1) || named_curve(2) || point_len(1) || point ||
+/// sig_alg(2) || sig_len(2) || sig`.
+///
+/// Only the named-curve form (`curve_type == 3`) is reachable in this client; the explicit-prime
+/// `ServerDHParams` form is not implemented here, and the authority's length checks leave it
+/// unreachable, so it is refused rather than guessed at. Trailing bytes after the signature are
+/// ignored, exactly as the reduce does today.
+fn read_server_ecdh_params(body: &[u8]) -> Option<ServerEcdhParams<'_>> {
+    let mut cur = SliceCursor::new(body);
+    let params_start = cur.pos();
+    if cur.take_u8()? != 3 {
+        return None;
+    }
+    let group = cur.take_u16()?;
+    let ptlen = cur.take_u8()? as usize;
+    let point = cur.take(ptlen)?;
+    let params_end = cur.pos();
+    let params = body.get(params_start..params_end)?;
+    let sigalg = cur.take_u16()?;
+    let siglen = cur.take_u16()? as usize;
+    let sig = cur.take(siglen)?;
+    Some(ServerEcdhParams {
+        params,
+        group,
+        point,
+        sigalg,
+        sig,
+    })
+}
+
 /// `MSG_PROCESS_RETURN tls_process_key_exchange(...)` (`statem_clnt.c:1995`/`statem_lib.c:441`) for
 /// the ECDHE arm: verify the `ServerECDHParams` signature with the server certificate key and wrap
 /// the server's point into an `EVP_PKEY`.
@@ -2354,30 +2615,26 @@ pub(crate) unsafe fn tls12_process_peer_certificate(
 /// `s` is live; `msg` is the full ServerKeyExchange message.
 unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
     use crate::x509::x509_cmp::X509_get0_pubkey;
-    if msg.len() < 4 || msg[0] != SSL3_MT_SERVER_KEY_EXCHANGE as u8 {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_SERVER_KEY_EXCHANGE as u8) {
         return 0;
     }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
+    let Some(blen) = take_u24(&mut frame) else {
         return 0;
-    }
-    let body = &msg[4..4 + blen];
-    if body.len() < 5 || body[0] != 3 {
+    };
+    let Some(body) = frame.take(blen) else {
         return 0;
-    }
-    let group = ((body[1] as u16) << 8) | body[2] as u16;
-    let ptlen = body[3] as usize;
-    if 4 + ptlen + 4 > body.len() {
+    };
+    let Some(ServerEcdhParams {
+        params,
+        group,
+        point,
+        sigalg,
+        sig,
+    }) = read_server_ecdh_params(body)
+    else {
         return 0;
-    }
-    let params = &body[..4 + ptlen];
-    let point = &body[4..4 + ptlen];
-    let sigalg = ((body[4 + ptlen] as u16) << 8) | body[4 + ptlen + 1] as u16;
-    let siglen = ((body[4 + ptlen + 2] as usize) << 8) | body[4 + ptlen + 3] as usize;
-    if 4 + ptlen + 4 + siglen > body.len() {
-        return 0;
-    }
-    let sig = &body[4 + ptlen + 4..4 + ptlen + 4 + siglen];
+    };
     // SAFETY: `s` is live.
     let peer_cert = unsafe { (*s).peer_cert };
     if peer_cert.is_null() {
@@ -2440,18 +2697,103 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
 }
 
 /// `MSG_PROCESS_RETURN tls_process_certificate_request(...)` (`statem_clnt.c:2210-2290`) for
-/// TLS1.2: record that a client certificate is requested and append the message.
+/// TLS1.2: record that a client certificate is requested, save the vector the signer must choose
+/// from (`tls1_save_sigalgs`, `statem_clnt.c:2686`) and append the message.
 ///
 /// # Safety
 /// `s` is live; `msg` is the full CertificateRequest message.
 unsafe fn tls12_process_certificate_request(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE_REQUEST as u8 {
+    // `SSL_AD_DECODE_ERROR` — `ssl3.h` (50); `SSL_AD_INTERNAL_ERROR` — `ssl3.h` (80);
+    // `SSL_R_LENGTH_MISMATCH` — `sslerr.h:163`; `SSL_R_SIGNATURE_ALGORITHMS_ERROR` — `sslerr.h:360`.
+    const SSL_AD_DECODE_ERROR: c_int = 50;
+    const SSL_AD_INTERNAL_ERROR: c_int = 80;
+    const SSL_R_LENGTH_MISMATCH: c_int = 159;
+    const SSL_R_SIGNATURE_ALGORITHMS_ERROR: c_int = 360;
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE_REQUEST as u8) {
+        return 0;
+    }
+    let Some(blen) = take_u24(&mut frame) else {
+        return 0;
+    };
+    let Some(body) = frame.take(blen) else {
+        return 0;
+    };
+    // `CertificateRequest { certificate_types<1>; supported_signature_algorithms<2>;
+    // certificate_authorities<2>; }` (`statem_clnt.c:2661-2698`). The reduced client does not use
+    // the certificate types or the CA names, but the scheme vector must be saved: the certificate
+    // constructors refuse a scheme the server did not offer, and without the saved list a client
+    // certificate could never be signed.
+    let mut cur = SliceCursor::new(body);
+    let Some(ctypes_len) = cur.take_u8() else {
+        return 0;
+    };
+    if cur.take(ctypes_len as usize).is_none() {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+        return 0;
+    }
+    let Some(list_len) = cur.take_u16() else {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+        return 0;
+    };
+    let Some(schemes) = cur.take(list_len as usize) else {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+        return 0;
+    };
+    // An empty vector is legal (`PACKET_memdup` answers NULL for zero bytes) and leaves the
+    // client on its advertised defaults, exactly as an empty list does for the authority.
+    // SAFETY: `s` is live; `schemes` is the vector's bytes and the default list is `'static`.
+    let saved = if schemes.is_empty() {
+        // SAFETY: `s` is live; the default list is a `'static` array.
+        unsafe {
+            crate::ssl::t1_lib::tls1_save_peer_sigalgs_default(
+                s,
+                &crate::ssl::statem::extensions_clnt::CLIENT_SIGALGS,
+            )
+        }
+    } else {
+        // SAFETY: `s` is live; `schemes` is the vector's bytes.
+        unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs_raw(s, schemes) }
+    };
+    if saved == 0 {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_SIGNATURE_ALGORITHMS_ERROR) };
+        return 0;
+    }
+    // `certificate_authorities<2>`: validated for extent but not retained.
+    let Some(ca_len) = cur.take_u16() else {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+        return 0;
+    };
+    if cur.take(ca_len as usize).is_none() {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
         return 0;
     }
     // SAFETY: `s` is live.
     unsafe { (*s).s3_tmp_cert_req = 1 };
     // SAFETY: `s` is live; `msg` is the full message.
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
+}
+
+/// The TLS1.2 `CertificateVerify` body: `sig_alg(2) || sig_len(2) || sig`.
+struct CertVerifyLayout<'a> {
+    sigalg: u16,
+    sig: &'a [u8],
+}
+
+/// Parse the `CertificateVerify` signature algorithm, the u16 signature length and the exact
+/// signature extent. Trailing bytes after the signature are ignored, matching the reduce.
+fn read_cert_verify_layout(body: &[u8]) -> Option<CertVerifyLayout<'_>> {
+    let mut cur = SliceCursor::new(body);
+    let sigalg = cur.take_u16()?;
+    let siglen = cur.take_u16()? as usize;
+    let sig = cur.take(siglen)?;
+    Some(CertVerifyLayout { sigalg, sig })
 }
 
 /// `MSG_PROCESS_RETURN tls_process_cert_verify(...)` (`statem_lib.c:441-560`) for TLS1.2: the
@@ -2461,23 +2803,19 @@ unsafe fn tls12_process_certificate_request(s: *mut Ssl, msg: &[u8]) -> c_int {
 /// `s` is live; `msg` is the full CertificateVerify message.
 pub(crate) unsafe fn tls12_process_cert_verify(s: *mut Ssl, msg: &[u8], _is_server: bool) -> c_int {
     use crate::x509::x509_cmp::X509_get0_pubkey;
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE_VERIFY as u8) {
         return 0;
     }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
+    let Some(blen) = take_u24(&mut frame) else {
         return 0;
-    }
-    let body = &msg[4..4 + blen];
-    if body.len() < 4 {
+    };
+    let Some(body) = frame.take(blen) else {
         return 0;
-    }
-    let sigalg = ((body[0] as u16) << 8) | body[1] as u16;
-    let siglen = ((body[2] as usize) << 8) | body[3] as usize;
-    if 4 + siglen > body.len() {
+    };
+    let Some(CertVerifyLayout { sigalg, sig }) = read_cert_verify_layout(body) else {
         return 0;
-    }
-    let sig = &body[4..4 + siglen];
+    };
     // SAFETY: `s` is live.
     let peer_cert = unsafe { (*s).peer_cert };
     if peer_cert.is_null() {
@@ -2767,6 +3105,42 @@ unsafe fn status_callback_initial_flight(s: *mut Ssl) -> c_int {
 ///
 /// # Safety
 /// `s` is live.
+/// Why a TLS1.2 `CertificateStatus` body was refused. The framing failure is a decode error;
+/// a status type or response-length disagreement is a bad-status-response alert, matching the
+/// authority's split (`tls_process_cert_status`, `statem_clnt.c`).
+#[derive(Debug)]
+enum CertStatusReject {
+    Decode,
+    BadResponse,
+}
+
+/// Parse `CertificateStatus`: `status_type(1) || response_len(3) || response`.
+///
+/// Returns exactly the declared response extent, which must consume the whole body. A
+/// zero-length response is valid.
+fn read_cert_status_response(
+    body: &[u8],
+    expected_status_type: c_int,
+) -> Result<&[u8], CertStatusReject> {
+    let mut cur = SliceCursor::new(body);
+    let Some(status_type) = cur.take_u8() else {
+        return Err(CertStatusReject::Decode);
+    };
+    let Some(rlen) = take_u24(&mut cur) else {
+        return Err(CertStatusReject::Decode);
+    };
+    if status_type as c_int != expected_status_type {
+        return Err(CertStatusReject::BadResponse);
+    }
+    let Some(response) = cur.take(rlen) else {
+        return Err(CertStatusReject::BadResponse);
+    };
+    if cur.remaining() != 0 {
+        return Err(CertStatusReject::BadResponse);
+    }
+    Ok(response)
+}
+
 unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
     use crate::ssl::statem::statem_srvr::{
         tls12_construct_certificate, tls12_construct_finished, tls12_read_handshake,
@@ -2811,30 +3185,41 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                     }
                     // `tls_process_cert_status` (`statem_clnt.c`):
                     // `status_type(1) || response<3>`.
-                    let blen =
-                        ((buf[1] as usize) << 16) | ((buf[2] as usize) << 8) | buf[3] as usize;
-                    if 4 + blen > n || blen < 4 {
+                    let mut frame = SliceCursor::new(&buf[..n]);
+                    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE_STATUS as u8) {
                         ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
                         return -1;
                     }
-                    let body = &buf[4..4 + blen];
-                    let rlen =
-                        ((body[1] as usize) << 16) | ((body[2] as usize) << 8) | body[3] as usize;
-                    if body[0] as c_int != (*s).ext_status_type || 4 + rlen != body.len() {
-                        ossl_statem_fatal(
-                            s,
-                            SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE,
-                            SSL_R_BAD_EXTENSION,
-                        );
+                    let Some(blen) = take_u24(&mut frame) else {
+                        ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
                         return -1;
-                    }
-                    // SAFETY: `s` is live; `body[4..]` names `rlen` readable bytes. The ctrl copies
-                    // them, so the transcript buffer may be reused afterwards.
+                    };
+                    let Some(body) = frame.take(blen) else {
+                        ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
+                        return -1;
+                    };
+                    let response = match read_cert_status_response(body, (*s).ext_status_type) {
+                        Ok(response) => response,
+                        Err(CertStatusReject::Decode) => {
+                            ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
+                            return -1;
+                        }
+                        Err(CertStatusReject::BadResponse) => {
+                            ossl_statem_fatal(
+                                s,
+                                SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE,
+                                SSL_R_BAD_EXTENSION,
+                            );
+                            return -1;
+                        }
+                    };
+                    // SAFETY: `s` is live; `response` names `response.len()` readable bytes. The
+                    // ctrl copies them, so the transcript buffer may be reused afterwards.
                     if crate::ssl::ssl_lib::SSL_ctrl(
                         s,
                         crate::ssl::ssl_lib::SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP,
-                        rlen as core::ffi::c_long,
-                        body[4..].as_ptr().cast_mut().cast(),
+                        response.len() as core::ffi::c_long,
+                        response.as_ptr().cast_mut().cast(),
                     ) != 1
                     {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
@@ -2872,6 +3257,12 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                     if buf[0] == SSL3_MT_CERTIFICATE_REQUEST as u8 {
                         if tls12_process_certificate_request(s, &buf[..n]) == 0 {
                             ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                            return -1;
+                        }
+                        // `tls_prepare_client_certificate` (`statem_clnt.c:3772-3785`): the hook
+                        // runs before `TLS_ST_CW_CERT` decides whether a certificate is sent.
+                        // SAFETY: `s` is live.
+                        if crate::ssl::statem::statem_srvr::invoke_cert_cb(s) <= 0 {
                             return -1;
                         }
                         // A CertificateRequest is followed by ServerHelloDone.
@@ -3385,6 +3776,14 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
                             ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                             return -1;
                         }
+                        // `tls_post_process_certificate_request` → `tls_prepare_client_certificate`
+                        // (`statem_clnt.c:1172`, `:3772-3785`): the certificate hook runs after
+                        // the request and before the client certificate is selected, so a
+                        // certificate it installs is the one the client sends.
+                        // SAFETY: `s` is live.
+                        if crate::ssl::statem::statem_srvr::invoke_cert_cb(s) <= 0 {
+                            return -1;
+                        }
                         (*s).hand_state = TLS_ST_CR_CERT_REQ;
                         continue;
                     }
@@ -3822,6 +4221,1224 @@ mod server_hello_bounds {
             assert!((*s).session.is_null(), "no session is created on refusal");
             assert_eq!((*s).statem_state, MSG_FLOW_ERROR_13);
             CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// ServerHello parse cluster: version selection, extension readers, and malformed input.
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod server_hello_parse {
+    #![allow(clippy::panic, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new, SslCtx};
+
+    /// The echoed TLS1.3 `legacy_session_id` used by the valid cases.
+    const SID: &[u8] = &[0xA1, 0xB2, 0xC3, 0xD4];
+    const TLS_AES_128_GCM_SHA256: u16 = 0x1301;
+    const ECDHE_RSA_AES_128_GCM_SHA256: u16 = 0xC02F;
+    const X25519: u16 = 0x001D;
+
+    fn extension(etype: u16, body: &[u8]) -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(&etype.to_be_bytes());
+        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(body);
+        out
+    }
+
+    fn extension_block(exts: &[Vec<u8>]) -> Vec<u8> {
+        let mut body = Vec::new();
+        for ext in exts {
+            body.extend_from_slice(ext);
+        }
+        let mut out = Vec::new();
+        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(&body);
+        out
+    }
+
+    fn frame(mut body: Vec<u8>) -> Vec<u8> {
+        let mut msg = vec![SSL3_MT_SERVER_HELLO as u8];
+        msg.push((body.len() >> 16) as u8);
+        msg.push((body.len() >> 8) as u8);
+        msg.push(body.len() as u8);
+        msg.append(&mut body);
+        msg
+    }
+
+    /// `legacy_version || random || session_id || cipher_suite || compression`.
+    fn hello_prefix(sid: &[u8], cipher: u16) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&[0x03, 0x03]);
+        body.extend_from_slice(&[0x42; SSL3_RANDOM_SIZE]);
+        body.push(sid.len() as u8);
+        body.extend_from_slice(sid);
+        body.extend_from_slice(&cipher.to_be_bytes());
+        body.push(0);
+        body
+    }
+
+    fn server_hello(sid: &[u8], cipher: u16, exts: Option<&[Vec<u8>]>) -> Vec<u8> {
+        let mut body = hello_prefix(sid, cipher);
+        if let Some(exts) = exts {
+            body.extend_from_slice(&extension_block(exts));
+        }
+        frame(body)
+    }
+
+    fn supported_versions_ext(version: u16) -> Vec<u8> {
+        extension(TLSEXT_TYPE_SUPPORTED_VERSIONS, &version.to_be_bytes())
+    }
+
+    fn key_share_ext(group: u16, share: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&group.to_be_bytes());
+        body.extend_from_slice(&(share.len() as u16).to_be_bytes());
+        body.extend_from_slice(share);
+        extension(TLSEXT_TYPE_KEY_SHARE, &body)
+    }
+
+    /// Generate one X25519 key and open a live connection with it installed as the client's
+    /// ephemeral. The server's encoded public share is returned for the ServerHello.
+    ///
+    /// # Safety
+    /// The returned connection is owned by the caller and released with `SSL_free`; the context
+    /// is owned by the caller and released with `SSL_CTX_free`.
+    unsafe fn tls13_connection() -> (*mut SslCtx, *mut Ssl, [u8; 32]) {
+        use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
+        // SAFETY: every constructor below answers a fresh object owned by this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(crate::ssl::methods::TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            (&mut (*s).tmp_session_id)[..SID.len()].copy_from_slice(SID);
+            (*s).tmp_session_id_len = SID.len();
+
+            let params = [crate::params::END; 1];
+            let client = evp_pkey_keygen(
+                core::ptr::null_mut(),
+                c"X25519".as_ptr(),
+                core::ptr::null(),
+                params.as_ptr(),
+            );
+            assert!(!client.is_null(), "a client X25519 key must be generated");
+            (*s).pkey = client.cast();
+
+            let server = evp_pkey_keygen(
+                core::ptr::null_mut(),
+                c"X25519".as_ptr(),
+                core::ptr::null(),
+                params.as_ptr(),
+            );
+            assert!(!server.is_null(), "a server X25519 key must be generated");
+            let mut pubp: *mut u8 = core::ptr::null_mut();
+            let n = EVP_PKEY_get1_encoded_public_key(server, &mut pubp);
+            assert_eq!(n, 32, "X25519 public keys are 32 bytes");
+            let mut share = [0u8; 32];
+            core::ptr::copy_nonoverlapping(pubp, share.as_mut_ptr(), 32);
+            CRYPTO_free(pubp.cast(), core::ptr::null(), 0);
+            EVP_PKEY_free(server);
+            (ctx, s, share)
+        }
+    }
+
+    #[test]
+    fn valid_tls13_server_hello_is_accepted() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the connection and context are this test's own objects.
+        unsafe {
+            let (ctx, s, share) = tls13_connection();
+            let msg = server_hello(
+                SID,
+                TLS_AES_128_GCM_SHA256,
+                Some(&[
+                    key_share_ext(X25519, &share),
+                    supported_versions_ext(0x0304),
+                ]),
+            );
+            assert_eq!(
+                tls_process_server_hello(s, &msg),
+                1,
+                "a well-formed TLS1.3 ServerHello must be accepted"
+            );
+            assert_eq!((*s).version, TLS1_3_VERSION);
+            assert_eq!((*s).group_id, X25519);
+            assert_eq!((*(*s).pending_cipher).id as u16, TLS_AES_128_GCM_SHA256);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn valid_tls12_server_hello_selects_the_tls12_processor() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the connection and context are this test's own objects.
+        unsafe {
+            let ctx = SSL_CTX_new(crate::ssl::methods::TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            let msg = server_hello(&[], ECDHE_RSA_AES_128_GCM_SHA256, None);
+            assert_eq!(
+                process_server_hello_dispatch(s, &msg),
+                1,
+                "a TLS1.2 ServerHello must be accepted by the legacy arm"
+            );
+            assert_eq!((*s).version, TLS1_2_VERSION);
+            assert_eq!((*s).tls12_driver, 1);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn missing_supported_versions_selects_the_legacy_processor() {
+        let msg = server_hello(&[], ECDHE_RSA_AES_128_GCM_SHA256, None);
+        assert_eq!(
+            server_hello_selects_tls13(&msg),
+            Ok(false),
+            "absence of supported_versions must select the TLS1.2 arm"
+        );
+    }
+
+    #[test]
+    fn unknown_cipher_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = server_hello(&[], 0xFFFF, None);
+        // SAFETY: the refusal happens before any connection state is read.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls12_process_server_hello(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn session_id_echo_mismatch_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = server_hello(
+            SID,
+            TLS_AES_128_GCM_SHA256,
+            Some(&[supported_versions_ext(0x0304)]),
+        );
+        // SAFETY: the mismatch is detected before the cipher or context is used.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_server_hello(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn duplicate_extension_keeps_the_last_value() {
+        let first = key_share_ext(X25519, &[0x11; 32]);
+        let second = key_share_ext(0x0100, &[0x22; 16]);
+        let mut exts = Vec::new();
+        exts.extend_from_slice(&first);
+        exts.extend_from_slice(&second);
+        let parsed =
+            read_tls13_server_hello_extensions(&exts).expect("both entries are well formed");
+        assert_eq!(parsed.group, 0x0100, "the later key_share wins");
+        assert_eq!(parsed.share, &[0x22; 16]);
+    }
+
+    #[test]
+    fn key_share_group_not_offered_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the connection and context are this test's own objects.
+        unsafe {
+            let (ctx, s, _) = tls13_connection();
+            let msg = server_hello(
+                SID,
+                TLS_AES_128_GCM_SHA256,
+                Some(&[
+                    key_share_ext(0x0100, &[0x33; 16]),
+                    supported_versions_ext(0x0304),
+                ]),
+            );
+            assert_eq!(
+                tls_process_server_hello(s, &msg),
+                0,
+                "a group this client did not offer cannot complete the exchange"
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn truncated_extension_block_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let mut body = hello_prefix(SID, TLS_AES_128_GCM_SHA256);
+        // `extensions<2>` declares 255 bytes but the body ends here.
+        body.extend_from_slice(&[0x00, 0xFF]);
+        let msg = frame(body);
+        let sh = read_server_hello_layout(&msg, SSL3_MT_SERVER_HELLO as u8)
+            .expect("the fixed prefix is well formed");
+        assert!(
+            read_extension_block(sh.rest).is_none(),
+            "a declared extension extent past the body must be rejected"
+        );
+        // SAFETY: the mismatch is detected before the cipher or context is used.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (&mut (*s).tmp_session_id)[..SID.len()].copy_from_slice(SID);
+            (*s).tmp_session_id_len = SID.len();
+            assert_eq!(tls_process_server_hello(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    /// Deterministic (seeded, bounded) mutation of a well-formed ServerHello. Every parse helper
+    /// must answer `None`/`Err` rather than panic; the production entry points are not called here
+    /// because a zeroed connection has no context and a valid frame would reach it.
+    #[test]
+    fn malformed_server_hello_loop_does_not_panic() {
+        let good = server_hello(
+            SID,
+            TLS_AES_128_GCM_SHA256,
+            Some(&[
+                key_share_ext(X25519, &[0x44; 32]),
+                supported_versions_ext(0x0304),
+            ]),
+        );
+        let mut state = 0x9E37_79B9_7F4A_7C15u64;
+        for _ in 0..512 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut msg = good.clone();
+            let edits = 1 + (state as usize % 4);
+            for i in 0..edits {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                let at = (state as usize) % msg.len();
+                msg[at] ^= (state >> 32) as u8 | (i as u8 + 1);
+            }
+            if let Some(sh) = read_server_hello_layout(&msg, SSL3_MT_SERVER_HELLO as u8) {
+                if let Some(ServerHelloExtensionBlock::Present(exts)) =
+                    read_extension_block(sh.rest)
+                {
+                    let _ = read_tls13_server_hello_extensions(exts);
+                }
+            }
+            let _ = server_hello_selects_tls13(&msg);
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// EncryptedExtensions / CertificateRequest / Certificate framing on the client path.
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod post_server_hello_parse {
+    #![allow(clippy::panic, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_get0_alpn_selected, SSL_new,
+    };
+    use core::ffi::c_uint;
+
+    fn extension(etype: u16, body: &[u8]) -> Vec<u8> {
+        let mut out = etype.to_be_bytes().to_vec();
+        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(body);
+        out
+    }
+
+    fn extension_block(exts: &[Vec<u8>]) -> Vec<u8> {
+        let mut body = Vec::new();
+        for ext in exts {
+            body.extend_from_slice(ext);
+        }
+        let mut out = (body.len() as u16).to_be_bytes().to_vec();
+        out.extend_from_slice(&body);
+        out
+    }
+
+    /// `type || declared_length (ignored by the reduced reader) || extensions<2> || body`.
+    fn encrypted_extensions(block: &[u8]) -> Vec<u8> {
+        let mut msg = vec![SSL3_MT_EE_BODY, 0, 0, block.len() as u8];
+        msg.extend_from_slice(block);
+        msg
+    }
+
+    /// `type || u24(body_len) || body`.
+    fn framed(mt: c_int, body: &[u8]) -> Vec<u8> {
+        let mut msg = vec![mt as u8];
+        msg.extend_from_slice(&(body.len() as u32).to_be_bytes()[1..]);
+        msg.extend_from_slice(body);
+        msg
+    }
+
+    fn alpn_ext(proto: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&((proto.len() + 1) as u16).to_be_bytes());
+        body.push(proto.len() as u8);
+        body.extend_from_slice(proto);
+        extension(TLSEXT_TYPE_ALPN, &body)
+    }
+
+    #[test]
+    fn encrypted_extensions_with_alpn_h2_selects_it() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = encrypted_extensions(&extension_block(&[alpn_ext(b"h2")]));
+        // SAFETY: the context and connection are this test's own objects.
+        unsafe {
+            let ctx = SSL_CTX_new(crate::ssl::methods::TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            assert_eq!(
+                tls_process_encrypted_extensions(s, &msg),
+                1,
+                "a well-formed ALPN extension must be accepted"
+            );
+            let mut data: *const u8 = core::ptr::null();
+            let mut len: c_uint = 0;
+            SSL_get0_alpn_selected(s, &mut data, &mut len);
+            assert_eq!(len, 2, "the selected protocol is recorded");
+            assert_eq!(
+                core::slice::from_raw_parts(data, len as usize),
+                b"h2",
+                "the selected protocol is the one the server named"
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn encrypted_extensions_unknown_extension_is_ignored() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = encrypted_extensions(&extension_block(&[extension(0x1234, &[0xAA, 0xBB])]));
+        // SAFETY: `s` is this frame's zeroed block; the accepted path only appends to the
+        // transcript buffer and records no extension.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(
+                tls_process_encrypted_extensions(s, &msg),
+                1,
+                "an unrecognised extension must be ignored, not rejected"
+            );
+            let mut data: *const u8 = core::ptr::null();
+            let mut len: c_uint = 0;
+            SSL_get0_alpn_selected(s, &mut data, &mut len);
+            assert!(data.is_null() && len == 0, "no ALPN was selected");
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn truncated_encrypted_extensions_is_refused() {
+        // The extension block declares 255 bytes but the message ends after two.
+        let msg = encrypted_extensions(&[0x00, 0xFF]);
+        // SAFETY: the refusal happens before any connection state is read.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_encrypted_extensions(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        // An extension declares four body bytes but carries two.
+        let msg = encrypted_extensions(&[0x00, 0x06, 0x12, 0x34, 0x00, 0x04, 0x00, 0x00]);
+        // SAFETY: as above.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_encrypted_extensions(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn tls12_certificate_request_frame_is_accepted_and_bounded() {
+        let _g = crate::test_support::lock_global_state();
+        // `certificate_types<1>(rsa_sign) || supported_signature_algorithms<2>(empty) ||
+        // certificate_authorities<2>(empty)`: an empty scheme vector is legal and selects the
+        // client's defaults. The trailing CA field is mandatory for the authority's reader.
+        let body = [0x01, 0x01, 0x00, 0x00, 0x00, 0x00];
+        let msg = framed(SSL3_MT_CERTIFICATE_REQUEST, &body);
+        // SAFETY: `s` is this frame's zeroed block; the accepted path appends to the transcript.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls12_process_certificate_request(s, &msg), 1);
+            assert_eq!((*s).s3_tmp_cert_req, 1, "the request is recorded");
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        // The declared body length overruns the message.
+        let msg = vec![
+            SSL3_MT_CERTIFICATE_REQUEST as u8,
+            0x00,
+            0x00,
+            0x08,
+            0x01,
+            0x01,
+        ];
+        // SAFETY: as above; the refusal reads no connection state.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls12_process_certificate_request(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn tls13_certificate_request_frame_is_accepted() {
+        let _g = crate::test_support::lock_global_state();
+        // `context<1>(empty) || extensions<2>(empty)`.
+        let msg = framed(SSL3_MT_CERTIFICATE_REQUEST, &[0x00, 0x00, 0x00]);
+        // SAFETY: `s` is this frame's zeroed block; the accepted path appends to the transcript.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_certificate_request(s, &msg), 1);
+            assert_eq!((*s).s3_tmp_cert_req, 1, "the request is recorded");
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        // The extension block length does not end the body.
+        let msg = framed(SSL3_MT_CERTIFICATE_REQUEST, &[0x00, 0x00, 0x02, 0xAA]);
+        // SAFETY: as above; the length mismatch sends the authority's fatal alert.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_certificate_request(s, &msg), 0);
+            assert_eq!((*s).statem_state, MSG_FLOW_ERROR_13);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn zero_length_certificate_list_is_refused_for_a_server_but_legal_for_a_peer() {
+        let _g = crate::test_support::lock_global_state();
+        // `context<1>(empty) || certificate_list<3>(empty)`.
+        let msg = framed(SSL3_MT_CERTIFICATE, &[0x00, 0x00, 0x00, 0x00]);
+        // SAFETY: `s` is this frame's zeroed block; no certificate is decoded.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(
+                tls13_process_peer_certificate(s, &msg, false),
+                0,
+                "a server may not send an empty certificate list"
+            );
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(
+                tls13_process_peer_certificate(s, &msg, true),
+                1,
+                "an empty client certificate list is legal without a verification demand"
+            );
+            assert!((*s).peer_cert.is_null() && (*s).peer_chain.is_null());
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn certificate_list_length_that_overruns_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // `context<1>(empty) || certificate_list<3>(5)` followed by only two bytes.
+        let msg = framed(SSL3_MT_CERTIFICATE, &[0x00, 0x00, 0x00, 0x05, 0x30, 0x01]);
+        // SAFETY: the refusal happens before any certificate is decoded.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls13_process_peer_certificate(s, &msg, true), 0);
+            assert!((*s).peer_chain.is_null());
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn tls13_entry_with_a_truncated_extension_block_is_refused() {
+        let der = [0x30, 0x03, 0x02, 0x01, 0x05];
+        // One `CertificateEntry`: `cert_data<3>(5) || extensions<2>(3)` followed by only one
+        // extension byte.
+        let mut entry = vec![0x00, 0x00, 0x05];
+        entry.extend_from_slice(&der);
+        entry.extend_from_slice(&[0x00, 0x03, 0xAA]);
+
+        // `context<1>(empty) || certificate_list<3> || entry`.
+        let mut body = vec![0x00];
+        body.extend_from_slice(&(entry.len() as u32).to_be_bytes()[1..]);
+        body.extend_from_slice(&entry);
+
+        let cert_list = &body[4..];
+        let mut cur = SliceCursor::new(cert_list);
+        assert!(
+            read_tls13_certificate_entry(&mut cur).is_none(),
+            "an entry whose extension block overruns the list must be refused"
+        );
+
+        // The same entry is accepted when the extension block fits, and the frame's trailing
+        // one- or two-byte remainder is ignored exactly as before.
+        let mut good = Vec::new();
+        good.extend_from_slice(&(der.len() as u32).to_be_bytes()[1..]);
+        good.extend_from_slice(&der);
+        good.extend_from_slice(&[0x00, 0x00]);
+        good.extend_from_slice(&[0x00, 0x00]);
+        let mut cur = SliceCursor::new(&good);
+        let Some((entry, exts)) = read_tls13_certificate_entry(&mut cur) else {
+            panic!("a complete entry must parse");
+        };
+        assert_eq!(entry, der);
+        assert!(exts.is_empty());
+        assert_eq!(cur.remaining(), 2, "a short remainder ends the walk");
+    }
+
+    #[test]
+    fn zero_length_certificate_entry_is_refused() {
+        let list = [0x00, 0x00, 0x00, 0x00, 0x00];
+        let mut cur = SliceCursor::new(&list);
+        assert!(
+            read_tls13_certificate_entry(&mut cur).is_none(),
+            "cert_data<1..2^24-1> may not be empty"
+        );
+    }
+
+    /// Deterministic (seeded, bounded) mutation of an EncryptedExtensions message and a
+    /// certificate list. The production EncryptedExtensions parser and the entry framer must
+    /// answer a code rather than panic.
+    #[test]
+    fn malformed_post_server_hello_loop_does_not_panic() {
+        let _g = crate::test_support::lock_global_state();
+        let good_ee = encrypted_extensions(&extension_block(&[
+            alpn_ext(b"h2"),
+            extension(0x1234, &[0x01]),
+        ]));
+        let mut good_cert_list = Vec::new();
+        good_cert_list.extend_from_slice(&[0x00, 0x00, 0x05]);
+        good_cert_list.extend_from_slice(&[0x30, 0x03, 0x02, 0x01, 0x05]);
+        good_cert_list.extend_from_slice(&[0x00, 0x00]);
+
+        let mut state = 0x9E37_79B9_7F4A_7C15u64;
+        for _ in 0..256 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut ee = good_ee.clone();
+            let edits = 1 + (state as usize % 4);
+            for i in 0..edits {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                let at = (state as usize) % ee.len();
+                ee[at] ^= (state >> 32) as u8 | (i as u8 + 1);
+            }
+            // SAFETY: `s` is this iteration's own zeroed block; any recorded ALPN buffer is
+            // released here before the enclosing block.
+            unsafe {
+                let s = crate::ssl::adv_alloc::zeroed_ssl();
+                assert!(!s.is_null());
+                let _ = tls_process_encrypted_extensions(s, &ee);
+                let mut data: *const u8 = core::ptr::null();
+                let mut len: c_uint = 0;
+                SSL_get0_alpn_selected(s, &mut data, &mut len);
+                if !data.is_null() {
+                    CRYPTO_free(data.cast_mut().cast(), core::ptr::null(), 0);
+                }
+                CRYPTO_free(s.cast(), core::ptr::null(), 0);
+            }
+
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut list = good_cert_list.clone();
+            let at = (state as usize) % list.len();
+            list[at] ^= ((state >> 32) as u8) | 0x01;
+            let mut cur = SliceCursor::new(&list);
+            while cur.remaining() >= 3 {
+                let Some((_der, _exts)) = read_tls13_certificate_entry(&mut cur) else {
+                    break;
+                };
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// TLS1.2 server flight: ServerKeyExchange, CertificateVerify, CertificateStatus framing
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod tls12_server_flight_parse {
+    #![allow(clippy::panic, clippy::expect_used)]
+
+    use super::{
+        read_cert_status_response, read_cert_verify_layout, read_server_ecdh_params,
+        CertStatusReject,
+    };
+
+    const CURVE_TYPE_NAMED: u8 = 3;
+    const GROUP_P256: u16 = 23;
+    const GROUP_X25519: u16 = 29;
+    const SIGALG_ECDSA_SHA256: u16 = 0x0403;
+
+    /// `ServerECDHParams || sig_alg || sig_len || sig`, with separately supplied declared
+    /// lengths so the malformed cases can disagree with the actual bytes.
+    fn ske_body(
+        curve_type: u8,
+        group: u16,
+        point: &[u8],
+        declared_ptlen: Option<u8>,
+        sigalg: u16,
+        sig: &[u8],
+        declared_siglen: Option<u16>,
+    ) -> Vec<u8> {
+        let mut body = vec![curve_type];
+        body.extend_from_slice(&group.to_be_bytes());
+        body.push(declared_ptlen.unwrap_or(point.len() as u8));
+        body.extend_from_slice(point);
+        body.extend_from_slice(&sigalg.to_be_bytes());
+        body.extend_from_slice(&declared_siglen.unwrap_or(sig.len() as u16).to_be_bytes());
+        body.extend_from_slice(sig);
+        body
+    }
+
+    fn p256_point() -> Vec<u8> {
+        let mut point = vec![0x04];
+        point.extend((0..64u8).map(|i| i.wrapping_mul(3)));
+        point
+    }
+
+    fn x25519_point() -> Vec<u8> {
+        (0..32u8).map(|i| 0x80 ^ i).collect()
+    }
+
+    #[test]
+    fn valid_p256_ske_reports_the_signed_params_extent() {
+        let point = p256_point();
+        let sig = [0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02];
+        let body = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_P256,
+            &point,
+            None,
+            SIGALG_ECDSA_SHA256,
+            &sig,
+            None,
+        );
+        let parsed = read_server_ecdh_params(&body).expect("a well-formed P-256 SKE parses");
+        assert_eq!(parsed.group, GROUP_P256);
+        assert_eq!(parsed.point, &point[..]);
+        assert_eq!(parsed.sigalg, SIGALG_ECDSA_SHA256);
+        assert_eq!(parsed.sig, &sig[..]);
+        // The signed extent is exactly `curve_type || named_curve || point_len || point`.
+        assert_eq!(parsed.params.len(), 4 + point.len());
+        assert_eq!(parsed.params, &body[..4 + point.len()]);
+    }
+
+    #[test]
+    fn valid_x25519_ske_parses() {
+        let point = x25519_point();
+        let sig = [0xaa; 64];
+        let body = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_X25519,
+            &point,
+            None,
+            SIGALG_ECDSA_SHA256,
+            &sig,
+            None,
+        );
+        let parsed = read_server_ecdh_params(&body).expect("a well-formed X25519 SKE parses");
+        assert_eq!(parsed.group, GROUP_X25519);
+        assert_eq!(parsed.point, &point[..]);
+        assert_eq!(parsed.params.len(), 4 + point.len());
+    }
+
+    #[test]
+    fn point_length_overrunning_the_body_is_refused() {
+        // Declares 200 point bytes but supplies four bytes followed by the signature fields.
+        let body = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_P256,
+            &[0x04, 0x01, 0x02, 0x03],
+            Some(200),
+            SIGALG_ECDSA_SHA256,
+            &[0u8; 8],
+            None,
+        );
+        assert!(
+            read_server_ecdh_params(&body).is_none(),
+            "a point length that overruns the params must be refused"
+        );
+    }
+
+    #[test]
+    fn non_named_curve_type_is_refused() {
+        let body = ske_body(1, GROUP_P256, &p256_point(), None, 0x0401, &[0u8; 8], None);
+        assert!(read_server_ecdh_params(&body).is_none());
+    }
+
+    #[test]
+    fn signature_length_overrunning_the_body_is_refused() {
+        let point = p256_point();
+        let body = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_P256,
+            &point,
+            None,
+            SIGALG_ECDSA_SHA256,
+            &[0x30, 0x02],
+            Some(0xffff),
+        );
+        assert!(read_server_ecdh_params(&body).is_none());
+    }
+
+    #[test]
+    fn valid_cert_verify_extent_is_exact() {
+        let sig = [0x30, 0x04, 0x02, 0x02, 0x11, 0x22];
+        let mut body = SIGALG_ECDSA_SHA256.to_be_bytes().to_vec();
+        body.extend_from_slice(&(sig.len() as u16).to_be_bytes());
+        body.extend_from_slice(&sig);
+        let parsed = read_cert_verify_layout(&body).expect("a complete CertificateVerify parses");
+        assert_eq!(parsed.sigalg, SIGALG_ECDSA_SHA256);
+        assert_eq!(parsed.sig, &sig[..]);
+    }
+
+    #[test]
+    fn truncated_cert_verify_signature_is_refused() {
+        let mut body = SIGALG_ECDSA_SHA256.to_be_bytes().to_vec();
+        body.extend_from_slice(&64u16.to_be_bytes());
+        body.extend_from_slice(&[0x30, 0x04]); // only two of the declared 64 bytes
+        assert!(read_cert_verify_layout(&body).is_none());
+
+        // A body shorter than the four-byte prefix is also refused, not split.
+        assert!(read_cert_verify_layout(&[0x04, 0x03, 0x00]).is_none());
+    }
+
+    #[test]
+    fn zero_length_cert_status_response_is_accepted() {
+        let body = [1u8, 0, 0, 0];
+        let response =
+            read_cert_status_response(&body, 1).expect("a zero length response is valid");
+        assert!(response.is_empty());
+    }
+
+    #[test]
+    fn cert_status_u24_overrun_is_a_bad_response() {
+        let body = [1u8, 0, 0, 10, 0xaa];
+        assert!(matches!(
+            read_cert_status_response(&body, 1),
+            Err(CertStatusReject::BadResponse)
+        ));
+    }
+
+    #[test]
+    fn cert_status_trailing_bytes_disagreeing_with_the_length_are_refused() {
+        let body = [1u8, 0, 0, 1, 0xaa, 0xbb];
+        assert!(matches!(
+            read_cert_status_response(&body, 1),
+            Err(CertStatusReject::BadResponse)
+        ));
+    }
+
+    #[test]
+    fn unsupported_status_type_is_a_bad_response() {
+        let body = [2u8, 0, 0, 0];
+        assert!(matches!(
+            read_cert_status_response(&body, 1),
+            Err(CertStatusReject::BadResponse)
+        ));
+    }
+
+    #[test]
+    fn cert_status_shorter_than_its_prefix_is_a_decode_error() {
+        assert!(matches!(
+            read_cert_status_response(&[1u8, 0, 0], 1),
+            Err(CertStatusReject::Decode)
+        ));
+        assert!(matches!(
+            read_cert_status_response(&[], 1),
+            Err(CertStatusReject::Decode)
+        ));
+    }
+
+    /// Deterministic seeded mutation of the three TLS1.2 server-flight parsers: every entry
+    /// point must answer `None`/`Err` rather than panic or read outside the frame.
+    #[test]
+    fn malformed_tls12_server_flight_loop_does_not_panic() {
+        let point = p256_point();
+        let good_ske = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_P256,
+            &point,
+            None,
+            SIGALG_ECDSA_SHA256,
+            &[0x30; 16],
+            None,
+        );
+        let mut good_cv = SIGALG_ECDSA_SHA256.to_be_bytes().to_vec();
+        good_cv.extend_from_slice(&16u16.to_be_bytes());
+        good_cv.extend_from_slice(&[0x30; 16]);
+        let good_status = [1u8, 0, 0, 4, 0x01, 0x02, 0x03, 0x04];
+
+        let mut state = 0xA5A5_5A5A_1234_5678u64;
+        for _ in 0..512 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut ske = good_ske.clone();
+            let edits = 1 + (state as usize % 3);
+            for i in 0..edits {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                let at = (state as usize) % ske.len();
+                ske[at] ^= (state >> 32) as u8 | (i as u8 + 1);
+            }
+            let _ = read_server_ecdh_params(&ske);
+
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut cv = good_cv.clone();
+            let at = (state as usize) % cv.len();
+            cv[at] ^= ((state >> 32) as u8) | 1;
+            let _ = read_cert_verify_layout(&cv);
+
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut status = good_status.to_vec();
+            let at = (state as usize) % status.len();
+            status[at] ^= ((state >> 32) as u8) | 1;
+            let _ = read_cert_status_response(&status, 1);
+        }
+    }
+}
+
+#[cfg(test)]
+mod certificate_request_sigalgs {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free, EvpPkey};
+    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_new};
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
+    use crate::runtime::obj as o;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new};
+    use crate::ssl::ssl_rsa::{SSL_use_PrivateKey, SSL_use_certificate};
+    use crate::x509::x_x509::{X509_free, X509_new, X509};
+    use core::ffi::c_int;
+
+    const TLS_AES_128_GCM_SHA256: u16 = 0x1301;
+
+    fn extension(etype: u16, body: &[u8]) -> Vec<u8> {
+        let mut out = etype.to_be_bytes().to_vec();
+        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(body);
+        out
+    }
+
+    /// `type || u24(body_len) || body`.
+    fn framed(mt: c_int, body: &[u8]) -> Vec<u8> {
+        let mut msg = vec![mt as u8];
+        msg.extend_from_slice(&(body.len() as u32).to_be_bytes()[1..]);
+        msg.extend_from_slice(body);
+        msg
+    }
+
+    /// TLS1.3 `CertificateRequest`: `context<1> || extensions<2>`.
+    fn cr_tls13(exts: &[u8]) -> Vec<u8> {
+        let mut body = vec![0u8];
+        body.extend_from_slice(&(exts.len() as u16).to_be_bytes());
+        body.extend_from_slice(exts);
+        framed(SSL3_MT_CERTIFICATE_REQUEST, &body)
+    }
+
+    /// TLS1.2 `CertificateRequest`: `ctypes<1> || sigalgs<2> || CA names<2>`.
+    fn cr_tls12(sigalgs: &[u8]) -> Vec<u8> {
+        let mut body = vec![1u8, 64u8];
+        body.extend_from_slice(&(sigalgs.len() as u16).to_be_bytes());
+        body.extend_from_slice(sigalgs);
+        body.extend_from_slice(&0u16.to_be_bytes());
+        framed(SSL3_MT_CERTIFICATE_REQUEST, &body)
+    }
+
+    /// A provider EC identity on `nid`'s curve, self-signed under SHA-256.
+    ///
+    /// # Safety
+    /// The caller owns both objects and releases them with `EVP_PKEY_free`/`X509_free`.
+    unsafe fn ec_identity(nid: c_int) -> (*mut EvpPkey, *mut X509) {
+        use crate::asn1::layout::MBSTRING_UTF8;
+        use crate::asn1::prim::ASN1_INTEGER_set;
+        use crate::evp::legacy_sha::EVP_sha256;
+        use crate::x509::x509_set::{
+            X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
+        };
+        use crate::x509::x509_vfy::X509_gmtime_adj;
+        use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+        use crate::x509::x_all::X509_sign;
+        use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+        let group = match nid {
+            o::NID_secp384r1 => c"P-384",
+            o::NID_secp521r1 => c"P-521",
+            _ => c"P-256",
+        };
+        // SAFETY: constructors below answer fresh objects owned by this frame.
+        unsafe {
+            let pkey = openssl_rs_evp_pkey_q_keygen(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                c"EC".as_ptr(),
+                2,
+                0,
+                group.as_ptr(),
+            );
+            assert!(!pkey.is_null(), "curve {nid} must create a key");
+            let x = X509_new();
+            let name = X509_NAME_new();
+            assert!(!x.is_null() && !name.is_null());
+            assert_eq!(
+                X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    MBSTRING_UTF8,
+                    c"client.test".as_ptr().cast::<u8>(),
+                    11,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(ASN1_INTEGER_set(&mut (*x).cert_info.serialNumber, 1), 1);
+            assert_eq!(X509_set_subject_name(x, name), 1);
+            assert_eq!(X509_set_issuer_name(x, name), 1);
+            (*x).cert_info.validity.notBefore = X509_gmtime_adj(core::ptr::null_mut(), 0);
+            (*x).cert_info.validity.notAfter = X509_gmtime_adj(core::ptr::null_mut(), 86_400);
+            assert!(!(*x).cert_info.validity.notBefore.is_null());
+            assert!(!(*x).cert_info.validity.notAfter.is_null());
+            assert_eq!(X509_set_pubkey(x, pkey), 1);
+            assert!(X509_sign(x, pkey, EVP_sha256()) > 0);
+            X509_NAME_free(name);
+            (pkey, x)
+        }
+    }
+
+    fn drain_reasons() -> Vec<c_int> {
+        let mut v = Vec::new();
+        loop {
+            let e = ERR_get_error();
+            if e == 0 {
+                break;
+            }
+            v.push((e & 0x7f_ffff) as c_int);
+        }
+        v
+    }
+
+    /// # Safety
+    /// The connection must be live and own a certificate installed by this test.
+    unsafe fn saved(s: *mut Ssl) -> Vec<u16> {
+        // SAFETY: `s` is live; a saved list is `peer_sigalgslen` live `u16`s.
+        let (p, n) = unsafe { ((*s).peer_sigalgs, (*s).peer_sigalgslen) };
+        if p.is_null() || n == 0 {
+            Vec::new()
+        } else {
+            // SAFETY: as above.
+            unsafe { core::slice::from_raw_parts(p, n) }.to_vec()
+        }
+    }
+
+    /// The TLS1.3 request's `signature_algorithms` is saved, so the certificate constructor can
+    /// check that its scheme was offered.
+    #[test]
+    fn tls13_request_saves_sigalgs() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            ERR_clear_error();
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            let msg = cr_tls13(&extension(13, &[0x00, 0x02, 0x05, 0x03]));
+            assert_eq!(tls_process_certificate_request(s, &msg), 1);
+            assert_eq!(saved(s), vec![0x0503]);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// A request with no `signature_algorithms` falls back to the list this client advertises —
+    /// the authority's defaults arm (`tls_choose_sigalg`, `t1_lib.c:4685-4713`).
+    #[test]
+    fn tls13_request_without_sigalgs_uses_the_defaults() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            ERR_clear_error();
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            assert_eq!(tls_process_certificate_request(s, &cr_tls13(&[])), 1);
+            assert_eq!(
+                saved(s),
+                crate::ssl::statem::extensions_clnt::CLIENT_SIGALGS.to_vec()
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// A malformed vector is refused and the incumbent list is untouched (`tls1_save_u16` parses
+    /// before it stores).
+    #[test]
+    fn tls13_malformed_sigalgs_is_refused_and_keeps_the_incumbent() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            ERR_clear_error();
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            let good = cr_tls13(&extension(13, &[0x00, 0x02, 0x05, 0x03]));
+            assert_eq!(tls_process_certificate_request(s, &good), 1);
+            // Odd list length.
+            let bad = cr_tls13(&extension(13, &[0x00, 0x03, 0x05, 0x03, 0x00]));
+            ERR_clear_error();
+            assert_eq!(tls_process_certificate_request(s, &bad), 0);
+            assert_eq!(saved(s), vec![0x0503], "the incumbent list survives");
+            assert!(drain_reasons().contains(&110), "SSL_R_BAD_EXTENSION");
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// A P-256 client key with a request offering only P-384 cannot be signed: the authority's
+    /// `SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM` (118). Offering the key's scheme succeeds.
+    #[test]
+    fn tls13_p256_client_key_requires_its_scheme_to_be_offered() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            let (pkey, x) = ec_identity(o::NID_X9_62_prime256v1);
+            // Case 1: only P-384 offered.
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            assert_eq!(SSL_use_certificate(s, x), 1);
+            assert_eq!(SSL_use_PrivateKey(s, pkey), 1);
+            (*s).wbio = BIO_new(BIO_s_mem());
+            assert!(!(*s).wbio.is_null());
+            assert_eq!(
+                crate::ssl::tls13_enc::tls13_setup_cipher(s, TLS_AES_128_GCM_SHA256),
+                1
+            );
+            let only384 = cr_tls13(&extension(13, &[0x00, 0x02, 0x05, 0x03]));
+            assert_eq!(tls_process_certificate_request(s, &only384), 1);
+            ERR_clear_error();
+            assert_eq!(
+                crate::ssl::statem::statem_srvr::tls13_construct_cert_verify(s, false),
+                0
+            );
+            assert!(
+                drain_reasons().contains(&118),
+                "SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM"
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+
+            // Case 2: the key's own scheme is offered.
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            assert_eq!(SSL_use_certificate(s, x), 1);
+            assert_eq!(SSL_use_PrivateKey(s, pkey), 1);
+            (*s).wbio = BIO_new(BIO_s_mem());
+            assert!(!(*s).wbio.is_null());
+            assert_eq!(
+                crate::ssl::tls13_enc::tls13_setup_cipher(s, TLS_AES_128_GCM_SHA256),
+                1
+            );
+            let both = cr_tls13(&extension(13, &[0x00, 0x04, 0x05, 0x03, 0x04, 0x03]));
+            assert_eq!(tls_process_certificate_request(s, &both), 1);
+            ERR_clear_error();
+            assert_eq!(
+                crate::ssl::statem::statem_srvr::tls13_construct_cert_verify(s, false),
+                1
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+            EVP_PKEY_free(pkey);
+            X509_free(x);
+        }
+    }
+
+    /// TLS1.2: the request's vector is saved and the client signer refuses a scheme that was not
+    /// offered (`tls12_sign`'s `peer_sigalgs` membership test).
+    #[test]
+    fn tls12_client_signer_uses_the_requested_scheme() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            let (pkey, x) = ec_identity(o::NID_X9_62_prime256v1);
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            assert_eq!(SSL_use_certificate(s, x), 1);
+            assert_eq!(SSL_use_PrivateKey(s, pkey), 1);
+            let mut sig = [0u8; 512];
+
+            let only384 = cr_tls12(&[0x05, 0x03]);
+            ERR_clear_error();
+            assert_eq!(tls12_process_certificate_request(s, &only384), 1);
+            assert_eq!(saved(s), vec![0x0503]);
+            assert!(crate::ssl::statem::statem_srvr::tls12_sign(s, b"tbs", &mut sig).is_none());
+
+            let offered = cr_tls12(&[0x04, 0x03]);
+            assert_eq!(tls12_process_certificate_request(s, &offered), 1);
+            assert_eq!(saved(s), vec![0x0403]);
+            assert_eq!(
+                crate::ssl::statem::statem_srvr::tls12_sign(s, b"tbs", &mut sig).map(|(a, _)| a),
+                Some(0x0403)
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+            EVP_PKEY_free(pkey);
+            X509_free(x);
+        }
+    }
+
+    /// The TLS1.2 reader refuses a truncated signature-algorithm vector.
+    #[test]
+    fn tls12_truncated_sigalgs_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            ERR_clear_error();
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            // Declared 4 bytes, only 2 present, and the message ends there (a following field
+            // would supply the two missing bytes, exactly as the authority's packet reader would
+            // consume them).
+            let mut body = vec![1u8, 64u8];
+            body.extend_from_slice(&4u16.to_be_bytes());
+            body.extend_from_slice(&[0x04, 0x03]);
+            let msg = framed(SSL3_MT_CERTIFICATE_REQUEST, &body);
+            assert_eq!(tls12_process_certificate_request(s, &msg), 0);
+            assert_eq!(saved(s), Vec::<u16>::new());
+            SSL_free(s);
+            SSL_CTX_free(ctx);
         }
     }
 }

@@ -11,11 +11,14 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use super::encoders::{ossl_ml_dsa_pk_decode, ossl_ml_dsa_pk_encode};
+use super::encoders::{
+    ossl_ml_dsa_pk_decode, ossl_ml_dsa_pk_encode, ossl_ml_dsa_sk_decode, ossl_ml_dsa_sk_encode,
+};
 use super::key::{
     ossl_ml_dsa_generate_key, ossl_ml_dsa_key_free, ossl_ml_dsa_key_get_priv,
-    ossl_ml_dsa_key_get_pub, ossl_ml_dsa_key_get_pub_len, ossl_ml_dsa_key_get_sig_len,
-    ossl_ml_dsa_key_new, ossl_ml_dsa_key_pairwise_check, ossl_ml_dsa_set_prekey,
+    ossl_ml_dsa_key_get_priv_len, ossl_ml_dsa_key_get_pub, ossl_ml_dsa_key_get_pub_len,
+    ossl_ml_dsa_key_get_sig_len, ossl_ml_dsa_key_new, ossl_ml_dsa_key_pairwise_check,
+    ossl_ml_dsa_set_prekey,
 };
 use super::key_compress::{
     ossl_ml_dsa_key_compress_decompose, ossl_ml_dsa_key_compress_high_bits,
@@ -343,5 +346,74 @@ fn the_public_key_encoding_round_trips() {
 
         ossl_ml_dsa_key_free(key);
         ossl_ml_dsa_key_free(other);
+    }
+}
+
+/// Every parameter set round-trips both packed key encodings byte for byte, and a truncated input
+/// of either kind is refused.
+#[test]
+fn packed_keys_round_trip_for_every_parameter_set() {
+    for evp_type in [EVP_PKEY_ML_DSA_44, EVP_PKEY_ML_DSA_65, EVP_PKEY_ML_DSA_87] {
+        // SAFETY: every key is created and freed here; each byte slice stays live across its call.
+        unsafe {
+            let key = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), evp_type);
+            assert!(!key.is_null());
+            assert_eq!(ossl_ml_dsa_generate_key(key), 1);
+            assert_eq!(ossl_ml_dsa_pk_encode(key), 1);
+            let pk_len = ossl_ml_dsa_key_get_pub_len(key);
+            let pk = core::slice::from_raw_parts(ossl_ml_dsa_key_get_pub(key), pk_len).to_vec();
+
+            let pub_copy = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), evp_type);
+            assert_eq!(
+                ossl_ml_dsa_pk_decode(pub_copy, pk.as_ptr(), pk.len()),
+                1,
+                "pk decode ({evp_type})"
+            );
+            assert_eq!(
+                core::slice::from_raw_parts(
+                    ossl_ml_dsa_key_get_pub(pub_copy),
+                    ossl_ml_dsa_key_get_pub_len(pub_copy)
+                ),
+                &pk[..]
+            );
+
+            assert_eq!(ossl_ml_dsa_sk_encode(key), 1);
+            let sk_len = ossl_ml_dsa_key_get_priv_len(key);
+            let sk = core::slice::from_raw_parts(ossl_ml_dsa_key_get_priv(key), sk_len).to_vec();
+
+            let priv_copy = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), evp_type);
+            assert_eq!(
+                ossl_ml_dsa_sk_decode(priv_copy, sk.as_ptr(), sk.len()),
+                1,
+                "sk decode ({evp_type})"
+            );
+            assert_eq!(
+                core::slice::from_raw_parts(
+                    ossl_ml_dsa_key_get_priv(priv_copy),
+                    ossl_ml_dsa_key_get_priv_len(priv_copy)
+                ),
+                &sk[..]
+            );
+
+            // One byte short is refused by both decoders.
+            let short = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), evp_type);
+            assert_eq!(
+                ossl_ml_dsa_pk_decode(short, pk.as_ptr(), pk.len() - 1),
+                0,
+                "truncated pk ({evp_type})"
+            );
+            let short_sk = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), evp_type);
+            assert_eq!(
+                ossl_ml_dsa_sk_decode(short_sk, sk.as_ptr(), sk.len() - 1),
+                0,
+                "truncated sk ({evp_type})"
+            );
+
+            ossl_ml_dsa_key_free(short);
+            ossl_ml_dsa_key_free(short_sk);
+            ossl_ml_dsa_key_free(priv_copy);
+            ossl_ml_dsa_key_free(pub_copy);
+            ossl_ml_dsa_key_free(key);
+        }
     }
 }

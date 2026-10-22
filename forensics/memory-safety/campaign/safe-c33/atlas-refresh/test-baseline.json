@@ -1,0 +1,9 @@
+{
+  "command": "cargo test --lib -- --test-threads=4",
+  "source_commit": "3ee81389e",
+  "passed": 1962,
+  "failed": 0,
+  "ignored": 44,
+  "kind": "full-library-run",
+  "note": "later commits add tests without a further full run; this is a floor"
+}

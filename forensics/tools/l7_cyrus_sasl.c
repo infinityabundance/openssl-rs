@@ -26,7 +26,13 @@
 #define FIXTURE_USER "fixture-user"
 #define FIXTURE_PASS "phase25-correct-password"
 #define FIXTURE_REALM "fixture.realm"
-#define MECH "DIGEST-MD5"
+/* The family-specific harness compile selects the mechanism; DIGEST-MD5 is the admitted
+ * original.  The client/server exchange and the wrong-password rejection are otherwise
+ * identical, so SCRAM-SHA-256 and CRAM-MD5 reuse this one audited workload. */
+#ifndef L7_MECH
+#define L7_MECH "DIGEST-MD5"
+#endif
+#define MECH L7_MECH
 
 struct fixture {
     const char *user;

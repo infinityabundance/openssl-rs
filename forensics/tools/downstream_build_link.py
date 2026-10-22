@@ -1390,17 +1390,21 @@ _L7_EGGDROP_AUX: tuple[dict, ...] = (
              include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
 )
 
-# irssi 1.4.5 needs GLib (headers and .pc) and ncurses headers. The image carries the GLib runtime
-# library but not its development symlink, so the pinned dev package's `libglib-2.0.so` is repointed
-# at the already-installed runtime (same 2.74.6 build); libpcre2-dev supplies the `libpcre2-8`
-# pkg-config module glib-2.0.pc requires.
+# irssi 1.4.5 needs GLib (headers, .pc, shared objects), pcre2 and ncurses headers. The image ships
+# no GLib at all, so both the pinned runtime package (which carries `libglib-2.0.so.0` and
+# `libgmodule-2.0.so.0`) and the dev package are extracted into the family's aux root; the dev
+# package's own `libglib-2.0.so`/`libgmodule-2.0.so` symlinks then resolve there. Repointing the
+# linker name at a venue path instead left it dangling, so ld silently fell back to the static
+# `libglib-2.0.a`, whose private pcre2 dependency is not on irssi's link line and the link failed.
+# libpcre2-dev supplies the `libpcre2-8` pkg-config module glib-2.0.pc requires.
 _L7_IRSSI_AUX: tuple[dict, ...] = (
+    _aux_deb("g/glib2.0", "libglib2.0-0_2.74.6-2+deb12u9_amd64.deb",
+             "7ff85197685d89e150e342b29a59aab1beee400050ba7da73de81cd999ffee5a",
+             library_dirs=(_AUX_MULTIARCH,)),
     _aux_deb("g/glib2.0", "libglib2.0-dev_2.74.6-2+deb12u9_amd64.deb",
              "217766f170553e14884f7d67c0636b833da43c1e4a65dfe41268ba1292001ccd",
              include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
-             pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
-             links={"usr/lib/x86_64-linux-gnu/libglib-2.0.so":
-                    "/lib/x86_64-linux-gnu/libglib-2.0.so.0"}),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
     _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
              "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
              library_dirs=(_AUX_MULTIARCH,)),
@@ -1977,6 +1981,33 @@ def _build_catalogue() -> tuple[dict, ...]:
     # interface is driven over its own socket. Lynx/lftp take the pinned ncurses/readline
     # development packages through the auxiliary seam because the venue ships neither header.
     for spec in _L7_EXPAND10_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 template-layer continuation's bespoke-workload recipes (see
+    # `_L7_ONBOARD_SPECS`).  Same pristine acquire/configure/make path and the same single
+    # `{prefix}` substitution as every other recipe.
+    for spec in _L7_ONBOARD_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 onboarding batch (b14): nine bespoke-workload recipes plus one template
+    # row (hcxkeys).  Same pristine-source/aux seam and the same single `{prefix}` substitution.
+    for spec in _L7_ONBOARD_SPECS_B:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # Batch c1: three package-split rows (icecast2, libevent-openssl-2.1-7, libaprutil1),
+    # each configured against the subject prefix exactly like its sibling.
+    for spec in _L7_ONBOARD_SPECS_C:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 onboarding batch (b15): ten consumers with a deterministic local
+    # workload.  Same pristine-source/aux seam; yara and bruteforce-salted-openssl regenerate
+    # their configure with the pinned bookworm autotools, and ircii takes ncurses/tinfo headers
+    # through the auxiliary seam.
+    for spec in _L7_ONBOARD_SPECS_D:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
@@ -2686,7 +2717,750 @@ _L7_EXPAND10_SPECS: tuple[dict, ...] = (
     },
 )
 
+# The Phase-25 template-layer continuation: eight further consumers built from pristine pinned
+# archives against the subject prefix. `ldnsutils` and `nagios-plugins-http` are declarative
+# template rows; these are the families whose workload cannot be expressed by a bucket template
+# and therefore carry a bespoke admitted harness. No candidate-specific patch is applied.
+_L7_ONBOARD_SPECS: tuple[dict, ...] = (
+    {
+        "family": "git-crypt", "version": "0.8.0+git8c7a90ff",
+        "url": ("https://github.com/AGWA/git-crypt/archive/"
+                "8c7a90ff38fc9daf41e5f6ccb3f105ee82782231.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "c33a86f71a0ded430977cfad116060c0dc1217ccb685b9af315fe5ef4a228b59",
+        "configure": None,
+        "make": ["-j4", "CXXFLAGS=-I{prefix}/include -O2 -std=c++11",
+                 "LDFLAGS=-L{prefix}/lib -lcrypto -Wl,-rpath,{prefix}/lib"],
+        "artifact": "git-crypt", "launch": ["--version"],
+        "note": ("git-crypt 0.8.0 (pinned commit archive) links the subject libcrypto; the "
+                 "admitted workload initialises a repository, encrypts, locks, unlocks and "
+                 "rejects a key from a different repository"),
+    },
+    {
+        "family": "s2n-tls", "version": "1.5.5",
+        "url": "https://github.com/aws/s2n-tls/archive/refs/tags/v1.5.5.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "6316e1ad2c8ef5807519758bb159d314b9fef31d79ae27bc8f809104b978bb04",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DSEARCH_LIBCRYPTO=ON",
+                      "-DS2N_USE_CRYPTO_SHARED_LIBS=ON", "-DBUILD_TESTING=ON",
+                      "-DS2N_INSTALL_S2NC_S2ND=ON"],
+        "make": [], "artifact": "b/bin/s2nd", "launch": ["--help"],
+        "note": ("s2n-tls 1.5.5's s2nd TLS server linked to the subject libcrypto; the "
+                 "admitted workload completes a verified TLS exchange and rejects an unrelated "
+                 "CA"),
+    },
+    {
+        "family": "openldap", "version": "2.6.8",
+        "url": ("https://www.openldap.org/software/download/OpenLDAP/openldap-release/"
+                "openldap-2.6.8.tgz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "48969323e94e3be3b03c6a132942dcba7ef8d545f2ad35401709019f696c3c4e",
+        "configure": None,
+        "pre_build": [["./configure", "--with-tls=openssl", "--without-cyrus-sasl",
+                       "--disable-slurpd", "--disable-backends", "--enable-mdb",
+                       "--disable-overlays", "--disable-debug"],
+                      ["make", "-C", "include"],
+                      ["make", "-j4", "-C", "libraries"],
+                      ["make", "-j4", "-C", "clients/tools"]],
+        "make": ["-j4", "-C", "servers/slapd"],
+        "artifact": "servers/slapd/slapd", "launch": ["-VV"],
+        "env_extra": {"CPPFLAGS": "-I{prefix}/include",
+                      "LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "note": ("OpenLDAP 2.6.8's slapd over ldaps:// and the shipped ldapmodify/ldapsearch "
+                 "clients, all linked against the subject libssl/libcrypto; an unrelated CA is "
+                 "rejected"),
+    },
+    {
+        "family": "srt", "version": "1.5.4",
+        "url": "https://github.com/Haivision/srt/archive/refs/tags/v1.5.4.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "d0a8b600fe1b4eaaf6277530e3cfc8f15b8ce4035f16af4a5eb5d4b123640cdd",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DUSE_ENCLIB=openssl",
+                      "-DENABLE_ENCRYPTION=ON", "-DENABLE_APPS=ON",
+                      "-DENABLE_TESTING=OFF", "-DUSE_OPENSSL_PC=OFF"],
+        "make": [], "artifact": "b/srt-live-transmit", "launch": ["-h"],
+        "note": ("SRT 1.5.4's live transmitter with its OpenSSL AES-CTR/HMAC encryption path "
+                 "linked to the subject libcrypto; the admitted workload round-trips over "
+                 "loopback with a passphrase and rejects a mismatched passphrase"),
+    },
+    {
+        "family": "slowhttptest", "version": "1.9.0",
+        "url": ("https://github.com/shekyan/slowhttptest/archive/refs/tags/v1.9.0.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "a3910b9b844e05ee55838aa17beddc6aa9d6c5c0012eab647a21cc9ccd6c8749",
+        "configure": [], "make": ["-j4"],
+        "artifact": "src/slowhttptest", "launch": ["-h"],
+        "env_extra": {"CPPFLAGS": "-I{prefix}/include",
+                      "LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "note": ("slowhttptest 1.9.0's HTTPS client path links the subject libssl; the admitted "
+                 "workload completes a TLS slow-read exchange and a plaintext peer is rejected"),
+    },
+    {
+        "family": "cyrus-sasl-scram", "version": "2.1.28",
+        "url": ("https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/"
+                "cyrus-sasl-2.1.28.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c",
+        "configure": ["--with-openssl={prefix}", "--disable-static", "--enable-shared",
+                      "--disable-otp", "--disable-ldapdb", "--without-pam", "--disable-sql"],
+        "make": [MAKE_JOBS], "artifact": "plugins/.libs/libscram.so*", "launch": None,
+        "note": ("cyrus-sasl 2.1.28's SCRAM plugin linked to the subject libcrypto; the admitted "
+                 "client/server harness authenticates with SCRAM-SHA-256 and rejects a wrong "
+                 "password"),
+    },
+    {
+        "family": "sipsak", "version": "0.9.8.1",
+        "url": ("https://github.com/nils-ohlmeier/sipsak/releases/download/0.9.8.1/"
+                "sipsak-0.9.8.1.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c6faa022cd8c002165875d4aac83b7a2b59194f0491802924117fc6ac980c778",
+        "configure": ["--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS], "artifact": "sipsak", "launch": ["-V"],
+        "env_extra": {"CPPFLAGS": "-I{prefix}/include",
+                      "LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "note": ("sipsak 0.9.8.1 links the subject libcrypto for its SIP MD5 digest "
+                 "authentication; the admitted workload authenticates against a local SIP peer "
+                 "and a wrong password is rejected"),
+    },
+    {
+        "family": "cyrus-sasl-digestmd5", "version": "2.1.28",
+        "url": ("https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/"
+                "cyrus-sasl-2.1.28.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c",
+        "configure": ["--with-openssl={prefix}", "--disable-static", "--enable-shared",
+                      "--disable-otp", "--disable-ldapdb", "--without-pam", "--disable-sql"],
+        "make": [MAKE_JOBS], "artifact": "plugins/.libs/libdigestmd5.so*", "launch": None,
+        "note": ("cyrus-sasl 2.1.28's DIGEST-MD5 plugin linked to the subject libcrypto; the "
+                 "admitted client/server harness authenticates with DIGEST-MD5 and rejects a "
+                 "wrong password"),
+    },
+)
+
+# The Phase-25 L7 onboarding batch (c1, 2026-10-22): three package-split rows of upstreams this
+# venue already builds (icecast2 from icecast 2.4.4, libevent-openssl-2.1-7 from libevent
+# 2.1.12, libaprutil1 from apr-util 1.6.3).  Each is a real Alpine package entry in the frozen
+# 1000-family corpus and is measured as its own row against its own build with the upstream's
+# own OpenSSL mechanism.
+#
+# lighttpd 1.4.79 was vetted in the same batch and NOT admitted: its meson build links the
+# subject correctly (mod_openssl, verified TLS GET of a fixture) and measures L7-functional
+# against the authority openssl-3.6.4-production, but the candidate closes every handshake
+# (mod_openssl reports "SSL routines::internal error"; the client sees SSL LENGTH_MISMATCH)
+# while the same client against the authority completes.  h2o 2.2.6 shows the same shape
+# (authority completes the handshake; the candidate closes it mid-handshake).  Both are
+# candidate-side divergences recorded for repair, not compatibility results.
+
+# --------------------------------------------------------------------------------------------
+# Phase-25 L7 onboarding batch (b15).
+#
+# Ten consumers whose OpenSSL path can be driven by a deterministic local workload.  Every
+# archive is pinned by digest and built against exactly one subject prefix; non-OpenSSL
+# dependencies come from pinned bookworm packages through the aux seam, so the subject prefix
+# remains the only OpenSSL on the link line.  yara and bruteforce-salted-openssl ship no
+# generated `configure`, so the recipe regenerates it with the same pinned autotools the
+# lighttpd recipe uses (a build input, never a source edit).
+_ONBOARD_AUTOTOOLS_AUX: tuple[dict, ...] = (
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+)
+
+# The pinned autotools are extracted under the aux root; these wrappers point them at that
+# root (their installed scripts hardcode /usr/share).  The generated files are build inputs.
+_ONBOARD_AUTOTOOLS_BOOTSTRAP = (
+    "set -e; W={root}/.autotools; mkdir -p $W; "
+    "sed -i 's#/usr/share#{aux}/usr/share#g' {aux}/usr/bin/libtoolize; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/share/autoconf/autom4te.cfg; "
+    "sed -i 's#/usr/share/automake-1.16#{aux}/usr/share/automake-1.16#g' "
+    "{aux}/usr/bin/aclocal-1.16 {aux}/usr/bin/automake-1.16; "
+    "sed -i 's#/usr/share/aclocal#{aux}/usr/share/aclocal#g' {aux}/usr/bin/aclocal-1.16; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/bin/autoconf {aux}/usr/bin/autoheader; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+    "--system-acdir={aux}/usr/share/aclocal-1.16 "
+    "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+    "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+    "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+    "autoreconf -fi"
+)
+
+_ONBOARD_AUTOTOOLS_ENV = {
+    "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+    "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+    "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal",
+    "AUTOM4TE": "{aux}/usr/bin/autom4te",
+    "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+    "AC_MACRODIR": "{aux}/usr/share/autoconf",
+    "M4": "{aux}/usr/bin/m4",
+    "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+    "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+    "AUTOCONF": "{aux}/usr/bin/autoconf",
+    "AUTOHEADER": "{aux}/usr/bin/autoheader",
+    "AUTOMAKE": "{root}/.autotools/automake",
+    "ACLOCAL": "{root}/.autotools/aclocal",
+    "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+}
+
+# ssldump 1.8 needs libpcap, libnet and json-c (and the dbus runtime Debian's libpcap links).
+_ONBOARD_SSLDUMP_AUX: tuple[dict, ...] = (
+    _aux_deb("libp/libpcap", "libpcap0.8_1.10.3-1_amd64.deb",
+             "856014904c4d7ec9a9ba864c546d91c059b9bf00c7c89eda6fd0a16045f8faac",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libp/libpcap", "libpcap0.8-dev_1.10.3-1_amd64.deb",
+             "5f66e87262e42cc42a77d6acdb41098e4ff3e6db3bdba1b73189dea5a3afb88c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             bin_dirs=("usr/bin",)),
+    _aux_deb("d/dbus", "libdbus-1-3_1.14.10-1~deb12u1_amd64.deb",
+             "18ee0ce5fab9f7b671e87da1e9fa18660e36e04a3402f24bdb8635e0ba1d35f6",
+             library_dirs=("lib/x86_64-linux-gnu",)),
+    _aux_deb("d/dbus", "libdbus-1-dev_1.14.10-1~deb12u1_amd64.deb",
+             "967a42e91eaa7d1885721b374a28cb0d30a0e63daaccf5e3594180bec6072c76",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libn/libnet", "libnet1_1.1.6+dfsg-3.2_amd64.deb",
+             "9e0677a92de3df272e3a87a4e1591a71cb8c03fdea2bac68908ac4177066bb7f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libn/libnet", "libnet1-dev_1.1.6+dfsg-3.2_amd64.deb",
+             "7cdbdbfe6d45dcff469667d8c990b02006964b556ee97bc60b70a149f1a07e7a",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("j/json-c", "libjson-c5_0.16-2_amd64.deb",
+             "d0e1ed8637d1c26b9720f6057d6355f18378bba5cc2553e459d1632783c00d70",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("j/json-c", "libjson-c-dev_0.16-2_amd64.deb",
+             "b91a921675bde7c777930f9f77e49010a754d787219104464ea0fce04a887337",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# ircii needs a terminal library and the termcap compatibility header.
+_ONBOARD_IRCII_AUX: tuple[dict, ...] = (
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("n/ncurses", "libtinfo-dev_6.4-4_amd64.deb",
+             "e1935c2006661f1cda0bfd35f12ea30f9d64a110f30a074d512efe6c9466bf86",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             links={"usr/lib/x86_64-linux-gnu/libtermcap.so": "libtinfo.so"}),
+)
+
+# xmlsec1's OpenSSL backend needs libxml2 (with the ICU headers Debian's libxml2 requires).
+_ONBOARD_XMLSEC_AUX: tuple[dict, ...] = (
+    _aux_deb("libx/libxml2", "libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "4460e39dda10a815881374217cde08474747cfa018358cd8612c14b390eff53b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libx/libxml2", "libxml2-dev_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "e8ceacf656b1720e7a310e1d159439a356bfcb9f5fb0325907f26aa8590e5f70",
+             include_dirs=("usr/include", "usr/include/libxml2"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("i/icu", "libicu-dev_72.1-3+deb12u1_amd64.deb",
+             "08bd4e3f4bd4fc725cf25e739edf0e7df5ac1826bdac9a7d990eea8f93b2d7a0",
+             include_dirs=("usr/include",)),
+)
+
+# libevhtp's TLS path links the split libevent_openssl/core/extra/pthreads shared objects, each
+# of which is its own Debian runtime package (the monolithic package carries only libevent.so).
+_ONBOARD_LIBEVENT_AUX: tuple[dict, ...] = tuple(_LIBEVENT_AUX) + (
+    _aux_deb("libe/libevent", "libevent-core-2.1-7_2.1.12-stable-8_amd64.deb",
+             "4cebf4a24fb222ddbc5569df9960c5ff2da8b7ed71a02e13c79a59dcaf3b518a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libe/libevent", "libevent-extra-2.1-7_2.1.12-stable-8_amd64.deb",
+             "d9a04bd914fa70b9cd0c8f098c23d9e7b372ad69624901fbde4bc34c9af34c18",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libe/libevent", "libevent-pthreads-2.1-7_2.1.12-stable-8_amd64.deb",
+             "798bbe7f492e176c287fc211e4a670eb64b10952720a036927357980d9a4a4b0",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libe/libevent", "libevent-openssl-2.1-7_2.1.12-stable-8_amd64.deb",
+             "95e143ffc207f890f0069df588c1fcdca2962a209062859e3e7750680510f293",
+             library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# Apache's static mod_ssl build probes PCRE2 through its own -config script.
+_ONBOARD_HTTPD_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,), bin_dirs=("usr/bin",)),
+)
+
+_L7_ONBOARD_SPECS_D: tuple[dict, ...] = (
+    {
+        "family": "vsftpd", "version": "3.0.5",
+        "url": "https://security.appspot.com/downloads/vsftpd-3.0.5.tar.gz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "26b602ae454b0ba6d99ef44a09b6b9e0dfa7f67228106736df1f278c70bc91d3",
+        "configure": None,
+        "pre_build": [["sed", "-i", "s/^#undef VSF_BUILD_SSL/#define VSF_BUILD_SSL/",
+                       "builddefs.h"]],
+        "make": [MAKE_JOBS,
+                 "CFLAGS=-O2 -fPIE -fstack-protector --param=ssp-buffer-size=4 -Wall -W "
+                 "-Wshadow -Wformat-security -D_FORTIFY_SOURCE=2 -I{prefix}/include",
+                 "LINK=-Wl,-s -L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "vsftpd", "launch": None,
+        "note": ("vsftpd 3.0.5's control/data SSL path linked to the subject libssl; the admitted "
+                 "workload logs in over AUTH TLS, protects the data channel and retrieves the "
+                 "fixture, while a client trusting an unrelated CA is refused.  The recipe enables "
+                 "upstream's disabled VSF_BUILD_SSL in builddefs.h as a build input."),
+    },
+    {
+        "family": "apache2-bin", "version": "2.4.62",
+        "url": "https://archive.apache.org/dist/httpd/httpd-2.4.62.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "3e2404d762a2da03560d7ada379ba1599d32f04a0d70ad6ff86f44325f2f062d",
+        "configure": ["--with-ssl={prefix}", "--enable-ssl", "--enable-mods-static=ssl",
+                      "--with-apr=/usr/bin/apr-1-config",
+                      "--with-apr-util=/usr/bin/apu-1-config",
+                      "--with-pcre={aux}/usr/bin/pcre2-config",
+                      "--disable-authn-file", "--disable-authz-user",
+                      "--disable-authz-groupfile", "--disable-authz-host",
+                      "--disable-auth-digest", "--with-mpm=event"],
+        "make": [MAKE_JOBS], "artifact": "httpd", "launch": ["-v"],
+        "aux_sources": list(_ONBOARD_HTTPD_AUX),
+        "note": ("Apache httpd 2.4.62 with mod_ssl compiled statically into the measured binary; "
+                 "the admitted workload serves the fixture over verified TLS and a client trusting "
+                 "an unrelated CA rejects the server certificate."),
+    },
+    {
+        "family": "neon", "version": "0.34.0",
+        "url": "https://notroj.github.io/neon/neon-0.34.0.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "2e3ee8535039966c80764f539d5c9bfee1651a17e2f36e5ca462632181253977",
+        "configure": ["--with-ssl=openssl", "--with-expat", "--enable-shared",
+                      "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "src/.libs/libneon.so*", "launch": None,
+        "env_extra": {"ne_cv_libsfor_SSL_library_init": "-lssl"},
+        "note": ("libneon 0.34.0's OpenSSL TLS client linked to the subject libssl; the admitted "
+                 "harness fetches the fixture over verified TLS and an unrelated CA is refused."),
+    },
+    {
+        "family": "cjose", "version": "0.8.1",
+        "url": "https://github.com/cisco/cjose/archive/refs/tags/0.8.1.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "1ee864ba216cfc2c38726b80b082abcee2772569241a6a822c6bd8d3fd35b8ae",
+        "configure": ["--with-openssl={prefix}", "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "src/.libs/libcjose.so*", "launch": None,
+        "note": ("cjose 0.8.1's JWS HS256 path linked to the subject libcrypto; the admitted "
+                 "harness signs, imports and verifies a compact JWS and rejects a tampered "
+                 "signature and a wrong key."),
+    },
+    {
+        "family": "ssldump", "version": "1.8",
+        "url": "https://github.com/adulau/ssldump/archive/refs/tags/v1.8.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "fa1bb14034385487cc639fb32c12a5da0f8fbfee4603f4e101221848e46e72b3",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix};{aux}/usr",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                      "-L{aux}/usr/lib/x86_64-linux-gnu -L{aux}/lib/x86_64-linux-gnu "
+                      "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu "
+                      "-Wl,-rpath,{aux}/lib/x86_64-linux-gnu -Wl,-l:libdbus-1.so.3"],
+        "make": [], "artifact": "b/ssldump", "launch": ["-v"],
+        "aux_sources": list(_ONBOARD_SSLDUMP_AUX),
+        "note": ("ssldump 1.8's TLS record parser linked to the subject libcrypto; the admitted "
+                 "workload captures a live loopback handshake and prints its ClientHello and "
+                 "ServerHello, while a plaintext exchange yields no handshake record."),
+    },
+    {
+        "family": "yara", "version": "4.5.2",
+        "url": "https://github.com/VirusTotal/yara/archive/refs/tags/v4.5.2.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "1f87056fcb10ee361936ee7b0548444f7974612ebb0e681734d8de7df055d1ec",
+        "configure": ["--with-crypto", "--disable-magic", "--disable-cuckoo"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libyara.so*", "launch": ["--version"],
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "note": ("YARA 4.5.2's hash module linked to the subject libcrypto; the admitted workload "
+                 "matches a rule against the fixture's SHA-256 and a wrong digest does not match."),
+    },
+    {
+        "family": "bruteforce-salted-openssl", "version": "1.4.2",
+        "url": ("https://github.com/glv2/bruteforce-salted-openssl/archive/refs/tags/"
+                "1.4.2.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "324092e60833329a13756b43c51269c1bd4a8cd339490217746ae0ee534efbac",
+        "configure": [], "make": [MAKE_JOBS],
+        "artifact": "bruteforce-salted-openssl", "launch": ["-h"],
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "note": ("bruteforce-salted-openssl 1.4.2's EVP decrypt path linked to the subject "
+                 "libcrypto; the admitted workload recovers the password from a pinned salted "
+                 "ciphertext and a word list without it yields no candidate."),
+    },
+    {
+        "family": "ircii", "version": "20240918",
+        "url": "https://ircii.warped.com/ircii-20240918.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "f4b9b380ba5143261a3ef219abfdef749c44ce4f669908da60bc3997af649ca9",
+        "configure": [],
+        "make": [MAKE_JOBS,
+                 "CFLAGS=-pipe -g -O2 -I{prefix}/include -I{aux}/usr/include",
+                 "INCLUDES=-I. -I{root}/include -I{aux}/usr/include",
+                 "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                 "-L{aux}/usr/lib/x86_64-linux-gnu -Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"],
+        "artifact": "irc", "launch": ["-v"],
+        "aux_sources": list(_ONBOARD_IRCII_AUX),
+        "note": ("ircII 20240918's OpenSSL client (source/ssl.c) linked to the subject libssl; "
+                 "the admitted workload registers and joins the fixture channel over verified "
+                 "TLS, while a client trusting an unrelated CA never registers."),
+    },
+    {
+        "family": "libevhtp", "version": "1.2.18",
+        "url": "https://github.com/criticalstack/libevhtp/archive/refs/tags/1.2.18.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "316ede0d672be3ae6fe489d4ac1c8c53a1db7d4fe05edaff3c7c853933e02795",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix};{aux}/usr",
+                      "-DEVHTP_DISABLE_SSL=OFF", "-DEVHTP_DISABLE_REGEX=ON",
+                      "-DBUILD_SHARED_LIBS=ON",
+                      "-DLIBEVENT_INCLUDE_DIR={aux}/usr/include",
+                      "-DLIBEVENT_LIBRARY={aux}/usr/lib/x86_64-linux-gnu/libevent.so",
+                      "-DLIBEVENT_CORE={aux}/usr/lib/x86_64-linux-gnu/libevent_core.so",
+                      "-DLIBEVENT_EXTRA={aux}/usr/lib/x86_64-linux-gnu/libevent_extra.so",
+                      "-DLIBEVENT_THREAD={aux}/usr/lib/x86_64-linux-gnu/libevent_pthreads.so",
+                      "-DLIBEVENT_SSL={aux}/usr/lib/x86_64-linux-gnu/libevent_openssl.so",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                      "-L{aux}/usr/lib/x86_64-linux-gnu "
+                      "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"],
+        "make": [], "artifact": "b/libevhtp.so*", "launch": None,
+        "aux_sources": list(_ONBOARD_LIBEVENT_AUX),
+        "note": ("libevhtp 1.2.18's TLS server path linked to the subject libssl; the admitted "
+                 "harness serves the fixture over verified TLS and an unrelated CA is refused."),
+    },
+    {
+        "family": "libxmlsec1", "version": "1.3.12",
+        "url": "https://github.com/lsh123/xmlsec/releases/download/1.3.12/xmlsec1-1.3.12.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "24045199af12d93fe5fdbbbf7e386e823e4842071e9432e2b90ac108b889a923",
+        "configure": ["--with-openssl={prefix}", "--with-default-crypto=openssl",
+                      "--enable-apps", "--disable-apps-crypto-dl", "--disable-crypto-dl"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/openssl/.libs/libxmlsec1-openssl.so*", "launch": None,
+        "aux_sources": list(_ONBOARD_XMLSEC_AUX),
+        "note": ("xmlsec1 1.3.12's OpenSSL backend linked to the subject libcrypto; the admitted "
+                 "xmlsec1 CLI signs a document with RSA-SHA256, verifies it, and rejects a "
+                 "tampered document."),
+    },
+)
+
+_L7_ONBOARD_SPECS_C: tuple[dict, ...] = (
+    {
+        "family": "icecast2", "version": "2.4.4",
+        "url": "https://downloads.xiph.org/releases/icecast/icecast-2.4.4.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "49b5979f9f614140b6a38046154203ee28218d8fc549888596a683ad604e4d44",
+        "configure": ["--with-openssl={prefix}", "--without-curl", "--without-speex",
+                      "--without-theora", "--disable-yp"],
+        "make": [MAKE_JOBS], "artifact": "src/icecast", "launch": ["-v"],
+        "aux_sources": list(_ICECAST_AUX),
+        "note": ("the icecast2 package row of icecast 2.4.4: its HTTPS listener serves the "
+                 "fixture over the subject libssl and rejects an unrelated CA"),
+    },
+    {
+        "family": "libevent-openssl-2.1-7", "version": "2.1.12-stable",
+        "url": ("https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/"
+                "libevent-2.1.12-stable.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb",
+        "configure": ["--disable-samples", "--disable-libevent-regress"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libevent_openssl*.so*", "launch": None,
+        "note": ("the libevent_openssl package row of libevent 2.1.12: a TLS1.3 bufferevent "
+                 "round trip against the fixture CA, with an unrelated-CA reject"),
+    },
+    {
+        "family": "libaprutil1", "version": "1.6.3",
+        "url": "https://archive.apache.org/dist/apr/apr-util-1.6.3.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "2b74d8932703826862ca305b094eef2983c27b39d5c9414442e9976a9acf1983",
+        "configure": ["--with-apr=/usr/bin/apr-1-config", "--with-crypto",
+                      "--with-openssl={prefix}", "--disable-util-dso"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libaprutil-1.so*", "launch": None,
+        "note": ("the libaprutil1 package row of apr-util 1.6.3: the OpenSSL crypto driver "
+                 "plus a libssl handshake over an apr_socket, with a mutated-digest control"),
+    },
+)
+
+# The Phase-25 L7 onboarding batch (b14): ten further consumers, each built from a pristine
+# released archive against the subject prefix. `hcxkeys` is a declarative template row; the
+# others carry a bespoke workload because their observable is a protocol decision (DoT, TLS
+# echo, MQTT CONNACK, Icecast SOURCE, AMQP TLS open) or a file transform (PDF encryption, EFI
+# signature list). Non-OpenSSL dependencies are pinned bookworm packages through `aux_sources,
+# exactly as the earlier batches do, so the subject prefix remains the only OpenSSL.
+_L7_ONBOARD_SPECS_B: tuple[dict, ...] = (
+    {
+        "family": "nmap-ncat", "version": "7.95",
+        "url": "https://nmap.org/dist/nmap-7.95.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
+        "configure": ["--with-openssl={prefix}", "--without-zenmap", "--without-nping",
+                      "--without-nmap-update"],
+        "make": [MAKE_JOBS, "build-ncat"],
+        "artifact": "ncat/ncat", "launch": ["--version"],
+        "note": ("Ncat 7.95's TLS transport linked to the subject libssl; the admitted workload "
+                 "completes a verified TLS exchange carrying the payload and rejects an "
+                 "unrelated CA"),
+    },
+    {
+        "family": "unbound", "version": "1.22.0",
+        "url": "https://www.nlnetlabs.nl/downloads/unbound/unbound-1.22.0.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c5dd1bdef5d5685b2cedb749158dd152c52d44f65529a34ac15cd88d4b1b3d43",
+        "configure": ["--with-ssl={prefix}", "--with-libevent=no", "--disable-sha1",
+                      "--disable-ecdsa", "--disable-gost", "--without-pythonmodule",
+                      "--without-pyunbound", "--disable-dnstap"],
+        "make": [MAKE_JOBS], "artifact": "unbound", "launch": ["-V"],
+        "note": ("Unbound 1.22.0's DNS-over-TLS forwarder path linked to the subject libssl: a "
+                 "local TLS resolver serves a fixture zone and a forwarding resolver retrieves "
+                 "it over DoT, while a resolver trusting only an unrelated CA cannot"),
+    },
+    {
+        "family": "qpdf", "version": "11.9.1",
+        "url": "https://github.com/qpdf/qpdf/releases/download/v11.9.1/qpdf-11.9.1.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "2ba4d248f9567a27c146b9772ef5dc93bd9622317978455ffe91b259340d13d1",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DBUILD_DOC=OFF",
+                      "-DBUILD_STATIC_LIBS=OFF", "-DREQUIRE_CRYPTO_OPENSSL=ON",
+                      "-DDEFAULT_CRYPTO=openssl",
+                      "-DCMAKE_C_FLAGS=-I{aux}/usr/include -I{aux}/usr/include/x86_64-linux-gnu",
+                      "-DCMAKE_CXX_FLAGS=-I{aux}/usr/include "
+                      "-I{aux}/usr/include/x86_64-linux-gnu"],
+        "make": [], "artifact": "b/libqpdf/libqpdf.so*", "launch": ["--version"],
+        "aux_sources": [
+            _aux_deb("libj/libjpeg-turbo", "libjpeg62-turbo_2.1.5-2_amd64.deb",
+                     "95ec30140789a342add8f8371ed018924de51b539056522b66f207b25cba9cad",
+                     library_dirs=(_AUX_MULTIARCH,)),
+            _aux_deb("libj/libjpeg-turbo", "libjpeg62-turbo-dev_2.1.5-2_amd64.deb",
+                     "10485411f751c24472c43b28fe24ab6389fedb027d496bbc2c831496f750ab01",
+                     include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+                     library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+        ],
+        "note": ("qpdf 11.9.1's OpenSSL crypto provider (explicitly selected, REQUIRE_CRYPTO_OPENSSL) "
+                 "encrypts a PDF with AES-256, reports the R=6 encryption parameters, decrypts it "
+                 "with the right password and rejects the wrong one"),
+    },
+    {
+        "family": "nagios-plugins-smtp", "version": "2.4.0",
+        "url": "https://www.monitoring-plugins.org/download/monitoring-plugins-2.4.0.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "e5dfd4ad8fde0a40da50aab3aff6d9a27020b8f283e332bc4da6ef9914f4028c",
+        "configure": ["--with-openssl={prefix}", "--without-pgsql", "--without-mysql",
+                      "--without-ldap", "--without-dbi", "--without-radius",
+                      "--without-libcurl", "--without-ssh", "--without-snmp",
+                      "--without-nagios-xml", "--disable-nls"],
+        "make": [MAKE_JOBS], "artifact": "plugins/check_smtp", "launch": ["-V"],
+        "note": ("check_smtp 2.4.0's STARTTLS path linked to the subject libssl: a local SMTP "
+                 "peer negotiates STARTTLS and the check succeeds, while a peer that does not "
+                 "advertise STARTTLS is rejected"),
+    },
+    {
+        "family": "efitools", "version": "1.9.2",
+        "url": ("https://git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git/snapshot/"
+                "efitools-1.9.2.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "0f315b36e7d1ba74bfc97ab9f304f0a3072c47578bbe5e42594acae381f9acfe",
+        "configure": None,
+        "make": [MAKE_JOBS, "sign-efi-sig-list", "cert-to-efi-sig-list",
+                 "CC=gcc -L{prefix}/lib -Wl,-rpath,{prefix}/lib",
+                 "CFLAGS=-O2 -g -fpic -fshort-wchar -fno-strict-aliasing "
+                 "-fno-merge-constants -fno-stack-protector -ffreestanding -fno-stack-check "
+                 "-DGNU_EFI_USE_MS_ABI -DEFI_FUNCTION_WRAPPER -mno-red-zone "
+                 "-DCONFIG_x86_64 -fno-toplevel-reorder -I{aux}/usr/include -I{prefix}/include",
+                 "INCDIR=-I{root}/include/ -I{aux}/usr/include -I{aux}/usr/include/efi "
+                 "-I{aux}/usr/include/efi/x86_64 -I{aux}/usr/include/efi/protocol"],
+        "artifact": "sign-efi-sig-list", "launch": ["-h"],
+        "aux_sources": [
+            _aux_deb("g/gnu-efi", "gnu-efi_3.0.15-1_amd64.deb",
+                     "1e668cebcb94678b39a69e5c7b8f1d1eb51fd4eb251643491a8c249ae6fa0c36",
+                     include_dirs=("usr/include",)),
+        ],
+        "note": ("efitools' EFI signature-list path linked to the subject libcrypto: a certificate "
+                 "is encoded as an ESL and signed into an authenticated variable update, while a "
+                 "key that does not match the certificate is rejected"),
+    },
+    {
+        "family": "libpaho-mqtt", "version": "1.3.13",
+        "url": "https://github.com/eclipse-paho/paho.mqtt.c/archive/refs/tags/v1.3.13.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "47c77e95609812da82feee30db435c3b7c720d4fd3147d466ead126e657b6d9c",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DPAHO_BUILD_SHARED=TRUE",
+                      "-DPAHO_BUILD_STATIC=FALSE", "-DPAHO_BUILD_SAMPLES=FALSE",
+                      "-DPAHO_ENABLE_TESTING=FALSE", "-DPAHO_WITH_SSL=TRUE"],
+        "make": [], "artifact": "b/src/libpaho-mqtt3cs.so*", "launch": None,
+        "note": ("paho.mqtt.c's TLS client linked to the subject libssl; the admitted harness "
+                 "completes MQTT CONNECT/CONNACK over TLS and rejects an unrelated CA"),
+    },
+    {
+        "family": "nagios-plugins-ldap", "version": "2.4.0",
+        "url": "https://www.monitoring-plugins.org/download/monitoring-plugins-2.4.0.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "e5dfd4ad8fde0a40da50aab3aff6d9a27020b8f283e332bc4da6ef9914f4028c",
+        "configure": ["--with-openssl={prefix}", "--without-pgsql", "--without-mysql",
+                      "--without-dbi", "--without-radius", "--without-libcurl",
+                      "--without-ssh", "--without-snmp", "--without-nagios-xml",
+                      "--disable-nls"],
+        "make": [MAKE_JOBS], "artifact": "plugins/check_ldap", "launch": ["-V"],
+        "note": ("check_ldap 2.4.0's LDAPS path linked to the subject libssl: a local LDAP peer "
+                 "accepts the simple bind and search, while the wrong password is rejected"),
+    },
+    {
+        "family": "srtp", "version": "2.6.0",
+        "url": "https://github.com/cisco/libsrtp/archive/refs/tags/v2.6.0.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "bf641aa654861be10570bfc137d1441283822418e9757dc71ebb69a6cf84ea6b",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DENABLE_OPENSSL=ON",
+                      "-DLIBSRTP_TEST_APPS=OFF", "-DBUILD_SHARED_LIBS=ON"],
+        "make": [], "artifact": "b/libsrtp2.so*", "launch": None,
+        "note": ("libsrtp's OpenSSL crypto backend; the admitted harness protects an RTP packet "
+                 "with AES-CM-128/HMAC-SHA1, unprotects it, and rejects a session with the wrong "
+                 "key"),
+    },
+    {
+        "family": "rabbitmq-c", "version": "0.15.0",
+        "url": "https://github.com/alanxz/rabbitmq-c/archive/refs/tags/v0.15.0.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "7b652df52c0de4d19ca36c798ed81378cba7a03a0f0c5d498881ae2d79b241c2",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DBUILD_SHARED_LIBS=ON",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTS=OFF", "-DBUILD_TOOLS=OFF",
+                      "-DENABLE_SSL_SUPPORT=ON"],
+        "make": [], "artifact": "b/librabbitmq/librabbitmq.so*", "launch": None,
+        "note": ("rabbitmq-c's SSL socket linked to the subject libssl; the admitted harness "
+                 "completes the TLS connection to a local peer and rejects an unrelated CA"),
+    },
+)
+
+# lighttpd 1.4.76's release tarball carries `configure.ac` but no generated `configure`, and
+# its TLS module is normally a dlopen'd `mod_openssl.so` (so the main executable imports no
+# OpenSSL symbol). The recipe bootstraps the tarball's own configure with the pinned bookworm
+# autotools, builds the static server (`LIGHTTPD_STATIC=yes`, the upstream-supported mode that
+# compiles mod_openssl into `src/lighttpd`), and takes PCRE2 from the same pinned-package seam.
+# The source tree stays pristine: the bootstrap writes generated build files only, exactly as
+# the partclone/httperf recipes do.
+_LIGHTTPD_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+)
+
+_LIGHTTPD_BOOTSTRAP = (
+    "set -e; mkdir -p m4; W={root}/.autotools; mkdir -p $W; "
+    "sed -i 's#/usr/share#{aux}/usr/share#g' {aux}/usr/bin/libtoolize; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/share/autoconf/autom4te.cfg; "
+    "sed -i 's#/usr/share/automake-1.16#{aux}/usr/share/automake-1.16#g' "
+    "{aux}/usr/bin/aclocal-1.16 {aux}/usr/bin/automake-1.16; "
+    "sed -i 's#/usr/share/aclocal#{aux}/usr/share/aclocal#g' {aux}/usr/bin/aclocal-1.16; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/bin/autoconf {aux}/usr/bin/autoheader; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+    "--system-acdir={aux}/usr/share/aclocal-1.16 "
+    "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+    "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+    "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+    "autoreconf -fi; "
+    # Upstream's static-server mode requires src/plugin-static.h (INSTALL: "create "
+    # src/plugin-static.h with list of modules as PLUGIN_INIT(mod_foo)"). It is a generated
+    # build input, not a source edit: the list is exactly the modules src/Makefile.am compiles
+    # under `if LIGHTTPD_STATIC` for this configuration (the optional blocks stay disabled).
+    "printf '%s\\n' "
+    "'PLUGIN_INIT(mod_access)' 'PLUGIN_INIT(mod_accesslog)' 'PLUGIN_INIT(mod_ajp13)' "
+    "'PLUGIN_INIT(mod_alias)' 'PLUGIN_INIT(mod_auth)' "
+    "'PLUGIN_INIT(mod_authn_file)' 'PLUGIN_INIT(mod_cgi)' 'PLUGIN_INIT(mod_deflate)' "
+    "'PLUGIN_INIT(mod_dirlisting)' 'PLUGIN_INIT(mod_evhost)' 'PLUGIN_INIT(mod_expire)' "
+    "'PLUGIN_INIT(mod_extforward)' 'PLUGIN_INIT(mod_fastcgi)' 'PLUGIN_INIT(mod_indexfile)' "
+    "'PLUGIN_INIT(mod_openssl)' 'PLUGIN_INIT(mod_proxy)' 'PLUGIN_INIT(mod_redirect)' "
+    "'PLUGIN_INIT(mod_rewrite)' 'PLUGIN_INIT(mod_rrdtool)' 'PLUGIN_INIT(mod_scgi)' "
+    "'PLUGIN_INIT(mod_setenv)' 'PLUGIN_INIT(mod_simple_vhost)' 'PLUGIN_INIT(mod_sockproxy)' "
+    "'PLUGIN_INIT(mod_ssi)' 'PLUGIN_INIT(mod_staticfile)' 'PLUGIN_INIT(mod_status)' "
+    "'PLUGIN_INIT(mod_userdir)' 'PLUGIN_INIT(mod_vhostdb)' "
+    "'PLUGIN_INIT(mod_webdav)'"
+    " > src/plugin-static.h"
+)
+
+_LIGHTTPD_ENV = {
+    "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+    "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+    "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal:{aux}/usr/share/libtool/m4",
+    "ACLOCAL": "{root}/.autotools/aclocal",
+    "AUTOMAKE": "{root}/.autotools/automake",
+    "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+    "AUTOPOINT": "true",
+    "AUTOCONF": "{aux}/usr/bin/autoconf",
+    "AUTOHEADER": "{aux}/usr/bin/autoheader",
+    "AUTOM4TE": "{aux}/usr/bin/autom4te",
+    "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+    "AC_MACRODIR": "{aux}/usr/share/autoconf",
+    "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+    "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+    "M4": "{aux}/usr/bin/m4",
+    # Upstream's supported static-server mode: compiles every enabled module (including
+    # mod_openssl) into the executable, so the artifact itself names libssl/libcrypto.
+    "LIGHTTPD_STATIC": "yes",
+}
+
 _LATE_RECIPE_OVERRIDES: dict[str, dict] = {
+    "lighttpd": {
+        "build_system": "configure",
+        "configure": ["--with-openssl={prefix}", "--with-pcre2"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/lighttpd",
+        "aux_sources": list(_LIGHTTPD_AUX),
+        "pre_build": [["sh", "-c", _LIGHTTPD_BOOTSTRAP]],
+        "env_extra": dict(_LIGHTTPD_ENV),
+        "note": ("lighttpd 1.4.76 with its TLS module: the release tarball ships configure.ac "
+                 "only, so the recipe bootstraps it with the pinned bookworm autotools, takes "
+                 "PCRE2 from its pinned package, and builds the statically-linked server so "
+                 "mod_openssl is part of the measured executable. No source is edited."),
+    },
     "libssh": {
         "build_system": "cmake",
         "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DOPENSSL_ROOT_DIR={prefix}",
@@ -3175,6 +3949,29 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
         limits=limits, prefix=prefix, source_root_hash=root_hash)
 
 
+def _acquisition_failure_rows(fam: dict, recipe: dict, reason: str, limits: dict,
+                              prefix: Path) -> list[dict]:
+    """Both subject rows for a family whose pristine source could not be acquired or opened.
+
+    The reason names the source host and URL, so an unreachable upstream is diagnosable from the
+    atlas alone. Level `L0`/`not_attempted`/`acquire-failure` is the honest classification: no
+    build was attempted because there was no source tree to build.
+    """
+    name = str(fam.get("canonical_name"))
+    return [
+        _subject_row(
+            fam, recipe, subject, level=L0, outcome="not_attempted", residual="unavailable",
+            failure_class="acquire-failure", reason=reason,
+            specimen_id=f"specimen:{name}:{recipe['version']}",
+            variant_id=f"variant:{name}:{recipe['version']}:pristine",
+            source_sha256=None,
+            evidence=[f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
+                      f"source:{recipe['url']}"],
+            steps=None, canvas=None, limits=limits, prefix=prefix)
+        for subject in ("authority", "candidate")
+    ]
+
+
 def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path,
                    auth_defined: set[str], cand_defined: set[str],
                    limits: dict) -> tuple[list[dict], dict | None, dict | None]:
@@ -3186,7 +3983,12 @@ def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path
     work.mkdir(parents=True, exist_ok=True)
 
     archive = work / f"source.{recipe['archive']}"
-    fetch = census._fetch(recipe["url"], archive)
+    try:
+        fetch = census._fetch(recipe["url"], archive)
+    except Exception as exc:  # noqa: BLE001 - an unreachable host must not abort the court
+        fetch = {"ok": False, "rc": None,
+                 "error": f"{type(exc).__name__}: {exc}",
+                 "url": recipe["url"]}
     if not fetch["ok"] or not archive.is_file():
         # No source: both subjects are honestly `not_attempted`/acquire-failure. The specimen is
         # still recorded with the recipe's pinned digest -- the intended released tarball.
@@ -3194,7 +3996,8 @@ def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path
             _subject_row(
                 fam, recipe, subject, level=L0, outcome="not_attempted", residual="unavailable",
                 failure_class="acquire-failure",
-                reason=f"fetching the pristine source failed: {census._error_line(fetch)}",
+                reason=(f"fetching the pristine source from {recipe['url']} failed: "
+                        f"{census._error_line(fetch)}"),
                 specimen_id=f"specimen:{name}:{recipe['version']}",
                 variant_id=f"variant:{name}:{recipe['version']}:pristine",
                 source_sha256=None,
@@ -3214,8 +4017,9 @@ def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path
             _subject_row(
                 fam, recipe, subject, level=L1, outcome="failed", residual="unavailable",
                 failure_class="acquire-failure",
-                reason=(f"the fetched {name} {recipe['version']} archive digest {observed} does "
-                        f"not match the pinned {recipe['sha256']}"),
+                reason=(f"the fetched {name} {recipe['version']} archive from {recipe['url']} "
+                        f"has digest {observed}, which does not match the pinned "
+                        f"{recipe['sha256']}"),
                 specimen_id=f"specimen:{name}:{recipe['version']}",
                 variant_id=f"variant:{name}:{recipe['version']}:pristine",
                 source_sha256=observed,
@@ -3226,11 +4030,19 @@ def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path
         ]
         return rows, _specimen(fam, recipe, observed), _variant(fam, recipe)
 
-    rows = []
-    for subject, prefix, defined in (("authority", auth_prefix, auth_defined),
-                                     ("candidate", cand_prefix, cand_defined)):
-        rows.append(_measure_subject(fam, recipe, observed, archive, subject, prefix, defined,
-                                     auth_prefix, limits))
+    try:
+        rows = []
+        for subject, prefix, defined in (("authority", auth_prefix, auth_defined),
+                                         ("candidate", cand_prefix, cand_defined)):
+            rows.append(_measure_subject(fam, recipe, observed, archive, subject, prefix, defined,
+                                         auth_prefix, limits))
+    except Exception as exc:  # noqa: BLE001 - acquisition failure is a measured outcome
+        # Unpacking, extraction or environment preparation raised: the family is an acquire
+        # failure naming its source host, and the caller continues with the next family.
+        reason = (f"acquiring or preparing the pristine source from {recipe['url']} failed: "
+                  f"{type(exc).__name__}: {exc}")
+        return (_acquisition_failure_rows(fam, recipe, reason, limits, auth_prefix),
+                _specimen(fam, recipe, observed), _variant(fam, recipe))
     root_hash = next((r.get("source_root_hash") for r in rows if r.get("source_root_hash")),
                      None)
     return rows, _specimen(fam, recipe, observed, root_hash), _variant(fam, recipe)
@@ -3361,8 +4173,21 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
                 variants.append(copy.deepcopy(var))
             reused_families.append(name)
             continue
-        fam_rows, specimen, variant = measure_family(
-            fam, recipe, auth_prefix, CANDIDATE_PREFIX, auth_defined, cand_defined, limits)
+        try:
+            fam_rows, specimen, variant = measure_family(
+                fam, recipe, auth_prefix, CANDIDATE_PREFIX, auth_defined, cand_defined, limits)
+        except Exception as exc:  # noqa: BLE001 - a family failure must not abort the court
+            # A failed acquisition or a missing/undecodable source tree is a measured outcome for
+            # this family, not a reason to abandon the remaining 999. Both subjects are recorded
+            # as `acquire-failure` naming the source host and URL, and the court continues.
+            reason = (f"acquiring or building {recipe['url']} failed before a pristine source "
+                      f"tree existed: {type(exc).__name__}: {exc}")
+            rows.extend(_acquisition_failure_rows(fam, recipe, reason, limits, auth_prefix))
+            specimens.append(_specimen(fam, recipe))
+            variants.append(_variant(fam, recipe))
+            print(f"  [p1000 {entry.get('p1000_rank'):>4}] {name:<12} acquire-failure "
+                  f"{reason[:70]}"[:150], flush=True)
+            continue
         rows.extend(fam_rows)
         if specimen:
             specimens.append(specimen)
@@ -3867,7 +4692,29 @@ def self_test() -> int:
         if not r.get("sha256"):
             failures.append(f"the recipe for {r['family']!r} pins no archive SHA-256")
 
-    # 3. The pure functions behave over the committed evidence.
+    # 3. Acquisition failure is a measured outcome, not a court abort: a missing source tree is
+    #    `None` (never a raised `FileNotFoundError`) and the failure rows name the source host while
+    #    accounting for both subjects under the closed vocabulary.
+    if census._single_source_root(Path("/nonexistent-acquire-self-test/src")) is not None:
+        failures.append("a missing source tree did not report `None`")
+    recipe = {"family": "__selftest__", "version": "0", "recipe_id": "selftest",
+              "url": "https://unreachable.invalid/__selftest__.tar.gz", "archive": "tar.gz"}
+    fam = {"family_id": "__selftest__", "canonical_name": "__selftest__",
+           "openssl_linkage": "direct", "directness_class": "direct", "_rank": 0}
+    acquire_rows = _acquisition_failure_rows(
+        fam, recipe, "fetching the pristine source from https://unreachable.invalid/ failed",
+        {"memory_max": "?", "pids_max": "?"}, Path("/p"))
+    if {r["subject"] for r in acquire_rows} != {"authority", "candidate"}:
+        failures.append("an acquisition failure does not account for both subjects")
+    for r in acquire_rows:
+        if r.get("failure_class") != "acquire-failure" or "unreachable.invalid" not in str(
+                r.get("reason")):
+            failures.append("an acquisition failure neither names its class nor its source host")
+        problems = downstream_schemas.validate_run(r)
+        if problems:
+            failures.append(f"an acquisition failure row is schema-invalid: {problems[:2]}")
+
+    # 4. The pure functions behave over the committed evidence.
     if not FAMILY_FREEZE.is_file():
         failures.append(f"{rel(FAMILY_FREEZE)} is absent")
     else:
@@ -3893,8 +4740,9 @@ def self_test() -> int:
             print(f"  {f}")
         return 1
     print("[downstream-build-link] self-test ok: the guard refuses a host invocation of this tool "
-          "(marker and flag both named), the committed P1000 build/link atlas reproduces with zero "
-          "findings, and every seeded mutation (candidate linkage resolving the authority, a "
+          "(marker and flag both named), a missing source tree is an `acquire-failure` naming its "
+          "host rather than a raised exception, the committed P1000 build/link atlas reproduces "
+          "with zero findings, and every seeded mutation (candidate linkage resolving the authority, a "
           "recipe-backed family missing its authority row, a positive candidate-specific patch "
           "count, a non-measured row with no residual class, candidate linkage resolving a "
           "system library, and a candidate row that built a different pristine source tree) is "

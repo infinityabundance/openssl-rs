@@ -25,7 +25,7 @@ carry (docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md section 3.8). This seal records
 - Authority: the admitted venue `openssl-rs-court:1`; the frozen
   candidate is `openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)`, not live HEAD.
 - Court results: `artifacts/phase25/COURTS.json` — 21 Phase-25 courts,
-  `all_pass` true, `summary` `pass` 21 of 21, `pending_courts`
+  `all_pass` true, `summary` `pass` 15 of 21, `pending_courts`
   empty. No court is FRF-declarable: each reads committed evidence and stages no
   `artifacts/phase25/probes/<probe>.{authority,candidate}` pair.
 - Obligation ledger: `forensics/phase25-obligations.json` — `owned` 22,
@@ -52,23 +52,23 @@ reproduce.
 |---|---|---|---|---|---|
 | `MS-CONSTITUTION` | `constitution` | pass | 0 | honest |
  `docs/PHASE-25-MEMORY-SAFETY-SUBPHASES.md` |
-| `MS-SOURCE-CENSUS` | `source-census` | pass | 3 | honest |
+| `MS-SOURCE-CENSUS` | `source-census` | fail | 3 | NOT-honest |
  `artifacts/phase25/source-census.json` |
-| `MS-NON-RUST-TCB` | `non-rust-tcb` | pass | 3 | honest |
+| `MS-NON-RUST-TCB` | `non-rust-tcb` | fail | 3 | NOT-honest |
  `artifacts/phase25/non-rust-tcb.json` |
 | `MS-SAFETY-OBLIGATIONS` | `safety-obligations` | pass | 3 | honest |
  `artifacts/phase25/safety-obligations.json` |
-| `MS-OWNERSHIP-PLANES` | `ownership-planes` | pass | 8 | honest |
+| `MS-OWNERSHIP-PLANES` | `ownership-planes` | fail | 8 | NOT-honest |
  `artifacts/phase25/ownership-planes.json` |
 | `MS-PHASE22-CROSSWALK` | `phase22-crosswalk` | pass | 4 | honest |
  `artifacts/phase25/phase22-crosswalk.json` |
 | `MS-PHASE24-CROSSWALK` | `phase24-crosswalk` | pass | 5 | honest |
  `artifacts/phase25/phase24-crosswalk.json` |
-| `MS-EXPOSURE-CLASSIFICATION` | `exposure-classification` | pass | 5 | honest |
+| `MS-EXPOSURE-CLASSIFICATION` | `exposure-classification` | fail | 5 | NOT-honest |
  `artifacts/phase25/exposure.json` |
-| `MS-UNSAFE-REDUCTION` | `unsafe-reduction` | pass | 3 | honest |
+| `MS-UNSAFE-REDUCTION` | `unsafe-reduction` | fail | 3 | NOT-honest |
  `artifacts/phase25/unsafe-reduction.json` |
-| `MS-MIRI` | `miri` | pass | 4 | honest |
+| `MS-MIRI` | `miri` | fail | 4 | NOT-honest |
  `artifacts/phase25/miri.json` |
 | `MS-ASAN-MSMAN` | `asan-msan` | pass | 0 | honest |
  `artifacts/phase25/asan-msan.json` |
@@ -98,9 +98,9 @@ reproduce.
 Every residual the committed planes carry, classified from
 `memory_safety_schemas.RESIDUAL_CLASSES` and disposed from `RESIDUAL_DISPOSITIONS`:
 
-- total 494 residual(s): 483 schema record(s) plus
+- total 585 residual(s): 574 schema record(s) plus
   11 light cross-check leftover(s);
-- 483 disposed, 449 open, 0
+- 574 disposed, 540 open, 0
   undisposed.
 
 By class:
@@ -108,7 +108,7 @@ By class:
 - `evidence_missing`: 389
 - `evidence_not_reproducible`: 1
 - `historical_cve_unreplayed`: 4
-- `join_evidence_missing`: 65
+- `join_evidence_missing`: 156
 - `mechanism_unreconciled`: 4
 - `out_of_scope`: 20
 - `tool_not_reachable`: 4
@@ -118,7 +118,7 @@ By class:
 By disposition:
 
 - `classified`: 1
-- `open`: 449
+- `open`: 540
 - `preserved`: 33
 
 ## 3. The open items

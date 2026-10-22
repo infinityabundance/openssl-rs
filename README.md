@@ -29,26 +29,26 @@ Measured at the source identity rendered below. Every row names its own
 machine-readable evidence; none of them is a claim of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: crate version `0.0.30`; `libcrypto.so.3` sha256 `891cf18bcd185bfc2cea87254a50775f9f9800558338674b99295cde93bc6f1b`; `libssl.so.3` sha256 `51fec2d3c9ac4568974a6f2f82520e9411525e4ec3a1093f9077c2807e4ae4aa`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: crate version `0.0.31`; `libcrypto.so.3` sha256 `857b72cc760ba2150e10dce7b2baab1096596b17520a86606d5831a7e6ad9c90`; `libssl.so.3` sha256 `7a168934491a90456fe5cbc902a6470bf27c9b08e0bc1911ea88da61c59a1290`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
 | **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`) |
-| **Downstream drop-in, 1000-family corpus** | **101 / 1000 at `L7-functional`**; candidate 101 = authority 101; **0 failed**; 102 loaded; 898 not attempted | same atlas, `body.counts.by_subject` |
-| **Library test suite** | **1,747 passing, 0 failing, 42 ignored** | `atlas-refresh/publish-0.0.30.json` |
+| **Downstream drop-in, 1000-family corpus** | **145 / 1000 at `L7-functional`**; candidate 145 = authority 145; **0 failed**; 146 loaded; 854 not attempted | same atlas, `body.counts.by_subject` |
+| **Library test suite** | **1,962 passing, 0 failing, 44 ignored** at `3ee81389e` — a **floor**, not the current count: later commits add tests without a further full run | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **5 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
 | **Memory safety: boundaries** | 5 scoped boundary discharges (B23, B25, B27, B28, B29); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: file census** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
 | **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure | `CAMPAIGN-STATUS.json` (`consumers`) |
-| **Release** | **0.0.30** on crates.io (2026-10-22), checksum `07eb9cb4…` | `atlas-refresh/publish-0.0.30.json` |
+| **Release** | **0.0.31** on crates.io (2026-10-22), checksum `d574588e…` | `atlas-refresh/publish-0.0.31.json` |
 <!-- END GENERATED: readme-achievements -->
 
 ### The families at `L7-functional`
 
 <!-- BEGIN GENERATED: readme-l7-families -->
-**101 of 1000 counted corpus families are `L7-functional`** — candidate and authority rows agree (101 = 101); 0 failed, 102 loaded, 898 not attempted.
+**145 of 1000 counted corpus families are `L7-functional`** — candidate and authority rows agree (145 = 145); 0 failed, 146 loaded, 854 not attempted.
 
-`aircrack-ng`, `apache2-utils`, `apr-util`, `arm-trusted-firmware-tools`, `axel`, `bannergrab`, `cowpatty`, `curl`, `cyrus-sasl`, `dcap-tunnel-ssl`, `dovecot`, `duo_unix`, `eggdrop`, `elinks`, `epic5`, `exim`, `fetchmail`, `fido2`, `fossil`, `gensio`, `getdns`, `haproxy`, `hcxtools`, `hiredis-ssl`, `hitch`, `httperf`, `httping`, `icecast`, `iperf3`, `irssi`, `isync`, `jimtcl`, `jwt`, `kea`, `keepalived`, `kmod`, `ldns`, `lftp`, `libarchive`, `libcoap`, `libesmtp`, `libevent`, `libjose`, `libnetconf2`, `liboauth2`, `librdkafka`, `libre`, `libretls`, `libssh`, `libstrophe`, `libtins`, `libtpms`, `libu2f-server`, `libwebsockets`, `libzip`, `links`, `lua-luaossl`, `lua-sec`, `lynx`, `makepasswd`, `memcached`, `mini-httpd`, `minizip-ng`, `mktorrent`, `monit`, `mosquitto`, `mumble-server`, `net-snmp`, `nginx`, `nmap`, `nrpe`, `nsd`, `opendkim`, `openssh`, `openssh-server`, `openvpn`, `osslsigncode`, `partclone`, `proftpd`, `prosody`, `proxytunnel`, `pure-ftpd`, `radsecproxy`, `redis`, `rsync`, `s-nail`, `slrn`, `socat`, `sofia-sip`, `squid`, `sslscan`, `sslsplit`, `ssmtp`, `stunnel`, `swtpm`, `tcpdump`, `tinc`, `tnftp`, `u-boot-tools`, `w3m`, `znc`.
+`aircrack-ng`, `apache2-bin`, `apache2-utils`, `appx-util`, `apr-util`, `arm-trusted-firmware-tools`, `axel`, `bannergrab`, `bruteforce-salted-openssl`, `cjose`, `cowpatty`, `curl`, `curl-minimal`, `cyrus-sasl`, `cyrus-sasl-digestmd5`, `cyrus-sasl-scram`, `dcap-tunnel-ssl`, `dovecot`, `duo_unix`, `efitools`, `eggdrop`, `elinks`, `epic5`, `exim`, `fetchmail`, `fido2`, `fossil`, `fsverity-utils`, `gensio`, `getdns`, `git-crypt`, `gmnisrv`, `gostsum`, `haproxy`, `hcxkeys`, `hcxtools`, `hiredis-ssl`, `hitch`, `httperf`, `httping`, `httrack`, `icecast`, `icecast2`, `iperf3`, `ircii`, `irssi`, `isync`, `jimtcl`, `jwt`, `kea`, `keepalived`, `kmod`, `ldns`, `ldnsutils`, `lftp`, `libaprutil1`, `libarchive`, `libcoap`, `libesmtp`, `libevent`, `libevent-openssl-2.1-7`, `libevhtp`, `libjose`, `libnetconf2`, `liboauth2`, `libpaho-mqtt`, `librdkafka`, `libre`, `libretls`, `libssh`, `libstrophe`, `libtins`, `libtpms`, `libu2f-server`, `libwebsockets`, `libxmlsec1`, `libzip`, `lighttpd`, `links`, `lua-luaossl`, `lua-sec`, `lynx`, `makepasswd`, `memcached`, `mini-httpd`, `minizip-ng`, `mktorrent`, `monit`, `mosquitto`, `mumble-server`, `nagios-plugins-http`, `nagios-plugins-ldap`, `nagios-plugins-smtp`, `neon`, `net-snmp`, `nginx`, `nmap`, `nmap-ncat`, `nrpe`, `nsd`, `opendkim`, `openldap`, `openssh`, `openssh-client`, `openssh-server`, `openvpn`, `osslsigncode`, `partclone`, `proftpd`, `prosody`, `proxytunnel`, `pure-ftpd`, `qpdf`, `rabbitmq-c`, `radsecproxy`, `redis`, `rhash`, `rsync`, `s-nail`, `s2n-tls`, `siege`, `sipsak`, `slowhttptest`, `slrn`, `socat`, `sofia-sip`, `squid`, `srt`, `srtp`, `ssldump`, `sslscan`, `sslsplit`, `ssmtp`, `stunnel`, `swtpm`, `tcpdump`, `tinc`, `tnftp`, `u-boot-tools`, `unbound`, `vsftpd`, `w3m`, `wrk`, `yara`, `znc`.
 <!-- END GENERATED: readme-l7-families -->
 
 Client, server, library, signing, interception, VPN, mail, DNS, IMAP, IRC,
@@ -102,18 +102,16 @@ which strata are complete. For shape, the strata group as:
 | 19–21 | performance / CPU dispatch, the 3.6.4 custodian seal, and the maintenance-delta machinery |
 | 22 | authority exhaustiveness and the whole-program compatibility atlas |
 
-> **Safe-33 conversion status (2026-10-20, reconciled 2026-10-22).** The
-> generated blocker block below is frozen at the Phase-24 derivation and is
-> superseded for current counts by
-> `forensics/downstream/runtime-functional-atlas.json`: it records **101
-> candidate and 101 authority `L7-functional` rows**, **102 loaded under each
-> subject**, **898 not attempted**, **0 failed**, and **33/33 cohort families
-> at `L7-functional`**. For conversion, discharge, test-count and consumer
-> claims read
+> **Safe-33 conversion status.** The generated blocker block below is frozen at
+> the Phase-24 derivation and is superseded for current counts by the generated
+> achievement block earlier in this page, which derives them from
+> `forensics/downstream/runtime-functional-atlas.json`. For conversion,
+> discharge, test-count and consumer claims read
 > [`forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`](forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md);
 > `forensics/STATUS.md` is generated and requires regeneration by
 > `forensics/tools/render_status.py` before its downstream figures can be
-> quoted.
+> quoted. No count is typed in this paragraph deliberately: typed counts go
+> stale, which is exactly what the generated blocks exist to prevent.
 
 <!-- BEGIN GENERATED: downstream-blockers -->
 
@@ -131,7 +129,7 @@ corpus counts come from `forensics/downstream/runtime-functional-atlas.json`.
 | `no-admitted-recipe` | 965 | 965 | `recipe-admission` | 1.0 |
 | `recipe-build-system-unsupported` | 2 | 2 | `recipe-build-system` | 2.0 |
 
-**Frozen Phase-24 partition: 967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable); of those 33, 25 were at L4-linked and 8 reached L5 or above in that plane. **Current atlas:** 101 candidate and 101 authority families are `L7-functional`, 102 are loaded under each subject, 898 are not attempted, 0 failed, and the 33-family cohort is **33/33 at `L7-functional`** (`runtime-functional-atlas.json`, `body.counts.by_subject`; restated in `STATUS-2026-10-20.md`). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung.
+**Frozen Phase-24 partition: 967 of the 1000 counted families are blocked; 33 are `DROP_IN_PASS`** (967 are `DROP_IN_NOT_APPLICABLE`, 33 measurable); of those 33, 25 were at L4-linked and 8 reached L5 or above in that plane. **Current atlas:** see the generated achievement block at the top of this page for the current candidate and authority `L7-functional` counts, the loaded and not-attempted split, and the cohort figure (`runtime-functional-atlas.json`, `body.counts.by_subject`; restated in `STATUS-2026-10-20.md`). The `drop-in-pass` figure is a baseline-normalized verdict count, not a rung.
 
 * a selected population is not a random sample: the 1,000 counted families are selected from frozen ranking evidence, so their blocker shares do not generalise to all downstream software
 * 1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and the analysis makes no statement about an unmeasured consumer

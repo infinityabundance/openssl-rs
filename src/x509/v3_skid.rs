@@ -56,7 +56,7 @@ use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::obj::NID_subject_key_identifier;
 use crate::runtime::str::{OPENSSL_buf2hexstr, OPENSSL_hexstr2buf};
 use crate::x509::v3_conf::{X509V3Ctx, X509V3_CTX_TEST};
-use crate::x509::v3_lib::{X509V3ExtI2s, X509V3ExtMethod};
+use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::x509_req::X509Req;
 use crate::x509::x_pubkey::{ossl_x509_PUBKEY_get0_libctx, X509Pubkey, X509_PUBKEY_get0_param};
 
@@ -245,17 +245,11 @@ unsafe extern "C" fn s2i_skey_id(
     // SAFETY: `pubkey` is the live key the branch above read, or NULL; the callee accepts NULL.
     unsafe { ossl_x509_pubkey_hash(pubkey) }.cast::<c_void>()
 }
-const fn as_i2s(
-    f: unsafe extern "C" fn(*mut c_void, *const Asn1String) -> *mut c_char,
-) -> X509V3ExtI2s {
-    // SAFETY: both function types take two pointer arguments and answer a pointer; the authority
-    // writes exactly this cast in the row.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(*mut c_void, *const Asn1String) -> *mut c_char,
-            unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char,
-        >(f)
-    })
+/// The `i2s` slot for `i2s_ASN1_OCTET_STRING`.
+unsafe extern "C" fn skid_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
+    // SAFETY: `meth` is the table's live row (read only); `value` is the `ASN1_OCTET_STRING` in
+    // the slot.
+    unsafe { i2s_ASN1_OCTET_STRING(meth.cast_mut().cast::<c_void>(), value.cast::<Asn1String>()) }
 }
 
 /// `const X509V3_EXT_METHOD ossl_v3_skey_id` — `crypto/x509/v3_skid.c:18-25`.
@@ -270,7 +264,7 @@ pub static ossl_v3_skey_id: X509V3ExtMethod = X509V3ExtMethod {
     ext_free: None,
     d2i: None,
     i2d: None,
-    i2s: as_i2s(i2s_ASN1_OCTET_STRING),
+    i2s: Some(skid_i2s),
     s2i: Some(s2i_skey_id),
     i2v: None,
     v2i: None,

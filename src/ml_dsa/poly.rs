@@ -112,6 +112,88 @@ impl<'a> VectorBuf<'a> {
     }
 }
 
+/// A freshly allocated `Poly` block this frame owns until it is published into a `Vector`.
+///
+/// `Vector::{alloc,secure_alloc}` are this unit's only allocations. An owner checks the
+/// element-count product once, releases the block if a future early return appears between the
+/// allocator call and publication, and makes the secure arm's release the cleansing one. `into_raw`
+/// is the single transfer into the member slot.
+struct PolyBlock {
+    ptr: ptr::NonNull<Poly>,
+    bytes: usize,
+    file: *const c_char,
+    line: c_int,
+    secure: bool,
+}
+
+impl PolyBlock {
+    /// `OPENSSL_malloc_array(count, sizeof(POLY))`.
+    fn malloc(count: usize, file: *const c_char, line: c_int) -> Option<PolyBlock> {
+        let elem = core::mem::size_of::<Poly>();
+        let bytes = count.checked_mul(elem);
+        // SAFETY: `file` is NULL or a valid NUL-terminated coordinate; the array allocator checks
+        // the product itself and raises the authority's overflow error there.
+        let raw = unsafe { CRYPTO_malloc_array(count, elem, file, line) }.cast::<Poly>();
+        let ptr = ptr::NonNull::new(raw)?;
+        let Some(bytes) = bytes else {
+            // The allocator should already have refused; release if it did not, so an overflowing
+            // count can never leave an unpublishable block behind.
+            // SAFETY: `raw` is a live block this call owns.
+            unsafe { CRYPTO_free(raw.cast(), file, line) };
+            return None;
+        };
+        Some(PolyBlock {
+            ptr,
+            bytes,
+            file,
+            line,
+            secure: false,
+        })
+    }
+
+    /// `OPENSSL_secure_malloc_array(count, sizeof(POLY))`.
+    fn secure_malloc(count: usize, file: *const c_char, line: c_int) -> Option<PolyBlock> {
+        let elem = core::mem::size_of::<Poly>();
+        let bytes = count.checked_mul(elem);
+        // SAFETY: as in `malloc`; the secure array allocator checks the product too.
+        let raw = unsafe { CRYPTO_secure_malloc_array(count, elem, file, line) }.cast::<Poly>();
+        let ptr = ptr::NonNull::new(raw)?;
+        let Some(bytes) = bytes else {
+            // SAFETY: `raw` is a live secure block this call owns; the release cleanses it.
+            unsafe { CRYPTO_secure_clear_free(raw.cast(), 0, file, line) };
+            return None;
+        };
+        Some(PolyBlock {
+            ptr,
+            bytes,
+            file,
+            line,
+            secure: true,
+        })
+    }
+
+    /// Transfer the block into a `Vector` member slot.
+    fn into_raw(self) -> *mut Poly {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for PolyBlock {
+    fn drop(&mut self) {
+        // SAFETY: `ptr` is the exclusively owned block this handle allocated and has not released,
+        // `bytes` its checked extent, and `Drop` runs once. The secure arm cleanses.
+        unsafe {
+            if self.secure {
+                CRYPTO_secure_clear_free(self.ptr.as_ptr().cast(), self.bytes, self.file, self.line)
+            } else {
+                CRYPTO_free(self.ptr.as_ptr().cast(), self.file, self.line)
+            }
+        }
+    }
+}
+
 /// `struct matrix_st` — `ml_dsa_matrix.h:11-14`, a `k` by `l` matrix.
 #[repr(C)]
 pub(crate) struct Matrix {
@@ -260,19 +342,13 @@ impl Vector {
         file: *const c_char,
         line: c_int,
     ) -> c_int {
-        // `OPENSSL_malloc_array` is `CRYPTO_malloc_array`: it checks the element-count product,
-        // raises the authority's integer-overflow error and answers NULL on refusal.
-        let p = unsafe {
-            // SAFETY: `file` is NULL or a NUL-terminated coordinate valid for the call (a static literal/default, or a precondition established by the calling boundary), so `malloc_request`/the installed hook may read it.
-            CRYPTO_malloc_array(num_polys, core::mem::size_of::<Poly>(), file, line)
-        }
-        .cast::<Poly>();
-        if p.is_null() {
+        // The owner checks the element-count product and is the single release until publication.
+        let Some(block) = PolyBlock::malloc(num_polys, file, line) else {
             return 0;
-        }
+        };
         // The pair is published together; no allocation event or observer runs between the two
         // stores, so the member invariant holds from the next observation.
-        self.poly = p;
+        self.poly = block.into_raw();
         self.num_poly = num_polys;
         1
     }
@@ -289,18 +365,12 @@ impl Vector {
         file: *const c_char,
         line: c_int,
     ) -> c_int {
-        // `OPENSSL_secure_malloc_array`: the element-count product is checked and an overflow is
-        // reported as the authority's secure-allocation failure.
-        // SAFETY: `CRYPTO_secure_malloc_array` reads no caller pointer.
-        let p = unsafe {
-            CRYPTO_secure_malloc_array(num_polys, core::mem::size_of::<Poly>(), file, line)
-        }
-        .cast::<Poly>();
-        if p.is_null() {
+        // The owner checks the product and its `Drop` is the cleansing release until publication.
+        let Some(block) = PolyBlock::secure_malloc(num_polys, file, line) else {
             return 0;
-        }
+        };
         // As in `alloc`: the pair is published together and the member invariant is restored.
-        self.poly = p;
+        self.poly = block.into_raw();
         self.num_poly = num_polys;
         1
     }
@@ -327,11 +397,10 @@ impl Vector {
         unsafe { VectorBuf::of(self) }.clear_secure(rank, file, line);
     }
 
-    /// `vector_zero(va)` — `ml_dsa_vector.h:66-70`.
-    pub(crate) fn zero(&mut self) {
-        if !self.poly.is_null() {
-            // SAFETY: the NULL check above means `poly` names `num_poly` polynomials.
-            unsafe { ptr::write_bytes(self.poly, 0, self.num_poly) };
+    /// `vector_zero(va)` — `ml_dsa_vector.h:66-70`, over a proven slice.
+    pub(crate) fn zero(v: &mut [Poly]) {
+        for p in v {
+            poly_zero(p);
         }
     }
 
@@ -359,29 +428,23 @@ impl Vector {
 ///
 /// # Safety
 /// Both vectors must name `num_poly` initialised polynomials, and they must not alias.
-pub(crate) unsafe fn vector_copy(dst: &mut Vector, src: &Vector) {
-    // The authority's `assert` disappears under `NDEBUG` and its `memcpy` then
-    // writes `src->num_poly` elements into `dst`. A shape mismatch is a caller
-    // error here, so refuse in release too rather than reproduce the write
-    // beyond `dst`'s extent (§17).
-    assert_eq!(dst.num_poly, src.num_poly);
-    // SAFETY: the contract says both name `num_poly` polynomials and do not alias.
-    unsafe {
-        ptr::copy_nonoverlapping(src.poly, dst.poly, src.num_poly);
-    }
+pub(crate) fn vector_copy(dst: &mut [Poly], src: &[Poly]) {
+    // The authority's `assert` disappears under `NDEBUG` and its `memcpy` then writes
+    // `src->num_poly` elements into `dst`. A shape mismatch is refused in release too rather than
+    // reproduce the write beyond `dst`'s extent (§17).
+    assert_eq!(dst.len(), src.len());
+    dst.copy_from_slice(src);
 }
 
 /// `vector_equal(a, b)` — `ml_dsa_vector.h:84-96`.
 ///
 /// # Safety
 /// Both vectors must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_equal(a: &Vector, b: &Vector) -> c_int {
-    if a.num_poly != b.num_poly {
+pub(crate) fn vector_equal(a: &[Poly], b: &[Poly]) -> c_int {
+    if a.len() != b.len() {
         return 0;
     }
-    // SAFETY: the contract says both name `num_poly` polynomials.
-    let (sa, sb) = unsafe { (a.as_slice(), b.as_slice()) };
-    for (pa, pb) in sa.iter().zip(sb.iter()) {
+    for (pa, pb) in a.iter().zip(b) {
         if poly_equal(pa, pb) == 0 {
             return 0;
         }
@@ -417,9 +480,8 @@ pub(crate) unsafe fn vector_sub(lhs: &Vector, rhs: &Vector, out: &mut Vector) {
 ///
 /// # Safety
 /// `va` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_ntt(va: &mut Vector) {
-    // SAFETY: the contract says `poly` names `num_poly` polynomials.
-    for p in unsafe { va.as_mut_slice() } {
+pub(crate) fn vector_ntt(va: &mut [Poly]) {
+    for p in va {
         ossl_ml_dsa_poly_ntt(p);
     }
 }
@@ -428,9 +490,8 @@ pub(crate) unsafe fn vector_ntt(va: &mut Vector) {
 ///
 /// # Safety
 /// `va` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_ntt_inverse(va: &mut Vector) {
-    // SAFETY: the contract says `poly` names `num_poly` polynomials.
-    for p in unsafe { va.as_mut_slice() } {
+pub(crate) fn vector_ntt_inverse(va: &mut [Poly]) {
+    for p in va {
         super::ntt::ossl_ml_dsa_poly_ntt_inverse(p);
     }
 }
@@ -458,7 +519,7 @@ pub(crate) unsafe fn vector_scale_power2_round_ntt(input: &Vector, out: &mut Vec
         poly_scale_power2_round(&si[i], &mut so[i]);
     }
     // SAFETY: `out` still names its polynomials; `poly_scale_power2_round` did not move them.
-    unsafe { vector_ntt(out) };
+    vector_ntt(unsafe { out.as_mut_slice() });
 }
 
 /// `vector_power2_round(t, t1, t0)` — `ml_dsa_vector.h:192-199`.
@@ -503,10 +564,9 @@ pub(crate) unsafe fn vector_low_bits(input: &Vector, gamma2: u32, out: &mut Vect
 ///
 /// # Safety
 /// `v` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_max(v: &Vector) -> u32 {
+pub(crate) fn vector_max(v: &[Poly]) -> u32 {
     let mut mx = 0u32;
-    // SAFETY: the contract says `v` names `num_poly` polynomials.
-    for p in unsafe { v.as_slice() } {
+    for p in v {
         poly_max(p, &mut mx);
     }
     mx
@@ -516,10 +576,9 @@ pub(crate) unsafe fn vector_max(v: &Vector) -> u32 {
 ///
 /// # Safety
 /// `v` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_max_signed(v: &Vector) -> u32 {
+pub(crate) fn vector_max_signed(v: &[Poly]) -> u32 {
     let mut mx = 0u32;
-    // SAFETY: the contract says `v` names `num_poly` polynomials.
-    for p in unsafe { v.as_slice() } {
+    for p in v {
         poly_max_signed(p, &mut mx);
     }
     mx
@@ -529,10 +588,9 @@ pub(crate) unsafe fn vector_max_signed(v: &Vector) -> u32 {
 ///
 /// # Safety
 /// `v` must name `num_poly` initialised polynomials.
-pub(crate) unsafe fn vector_count_ones(v: &Vector) -> usize {
+pub(crate) fn vector_count_ones(v: &[Poly]) -> usize {
     let mut count = 0usize;
-    // SAFETY: the contract says `v` names `num_poly` polynomials.
-    for p in unsafe { v.as_slice() } {
+    for p in v {
         for j in 0..ML_DSA_NUM_POLY_COEFFICIENTS {
             count += p.coeff[j] as usize;
         }
@@ -597,8 +655,16 @@ pub(crate) fn matrix_init(polys: *mut Poly, k: usize, l: usize) -> Matrix {
 /// # Safety
 /// `m_poly` must name at least `k * l` initialised polynomials.
 pub(crate) unsafe fn matrix_as_slice(m: &Matrix) -> &[Poly] {
+    // A shape whose product overflows cannot name a block (the authority would wrap the product
+    // and read out of bounds); the defined refusal is the empty slice (§3).
+    let Some(n) = m.k.checked_mul(m.l) else {
+        return &[];
+    };
+    if n == 0 || m.m_poly.is_null() {
+        return &[];
+    }
     // SAFETY: the contract says `m_poly` names `k * l` polynomials.
-    unsafe { core::slice::from_raw_parts(m.m_poly, m.k * m.l) }
+    unsafe { core::slice::from_raw_parts(m.m_poly, n) }
 }
 
 /// `matrix_mult_vector(a, s, t)` — `ml_dsa_matrix.h:33-37`, `ml_dsa_matrix.c:24-41`.
@@ -715,8 +781,9 @@ pub(crate) unsafe fn vector_expand_mask(
 
     // SAFETY: `out` names `num_poly` polynomials per the contract.
     let vector = unsafe { &mut *out };
-    let n = vector.num_poly;
-    for i in 0..n {
+    // SAFETY: `out` names `num_poly` polynomials per the contract.
+    let polys = unsafe { vector.as_mut_slice() };
+    for (i, p) in polys.iter_mut().enumerate() {
         let index = kappa + i as u32;
         derived_seed[ML_DSA_RHO_PRIME_BYTES] = (index & 0xFF) as u8;
         derived_seed[ML_DSA_RHO_PRIME_BYTES + 1] = ((index >> 8) & 0xFF) as u8;
@@ -724,7 +791,7 @@ pub(crate) unsafe fn vector_expand_mask(
         // `ML_DSA_RHO_PRIME_BYTES + 2`-byte buffer.
         unsafe {
             poly_expand_mask(
-                vector.poly.add(i),
+                ptr::from_mut(p),
                 derived_seed.as_ptr(),
                 derived_seed.len(),
                 gamma1,
@@ -747,3 +814,104 @@ pub(crate) const VECTOR_EXPAND_MASK_SEED_LEN: usize = ML_DSA_RHO_PRIME_BYTES + 2
 
 /// The `ML_DSA_Q` value the header spells `ML_DSA_Q`, re-exported for the units that use it.
 pub(crate) const POLY_MODULUS: u32 = ML_DSA_Q;
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used)]
+
+    use super::*;
+
+    #[test]
+    fn a_vector_allocation_round_trips_and_frees_once() {
+        let _g = crate::test_support::lock_global_state();
+        let mut v = Vector::empty();
+        // SAFETY: `v` is empty and NULL is the allocator's default coordinate.
+        assert_eq!(unsafe { v.alloc(4, ptr::null(), 0) }, 1);
+        assert_eq!(v.num_poly, 4);
+        // SAFETY: the vector owns four initialised polynomials.
+        unsafe {
+            let s = v.as_mut_slice();
+            assert_eq!(s.len(), 4);
+            s[0].coeff[0] = 7;
+            assert_eq!(s[3].coeff[0], 0);
+        }
+        // SAFETY: the block came from `alloc` and is released exactly once here.
+        unsafe { v.free(ptr::null(), 0) };
+        assert!(v.poly.is_null() && v.num_poly == 0);
+    }
+
+    #[test]
+    fn an_overflowing_element_count_is_refused_without_publication() {
+        let _g = crate::test_support::lock_global_state();
+        let mut v = Vector::empty();
+        // SAFETY: `v` is empty; the count makes the element-count product overflow.
+        assert_eq!(unsafe { v.alloc(usize::MAX, ptr::null(), 0) }, 0);
+        assert!(v.poly.is_null() && v.num_poly == 0);
+        // SAFETY: as above, through the secure arm.
+        assert_eq!(unsafe { v.secure_alloc(usize::MAX, ptr::null(), 0) }, 0);
+        assert!(v.poly.is_null() && v.num_poly == 0);
+    }
+
+    #[test]
+    fn a_matrix_with_an_overflowing_shape_names_nothing() {
+        let m = Matrix {
+            m_poly: ptr::NonNull::<Poly>::dangling().as_ptr(),
+            k: usize::MAX,
+            l: 2,
+        };
+        // SAFETY: the checked product refuses before any slice is formed, so the pointer is never
+        // read.
+        assert!(unsafe { matrix_as_slice(&m) }.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod slice_tests {
+    #![allow(clippy::panic, clippy::unwrap_used)]
+
+    use super::*;
+
+    fn poly(v: u32) -> Poly {
+        Poly {
+            coeff: [v; ML_DSA_NUM_POLY_COEFFICIENTS],
+        }
+    }
+
+    #[test]
+    fn the_safe_vector_operations_hold_their_preconditions() {
+        let mut a = [poly(1), poly(2)];
+        let mut b = [poly(3), poly(4)];
+
+        vector_copy(&mut b, &a);
+        assert_eq!(vector_equal(&a, &b), 1);
+        assert_eq!(
+            vector_equal(&a, &[poly(1)]),
+            0,
+            "a length mismatch is unequal"
+        );
+
+        Vector::zero(&mut b);
+        assert_eq!(vector_equal(&a, &b), 0);
+
+        assert_eq!(vector_max(&a), maximum(0, abs_mod_prime(2)));
+        assert_eq!(vector_max_signed(&a), abs_signed(2));
+        assert_eq!(
+            vector_count_ones(&[poly(1), poly(1)]),
+            2 * ML_DSA_NUM_POLY_COEFFICIENTS
+        );
+
+        // In-place NTT and its inverse are safe over the slice.
+        let before = a;
+        vector_ntt(&mut a);
+        assert_eq!(vector_equal(&a, &before), 0);
+        vector_ntt_inverse(&mut a);
+        // `poly_ntt` multiplies by the Montgomery factor; the round trip scales by R, so compare
+        // against the same scaling the crate's scalar NTT test uses.
+        let mut expected = before;
+        for p in &mut expected {
+            ossl_ml_dsa_poly_ntt(p);
+            super::super::ntt::ossl_ml_dsa_poly_ntt_inverse(p);
+        }
+        assert_eq!(vector_equal(&a, &expected), 1);
+    }
+}

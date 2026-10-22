@@ -164,7 +164,7 @@ are **references for technique only**.
   and abort if `available` is small. Never build into a RAM-backed tmpfs.
 - Local gate per batch: `cargo fmt --all -- --check`,
   `cargo clippy --all-targets -- -D warnings`,
-  **all current library tests pass**. The observed baseline is **1747** library
+  **all current library tests pass**. The observed floor is **1962** library
   tests (0 failed, 42 ignored; commit `a8676158f`); it will grow, so the rule is
   *no unexplained removals and no newly ignored tests* — not a frozen literal.
 - Preserve the `CRYPTO_*` allocator seam at the authority's exact size/`file`/
