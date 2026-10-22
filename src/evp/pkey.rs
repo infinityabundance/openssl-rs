@@ -86,7 +86,7 @@ use crate::dsa::object::{DSA_free, DSA_up_ref};
 use crate::dsa::Dsa;
 use crate::ec::backend::ossl_ec_key_is_foreign;
 use crate::ec::ecx_key::{ossl_ecx_key_up_ref, EcxKey};
-use crate::ec::key::{EC_KEY_get0_group, EC_KEY_get_conv_form};
+use crate::ec::key::{EC_KEY_can_sign, EC_KEY_get0_group, EC_KEY_get_conv_form};
 use crate::ec::lib::{EC_GROUP_get_curve_name, EC_GROUP_get_field_type};
 use crate::ec::EcKey;
 use crate::encoder_lib::{OSSL_ENCODER_CTX_get_num_encoders, OSSL_ENCODER_to_bio};
@@ -3140,8 +3140,9 @@ pub unsafe extern "C" fn EVP_PKEY_missing_parameters(pkey: *const EvpPkey) -> c_
 /// saying anything.
 ///
 /// The legacy arm is a switch over `EVP_PKEY_get_base_id` that reads the low-level key for the
-/// EC case; it is Phase 8's for its primitives and unreachable for its guard, since
-/// `keymgmt == NULL` with a type is a legacy origin.
+/// EC case. It is reachable: `keymgmt == NULL` with a non-zero type is precisely a legacy origin,
+/// which is how an application-assigned low-level `EC_KEY` (a P-384 certificate's key, say)
+/// reaches this function.
 ///
 /// # Safety
 /// `pkey` must be live.
@@ -3151,10 +3152,29 @@ pub unsafe extern "C" fn EVP_PKEY_can_sign(pkey: *const EvpPkey) -> c_int {
     let keymgmt = unsafe { (*pkey).keymgmt };
 
     if keymgmt.is_null() {
-        /* Phase 8: the `EVP_PKEY_RSA`/`_RSA_PSS`/`_DSA`/`_ED25519`/`_ED448`/`_EC` switch, whose EC
-         * arm calls `EC_KEY_can_sign(pkey->pkey.ec)`. Unreachable: a key with no method and a type
-         * is a legacy origin. */
-        return 0;
+        /* The authority's legacy switch (`p_lib.c:1114-1132`): RSA, RSA-PSS, DSA, ED25519 and
+         * ED448 answer 1 outright; EC — including SM2, which the authority folds into
+         * `case EVP_PKEY_EC` through the SM2 ameth's base id — asks `EC_KEY_can_sign`; every other
+         * type reaches `default` and answers 0. */
+        // SAFETY: `pkey` is live per the contract.
+        let base_id = unsafe { EVP_PKEY_get_base_id(pkey) };
+        return match base_id {
+            EVP_PKEY_RSA | EVP_PKEY_RSA_PSS | EVP_PKEY_DSA | EVP_PKEY_ED25519 | EVP_PKEY_ED448 => 1,
+            EVP_PKEY_EC | EVP_PKEY_SM2 => {
+                // SAFETY: a legacy EC/SM2 origin stores its `EC_KEY *` in the union's first slot.
+                let ec = unsafe { (*pkey).pkey.cast::<EcKey>() };
+                if ec.is_null() {
+                    // The authority dereferences this slot unconditionally; a legacy EC-type key
+                    // with no origin is an invalid state, and this crate answers 0 rather than
+                    // reproducing the NULL dereference (AGENTS.md §17).
+                    0
+                } else {
+                    // SAFETY: `ec` is the live low-level key of this legacy origin.
+                    unsafe { EC_KEY_can_sign(ec) }
+                }
+            }
+            _ => 0,
+        };
     }
 
     // SAFETY: `keymgmt` is live.
@@ -5460,6 +5480,45 @@ mod tests {
             let typed = EVP_PKEY_new();
             assert_eq!(EVP_PKEY_assign(typed, EVP_PKEY_DSA, ptr::null_mut()), 0);
             EVP_PKEY_free(typed);
+        }
+    }
+
+    /// The legacy arm of `EVP_PKEY_can_sign` answers as `p_lib.c:1114-1132` does: RSA, RSA-PSS,
+    /// DSA, ED25519, ED448 and EC answer 1, with EC asking `EC_KEY_can_sign`; DH is the authority's
+    /// `default` and answers 0.
+    #[test]
+    fn legacy_keys_answer_can_sign_like_the_authority() {
+        use crate::ec::key::EC_KEY_new_by_curve_name;
+        use crate::runtime::obj::{NID_X9_62_prime256v1, NID_secp384r1};
+        // SAFETY: every object is created here and either transferred to a key (which frees it) or
+        // freed directly.
+        unsafe {
+            for curve in [NID_X9_62_prime256v1, NID_secp384r1] {
+                let pkey = EVP_PKEY_new();
+                let ec = EC_KEY_new_by_curve_name(curve);
+                assert!(!pkey.is_null() && !ec.is_null(), "curve {curve}");
+                assert_eq!(EVP_PKEY_assign(pkey, EVP_PKEY_EC, ec.cast()), 1);
+                assert_eq!(EVP_PKEY_can_sign(pkey), 1, "legacy EC curve {curve}");
+                EVP_PKEY_free(pkey);
+            }
+
+            let rsa_key = EVP_PKEY_new();
+            let rsa = crate::rsa::object::RSA_new();
+            assert!(!rsa_key.is_null() && !rsa.is_null());
+            assert_eq!(EVP_PKEY_assign(rsa_key, EVP_PKEY_RSA, rsa.cast()), 1);
+            assert_eq!(EVP_PKEY_can_sign(rsa_key), 1, "legacy RSA");
+            EVP_PKEY_free(rsa_key);
+
+            let dh_key = EVP_PKEY_new();
+            let dh = crate::dh::object::DH_new();
+            assert!(!dh_key.is_null() && !dh.is_null());
+            assert_eq!(EVP_PKEY_assign(dh_key, EVP_PKEY_DH, dh.cast()), 1);
+            assert_eq!(
+                EVP_PKEY_can_sign(dh_key),
+                0,
+                "DH is the authority's default"
+            );
+            EVP_PKEY_free(dh_key);
         }
     }
 
