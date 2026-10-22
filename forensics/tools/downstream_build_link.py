@@ -2003,6 +2003,14 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 L7 onboarding batch (b15): ten consumers with a deterministic local
+    # workload.  Same pristine-source/aux seam; yara and bruteforce-salted-openssl regenerate
+    # their configure with the pinned bookworm autotools, and ircii takes ncurses/tinfo headers
+    # through the auxiliary seam.
+    for spec in _L7_ONBOARD_SPECS_D:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     # The declarative template cohort.  Each entry is a small config row (URL + SHA-256 +
     # build-system fields + a bucket workload) rather than a bespoke recipe; the same pristine
     # acquire/configure/make path is used, and `{prefix}` is still the only substitution.
@@ -2844,6 +2852,322 @@ _L7_ONBOARD_SPECS: tuple[dict, ...] = (
 # while the same client against the authority completes.  h2o 2.2.6 shows the same shape
 # (authority completes the handshake; the candidate closes it mid-handshake).  Both are
 # candidate-side divergences recorded for repair, not compatibility results.
+
+# --------------------------------------------------------------------------------------------
+# Phase-25 L7 onboarding batch (b15).
+#
+# Ten consumers whose OpenSSL path can be driven by a deterministic local workload.  Every
+# archive is pinned by digest and built against exactly one subject prefix; non-OpenSSL
+# dependencies come from pinned bookworm packages through the aux seam, so the subject prefix
+# remains the only OpenSSL on the link line.  yara and bruteforce-salted-openssl ship no
+# generated `configure`, so the recipe regenerates it with the same pinned autotools the
+# lighttpd recipe uses (a build input, never a source edit).
+_ONBOARD_AUTOTOOLS_AUX: tuple[dict, ...] = (
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+)
+
+# The pinned autotools are extracted under the aux root; these wrappers point them at that
+# root (their installed scripts hardcode /usr/share).  The generated files are build inputs.
+_ONBOARD_AUTOTOOLS_BOOTSTRAP = (
+    "set -e; W={root}/.autotools; mkdir -p $W; "
+    "sed -i 's#/usr/share#{aux}/usr/share#g' {aux}/usr/bin/libtoolize; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/share/autoconf/autom4te.cfg; "
+    "sed -i 's#/usr/share/automake-1.16#{aux}/usr/share/automake-1.16#g' "
+    "{aux}/usr/bin/aclocal-1.16 {aux}/usr/bin/automake-1.16; "
+    "sed -i 's#/usr/share/aclocal#{aux}/usr/share/aclocal#g' {aux}/usr/bin/aclocal-1.16; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/bin/autoconf {aux}/usr/bin/autoheader; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+    "--system-acdir={aux}/usr/share/aclocal-1.16 "
+    "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+    "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+    "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+    "autoreconf -fi"
+)
+
+_ONBOARD_AUTOTOOLS_ENV = {
+    "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+    "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+    "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal",
+    "AUTOM4TE": "{aux}/usr/bin/autom4te",
+    "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+    "AC_MACRODIR": "{aux}/usr/share/autoconf",
+    "M4": "{aux}/usr/bin/m4",
+    "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+    "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+    "AUTOCONF": "{aux}/usr/bin/autoconf",
+    "AUTOHEADER": "{aux}/usr/bin/autoheader",
+    "AUTOMAKE": "{root}/.autotools/automake",
+    "ACLOCAL": "{root}/.autotools/aclocal",
+    "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+}
+
+# ssldump 1.8 needs libpcap, libnet and json-c (and the dbus runtime Debian's libpcap links).
+_ONBOARD_SSLDUMP_AUX: tuple[dict, ...] = (
+    _aux_deb("libp/libpcap", "libpcap0.8_1.10.3-1_amd64.deb",
+             "856014904c4d7ec9a9ba864c546d91c059b9bf00c7c89eda6fd0a16045f8faac",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libp/libpcap", "libpcap0.8-dev_1.10.3-1_amd64.deb",
+             "5f66e87262e42cc42a77d6acdb41098e4ff3e6db3bdba1b73189dea5a3afb88c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             bin_dirs=("usr/bin",)),
+    _aux_deb("d/dbus", "libdbus-1-3_1.14.10-1~deb12u1_amd64.deb",
+             "18ee0ce5fab9f7b671e87da1e9fa18660e36e04a3402f24bdb8635e0ba1d35f6",
+             library_dirs=("lib/x86_64-linux-gnu",)),
+    _aux_deb("d/dbus", "libdbus-1-dev_1.14.10-1~deb12u1_amd64.deb",
+             "967a42e91eaa7d1885721b374a28cb0d30a0e63daaccf5e3594180bec6072c76",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libn/libnet", "libnet1_1.1.6+dfsg-3.2_amd64.deb",
+             "9e0677a92de3df272e3a87a4e1591a71cb8c03fdea2bac68908ac4177066bb7f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libn/libnet", "libnet1-dev_1.1.6+dfsg-3.2_amd64.deb",
+             "7cdbdbfe6d45dcff469667d8c990b02006964b556ee97bc60b70a149f1a07e7a",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("j/json-c", "libjson-c5_0.16-2_amd64.deb",
+             "d0e1ed8637d1c26b9720f6057d6355f18378bba5cc2553e459d1632783c00d70",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("j/json-c", "libjson-c-dev_0.16-2_amd64.deb",
+             "b91a921675bde7c777930f9f77e49010a754d787219104464ea0fce04a887337",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# ircii needs a terminal library and the termcap compatibility header.
+_ONBOARD_IRCII_AUX: tuple[dict, ...] = (
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("n/ncurses", "libtinfo-dev_6.4-4_amd64.deb",
+             "e1935c2006661f1cda0bfd35f12ea30f9d64a110f30a074d512efe6c9466bf86",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             links={"usr/lib/x86_64-linux-gnu/libtermcap.so": "libtinfo.so"}),
+)
+
+# xmlsec1's OpenSSL backend needs libxml2 (with the ICU headers Debian's libxml2 requires).
+_ONBOARD_XMLSEC_AUX: tuple[dict, ...] = (
+    _aux_deb("libx/libxml2", "libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "4460e39dda10a815881374217cde08474747cfa018358cd8612c14b390eff53b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libx/libxml2", "libxml2-dev_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "e8ceacf656b1720e7a310e1d159439a356bfcb9f5fb0325907f26aa8590e5f70",
+             include_dirs=("usr/include", "usr/include/libxml2"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("i/icu", "libicu-dev_72.1-3+deb12u1_amd64.deb",
+             "08bd4e3f4bd4fc725cf25e739edf0e7df5ac1826bdac9a7d990eea8f93b2d7a0",
+             include_dirs=("usr/include",)),
+)
+
+# libevhtp's TLS path links the split libevent_openssl/core/extra/pthreads shared objects, each
+# of which is its own Debian runtime package (the monolithic package carries only libevent.so).
+_ONBOARD_LIBEVENT_AUX: tuple[dict, ...] = tuple(_LIBEVENT_AUX) + (
+    _aux_deb("libe/libevent", "libevent-core-2.1-7_2.1.12-stable-8_amd64.deb",
+             "4cebf4a24fb222ddbc5569df9960c5ff2da8b7ed71a02e13c79a59dcaf3b518a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libe/libevent", "libevent-extra-2.1-7_2.1.12-stable-8_amd64.deb",
+             "d9a04bd914fa70b9cd0c8f098c23d9e7b372ad69624901fbde4bc34c9af34c18",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libe/libevent", "libevent-pthreads-2.1-7_2.1.12-stable-8_amd64.deb",
+             "798bbe7f492e176c287fc211e4a670eb64b10952720a036927357980d9a4a4b0",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libe/libevent", "libevent-openssl-2.1-7_2.1.12-stable-8_amd64.deb",
+             "95e143ffc207f890f0069df588c1fcdca2962a209062859e3e7750680510f293",
+             library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# Apache's static mod_ssl build probes PCRE2 through its own -config script.
+_ONBOARD_HTTPD_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,), bin_dirs=("usr/bin",)),
+)
+
+_L7_ONBOARD_SPECS_D: tuple[dict, ...] = (
+    {
+        "family": "vsftpd", "version": "3.0.5",
+        "url": "https://security.appspot.com/downloads/vsftpd-3.0.5.tar.gz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "26b602ae454b0ba6d99ef44a09b6b9e0dfa7f67228106736df1f278c70bc91d3",
+        "configure": None,
+        "pre_build": [["sed", "-i", "s/^#undef VSF_BUILD_SSL/#define VSF_BUILD_SSL/",
+                       "builddefs.h"]],
+        "make": [MAKE_JOBS,
+                 "CFLAGS=-O2 -fPIE -fstack-protector --param=ssp-buffer-size=4 -Wall -W "
+                 "-Wshadow -Wformat-security -D_FORTIFY_SOURCE=2 -I{prefix}/include",
+                 "LINK=-Wl,-s -L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "vsftpd", "launch": None,
+        "note": ("vsftpd 3.0.5's control/data SSL path linked to the subject libssl; the admitted "
+                 "workload logs in over AUTH TLS, protects the data channel and retrieves the "
+                 "fixture, while a client trusting an unrelated CA is refused.  The recipe enables "
+                 "upstream's disabled VSF_BUILD_SSL in builddefs.h as a build input."),
+    },
+    {
+        "family": "apache2-bin", "version": "2.4.62",
+        "url": "https://archive.apache.org/dist/httpd/httpd-2.4.62.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "3e2404d762a2da03560d7ada379ba1599d32f04a0d70ad6ff86f44325f2f062d",
+        "configure": ["--with-ssl={prefix}", "--enable-ssl", "--enable-mods-static=ssl",
+                      "--with-apr=/usr/bin/apr-1-config",
+                      "--with-apr-util=/usr/bin/apu-1-config",
+                      "--with-pcre={aux}/usr/bin/pcre2-config",
+                      "--disable-authn-file", "--disable-authz-user",
+                      "--disable-authz-groupfile", "--disable-authz-host",
+                      "--disable-auth-digest", "--with-mpm=event"],
+        "make": [MAKE_JOBS], "artifact": "httpd", "launch": ["-v"],
+        "aux_sources": list(_ONBOARD_HTTPD_AUX),
+        "note": ("Apache httpd 2.4.62 with mod_ssl compiled statically into the measured binary; "
+                 "the admitted workload serves the fixture over verified TLS and a client trusting "
+                 "an unrelated CA rejects the server certificate."),
+    },
+    {
+        "family": "neon", "version": "0.34.0",
+        "url": "https://notroj.github.io/neon/neon-0.34.0.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "2e3ee8535039966c80764f539d5c9bfee1651a17e2f36e5ca462632181253977",
+        "configure": ["--with-ssl=openssl", "--with-expat", "--enable-shared",
+                      "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "src/.libs/libneon.so*", "launch": None,
+        "env_extra": {"ne_cv_libsfor_SSL_library_init": "-lssl"},
+        "note": ("libneon 0.34.0's OpenSSL TLS client linked to the subject libssl; the admitted "
+                 "harness fetches the fixture over verified TLS and an unrelated CA is refused."),
+    },
+    {
+        "family": "cjose", "version": "0.8.1",
+        "url": "https://github.com/cisco/cjose/archive/refs/tags/0.8.1.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "1ee864ba216cfc2c38726b80b082abcee2772569241a6a822c6bd8d3fd35b8ae",
+        "configure": ["--with-openssl={prefix}", "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "src/.libs/libcjose.so*", "launch": None,
+        "note": ("cjose 0.8.1's JWS HS256 path linked to the subject libcrypto; the admitted "
+                 "harness signs, imports and verifies a compact JWS and rejects a tampered "
+                 "signature and a wrong key."),
+    },
+    {
+        "family": "ssldump", "version": "1.8",
+        "url": "https://github.com/adulau/ssldump/archive/refs/tags/v1.8.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "fa1bb14034385487cc639fb32c12a5da0f8fbfee4603f4e101221848e46e72b3",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix};{aux}/usr",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                      "-L{aux}/usr/lib/x86_64-linux-gnu -L{aux}/lib/x86_64-linux-gnu "
+                      "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu "
+                      "-Wl,-rpath,{aux}/lib/x86_64-linux-gnu -Wl,-l:libdbus-1.so.3"],
+        "make": [], "artifact": "b/ssldump", "launch": ["-v"],
+        "aux_sources": list(_ONBOARD_SSLDUMP_AUX),
+        "note": ("ssldump 1.8's TLS record parser linked to the subject libcrypto; the admitted "
+                 "workload captures a live loopback handshake and prints its ClientHello and "
+                 "ServerHello, while a plaintext exchange yields no handshake record."),
+    },
+    {
+        "family": "yara", "version": "4.5.2",
+        "url": "https://github.com/VirusTotal/yara/archive/refs/tags/v4.5.2.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "1f87056fcb10ee361936ee7b0548444f7974612ebb0e681734d8de7df055d1ec",
+        "configure": ["--with-crypto", "--disable-magic", "--disable-cuckoo"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libyara.so*", "launch": ["--version"],
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "note": ("YARA 4.5.2's hash module linked to the subject libcrypto; the admitted workload "
+                 "matches a rule against the fixture's SHA-256 and a wrong digest does not match."),
+    },
+    {
+        "family": "bruteforce-salted-openssl", "version": "1.4.2",
+        "url": ("https://github.com/glv2/bruteforce-salted-openssl/archive/refs/tags/"
+                "1.4.2.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "324092e60833329a13756b43c51269c1bd4a8cd339490217746ae0ee534efbac",
+        "configure": [], "make": [MAKE_JOBS],
+        "artifact": "bruteforce-salted-openssl", "launch": ["-h"],
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "note": ("bruteforce-salted-openssl 1.4.2's EVP decrypt path linked to the subject "
+                 "libcrypto; the admitted workload recovers the password from a pinned salted "
+                 "ciphertext and a word list without it yields no candidate."),
+    },
+    {
+        "family": "ircii", "version": "20240918",
+        "url": "https://ircii.warped.com/ircii-20240918.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "f4b9b380ba5143261a3ef219abfdef749c44ce4f669908da60bc3997af649ca9",
+        "configure": [],
+        "make": [MAKE_JOBS,
+                 "CFLAGS=-pipe -g -O2 -I{prefix}/include -I{aux}/usr/include",
+                 "INCLUDES=-I. -I{root}/include -I{aux}/usr/include",
+                 "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                 "-L{aux}/usr/lib/x86_64-linux-gnu -Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"],
+        "artifact": "irc", "launch": ["-v"],
+        "aux_sources": list(_ONBOARD_IRCII_AUX),
+        "note": ("ircII 20240918's OpenSSL client (source/ssl.c) linked to the subject libssl; "
+                 "the admitted workload registers and joins the fixture channel over verified "
+                 "TLS, while a client trusting an unrelated CA never registers."),
+    },
+    {
+        "family": "libevhtp", "version": "1.2.18",
+        "url": "https://github.com/criticalstack/libevhtp/archive/refs/tags/1.2.18.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "316ede0d672be3ae6fe489d4ac1c8c53a1db7d4fe05edaff3c7c853933e02795",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix};{aux}/usr",
+                      "-DEVHTP_DISABLE_SSL=OFF", "-DEVHTP_DISABLE_REGEX=ON",
+                      "-DBUILD_SHARED_LIBS=ON",
+                      "-DLIBEVENT_INCLUDE_DIR={aux}/usr/include",
+                      "-DLIBEVENT_LIBRARY={aux}/usr/lib/x86_64-linux-gnu/libevent.so",
+                      "-DLIBEVENT_CORE={aux}/usr/lib/x86_64-linux-gnu/libevent_core.so",
+                      "-DLIBEVENT_EXTRA={aux}/usr/lib/x86_64-linux-gnu/libevent_extra.so",
+                      "-DLIBEVENT_THREAD={aux}/usr/lib/x86_64-linux-gnu/libevent_pthreads.so",
+                      "-DLIBEVENT_SSL={aux}/usr/lib/x86_64-linux-gnu/libevent_openssl.so",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                      "-L{aux}/usr/lib/x86_64-linux-gnu "
+                      "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"],
+        "make": [], "artifact": "b/libevhtp.so*", "launch": None,
+        "aux_sources": list(_ONBOARD_LIBEVENT_AUX),
+        "note": ("libevhtp 1.2.18's TLS server path linked to the subject libssl; the admitted "
+                 "harness serves the fixture over verified TLS and an unrelated CA is refused."),
+    },
+    {
+        "family": "libxmlsec1", "version": "1.3.12",
+        "url": "https://github.com/lsh123/xmlsec/releases/download/1.3.12/xmlsec1-1.3.12.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "24045199af12d93fe5fdbbbf7e386e823e4842071e9432e2b90ac108b889a923",
+        "configure": ["--with-openssl={prefix}", "--with-default-crypto=openssl",
+                      "--enable-apps", "--disable-apps-crypto-dl", "--disable-crypto-dl"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/openssl/.libs/libxmlsec1-openssl.so*", "launch": None,
+        "aux_sources": list(_ONBOARD_XMLSEC_AUX),
+        "note": ("xmlsec1 1.3.12's OpenSSL backend linked to the subject libcrypto; the admitted "
+                 "xmlsec1 CLI signs a document with RSA-SHA256, verifies it, and rejects a "
+                 "tampered document."),
+    },
+)
+
 _L7_ONBOARD_SPECS_C: tuple[dict, ...] = (
     {
         "family": "icecast2", "version": "2.4.4",
