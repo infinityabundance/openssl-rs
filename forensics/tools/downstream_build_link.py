@@ -1390,17 +1390,21 @@ _L7_EGGDROP_AUX: tuple[dict, ...] = (
              include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
 )
 
-# irssi 1.4.5 needs GLib (headers and .pc) and ncurses headers. The image carries the GLib runtime
-# library but not its development symlink, so the pinned dev package's `libglib-2.0.so` is repointed
-# at the already-installed runtime (same 2.74.6 build); libpcre2-dev supplies the `libpcre2-8`
-# pkg-config module glib-2.0.pc requires.
+# irssi 1.4.5 needs GLib (headers, .pc, shared objects), pcre2 and ncurses headers. The image ships
+# no GLib at all, so both the pinned runtime package (which carries `libglib-2.0.so.0` and
+# `libgmodule-2.0.so.0`) and the dev package are extracted into the family's aux root; the dev
+# package's own `libglib-2.0.so`/`libgmodule-2.0.so` symlinks then resolve there. Repointing the
+# linker name at a venue path instead left it dangling, so ld silently fell back to the static
+# `libglib-2.0.a`, whose private pcre2 dependency is not on irssi's link line and the link failed.
+# libpcre2-dev supplies the `libpcre2-8` pkg-config module glib-2.0.pc requires.
 _L7_IRSSI_AUX: tuple[dict, ...] = (
+    _aux_deb("g/glib2.0", "libglib2.0-0_2.74.6-2+deb12u9_amd64.deb",
+             "7ff85197685d89e150e342b29a59aab1beee400050ba7da73de81cd999ffee5a",
+             library_dirs=(_AUX_MULTIARCH,)),
     _aux_deb("g/glib2.0", "libglib2.0-dev_2.74.6-2+deb12u9_amd64.deb",
              "217766f170553e14884f7d67c0636b833da43c1e4a65dfe41268ba1292001ccd",
              include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
-             pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
-             links={"usr/lib/x86_64-linux-gnu/libglib-2.0.so":
-                    "/lib/x86_64-linux-gnu/libglib-2.0.so.0"}),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
     _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
              "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
              library_dirs=(_AUX_MULTIARCH,)),
