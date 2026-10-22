@@ -17,6 +17,7 @@
 #include <sofia-sip/sip.h>
 #include <sofia-sip/sip_header.h>
 #include <sofia-sip/su.h>
+#include <sofia-sip/su_log.h>
 #include <sofia-sip/su_wait.h>
 #include <sofia-sip/msg.h>
 #include <sofia-sip/tport.h>
@@ -24,12 +25,15 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 static const char PAYLOAD[] = "sofia-sip-l7-payload";
+
+extern su_log_t tport_log[];
 
 struct stack {
     int received;
@@ -41,7 +45,7 @@ static void stack_recv(tp_stack_t *stack, tport_t *tp, msg_t *msg,
                        tp_magic_t *magic, su_time_t received)
 {
     struct stack *s = (struct stack *)stack;
-    sip_t const *sip = (sip_t const *)msg_public(msg, NULL);
+    sip_t const *sip = (sip_t const *)msg_object(msg);
 
     (void)tp;
     (void)magic;
@@ -111,8 +115,7 @@ static int install_ca(char const *dir, char const *ca)
 
 static int bind_tls(tport_t *master, char const *certdir, int server)
 {
-    tp_name_t name[1] = {{ "tls", "127.0.0.1", server ? "*" : "*", "*",
-                           server ? "server" : "client", NULL }};
+    tp_name_t name[1] = {{ "tls", "*", "127.0.0.1", "*", NULL, "l7" }};
     char const *transports[] = { "tls", NULL };
 
     if (server)
@@ -121,7 +124,7 @@ static int bind_tls(tport_t *master, char const *certdir, int server)
                            TAG_END());
     return tport_tbind(master, name, transports, TPTAG_SERVER(0),
                        TPTAG_CERTIFICATE(certdir), TPTAG_TLS_VERSION(0),
-                       TPTAG_TLS_VERIFY_PEER(1), TAG_END());
+                       TPTAG_TLS_VERIFY_PEER(1), TPTAG_TLS_VERIFY_DEPTH(4), TAG_END());
 }
 
 static int run_session(char const *server_dir, char const *client_dir, char *got,
@@ -135,8 +138,6 @@ static int run_session(char const *server_dir, char const *client_dir, char *got
     char port[16];
     tp_name_t dst[1];
     msg_t *msg;
-    sip_request_t *rq;
-    sip_payload_t *pl;
     int i;
 
     memset(&stack, 0, sizeof(stack));
@@ -148,24 +149,38 @@ static int run_session(char const *server_dir, char const *client_dir, char *got
     cli = tport_tcreate((tp_stack_t *)&stack, stack_class, root, TAG_END());
     if (srv == NULL || cli == NULL)
         return -1;
-    if (bind_tls(srv, server_dir, 1) < 0 || bind_tls(cli, client_dir, 0) < 0)
+    if (bind_tls(srv, server_dir, 1) < 0) {
+        fprintf(stderr, "harness: server bind failed (errno=%d)\n", errno);
         return -1;
+    }
+    if (bind_tls(cli, client_dir, 0) < 0) {
+        fprintf(stderr, "harness: client bind failed (errno=%d)\n", errno);
+        return -1;
+    }
     tp = tport_primaries(srv);
     ai = tport_get_address(tp);
-    if (ai == NULL || ai->ai_addr == NULL)
+    if (ai == NULL || ai->ai_addr == NULL) {
+        fprintf(stderr, "harness: server has no bound address\n");
         return -1;
+    }
     snprintf(port, sizeof(port), "%u", ntohs(((struct sockaddr_in *)ai->ai_addr)->sin_port));
 
-    msg = msg_create(sip_default_mclass(), 0);
+    {
+        static char const raw[] =
+            "MESSAGE sip:server@127.0.0.1 SIP/2.0\r\n"
+            "Via: SIP/2.0/TLS 127.0.0.1;branch=z9hG4bK-l7\r\n"
+            "From: <sip:client@127.0.0.1>;tag=l7\r\n"
+            "To: <sip:server@127.0.0.1>\r\n"
+            "Call-ID: l7@127.0.0.1\r\n"
+            "CSeq: 1 MESSAGE\r\n"
+            "Max-Forwards: 70\r\n"
+            "Content-Type: text/plain\r\n"
+            "Content-Length: 20\r\n"
+            "\r\n"
+            "sofia-sip-l7-payload";
+        msg = msg_make(sip_default_mclass(), 0, raw, (int)sizeof(raw) - 1);
+    }
     if (msg == NULL)
-        return -1;
-    rq = sip_request_make(msg_home(msg), "MESSAGE sip:server@127.0.0.1 SIP/2.0");
-    if (rq == NULL || msg_header_insert(msg, msg_public(msg, NULL), (msg_header_t *)rq) < 0)
-        return -1;
-    pl = sip_payload_make(msg_home(msg), PAYLOAD);
-    if (pl == NULL || msg_header_insert(msg, msg_public(msg, NULL), (msg_header_t *)pl) < 0)
-        return -1;
-    if (msg_serialize(msg, msg_public(msg, NULL)) < 0)
         return -1;
 
     memset(dst, 0, sizeof(dst));
@@ -174,10 +189,15 @@ static int run_session(char const *server_dir, char const *client_dir, char *got
     dst->tpn_host = "127.0.0.1";
     dst->tpn_port = port;
     if (tport_tsend(tport_primaries(cli), msg, dst, TAG_END()) == NULL)
+    {
+        fprintf(stderr, "harness: tport_tsend returned NULL\n");
         return -1;
+    }
 
     for (i = 0; i < 100 && !stack.received; i++)
         su_root_step(root, 100);
+    if (!stack.received)
+        fprintf(stderr, "harness: no message received (error=%d)\n", stack.error);
     if (stack.received)
         snprintf(got, gotlen, "%s", stack.payload);
     return stack.received ? 0 : -1;
@@ -193,6 +213,9 @@ int main(int argc, char **argv)
     char path[256], cmd[512];
     char got[256], good_payload[256] = "";
     int i, good, bad;
+
+    if (getenv("L7_SOFIA_DEBUG") != NULL)
+        su_log_set_level(tport_log, 9);
 
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--version") == 0) {
@@ -226,16 +249,21 @@ int main(int argc, char **argv)
     }
     if (mkdtemp(srv_dir) == NULL || mkdtemp(cli_dir) == NULL || mkdtemp(bad_dir) == NULL)
         return 1;
-    snprintf(cmd, sizeof(cmd), "cat '%s' '%s' > '%s/agent.pem'; : > '%s/tls_seed.dat'; "
-             "cp '%s' '%s/cafile.pem'", cert, key, srv_dir, srv_dir, ca, srv_dir);
+    /* tport presents agent.pem with SSL_CTX_use_certificate_file(), which sends only the first
+     * certificate. The fixture therefore puts the leaf and its issuing CA in that one file, so
+     * the peer can build the chain to the cafile.pem trust anchor. */
+    snprintf(cmd, sizeof(cmd), "cat '%s' '%s' '%s' > '%s/agent.pem'; : > '%s/tls_seed.dat'; "
+             "cp '%s' '%s/cafile.pem'", cert, ca, key, srv_dir, srv_dir, ca, srv_dir);
     if (system(cmd) != 0)
         return 1;
-    snprintf(cmd, sizeof(cmd), "cat '%s' '%s' > '%s/agent.pem'; : > '%s/tls_seed.dat'; "
-             "cp '%s' '%s/cafile.pem'", client_cert, client_key, cli_dir, cli_dir, ca, cli_dir);
+    snprintf(cmd, sizeof(cmd), "cat '%s' '%s' '%s' > '%s/agent.pem'; : > '%s/tls_seed.dat'; "
+             "cp '%s' '%s/cafile.pem'", client_cert, ca, client_key, cli_dir, cli_dir, ca,
+             cli_dir);
     if (system(cmd) != 0 || install_ca(cli_dir, ca) != 0)
         return 1;
-    snprintf(cmd, sizeof(cmd), "cat '%s' '%s' > '%s/agent.pem'; : > '%s/tls_seed.dat'; "
-             "cp '%s' '%s/cafile.pem'", client_cert, client_key, bad_dir, bad_dir, other_ca, bad_dir);
+    snprintf(cmd, sizeof(cmd), "cat '%s' '%s' '%s' > '%s/agent.pem'; : > '%s/tls_seed.dat'; "
+             "cp '%s' '%s/cafile.pem'", client_cert, other_ca, client_key, bad_dir, bad_dir,
+             other_ca, bad_dir);
     if (system(cmd) != 0 || install_ca(bad_dir, other_ca) != 0)
         return 1;
 
