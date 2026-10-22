@@ -3,6 +3,12 @@
  "task_id": "SAFE-C33-001",
  "title": "Safe-33 closure inventory: drop-in-compatible downstream families and their internal ownership mechanisms",
  "branch": "integrate/safe-c33",
+ "superseded": true,
+ "superseded_by": [
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+  "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md"
+ ],
+ "superseded_note": "Historical closure inventory bound to head_sha 67ae7f8e and crate 0.0.27. Census, cohort and worklist figures other than the two corrected worklist states below are as-of that HEAD and are retained unchanged; do not read them as the current state. Current mechanism states: ERR-1 SAFETY_DISCHARGED (mechanism-discharge-ERR.json); BIO CONTRACTED (B39/B40 boundaries independently checked, mechanism not discharged); RUNTIME_ALLOC_OWNERSHIP UNSAFE_OPEN.",
  "base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
  "base_ref": "origin/main",
  "head_sha": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
@@ -945,7 +951,9 @@
    "rank": 1,
    "mechanism": "ERR",
    "families_unlocked": 33,
-   "state": "UNSAFE_OPEN",
+   "state": "SAFETY_DISCHARGED",
+   "state_source": "atlas-refresh/mechanism-discharge-ERR.json (mechanism scope only; consumers remain 0/33)",
+   "state_note": "Corrected from UNSAFE_OPEN at the 2026-10-22 reconciliation; this worklist entry was bound to head_sha 67ae7f8e.",
    "already_on_branch": [],
    "next_action": "audit crypto/err sites in src/runtime/err* and ssl_err_legacy; model the error-queue/ERR_STATE ownership; prove the per-site contract"
   },
@@ -965,7 +973,9 @@
    "rank": 3,
    "mechanism": "BIO",
    "families_unlocked": 32,
-   "state": "UNSAFE_OPEN",
+   "state": "CONTRACTED",
+   "state_source": "atlas-refresh/boundary-sweep-B39.json and boundary-sweep-B40.json (boundary scope independently checked; BIO mechanism not discharged)",
+   "state_note": "Corrected from UNSAFE_OPEN at the 2026-10-22 reconciliation; 73 SSL BIO call sites remain unaudited.",
    "already_on_branch": [],
    "next_action": "audit crypto/bio (src/runtime/bio, core_bio, bio_ssl, method/ctrl callbacks); BIO method-table ownership"
   },

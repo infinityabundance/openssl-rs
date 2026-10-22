@@ -12,12 +12,14 @@
       "authority_applicable_level": {
         "family:aircrack-ng": "L7-functional",
         "family:apache2-utils": "L7-functional",
+        "family:appx-util": "L0-catalogued",
         "family:apr-util": "L7-functional",
         "family:arm-trusted-firmware-tools": "L7-functional",
         "family:axel": "L7-functional",
         "family:bannergrab": "L7-functional",
         "family:cowpatty": "L7-functional",
         "family:curl": "L7-functional",
+        "family:curl-minimal": "L0-catalogued",
         "family:cyrus-sasl": "L7-functional",
         "family:dcap-tunnel-ssl": "L7-functional",
         "family:dovecot": "L7-functional",
@@ -30,14 +32,18 @@
         "family:fetchmail": "L7-functional",
         "family:fido2": "L7-functional",
         "family:fossil": "L7-functional",
+        "family:fsverity-utils": "L0-catalogued",
         "family:gensio": "L7-functional",
         "family:getdns": "L7-functional",
+        "family:gmnisrv": "L0-catalogued",
+        "family:gostsum": "L0-catalogued",
         "family:haproxy": "L7-functional",
         "family:hcxtools": "L7-functional",
         "family:hiredis-ssl": "L7-functional",
         "family:hitch": "L7-functional",
         "family:httperf": "L7-functional",
         "family:httping": "L7-functional",
+        "family:httrack": "L0-catalogued",
         "family:icecast": "L7-functional",
         "family:iperf3": "L7-functional",
         "family:irssi": "L7-functional",
@@ -86,6 +92,7 @@
         "family:nsd": "L7-functional",
         "family:opendkim": "L7-functional",
         "family:openssh": "L7-functional",
+        "family:openssh-client": "L0-catalogued",
         "family:openssh-server": "L7-functional",
         "family:openvpn": "L7-functional",
         "family:osslsigncode": "L7-functional",
@@ -96,8 +103,10 @@
         "family:pure-ftpd": "L7-functional",
         "family:radsecproxy": "L7-functional",
         "family:redis": "L7-functional",
+        "family:rhash": "L0-catalogued",
         "family:rsync": "L7-functional",
         "family:s-nail": "L7-functional",
+        "family:siege": "L0-catalogued",
         "family:slrn": "L7-functional",
         "family:socat": "L7-functional",
         "family:sofia-sip": "L7-functional",
@@ -112,6 +121,7 @@
         "family:tnftp": "L7-functional",
         "family:u-boot-tools": "L7-functional",
         "family:w3m": "L7-functional",
+        "family:wrk": "L0-catalogued",
         "family:znc": "L7-functional"
       },
       "by_subject": {
@@ -123,31 +133,30 @@
           "runtime": 102
         },
         "candidate": {
-          "failed": 1,
-          "functional": 100,
+          "failed": 0,
+          "functional": 101,
           "loaded": 102,
           "not_attempted": 898,
-          "runtime": 101
+          "runtime": 102
         }
       },
-      "candidate_baseline_not_linked": 1,
-      "candidate_below_baseline": 1,
+      "candidate_baseline_not_linked": 11,
+      "candidate_below_baseline": 0,
       "candidate_failures": {
-        "acquire-failure": 897,
-        "functional-failure": 1,
-        "link-failure": 1
+        "acquire-failure": 887,
+        "link-failure": 11
       },
-      "candidate_reaches_baseline": 102,
-      "candidate_reaches_linked_baseline": 101,
+      "candidate_reaches_baseline": 113,
+      "candidate_reaches_linked_baseline": 102,
       "candidate_specific_patch_count": 0,
-      "no_recipe": 897,
+      "no_recipe": 887,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 103
+      "with_recipe": 113
     },
     "evidence_reuse": {
       "candidate_identity_match": false,
-      "families_reused": 101,
+      "families_reused": 102,
       "mode": "committed-rows-carried-forward",
       "reused_families": [
         "aircrack-ng",
@@ -177,11 +186,11 @@
         "hiredis-ssl",
         "hitch",
         "httperf",
+        "httping",
         "icecast",
         "iperf3",
         "irssi",
         "isync",
-        "jimtcl",
         "jwt",
         "kea",
         "keepalived",
@@ -239,6 +248,7 @@
         "s-nail",
         "slrn",
         "socat",
+        "sofia-sip",
         "squid",
         "sslscan",
         "sslsplit",
@@ -885,6 +895,66 @@
         "program": "httping",
         "recipe_id": "recipe:httping:2.5",
         "version": "2.5"
+      },
+      {
+        "family": "rhash",
+        "program": "rhash",
+        "recipe_id": "recipe:rhash:1.4.5",
+        "version": "1.4.5"
+      },
+      {
+        "family": "fsverity-utils",
+        "program": "fsverity",
+        "recipe_id": "recipe:fsverity-utils:1.6",
+        "version": "1.6"
+      },
+      {
+        "family": "gostsum",
+        "program": "b/bin/gostsum",
+        "recipe_id": "recipe:gostsum:3.0.3+git20251212.7f6d61a",
+        "version": "3.0.3+git20251212.7f6d61a"
+      },
+      {
+        "family": "siege",
+        "program": "src/siege",
+        "recipe_id": "recipe:siege:4.1.6",
+        "version": "4.1.6"
+      },
+      {
+        "family": "wrk",
+        "program": "wrk",
+        "recipe_id": "recipe:wrk:4.2.0",
+        "version": "4.2.0"
+      },
+      {
+        "family": "httrack",
+        "program": "src/.libs/httrack",
+        "recipe_id": "recipe:httrack:3.49.2",
+        "version": "3.49.2"
+      },
+      {
+        "family": "curl-minimal",
+        "program": "src/.libs/curl",
+        "recipe_id": "recipe:curl-minimal:8.10.1",
+        "version": "8.10.1"
+      },
+      {
+        "family": "gmnisrv",
+        "program": "gmnisrv",
+        "recipe_id": "recipe:gmnisrv:1.0",
+        "version": "1.0"
+      },
+      {
+        "family": "appx-util",
+        "program": "b/appx",
+        "recipe_id": "recipe:appx-util:0.5",
+        "version": "0.5"
+      },
+      {
+        "family": "openssh-client",
+        "program": "ssh",
+        "recipe_id": "recipe:openssh-client:9.9p1",
+        "version": "9.9p1"
       }
     ],
     "resource_limits": {
@@ -5500,9 +5570,9 @@
         "evidence": [
           "family:family:appx-util"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:appx-util",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -5532,9 +5602,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 530,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:appx-util:0.5",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -5547,8 +5617,8 @@
         "run_id": "run:runtime:authority:appx-util",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://github.com/OSInside/appx-util/archive/refs/tags/v0.5.tar.gz",
+        "specimen_id": "specimen:appx-util:0.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -5558,7 +5628,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:appx-util:0.5:pristine",
         "workload": null
       },
       {
@@ -5572,9 +5642,9 @@
         "evidence": [
           "family:family:appx-util"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:appx-util",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -5604,9 +5674,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 530,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:appx-util:0.5",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -5619,8 +5689,8 @@
         "run_id": "run:runtime:candidate:appx-util",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://github.com/OSInside/appx-util/archive/refs/tags/v0.5.tar.gz",
+        "specimen_id": "specimen:appx-util:0.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -5630,7 +5700,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:appx-util:0.5:pristine",
         "workload": null
       },
       {
@@ -27244,9 +27314,9 @@
         "evidence": [
           "family:family:curl-minimal"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:curl-minimal",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -27276,9 +27346,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 633,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:curl-minimal:8.10.1",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -27291,8 +27361,8 @@
         "run_id": "run:runtime:authority:curl-minimal",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://curl.se/download/curl-8.10.1.tar.gz",
+        "specimen_id": "specimen:curl-minimal:8.10.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -27302,7 +27372,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:curl-minimal:8.10.1:pristine",
         "workload": null
       },
       {
@@ -27316,9 +27386,9 @@
         "evidence": [
           "family:family:curl-minimal"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:curl-minimal",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -27348,9 +27418,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 633,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:curl-minimal:8.10.1",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -27363,8 +27433,8 @@
         "run_id": "run:runtime:candidate:curl-minimal",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://curl.se/download/curl-8.10.1.tar.gz",
+        "specimen_id": "specimen:curl-minimal:8.10.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -27374,7 +27444,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:curl-minimal:8.10.1:pristine",
         "workload": null
       },
       {
@@ -51371,9 +51441,9 @@
         "evidence": [
           "family:family:fsverity-utils"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:fsverity-utils",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -51403,9 +51473,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 736,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:fsverity-utils:1.6",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -51418,8 +51488,8 @@
         "run_id": "run:runtime:authority:fsverity-utils",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://github.com/ebiggers/fsverity-utils/archive/refs/tags/v1.6.tar.gz",
+        "specimen_id": "specimen:fsverity-utils:1.6",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -51429,7 +51499,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:fsverity-utils:1.6:pristine",
         "workload": null
       },
       {
@@ -51443,9 +51513,9 @@
         "evidence": [
           "family:family:fsverity-utils"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:fsverity-utils",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -51475,9 +51545,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 736,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:fsverity-utils:1.6",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -51490,8 +51560,8 @@
         "run_id": "run:runtime:candidate:fsverity-utils",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://github.com/ebiggers/fsverity-utils/archive/refs/tags/v1.6.tar.gz",
+        "specimen_id": "specimen:fsverity-utils:1.6",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -51501,7 +51571,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:fsverity-utils:1.6:pristine",
         "workload": null
       },
       {
@@ -61297,9 +61367,9 @@
         "evidence": [
           "family:family:gmnisrv"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:gmnisrv",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -61329,9 +61399,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 787,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:gmnisrv:1.0",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -61344,8 +61414,8 @@
         "run_id": "run:runtime:authority:gmnisrv",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://git.sr.ht/~sircmpwn/gmnisrv/archive/1.0.tar.gz",
+        "specimen_id": "specimen:gmnisrv:1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -61355,7 +61425,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:gmnisrv:1.0:pristine",
         "workload": null
       },
       {
@@ -61369,9 +61439,9 @@
         "evidence": [
           "family:family:gmnisrv"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:gmnisrv",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -61401,9 +61471,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 787,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:gmnisrv:1.0",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -61416,8 +61486,8 @@
         "run_id": "run:runtime:candidate:gmnisrv",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://git.sr.ht/~sircmpwn/gmnisrv/archive/1.0.tar.gz",
+        "specimen_id": "specimen:gmnisrv:1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -61427,7 +61497,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:gmnisrv:1.0:pristine",
         "workload": null
       },
       {
@@ -63457,9 +63527,9 @@
         "evidence": [
           "family:family:gostsum"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:gostsum",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -63489,9 +63559,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 799,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:gostsum:3.0.3+git20251212.7f6d61a",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -63504,8 +63574,8 @@
         "run_id": "run:runtime:authority:gostsum",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://deb.debian.org/debian/pool/main/libe/libengine-gost-openssl/libengine-gost-openssl_3.0.3+git20251212.7f6d61a.orig.tar.gz",
+        "specimen_id": "specimen:gostsum:3.0.3+git20251212.7f6d61a",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -63515,7 +63585,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:gostsum:3.0.3+git20251212.7f6d61a:pristine",
         "workload": null
       },
       {
@@ -63529,9 +63599,9 @@
         "evidence": [
           "family:family:gostsum"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:gostsum",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -63561,9 +63631,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 799,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:gostsum:3.0.3+git20251212.7f6d61a",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -63576,8 +63646,8 @@
         "run_id": "run:runtime:candidate:gostsum",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://deb.debian.org/debian/pool/main/libe/libengine-gost-openssl/libengine-gost-openssl_3.0.3+git20251212.7f6d61a.orig.tar.gz",
+        "specimen_id": "specimen:gostsum:3.0.3+git20251212.7f6d61a",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -63587,7 +63657,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:gostsum:3.0.3+git20251212.7f6d61a:pristine",
         "workload": null
       },
       {
@@ -73527,9 +73597,9 @@
         "evidence": [
           "family:family:httrack"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:httrack",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -73559,9 +73629,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 844,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:httrack:3.49.2",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -73574,8 +73644,8 @@
         "run_id": "run:runtime:authority:httrack",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://download.httrack.com/httrack-3.49.2.tar.gz",
+        "specimen_id": "specimen:httrack:3.49.2",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -73585,7 +73655,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:httrack:3.49.2:pristine",
         "workload": null
       },
       {
@@ -73599,9 +73669,9 @@
         "evidence": [
           "family:family:httrack"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:httrack",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -73631,9 +73701,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 844,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:httrack:3.49.2",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -73646,8 +73716,8 @@
         "run_id": "run:runtime:candidate:httrack",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://download.httrack.com/httrack-3.49.2.tar.gz",
+        "specimen_id": "specimen:httrack:3.49.2",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -73657,7 +73727,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:httrack:3.49.2:pristine",
         "workload": null
       },
       {
@@ -81304,12 +81374,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "501164:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "501164:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "501164:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "501164:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "501164:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "501164:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "1706120:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1706120:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1706120:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1706120:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1706120:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1706120:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -81361,11 +81431,6 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
-        },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
-          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:authority:jimtcl",
         "source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
@@ -81420,14 +81485,14 @@
           "artifact:.l7-jimtcl-harness",
           "local_only:loopback"
         ],
-        "failure_class": "functional-failure",
+        "failure_class": null,
         "family_id": "family:jimtcl",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": [
           "--version"
         ],
-        "level": "L5-loaded",
+        "level": "L7-functional",
         "link": {
           "all_under_prefix": true,
           "sonames": {
@@ -81448,12 +81513,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "501189:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "501189:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "501189:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "501189:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "501189:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "501189:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "1706146:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1706146:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1706146:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1706146:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1706146:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1706146:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -81491,12 +81556,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "failed",
+        "outcome": "reached",
         "p1000_rank": 254,
-        "reaches_baseline": false,
-        "reason": "jimtcl's aio SSL server did not return the exact response or accepted a mismatched private key",
+        "reaches_baseline": true,
+        "reason": null,
         "recipe_id": "recipe:jimtcl:0.81+dfsg0",
-        "residual_class": "functional-divergence",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -81505,11 +81570,6 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
-        },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
-          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:jimtcl",
         "source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
@@ -81530,26 +81590,24 @@
           "== workload ==",
           "exit=0",
           "== jimtcl aio SSL server ==",
-          "exit=1",
-          "tls_session=failed",
-          "payload=absent",
+          "exit=0",
+          "tls_session=ok",
+          "payload=jimtcl-l7-response",
           "wrong_key=rejected",
-          "result=fail",
-          "jimtcl client: handshake failed: error:0A000410:SSL routines::ssl/tls alert handshake failure",
-          "jimtcl server ssl: error:0A0000C1:SSL routines::no shared cipher",
-          "jimtcl server: 2",
+          "result=ok",
+          "jimtcl server: 0",
           "jimtcl server ssl: error:05800074:x509 certificate routines::key values mismatch",
           "jimtcl server: 2",
           "jimtcl client: handshake failed: error:00000000:lib(0)::reason(0)"
         ],
-        "transcript_sha256": "1f774b7989279993648c9405a25bf04cae50382c7c076bf6cc846057370aab6f",
+        "transcript_sha256": "4a5047e40b8a53346df11f5b780c8a114d6054cd1abd8da8fed5436d9b344ec9",
         "variant_id": "variant:jimtcl:0.81+dfsg0:pristine",
         "workload": "jimtcl: the aio extension's OpenSSL server accepts a TLS request and writes the exact response + mismatched-key reject",
         "workload_result": {
-          "functional_ok": false,
+          "functional_ok": true,
           "local_only": true,
           "name": "jimtcl: the aio extension's OpenSSL server accepts a TLS request and writes the exact response + mismatched-key reject",
-          "runtime_ok": false
+          "runtime_ok": true
         }
       },
       {
@@ -127417,9 +127475,9 @@
         "evidence": [
           "family:family:openssh-client"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:openssh-client",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -127449,9 +127507,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 334,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:openssh-client:9.9p1",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -127464,8 +127522,8 @@
         "run_id": "run:runtime:authority:openssh-client",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "specimen_id": "specimen:openssh-client:9.9p1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -127475,7 +127533,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:openssh-client:9.9p1:pristine",
         "workload": null
       },
       {
@@ -127489,9 +127547,9 @@
         "evidence": [
           "family:family:openssh-client"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:openssh-client",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -127521,9 +127579,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 334,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:openssh-client:9.9p1",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -127536,8 +127594,8 @@
         "run_id": "run:runtime:candidate:openssh-client",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "specimen_id": "specimen:openssh-client:9.9p1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -127547,7 +127605,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:openssh-client:9.9p1:pristine",
         "workload": null
       },
       {
@@ -140255,9 +140313,9 @@
         "evidence": [
           "family:family:rhash"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:rhash",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -140287,9 +140345,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 378,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:rhash:1.4.5",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -140302,8 +140360,8 @@
         "run_id": "run:runtime:authority:rhash",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://github.com/rhash/RHash/archive/refs/tags/v1.4.5.tar.gz",
+        "specimen_id": "specimen:rhash:1.4.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -140313,7 +140371,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:rhash:1.4.5:pristine",
         "workload": null
       },
       {
@@ -140327,9 +140385,9 @@
         "evidence": [
           "family:family:rhash"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:rhash",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -140359,9 +140417,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 378,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:rhash:1.4.5",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -140374,8 +140432,8 @@
         "run_id": "run:runtime:candidate:rhash",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://github.com/rhash/RHash/archive/refs/tags/v1.4.5.tar.gz",
+        "specimen_id": "specimen:rhash:1.4.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -140385,7 +140443,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:rhash:1.4.5:pristine",
         "workload": null
       },
       {
@@ -144195,9 +144253,9 @@
         "evidence": [
           "family:family:siege"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:siege",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -144227,9 +144285,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 391,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:siege:4.1.6",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -144242,8 +144300,8 @@
         "run_id": "run:runtime:authority:siege",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://download.joedog.org/siege/siege-4.1.6.tar.gz",
+        "specimen_id": "specimen:siege:4.1.6",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -144253,7 +144311,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:siege:4.1.6:pristine",
         "workload": null
       },
       {
@@ -144267,9 +144325,9 @@
         "evidence": [
           "family:family:siege"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:siege",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -144299,9 +144357,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 391,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:siege:4.1.6",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -144314,8 +144372,8 @@
         "run_id": "run:runtime:candidate:siege",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://download.joedog.org/siege/siege-4.1.6.tar.gz",
+        "specimen_id": "specimen:siege:4.1.6",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -144325,7 +144383,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:siege:4.1.6:pristine",
         "workload": null
       },
       {
@@ -158435,9 +158493,9 @@
         "evidence": [
           "family:family:wrk"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:wrk",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -158467,9 +158525,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 432,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:wrk:4.2.0",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -158482,8 +158540,8 @@
         "run_id": "run:runtime:authority:wrk",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://github.com/wg/wrk/archive/refs/tags/4.2.0.tar.gz",
+        "specimen_id": "specimen:wrk:4.2.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -158493,7 +158551,7 @@
         "subject": "authority",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:wrk:4.2.0:pristine",
         "workload": null
       },
       {
@@ -158507,9 +158565,9 @@
         "evidence": [
           "family:family:wrk"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": "link-failure",
         "family_id": "family:wrk",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": null,
         "level": "L0-catalogued",
@@ -158539,9 +158597,9 @@
         "outcome": "not_attempted",
         "p1000_rank": 432,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "recipe_id": "recipe:wrk:4.2.0",
+        "residual_class": "unlinked",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -158554,8 +158612,8 @@
         "run_id": "run:runtime:candidate:wrk",
         "source_root_hash": null,
         "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_url": "https://github.com/wg/wrk/archive/refs/tags/4.2.0.tar.gz",
+        "specimen_id": "specimen:wrk:4.2.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -158565,7 +158623,7 @@
         "subject": "candidate",
         "transcript_excerpt": [],
         "transcript_sha256": "",
-        "variant_id": null,
+        "variant_id": "variant:wrk:4.2.0:pristine",
         "workload": null
       },
       {
@@ -164252,7 +164310,7 @@
       }
     ]
   },
-  "body_hash": "13a08a11c68788451fe27ad601c2245b8a9593ca8bdb72c9391c74294f1c56e1",
+  "body_hash": "d2dca4d284adca300614fa6fa8dc65754c457b957cba7cf6c9a34be4c1148276",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
@@ -164268,12 +164326,12 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "cf576c6b67e79c913bb8f0470f7b69239bb4e6d03fdf1d7e2f13ebf334900430"
+      "sha256": "69cc1ce96e0e644d22ae09b387fcf3c08aee811623f0efc73f024d46af566587"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "8921330d50835e73da841d1b38554baa7f23a676aa9a86bcd58104f5aa08a5ec"
+      "sha256": "4d15a08876461c0b44f24b20f96a3715f8e9be027ee81e42cf1501f3142ebe09"
     },
     {
       "name": "downstream-census",

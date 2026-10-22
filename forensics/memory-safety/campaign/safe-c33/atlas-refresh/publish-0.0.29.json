@@ -1,0 +1,42 @@
+{
+  "receipt": "publish-0.0.29",
+  "date": "2026-10-20",
+  "crate": "openssl-rs",
+  "version": "0.0.29",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "branch": "integrate/safe-c33",
+    "commit": "be3c537c3",
+    "note": "The published package was built from the 0.0.29 release commit plus the package-metadata commit merged as d0f0fb992. The working tree was clean at publish time."
+  },
+  "packaging": {
+    "entries": 1010,
+    "uncompressed": "39.4MiB",
+    "compressed": "8.2MiB",
+    "compressed_bytes": 8581169,
+    "limit_bytes": 10000000,
+    "dry_run_exit": 0,
+    "allow_dirty_used": false
+  },
+  "observed_output": [
+    "Uploading openssl-rs v0.0.29 (/work)",
+    "Uploaded openssl-rs v0.0.29 to registry `crates-io`"
+  ],
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs",
+    "max_version": "0.0.29",
+    "version_entry_present": true
+  },
+  "credential_handling": "The registry token was piped into the court container over stdin from the host credentials file, never on a command line and never printed. The injected file was removed and shredded after the upload; the host copy was left untouched at mode 0600.",
+  "exclusions_required_to_fit": [
+    "forensics/downstream/**",
+    "forensics/memory-safety/**",
+    "forensics/vectors/**"
+  ],
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "The published package contains the source tree and tests, not the downstream L7 evidence, which stays in git.",
+    "This receipt records observed output from the publish run; it does not re-verify the package contents."
+  ]
+}
