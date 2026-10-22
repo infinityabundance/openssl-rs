@@ -355,6 +355,10 @@ pub(crate) unsafe extern "C" fn ossl_cms_get0_env_enc_content(
 /// `STACK_OF(CMS_RecipientInfo) *CMS_get0_RecipientInfos(CMS_ContentInfo *cms)` —
 /// `cms_env.c:178-190`.
 ///
+/// **Borrowed.** The stack and every recipient it holds are owned by `cms`. The answer stays
+/// valid until `cms` gains or loses a recipient or is freed; the caller must never free the stack
+/// or any element, and must not retain either past that point.
+///
 /// # Safety
 /// `cms` is live.
 #[no_mangle]
@@ -976,6 +980,10 @@ pub(crate) unsafe extern "C" fn CMS_add1_recipient_cert(
 /// `int CMS_RecipientInfo_ktri_get0_algs(CMS_RecipientInfo *ri, EVP_PKEY **pk, X509 **recip,`
 /// `X509_ALGOR **palg)` — `cms_env.c:471-490`.
 ///
+/// **Borrowed.** `*pk`, `*recip` and `*palg` are members of the recipient's KTRI arm. The
+/// recipient's destructor releases them exactly once; the caller must not free them, and may use
+/// them only while the recipient lives (until the container is freed or the slot is replaced).
+///
 /// # Safety
 /// `ri` is live; the out-slots are writable or NULL.
 #[no_mangle]
@@ -1019,6 +1027,10 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_ktri_get0_algs(
 /// `int CMS_RecipientInfo_ktri_get0_signer_id(CMS_RecipientInfo *ri,`
 /// `ASN1_OCTET_STRING **keyid, X509_NAME **issuer, ASN1_INTEGER **sno)` —
 /// `cms_env.c:492-506`.
+///
+/// **Borrowed.** Each answer points into the recipient's `RecipientIdentifier`; the recipient
+/// owns it and releases it through `cms_ri_cb`, so the caller must not free it and may use it only
+/// while the recipient lives.
 ///
 /// # Safety
 /// `ri` is live; the out-slots are writable or NULL.
@@ -1076,6 +1088,90 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_ktri_cert_cmp(
     }
 }
 
+/// A transferred `EVP_PKEY` reference.
+///
+/// `CMS_RecipientInfo_set0_pkey` stores the caller's pointer **without** an up-ref, so success is
+/// a transfer of one reference. Holding it in a type before it is stored is what makes the
+/// incumbent release and the incoming store ordered and single-shot: the slot is cleared first,
+/// the incumbent is released through this owner, and only then is the incoming pointer stored, so
+/// a release can never land on the value that was just installed.
+struct OwnedPkey(core::ptr::NonNull<EvpPkey>);
+
+impl OwnedPkey {
+    /// Adopt a transferred reference.
+    ///
+    /// # Safety
+    /// `p` is NULL or a live key reference the caller transfers (no other owner will release it).
+    unsafe fn adopt(p: *mut EvpPkey) -> Option<Self> {
+        core::ptr::NonNull::new(p).map(Self)
+    }
+
+    fn as_ptr(&self) -> *mut EvpPkey {
+        self.0.as_ptr()
+    }
+
+    /// Hand the reference to someone else without releasing it.
+    fn into_raw(self) -> *mut EvpPkey {
+        let p = self.0.as_ptr();
+        // The reference now belongs to the caller; dropping here would release it.
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedPkey {
+    fn drop(&mut self) {
+        // SAFETY: this owner holds the transferred reference.
+        unsafe { EVP_PKEY_free(self.0.as_ptr()) };
+    }
+}
+
+/// A KEK recipient's `(key, keylen)` pair.
+///
+/// The pair travels together so a pointer and its extent cannot diverge. Installation is a
+/// **detach**, not a release: the incumbent is overwritten without being freed. That is the
+/// authority's own semantics and it is required, because the slot's ownership is conditional --
+/// `CMS_decrypt_set1_key` detaches a **borrowed** buffer by assigning NULL, so releasing the
+/// incumbent would free memory the recipient never owned. A slot installed by this function or
+/// by `CMS_add0_recipient_key` is owned by the recipient; a NULL detach is not.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct KeySlot {
+    key: *mut c_uchar,
+    keylen: usize,
+}
+
+impl KeySlot {
+    /// # Safety
+    /// `kekri` is live.
+    unsafe fn read(kekri: *mut CmsKekRecipientInfo) -> Self {
+        // SAFETY: the caller's contract.
+        unsafe {
+            Self {
+                key: (*kekri).key,
+                keylen: (*kekri).keylen,
+            }
+        }
+    }
+
+    /// Install, replacing the incumbent without releasing it (see the type's note). A pair that is
+    /// already stored is a no-op, so re-asserting a registered buffer cannot orphan it.
+    ///
+    /// # Safety
+    /// `kekri` is live; ownership of the buffer transfers to the recipient on success.
+    unsafe fn install(self, kekri: *mut CmsKekRecipientInfo) -> c_int {
+        // SAFETY: the caller's contract.
+        if unsafe { KeySlot::read(kekri) } == self {
+            return 1;
+        }
+        // SAFETY: the caller's contract; the incumbent is detached, not released.
+        unsafe {
+            (*kekri).key = self.key;
+            (*kekri).keylen = self.keylen;
+        }
+        1
+    }
+}
+
 /// `int CMS_RecipientInfo_set0_pkey(CMS_RecipientInfo *ri, EVP_PKEY *pkey)` —
 /// `cms_env.c:517-526`.
 ///
@@ -1109,9 +1205,27 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_set0_pkey(
     // SAFETY: `ri` is live.
     let ktri = unsafe { (*ri).d.cast::<CmsKeyTransRecipientInfo>() };
     // SAFETY: `ktri` is live.
-    unsafe { EVP_PKEY_free((*ktri).pkey) };
+    let incumbent = unsafe { (*ktri).pkey };
+    // SAFETY: `pkey` is NULL or the caller's transferred reference.
+    let mut incoming = unsafe { OwnedPkey::adopt(pkey) };
+
+    // Re-asserting the reference already stored is a no-op. The authority frees the incumbent and
+    // then stores the incoming pointer, so the self-pointer case frees the value it is about to
+    // store; here the slot already owns exactly that reference, so nothing is released or
+    // transferred. (Deliberate divergence: the authority leaves a dangling slot.)
+    if incoming.as_ref().is_some_and(|p| p.as_ptr() == incumbent) {
+        // The slot keeps its claim; drop the second one without releasing.
+        core::mem::forget(incoming.take());
+        return 1;
+    }
+
+    // Clear the slot before releasing so no release can run over the value about to be stored.
     // SAFETY: `ktri` is live.
-    unsafe { (*ktri).pkey = pkey };
+    unsafe { (*ktri).pkey = ptr::null_mut() };
+    // SAFETY: the slot held the only claim on `incumbent` (or it was NULL).
+    drop(unsafe { OwnedPkey::adopt(incumbent) });
+    // SAFETY: `ktri` is live; `incoming` (if any) is the caller's transferred reference.
+    unsafe { (*ktri).pkey = incoming.take().map_or(ptr::null_mut(), OwnedPkey::into_raw) };
     1
 }
 
@@ -1683,6 +1797,10 @@ unsafe fn cms_add0_recipient_key_with_push(
 /// `ASN1_OCTET_STRING **pid, ASN1_GENERALIZEDTIME **pdate, ASN1_OBJECT **potherid,`
 /// `ASN1_TYPE **pothertype)` — `cms_env.c:809-841`.
 ///
+/// **Borrowed.** Every answer is a member of the recipient's KEK arm (or of its `OtherKeyAttribute`
+/// sub-structure). The recipient owns and releases them exactly once; the caller must not free
+/// them and may use them only while the recipient lives.
+///
 /// # Safety
 /// `ri` is live; the out-slots are writable or NULL.
 #[no_mangle]
@@ -1740,7 +1858,12 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kekri_get0_id(
 }
 
 /// `int CMS_RecipientInfo_set0_key(CMS_RecipientInfo *ri, unsigned char *key,`
-/// `size_t keylen)` — `cms_env.c:843-856`.
+/// `size_t keylen)` — `cms_env.c:843-852`.
+///
+/// **Ownership.** Installation transfers the buffer to the recipient, which releases it with
+/// `OPENSSL_clear_free` at `keylen`. Replacement is a detach, not a release: the authority
+/// overwrites the slot and `CMS_decrypt_set1_key` relies on that to detach a borrowed buffer with
+/// a NULL assignment. A pair that is already stored is a no-op.
 ///
 /// **Association, not unconditional ownership transfer.** The authority stores `key`/`keylen`
 /// in `kekri`; while it remains associated, the recipient's destructor releases it with
@@ -1780,15 +1903,12 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_set0_key(
         return 0;
     }
 
-    // SAFETY: `ri` is live. The authority overwrites the slot without releasing the incumbent;
-    // `CMS_decrypt_set1_key` relies on that to detach a borrowed buffer with a NULL assignment.
+    // SAFETY: `ri` is live. The slot is replaced wholesale and the incumbent is not released:
+    // `CMS_decrypt_set1_key` detaches a borrowed buffer with a NULL assignment, so the slot's
+    // ownership is conditional (see `KeySlot`).
     let kekri = unsafe { (*ri).d.cast::<CmsKekRecipientInfo>() };
-    // SAFETY: `kekri` is live.
-    unsafe {
-        (*kekri).key = key;
-        (*kekri).keylen = keylen;
-    }
-    1
+    // SAFETY: `kekri` is live; on success the buffer's ownership transfers to the recipient.
+    unsafe { KeySlot { key, keylen }.install(kekri) }
 }
 
 /// `static EVP_CIPHER *cms_get_key_wrap_cipher(size_t keylen, const CMS_CTX *ctx)` —
@@ -3162,7 +3282,157 @@ mod tests {
             (*ktri).pkey = old;
             assert_eq!(CMS_RecipientInfo_set0_pkey(ri, ptr::null_mut()), 1);
             assert!((*ktri).pkey.is_null());
+            // A second NULL assignment is a no-op, not a second release.
+            assert_eq!(CMS_RecipientInfo_set0_pkey(ri, ptr::null_mut()), 1);
+            assert!((*ktri).pkey.is_null());
             m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    /// Two takeovers release the first incumbent once and the second on container teardown; a
+    /// release of the value just stored would abort at the later free.
+    #[test]
+    fn set0_pkey_twice_releases_each_incumbent_exactly_once() {
+        // SAFETY: all three keys are fresh `EVP_PKEY_new` allocations; each reference transfers
+        // on success and the recipient releases the last one.
+        unsafe {
+            let (ri, ktri) = trans_recipient();
+            let old = EVP_PKEY_new();
+            let first = EVP_PKEY_new();
+            let second = EVP_PKEY_new();
+            assert!(!old.is_null() && !first.is_null() && !second.is_null());
+            (*ktri).pkey = old;
+            assert_eq!(CMS_RecipientInfo_set0_pkey(ri, first), 1);
+            assert_eq!((*ktri).pkey, first);
+            assert_eq!(CMS_RecipientInfo_set0_pkey(ri, second), 1);
+            assert_eq!((*ktri).pkey, second);
+            // Frees `second`; `old` and `first` were released by the two takeovers.
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    /// Re-asserting the reference already stored must not free it: the authority frees the
+    /// incumbent before storing the incoming pointer, leaving the slot dangling.
+    #[test]
+    fn set0_pkey_with_the_same_pointer_does_not_double_release() {
+        // SAFETY: `p` transfers on the first call and the slot keeps it; the second call only
+        // re-asserts it. The recipient releases it once at teardown.
+        unsafe {
+            let (ri, ktri) = trans_recipient();
+            let p = EVP_PKEY_new();
+            assert!(!p.is_null());
+            assert_eq!(CMS_RecipientInfo_set0_pkey(ri, p), 1);
+            assert_eq!(CMS_RecipientInfo_set0_pkey(ri, p), 1);
+            assert_eq!((*ktri).pkey, p, "the slot keeps the same reference");
+            assert_eq!(
+                (*p).references.load(Ordering::Acquire),
+                1,
+                "the re-assertion neither frees nor duplicates the slot's reference"
+            );
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    /// A refused arm adopts nothing: the incoming reference and buffer stay the caller's, and the
+    /// slot of the wrong-arm recipient is untouched.
+    #[test]
+    fn set0_rejects_the_wrong_recipient_arm_without_adopting() {
+        // SAFETY: the fixtures are live; the buffer and key below are released by this frame
+        // because neither call adopts them.
+        unsafe {
+            let (kek_ri, kekri) = kek_recipient();
+            let incumbent = filled_block(16, 0x77);
+            (*kekri).key = incumbent;
+            let pkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(
+                CMS_RecipientInfo_set0_pkey(kek_ri, pkey),
+                0,
+                "a KEK recipient is not the key-transport arm"
+            );
+            assert_eq!((*kekri).key, incumbent, "the KEK slot is untouched");
+            EVP_PKEY_free(pkey);
+            m_asn1_free(kek_ri.cast(), cms_recipientinfo_it());
+
+            let (trans_ri, ktri) = trans_recipient();
+            let assert_pkey_unset = (*ktri).pkey.is_null();
+            let buf = filled_block(16, 0x78);
+            assert_eq!(
+                CMS_RecipientInfo_set0_key(trans_ri, buf, 16),
+                0,
+                "a KTRI is not the KEK arm"
+            );
+            assert!(assert_pkey_unset && (*ktri).pkey.is_null());
+            CRYPTO_free(buf.cast(), c"cms_env-test".as_ptr(), 0);
+            m_asn1_free(trans_ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    /// The accessors answer borrows owned by the container/recipient: the pointers equal the
+    /// members themselves, stay stable across getter calls, and the container's single free is
+    /// the only release.
+    #[test]
+    fn getters_answer_container_owned_borrows() {
+        // SAFETY: every allocation is owned by the container or by this frame as noted.
+        unsafe {
+            let cms = enveloped_cms();
+            let ris = CMS_get0_RecipientInfos(cms);
+            assert!(!ris.is_null());
+            let key = filled_block(16, 0x91);
+            let id = filled_block(KEY_ID_LEN, 0x92);
+            let ri = cms_add0_recipient_key_with_push(
+                cms,
+                NID_id_aes128_wrap,
+                key,
+                16,
+                id,
+                KEY_ID_LEN,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                OPENSSL_sk_push,
+            );
+            assert!(!ri.is_null());
+
+            // The stack is the container's; its element is the recipient itself.
+            assert_eq!(CMS_get0_RecipientInfos(cms), ris);
+            assert_eq!(OPENSSL_sk_num(ris), 1);
+            assert_eq!(OPENSSL_sk_value(ris, 0), ri.cast());
+
+            // The KEK id answers point into the recipient, not at copies.
+            let kekri = (*ri).d.cast::<CmsKekRecipientInfo>();
+            let mut palg: *mut X509Algor = ptr::null_mut();
+            let mut pid: *mut Asn1String = ptr::null_mut();
+            assert_eq!(
+                CMS_RecipientInfo_kekri_get0_id(
+                    ri,
+                    &mut palg,
+                    &mut pid,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                ),
+                1
+            );
+            assert_eq!(palg, (*kekri).key_encryption_algorithm);
+            assert_eq!(pid, (*(*kekri).kekid).key_identifier);
+
+            // The KTRI accessor answers the same members it does not own.
+            let (tri, ktri) = trans_recipient();
+            let pkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            (*ktri).pkey = pkey;
+            let mut got: *mut EvpPkey = ptr::null_mut();
+            assert_eq!(
+                CMS_RecipientInfo_ktri_get0_algs(tri, &mut got, ptr::null_mut(), ptr::null_mut()),
+                1
+            );
+            assert_eq!(got, pkey, "the accessor answers the recipient's own member");
+            // The recipient still owns it: its destructor releases it once.
+            m_asn1_free(tri.cast(), cms_recipientinfo_it());
+
+            // One container free releases the recipient, its key, id and algorithm.
+            CMS_ContentInfo_free(cms);
         }
     }
 
