@@ -1993,6 +1993,12 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # Batch c1: three package-split rows (icecast2, libevent-openssl-2.1-7, libaprutil1),
+    # each configured against the subject prefix exactly like its sibling.
+    for spec in _L7_ONBOARD_SPECS_C:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     # The declarative template cohort.  Each entry is a small config row (URL + SHA-256 +
     # build-system fields + a bucket workload) rather than a bespoke recipe; the same pristine
     # acquire/configure/make path is used, and `{prefix}` is still the only substitution.
@@ -2818,6 +2824,56 @@ _L7_ONBOARD_SPECS: tuple[dict, ...] = (
         "note": ("cyrus-sasl 2.1.28's DIGEST-MD5 plugin linked to the subject libcrypto; the "
                  "admitted client/server harness authenticates with DIGEST-MD5 and rejects a "
                  "wrong password"),
+    },
+)
+
+# The Phase-25 L7 onboarding batch (c1, 2026-10-22): three package-split rows of upstreams this
+# venue already builds (icecast2 from icecast 2.4.4, libevent-openssl-2.1-7 from libevent
+# 2.1.12, libaprutil1 from apr-util 1.6.3).  Each is a real Alpine package entry in the frozen
+# 1000-family corpus and is measured as its own row against its own build with the upstream's
+# own OpenSSL mechanism.
+#
+# lighttpd 1.4.79 was vetted in the same batch and NOT admitted: its meson build links the
+# subject correctly (mod_openssl, verified TLS GET of a fixture) and measures L7-functional
+# against the authority openssl-3.6.4-production, but the candidate closes every handshake
+# (mod_openssl reports "SSL routines::internal error"; the client sees SSL LENGTH_MISMATCH)
+# while the same client against the authority completes.  h2o 2.2.6 shows the same shape
+# (authority completes the handshake; the candidate closes it mid-handshake).  Both are
+# candidate-side divergences recorded for repair, not compatibility results.
+_L7_ONBOARD_SPECS_C: tuple[dict, ...] = (
+    {
+        "family": "icecast2", "version": "2.4.4",
+        "url": "https://downloads.xiph.org/releases/icecast/icecast-2.4.4.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "49b5979f9f614140b6a38046154203ee28218d8fc549888596a683ad604e4d44",
+        "configure": ["--with-openssl={prefix}", "--without-curl", "--without-speex",
+                      "--without-theora", "--disable-yp"],
+        "make": [MAKE_JOBS], "artifact": "src/icecast", "launch": ["-v"],
+        "aux_sources": list(_ICECAST_AUX),
+        "note": ("the icecast2 package row of icecast 2.4.4: its HTTPS listener serves the "
+                 "fixture over the subject libssl and rejects an unrelated CA"),
+    },
+    {
+        "family": "libevent-openssl-2.1-7", "version": "2.1.12-stable",
+        "url": ("https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/"
+                "libevent-2.1.12-stable.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb",
+        "configure": ["--disable-samples", "--disable-libevent-regress"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libevent_openssl*.so*", "launch": None,
+        "note": ("the libevent_openssl package row of libevent 2.1.12: a TLS1.3 bufferevent "
+                 "round trip against the fixture CA, with an unrelated-CA reject"),
+    },
+    {
+        "family": "libaprutil1", "version": "1.6.3",
+        "url": "https://archive.apache.org/dist/apr/apr-util-1.6.3.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "2b74d8932703826862ca305b094eef2983c27b39d5c9414442e9976a9acf1983",
+        "configure": ["--with-apr=/usr/bin/apr-1-config", "--with-crypto",
+                      "--with-openssl={prefix}", "--disable-util-dso"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libaprutil-1.so*", "launch": None,
+        "note": ("the libaprutil1 package row of apr-util 1.6.3: the OpenSSL crypto driver "
+                 "plus a libssl handshake over an apr_socket, with a mutated-digest control"),
     },
 )
 
