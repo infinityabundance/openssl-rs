@@ -527,6 +527,14 @@ def _extract(archive: Path, dest: Path) -> dict:
 
 
 def _single_source_root(dest: Path) -> Path | None:
+    """The one extracted source root under `dest`, or `None` when nothing was extracted.
+
+    A missing `dest` means acquisition never produced a tree (an unreachable host, a failed
+    fetch or extract). That is an ordinary measured outcome for a family, not a reason to abort
+    the whole court, so it is reported as `None` rather than raising `FileNotFoundError`.
+    """
+    if not dest.is_dir():
+        return None
     entries = [p for p in sorted(dest.iterdir()) if p.is_dir()]
     return entries[0] if len(entries) == 1 else (dest if entries else None)
 

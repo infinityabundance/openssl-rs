@@ -9453,8 +9453,24 @@ def derive_atlas(families_body: dict, freeze_body: dict, build_link_body: dict,
 
             # At least one subject reached L4: rebuild the pristine source once (the exact build
             # intent 24.6 used) so the program that is loaded is the program that was linked.
-            _bl_rows, specimen, variant = bl.measure_family(
-                fam, recipe, auth_prefix, CANDIDATE_PREFIX, auth_defined, cand_defined, limits)
+            try:
+                _bl_rows, specimen, variant = bl.measure_family(
+                    fam, recipe, auth_prefix, CANDIDATE_PREFIX, auth_defined, cand_defined, limits)
+            except Exception as exc:  # noqa: BLE001 - one family must not abort the court
+                # Acquisition is a measured outcome, not a court abort: record every subject as
+                # `acquire-failure` naming the source host, then continue with the next family.
+                reason = (f"acquiring or rebuilding the pristine source from {recipe['url']} "
+                          f"failed: {type(exc).__name__}: {exc}")
+                for subject in SUBJECTS:
+                    rows.append(_not_attempted(
+                        fam, subject, level=L0, failure_class="acquire-failure",
+                        residual="unavailable", reason=reason, recipe=recipe,
+                        specimen_id=_specimen_variant(recipe, name)[0],
+                        variant_id=_specimen_variant(recipe, name)[1], source_sha256=None,
+                        limits=limits, prefix=auth_prefix))
+                print(f"  [p1000 {entry.get('p1000_rank'):>4}] {name:<12} acquire-failure "
+                      f"{reason[:70]}"[:150], flush=True)
+                continue
             if specimen:
                 specimens[specimen["specimen_id"]] = specimen
             if variant:
@@ -9463,6 +9479,25 @@ def derive_atlas(families_body: dict, freeze_body: dict, build_link_body: dict,
                                   if r.get("source_sha256")), None)
             source_root_hash = next((r.get("source_root_hash") for r in _bl_rows
                                      if r.get("source_root_hash")), None)
+
+            # A failed acquisition returns rows without a source tree; the atlas records the
+            # acquire failure itself instead of probing a directory that was never created.
+            acquire_failure = next((r for r in _bl_rows
+                                    if r.get("failure_class") == "acquire-failure"), None)
+            if acquire_failure is not None:
+                reason = str(acquire_failure.get("reason") or
+                             f"the pristine source from {recipe['url']} was not acquired")
+                for subject in SUBJECTS:
+                    rows.append(_not_attempted(
+                        fam, subject, level=str(acquire_failure.get("level") or L0),
+                        failure_class="acquire-failure", residual="unavailable",
+                        reason=reason, recipe=recipe,
+                        specimen_id=_specimen_variant(recipe, name)[0],
+                        variant_id=_specimen_variant(recipe, name)[1], source_sha256=None,
+                        limits=limits, prefix=auth_prefix))
+                print(f"  [p1000 {entry.get('p1000_rank'):>4}] {name:<12} acquire-failure "
+                      f"{reason[:70]}"[:150], flush=True)
+                continue
 
             for subject in SUBJECTS:
                 if permits[subject] < RANK[L4]:
@@ -9480,9 +9515,10 @@ def derive_atlas(families_body: dict, freeze_body: dict, build_link_body: dict,
                 root = census._single_source_root(bl.SCRATCH / name / subject / "src")
                 if root is None:
                     rows.append(_not_attempted(
-                        fam, subject, level=L4, failure_class="load-failure",
-                        residual="runtime-failure",
-                        reason="the rebuild produced no source tree to load from", recipe=recipe,
+                        fam, subject, level=L4, failure_class="acquire-failure",
+                        residual="unavailable",
+                        reason=(f"the rebuild of {recipe['url']} produced no source tree to "
+                                f"load from"), recipe=recipe,
                         specimen_id=_specimen_variant(recipe, name)[0],
                         variant_id=_specimen_variant(recipe, name)[1], source_sha256=source_sha256,
                         limits=limits, prefix=auth_prefix))
@@ -10072,13 +10108,37 @@ def self_test() -> int:
             if not control["honest"]:
                 failures.append(f"the sensitivity control is not honest: {control}")
 
+    # 5. Acquisition failure is a measured outcome, not a court abort. A missing source tree is
+    #    reported as `None` (never a `FileNotFoundError`), and the failure rows name the source
+    #    host/URL while accounting for both subjects under the closed vocabulary.
+    missing = Path("/nonexistent-acquire-self-test/src")
+    if census._single_source_root(missing) is not None:
+        failures.append("a missing source tree did not report `None`")
+    recipe = {"family": "__selftest__", "version": "0", "recipe_id": "selftest",
+              "url": "https://unreachable.invalid/__selftest__.tar.gz", "archive": "tar.gz"}
+    fam = {"family_id": "__selftest__", "canonical_name": "__selftest__",
+           "openssl_linkage": "direct", "directness_class": "direct", "_rank": 0}
+    acquire_rows = bl._acquisition_failure_rows(
+        fam, recipe, "fetching the pristine source from https://unreachable.invalid/ failed",
+        {"memory_max": "?", "pids_max": "?"}, Path("/p"))
+    if {r["subject"] for r in acquire_rows} != {"authority", "candidate"}:
+        failures.append("an acquisition failure does not account for both subjects")
+    for r in acquire_rows:
+        if r.get("failure_class") != "acquire-failure" or "unreachable.invalid" not in str(
+                r.get("reason")):
+            failures.append("an acquisition failure neither names its class nor its source host")
+        problems = downstream_schemas.validate_run(r)
+        if problems:
+            failures.append(f"an acquisition failure row is schema-invalid: {problems[:2]}")
+
     if failures:
         print("[downstream-runtime] self-test FAILED")
         for f in failures:
             print(f"  {f}")
         return 1
     print("[downstream-runtime] self-test ok: the guard refuses a host invocation of this tool "
-          "(marker and flag both named), the normaliser preserves every return code, error class, "
+          "(marker and flag both named), a missing source tree is an `acquire-failure` naming its "
+          "host rather than a raised exception, the normaliser preserves every return code, error class, "
           "certificate decision and protocol/algorithm choice it must, the committed P1000 "
           "runtime/functional atlas reproduces with zero findings, and every seeded mutation "
           "(an inflated authority baseline, an L5 row with no load proof, an L6 row with an empty "
