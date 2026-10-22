@@ -1953,6 +1953,14 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b11): three more consumers whose pristine Debian source
+    # builds against the subject prefix. gensio's ssl gensio, jimtcl's aio SSL extension and
+    # sofia-sip's tport TLS transport are the OpenSSL paths; each harness is admitted in the
+    # runtime atlas.
+    for spec in _L7_EXPAND8_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -2258,6 +2266,51 @@ _L7_EXPAND7_SPECS: tuple[dict, ...] = (
         "note": ("dcap-tunnel-ssl 2.47.14's libsslTunnel plugin, the family's actual OpenSSL "
                  "consumer, built against the subject libssl; the source has no generated "
                  "configure, so the pinned bookworm autotools bootstrap it as a build input"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b11): three consumers whose pristine Debian source builds
+# against the subject prefix. gensio's ssl gensio, jimtcl's aio SSL extension and sofia-sip's
+# tport TLS transport are the OpenSSL paths driven by the runtime harnesses.
+_L7_EXPAND8_SPECS: tuple[dict, ...] = (
+    {
+        "family": "gensio", "version": "2.8.6",
+        "url": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--with-ssl=yes", "--with-tcl=no", "--with-python=no",
+                      "--with-swig=no"],
+        "make": ["-j4"], "artifact": "lib/.libs/libgensio.so*", "launch": None,
+        "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("gensio 2.8.6's ssl gensio (lib/gensio_ssl.c) built against the subject "
+                 "libssl; the admitted workload is the loopback TLS request/response harness"),
+    },
+    {
+        "family": "jimtcl", "version": "0.81+dfsg0",
+        "url": ("https://deb.debian.org/debian/pool/main/j/jimtcl/"
+                "jimtcl_0.81+dfsg0.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "configure": ["--prefix={root}/.l7-install", "--ssl", "--shared"],
+        "make": ["-j4"], "artifact": "libjim.so*", "launch": None,
+        "env_extra": {"PKG_CONFIG_PATH": "{prefix}/lib/pkgconfig"},
+        "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("jimtcl 0.81 with the aio extension's OpenSSL SSL support (jim-aio.c) built "
+                 "against the subject libssl; the admitted workload is the TLS server harness"),
+    },
+    {
+        "family": "sofia-sip", "version": "1.12.11+20110422.1",
+        "url": ("https://deb.debian.org/debian/pool/main/s/sofia-sip/"
+                "sofia-sip_1.12.11+20110422.1.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}"],
+        "make": ["-j4"], "artifact": "libsofia-sip-ua/.libs/libsofia-sip-ua.so*",
+        "launch": None, "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("sofia-sip 1.12.11's tport TLS transport (libsofia-sip-ua/tport/tport_tls.c) "
+                 "built against the subject libssl; the admitted workload is the SIP-over-TLS "
+                 "tport harness"),
     },
 )
 
