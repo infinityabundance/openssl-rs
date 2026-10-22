@@ -2867,10 +2867,9 @@ unsafe fn verify_rpk(ctx: *mut X509StoreCtx) -> c_int {
         if let Some(cb) = (*ctx).verify {
             return cb(ctx.cast());
         }
-        match (*ctx).verify_cb {
-            Some(cb) => c_int::from(cb(c_int::from((*ctx).error == X509_V_OK), ctx.cast()) != 0),
-            None => 0,
-        }
+        // The application verifier sees the same `ok` the authority passes (1 when no error is
+        // pending) and the answer is normalised to 0/1 as the authority's `!= 0` does.
+        c_int::from(dispatch_verify(ctx, c_int::from((*ctx).error == X509_V_OK), None) != 0)
     }
 }
 
@@ -3851,11 +3850,8 @@ unsafe extern "C" fn check_policy(ctx: *mut c_void) -> c_int {
         }
         if ret == X509_PCY_TREE_FAILURE {
             (*ctx).current_cert = ptr::null_mut();
-            (*ctx).error = X509_V_ERR_NO_EXPLICIT_POLICY;
-            return match (*ctx).verify_cb {
-                Some(cb) => cb(0, ctx.cast()),
-                None => 0,
-            };
+            // The helper publishes `X509_V_ERR_NO_EXPLICIT_POLICY` before dispatching.
+            return dispatch_verify(ctx, 0, Some(X509_V_ERR_NO_EXPLICIT_POLICY));
         }
         if ret != X509_PCY_TREE_VALID {
             raise_site(&X509_VFY_2053);
@@ -3864,10 +3860,8 @@ unsafe extern "C" fn check_policy(ctx: *mut c_void) -> c_int {
 
         if ((*param).flags & X509_V_FLAG_NOTIFY_POLICY) != 0 {
             (*ctx).current_cert = ptr::null_mut();
-            let ok = match (*ctx).verify_cb {
-                Some(cb) => cb(2, ctx.cast()),
-                None => 0,
-            };
+            // `ok = 2` is the authority's "policy notification" value; no error is published.
+            let ok = dispatch_verify(ctx, 2, None);
             if ok == 0 {
                 return 0;
             }
@@ -5646,10 +5640,8 @@ unsafe fn dane_verify(ctx: *mut X509StoreCtx) -> c_int {
             }
             (*ctx).error_depth = 0;
             (*ctx).current_cert = cert;
-            return match (*ctx).verify_cb {
-                Some(cb) => cb(1, ctx.cast()),
-                None => 0,
-            };
+            // No new error: the DANE match already succeeded.
+            return dispatch_verify(ctx, 1, None);
         }
 
         if matched < 0 {

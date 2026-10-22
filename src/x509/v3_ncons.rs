@@ -93,8 +93,8 @@ use crate::runtime::stack::{
 };
 use crate::x509::v3_conf::X509V3Ctx;
 use crate::x509::v3_genn::{
-    GENERAL_NAME_it, GeneralName, GEN_DIRNAME, GEN_DNS, GEN_EMAIL, GEN_IPADD, GEN_OTHERNAME,
-    GEN_URI,
+    GENERAL_NAME_it, GeneralName, GeneralNameRef, GEN_DIRNAME, GEN_DNS, GEN_EMAIL, GEN_IPADD,
+    GEN_OTHERNAME, GEN_URI,
 };
 use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_san::{v2i_GENERAL_NAME_ex, GENERAL_NAME_print};
@@ -697,11 +697,12 @@ unsafe fn nc_match(gen: *mut GeneralName, nc: *mut NameConstraints) -> c_int {
     let mut matched = 0;
     // SAFETY: `gen` is live per the contract.
     let mut effective_type = unsafe { (*gen).type_ };
-    if effective_type == GEN_OTHERNAME
-        // SAFETY: the `otherName` arm is live under the `GEN_OTHERNAME` selector.
-        && unsafe { OBJ_obj2nid((*(*gen).d.otherName).type_id) } == NID_id_on_SmtpUTF8Mailbox
-    {
-        effective_type = GEN_EMAIL;
+    // SAFETY: the view reads only the arm its selector names.
+    if let Some(GeneralNameRef::OtherName(other)) = unsafe { (*gen).as_ref() } {
+        // SAFETY: `type_id` is the live identifier of the selected arm.
+        if unsafe { OBJ_obj2nid(other.type_id) } == NID_id_on_SmtpUTF8Mailbox {
+            effective_type = GEN_EMAIL;
+        }
     }
 
     // Permitted subtrees: if any exist of matching type at least one must match.
@@ -713,14 +714,7 @@ unsafe fn nc_match(gen: *mut GeneralName, nc: *mut NameConstraints) -> c_int {
         // SAFETY: `i` is in bounds.
         let sub = unsafe { OPENSSL_sk_value(permitted, i) }.cast::<GeneralSubtree>();
         // SAFETY: `sub` is a live element per the stack contract; its `base` is live.
-        let skip = unsafe {
-            effective_type != (*(*sub).base).type_
-                || (effective_type == GEN_OTHERNAME
-                    && OBJ_cmp(
-                        (*(*gen).d.otherName).type_id,
-                        (*(*(*sub).base).d.otherName).type_id,
-                    ) != 0)
-        };
+        let skip = unsafe { subtree_skipped(gen, (*sub).base, effective_type) };
         if !skip {
             // SAFETY: `sub` is live per the stack contract.
             if unsafe { nc_minmax_valid(sub) } == 0 {
@@ -755,14 +749,7 @@ unsafe fn nc_match(gen: *mut GeneralName, nc: *mut NameConstraints) -> c_int {
         // SAFETY: `i` is in bounds.
         let sub = unsafe { OPENSSL_sk_value(excluded, i) }.cast::<GeneralSubtree>();
         // SAFETY: `sub` is a live element per the stack contract; its `base` is live.
-        let skip = unsafe {
-            effective_type != (*(*sub).base).type_
-                || (effective_type == GEN_OTHERNAME
-                    && OBJ_cmp(
-                        (*(*gen).d.otherName).type_id,
-                        (*(*(*sub).base).d.otherName).type_id,
-                    ) != 0)
-        };
+        let skip = unsafe { subtree_skipped(gen, (*sub).base, effective_type) };
         if !skip {
             // SAFETY: `sub` is live per the stack contract.
             if unsafe { nc_minmax_valid(sub) } == 0 {
@@ -782,36 +769,76 @@ unsafe fn nc_match(gen: *mut GeneralName, nc: *mut NameConstraints) -> c_int {
 }
 
 /// `static int nc_match_single(int effective_type, GENERAL_NAME *gen, GENERAL_NAME *base)` —
-/// `crypto/x509/v3_ncons.c:563-599`. Dispatches on `gen->type` to the per-type matcher.
+/// `crypto/x509/v3_ncons.c:563-599`. Dispatches on the selector-checked view, so a mismatched
+/// (selector, arm) pair answers `X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE` instead of reading
+/// another arm's pointer.
 ///
 /// # Safety
 ///
-/// `gen` and `base` are live `GENERAL_NAME`s of the same `type`.
+/// `gen` and `base` are live `GENERAL_NAME`s; `nc_match` only calls this for equal effective types.
 unsafe fn nc_match_single(
     effective_type: c_int,
     gen: *mut GeneralName,
     base: *mut GeneralName,
 ) -> c_int {
-    // SAFETY: `gen` is live per the contract; the selected arm is live under this selector.
-    match unsafe { (*gen).type_ } {
-        GEN_OTHERNAME => match effective_type {
-            GEN_EMAIL => {
-                // SAFETY: the `otherName`/`rfc822Name` arms are live under the selectors.
-                unsafe { nc_email_eai((*(*gen).d.otherName).value, (*base).d.ia5) }
-            }
+    // SAFETY: both are live per the contract; each view reads only its own selector's arm.
+    unsafe {
+        let (Some(gen_view), Some(base_view)) = ((*gen).as_ref(), (*base).as_ref()) else {
+            return X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE;
+        };
+        match gen_view {
+            GeneralNameRef::OtherName(other) => match (effective_type, base_view) {
+                (GEN_EMAIL, GeneralNameRef::Ia5(b)) => nc_email_eai(other.value, b),
+                _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+            },
+            GeneralNameRef::DirectoryName(nm) => match base_view {
+                GeneralNameRef::DirectoryName(b) => nc_dn(nm, b),
+                _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+            },
+            GeneralNameRef::Ia5(s) => match base_view {
+                GeneralNameRef::Ia5(b) => match (*gen).type_ {
+                    GEN_DNS => nc_dns(s, b),
+                    GEN_EMAIL => nc_email(s, b),
+                    GEN_URI => nc_uri(s, b),
+                    _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+                },
+                _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+            },
+            GeneralNameRef::IpAddress(s) => match base_view {
+                GeneralNameRef::IpAddress(b) => nc_ip(s, b),
+                _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+            },
             _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-        },
-        // SAFETY: the `directoryName` arm is live under the `GEN_DIRNAME` selector.
-        GEN_DIRNAME => unsafe { nc_dn((*gen).d.directoryName, (*base).d.directoryName) },
-        // SAFETY: the `dNSName` arm is live under the `GEN_DNS` selector.
-        GEN_DNS => unsafe { nc_dns((*gen).d.ia5, (*base).d.ia5) },
-        // SAFETY: the `rfc822Name` arm is live under the `GEN_EMAIL` selector.
-        GEN_EMAIL => unsafe { nc_email((*gen).d.ia5, (*base).d.ia5) },
-        // SAFETY: the `uniformResourceIdentifier` arm is live under the `GEN_URI` selector.
-        GEN_URI => unsafe { nc_uri((*gen).d.ia5, (*base).d.ia5) },
-        // SAFETY: the `iPAddress` arm is live under the `GEN_IPADD` selector.
-        GEN_IPADD => unsafe { nc_ip((*gen).d.iPAddress, (*base).d.iPAddress) },
-        _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+        }
+    }
+}
+
+/// The authority's `nc_match` skip predicate: a subtree whose `base` selector differs is ignored,
+/// and an `otherName` subtree must also carry the same type OID. Both identifiers are reached
+/// through the selector-checked view; a pair the view cannot resolve is skipped rather than read.
+///
+/// # Safety
+///
+/// `gen` and `base` are live `GENERAL_NAME`s.
+unsafe fn subtree_skipped(
+    gen: *mut GeneralName,
+    base: *mut GeneralName,
+    effective_type: c_int,
+) -> bool {
+    // SAFETY: both are live per the contract.
+    unsafe {
+        if effective_type != (*base).type_ {
+            return true;
+        }
+        if effective_type != GEN_OTHERNAME {
+            return false;
+        }
+        match ((*gen).as_ref(), (*base).as_ref()) {
+            (Some(GeneralNameRef::OtherName(a)), Some(GeneralNameRef::OtherName(b))) => {
+                OBJ_cmp(a.type_id, b.type_id) != 0
+            }
+            _ => true,
+        }
     }
 }
 
@@ -851,39 +878,49 @@ unsafe fn nc_dn(nm: *const X509Name, base: *const X509Name) -> c_int {
     X509_V_OK
 }
 
-/// `static int nc_dns(ASN1_IA5STRING *dns, ASN1_IA5STRING *base)` — `crypto/x509/v3_ncons.c:627-653`.
+/// The content bytes of a live decoded string, or the empty slice.
 ///
 /// # Safety
 ///
-/// `dns` and `base` are live IA5 strings.
-unsafe fn nc_dns(dns: *mut Asn1String, base: *mut Asn1String) -> c_int {
-    // SAFETY: `base`/`dns` are live per the contract.
-    let (baseptr, mut dnsptr, dnslen, baselen) = unsafe {
-        (
-            (*base).data.cast::<c_char>(),
-            (*dns).data.cast::<c_char>(),
-            (*dns).length,
-            (*base).length,
-        )
-    };
+/// `s` is live and either owns `length` readable bytes at `data` or has `length == 0`.
+unsafe fn asn1_bytes(s: &Asn1String) -> &[u8] {
+    if s.length <= 0 {
+        return &[];
+    }
+    // SAFETY: `length` is positive and the string owns that many readable bytes.
+    unsafe { core::slice::from_raw_parts(s.data, s.length as usize) }
+}
+
+/// `static int nc_dns(ASN1_IA5STRING *dns, ASN1_IA5STRING *base)` — `crypto/x509/v3_ncons.c:627-653`.
+///
+/// Bounded slices, not offsets: the subtree is a suffix of the name, and when it is a proper
+/// suffix the byte before it must be a label boundary unless the subtree itself starts with `.`.
+fn nc_dns(dns: &Asn1String, base: &Asn1String) -> c_int {
+    // SAFETY: both strings are live decoded values.
+    let (dns, base) = unsafe { (asn1_bytes(dns), asn1_bytes(base)) };
     // Empty matches everything.
-    if baselen == 0 {
+    if base.is_empty() {
         return X509_V_OK;
     }
-    if dnslen < baselen {
+    if dns.len() < base.len() {
         return X509_V_ERR_PERMITTED_VIOLATION;
     }
-    // Otherwise can add zero or more components on the left.
-    if dnslen > baselen {
-        // SAFETY: `dnsptr` has `dnslen` readable bytes and `dnslen > baselen >= 1`.
-        dnsptr = unsafe { dnsptr.add((dnslen - baselen) as usize) };
-        // SAFETY: `baseptr` and `dnsptr` are in bounds; `dnsptr` is not the first byte.
-        if unsafe { *baseptr != b'.' as c_char && *dnsptr.sub(1) != b'.' as c_char } {
+    if dns.len() > base.len() {
+        let start = dns.len() - base.len();
+        if base[0] != b'.' && dns[start - 1] != b'.' {
             return X509_V_ERR_PERMITTED_VIOLATION;
         }
     }
-    // SAFETY: both pointers have `baselen` readable bytes.
-    if unsafe { ia5ncasecmp(baseptr, dnsptr, baselen as usize) } != 0 {
+    let suffix = &dns[dns.len() - base.len()..];
+    // SAFETY: both slices have `base.len()` bytes.
+    if unsafe {
+        ia5ncasecmp(
+            suffix.as_ptr().cast::<c_char>(),
+            base.as_ptr().cast::<c_char>(),
+            base.len(),
+        )
+    } != 0
+    {
         return X509_V_ERR_PERMITTED_VIOLATION;
     }
     X509_V_OK
@@ -896,13 +933,11 @@ unsafe fn nc_dns(dns: *mut Asn1String, base: *mut Asn1String) -> c_int {
 /// # Safety
 ///
 /// `emltype` is a live `ASN1_TYPE`; `base` a live IA5 string.
-unsafe fn nc_email_eai(emltype: *mut Asn1Type, base: *mut Asn1String) -> c_int {
+fn nc_email_eai(emltype: *mut Asn1Type, base: &Asn1String) -> c_int {
     // We do not accept embedded NUL characters.
-    // SAFETY: `base` is live per the contract.
-    let base_len_prefix = unsafe { (*base).length };
-    // SAFETY: `base` is live and its data has `base_len_prefix` readable bytes.
-    let base_has_nul =
-        unsafe { !memchr((*base).data.cast(), 0, base_len_prefix as usize).is_null() };
+    let base_len_prefix = base.length;
+    // SAFETY: `base` owns `base_len_prefix` readable bytes.
+    let base_has_nul = unsafe { !memchr(base.data.cast(), 0, base_len_prefix as usize).is_null() };
     if base_len_prefix > 0 && base_has_nul {
         return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
     }
@@ -910,8 +945,8 @@ unsafe fn nc_email_eai(emltype: *mut Asn1Type, base: *mut Asn1String) -> c_int {
     // SAFETY: `base` is live and has `length` readable bytes; the file/line are this unit's.
     let baseptr = unsafe {
         CRYPTO_strndup(
-            (*base).data.cast::<c_char>(),
-            (*base).length as usize,
+            base.data.cast::<c_char>(),
+            base.length as usize,
             FILE.as_ptr(),
             LINE_STRNDUP_BASE,
         )
@@ -987,16 +1022,13 @@ unsafe fn nc_email_eai(emltype: *mut Asn1Type, base: *mut Asn1String) -> c_int {
 /// # Safety
 ///
 /// `eml` and `base` are live IA5 strings.
-unsafe fn nc_email(eml: *mut Asn1String, base: *mut Asn1String) -> c_int {
-    // SAFETY: `eml`/`base` are live per the contract.
-    let (mut baseptr, mut emlptr, eml_len, base_len) = unsafe {
-        (
-            (*base).data.cast::<c_char>().cast_const(),
-            (*eml).data.cast::<c_char>().cast_const(),
-            (*eml).length,
-            (*base).length,
-        )
-    };
+fn nc_email(eml: &Asn1String, base: &Asn1String) -> c_int {
+    let (mut baseptr, mut emlptr, eml_len, base_len) = (
+        base.data.cast::<c_char>().cast_const(),
+        eml.data.cast::<c_char>().cast_const(),
+        eml.length,
+        base.length,
+    );
     // SAFETY: both are live IA5 strings; `ia5memrchr` reads within them.
     let baseat = unsafe { ia5memrchr(base, '@' as c_int) };
     // SAFETY: as above.
@@ -1064,14 +1096,13 @@ unsafe fn nc_email(eml: *mut Asn1String, base: *mut Asn1String) -> c_int {
 /// # Safety
 ///
 /// `uri` and `base` are live IA5 strings.
-unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
-    // SAFETY: `base` is live per the contract.
-    let baseptr = unsafe { (*base).data.cast::<c_char>() };
+fn nc_uri(uri: &Asn1String, base: &Asn1String) -> c_int {
+    let baseptr = base.data.cast::<c_char>();
     // SAFETY: `uri` is live and has `length` readable bytes; the file/line are this unit's.
     let uri_copy_raw = unsafe {
         CRYPTO_strndup(
-            (*uri).data.cast::<c_char>(),
-            (*uri).length as usize,
+            uri.data.cast::<c_char>(),
+            uri.length as usize,
             FILE.as_ptr(),
             LINE_STRNDUP_URI,
         )
@@ -1139,8 +1170,7 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
     let hostlen = unsafe { strlen(hostptr) } as c_int;
     // The `host`/`scheme`/`uri_copy` handles release their blocks as this frame returns.
     'end: {
-        // SAFETY: `base` is live per the contract.
-        let base_len = unsafe { (*base).length };
+        let base_len = base.length;
         // SAFETY: `baseptr` has `base_len` readable bytes (or `base_len == 0`).
         let base_is_dot = base_len > 0 && unsafe { *baseptr } == b'.' as c_char;
         if base_is_dot {
@@ -1170,39 +1200,30 @@ unsafe fn nc_uri(uri: *mut Asn1String, base: *mut Asn1String) -> c_int {
     }
 }
 
-/// `static int nc_ip(ASN1_OCTET_STRING *ip, ASN1_OCTET_STRING *base)` — `crypto/x509/v3_ncons.c:834-862`.
-/// Masks the host address and the base address with the base's mask half and compares.
-///
-/// # Safety
-///
-/// `ip` and `base` are live octet strings.
-unsafe fn nc_ip(ip: *mut Asn1String, base: *mut Asn1String) -> c_int {
-    // SAFETY: `ip`/`base` are live per the contract.
-    let (hostptr, hostlen, baseptr, baselen) =
-        unsafe { ((*ip).data, (*ip).length, (*base).data, (*base).length) };
+/// `static int nc_ip(ASN1_OCTET_STRING *ip, ASN1_OCTET_STRING *base)` —
+/// `crypto/x509/v3_ncons.c:834-862`. Masks the address and the base address with the base's mask
+/// half; every extent is a checked slice split, never an offset.
+fn nc_ip(ip: &Asn1String, base: &Asn1String) -> c_int {
+    // SAFETY: both strings are live decoded values.
+    let (host, constraint) = unsafe { (asn1_bytes(ip), asn1_bytes(base)) };
     // Invalid if not IPv4 or IPv6.
-    if hostlen != 4 && hostlen != 16 {
+    if host.len() != 4 && host.len() != 16 {
         return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
     }
-    if baselen != 8 && baselen != 32 {
+    if constraint.len() != 8 && constraint.len() != 32 {
         return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
     }
-    // Do not match IPv4 with IPv6.
-    if hostlen * 2 != baselen {
+    if host.len() * 2 != constraint.len() {
         return X509_V_ERR_PERMITTED_VIOLATION;
     }
-    // SAFETY: `baseptr` has `baselen >= hostlen * 2` bytes; the mask half begins at `hostlen`.
-    let maskptr = unsafe { baseptr.add(hostlen as usize) };
-    let mut i = 0;
-    while i < hostlen {
-        // SAFETY: `hostptr`/`baseptr`/`maskptr` each have at least `hostlen` readable bytes.
-        let masked_host = unsafe { *hostptr.add(i as usize) & *maskptr.add(i as usize) };
-        // SAFETY: as above.
-        let masked_base = unsafe { *baseptr.add(i as usize) & *maskptr.add(i as usize) };
-        if masked_host != masked_base {
-            return X509_V_ERR_PERMITTED_VIOLATION;
-        }
-        i += 1;
+    let (addr, mask) = constraint.split_at(host.len());
+    if host
+        .iter()
+        .zip(addr)
+        .zip(mask)
+        .any(|((h, a), m)| (h & m) != (a & m))
+    {
+        return X509_V_ERR_PERMITTED_VIOLATION;
     }
     X509_V_OK
 }
@@ -1574,3 +1595,299 @@ pub static ossl_v3_delegated_name_constraints: X509V3ExtMethod = X509V3ExtMethod
     r2i: None,
     usr_data: ptr::null_mut(),
 };
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used)]
+
+    use super::*;
+    use crate::asn1::layout::V_ASN1_OCTET_STRING;
+    use crate::asn1::prim::ASN1_INTEGER_set;
+    use crate::asn1::string::{
+        ASN1_INTEGER_new, ASN1_STRING_free, ASN1_STRING_set, ASN1_STRING_type_new,
+    };
+    use crate::runtime::obj::{NID_basic_constraints, OBJ_nid2obj};
+    use crate::x509::v3_genn::{
+        GENERAL_NAME_free, GENERAL_NAME_new, GENERAL_NAME_set0_value, GEN_RID,
+    };
+
+    /// A decoded string of `type_`, owned by the `GENERAL_NAME`/subtree that adopts it.
+    unsafe fn str_of(type_: c_int, bytes: &[u8]) -> *mut Asn1String {
+        let s = ASN1_STRING_type_new(type_);
+        assert!(!s.is_null());
+        // SAFETY: `s` is fresh and `bytes` is readable for its length.
+        let rc = unsafe { ASN1_STRING_set(s, bytes.as_ptr().cast(), bytes.len() as c_int) };
+        assert_eq!(rc, 1);
+        s
+    }
+
+    /// A `GENERAL_NAME` of `selector` carrying `value`; the name owns the value.
+    unsafe fn general_name(selector: c_int, value: *mut c_void) -> *mut GeneralName {
+        let g = GENERAL_NAME_new();
+        assert!(!g.is_null());
+        // SAFETY: `g` is fresh; `value` is the arm the selector names and transfers here.
+        unsafe { GENERAL_NAME_set0_value(g, selector, value) };
+        g
+    }
+
+    unsafe fn dns_name(bytes: &[u8]) -> *mut GeneralName {
+        // SAFETY: both halves are this frame's fresh allocations.
+        unsafe { general_name(GEN_DNS, str_of(V_ASN1_IA5STRING, bytes).cast()) }
+    }
+
+    unsafe fn email_name(bytes: &[u8]) -> *mut GeneralName {
+        // SAFETY: both halves are this frame's fresh allocations.
+        unsafe { general_name(GEN_EMAIL, str_of(V_ASN1_IA5STRING, bytes).cast()) }
+    }
+
+    unsafe fn ip_name(bytes: &[u8]) -> *mut GeneralName {
+        // SAFETY: both halves are this frame's fresh allocations.
+        unsafe { general_name(GEN_IPADD, str_of(V_ASN1_OCTET_STRING, bytes).cast()) }
+    }
+
+    /// A subtree over `base`; ownership of `base` transfers.
+    unsafe fn subtree(base: *mut GeneralName) -> *mut GeneralSubtree {
+        let sub = GENERAL_SUBTREE_new();
+        assert!(!sub.is_null());
+        // SAFETY: `sub` is fresh and `base` transfers to it.
+        unsafe { (*sub).base = base };
+        sub
+    }
+
+    /// A `NAME_CONSTRAINTS` over the two subtree lists.
+    unsafe fn constraints(
+        permitted: &[*mut GeneralSubtree],
+        excluded: &[*mut GeneralSubtree],
+    ) -> *mut NameConstraints {
+        let nc = NAME_CONSTRAINTS_new();
+        assert!(!nc.is_null());
+        let p = OPENSSL_sk_new_null();
+        let e = OPENSSL_sk_new_null();
+        assert!(!p.is_null() && !e.is_null());
+        for &s in permitted {
+            // SAFETY: both stacks are fresh and `s` transfers to them. `sk_push` answers the
+            // new count.
+            assert!(unsafe { OPENSSL_sk_push(p, s.cast()) } > 0);
+        }
+        for &s in excluded {
+            // SAFETY: as above.
+            assert!(unsafe { OPENSSL_sk_push(e, s.cast()) } > 0);
+        }
+        // SAFETY: `nc` is fresh and the stacks transfer to it.
+        unsafe {
+            (*nc).permittedSubtrees = p;
+            (*nc).excludedSubtrees = e;
+        }
+        nc
+    }
+
+    /// Run `nc_match` and release the name, the constraints and every subtree/stack exactly once.
+    unsafe fn check(gen: *mut GeneralName, nc: *mut NameConstraints) -> c_int {
+        // SAFETY: both are live for this call; the frees below run after it returns.
+        let r = unsafe { nc_match(gen, nc) };
+        // SAFETY: both objects and everything they own are this frame's.
+        unsafe {
+            GENERAL_NAME_free(gen);
+            NAME_CONSTRAINTS_free(nc);
+        }
+        r
+    }
+
+    #[test]
+    fn dns_permit_and_exclude() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            let permitted = [subtree(dns_name(b"example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(check(dns_name(b"host.example.com"), nc), X509_V_OK);
+
+            let permitted = [subtree(dns_name(b"example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(dns_name(b"host.example.org"), nc),
+                X509_V_ERR_PERMITTED_VIOLATION
+            );
+            // The suffix must start at a label boundary: `notexample.com` is not under
+            // `example.com` even though the bytes end with it.
+            let permitted = [subtree(dns_name(b"example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(dns_name(b"notexample.com"), nc),
+                X509_V_ERR_PERMITTED_VIOLATION
+            );
+
+            let excluded = [subtree(dns_name(b"example.com"))];
+            let nc = constraints(&[], &excluded);
+            assert_eq!(
+                check(dns_name(b"host.example.com"), nc),
+                X509_V_ERR_EXCLUDED_VIOLATION
+            );
+        }
+    }
+
+    #[test]
+    fn an_excluded_empty_dns_matches_everything() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            let excluded = [subtree(dns_name(b""))];
+            let nc = constraints(&[], &excluded);
+            assert_eq!(
+                check(dns_name(b"anything.example"), nc),
+                X509_V_ERR_EXCLUDED_VIOLATION
+            );
+        }
+    }
+
+    #[test]
+    fn an_over_long_subtree_is_a_permitted_violation() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            let long = [b'a'; 300];
+            let permitted = [subtree(dns_name(&long))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(dns_name(b"short.example"), nc),
+                X509_V_ERR_PERMITTED_VIOLATION
+            );
+        }
+    }
+
+    #[test]
+    fn email_permit_and_violation() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            // A base with no `@` is a host-only match.
+            let permitted = [subtree(email_name(b"example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(check(email_name(b"user@example.com"), nc), X509_V_OK);
+
+            let permitted = [subtree(email_name(b"example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(email_name(b"user@example.org"), nc),
+                X509_V_ERR_PERMITTED_VIOLATION
+            );
+
+            // A base with a local part matches it case-sensitively.
+            let permitted = [subtree(email_name(b"user@example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(check(email_name(b"user@example.com"), nc), X509_V_OK);
+            let permitted = [subtree(email_name(b"User@example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(email_name(b"user@example.com"), nc),
+                X509_V_ERR_PERMITTED_VIOLATION
+            );
+        }
+    }
+
+    #[test]
+    fn ip_permit_and_violation() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            let permitted = [subtree(ip_name(&[192, 0, 2, 0, 255, 255, 255, 0]))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(check(ip_name(&[192, 0, 2, 1]), nc), X509_V_OK);
+
+            let permitted = [subtree(ip_name(&[192, 0, 2, 0, 255, 255, 255, 0]))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(ip_name(&[198, 51, 100, 1]), nc),
+                X509_V_ERR_PERMITTED_VIOLATION
+            );
+
+            // A malformed address width is a syntax error, not a match.
+            let permitted = [subtree(ip_name(&[192, 0, 2, 0, 255, 255, 255, 0]))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(ip_name(&[192, 0, 2]), nc),
+                X509_V_ERR_UNSUPPORTED_NAME_SYNTAX
+            );
+        }
+    }
+
+    #[test]
+    fn a_minimum_or_maximum_field_is_refused() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            let sub = subtree(dns_name(b"example.com"));
+            let max = ASN1_INTEGER_new();
+            assert!(!max.is_null());
+            assert_eq!(ASN1_INTEGER_set(max, 1), 1);
+            (*sub).maximum = max;
+            let permitted = [sub];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(dns_name(b"host.example.com"), nc),
+                X509_V_ERR_SUBTREE_MINMAX
+            );
+        }
+    }
+
+    #[test]
+    fn a_subtree_of_another_type_is_ignored_not_reinterpreted() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            // The name is DNS; the only permitted subtree is an email subtree. No subtree of the
+            // name's type exists, so the authority's `matched` stays 0 and the name is accepted
+            // without ever reading the email arm as a DNS string.
+            let permitted = [subtree(email_name(b"example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(check(dns_name(b"host.example.com"), nc), X509_V_OK);
+        }
+    }
+
+    #[test]
+    fn an_unsupported_selector_is_refused() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            // GEN_RID is not a constraint type; `nc_match_single` answers UNSUPPORTED without
+            // reading any arm of the name. The arm is a real `ASN1_OBJECT` (the shared static the
+            // selector names), because `GENERAL_NAME_free` frees a registeredID as an object.
+            let rid = OBJ_nid2obj(NID_basic_constraints);
+            let permitted = [subtree(general_name(GEN_RID, rid.cast()))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(general_name(GEN_RID, rid.cast()), nc),
+                X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE
+            );
+        }
+    }
+
+    #[test]
+    fn seeded_malformed_names_never_panic() {
+        let _guard = crate::test_support::lock_global_state();
+        let mut state: u64 = 0xD1B5_4A32_D192_ED03;
+        for _ in 0..5_000 {
+            let len = (state as usize) % 40;
+            let mut buf = [0u8; 40];
+            for b in buf.iter_mut().take(len) {
+                state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                *b = (state >> 33) as u8;
+            }
+            // SAFETY: each string owns its own copied bytes; the helpers only read them.
+            unsafe {
+                let dns = str_of(V_ASN1_IA5STRING, &buf[..len]);
+                let base_dns = str_of(V_ASN1_IA5STRING, &buf[..len / 2]);
+                let _ = nc_dns(&*dns, &*base_dns);
+                let _ = nc_email(&*dns, &*base_dns);
+                let _ = nc_uri(&*dns, &*base_dns);
+                let ip = str_of(V_ASN1_OCTET_STRING, &buf[..len]);
+                let base_ip = str_of(V_ASN1_OCTET_STRING, &buf[..len / 2]);
+                let _ = nc_ip(&*ip, &*base_ip);
+                ASN1_STRING_free(dns);
+                ASN1_STRING_free(base_dns);
+                ASN1_STRING_free(ip);
+                ASN1_STRING_free(base_ip);
+            }
+        }
+    }
+}
