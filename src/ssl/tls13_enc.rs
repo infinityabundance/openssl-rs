@@ -66,6 +66,8 @@ use crate::evp::legacy_sha::{EVP_sha256, EVP_sha384};
 use crate::evp::pkey::{EVP_PKEY_new_raw_public_key_ex, EvpPkey};
 use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_pkey};
 use crate::mac::hmac::HMAC;
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_lib::{Ssl, TLS13_HS_BUF_LEN};
 
 // --- `ssl3.h` change-cipher-state selectors ------------------------------------------------
@@ -1318,10 +1320,17 @@ pub(crate) unsafe fn tls13_encrypt_record(
         hdr[3] = (rec_len >> 8) as u8;
         hdr[4] = rec_len as u8;
         ptr::copy_nonoverlapping(hdr.as_ptr(), out, 5);
-        // Inner plaintext: content then the real content type.
-        let mut inner = [0u8; TLS13_HS_BUF_LEN + 1];
-        ptr::copy_nonoverlapping(plain, inner.as_mut_ptr(), len);
-        inner[len] = content_type;
+        // Inner plaintext: content then the real content type. The block is heap-allocated through
+        // the crate's allocator seam: a record-sized stack array would put a frame larger than
+        // radsecproxy's whole 32 KiB accept thread on every handshake/application write.
+        let Some(inner_block) = OwnedBuf::new(TLS13_HS_BUF_LEN + 1, SeamFile::NULL, 0) else {
+            return -1;
+        };
+        let inner = inner_block.as_ptr();
+        // SAFETY: `inner` is writable for `TLS13_HS_BUF_LEN + 1` bytes (`inner_len` was checked
+        // against that bound above); `plain` is `len` readable.
+        ptr::copy_nonoverlapping(plain, inner, len);
+        *inner.add(len) = content_type;
 
         // SAFETY: no preconditions.
         let ctx = EVP_CIPHER_CTX_new();
@@ -1354,7 +1363,7 @@ pub(crate) unsafe fn tls13_encrypt_record(
             let mut l: c_int = 0;
             let aad = EVP_EncryptUpdate(ctx, ptr::null_mut(), &mut l, hdr.as_ptr(), 5);
             let body = if aad == 1 {
-                EVP_EncryptUpdate(ctx, out.add(5), &mut l, inner.as_ptr(), inner_len as c_int)
+                EVP_EncryptUpdate(ctx, out.add(5), &mut l, inner, inner_len as c_int)
             } else {
                 0
             };
@@ -1412,10 +1421,16 @@ pub(crate) unsafe fn tls13_decrypt_record(
         }
         let nonce = make_nonce(&(*s).dec_iv, iv_len, (*s).dec_seq);
         let ct_body_len = ct_len - tag_len;
-        let mut plain = [0u8; TLS13_HS_BUF_LEN + 1];
-        if ct_body_len > plain.len() {
+        if ct_body_len > TLS13_HS_BUF_LEN + 1 {
             return -1;
         }
+        // The plaintext block is heap-allocated through the crate's allocator seam; a record-sized
+        // stack array would overflow a small accept thread. Its single release is `Drop` on every
+        // return below.
+        let Some(plain_block) = OwnedBuf::new(TLS13_HS_BUF_LEN + 1, SeamFile::NULL, 0) else {
+            return -1;
+        };
+        let plain = plain_block.as_ptr();
         // SAFETY: no preconditions.
         let ctx = EVP_CIPHER_CTX_new();
         if ctx.is_null() {
@@ -1448,7 +1463,7 @@ pub(crate) unsafe fn tls13_decrypt_record(
             let mut l: c_int = 0;
             let aad = EVP_DecryptUpdate(ctx, ptr::null_mut(), &mut l, hdr.as_ptr(), 5);
             let body = if aad == 1 {
-                EVP_DecryptUpdate(ctx, plain.as_mut_ptr(), &mut l, ct, ct_body_len as c_int)
+                EVP_DecryptUpdate(ctx, plain, &mut l, ct, ct_body_len as c_int)
             } else {
                 0
             };
@@ -1461,7 +1476,7 @@ pub(crate) unsafe fn tls13_decrypt_record(
             );
             let mut fl: c_int = 0;
             let fin = if body == 1 && tagset == 1 {
-                EVP_DecryptFinal_ex(ctx, plain.as_mut_ptr().add(outl), &mut fl)
+                EVP_DecryptFinal_ex(ctx, plain.add(outl), &mut fl)
             } else {
                 0
             };
@@ -1477,18 +1492,21 @@ pub(crate) unsafe fn tls13_decrypt_record(
         }
         // Strip the record padding and read the inner content type: the last non-zero byte.
         let mut pos = outl;
-        while pos > 0 && plain[pos - 1] == 0 {
+        // SAFETY: `plain` holds `outl` decrypted bytes (`EVP_DecryptUpdate`/`Final` wrote them).
+        while pos > 0 && *plain.add(pos - 1) == 0 {
             pos -= 1;
         }
         if pos == 0 {
             return -1;
         }
-        let inner_type = plain[pos - 1];
+        // SAFETY: `pos >= 1` and `plain` holds `outl >= pos` initialized bytes.
+        let inner_type = *plain.add(pos - 1);
         let content_len = pos - 1;
         if content_len > out_cap {
             return -1;
         }
-        ptr::copy_nonoverlapping(plain.as_ptr(), out, content_len);
+        // SAFETY: `content_len` readable plaintext bytes at `plain`; `out` is `out_cap` writable.
+        ptr::copy_nonoverlapping(plain, out, content_len);
         *content_type = inner_type;
         (*s).dec_seq += 1;
         content_len as isize
@@ -1511,30 +1529,35 @@ pub(crate) unsafe fn write_handshake_message(
     let Some(total) = body_len.checked_add(4) else {
         return 0;
     };
-    let mut msg = [0u8; 17000];
-    if total > msg.len() {
+    if total > 17000 {
         return 0;
     }
-    msg[0] = mtype;
-    msg[1] = (body_len >> 16) as u8;
-    msg[2] = (body_len >> 8) as u8;
-    msg[3] = body_len as u8;
+    // The framed message is heap-allocated through the crate's allocator seam, so a handshake
+    // write no longer places a 17000-byte frame on the caller's stack. Its single release is the
+    // handle's `Drop` on every return below.
+    let Some(msg_block) = OwnedBuf::new(17000, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    let msg = msg_block.as_ptr();
+    // SAFETY: `msg` is writable for 17000 bytes (`total` was checked against that bound above)
+    // and every byte below is written before it is read.
+    unsafe {
+        *msg = mtype;
+        *msg.add(1) = (body_len >> 16) as u8;
+        *msg.add(2) = (body_len >> 8) as u8;
+        *msg.add(3) = body_len as u8;
+    }
     if body_len != 0 {
-        // SAFETY: `body` is readable for `body_len` per the contract.
-        unsafe { ptr::copy_nonoverlapping(body, msg.as_mut_ptr().add(4), body_len) };
+        // SAFETY: `body` is readable for `body_len` per the contract; `msg + 4` is writable.
+        unsafe { ptr::copy_nonoverlapping(body, msg.add(4), body_len) };
     }
     // SAFETY: `s` is live; `msg` is `total` initialised bytes.
     let r = unsafe {
-        crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
-            s,
-            SSL3_RT_HANDSHAKE,
-            msg.as_ptr(),
-            total,
-        )
+        crate::ssl::record::rec_layer_s3::ssl3_write_bytes(s, SSL3_RT_HANDSHAKE, msg, total)
     };
     if r > 0 {
         // SAFETY: `s` is live; `msg` is `total` initialised bytes.
-        unsafe { transcript_update(s, msg.as_ptr(), total) };
+        unsafe { transcript_update(s, msg, total) };
         // `ssl3_do_write`'s `msg_callback` (`statem_lib.c:114-118`): the authority reports every
         // handshake message written, with `s->version` and `SSL3_RT_HANDSHAKE`.
         // SAFETY: `s` is live; `msg` is `total` initialised bytes.
@@ -1544,7 +1567,7 @@ pub(crate) unsafe fn write_handshake_message(
                     1,
                     (*s).version,
                     SSL3_RT_HANDSHAKE as c_int,
-                    msg.as_ptr().cast(),
+                    msg.cast(),
                     total,
                     s,
                     (*s).msg_callback_arg,

@@ -1040,20 +1040,28 @@ unsafe fn lookup_sess_in_cache(s: *mut Ssl, sess_id: &[u8]) -> *mut SslSession {
 ///
 /// # Safety
 /// `s` must be a live connection; `session_id`/`ticket` are readable slices.
-pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_int {
+pub(crate) unsafe fn ssl_get_prev_session(
+    s: *mut Ssl,
+    session_id: &[u8],
+    ticket_ext_present: bool,
+) -> c_int {
     // SAFETY: `s` is live per the contract.
     unsafe {
-        // `tls_get_ticket_from_client` clears the flag first (`t1_lib.c:3000`).
+        // `tls_get_ticket_from_client` clears the flag first (`t1_lib.c:3000`) and only re-arms
+        // it when the client offered `session_ticket` and tickets are enabled
+        // (`t1_lib.c:2996-3010`).
         (*s).ext_ticket_expected = 0;
+        let ticket_expected =
+            c_int::from(ticket_ext_present && crate::ssl::t1_lib::tls_use_ticket(s));
         if session_id.is_empty() {
             // No session looked up: the server will issue a fresh ticket and session.
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         let ctx = (*s).session_ctx;
         let mut ret = lookup_sess_in_cache(s, session_id);
         if ret.is_null() {
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         // Version consistency (`ssl_sess.c:641`).
@@ -1084,7 +1092,7 @@ pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_i
             }
         }
         if ret.is_null() {
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         if (*s).verify_mode & SSL_VERIFY_PEER != 0 && (*s).sid_ctx_length == 0 {
@@ -1096,7 +1104,7 @@ pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_i
             (*ctx).stats.sess_timeout.fetch_add(1, Ordering::Relaxed);
             SSL_CTX_remove_session(ctx, ret);
             SSL_SESSION_free(ret);
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         // The explicit offered/embedded id match (`ssl_sess.c:717-723`).
@@ -1108,7 +1116,7 @@ pub(crate) unsafe fn ssl_get_prev_session(s: *mut Ssl, session_id: &[u8]) -> c_i
             a != session_id
         } {
             SSL_SESSION_free(ret);
-            (*s).ext_ticket_expected = 1;
+            (*s).ext_ticket_expected = ticket_expected;
             return 0;
         }
         (*ctx).stats.sess_hit.fetch_add(1, Ordering::Relaxed);
@@ -1159,6 +1167,16 @@ pub(crate) unsafe fn ssl_update_cache(s: *mut Ssl, mode: c_long) {
 // -------------------------------------------------------------------------------------------
 // Accessors
 // -------------------------------------------------------------------------------------------
+
+// ## NULL safety
+//
+// The authority defines a NULL answer only for the time accessors
+// (`SSL_SESSION_get_time[_ex]`, `SSL_SESSION_get_timeout`, the matching setters) and
+// dereferences NULL in the rest. Every accessor below answers a neutral value from a NULL
+// session instead: a NULL reaching a reader is a defect in the caller or in
+// `SSL_get_session` (the sslscan 2.1.5 crash), and reproducing the authority's dereference
+// would be undefined behaviour (AGENTS §17). Defined, non-NULL inputs keep the authority's
+// exact answer; the deviation exists only for the input the authority leaves undefined.
 
 /// `SSL_SESSION *SSL_get_session(const SSL *ssl)` — `ssl/ssl_sess.c:62-71`.
 ///
@@ -1271,6 +1289,9 @@ pub unsafe extern "C" fn SSL_SESSION_set_ex_data(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get_ex_data(s: *const SslSession, idx: c_int) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { CRYPTO_get_ex_data(&(*s).ex_data, idx) }
     })
@@ -1284,6 +1305,13 @@ pub unsafe extern "C" fn SSL_SESSION_get_ex_data(s: *const SslSession, idx: c_in
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get_id(s: *const SslSession, len: *mut c_uint) -> *const u8 {
     guard_ffi(ptr::null(), || {
+        if s.is_null() {
+            if !len.is_null() {
+                // SAFETY: `len` is NULL or writable per the caller's contract.
+                unsafe { *len = 0 };
+            }
+            return ptr::null();
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
             if !len.is_null() {
@@ -1305,6 +1333,13 @@ pub unsafe extern "C" fn SSL_SESSION_get0_id_context(
     len: *mut c_uint,
 ) -> *const u8 {
     guard_ffi(ptr::null(), || {
+        if s.is_null() {
+            if !len.is_null() {
+                // SAFETY: `len` is NULL or writable per the caller's contract.
+                unsafe { *len = 0 };
+            }
+            return ptr::null();
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
             if !len.is_null() {
@@ -1322,6 +1357,9 @@ pub unsafe extern "C" fn SSL_SESSION_get0_id_context(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get_compress_id(s: *const SslSession) -> c_uint {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).compress_meth }
     })
@@ -1339,6 +1377,9 @@ pub unsafe extern "C" fn SSL_SESSION_set1_id(
     sid_len: c_uint,
 ) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
             if sid_len as usize > SSL_MAX_SSL_SESSION_ID_LENGTH {
@@ -1482,6 +1523,9 @@ pub unsafe extern "C" fn SSL_SESSION_set_time(s: *mut SslSession, t: c_long) -> 
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get_protocol_version(s: *const SslSession) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).ssl_version }
     })
@@ -1497,6 +1541,9 @@ pub unsafe extern "C" fn SSL_SESSION_set_protocol_version(
     version: c_int,
 ) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).ssl_version = version };
         1
@@ -1512,6 +1559,9 @@ pub unsafe extern "C" fn SSL_SESSION_get0_cipher(
     s: *const SslSession,
 ) -> *const crate::ssl::ssl_ciph_table::SslCipher {
     guard_ffi(ptr::null(), || {
+        if s.is_null() {
+            return ptr::null();
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).cipher }
     })
@@ -1527,6 +1577,9 @@ pub unsafe extern "C" fn SSL_SESSION_set_cipher(
     cipher: *const crate::ssl::ssl_ciph_table::SslCipher,
 ) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).cipher = cipher };
         1
@@ -1540,6 +1593,9 @@ pub unsafe extern "C" fn SSL_SESSION_set_cipher(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get0_hostname(s: *const SslSession) -> *const c_char {
     guard_ffi(ptr::null(), || {
+        if s.is_null() {
+            return ptr::null();
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).ext_hostname() }
     })
@@ -1555,6 +1611,9 @@ pub unsafe extern "C" fn SSL_SESSION_set1_hostname(
     hostname: *const c_char,
 ) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract and its `ext_hostname` member obeys the
         // member-buffer invariant.
         let mut slot = unsafe { (*s).ext_hostname_slot() };
@@ -1589,6 +1648,9 @@ pub unsafe extern "C" fn SSL_SESSION_set1_hostname(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_has_ticket(s: *const SslSession) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
             if (*s).ext_tick().1 > 0 {
@@ -1608,6 +1670,9 @@ pub unsafe extern "C" fn SSL_SESSION_has_ticket(s: *const SslSession) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get_ticket_lifetime_hint(s: *const SslSession) -> c_ulong {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).ext_tick_lifetime_hint }
     })
@@ -1625,6 +1690,16 @@ pub unsafe extern "C" fn SSL_SESSION_get0_ticket(
     len: *mut usize,
 ) {
     guard_ffi((), || {
+        if s.is_null() {
+            // SAFETY: `len` is writable and `tick` is NULL or writable per the caller's contract.
+            unsafe {
+                *len = 0;
+                if !tick.is_null() {
+                    *tick = ptr::null();
+                }
+            }
+            return;
+        }
         // SAFETY: `s` is live per the caller's contract.
         let (tick_ptr, tick_len) = unsafe { (*s).ext_tick() };
         // SAFETY: `len` is writable and `tick` is NULL or writable, per the caller's contract.
@@ -1644,6 +1719,9 @@ pub unsafe extern "C" fn SSL_SESSION_get0_ticket(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get_max_early_data(s: *const SslSession) -> u32 {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).ext_max_early_data }
     })
@@ -1657,6 +1735,9 @@ pub unsafe extern "C" fn SSL_SESSION_get_max_early_data(s: *const SslSession) ->
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_set_max_early_data(s: *mut SslSession, max: u32) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).ext_max_early_data = max };
         1
@@ -1675,6 +1756,14 @@ pub unsafe extern "C" fn SSL_SESSION_get0_alpn_selected(
     len: *mut usize,
 ) {
     guard_ffi((), || {
+        if s.is_null() {
+            // SAFETY: `alpn` and `len` are writable per the caller's contract.
+            unsafe {
+                *alpn = ptr::null();
+                *len = 0;
+            }
+            return;
+        }
         // SAFETY: `s` is live per the caller's contract.
         let (alpn_ptr, alpn_len) = unsafe { (*s).ext_alpn_selected() };
         // SAFETY: `alpn` and `len` are writable per the caller's contract.
@@ -1697,6 +1786,9 @@ pub unsafe extern "C" fn SSL_SESSION_set1_alpn_selected(
     len: usize,
 ) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract and its `ext_alpn_selected` member obeys
         // the blob member-buffer invariant.
         let mut slot = unsafe { (*s).ext_alpn_selected_slot() };
@@ -1731,6 +1823,9 @@ pub unsafe extern "C" fn SSL_SESSION_set1_alpn_selected(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get0_peer(s: *mut SslSession) -> *mut X509 {
     guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).peer }
     })
@@ -1743,6 +1838,9 @@ pub unsafe extern "C" fn SSL_SESSION_get0_peer(s: *mut SslSession) -> *mut X509 
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_get0_peer_rpk(s: *mut SslSession) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe { (*s).peer_rpk }
     })
@@ -1760,6 +1858,9 @@ pub unsafe extern "C" fn SSL_SESSION_set1_id_context(
     sid_ctx_len: c_uint,
 ) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
             if sid_ctx_len as usize > SSL_MAX_SID_CTX_LENGTH {
@@ -1785,6 +1886,9 @@ pub unsafe extern "C" fn SSL_SESSION_set1_id_context(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_SESSION_is_resumable(s: *const SslSession) -> c_int {
     guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
             if (*s).not_resumable == 0 && ((*s).session_id_length > 0 || (*s).ext_tick().1 > 0) {
@@ -2140,6 +2244,9 @@ pub unsafe extern "C" fn SSL_SESSION_set1_ticket_appdata(
     len: usize,
 ) -> c_int {
     guard_ffi(0, || {
+        if ss.is_null() {
+            return 0;
+        }
         // SAFETY: `ss` is live per the caller's contract and its `ticket_appdata` member obeys the
         // blob member-buffer invariant.
         let mut slot = unsafe { (*ss).ticket_appdata_slot() };
@@ -2179,6 +2286,14 @@ pub unsafe extern "C" fn SSL_SESSION_get0_ticket_appdata(
     len: *mut usize,
 ) -> c_int {
     guard_ffi(0, || {
+        if ss.is_null() {
+            // SAFETY: `data` and `len` are writable per the caller's contract.
+            unsafe {
+                *data = ptr::null_mut();
+                *len = 0;
+            }
+            return 0;
+        }
         // SAFETY: `ss` is live per the caller's contract.
         let (appdata_ptr, appdata_len) = unsafe { (*ss).ticket_appdata() };
         // SAFETY: `data` and `len` are writable per the caller's contract.
@@ -2748,6 +2863,81 @@ mod session_id_alias_tests {
             );
 
             SSL_SESSION_free(s);
+        }
+    }
+}
+
+/// NULL-input safety for the whole accessor family. The authority dereferences NULL in most of
+/// these (`ssl_sess.c`), which is undefined behaviour; every accessor here instead answers a
+/// neutral value. This is the shape sslscan 2.1.5 reached: `SSL_get_session` answered NULL and
+/// `SSL_SESSION_get_compress_id` faulted on it.
+#[cfg(test)]
+mod null_accessor_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+
+    #[test]
+    fn every_session_accessor_answers_a_neutral_value_for_null() {
+        let _g = crate::test_support::lock_global_state();
+        let n: *const SslSession = core::ptr::null();
+        let m: *mut SslSession = core::ptr::null_mut();
+        // SAFETY: every call passes a NULL session, which each accessor now accepts; all
+        // out-parameters are this frame's own variables.
+        unsafe {
+            assert_eq!(SSL_SESSION_get_compress_id(n), 0);
+            assert_eq!(SSL_SESSION_get_protocol_version(n), 0);
+            assert_eq!(SSL_SESSION_get_max_early_data(n), 0);
+            assert_eq!(SSL_SESSION_get_ticket_lifetime_hint(n), 0);
+            assert_eq!(SSL_SESSION_has_ticket(n), 0);
+            assert_eq!(SSL_SESSION_is_resumable(n), 0);
+            assert_eq!(SSL_SESSION_get_time(n), 0);
+            assert_eq!(SSL_SESSION_get_time_ex(n), 0);
+            assert_eq!(SSL_SESSION_get_timeout(n), 0);
+            assert!(SSL_SESSION_get0_cipher(n).is_null());
+            assert!(SSL_SESSION_get0_hostname(n).is_null());
+            assert!(SSL_SESSION_get0_peer(m).is_null());
+            assert!(SSL_SESSION_get0_peer_rpk(m).is_null());
+            assert!(SSL_SESSION_get_ex_data(n, 0).is_null());
+
+            let mut len = 7u32;
+            assert!(SSL_SESSION_get_id(n, &mut len).is_null());
+            assert_eq!(len, 0);
+            len = 7;
+            assert!(SSL_SESSION_get0_id_context(n, &mut len).is_null());
+            assert_eq!(len, 0);
+
+            let mut tick: *const u8 = core::ptr::NonNull::dangling().as_ptr();
+            let mut tick_len = 7usize;
+            SSL_SESSION_get0_ticket(n, &mut tick, &mut tick_len);
+            assert!(tick.is_null());
+            assert_eq!(tick_len, 0);
+
+            let mut alpn: *const u8 = core::ptr::NonNull::dangling().as_ptr();
+            let mut alpn_len = 7usize;
+            SSL_SESSION_get0_alpn_selected(n, &mut alpn, &mut alpn_len);
+            assert!(alpn.is_null());
+            assert_eq!(alpn_len, 0);
+
+            let mut appdata: *mut c_void = core::ptr::NonNull::dangling().as_ptr();
+            let mut appdata_len = 7usize;
+            assert_eq!(
+                SSL_SESSION_get0_ticket_appdata(m, &mut appdata, &mut appdata_len),
+                0
+            );
+            assert!(appdata.is_null());
+            assert_eq!(appdata_len, 0);
+
+            assert_eq!(SSL_SESSION_set_protocol_version(m, 0x0304), 0);
+            assert_eq!(SSL_SESSION_set_max_early_data(m, 1), 0);
+            assert_eq!(SSL_SESSION_set_cipher(m, core::ptr::null()), 0);
+            assert_eq!(SSL_SESSION_set1_hostname(m, core::ptr::null()), 0);
+            assert_eq!(SSL_SESSION_set1_id(m, core::ptr::null(), 0), 0);
+            assert_eq!(SSL_SESSION_set1_id_context(m, core::ptr::null(), 0), 0);
+            assert_eq!(SSL_SESSION_set1_alpn_selected(m, core::ptr::null(), 0), 0);
+            assert_eq!(SSL_SESSION_set1_ticket_appdata(m, core::ptr::null(), 0), 0);
+            assert_eq!(SSL_SESSION_set_time_ex(m, 0), 0);
+            assert_eq!(SSL_SESSION_set_timeout(m, 1), 0);
         }
     }
 }

@@ -187,8 +187,9 @@ attribution; broad linkage and directory mapping are upper bounds only.
 by `consumer impact x demonstrated dependence x exploitability / cost`, where
 unknown dependence is conservative, not zero. Rank by expected number of
 important **reachable obligations discharged**, not number of files edited or
-unclassified raw `CRYPTO_*` spellings removed. Independently rerun the 8 L7
-workloads against the converted candidate; the 25 L4-only consumers need
+unclassified raw `CRYPTO_*` spellings removed. Independently rerun the L7
+cohort workloads against the converted candidate (33/33 as of 2026-10-20); any
+remaining L4-only or L6 consumer needs
 meaningful L7 workflows before trial invitations. Preserve exact outcomes
 rather than collapsing build/link/load/function into one “drop-in” label.
 

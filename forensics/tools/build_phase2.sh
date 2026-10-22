@@ -172,7 +172,52 @@ cp libcrypto.so libssl.so install/lib/
 cp "$OBJ/libcrypto.a" install/lib/libcrypto.a
 cp "$OBJ/libssl.a" install/lib/libssl.a
 cp legacy.so install/lib/ossl-modules/legacy.so
-cp pkgconfig/libcrypto.pc pkgconfig/libssl.pc install/lib/pkgconfig/
+
+# --- pkg-config metadata ------------------------------------------------------
+# `pkg-config --libs openssl` is how autoconf/cmake find a prefix, so the
+# metadata is part of the install contract, not a convenience. The authority
+# ships lib/pkgconfig/{openssl,libssl,libcrypto}.pc and a consumer that only
+# gets PKG_CONFIG_PATH must get the same answers, including the `openssl`
+# meta-package (which has no Libs of its own: its two -l flags come from
+# `Requires`, exactly as the authority's does).
+#
+# The templates reproduce the authority's field set verbatim, including
+# `Requires.private`/`Libs.private` and the bare `#` first line; only `prefix`
+# differs, and it is this install root rather than an absolute host path, so the
+# same tree resolves wherever the court mounts it. `${...}` in the templates are
+# pkg-config variables, not shell ones: `sed` is used precisely because it does
+# not expand them and needs no escaping (no `$`, no `&` in the replacement).
+#
+# `phase2_shell.py` still emits pkgconfig/*.pc, and those hashes are in its
+# receipt. They are NOT installed and NOT overwritten here: they name themselves
+# `libcrypto`/`libssl` rather than the authority's `OpenSSL-libcrypto`/`-libssl`,
+# hardcode `prefix=/usr/local`, and omit `openssl.pc`. Overwriting them in place
+# would invalidate a receipt that was already written, so the install tree is
+# generated from the templates instead. Superseded generator output recorded as
+# a divergence in docs/PHASE-14-SUBPHASES.md.
+pkgconfig_templates=/work/forensics/tools/templates/pkgconfig
+install_prefix="$PWD/install"
+# Single source of truth for the version: the value the generator derived from
+# the authority, not a literal repeated here.
+version="$(sed -n 's/^Version: //p' pkgconfig/libcrypto.pc)"
+if [ -z "$version" ]; then
+  echo "install layout: no Version in pkgconfig/libcrypto.pc" >&2
+  exit 1
+fi
+for pc in openssl libssl libcrypto; do
+  sed -e "s|@PREFIX@|$install_prefix|g" -e "s|@VERSION@|$version|g" \
+    "$pkgconfig_templates/$pc.pc.in" > "install/lib/pkgconfig/$pc.pc"
+done
+
+# The metadata is only a fix if it resolves against this tree, so the resolution
+# is part of the build rather than of the report: `--exists` follows Requires and
+# Requires.private, which is what catches a missing libssl/libcrypto pair.
+if command -v pkg-config >/dev/null 2>&1; then
+  PKG_CONFIG_PATH="$install_prefix/lib/pkgconfig" \
+    pkg-config --exists openssl libssl libcrypto
+  echo "  pkg-config: openssl libssl libcrypto $(PKG_CONFIG_PATH="$install_prefix/lib/pkgconfig" pkg-config --modversion openssl)"
+fi
+
 cp openssl c_rehash install/bin/
 chmod +x install/bin/openssl install/bin/c_rehash
 cd /work

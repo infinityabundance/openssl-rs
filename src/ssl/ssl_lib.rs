@@ -108,8 +108,8 @@ use crate::ssl::statem::extensions_cust::{
 };
 use crate::ssl::statem::statem::{
     ossl_statem_accept, ossl_statem_check_finish_init, ossl_statem_clear, ossl_statem_connect,
-    ossl_statem_in_error, ossl_statem_set_in_init, SSL_in_before, SSL_in_init,
-    SSL_is_init_finished,
+    ossl_statem_get_in_handshake, ossl_statem_in_error, ossl_statem_set_in_handshake,
+    ossl_statem_set_in_init, SSL_in_before, SSL_in_init, SSL_is_init_finished,
 };
 use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled};
 use crate::x509::by_dir::X509_LOOKUP_hash_dir;
@@ -386,6 +386,25 @@ const SSL_CTRL_SET_NOT_RESUMABLE_SESS_CB: c_int = 79;
 /// `SSL_CTRL_SET_TLSEXT_SERVERNAME_CB` — `ssl.h:1266` (the `SSL_CTX_set_tlsext_servername_callback`
 /// macro's control code).
 const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB: c_int = 53;
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB` — `ssl.h.in:1276` (`SSL_CTX_set_tlsext_status_cb`'s
+/// `SSL_CTX_callback_ctrl` code).
+pub(crate) const SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB: c_int = 63;
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG` — `ssl.h.in:1277`.
+pub(crate) const SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG: c_int = 64;
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE` — `ssl.h.in:1278`.
+pub(crate) const SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE: c_int = 65;
+/// `SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP` — `ssl.h.in:1283`.
+pub(crate) const SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 70;
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP` — `ssl.h.in:1284`.
+pub(crate) const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
+/// `SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE` — `ssl.h.in:1334`.
+pub(crate) const SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE: c_int = 127;
+/// `SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB` — `ssl.h.in:1335`.
+pub(crate) const SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB: c_int = 128;
+/// `SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB_ARG` — `ssl.h.in:1336`.
+pub(crate) const SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB_ARG: c_int = 129;
+/// `TLSEXT_STATUSTYPE_ocsp` — `tls1.h`: the only status type this implementation requests.
+pub(crate) const TLSEXT_STATUSTYPE_OCSP: c_int = 1;
 /// `SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG` — `ssl.h:1267` (the `SSL_CTX_set_tlsext_servername_arg`
 /// macro's control code). It is dispatched by `ssl3_ctx_ctrl` (`s3_lib.c:4463-4465`), the
 /// `SSL_CTX_ctrl` fall-through, not by `SSL_CTX_callback_ctrl`.
@@ -432,6 +451,9 @@ const SSL_CTRL_SET_TMP_DH: c_int = 3;
 const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
 /// `SSL_CTRL_SET_GROUPS` — `ssl.h:1352` (`SSL_CTX_set1_groups`).
 const SSL_CTRL_SET_GROUPS: c_int = 91;
+/// `SSL_CTRL_SET_GROUPS_LIST` — `ssl.h.in:1306` (`SSL_CTX_set1_groups_list` and the
+/// `set1_curves_list` alias).
+const SSL_CTRL_SET_GROUPS_LIST: c_int = 92;
 /// `SSL_CTRL_CHAIN` — `ssl.h:1349` (`SSL_CTX_set0_chain`/`SSL_CTX_set1_chain`).
 const SSL_CTRL_CHAIN: c_int = 88;
 /// `SSL_CTRL_CHAIN_CERT` — `ssl.h:1350` (`SSL_CTX_add0_chain_cert`/`add1`).
@@ -518,7 +540,7 @@ const TLSEXT_NAMETYPE_HOST_NAME: c_int = 0;
 /// `SSL_CTRL_SET_TLSEXT_HOSTNAME` — `ssl.h:1268`.
 const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 /// `TLSEXT_STATUSTYPE_nothing` — `tls1.h` (the "no OCSP status request" sentinel).
-const TLSEXT_STATUSTYPE_NOTHING: c_int = -1;
+pub(crate) const TLSEXT_STATUSTYPE_NOTHING: c_int = -1;
 /// `TLSEXT_cert_type_x509` — `tls1.h:240`.
 const TLSEXT_CERT_TYPE_X509: u8 = 0;
 /// `TLSEXT_cert_type_rpk` — `tls1.h:242`.
@@ -1395,6 +1417,12 @@ pub struct SslCtx {
     /// `void *ext.servername_arg` — the callback's argument (NULL for nginx, which uses the
     /// two-argument macro).
     pub servername_arg: *mut c_void,
+    /// `int (*ext.status_cb)(SSL *, void *)` — the OCSP status callback
+    /// `SSL_CTX_set_tlsext_status_cb` installs through `SSL_CTX_callback_ctrl`
+    /// (`s3_lib.c:4673-4675`).
+    pub status_cb: Option<StatusCb>,
+    /// `void *ext.status_arg` — the callback's argument (`s3_lib.c:4505-4507`).
+    pub status_arg: *mut c_void,
     /// `SSL_async_callback_fn async_cb`.
     #[allow(dead_code)] // stored for the setter's contract; read by the async path (14.5)
     pub async_cb: Option<AsyncCb>,
@@ -1767,6 +1795,12 @@ pub struct Ssl {
     pub ext_ticket_expected: c_int,
     /// `int ext.status_expected` — the OCSP status-request extension flag (`statem_*.c`, 16.5).
     pub ext_status_expected: c_int,
+    /// `unsigned char *ext.ocsp.resp` — the single OCSP response, owned by this connection. The
+    /// authority aliases the caller's pointer (`s3_lib.c:4110-4132`); this crate copies the bytes
+    /// and releases them in `destroy_body`, the recorded ownership repair.
+    pub ext_ocsp_resp: *mut u8,
+    /// `size_t ext.ocsp.resp_len` — the response length, zero when none is held.
+    pub ext_ocsp_resp_len: usize,
     /// `int ext.compress_certificate_sent` — the certificate-compression flag (`statem_*.c`, 16.5).
     pub ext_compress_certificate_sent: c_int,
     /// `uint8_t ext.compress_certificate_from_peer[0]` — the peer's first compression
@@ -2372,6 +2406,9 @@ pub type SessionTicketCb =
 /// `int (*)(SSL *, int *, void *)` — the server-name callback
 /// `SSL_CTX_set_tlsext_servername_callback` installs (`ssl_local.h:994`).
 pub type ServernameCb = unsafe extern "C" fn(*mut Ssl, *mut c_int, *mut c_void) -> c_int;
+/// `int (*)(SSL *, void *)` — the OCSP status callback `SSL_CTX_set_tlsext_status_cb` installs
+/// (`ssl_local.h:1012`).
+pub type StatusCb = unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int;
 /// `int (*)(SSL *, unsigned char *, unsigned char *, EVP_CIPHER_CTX *, HMAC_CTX *, int)` — the
 /// deprecated ticket-key callback `SSL_CTX_set_tlsext_ticket_key_cb` installs (`ssl_local.h:1001`).
 /// The cipher and MAC contexts are opaque here, as they are for [`TicketKeyEvpCb`].
@@ -3299,6 +3336,19 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             }
             X509_VERIFY_PARAM_inherit((*s).param, (*ctx).param);
 
+            // `ssl_lib.c:769-772`: shallow-copy the context's TLSv1.3 suite stack. The
+            // connection's `SSL_set_cipher_list`/`SSL_set_ciphersuites` build their result from
+            // this stack, so a NULL one would drop every TLSv1.3 suite from the connection's
+            // cipher list (jimtcl's `SSL_set_cipher_list(ssl, "ALL")` then fails a TLSv1.3
+            // handshake with `no shared cipher`). The duplicate is released by `SSL_free`'s body.
+            if (*ctx).tls13_ciphersuites.is_null() {
+                return ptr::null_mut();
+            }
+            (*s).tls13_ciphersuites = OPENSSL_sk_dup((*ctx).tls13_ciphersuites);
+            if (*s).tls13_ciphersuites.is_null() {
+                return ptr::null_mut();
+            }
+
             (*s).cert = ssl_cert_dup((*ctx).cert);
             if (*s).cert.is_null() {
                 return ptr::null_mut();
@@ -3556,6 +3606,7 @@ unsafe impl CtxDestroy for Ssl {
             (*s).s3_alpn_selected_slot().clear(FILE, 0);
             (*s).s3_alpn_proposed_slot().clear(FILE, 0);
             CRYPTO_free((*s).supportedgroups.cast(), FILE, 0);
+            CRYPTO_free((*s).ext_ocsp_resp.cast(), FILE, 0);
             (*s).pha_context_slot().clear(FILE, 0);
             crate::evp::digest::EVP_MD_CTX_free((*s).pha_dgst.cast());
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data);
@@ -4433,6 +4484,35 @@ fn ssl_check_allowed_versions(min_version: c_int, max_version: c_int) -> bool {
     true
 }
 
+/// Replace the connection's single OCSP response with an owned copy of `data`.
+///
+/// `SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP` (`s3_lib.c:4110-4136`) stores the caller's pointer;
+/// this crate copies the bytes so the connection never aliases application memory (recorded
+/// ownership repair). A NULL `data` clears the response, as the authority's `parg == NULL` arm does.
+///
+/// # Safety
+/// `s` must be live; `data` must name `len` readable bytes when non-NULL.
+unsafe fn set_ocsp_response(s: *mut Ssl, data: *mut u8, len: c_long) -> c_long {
+    // SAFETY: `s` is live per the contract.
+    unsafe {
+        if !(*s).ext_ocsp_resp.is_null() {
+            CRYPTO_free((*s).ext_ocsp_resp.cast(), FILE, 0);
+            (*s).ext_ocsp_resp = ptr::null_mut();
+        }
+        (*s).ext_ocsp_resp_len = 0;
+        if data.is_null() || len <= 0 {
+            return 1;
+        }
+        let dup = CRYPTO_memdup(data.cast(), len as usize, FILE, 0).cast::<u8>();
+        if dup.is_null() {
+            return 0;
+        }
+        (*s).ext_ocsp_resp = dup;
+        (*s).ext_ocsp_resp_len = len as usize;
+        1
+    }
+}
+
 /// `long SSL_ctrl(SSL *s, int cmd, long larg, void *parg)` — `ssl/ssl_lib.c:2943-2946`, via
 /// `ossl_ctrl_internal` (`:2948-3074`).
 ///
@@ -4507,6 +4587,41 @@ pub unsafe extern "C" fn SSL_ctrl(
                     sc.max_pipelines = larg as usize;
                     1
                 }
+            }
+            // `ssl3_ctrl`'s OCSP status arms (`s3_lib.c:4061-4068`, `:4087-4136`).
+            SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE => sc.ext_status_type as c_long,
+            SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE => {
+                sc.ext_status_type = larg as c_int;
+                1
+            }
+            SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP => {
+                // `s3_lib.c:4087-4107`: answer the held DER (NULL/`-1` when none).
+                // SAFETY: `parg` is a writable `unsigned char *` slot for this command.
+                unsafe { *parg.cast::<*mut u8>() = sc.ext_ocsp_resp };
+                if sc.ext_ocsp_resp.is_null() {
+                    -1
+                } else {
+                    sc.ext_ocsp_resp_len as c_long
+                }
+            }
+            SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP => {
+                // `s3_lib.c:4110-4136`: replace the held response. The authority stores the
+                // caller's pointer; this crate copies it (recorded ownership repair).
+                // SAFETY: `s` is live; `parg` names `larg` readable bytes when non-NULL.
+                unsafe { set_ocsp_response(s, parg.cast::<u8>(), larg) }
+            }
+            // `s3_lib.c:4561-4569`: install the per-connection supported-groups list parsed from a
+            // colon-separated group string.
+            SSL_CTRL_SET_GROUPS_LIST => {
+                // SAFETY: `parg` is the NUL-terminated group string for this command; `sc`'s
+                // fields are writable.
+                c_long::from(unsafe {
+                    crate::ssl::t1_lib::tls1_set_groups_list(
+                        &mut sc.supportedgroups,
+                        &mut sc.supportedgroups_len,
+                        parg.cast::<c_char>(),
+                    )
+                })
             }
             // `sc->s3.send_connection_binding`, with no connection binding installed.
             SSL_CTRL_GET_RI_SUPPORT => 0,
@@ -4811,6 +4926,33 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
             c.servername_arg = parg;
             1
         }
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG => {
+            // `s3_lib.c:4505-4507`: store the OCSP status callback argument.
+            c.status_arg = parg;
+            1
+        }
+        SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB_ARG => {
+            // `s3_lib.c:4509-4511`: answer the stored argument through the caller's slot.
+            // SAFETY: `parg` is a writable `void *` slot for this command.
+            unsafe { *parg.cast::<*mut c_void>() = c.status_arg };
+            // The authority's `break` falls through to the function's trailing `return 1`.
+            1
+        }
+        SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB => {
+            // `s3_lib.c:4513-4515`: answer the stored callback pointer through the caller's slot.
+            // SAFETY: `parg` is a writable function-pointer slot for this command.
+            unsafe { *parg.cast::<Option<StatusCb>>() = c.status_cb };
+            1
+        }
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE => {
+            // `s3_lib.c:4498-4500`: the context's OCSP request type.
+            c.ext_status_type = larg as c_int;
+            1
+        }
+        SSL_CTRL_GET_TLSEXT_STATUS_REQ_TYPE => {
+            // `s3_lib.c:4495-4497`.
+            c.ext_status_type as c_long
+        }
         SSL_CTRL_SET_GROUPS => {
             // `s3_lib.c:4552-4560`: install the supported-groups list.
             // SAFETY: `parg` holds `larg` ints per the command's contract; `c`'s fields are
@@ -4824,8 +4966,32 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
                 )
             })
         }
+        SSL_CTRL_SET_GROUPS_LIST => {
+            // `s3_lib.c:4561-4569`: parse and install the context's supported-groups list.
+            // SAFETY: `parg` is the NUL-terminated group string for this command; `c`'s fields
+            // are writable.
+            c_long::from(unsafe {
+                crate::ssl::t1_lib::tls1_set_groups_list(
+                    &mut c.supportedgroups,
+                    &mut c.supportedgroups_len,
+                    parg.cast::<c_char>(),
+                )
+            })
+        }
         SSL_CTRL_SET_TMP_ECDH => {
-            // `s3_lib.c:4449-4462` -> `ssl_set_tmp_ecdh_groups` (`tls_depr.c:167-190`).
+            // The pinned authority is built `no-deprecated`, so `s3_lib.c`'s
+            // `case SSL_CTRL_SET_TMP_ECDH` is compiled out and the control does not touch the
+            // context's group list (`ssl.h:1423-1428` guards the consumer macro on
+            // `OPENSSL_NO_DEPRECATED_3_0` too). Consumers such as monit still reach this control
+            // through a pre-3.0 header and expect success.
+            //
+            // Divergence, recorded: the authority's compiled-out control answers 0 (the switch's
+            // default), while this arm answers the documented success value 1. Keeping 1 is the
+            // compatibility choice; the observable group list is what matters here and it must
+            // stay untouched. The former `tls1_set_groups(&nid, 1)` replaced the default list
+            // with a single curve, which made a TLS1.2 server select a group its ECDHE path could
+            // not complete and return alert 40. The argument is still validated so a NULL or
+            // group-less `EC_KEY` keeps the authority's documented failure values.
             if parg.is_null() {
                 // SAFETY: a constant site.
                 unsafe { raise_ssl(ERR_R_PASSED_NULL_PARAMETER, 4451) };
@@ -4844,15 +5010,7 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
             if nid == NID_undef {
                 return 0;
             }
-            // SAFETY: `nid` is this frame's int; `c`'s fields are writable.
-            c_long::from(unsafe {
-                crate::ssl::t1_lib::tls1_set_groups(
-                    &mut c.supportedgroups,
-                    &mut c.supportedgroups_len,
-                    &nid,
-                    1,
-                )
-            })
+            1
         }
         SSL_CTRL_SET_TMP_DH => {
             // `s3_lib.c:4423-4439`.
@@ -5065,6 +5223,15 @@ pub unsafe extern "C" fn SSL_CTX_callback_ctrl(
             // SAFETY: `ctx` is live; the pointer bits are stored as the callback.
             unsafe {
                 (*ctx).ticket_key_cb = fp.map(|f| core::mem::transmute::<_, TicketKeyCb>(f));
+            }
+            1
+        }
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB => {
+            // `ssl3_ctx_callback_ctrl`, `s3_lib.c:4673-4675`: the OCSP status callback libtls and
+            // every other libtls consumer install with `SSL_CTX_set_tlsext_status_cb`.
+            // SAFETY: `ctx` is live; only the pointer bits are stored (`ssl_local.h:1012`).
+            unsafe {
+                (*ctx).status_cb = fp.map(|f| core::mem::transmute::<_, StatusCb>(f));
             }
             1
         }
@@ -5507,9 +5674,10 @@ pub unsafe extern "C" fn SSL_get_error(s: *const Ssl, i: c_int) -> c_int {
 
 /// `int SSL_pending(const SSL *s)` — `ssl/ssl_lib.c:1926-1941`.
 ///
-/// The authority's body is `s->method->ssl_pending(s)` (`ssl3_pending`), which reports the bytes
-/// buffered in the record layer; this slice has no record layer, and `ssl3_pending` reports 0 for
-/// an empty one.
+/// The authority's body is `s->method->ssl_pending(s)` (`ssl3_pending`, `rec_layer_s3.c:176-201`),
+/// which sums the application plaintext buffered in the record layer. This slice keeps the
+/// unread tail of the current record in `rx_buf[rx_off..rx_len]`, so that is the pending count; a
+/// peek leaves it untouched (`rec_layer_s3.c:791-808`) and the count reports the peeked bytes.
 ///
 /// # Safety
 /// `s` must point to a live connection.
@@ -5519,13 +5687,18 @@ pub unsafe extern "C" fn SSL_pending(s: *const Ssl) -> c_int {
         if s.is_null() {
             return 0;
         }
-        0
+        // SAFETY: `s` is live per the caller's contract.
+        let pending = unsafe { (*s).rx_len.saturating_sub((*s).rx_off) };
+        // `ssl_lib.c:1939`: values at or above `INT_MAX` answer `INT_MAX`.
+        pending.min(c_int::MAX as usize) as c_int
     })
 }
 
 /// `int SSL_has_pending(const SSL *s)` — `ssl/ssl_lib.c:1943-1977`.
 ///
-/// As [`SSL_pending`], the record layer is 14.4's and an empty one reports 0.
+/// As [`SSL_pending`], the record layer is the reduced one: processed (decrypted) application
+/// plaintext is buffered in `rx_buf` and reports 1. Unprocessed bytes still in the read BIO are
+/// not visible without reading a record in this slice.
 ///
 /// # Safety
 /// `s` must be NULL or a live connection.
@@ -5535,7 +5708,8 @@ pub unsafe extern "C" fn SSL_has_pending(s: *const Ssl) -> c_int {
         if s.is_null() {
             return 0;
         }
-        0
+        // SAFETY: `s` is live per the caller's contract.
+        c_int::from(unsafe { (*s).rx_off < (*s).rx_len })
     })
 }
 
@@ -6586,6 +6760,74 @@ pub(crate) unsafe fn ssl_read_internal(
         if ossl_statem_check_finish_init(s, 0) == 0 {
             return -1;
         }
+        // `s3_lib.c:5117-5159`: `ssl3_read` and `ssl3_peek` are both `ssl3_read_internal`; only
+        // the `peek` flag differs.
+        ssl3_read_internal(s, _buf, _num, false, _readbytes)
+    }
+}
+
+/// `ssl3_read_internal` — `ssl/s3_lib.c:5117-5153`, the shared body of `ssl3_read`/`ssl3_peek`.
+///
+/// The renegotiation check and the `s3.in_read_app_data` re-entry bookkeeping are the authority's
+/// (`s3_lib.c:5121-5140`). The application-data body is [`ssl3_read_app_data`]; the retry arm is
+/// retained for parity with the authority and is unreachable in this reduced record layer, which
+/// never sets `s3.in_read_app_data` to 2.
+///
+/// # Safety
+/// `s` must be a live connection; `buf` must hold `num` writable bytes and `readbytes` be
+/// writable.
+unsafe fn ssl3_read_internal(
+    s: *mut Ssl,
+    _buf: *mut c_void,
+    _num: usize,
+    peek: bool,
+    _readbytes: *mut usize,
+) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
+        // `s3_lib.c:5124-5125`: a pending renegotiation request is checked before the read.
+        if (*s).s3_renegotiate != 0 {
+            let _ = crate::ssl::s3_lib::ssl3_renegotiate_check(s, 0);
+        }
+        (*s).s3_in_read_app_data = 1;
+    }
+    // SAFETY: `s` is live per the caller's contract; `_buf`/`_num`/`_readbytes` are the caller's.
+    let ret = unsafe { ssl3_read_app_data(s, _buf, _num, peek, _readbytes) };
+    // SAFETY: `s` is live.
+    unsafe {
+        if ret == -1 && (*s).s3_in_read_app_data == 2 {
+            // `s3_lib.c:5127-5137`: a handshake re-entered from the record layer found
+            // application data; retry with handshake processing disabled.
+            ossl_statem_set_in_handshake(s, 1);
+            let retry = ssl3_read_app_data(s, _buf, _num, peek, _readbytes);
+            ossl_statem_set_in_handshake(s, 0);
+            retry
+        } else {
+            (*s).s3_in_read_app_data = 0;
+            ret
+        }
+    }
+}
+
+/// The application-data body of [`ssl3_read_internal`] — `s3_lib.c:5127-5153` and the reduced
+/// `ssl3_read_bytes`.
+///
+/// When `peek` is true the record is copied to the caller but **not** consumed
+/// (`rec_layer_s3.c:791-810`): the plaintext stays in `rx_buf` so the next `SSL_read` returns the
+/// same bytes.
+///
+/// # Safety
+/// `s` must be a live connection; `_buf` must hold `_num` writable bytes and `_readbytes` be
+/// writable.
+unsafe fn ssl3_read_app_data(
+    s: *mut Ssl,
+    _buf: *mut c_void,
+    _num: usize,
+    peek: bool,
+    _readbytes: *mut usize,
+) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
         // Phase 17: once the handshake has finished, read through the reduced record layer the way
         // the authority reaches `ssl3_read_bytes` from `ssl3_read` with `SSL3_RT_APPLICATION_DATA`
         // (`s3_lib.c:5151-5154`, `s3_lib.c:5118-5149` -> `rec_layer_s3.c:622`). A post-handshake
@@ -6593,8 +6835,22 @@ pub(crate) unsafe fn ssl_read_internal(
         // `rec_layer_s3.c:992-1066`) is consumed by the authority's state machine and the read
         // loops (`goto start`, `rec_layer_s3.c:1065`). This slice has no post-handshake state
         // machine, so it drops such records and reads again; only application plaintext is returned.
-        if (*s).in_init != 0 {
-            return -1;
+        // The authority's `ssl3_read_bytes` drives the handshake when an application read arrives
+        // before it has finished (`rec_layer_s3.c:673-680`): the connection's engine runs first, a
+        // retry (`0`) answers `-1` with the engine's `rwstate` intact so `SSL_get_error` reports
+        // `SSL_ERROR_WANT_READ`/`_WRITE`, and only a finished handshake falls through to the
+        // application-data read.
+        if ossl_statem_get_in_handshake(s) == 0 && (*s).in_init != 0 {
+            let func = (*s).handshake_func;
+            if let Some(f) = func {
+                let r = f(s);
+                if r < 0 {
+                    return r;
+                }
+                if r == 0 {
+                    return -1;
+                }
+            }
         }
         // Phase 17: first satisfy the caller from the unread tail of the previous record, which
         // `ssl3_read_bytes` left in `rx_buf` (`ssl3_read_internal`, `s3_lib.c`; the authority's
@@ -6609,15 +6865,23 @@ pub(crate) unsafe fn ssl_read_internal(
                     n,
                 );
             }
-            (*s).rx_off += n;
-            if (*s).rx_off >= (*s).rx_len {
-                (*s).rx_off = 0;
-                (*s).rx_len = 0;
+            // `rec_layer_s3.c:791-808`: a peek copies from the record but leaves its offset and
+            // remaining length untouched, so the following read returns the same bytes.
+            if !peek {
+                (*s).rx_off += n;
+                if (*s).rx_off >= (*s).rx_len {
+                    (*s).rx_off = 0;
+                    (*s).rx_len = 0;
+                }
             }
             if !_readbytes.is_null() {
                 *_readbytes = n;
             }
             (*s).rwstate = SSL_NOTHING;
+            // `rec_layer_s3.c:774-781`: a zero-length request answers 0 without consuming.
+            if _num == 0 {
+                return 0;
+            }
             return 1;
         }
         loop {
@@ -6651,9 +6915,12 @@ pub(crate) unsafe fn ssl_read_internal(
                     if !_buf.is_null() && want != 0 {
                         ptr::copy_nonoverlapping((*s).rx_buf.as_ptr(), _buf.cast::<u8>(), want);
                     }
-                    (*s).rx_off = want;
+                    // A read advances past the delivered bytes and keeps the remainder; a peek
+                    // keeps the whole record so the next read (or peek) starts at its first byte
+                    // (`rec_layer_s3.c:791-810`).
                     (*s).rx_len = avail;
-                    if (*s).rx_off >= (*s).rx_len {
+                    (*s).rx_off = if peek { 0 } else { want };
+                    if !peek && (*s).rx_off >= (*s).rx_len {
                         (*s).rx_off = 0;
                         (*s).rx_len = 0;
                     }
@@ -6661,6 +6928,10 @@ pub(crate) unsafe fn ssl_read_internal(
                         *_readbytes = want;
                     }
                     (*s).rwstate = SSL_NOTHING;
+                    // `rec_layer_s3.c:774-781`: a zero-length request answers 0 without consuming.
+                    if _num == 0 {
+                        return 0;
+                    }
                     return 1;
                 }
                 // `SSL3_RT_HANDSHAKE` (22): a post-handshake message. `NewSessionTicket` and
@@ -6673,7 +6944,9 @@ pub(crate) unsafe fn ssl_read_internal(
                     // connection (they send the client's response), so `rx_buf` must not be
                     // aliased by `msg`.
                     let mlen = n as usize;
-                    let mut scratch = [0u8; 16384];
+                    // Heap-allocated: `SSL_read` may dispatch a record-sized post-handshake
+                    // message, and a 16 KiB stack array here would overflow a small read thread.
+                    let mut scratch = vec![0u8; 16384];
                     if mlen > scratch.len() {
                         return -1;
                     }
@@ -6752,6 +7025,12 @@ pub(crate) unsafe fn ssl_read_internal(
         }
     }
 }
+/// `ssl_peek_internal` — `ssl/ssl_lib.c:2461-2497`.
+///
+/// Unlike `ssl_read_internal` the authority does **not** check the early-data retry states or
+/// call `ossl_statem_check_finish_init` here; the unfinished handshake is driven from
+/// `ssl3_read_bytes` exactly as it is for a read, so a retry answers `-1` with
+/// `rwstate = SSL_READING` and `SSL_get_error` reports `SSL_ERROR_WANT_READ`.
 ///
 /// # Safety
 /// As [`ssl_read_internal`].
@@ -6761,16 +7040,23 @@ unsafe fn ssl_peek_internal(
     _num: usize,
     _readbytes: *mut usize,
 ) -> c_int {
+    // `ssl_lib.c:2465-2471`: `SSL_CONNECTION_FROM_SSL` NULL answers 0 (QUIC is not modelled).
     if s.is_null() {
-        return -1;
+        return 0;
     }
     // SAFETY: `s` is live.
-    if unsafe { (*s).handshake_func }.is_none() {
-        // SAFETY: a constant site.
-        unsafe { raise_ssl(SSL_R_UNINITIALIZED, 2474) };
-        return -1;
+    unsafe {
+        if (*s).handshake_func.is_none() {
+            raise_ssl(SSL_R_UNINITIALIZED, 2469);
+            return -1;
+        }
+        if (*s).shutdown & SSL_RECEIVED_SHUTDOWN != 0 {
+            return 0;
+        }
+        // Async mode (`ssl_lib.c:2484-2494`) is not modelled. `ssl3_peek` is `ssl3_read_internal`
+        // with `peek = 1` (`s3_lib.c:5156-5159`).
+        ssl3_read_internal(s, _buf, _num, true, _readbytes)
     }
-    -1
 }
 
 /// `ssl_write_internal` — `ssl/ssl_lib.c:2530-2585`, reduced at the record layer's write.
@@ -6824,7 +7110,7 @@ pub(crate) unsafe fn ssl_write_internal(
         // progress (a TLS1.3 post-handshake `CertificateRequest` queued by
         // `SSL_verify_client_post_handshake`) the connection's `handshake_func` runs before the
         // application record. `-1` surfaces the authority's `i == 0`/-1 arms.
-        if (*s).in_init != 0 {
+        if ossl_statem_get_in_handshake(s) == 0 && (*s).in_init != 0 {
             // SAFETY: `s` is live; `handshake_func` is non-NULL (checked above).
             let func = (*s).handshake_func;
             if let Some(f) = func {
@@ -13855,6 +14141,156 @@ mod setter_alias_tests {
             assert_eq!(CStr::from_ptr(again), c"direct.example");
 
             SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+}
+
+/// Controls for the two downstream-compatibility gaps: the `set1_groups_list` grammar and the
+/// non-blocking handshake error classification.
+#[cfg(test)]
+mod downstream_compat_tests {
+    #![allow(clippy::panic)]
+
+    use super::*;
+    use crate::runtime::bio::{BIO_free, BIO_new_bio_pair, Bio};
+    use crate::runtime::err::ERR_clear_error;
+    use crate::ssl::methods::TLS_method;
+    use core::ffi::CStr;
+
+    fn new_ctx() -> *mut SslCtx {
+        // SAFETY: process-lifetime method table; the constructor returns an owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        ctx
+    }
+
+    fn ctx_groups(ctx: *mut SslCtx, list: &CStr) -> c_long {
+        // SAFETY: `ctx` is live and `list` is a static NUL-terminated string for this call.
+        unsafe {
+            SSL_CTX_ctrl(
+                ctx,
+                SSL_CTRL_SET_GROUPS_LIST,
+                0,
+                list.as_ptr().cast_mut().cast::<c_void>(),
+            )
+        }
+    }
+
+    /// The authority accepts every TLS name, legacy curve name/alias and the `?`/`*` prefixes in
+    /// `SSL_CTX_set1_groups_list` (`t1_lib.c:1633-1746`, provider names in
+    /// `providers/common/capabilities.c:150-260`). The pre-fix control answered 0 for all of them.
+    #[test]
+    fn set1_groups_list_accepts_the_authority_grammar() {
+        let ctx = new_ctx();
+        let accepted: [&CStr; 14] = [
+            c"X25519",
+            c"P-256",
+            c"X25519:P-256",
+            c"prime256v1",
+            c"secp256r1",
+            c"secp384r1",
+            c"secp521r1",
+            c"X448",
+            c"P-384",
+            c"P-521",
+            c"?unsupported-group:X25519",
+            c"*X25519:?P-256",
+            c"X25519/P-256",
+            c"DEFAULT",
+        ];
+        for list in accepted {
+            assert_eq!(ctx_groups(ctx, list), 1, "list {list:?} must be accepted");
+            // Clear the queue; no error is expected.
+            ERR_clear_error();
+        }
+
+        // A name the provider does not publish still fails unless it carries `?`.
+        for list in [c"X25519:bogus-group", c"X25519::P-256", c"bogus-group"] {
+            assert_eq!(ctx_groups(ctx, list), 0, "list {list:?} must be rejected");
+            // Clear the expected failure from the queue.
+            ERR_clear_error();
+        }
+
+        // `SSL_set1_groups_list` shares the parser; `SSL_set1_curves_list` is the same ctrl.
+        // SAFETY: `ctx` is live and `SSL_new` returns an owned connection.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        // SAFETY: both pointers are live for this call.
+        unsafe {
+            assert_eq!(
+                SSL_ctrl(
+                    ssl,
+                    SSL_CTRL_SET_GROUPS_LIST,
+                    0,
+                    c"X25519:P-256".as_ptr().cast_mut().cast::<c_void>(),
+                ),
+                1
+            );
+            assert_eq!(
+                SSL_ctrl(
+                    ssl,
+                    SSL_CTRL_SET_GROUPS_LIST,
+                    0,
+                    c"secp521r1".as_ptr().cast_mut().cast::<c_void>(),
+                ),
+                1
+            );
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// A non-blocking client driven by `SSL_read`/`SSL_write` must report the unfinished handshake
+    /// as `SSL_ERROR_WANT_READ` when its transport would block, not `SSL_ERROR_SYSCALL`
+    /// (`ssl3_read_bytes`, `rec_layer_s3.c:673-680`; openvpn drives TLS this way).
+    #[test]
+    fn incomplete_handshake_read_and_write_report_want_read() {
+        let ctx = new_ctx();
+        // SAFETY: `ctx` is live; the connection is owned here.
+        let ssl = unsafe { SSL_new(ctx) };
+        assert!(!ssl.is_null());
+        // SAFETY: `ssl` is live; the setter installs the client handshake engine.
+        unsafe { SSL_set_connect_state(ssl) };
+
+        let mut bio1: *mut Bio = ptr::null_mut();
+        let mut bio2: *mut Bio = ptr::null_mut();
+        // SAFETY: both slots are writable and are filled with owned BIOs; `bio1` is handed to the
+        // connection below and `bio2` is released here.
+        unsafe {
+            assert_eq!(BIO_new_bio_pair(&mut bio1, 0, &mut bio2, 0), 1);
+            assert!(!bio1.is_null() && !bio2.is_null());
+            SSL_set_bio(ssl, bio1, bio1);
+        }
+
+        let mut buf = [0u8; 16];
+        // SAFETY: `ssl` is live and `buf` is a 16-byte writable region.
+        let read_ret = unsafe { SSL_read(ssl, buf.as_mut_ptr().cast(), buf.len() as c_int) };
+        assert!(read_ret <= 0, "incomplete handshake read must not succeed");
+        assert_eq!(
+            // SAFETY: `ssl` is live.
+            unsafe { SSL_get_error(ssl, read_ret) },
+            SSL_ERROR_WANT_READ,
+            "SSL_read must classify the blocked handshake as WANT_READ"
+        );
+
+        // SAFETY: `ssl` is live and `buf` is a 16-byte readable region.
+        let write_ret = unsafe { SSL_write(ssl, buf.as_ptr().cast(), 1) };
+        assert!(
+            write_ret <= 0,
+            "incomplete handshake write must not succeed"
+        );
+        assert_eq!(
+            // SAFETY: `ssl` is live.
+            unsafe { SSL_get_error(ssl, write_ret) },
+            SSL_ERROR_WANT_READ,
+            "SSL_write must classify the blocked handshake as WANT_READ"
+        );
+
+        // SAFETY: `ssl` owns `bio1`; `bio2` is the peer end still owned here.
+        unsafe {
+            SSL_free(ssl);
+            BIO_free(bio2);
             SSL_CTX_free(ctx);
         }
     }

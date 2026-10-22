@@ -1121,11 +1121,14 @@ pub(crate) unsafe fn ssl_cert_add1_chain_cert(
 /// `ssl/ssl_cert.c:427-553`, reduced to the certificate arm (`ssl_verify_cert_chain`, `:574`).
 ///
 /// It builds an `X509_STORE_CTX` over the connection's `cert_store`, inherits the SSL's verify
-/// parameters (which carry the hostname/IP `PYTHON` set through `SSL_get0_param`), runs
-/// `X509_verify_cert`, installs the resulting error in `s->verify_result` and the validated chain
-/// in `s->verified_chain`, and moves the checked hostname (`vpm.peername`) back to the SSL's
-/// parameters. The RPK and DANE arms, the SSL ex-data slot and the OCSP response are not modelled
-/// here (the reduced client presents certificates, not raw public keys).
+/// parameters (which carry the hostname/IP `PYTHON` set through `SSL_get0_param`), verifies the
+/// chain, installs the resulting error in `s->verify_result` and the validated chain in
+/// `s->verified_chain`, and moves the checked hostname (`vpm.peername`) back to the SSL's
+/// parameters. Verification is either the default `X509_verify_cert` or, when
+/// `SSL_CTX_set_cert_verify_callback` installed one, the application's verifier — which replaces
+/// chain verification and whose return value is the verdict (`ssl_cert.c:526-533`). The RPK and
+/// DANE arms and the OCSP response are not modelled here (the reduced client presents
+/// certificates, not raw public keys).
 ///
 /// # Safety
 /// `s` must be a live connection; `sk` must be NULL or a live `STACK_OF(X509)` of live certs.
@@ -1136,8 +1139,8 @@ pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -
     use crate::x509::x509_vfy::{
         X509_STORE_CTX_free, X509_STORE_CTX_get0_chain, X509_STORE_CTX_get0_param,
         X509_STORE_CTX_get1_chain, X509_STORE_CTX_get_error, X509_STORE_CTX_init,
-        X509_STORE_CTX_new_ex, X509_STORE_CTX_set_default, X509_STORE_CTX_set_verify_cb,
-        X509_verify_cert,
+        X509_STORE_CTX_new_ex, X509_STORE_CTX_set_default, X509_STORE_CTX_set_ex_data,
+        X509_STORE_CTX_set_verify_cb, X509_verify_cert,
     };
     use crate::x509::x509_vpm::{
         X509_VERIFY_PARAM_move_peername, X509_VERIFY_PARAM_set1, X509_VERIFY_PARAM_set_auth_level,
@@ -1170,6 +1173,16 @@ pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -
         let param = X509_STORE_CTX_get0_param(ctx);
         X509_VERIFY_PARAM_set_auth_level(param, SSL_get_security_level(s));
 
+        // `X509_STORE_CTX_set_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx(), s)` —
+        // `ssl_cert.c:482-484`. The verification callback retrieves the `SSL` from this slot
+        // (`ssl_verify_openssl.c:61` in openvpn asserts on it); without the slot, every callback
+        // that reads it sees NULL.
+        if X509_STORE_CTX_set_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx(), s.cast()) == 0 {
+            raise_ssl(ERR_R_X509_LIB, 484);
+            X509_STORE_CTX_free(ctx);
+            return 0;
+        }
+
         // `X509_STORE_CTX_set_default(ctx, s->server ? "ssl_client" : "ssl_server")` — `:517`.
         let dflt = if (*s).server != 0 {
             c"ssl_client".as_ptr()
@@ -1187,11 +1200,22 @@ pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -
             X509_STORE_CTX_set_verify_cb(ctx, Some(cb));
         }
 
-        // `i = X509_verify_cert(ctx); if (i < 0) i = 0;` — `:528-533`.
-        let mut i = X509_verify_cert(ctx);
-        if i < 0 {
-            i = 0;
-        }
+        // `if (sctx->app_verify_callback != NULL) { i = sctx->app_verify_callback(ctx,
+        // sctx->app_verify_arg); } else { i = X509_verify_cert(ctx); if (i < 0) i = 0; }` —
+        // `ssl_cert.c:526-533`. An application-installed verifier replaces the default chain
+        // verification entirely; its return value is the verdict (the authority does not clamp a
+        // negative return to 0 on this arm).
+        let mut i = if let Some(cb) = (*sctx).app_verify_callback {
+            cb(ctx.cast(), (*sctx).app_verify_arg)
+        } else {
+            let r = X509_verify_cert(ctx);
+            // We treat an error in the same way as a failure to verify.
+            if r < 0 {
+                0
+            } else {
+                r
+            }
+        };
 
         // `s->verify_result = X509_STORE_CTX_get_error(ctx)` — `:535`.
         (*s).verify_result = c_long::from(X509_STORE_CTX_get_error(ctx));
@@ -1217,5 +1241,297 @@ pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -
 
         X509_STORE_CTX_free(ctx);
         i
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// Application certificate-verification hook — `ssl_cert.c:526-533`
+// -------------------------------------------------------------------------------------------
+//
+// `SSL_CTX_set_cert_verify_callback` installs an application verifier that *replaces* the
+// default `X509_verify_cert` chain verification; its return value is the verdict. These tests
+// drive `ssl_verify_cert_chain` (the function the TLS1.2 and TLS1.3 client and server
+// certificate-message paths call) over a one-certificate chain whose default verification fails,
+// so the callback's effect is observable.
+#[cfg(test)]
+mod app_verify_callback_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use core::ffi::c_long;
+    use core::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
+
+    use super::*;
+    use crate::asn1::layout::MBSTRING_UTF8;
+    use crate::asn1::prim::ASN1_INTEGER_set;
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free};
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_cert_verify_callback, SSL_free,
+        SSL_get_verify_result, SSL_new,
+    };
+    use crate::x509::x509_lu::X509_STORE_add_cert;
+    use crate::x509::x509_set::{
+        X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
+    };
+    use crate::x509::x509_vfy::{
+        X509_STORE_CTX_get_error, X509_STORE_CTX_set_error, X509_gmtime_adj,
+    };
+    use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+    use crate::x509::x_all::X509_sign;
+    use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+    use crate::x509::x_x509::X509_new;
+
+    /// `X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY` — `include/openssl/x509_vfy.h.in:235`.
+    const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY: c_int = 20;
+
+    /// The tests share the observation statics, so they must not overlap.
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn serial() -> std::sync::MutexGuard<'static, ()> {
+        LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    static CALLS: AtomicUsize = AtomicUsize::new(0);
+    static VERDICT: AtomicI32 = AtomicI32::new(1);
+    static SEEN_BEFORE: AtomicI32 = AtomicI32::new(-1);
+    static SEEN_AFTER: AtomicI32 = AtomicI32::new(-1);
+
+    /// An application verifier that records the store context's error before its own write,
+    /// writes `X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY` when `SET_ERROR` is set, records the
+    /// read-back, and answers `VERDICT`.
+    ///
+    /// # Safety
+    /// `ctx` must be the live `X509_STORE_CTX` the caller passed.
+    unsafe extern "C" fn recording_cb(ctx: *mut c_void, _arg: *mut c_void) -> c_int {
+        // SAFETY: `ctx` is the store context `ssl_verify_cert_chain` built and still owns.
+        unsafe {
+            SEEN_BEFORE.store(X509_STORE_CTX_get_error(ctx.cast()), Ordering::Relaxed);
+            if VERDICT.load(Ordering::Relaxed) == 0 {
+                X509_STORE_CTX_set_error(ctx.cast(), X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY);
+                SEEN_AFTER.store(X509_STORE_CTX_get_error(ctx.cast()), Ordering::Relaxed);
+            }
+        }
+        CALLS.fetch_add(1, Ordering::Relaxed);
+        VERDICT.load(Ordering::Relaxed)
+    }
+
+    /// A complete, self-signed certificate over an EC key, the same construction the
+    /// handshake tests use. Complete because `X509_verify_cert` builds and checks a real chain:
+    /// the ASN.1 encoder refuses a certificate whose mandatory fields are unset.
+    ///
+    /// # Safety
+    /// The caller owns the returned certificate and must `X509_free` it.
+    unsafe fn self_signed_cert() -> *mut X509 {
+        // SAFETY: every pointer below is this frame's own fresh object.
+        unsafe {
+            let pkey = openssl_rs_evp_pkey_q_keygen(
+                ptr::null_mut(),
+                ptr::null(),
+                c"EC".as_ptr(),
+                2,
+                0,
+                c"prime256v1".as_ptr(),
+            );
+            assert!(!pkey.is_null(), "an EC key must be generatable");
+            let x = X509_new();
+            let name = X509_NAME_new();
+            assert!(!x.is_null() && !name.is_null());
+            assert_eq!(
+                X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    MBSTRING_UTF8,
+                    c"app-verify".as_ptr().cast::<u8>(),
+                    10,
+                    -1,
+                    0,
+                ),
+                1,
+                "the name must be accepted"
+            );
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(
+                ASN1_INTEGER_set(ptr::addr_of_mut!((*x).cert_info.serialNumber), 1),
+                1
+            );
+            assert_eq!(X509_set_subject_name(x, name), 1);
+            assert_eq!(X509_set_issuer_name(x, name), 1);
+            (*x).cert_info.validity.notBefore = X509_gmtime_adj(ptr::null_mut(), 0);
+            (*x).cert_info.validity.notAfter = X509_gmtime_adj(ptr::null_mut(), 86_400);
+            assert!(!(*x).cert_info.validity.notBefore.is_null());
+            assert!(!(*x).cert_info.validity.notAfter.is_null());
+            assert_eq!(X509_set_pubkey(x, pkey), 1);
+            assert!(X509_sign(x, pkey, EVP_sha256()) > 0, "signing must succeed");
+            X509_NAME_free(name);
+            EVP_PKEY_free(pkey);
+            x
+        }
+    }
+
+    struct Fixture {
+        ctx: *mut SslCtx,
+        s: *mut Ssl,
+        sk: *mut OpenSslStack,
+        x: *mut X509,
+    }
+
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            // SAFETY: each pointer is this fixture's own, live until here; `SSL_free` releases
+            // the context reference `SSL_new` took and the `verified_chain` up-ref of `x`.
+            unsafe {
+                SSL_free(self.s);
+                SSL_CTX_free(self.ctx);
+                OPENSSL_sk_free(self.sk);
+                X509_free(self.x);
+            }
+        }
+    }
+
+    /// A context, a connection, and a one-element `STACK_OF(X509)` holding a blank `X509` that no
+    /// trust store can validate.
+    fn fixture() -> Fixture {
+        // SAFETY: the constructors have no preconditions beyond a live method static.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null(), "SSL_CTX_new(TLS_method()) must succeed");
+            let s = SSL_new(ctx);
+            assert!(!s.is_null(), "SSL_new must succeed");
+            let sk = OPENSSL_sk_new_null();
+            assert!(!sk.is_null());
+            let x = X509_new();
+            assert!(!x.is_null());
+            assert_eq!(OPENSSL_sk_push(sk, x.cast()), 1);
+            Fixture { ctx, s, sk, x }
+        }
+    }
+
+    fn reset(calls: usize, verdict: c_int) {
+        CALLS.store(calls, Ordering::Relaxed);
+        VERDICT.store(verdict, Ordering::Relaxed);
+        SEEN_BEFORE.store(-1, Ordering::Relaxed);
+        SEEN_AFTER.store(-1, Ordering::Relaxed);
+    }
+
+    /// The setter stores the application verifier and its argument on the context. (The
+    /// authority's setter is `void`-returning, `ssl_lib.c:4530`; the "returns 1" wording of the
+    /// task has no ABI counterpart, so the observable effect is what is asserted.)
+    #[test]
+    fn set_cert_verify_callback_installs_the_application_hook() {
+        let _guard = serial();
+        let f = fixture();
+        let arg = 0x5a5a_usize as *mut c_void;
+        // SAFETY: `f.ctx` is live.
+        unsafe {
+            SSL_CTX_set_cert_verify_callback(f.ctx, Some(recording_cb), arg);
+            assert!(
+                (*f.ctx).app_verify_callback.is_some(),
+                "the setter must install the hook"
+            );
+            assert_eq!(
+                (*f.ctx).app_verify_arg,
+                arg,
+                "the argument is stored verbatim"
+            );
+        }
+    }
+
+    /// A callback returning 1 accepts a chain the default verification rejects, and is called
+    /// exactly once instead of `X509_verify_cert`.
+    #[test]
+    fn callback_accepts_a_chain_the_default_verification_rejects() {
+        let _guard = serial();
+        let f = fixture();
+        // SAFETY: all three pointers are live.
+        unsafe {
+            assert_eq!(
+                ssl_verify_cert_chain(f.s, f.sk),
+                0,
+                "control: the default path rejects the untrusted chain"
+            );
+            reset(0, 1);
+            SSL_CTX_set_cert_verify_callback(f.ctx, Some(recording_cb), ptr::null_mut());
+            assert_eq!(
+                ssl_verify_cert_chain(f.s, f.sk),
+                1,
+                "the application verifier's verdict replaces chain verification"
+            );
+            assert_eq!(CALLS.load(Ordering::Relaxed), 1, "called exactly once");
+        }
+    }
+
+    /// A callback returning 0 rejects a genuinely trusted chain: the self-signed leaf is in the
+    /// context's store, so the default path returns 1, while the application verdict of 0 wins.
+    #[test]
+    fn callback_rejects_a_chain_the_default_path_accepts() {
+        let _guard = serial();
+        // SAFETY: `TLS_method` and the constructors are total for a static method; every pointer
+        // below is this frame's own and live until released here.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            let x = self_signed_cert();
+            // The leaf is a trust anchor for this context's store.
+            assert_eq!(
+                X509_STORE_add_cert((*ctx).cert_store, x),
+                1,
+                "the self-signed leaf must be addable as a trust anchor"
+            );
+            let sk = OPENSSL_sk_new_null();
+            assert!(!sk.is_null());
+            assert_eq!(OPENSSL_sk_push(sk, x.cast()), 1);
+
+            assert_eq!(
+                ssl_verify_cert_chain(s, sk),
+                1,
+                "control: the default path accepts the trusted chain"
+            );
+
+            reset(0, 0);
+            SSL_CTX_set_cert_verify_callback(ctx, Some(recording_cb), ptr::null_mut());
+            assert_eq!(
+                ssl_verify_cert_chain(s, sk),
+                0,
+                "a zero verdict must reject even a chain the default path accepts"
+            );
+            assert_eq!(CALLS.load(Ordering::Relaxed), 1, "called exactly once");
+
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+            OPENSSL_sk_free(sk);
+            X509_free(x);
+        }
+    }
+
+    /// The callback can read and write the store context's error, and the error it leaves is the
+    /// one `SSL_get_verify_result` reports (`ssl_cert.c:535`).
+    #[test]
+    fn callback_can_set_and_read_the_store_error() {
+        let _guard = serial();
+        let f = fixture();
+        // SAFETY: the fixture's pointers are live.
+        unsafe {
+            reset(0, 0);
+            SSL_CTX_set_cert_verify_callback(f.ctx, Some(recording_cb), ptr::null_mut());
+            assert_eq!(ssl_verify_cert_chain(f.s, f.sk), 0);
+            assert_eq!(
+                SEEN_BEFORE.load(Ordering::Relaxed),
+                0,
+                "X509_V_OK before the callback writes"
+            );
+            assert_eq!(
+                SEEN_AFTER.load(Ordering::Relaxed),
+                X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY,
+                "X509_STORE_CTX_get_error reads back what X509_STORE_CTX_set_error wrote"
+            );
+            assert_eq!(
+                SSL_get_verify_result(f.s),
+                c_long::from(X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY),
+                "the callback's error reaches the connection's verify result"
+            );
+        }
     }
 }
