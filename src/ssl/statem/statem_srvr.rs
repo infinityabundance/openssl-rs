@@ -941,30 +941,34 @@ unsafe fn tls_handle_alpn(s: *mut Ssl) -> c_int {
 ///
 /// Every accessor answers `None` rather than reading outside `bytes`, so a malformed
 /// ClientHello can only end the walk with the authority's error. The cursor is the only
+/// The cursor is the only
 /// place the extension readers advance an offset; callers never add a length to an index
 /// themselves.
-struct SliceCursor<'a> {
+///
+/// Shared with `statem_clnt.rs` (the ServerHello readers) so the client does not grow a
+/// second, subtly different bounds-checked cursor.
+pub(crate) struct SliceCursor<'a> {
     bytes: &'a [u8],
     pos: usize,
 }
 
 impl<'a> SliceCursor<'a> {
-    fn new(bytes: &'a [u8]) -> Self {
+    pub(crate) fn new(bytes: &'a [u8]) -> Self {
         Self { bytes, pos: 0 }
     }
 
     /// Bytes not yet consumed. `pos` is never advanced past `bytes.len()`.
-    fn remaining(&self) -> usize {
+    pub(crate) fn remaining(&self) -> usize {
         self.bytes.len() - self.pos
     }
 
     /// Offset of the next unconsumed byte, always within `0..=bytes.len()`.
-    fn pos(&self) -> usize {
+    pub(crate) fn pos(&self) -> usize {
         self.pos
     }
 
     /// Consume exactly `n` bytes, or nothing when they are not all present.
-    fn take(&mut self, n: usize) -> Option<&'a [u8]> {
+    pub(crate) fn take(&mut self, n: usize) -> Option<&'a [u8]> {
         let end = self.pos.checked_add(n)?;
         let out = self.bytes.get(self.pos..end)?;
         self.pos = end;
@@ -974,7 +978,7 @@ impl<'a> SliceCursor<'a> {
     /// Consume `n` bytes when present, otherwise consume the remainder and answer `None`.
     /// This mirrors the authority's `PACKET_remaining` readers, which leave an over-long
     /// field as an empty value rather than rejecting the message.
-    fn take_or_rest(&mut self, n: usize) -> Option<&'a [u8]> {
+    pub(crate) fn take_or_rest(&mut self, n: usize) -> Option<&'a [u8]> {
         match self.take(n) {
             Some(s) => Some(s),
             None => {
@@ -984,11 +988,11 @@ impl<'a> SliceCursor<'a> {
         }
     }
 
-    fn take_u8(&mut self) -> Option<u8> {
+    pub(crate) fn take_u8(&mut self) -> Option<u8> {
         self.take(1).map(|b| b[0])
     }
 
-    fn take_u16(&mut self) -> Option<u16> {
+    pub(crate) fn take_u16(&mut self) -> Option<u16> {
         self.take(2).map(|b| u16::from_be_bytes([b[0], b[1]]))
     }
 }
