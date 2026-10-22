@@ -13,6 +13,7 @@ Evidence inputs (no others):
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/unsafe-census.json``
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/post-census-delta.json``
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-*.json``
+* ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/test-baseline.json``
 * ``Cargo.toml`` and ``atlas-refresh/publish-*.json``
 * ``body.candidate_identity`` (candidate library hashes / commit)
 
@@ -34,6 +35,7 @@ ATLAS = Path("forensics/downstream/runtime-functional-atlas.json")
 CENSUS = CAMPAIGN / "atlas-refresh/unsafe-census.json"
 DELTA = CAMPAIGN / "atlas-refresh/post-census-delta.json"
 STATUS_JSON = CAMPAIGN / "CAMPAIGN-STATUS.json"
+TEST_BASELINE = CAMPAIGN / "atlas-refresh/test-baseline.json"
 SWEEP_GLOB = "boundary-sweep-*.json"
 PUBLISH_GLOB = "publish-*.json"
 
@@ -42,6 +44,7 @@ ATLAS_S = "forensics/downstream/runtime-functional-atlas.json"
 STATUS_S = "CAMPAIGN-STATUS.json"
 CENSUS_S = "atlas-refresh/unsafe-census.json"
 DELTA_S = "atlas-refresh/post-census-delta.json"
+TEST_BASELINE_S = "atlas-refresh/test-baseline.json"
 
 README = Path("README.md")
 STATUS_DOC = CAMPAIGN / "STATUS-2026-10-20.md"
@@ -167,63 +170,65 @@ def census_partition(census: dict, delta: dict) -> dict[str, int]:
     return combined
 
 
-TEST_RE = re.compile(r"(\d[\d,]*)\s+passed[^0-9]{0,40}?(\d[\d,]*)\s+failed[^0-9]{0,40}?(\d[\d,]*)\s+ignored")
+def test_baseline(root: Path, candidate: dict) -> dict:
+    """The last *full* library run, from its own evidence record.
 
+    A publish receipt attests a release, not the test suite, and later
+    commits add tests without a further full run, so a receipt is never a
+    source for the count.  A missing or unusable baseline is rendered as
+    UNKNOWN rather than back-filled from a receipt.
 
-def as_int(text: str) -> int:
-    return int(text.replace(",", ""))
-
-
-def test_evidence(refresh: Path, root: Path) -> dict:
-    """Most recent *committed receipt* that states a library test count."""
-    candidates: list[tuple[str, int, str, tuple[int, int, int]]] = []
-    for path in refresh.glob(PUBLISH_GLOB):
-        data = load_json(path)
-        identity = data.get("evidence_at_this_identity") or {}
-        text = identity.get("library_tests")
-        if isinstance(text, str):
-            match = TEST_RE.search(text)
-            if match:
-                candidates.append(
-                    (
-                        data.get("date", ""),
-                        1,
-                        f"atlas-refresh/{path.name}",
-                        tuple(as_int(g) for g in match.groups()),
-                    )
-                )
-    for number, name, data in load_sweeps(refresh):
-        for control in data.get("controls") or []:
-            if not isinstance(control, dict):
-                continue
-            observed = control.get("observed")
-            if not isinstance(observed, str):
-                continue
-            if "test" not in str(control.get("instrument", "")).lower():
-                continue
-            if "lib" not in str(control.get("instrument", "")):
-                continue
-            match = TEST_RE.search(observed)
-            if match:
-                candidates.append(
-                    (
-                        data.get("date", ""),
-                        0,
-                        f"atlas-refresh/{name}.json",
-                        tuple(as_int(g) for g in match.groups()),
-                    )
-                )
-                break
-    if not candidates:
-        raise RenderError("no receipt states a library test count")
-    date, _, source, (passed, failed, ignored) = max(candidates)
+    The record carries the commit it was taken at, never the current git
+    HEAD: if that commit is not the candidate's, the count is a floor, not
+    the current total.
+    """
+    try:
+        data = load_json(root / TEST_BASELINE)
+        counts = {key: int(data[key]) for key in ("passed", "failed", "ignored")}
+        commit = str(data["source_commit"])
+        kind = str(data["kind"])
+        if kind != "full-library-run":
+            raise ValueError(f"kind is {kind!r}, not 'full-library-run'")
+    except (RenderError, KeyError, TypeError, ValueError) as exc:
+        return {"unknown": True, "reason": str(exc) or "no usable record"}
     return {
-        "date": date,
-        "source": source,
-        "passed": passed,
-        "failed": failed,
-        "ignored": ignored,
+        "unknown": False,
+        "passed": counts["passed"],
+        "failed": counts["failed"],
+        "ignored": counts["ignored"],
+        "source_commit": commit,
+        "kind": kind,
+        "floor": candidate.get("commit") != commit,
     }
+
+
+def test_counts(tests: dict, verb: str = "passing") -> str:
+    """The bare count, or UNKNOWN when no full run is on record."""
+    if tests["unknown"]:
+        return "**UNKNOWN**"
+    return (
+        f"**{tests['passed']:,} {verb}, {tests['failed']} failing, "
+        f"{tests['ignored']} ignored**"
+    )
+
+
+def test_row(tests: dict, label: str, verb: str = "passing") -> str:
+    """A complete table row for a library-test count."""
+    if tests["unknown"]:
+        result = (
+            "**UNKNOWN** — no full library run is on record; a release "
+            "receipt is not a test count"
+        )
+        evidence = f"`{TEST_BASELINE_S}` (absent or unusable)"
+    else:
+        result = test_counts(tests, verb)
+        if tests["floor"]:
+            result += (
+                f" at `{tests['source_commit']}` — a **floor**, not the current "
+                "count: later commits add tests without a further full run"
+            )
+        evidence = f"`{TEST_BASELINE_S}` (`{tests['kind']}`)"
+    return f"| {label} | {result} | {evidence} |"
 
 
 def publish_identity(refresh: Path, root: Path, version: str) -> dict:
@@ -406,7 +411,7 @@ class Evidence:
         self.version = cargo_version(root)
         self.families = family_names(self.atlas)
         self.partition = census_partition(self.census, self.delta)
-        self.tests = test_evidence(refresh, root)
+        self.tests = test_baseline(root, self.candidate)
         self.publish = publish_identity(refresh, root, self.version)
         self.boundaries = boundary_evidence(self.sweeps, self.status)
         self.stop_defects = stop_class_defects(self.sweeps)
@@ -477,9 +482,7 @@ class Evidence:
                 f"**{corpus['failed']} failed**; {corpus['loaded']} loaded; "
                 f"{corpus['not_attempted']} not attempted | same atlas, "
                 "`body.counts.by_subject` |",
-                "| **Library test suite** | "
-                f"**{self.tests['passed']:,} passing, {self.tests['failed']} failing, "
-                f"{self.tests['ignored']} ignored** | `{self.tests['source']}` |",
+                test_row(self.tests, "**Library test suite**"),
                 "| **Memory safety: mechanisms** | "
                 f"**{plural(len(self.mechanisms), 'mechanism')} discharged at mechanism scope** "
                 f"— {mechanisms} | `{STATUS_S}` (`mechanism_discharges`) |",
@@ -628,9 +631,7 @@ class Evidence:
                 f"**{self.publish['version']}** published to crates.io "
                 f"({self.publish['date']}, checksum `{self.publish['checksum']}…`) | "
                 f"`Cargo.toml`; `{self.publish['source']}` |",
-                "| library tests | "
-                f"**{self.tests['passed']:,} passed / {self.tests['failed']} failed / "
-                f"{self.tests['ignored']} ignored** | `{self.tests['source']}` |",
+                test_row(self.tests, "library tests", verb="passed"),
                 "| cohort | "
                 f"**{self.consumers['l7_functional']}/{self.consumers['families_total']}** "
                 "at `L7-functional` | `" + ATLAS_S + "` (`body.runs`) |",
