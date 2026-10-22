@@ -12,14 +12,14 @@
       "authority_applicable_level": {
         "family:aircrack-ng": "L7-functional",
         "family:apache2-utils": "L7-functional",
-        "family:appx-util": "L0-catalogued",
+        "family:appx-util": "L7-functional",
         "family:apr-util": "L7-functional",
         "family:arm-trusted-firmware-tools": "L7-functional",
         "family:axel": "L7-functional",
         "family:bannergrab": "L7-functional",
         "family:cowpatty": "L7-functional",
         "family:curl": "L7-functional",
-        "family:curl-minimal": "L0-catalogued",
+        "family:curl-minimal": "L7-functional",
         "family:cyrus-sasl": "L7-functional",
         "family:dcap-tunnel-ssl": "L7-functional",
         "family:dovecot": "L7-functional",
@@ -32,18 +32,18 @@
         "family:fetchmail": "L7-functional",
         "family:fido2": "L7-functional",
         "family:fossil": "L7-functional",
-        "family:fsverity-utils": "L0-catalogued",
+        "family:fsverity-utils": "L7-functional",
         "family:gensio": "L7-functional",
         "family:getdns": "L7-functional",
-        "family:gmnisrv": "L0-catalogued",
-        "family:gostsum": "L0-catalogued",
+        "family:gmnisrv": "L7-functional",
+        "family:gostsum": "L7-functional",
         "family:haproxy": "L7-functional",
         "family:hcxtools": "L7-functional",
         "family:hiredis-ssl": "L7-functional",
         "family:hitch": "L7-functional",
         "family:httperf": "L7-functional",
         "family:httping": "L7-functional",
-        "family:httrack": "L0-catalogued",
+        "family:httrack": "L7-functional",
         "family:icecast": "L7-functional",
         "family:iperf3": "L7-functional",
         "family:irssi": "L7-functional",
@@ -92,7 +92,7 @@
         "family:nsd": "L7-functional",
         "family:opendkim": "L7-functional",
         "family:openssh": "L7-functional",
-        "family:openssh-client": "L0-catalogued",
+        "family:openssh-client": "L7-functional",
         "family:openssh-server": "L7-functional",
         "family:openvpn": "L7-functional",
         "family:osslsigncode": "L7-functional",
@@ -103,10 +103,10 @@
         "family:pure-ftpd": "L7-functional",
         "family:radsecproxy": "L7-functional",
         "family:redis": "L7-functional",
-        "family:rhash": "L0-catalogued",
+        "family:rhash": "L7-functional",
         "family:rsync": "L7-functional",
         "family:s-nail": "L7-functional",
-        "family:siege": "L0-catalogued",
+        "family:siege": "L7-functional",
         "family:slrn": "L7-functional",
         "family:socat": "L7-functional",
         "family:sofia-sip": "L7-functional",
@@ -121,33 +121,34 @@
         "family:tnftp": "L7-functional",
         "family:u-boot-tools": "L7-functional",
         "family:w3m": "L7-functional",
-        "family:wrk": "L0-catalogued",
+        "family:wrk": "L7-functional",
         "family:znc": "L7-functional"
       },
       "by_subject": {
         "authority": {
           "failed": 0,
-          "functional": 101,
-          "loaded": 102,
-          "not_attempted": 898,
-          "runtime": 102
+          "functional": 111,
+          "loaded": 112,
+          "not_attempted": 888,
+          "runtime": 112
         },
         "candidate": {
-          "failed": 0,
-          "functional": 101,
-          "loaded": 102,
-          "not_attempted": 898,
-          "runtime": 102
+          "failed": 1,
+          "functional": 110,
+          "loaded": 112,
+          "not_attempted": 888,
+          "runtime": 111
         }
       },
-      "candidate_baseline_not_linked": 11,
-      "candidate_below_baseline": 0,
+      "candidate_baseline_not_linked": 1,
+      "candidate_below_baseline": 1,
       "candidate_failures": {
         "acquire-failure": 887,
-        "link-failure": 11
+        "link-failure": 1,
+        "runtime-failure": 1
       },
-      "candidate_reaches_baseline": 113,
-      "candidate_reaches_linked_baseline": 102,
+      "candidate_reaches_baseline": 112,
+      "candidate_reaches_linked_baseline": 111,
       "candidate_specific_patch_count": 0,
       "no_recipe": 887,
       "p1000": 1000,
@@ -156,19 +157,17 @@
     },
     "evidence_reuse": {
       "candidate_identity_match": true,
-      "families_reused": 112,
+      "families_reused": 103,
       "mode": "committed-rows",
       "reused_families": [
         "aircrack-ng",
         "apache2-utils",
-        "appx-util",
         "apr-util",
         "arm-trusted-firmware-tools",
         "axel",
         "bannergrab",
         "cowpatty",
         "curl",
-        "curl-minimal",
         "cyrus-sasl",
         "dcap-tunnel-ssl",
         "dovecot",
@@ -181,20 +180,17 @@
         "fetchmail",
         "fido2",
         "fossil",
-        "fsverity-utils",
         "gensio",
         "getdns",
-        "gmnisrv",
-        "gostsum",
         "haproxy",
         "hcxtools",
         "hiredis-ssl",
         "hitch",
         "httperf",
         "httping",
-        "httrack",
         "icecast",
         "iperf3",
+        "irssi",
         "isync",
         "jimtcl",
         "jwt",
@@ -240,7 +236,6 @@
         "nsd",
         "opendkim",
         "openssh",
-        "openssh-client",
         "openssh-server",
         "openvpn",
         "osslsigncode",
@@ -251,10 +246,8 @@
         "pure-ftpd",
         "radsecproxy",
         "redis",
-        "rhash",
         "rsync",
         "s-nail",
-        "siege",
         "slrn",
         "socat",
         "sofia-sip",
@@ -269,7 +262,6 @@
         "tnftp",
         "u-boot-tools",
         "w3m",
-        "wrk",
         "znc"
       ],
       "superseded_identity": null
@@ -5544,7 +5536,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "appx-util",
@@ -5552,18 +5544,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:appx-util"
+          "family:family:appx-util",
+          "recipe:recipe:appx-util:0.5",
+          "artifact:b/appx",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:appx-util",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-h"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1331332:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1331332:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1331332:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1331332:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1331332:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1331332:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1331332:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "1331332:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -5583,13 +5612,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 530,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:appx-util:0.5",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -5599,8 +5628,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:appx-util",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "cea28e3c2946171d958b8b06472e01b34e3b388197bdb1baa049ba5417cd98fd",
+        "source_sha256": "6ddc12a7b7eb32c1c11d634abfec61da50047df0bb999fa7edfaa799d1d214fa",
         "source_url": "https://github.com/OSInside/appx-util/archive/refs/tags/v0.5.tar.gz",
         "specimen_id": "specimen:appx-util:0.5",
         "static_linkage": {
@@ -5610,13 +5639,73 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "Usage: {repo}/court/phase24-build-link/appx-util/authority/src/appx-util-0.5/b/appx -o APPX [OPTION]... INPUT...",
+          "Creates an optionally-signed Microsoft APPX or APPXBUNDLE package.",
+          "",
+          "Options:",
+          "  -c pfx-file     sign the APPX with the private key file",
+          "  -f map-file     specify inputs from a mapping file",
+          "  -f -            specify a mapping file through standard input",
+          "  -h              show this usage text and exit",
+          "  -b              produce APPXBUNDLE instead of APPX",
+          "  -o output-file  write the APPX (or APPXBUNDLE if -b is specified)",
+          "                  to the output-file (required)",
+          "  -0, -1, -2, -3, -4, -5, -6, -7, -8, -9",
+          "                  ZIP compression level",
+          "  -0              no ZIP compression (store files)",
+          "  -9              best ZIP compression",
+          "",
+          "An input is either:",
+          "  A directory, indicating that all files and subdirectories ",
+          "    of that directory are included in the package, or",
+          "  A file name, indicating that the file is included in the ",
+          "    root of the package, or",
+          "  A mapping file specified with the -f option.",
+          "",
+          "A mapping file has the following form:",
+          "",
+          "  [Files]",
+          "  \"/path/to/local/file.exe\" \"appx_file.exe\"",
+          "",
+          "Supported target systems:",
+          "  Windows 10 (UAP)",
+          "  Windows 10 Mobile",
+          "== workload ==",
+          "exit=0",
+          "== signed ==",
+          "exit=0",
+          "== unsigned control ==",
+          "exit=0"
+        ],
+        "transcript_sha256": "7d555bb821f706c9e191df05a2922e0768f8c2cd4894918e3a0d2bc1093ab491",
         "variant_id": "variant:appx-util:0.5:pristine",
-        "workload": null
+        "workload": "appx-util: signature bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "appx-util: signature bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "appx-util",
@@ -5624,18 +5713,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:appx-util"
+          "family:family:appx-util",
+          "recipe:recipe:appx-util:0.5",
+          "artifact:b/appx",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:appx-util",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-h"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1331350:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1331350:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1331350:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1331350:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1331350:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1331350:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1331350:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "1331350:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -5655,12 +5781,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 530,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:appx-util:0.5",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -5671,8 +5797,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:appx-util",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "cea28e3c2946171d958b8b06472e01b34e3b388197bdb1baa049ba5417cd98fd",
+        "source_sha256": "6ddc12a7b7eb32c1c11d634abfec61da50047df0bb999fa7edfaa799d1d214fa",
         "source_url": "https://github.com/OSInside/appx-util/archive/refs/tags/v0.5.tar.gz",
         "specimen_id": "specimen:appx-util:0.5",
         "static_linkage": {
@@ -5682,10 +5808,70 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "Usage: {repo}/court/phase24-build-link/appx-util/candidate/src/appx-util-0.5/b/appx -o APPX [OPTION]... INPUT...",
+          "Creates an optionally-signed Microsoft APPX or APPXBUNDLE package.",
+          "",
+          "Options:",
+          "  -c pfx-file     sign the APPX with the private key file",
+          "  -f map-file     specify inputs from a mapping file",
+          "  -f -            specify a mapping file through standard input",
+          "  -h              show this usage text and exit",
+          "  -b              produce APPXBUNDLE instead of APPX",
+          "  -o output-file  write the APPX (or APPXBUNDLE if -b is specified)",
+          "                  to the output-file (required)",
+          "  -0, -1, -2, -3, -4, -5, -6, -7, -8, -9",
+          "                  ZIP compression level",
+          "  -0              no ZIP compression (store files)",
+          "  -9              best ZIP compression",
+          "",
+          "An input is either:",
+          "  A directory, indicating that all files and subdirectories ",
+          "    of that directory are included in the package, or",
+          "  A file name, indicating that the file is included in the ",
+          "    root of the package, or",
+          "  A mapping file specified with the -f option.",
+          "",
+          "A mapping file has the following form:",
+          "",
+          "  [Files]",
+          "  \"/path/to/local/file.exe\" \"appx_file.exe\"",
+          "",
+          "Supported target systems:",
+          "  Windows 10 (UAP)",
+          "  Windows 10 Mobile",
+          "== workload ==",
+          "exit=0",
+          "== signed ==",
+          "exit=0",
+          "== unsigned control ==",
+          "exit=0"
+        ],
+        "transcript_sha256": "3fafa2802d5dfa64b6f663cfbd651828204d93a7dd0448096359ff11fe6bba74",
         "variant_id": "variant:appx-util:0.5:pristine",
-        "workload": null
+        "workload": "appx-util: signature bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "appx-util: signature bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L7-functional",
@@ -27238,7 +27424,7 @@
         }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "curl-minimal",
@@ -27246,18 +27432,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:curl-minimal"
+          "family:family:curl-minimal",
+          "recipe:recipe:curl-minimal:8.10.1",
+          "artifact:src/.libs/curl",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:curl-minimal",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-V"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1368038:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1368038:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1368038:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1368038:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1368038:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1368038:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -27277,13 +27508,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 633,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:curl-minimal:8.10.1",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -27293,8 +27524,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:curl-minimal",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "34735156e3978b653ea4ea6f1b073ca3ccd5bd8c493ec708160a2dc289598d08",
+        "source_sha256": "d15ebab765d793e2e96db090f0e172d127859d78ca6f6391d7eafecfd894bbc0",
         "source_url": "https://curl.se/download/curl-8.10.1.tar.gz",
         "specimen_id": "specimen:curl-minimal:8.10.1",
         "static_linkage": {
@@ -27304,13 +27535,58 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "curl 8.10.1 (x86_64-pc-linux-gnu) libcurl/8.10.1 OpenSSL/3.6.4 zlib/1.2.13",
+          "Release-Date: 2024-09-18",
+          "Protocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns mqtt pop3 pop3s rtsp smb smbs smtp smtps telnet tftp",
+          "Features: alt-svc AsynchDNS HSTS HTTPS-proxy IPv6 Largefile libz NTLM SSL threadsafe TLS-SRP UnixSockets",
+          "== workload ==",
+          "exit=0",
+          "== positive ==",
+          "exit=0",
+          "template-payload",
+          "== negative (no listener) ==",
+          "exit=60",
+          "curl: (60) SSL certificate problem: unable to get local issuer certificate",
+          "More details here: https://curl.se/docs/sslcerts.html",
+          "",
+          "curl failed to verify the legitimacy of the server and therefore could not",
+          "establish a secure connection to it. To learn more about this situation and",
+          "how to fix it, please visit the webpage mentioned above."
+        ],
+        "transcript_sha256": "ee3b8cb1f575ea8fde5cdc46686910833fad48819412ebb16b1d02ee53076ed5",
         "variant_id": "variant:curl-minimal:8.10.1:pristine",
-        "workload": null
+        "workload": "curl-minimal: http_client bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "curl-minimal: http_client bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "curl-minimal",
@@ -27318,18 +27594,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:curl-minimal"
+          "family:family:curl-minimal",
+          "recipe:recipe:curl-minimal:8.10.1",
+          "artifact:src/.libs/curl",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:curl-minimal",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-V"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1368062:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1368062:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1368062:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1368062:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1368062:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1368062:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -27349,12 +27670,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 633,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:curl-minimal:8.10.1",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -27365,8 +27686,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:curl-minimal",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "34735156e3978b653ea4ea6f1b073ca3ccd5bd8c493ec708160a2dc289598d08",
+        "source_sha256": "d15ebab765d793e2e96db090f0e172d127859d78ca6f6391d7eafecfd894bbc0",
         "source_url": "https://curl.se/download/curl-8.10.1.tar.gz",
         "specimen_id": "specimen:curl-minimal:8.10.1",
         "static_linkage": {
@@ -27376,10 +27697,55 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "curl 8.10.1 (x86_64-pc-linux-gnu) libcurl/8.10.1 OpenSSL/3.6.4 zlib/1.2.13",
+          "Release-Date: 2024-09-18",
+          "Protocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns mqtt pop3 pop3s rtsp smb smbs smtp smtps telnet tftp",
+          "Features: alt-svc AsynchDNS HSTS HTTPS-proxy IPv6 Largefile libz NTLM SSL threadsafe TLS-SRP UnixSockets",
+          "== workload ==",
+          "exit=0",
+          "== positive ==",
+          "exit=0",
+          "template-payload",
+          "== negative (no listener) ==",
+          "exit=60",
+          "curl: (60) SSL certificate problem: unable to get local issuer certificate",
+          "More details here: https://curl.se/docs/sslcerts.html",
+          "",
+          "curl failed to verify the legitimacy of the server and therefore could not",
+          "establish a secure connection to it. To learn more about this situation and",
+          "how to fix it, please visit the webpage mentioned above."
+        ],
+        "transcript_sha256": "ee3b8cb1f575ea8fde5cdc46686910833fad48819412ebb16b1d02ee53076ed5",
         "variant_id": "variant:curl-minimal:8.10.1:pristine",
-        "workload": null
+        "workload": "curl-minimal: http_client bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "curl-minimal: http_client bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -51255,7 +51621,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "fsverity-utils",
@@ -51263,18 +51629,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:fsverity-utils"
+          "family:family:fsverity-utils",
+          "recipe:recipe:fsverity-utils:1.6",
+          "artifact:fsverity",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:fsverity-utils",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1368375:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1368375:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1368375:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1368375:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1368375:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1368375:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1368375:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "1368375:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -51294,13 +51697,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 736,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:fsverity-utils:1.6",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -51310,8 +51713,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:fsverity-utils",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "7432af8c20214bf7da79ef796a02ee8f33a1d526c7a3973dfab1bec847046361",
+        "source_sha256": "c7aa6b17a8a069224321ff94e46fb91a6426828ca78170a879a52cef2597abb7",
         "source_url": "https://github.com/ebiggers/fsverity-utils/archive/refs/tags/v1.6.tar.gz",
         "specimen_id": "specimen:fsverity-utils:1.6",
         "static_linkage": {
@@ -51321,13 +51724,45 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "fsverity v1.6",
+          "== workload ==",
+          "exit=0",
+          "== digest ==",
+          "exit=0",
+          "sha256:234d5f12e8b47e199f6c8f8cfe6c6f52b31fe2480992d665d9357110c618ac06 {scratch}/fixtures/payload.bin",
+          "== tampered input ==",
+          "exit=0",
+          "sha256:a8ff292d18e63088e3360ae3d009d39128359f2a0306849798011e1a75a3f4df {scratch}/fixtures/tampered.bin"
+        ],
+        "transcript_sha256": "eb7e1c7e7aa23ce37c699ca5cd2d69e5a3cb70722578f6e118b03ea9eb34df27",
         "variant_id": "variant:fsverity-utils:1.6:pristine",
-        "workload": null
+        "workload": "fsverity-utils: digest bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "fsverity-utils: digest bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "fsverity-utils",
@@ -51335,18 +51770,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:fsverity-utils"
+          "family:family:fsverity-utils",
+          "recipe:recipe:fsverity-utils:1.6",
+          "artifact:fsverity",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:fsverity-utils",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1368393:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1368393:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1368393:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1368393:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1368393:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1368393:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1368393:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "1368393:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -51366,12 +51838,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 736,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:fsverity-utils:1.6",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -51382,8 +51854,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:fsverity-utils",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "7432af8c20214bf7da79ef796a02ee8f33a1d526c7a3973dfab1bec847046361",
+        "source_sha256": "c7aa6b17a8a069224321ff94e46fb91a6426828ca78170a879a52cef2597abb7",
         "source_url": "https://github.com/ebiggers/fsverity-utils/archive/refs/tags/v1.6.tar.gz",
         "specimen_id": "specimen:fsverity-utils:1.6",
         "static_linkage": {
@@ -51393,10 +51865,42 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "fsverity v1.6",
+          "== workload ==",
+          "exit=0",
+          "== digest ==",
+          "exit=0",
+          "sha256:234d5f12e8b47e199f6c8f8cfe6c6f52b31fe2480992d665d9357110c618ac06 {scratch}/fixtures/payload.bin",
+          "== tampered input ==",
+          "exit=0",
+          "sha256:a8ff292d18e63088e3360ae3d009d39128359f2a0306849798011e1a75a3f4df {scratch}/fixtures/tampered.bin"
+        ],
+        "transcript_sha256": "eb7e1c7e7aa23ce37c699ca5cd2d69e5a3cb70722578f6e118b03ea9eb34df27",
         "variant_id": "variant:fsverity-utils:1.6:pristine",
-        "workload": null
+        "workload": "fsverity-utils: digest bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "fsverity-utils: digest bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -61161,7 +61665,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "gmnisrv",
@@ -61169,18 +61673,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:gmnisrv"
+          "family:family:gmnisrv",
+          "recipe:recipe:gmnisrv:1.0",
+          "artifact:gmnisrv",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:gmnisrv",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-h"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1368819:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "1368819:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "1368819:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "1368819:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "1368819:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "1368819:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "1368819:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "1368819:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -61200,13 +61751,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 787,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:gmnisrv:1.0",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -61216,8 +61767,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:gmnisrv",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "5c7f2c142009fc3736a0a4ec7f76bad8239b83c95080b8e20e6a89ce4c025164",
+        "source_sha256": "b1257d6835aff453d6a321a1c6e50c485703692530e4bcfe35455d7aac45f3d5",
         "source_url": "https://git.sr.ht/~sircmpwn/gmnisrv/archive/1.0.tar.gz",
         "specimen_id": "specimen:gmnisrv:1.0",
         "static_linkage": {
@@ -61227,13 +61778,59 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "Usage: {repo}/court/phase24-build-link/gmnisrv/authority/src/gmnisrv-1.0/gmnisrv [-C path]",
+          "== workload ==",
+          "exit=0",
+          "== tls client ==",
+          "exit=0",
+          "20 text/gemini",
+          "template-payload",
+          "== unrelated CA (must fail) ==",
+          "exit=1",
+          "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:992)",
+          "== server ==",
+          "exit=0",
+          "{addr} localhost /   1ms    17 20 text/gemini",
+          "[gmnisrv] generating certificate for localhost",
+          "[gmnisrv] listening on {addr}",
+          "[gmnisrv] gmnisrv started",
+          "{addr} SSL accept error: error:0A000418:SSL routines::tlsv1 alert unknown ca",
+          "[gmnisrv] gmnisrv terminating"
+        ],
+        "transcript_sha256": "a4e7b05410565e1e436853505e5de9a57c1d442ae0f892a00ebf021f8baed77d",
         "variant_id": "variant:gmnisrv:1.0:pristine",
-        "workload": null
+        "workload": "gmnisrv: gemini server bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "gmnisrv: gemini server bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "gmnisrv",
@@ -61241,18 +61838,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:gmnisrv"
+          "family:family:gmnisrv",
+          "recipe:recipe:gmnisrv:1.0",
+          "artifact:gmnisrv",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": "runtime-failure",
         "family_id": "family:gmnisrv",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-h"
+        ],
+        "level": "L5-loaded",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1368840:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "1368840:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "1368840:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "1368840:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "1368840:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "1368840:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "1368840:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "1368840:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -61272,12 +61916,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "failed",
         "p1000_rank": 787,
-        "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reaches_baseline": false,
+        "reason": "the TLS server did not return the expected protocol response",
         "recipe_id": "recipe:gmnisrv:1.0",
-        "residual_class": "unlinked",
+        "residual_class": "runtime-failure",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -61288,8 +61932,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:gmnisrv",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "5c7f2c142009fc3736a0a4ec7f76bad8239b83c95080b8e20e6a89ce4c025164",
+        "source_sha256": "b1257d6835aff453d6a321a1c6e50c485703692530e4bcfe35455d7aac45f3d5",
         "source_url": "https://git.sr.ht/~sircmpwn/gmnisrv/archive/1.0.tar.gz",
         "specimen_id": "specimen:gmnisrv:1.0",
         "static_linkage": {
@@ -61299,10 +61943,55 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "Usage: {repo}/court/phase24-build-link/gmnisrv/candidate/src/gmnisrv-1.0/gmnisrv [-C path]",
+          "== workload ==",
+          "exit=0",
+          "== tls client ==",
+          "exit=1",
+          "TLS/SSL connection has been closed (EOF) (_ssl.c:992)",
+          "== unrelated CA (must fail) ==",
+          "exit=1",
+          "TLS/SSL connection has been closed (EOF) (_ssl.c:992)",
+          "== server ==",
+          "exit=0",
+          "[gmnisrv] generating certificate for localhost",
+          "[gmnisrv] listening on {addr}",
+          "[gmnisrv] gmnisrv started",
+          "{addr} SSL accept error: error:0A00013E:SSL routines::ecc cert not for signing",
+          "{addr} SSL accept error: error:0A00013E:SSL routines::ecc cert not for signing",
+          "[gmnisrv] gmnisrv terminating"
+        ],
+        "transcript_sha256": "3a2b34d4bfbabfd8f453308cb97f6e4b3552a546f4bb5d2e2312663c60c5c658",
         "variant_id": "variant:gmnisrv:1.0:pristine",
-        "workload": null
+        "workload": "gmnisrv: gemini server bucket",
+        "workload_result": {
+          "functional_ok": false,
+          "local_only": true,
+          "name": "gmnisrv: gemini server bucket",
+          "runtime_ok": false
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -63321,7 +64010,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "gostsum",
@@ -63329,18 +64018,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:gostsum"
+          "family:family:gostsum",
+          "recipe:recipe:gostsum:3.0.3+git20251212.7f6d61a",
+          "artifact:b/bin/gostsum",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:gostsum",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-h"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1370397:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1370397:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1370397:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1370397:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1370397:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1370397:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1370397:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "1370397:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 3
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -63360,13 +64086,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 799,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:gostsum:3.0.3+git20251212.7f6d61a",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -63376,8 +64102,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:gostsum",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "74c39913fc2b1031288f1f98887475e9408d2d8c4dac31bd984f51dbbbf3c527",
+        "source_sha256": "3363e630d7b73aa79ba00707dd6b9ff5978ea68a7d2704375bdf52bd8f423aa5",
         "source_url": "https://deb.debian.org/debian/pool/main/libe/libengine-gost-openssl/libengine-gost-openssl_3.0.3+git20251212.7f6d61a.orig.tar.gz",
         "specimen_id": "specimen:gostsum:3.0.3+git20251212.7f6d61a",
         "static_linkage": {
@@ -63387,13 +64113,52 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=3",
+          "{repo}/court/phase24-build-link/gostsum/authority/src/libengine-gost-openssl-3.0.3+git20251212.7f6d61a/b/bin/gostsum: invalid option -- 'h'",
+          "invalid option hgostsum [-bvt] [-c [file]]| [files]",
+          "\t-c check message digests (default is generate)",
+          "\t-v verbose, print file names when checking",
+          "\t-b read files in binary mode",
+          "\t-t use test GOST paramset (default is CryptoPro paramset)",
+          "The input for -c should be the list of message digests and file names",
+          "that is printed on stdout by this program when it generates digests.",
+          "== workload ==",
+          "exit=0",
+          "== digest ==",
+          "exit=0",
+          "624ce8b0be430e9e2624033006cf0fde17c5fe4fbbd753aca2c72e29d6b4805b {scratch}/fixtures/payload.bin",
+          "== tampered input ==",
+          "exit=0",
+          "921ed974d6ebd2a659dff720ca8ce6704a6e5b37c542b73e1eb532253947cf7a {scratch}/fixtures/tampered.bin"
+        ],
+        "transcript_sha256": "6eef4177afc81519f600f05b21bbbeae41151c393553e1654c90f4599abccf7c",
         "variant_id": "variant:gostsum:3.0.3+git20251212.7f6d61a:pristine",
-        "workload": null
+        "workload": "gostsum: digest bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "gostsum: digest bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "gostsum",
@@ -63401,18 +64166,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:gostsum"
+          "family:family:gostsum",
+          "recipe:recipe:gostsum:3.0.3+git20251212.7f6d61a",
+          "artifact:b/bin/gostsum",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:gostsum",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-h"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1370415:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1370415:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1370415:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1370415:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1370415:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1370415:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1370415:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "1370415:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 3
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -63432,12 +64234,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 799,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:gostsum:3.0.3+git20251212.7f6d61a",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -63448,8 +64250,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:gostsum",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "74c39913fc2b1031288f1f98887475e9408d2d8c4dac31bd984f51dbbbf3c527",
+        "source_sha256": "3363e630d7b73aa79ba00707dd6b9ff5978ea68a7d2704375bdf52bd8f423aa5",
         "source_url": "https://deb.debian.org/debian/pool/main/libe/libengine-gost-openssl/libengine-gost-openssl_3.0.3+git20251212.7f6d61a.orig.tar.gz",
         "specimen_id": "specimen:gostsum:3.0.3+git20251212.7f6d61a",
         "static_linkage": {
@@ -63459,10 +64261,49 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=3",
+          "{repo}/court/phase24-build-link/gostsum/candidate/src/libengine-gost-openssl-3.0.3+git20251212.7f6d61a/b/bin/gostsum: invalid option -- 'h'",
+          "invalid option hgostsum [-bvt] [-c [file]]| [files]",
+          "\t-c check message digests (default is generate)",
+          "\t-v verbose, print file names when checking",
+          "\t-b read files in binary mode",
+          "\t-t use test GOST paramset (default is CryptoPro paramset)",
+          "The input for -c should be the list of message digests and file names",
+          "that is printed on stdout by this program when it generates digests.",
+          "== workload ==",
+          "exit=0",
+          "== digest ==",
+          "exit=0",
+          "624ce8b0be430e9e2624033006cf0fde17c5fe4fbbd753aca2c72e29d6b4805b {scratch}/fixtures/payload.bin",
+          "== tampered input ==",
+          "exit=0",
+          "921ed974d6ebd2a659dff720ca8ce6704a6e5b37c542b73e1eb532253947cf7a {scratch}/fixtures/tampered.bin"
+        ],
+        "transcript_sha256": "c4c067b56fb5bfb21d0f832251539232d25df4e7270c278ab0bc20eecd4356fe",
         "variant_id": "variant:gostsum:3.0.3+git20251212.7f6d61a:pristine",
-        "workload": null
+        "workload": "gostsum: digest bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "gostsum: digest bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -73341,7 +74182,7 @@
         }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "httrack",
@@ -73349,18 +74190,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:httrack"
+          "family:family:httrack",
+          "recipe:recipe:httrack:3.49.2",
+          "artifact:src/.libs/httrack",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:httrack",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1393603:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1393603:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1393603:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1393603:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1393603:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1393603:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -73380,13 +74266,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 844,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:httrack:3.49.2",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -73396,8 +74282,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:httrack",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "11068909af260f6185a93c086483d821a4d22833079f716447d887edf92074b1",
+        "source_sha256": "4a017e8311035ec02ee2947e14022a5f1291c86c7e67e98ee762c9486f0db39d",
         "source_url": "https://download.httrack.com/httrack-3.49.2.tar.gz",
         "specimen_id": "specimen:httrack:3.49.2",
         "static_linkage": {
@@ -73407,13 +74293,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "HTTrack version 3.50-5",
+          "== workload ==",
+          "exit=0",
+          "== positive ==",
+          "exit=0",
+          "WARNING! You are running this program as root!",
+          "It might be a good idea to run as a different user",
+          "Mirror launched on Thu, 22 Oct 2026 {clock} by HTTrack Website Copier/3.50-5 [XR&CO]",
+          "mirroring https://{addr}/ with the wizard help..",
+          "Done.",
+          "Thanks for using HTTrack!",
+          "== negative (plaintext peer) ==",
+          "exit=0",
+          "WARNING! You are running this program as root!",
+          "It might be a good idea to run as a different user",
+          "Mirror launched on Thu, 22 Oct 2026 {clock} by HTTrack Website Copier/3.50-5 [XR&CO]",
+          "mirroring https://{addr}/ with the wizard help..",
+          "Mirror not completed (see log file)",
+          "Thanks for using HTTrack!"
+        ],
+        "transcript_sha256": "e6485cf9abd323cdc69ea4aad730fe9d885f4a44fbbadb5f4eb6c3d1d3207925",
         "variant_id": "variant:httrack:3.49.2:pristine",
-        "workload": null
+        "workload": "httrack: http_mirror bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "httrack: http_mirror bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "httrack",
@@ -73421,18 +74354,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:httrack"
+          "family:family:httrack",
+          "recipe:recipe:httrack:3.49.2",
+          "artifact:src/.libs/httrack",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:httrack",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1393635:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1393635:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1393635:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1393635:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1393635:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1393635:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -73452,12 +74430,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 844,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:httrack:3.49.2",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -73468,8 +74446,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:httrack",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "11068909af260f6185a93c086483d821a4d22833079f716447d887edf92074b1",
+        "source_sha256": "4a017e8311035ec02ee2947e14022a5f1291c86c7e67e98ee762c9486f0db39d",
         "source_url": "https://download.httrack.com/httrack-3.49.2.tar.gz",
         "specimen_id": "specimen:httrack:3.49.2",
         "static_linkage": {
@@ -73479,10 +74457,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "HTTrack version 3.50-5",
+          "== workload ==",
+          "exit=0",
+          "== positive ==",
+          "exit=0",
+          "WARNING! You are running this program as root!",
+          "It might be a good idea to run as a different user",
+          "Mirror launched on Thu, 22 Oct 2026 {clock} by HTTrack Website Copier/3.50-5 [XR&CO]",
+          "mirroring https://{addr}/ with the wizard help..",
+          "Done.",
+          "Thanks for using HTTrack!",
+          "== negative (plaintext peer) ==",
+          "exit=0",
+          "WARNING! You are running this program as root!",
+          "It might be a good idea to run as a different user",
+          "Mirror launched on Thu, 22 Oct 2026 {clock} by HTTrack Website Copier/3.50-5 [XR&CO]",
+          "mirroring https://{addr}/ with the wizard help..",
+          "Mirror not completed (see log file)",
+          "Thanks for using HTTrack!"
+        ],
+        "transcript_sha256": "e6485cf9abd323cdc69ea4aad730fe9d885f4a44fbbadb5f4eb6c3d1d3207925",
         "variant_id": "variant:httrack:3.49.2:pristine",
-        "workload": null
+        "workload": "httrack: http_mirror bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "httrack: http_mirror bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -126818,7 +127843,7 @@
         }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "openssh-client",
@@ -126826,18 +127851,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:openssh-client"
+          "family:family:openssh-client",
+          "recipe:recipe:openssh-client:9.9p1",
+          "artifact:ssh",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:openssh-client",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-V"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1318368:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1318368:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1318368:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1318368:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1318368:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1318368:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1318368:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "1318368:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -126857,13 +127919,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 334,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:openssh-client:9.9p1",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -126873,8 +127935,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:openssh-client",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+        "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
         "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
         "specimen_id": "specimen:openssh-client:9.9p1",
         "static_linkage": {
@@ -126884,13 +127946,72 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026",
+          "== workload ==",
+          "exit=0",
+          "== ssh exec ==",
+          "exit=0",
+          "ok",
+          "== ssh host-key mismatch (must fail) ==",
+          "exit=255",
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+          "@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @",
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+          "IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!",
+          "Someone could be eavesdropping on you right now (man-in-the-middle attack)!",
+          "It is also possible that a host key has just been changed.",
+          "The fingerprint for the ED25519 key sent by the remote host is",
+          "SHA256:ih06RK20KmyBnEi0BWpOZymLQk63JmhwU/CJD9SywbM.",
+          "Please contact your system administrator.",
+          "Add correct host key in {scratch}/known_bad to get rid of this message.",
+          "Offending ED25519 key in {scratch}/known_bad:1",
+          "Host key for [{addr}]:31645 has changed and you have requested strict checking.",
+          "Host key verification failed.",
+          "== sshd ==",
+          "exit=0",
+          "penalty: connections without attempting authentication",
+          "Connection from {addr} port 46566 on {addr} port 31645 rdomain \"\"",
+          "Accepted key ED25519 SHA256:wyie3cEkGE3vuNGCk0ZASjxnrn32wQM4GUZsx6xT5uE found at {scratch}/authorized_keys:1",
+          "Postponed publickey for root from {addr} port 46566 ssh2 [preauth]",
+          "Accepted key ED25519 SHA256:wyie3cEkGE3vuNGCk0ZASjxnrn32wQM4GUZsx6xT5uE found at {scratch}/authorized_keys:1",
+          "Accepted publickey for root from {addr} port 46566 ssh2: ED25519 SHA256:wyie3cEkGE3vuNGCk0ZASjxnrn32wQM4GUZsx6xT5uE",
+          "User child is on pid {pid}",
+          "Starting session: command for root from {addr} port 46566 id 0",
+          "Received disconnect from {addr} port 46566:11: disconnected by user",
+          "Disconnected from user root {addr} port 46566",
+          "Connection from {addr} port 46580 on {addr} port 31645 rdomain \"\"",
+          "Connection closed by {addr} port 46580 [preauth]",
+          "Received signal 15; terminating."
+        ],
+        "transcript_sha256": "1d60c40e4c336512d67df0cbe3c4ba1c18e5f221856242eeea14f6794d81841d",
         "variant_id": "variant:openssh-client:9.9p1:pristine",
-        "workload": null
+        "workload": "openssh-client: ssh client bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "openssh-client: ssh client bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "openssh-client",
@@ -126898,18 +128019,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:openssh-client"
+          "family:family:openssh-client",
+          "recipe:recipe:openssh-client:9.9p1",
+          "artifact:ssh",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:openssh-client",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-V"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1318397:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1318397:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1318397:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1318397:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1318397:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1318397:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1318397:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "1318397:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -126929,12 +128087,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 334,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:openssh-client:9.9p1",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -126945,8 +128103,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:openssh-client",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+        "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
         "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
         "specimen_id": "specimen:openssh-client:9.9p1",
         "static_linkage": {
@@ -126956,10 +128114,69 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026",
+          "== workload ==",
+          "exit=0",
+          "== ssh exec ==",
+          "exit=0",
+          "ok",
+          "== ssh host-key mismatch (must fail) ==",
+          "exit=255",
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+          "@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @",
+          "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+          "IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!",
+          "Someone could be eavesdropping on you right now (man-in-the-middle attack)!",
+          "It is also possible that a host key has just been changed.",
+          "The fingerprint for the ED25519 key sent by the remote host is",
+          "SHA256:cK1kQ5siO8Yp+tV/YyOGRirfSuFlmQm5zoBVHFE39qg.",
+          "Please contact your system administrator.",
+          "Add correct host key in {scratch}/known_bad to get rid of this message.",
+          "Offending ED25519 key in {scratch}/known_bad:1",
+          "Host key for [{addr}]:31645 has changed and you have requested strict checking.",
+          "Host key verification failed.",
+          "== sshd ==",
+          "exit=0",
+          "penalty: connections without attempting authentication",
+          "Connection from {addr} port 46606 on {addr} port 31645 rdomain \"\"",
+          "Accepted key ED25519 SHA256:BW8ULZT3oq5yam3+zp7I7HB+7LtTa+YNlJ4L5bq6XQc found at {scratch}/authorized_keys:1",
+          "Postponed publickey for root from {addr} port 46606 ssh2 [preauth]",
+          "Accepted key ED25519 SHA256:BW8ULZT3oq5yam3+zp7I7HB+7LtTa+YNlJ4L5bq6XQc found at {scratch}/authorized_keys:1",
+          "Accepted publickey for root from {addr} port 46606 ssh2: ED25519 SHA256:BW8ULZT3oq5yam3+zp7I7HB+7LtTa+YNlJ4L5bq6XQc",
+          "User child is on pid {pid}",
+          "Starting session: command for root from {addr} port 46606 id 0",
+          "Received disconnect from {addr} port 46606:11: disconnected by user",
+          "Disconnected from user root {addr} port 46606",
+          "Connection from {addr} port 46618 on {addr} port 31645 rdomain \"\"",
+          "Connection closed by {addr} port 46618 [preauth]",
+          "Received signal 15; terminating."
+        ],
+        "transcript_sha256": "d1e3b5ac3a3206e9a427caaa9361ef3b1b4bc7952f183b257a7e054e3a52a575",
         "variant_id": "variant:openssh-client:9.9p1:pristine",
-        "workload": null
+        "workload": "openssh-client: ssh client bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "openssh-client: ssh client bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L7-functional",
@@ -139552,7 +140769,7 @@
         }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "rhash",
@@ -139560,18 +140777,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:rhash"
+          "family:family:rhash",
+          "recipe:recipe:rhash:1.4.5",
+          "artifact:rhash",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:rhash",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1318997:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1318997:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1318997:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -139591,13 +140840,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 378,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:rhash:1.4.5",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -139607,8 +140856,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:rhash",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "3cc3f5e783f9783fd1496906bd1e10ec135f0371d9dd3531b60c8b8052a701a8",
+        "source_sha256": "6db837e7bbaa7c72c5fd43ca5af04b1d370c5ce32367b9f6a1f7b49b2338c09a",
         "source_url": "https://github.com/rhash/RHash/archive/refs/tags/v1.4.5.tar.gz",
         "specimen_id": "specimen:rhash:1.4.5",
         "static_linkage": {
@@ -139618,13 +140867,45 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "RHash v1.4.5",
+          "== workload ==",
+          "exit=0",
+          "== digest ==",
+          "exit=0",
+          "f62d241c46a428ac27e18359314661ea1f2633bfced2af1339f6e73e86050d3d  {scratch}/fixtures/payload.bin",
+          "== tampered input ==",
+          "exit=0",
+          "bbbaaed9d2a39299bc5153943dee20ff491b0c8a529439053aa7a74dbf94ab2f  {scratch}/fixtures/tampered.bin"
+        ],
+        "transcript_sha256": "9a838239427e5a18380dcb8ffab960bf9e1261aafab0ac060f6197c8a4c99260",
         "variant_id": "variant:rhash:1.4.5:pristine",
-        "workload": null
+        "workload": "rhash: digest bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "rhash: digest bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "rhash",
@@ -139632,18 +140913,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:rhash"
+          "family:family:rhash",
+          "recipe:recipe:rhash:1.4.5",
+          "artifact:rhash",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:rhash",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1319015:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1319015:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1319015:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -139663,12 +140976,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 378,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:rhash:1.4.5",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -139679,8 +140992,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:rhash",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "3cc3f5e783f9783fd1496906bd1e10ec135f0371d9dd3531b60c8b8052a701a8",
+        "source_sha256": "6db837e7bbaa7c72c5fd43ca5af04b1d370c5ce32367b9f6a1f7b49b2338c09a",
         "source_url": "https://github.com/rhash/RHash/archive/refs/tags/v1.4.5.tar.gz",
         "specimen_id": "specimen:rhash:1.4.5",
         "static_linkage": {
@@ -139690,10 +141003,42 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "RHash v1.4.5",
+          "== workload ==",
+          "exit=0",
+          "== digest ==",
+          "exit=0",
+          "f62d241c46a428ac27e18359314661ea1f2633bfced2af1339f6e73e86050d3d  {scratch}/fixtures/payload.bin",
+          "== tampered input ==",
+          "exit=0",
+          "bbbaaed9d2a39299bc5153943dee20ff491b0c8a529439053aa7a74dbf94ab2f  {scratch}/fixtures/tampered.bin"
+        ],
+        "transcript_sha256": "9a838239427e5a18380dcb8ffab960bf9e1261aafab0ac060f6197c8a4c99260",
         "variant_id": "variant:rhash:1.4.5:pristine",
-        "workload": null
+        "workload": "rhash: digest bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "rhash: digest bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -143472,7 +144817,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "siege",
@@ -143480,18 +144825,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:siege"
+          "family:family:siege",
+          "recipe:recipe:siege:4.1.6",
+          "artifact:src/siege",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:siege",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1326434:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "1326434:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "1326434:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "1326434:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "1326434:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "1326434:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "1326434:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "1326434:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -143511,13 +144903,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 391,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:siege:4.1.6",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -143527,8 +144919,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:siege",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "93ef032cad6f0fa76af37fdf3de375e026bf01b8c5009233b3f3c298805745d9",
+        "source_sha256": "309d589bfc819b6f15d2e5e8591b3c0c6f693624f5060eeac067a4d9a7757de9",
         "source_url": "https://download.joedog.org/siege/siege-4.1.6.tar.gz",
         "specimen_id": "specimen:siege:4.1.6",
         "static_linkage": {
@@ -143538,13 +144930,79 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "exit=0",
+          "== positive ==",
+          "exit=0",
+          "\u001b[0;34mHTTP/1.0 200     0.00 secs:      17 bytes ==> GET  /\u001b[0m",
+          "** SIEGE 4.1.6",
+          "** Preparing 1 concurrent users for battle.",
+          "The server is now under siege...",
+          "",
+          "Transactions:\t\t           1 hits",
+          "Availability:\t\t      100.00 %",
+          "Elapsed time:\t\t        0.00 secs",
+          "Data transferred:\t        0.00 MB",
+          "Response time:\t\t        0.00 secs",
+          "Transaction rate:\t        0.00 trans/sec",
+          "Throughput:\t\t        0.00 MB/sec",
+          "Concurrency:\t\t        0.00",
+          "Successful transactions:           1",
+          "Failed transactions:\t           0",
+          "Longest transaction:\t        0.00",
+          "Shortest transaction:\t        0.00",
+          "== negative (plaintext peer) ==",
+          "exit=0",
+          "** SIEGE 4.1.6",
+          "** Preparing 1 concurrent users for battle.",
+          "The server is now under siege...",
+          "[\u001b[1;33merror\u001b[0m] stack: A00010B : error:0A00010B:SSL routines::wrong version number",
+          "[\u001b[1;33merror\u001b[0m] Failed to make an SSL connection: 5",
+          "",
+          "Transactions:\t\t           0 hits",
+          "Availability:\t\t        0.00 %",
+          "Elapsed time:\t\t        0.00 secs",
+          "Data transferred:\t        0.00 MB",
+          "Response time:\t\t        0.00 secs",
+          "Transaction rate:\t        0.00 trans/sec",
+          "Throughput:\t\t        0.00 MB/sec",
+          "Concurrency:\t\t        0.00",
+          "Successful transactions:           0",
+          "Failed transactions:\t           1",
+          "Longest transaction:\t        0.00",
+          "Shortest transaction:\t        0.00"
+        ],
+        "transcript_sha256": "2dff4b5bfb878dcf0106c79a4b2903f009119b86ffe62020ffc27644516be942",
         "variant_id": "variant:siege:4.1.6:pristine",
-        "workload": null
+        "workload": "siege: http_bench bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "siege: http_bench bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "siege",
@@ -143552,18 +145010,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:siege"
+          "family:family:siege",
+          "recipe:recipe:siege:4.1.6",
+          "artifact:src/siege",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:siege",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1326464:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "1326464:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "1326464:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "1326464:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "1326464:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "1326464:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "1326464:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "1326464:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -143583,12 +145088,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 391,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:siege:4.1.6",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -143599,8 +145104,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:siege",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "93ef032cad6f0fa76af37fdf3de375e026bf01b8c5009233b3f3c298805745d9",
+        "source_sha256": "309d589bfc819b6f15d2e5e8591b3c0c6f693624f5060eeac067a4d9a7757de9",
         "source_url": "https://download.joedog.org/siege/siege-4.1.6.tar.gz",
         "specimen_id": "specimen:siege:4.1.6",
         "static_linkage": {
@@ -143610,10 +145115,76 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "exit=0",
+          "== positive ==",
+          "exit=0",
+          "\u001b[0;34mHTTP/1.0 200     0.00 secs:      17 bytes ==> GET  /\u001b[0m",
+          "** SIEGE 4.1.6",
+          "** Preparing 1 concurrent users for battle.",
+          "The server is now under siege...",
+          "",
+          "Transactions:\t\t           1 hits",
+          "Availability:\t\t      100.00 %",
+          "Elapsed time:\t\t        0.00 secs",
+          "Data transferred:\t        0.00 MB",
+          "Response time:\t\t        0.00 secs",
+          "Transaction rate:\t        0.00 trans/sec",
+          "Throughput:\t\t        0.00 MB/sec",
+          "Concurrency:\t\t        0.00",
+          "Successful transactions:           1",
+          "Failed transactions:\t           0",
+          "Longest transaction:\t        0.00",
+          "Shortest transaction:\t        0.00",
+          "== negative (plaintext peer) ==",
+          "exit=0",
+          "** SIEGE 4.1.6",
+          "** Preparing 1 concurrent users for battle.",
+          "The server is now under siege...",
+          "[\u001b[1;33merror\u001b[0m] stack: A0000C6 : error:0A0000C6:SSL routines::packet length too long: Operation now in progress",
+          "[\u001b[1;33merror\u001b[0m] Failed to make an SSL connection: 5: Operation now in progress",
+          "",
+          "Transactions:\t\t           0 hits",
+          "Availability:\t\t        0.00 %",
+          "Elapsed time:\t\t        0.00 secs",
+          "Data transferred:\t        0.00 MB",
+          "Response time:\t\t        0.00 secs",
+          "Transaction rate:\t        0.00 trans/sec",
+          "Throughput:\t\t        0.00 MB/sec",
+          "Concurrency:\t\t        0.00",
+          "Successful transactions:           0",
+          "Failed transactions:\t           1",
+          "Longest transaction:\t        0.00",
+          "Shortest transaction:\t        0.00"
+        ],
+        "transcript_sha256": "64c73d9a44b751d6bb7cae32baa24c6de9472054035ad829404a3d3146645c45",
         "variant_id": "variant:siege:4.1.6:pristine",
-        "workload": null
+        "workload": "siege: http_bench bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "siege: http_bench bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -157592,7 +159163,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "wrk",
@@ -157600,18 +159171,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:wrk"
+          "family:family:wrk",
+          "recipe:recipe:wrk:4.2.0",
+          "artifact:wrk",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:wrk",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1327655:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1327655:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1327655:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1327655:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1327655:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1327655:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 1
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -157631,13 +159247,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 432,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:wrk:4.2.0",
-        "residual_class": "unlinked",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -157647,8 +159263,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:wrk",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "4ad9057d35736e0b24d061dc39e510e6dd6a3b34e124ce77ab6befb4bd228806",
+        "source_sha256": "e255f696bff6e329f5d19091da6b06164b8d59d62cb9e673625bdcd27fe7bdad",
         "source_url": "https://github.com/wg/wrk/archive/refs/tags/4.2.0.tar.gz",
         "specimen_id": "specimen:wrk:4.2.0",
         "static_linkage": {
@@ -157658,13 +159274,71 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=1",
+          "wrk df3309236-dirty [epoll] Copyright (C) 2012 Will Glozer",
+          "Usage: wrk <options> <url>                            ",
+          "  Options:                                            ",
+          "    -c, --connections <N>  Connections to keep open   ",
+          "    -d, --duration    <T>  Duration of test           ",
+          "    -t, --threads     <N>  Number of threads to use   ",
+          "                                                      ",
+          "    -s, --script      <S>  Load Lua script file       ",
+          "    -H, --header      <H>  Add header to request      ",
+          "        --latency          Print latency statistics   ",
+          "        --timeout     <T>  Socket/request timeout     ",
+          "    -v, --version          Print version details      ",
+          "                                                      ",
+          "  Numeric arguments may include a SI unit (1k, 1M, 1G)",
+          "  Time arguments may include a time unit (2s, 2m, 2h)",
+          "== workload ==",
+          "exit=0",
+          "== positive ==",
+          "exit=0",
+          "Running 1s test @ https://{addr}/",
+          "  1 threads and 1 connections",
+          "  Thread Stats   Avg      Stdev     Max   +/- Stdev",
+          "    Latency    92.16us   25.62us 323.00us   84.60%",
+          "    Req/Sec     3.09k    33.13     3.13k    63.64%",
+          "  3384 requests in 1.10s, 495.70KB read",
+          "Requests/sec:   3077.10",
+          "Transfer/sec:    450.75KB",
+          "== negative (no listener) ==",
+          "exit=1",
+          "unable to connect to {addr} Connection refused"
+        ],
+        "transcript_sha256": "480cb97172823f62f524e5e2f8a589c8ebebfbc405c876e5f49d6cb7808bee57",
         "variant_id": "variant:wrk:4.2.0:pristine",
-        "workload": null
+        "workload": "wrk: http_bench bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "wrk: http_bench bucket",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "wrk",
@@ -157672,18 +159346,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:wrk"
+          "family:family:wrk",
+          "recipe:recipe:wrk:4.2.0",
+          "artifact:wrk",
+          "local_only:loopback"
         ],
-        "failure_class": "link-failure",
+        "failure_class": null,
         "family_id": "family:wrk",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1331064:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1331064:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1331064:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1331064:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1331064:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1331064:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 1
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -157703,12 +159422,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 432,
         "reaches_baseline": true,
-        "reason": "the 24.6 build/link run reached L0-catalogued, below L4-linked, so there is no loaded program to run",
+        "reason": null,
         "recipe_id": "recipe:wrk:4.2.0",
-        "residual_class": "unlinked",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -157719,8 +159438,8 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:wrk",
-        "source_root_hash": null,
-        "source_sha256": null,
+        "source_root_hash": "4ad9057d35736e0b24d061dc39e510e6dd6a3b34e124ce77ab6befb4bd228806",
+        "source_sha256": "e255f696bff6e329f5d19091da6b06164b8d59d62cb9e673625bdcd27fe7bdad",
         "source_url": "https://github.com/wg/wrk/archive/refs/tags/4.2.0.tar.gz",
         "specimen_id": "specimen:wrk:4.2.0",
         "static_linkage": {
@@ -157730,10 +159449,69 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "template_admission": {
+          "admitted": true,
+          "all_under_prefix": true,
+          "ldd_exit": 0,
+          "reason": null,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "/work/artifacts/phase2/install/lib/libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=1",
+          "wrk df3309236-dirty [epoll] Copyright (C) 2012 Will Glozer",
+          "Usage: wrk <options> <url>                            ",
+          "  Options:                                            ",
+          "    -c, --connections <N>  Connections to keep open   ",
+          "    -d, --duration    <T>  Duration of test           ",
+          "    -t, --threads     <N>  Number of threads to use   ",
+          "                                                      ",
+          "    -s, --script      <S>  Load Lua script file       ",
+          "    -H, --header      <H>  Add header to request      ",
+          "        --latency          Print latency statistics   ",
+          "        --timeout     <T>  Socket/request timeout     ",
+          "    -v, --version          Print version details      ",
+          "                                                      ",
+          "  Numeric arguments may include a SI unit (1k, 1M, 1G)",
+          "  Time arguments may include a time unit (2s, 2m, 2h)",
+          "== workload ==",
+          "exit=0",
+          "== positive ==",
+          "exit=0",
+          "Running 1s test @ https://{addr}/",
+          "  1 threads and 1 connections",
+          "  Thread Stats   Avg      Stdev     Max   +/- Stdev",
+          "    Latency   264.00us    0.00us 264.00us  100.00%",
+          "    Req/Sec    10.00      0.00    10.00    100.00%",
+          "  1 requests in 1.00s, 150.00B read",
+          "  Socket errors: connect 0, read 0, write 7, timeout 0",
+          "Requests/sec:      1.00",
+          "Transfer/sec:     149.74B",
+          "== negative (no listener) ==",
+          "exit=1",
+          "unable to connect to {addr} Connection refused"
+        ],
+        "transcript_sha256": "bcabf49d75ba1e3498756f45bfb25449c17abcecb81e9295f655c82817af37c9",
         "variant_id": "variant:wrk:4.2.0:pristine",
-        "workload": null
+        "workload": "wrk: http_bench bucket",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "wrk: http_bench bucket",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -160783,6 +162561,20 @@
       },
       {
         "evidence": [
+          "source:https://github.com/OSInside/appx-util/archive/refs/tags/v0.5.tar.gz#6ddc12a7b7eb32c1c11d634abfec61da50047df0bb999fa7edfaa799d1d214fa",
+          "recipe:recipe:appx-util:0.5",
+          "pinned_sha256:6ddc12a7b7eb32c1c11d634abfec61da50047df0bb999fa7edfaa799d1d214fa"
+        ],
+        "family_id": "family:appx-util",
+        "licence": "unknown",
+        "pristine_source_root_hash": "cea28e3c2946171d958b8b06472e01b34e3b388197bdb1baa049ba5417cd98fd",
+        "pristine_source_sha256": "6ddc12a7b7eb32c1c11d634abfec61da50047df0bb999fa7edfaa799d1d214fa",
+        "specimen_id": "specimen:appx-util:0.5",
+        "upstream_ref": "https://github.com/OSInside/appx-util/archive/refs/tags/v0.5.tar.gz",
+        "version": "0.5"
+      },
+      {
+        "evidence": [
           "source:https://archive.apache.org/dist/apr/apr-util-1.6.3.tar.gz#2b74d8932703826862ca305b094eef2983c27b39d5c9414442e9976a9acf1983",
           "recipe:recipe:apr-util:1.6.3",
           "pinned_sha256:2b74d8932703826862ca305b094eef2983c27b39d5c9414442e9976a9acf1983"
@@ -160850,6 +162642,20 @@
         "specimen_id": "specimen:cowpatty:4.8",
         "upstream_ref": "https://deb.debian.org/debian/pool/main/c/cowpatty/cowpatty_4.8.orig.tar.gz",
         "version": "4.8"
+      },
+      {
+        "evidence": [
+          "source:https://curl.se/download/curl-8.10.1.tar.gz#d15ebab765d793e2e96db090f0e172d127859d78ca6f6391d7eafecfd894bbc0",
+          "recipe:recipe:curl-minimal:8.10.1",
+          "pinned_sha256:d15ebab765d793e2e96db090f0e172d127859d78ca6f6391d7eafecfd894bbc0"
+        ],
+        "family_id": "family:curl-minimal",
+        "licence": "unknown",
+        "pristine_source_root_hash": "34735156e3978b653ea4ea6f1b073ca3ccd5bd8c493ec708160a2dc289598d08",
+        "pristine_source_sha256": "d15ebab765d793e2e96db090f0e172d127859d78ca6f6391d7eafecfd894bbc0",
+        "specimen_id": "specimen:curl-minimal:8.10.1",
+        "upstream_ref": "https://curl.se/download/curl-8.10.1.tar.gz",
+        "version": "8.10.1"
       },
       {
         "evidence": [
@@ -161035,6 +162841,20 @@
       },
       {
         "evidence": [
+          "source:https://github.com/ebiggers/fsverity-utils/archive/refs/tags/v1.6.tar.gz#c7aa6b17a8a069224321ff94e46fb91a6426828ca78170a879a52cef2597abb7",
+          "recipe:recipe:fsverity-utils:1.6",
+          "pinned_sha256:c7aa6b17a8a069224321ff94e46fb91a6426828ca78170a879a52cef2597abb7"
+        ],
+        "family_id": "family:fsverity-utils",
+        "licence": "unknown",
+        "pristine_source_root_hash": "7432af8c20214bf7da79ef796a02ee8f33a1d526c7a3973dfab1bec847046361",
+        "pristine_source_sha256": "c7aa6b17a8a069224321ff94e46fb91a6426828ca78170a879a52cef2597abb7",
+        "specimen_id": "specimen:fsverity-utils:1.6",
+        "upstream_ref": "https://github.com/ebiggers/fsverity-utils/archive/refs/tags/v1.6.tar.gz",
+        "version": "1.6"
+      },
+      {
+        "evidence": [
           "source:https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz#3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
           "recipe:recipe:gensio:2.8.6",
           "pinned_sha256:3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb"
@@ -161060,6 +162880,34 @@
         "specimen_id": "specimen:getdns:1.7.3",
         "upstream_ref": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz",
         "version": "1.7.3"
+      },
+      {
+        "evidence": [
+          "source:https://git.sr.ht/~sircmpwn/gmnisrv/archive/1.0.tar.gz#b1257d6835aff453d6a321a1c6e50c485703692530e4bcfe35455d7aac45f3d5",
+          "recipe:recipe:gmnisrv:1.0",
+          "pinned_sha256:b1257d6835aff453d6a321a1c6e50c485703692530e4bcfe35455d7aac45f3d5"
+        ],
+        "family_id": "family:gmnisrv",
+        "licence": "unknown",
+        "pristine_source_root_hash": "5c7f2c142009fc3736a0a4ec7f76bad8239b83c95080b8e20e6a89ce4c025164",
+        "pristine_source_sha256": "b1257d6835aff453d6a321a1c6e50c485703692530e4bcfe35455d7aac45f3d5",
+        "specimen_id": "specimen:gmnisrv:1.0",
+        "upstream_ref": "https://git.sr.ht/~sircmpwn/gmnisrv/archive/1.0.tar.gz",
+        "version": "1.0"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/libe/libengine-gost-openssl/libengine-gost-openssl_3.0.3+git20251212.7f6d61a.orig.tar.gz#3363e630d7b73aa79ba00707dd6b9ff5978ea68a7d2704375bdf52bd8f423aa5",
+          "recipe:recipe:gostsum:3.0.3+git20251212.7f6d61a",
+          "pinned_sha256:3363e630d7b73aa79ba00707dd6b9ff5978ea68a7d2704375bdf52bd8f423aa5"
+        ],
+        "family_id": "family:gostsum",
+        "licence": "unknown",
+        "pristine_source_root_hash": "74c39913fc2b1031288f1f98887475e9408d2d8c4dac31bd984f51dbbbf3c527",
+        "pristine_source_sha256": "3363e630d7b73aa79ba00707dd6b9ff5978ea68a7d2704375bdf52bd8f423aa5",
+        "specimen_id": "specimen:gostsum:3.0.3+git20251212.7f6d61a",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/libe/libengine-gost-openssl/libengine-gost-openssl_3.0.3+git20251212.7f6d61a.orig.tar.gz",
+        "version": "3.0.3+git20251212.7f6d61a"
       },
       {
         "evidence": [
@@ -161144,6 +162992,20 @@
         "specimen_id": "specimen:httping:2.5",
         "upstream_ref": "https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz",
         "version": "2.5"
+      },
+      {
+        "evidence": [
+          "source:https://download.httrack.com/httrack-3.49.2.tar.gz#4a017e8311035ec02ee2947e14022a5f1291c86c7e67e98ee762c9486f0db39d",
+          "recipe:recipe:httrack:3.49.2",
+          "pinned_sha256:4a017e8311035ec02ee2947e14022a5f1291c86c7e67e98ee762c9486f0db39d"
+        ],
+        "family_id": "family:httrack",
+        "licence": "unknown",
+        "pristine_source_root_hash": "11068909af260f6185a93c086483d821a4d22833079f716447d887edf92074b1",
+        "pristine_source_sha256": "4a017e8311035ec02ee2947e14022a5f1291c86c7e67e98ee762c9486f0db39d",
+        "specimen_id": "specimen:httrack:3.49.2",
+        "upstream_ref": "https://download.httrack.com/httrack-3.49.2.tar.gz",
+        "version": "3.49.2"
       },
       {
         "evidence": [
@@ -161792,6 +163654,20 @@
       {
         "evidence": [
           "source:https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz#b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+          "recipe:recipe:openssh-client:9.9p1",
+          "pinned_sha256:b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02"
+        ],
+        "family_id": "family:openssh-client",
+        "licence": "unknown",
+        "pristine_source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+        "pristine_source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "specimen_id": "specimen:openssh-client:9.9p1",
+        "upstream_ref": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "version": "9.9p1"
+      },
+      {
+        "evidence": [
+          "source:https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz#b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
           "recipe:recipe:openssh-server:9.9p1",
           "pinned_sha256:b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02"
         ],
@@ -161945,6 +163821,20 @@
       },
       {
         "evidence": [
+          "source:https://github.com/rhash/RHash/archive/refs/tags/v1.4.5.tar.gz#6db837e7bbaa7c72c5fd43ca5af04b1d370c5ce32367b9f6a1f7b49b2338c09a",
+          "recipe:recipe:rhash:1.4.5",
+          "pinned_sha256:6db837e7bbaa7c72c5fd43ca5af04b1d370c5ce32367b9f6a1f7b49b2338c09a"
+        ],
+        "family_id": "family:rhash",
+        "licence": "unknown",
+        "pristine_source_root_hash": "3cc3f5e783f9783fd1496906bd1e10ec135f0371d9dd3531b60c8b8052a701a8",
+        "pristine_source_sha256": "6db837e7bbaa7c72c5fd43ca5af04b1d370c5ce32367b9f6a1f7b49b2338c09a",
+        "specimen_id": "specimen:rhash:1.4.5",
+        "upstream_ref": "https://github.com/rhash/RHash/archive/refs/tags/v1.4.5.tar.gz",
+        "version": "1.4.5"
+      },
+      {
+        "evidence": [
           "source:https://snapshot.debian.org/archive/debian/20240412T023350Z/pool/main/r/rsync/rsync_3.3.0.orig.tar.gz#7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
           "recipe:recipe:rsync:3.3.0",
           "pinned_sha256:7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90"
@@ -161970,6 +163860,20 @@
         "specimen_id": "specimen:s-nail:14.9.25",
         "upstream_ref": "https://ftp.sdaoden.eu/s-nail-14.9.25.tar.xz",
         "version": "14.9.25"
+      },
+      {
+        "evidence": [
+          "source:https://download.joedog.org/siege/siege-4.1.6.tar.gz#309d589bfc819b6f15d2e5e8591b3c0c6f693624f5060eeac067a4d9a7757de9",
+          "recipe:recipe:siege:4.1.6",
+          "pinned_sha256:309d589bfc819b6f15d2e5e8591b3c0c6f693624f5060eeac067a4d9a7757de9"
+        ],
+        "family_id": "family:siege",
+        "licence": "unknown",
+        "pristine_source_root_hash": "93ef032cad6f0fa76af37fdf3de375e026bf01b8c5009233b3f3c298805745d9",
+        "pristine_source_sha256": "309d589bfc819b6f15d2e5e8591b3c0c6f693624f5060eeac067a4d9a7757de9",
+        "specimen_id": "specimen:siege:4.1.6",
+        "upstream_ref": "https://download.joedog.org/siege/siege-4.1.6.tar.gz",
+        "version": "4.1.6"
       },
       {
         "evidence": [
@@ -162183,6 +164087,20 @@
       },
       {
         "evidence": [
+          "source:https://github.com/wg/wrk/archive/refs/tags/4.2.0.tar.gz#e255f696bff6e329f5d19091da6b06164b8d59d62cb9e673625bdcd27fe7bdad",
+          "recipe:recipe:wrk:4.2.0",
+          "pinned_sha256:e255f696bff6e329f5d19091da6b06164b8d59d62cb9e673625bdcd27fe7bdad"
+        ],
+        "family_id": "family:wrk",
+        "licence": "unknown",
+        "pristine_source_root_hash": "4ad9057d35736e0b24d061dc39e510e6dd6a3b34e124ce77ab6befb4bd228806",
+        "pristine_source_sha256": "e255f696bff6e329f5d19091da6b06164b8d59d62cb9e673625bdcd27fe7bdad",
+        "specimen_id": "specimen:wrk:4.2.0",
+        "upstream_ref": "https://github.com/wg/wrk/archive/refs/tags/4.2.0.tar.gz",
+        "version": "4.2.0"
+      },
+      {
+        "evidence": [
           "source:https://znc.in/releases/znc-1.10.3.tar.gz#68f3f6641b480c041010c5596e1234043e05c9137eda06233845017603095f5b",
           "recipe:recipe:znc:1.10.3",
           "pinned_sha256:68f3f6641b480c041010c5596e1234043e05c9137eda06233845017603095f5b"
@@ -162220,6 +164138,18 @@
         "platform": "linux",
         "specimen_id": "specimen:apache2-utils:2.4.63",
         "variant_id": "variant:apache2-utils:2.4.63:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:appx-util:0.5",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:appx-util:0.5",
+        "variant_id": "variant:appx-util:0.5:pristine"
       },
       {
         "arch": "x86_64",
@@ -162280,6 +164210,18 @@
         "platform": "linux",
         "specimen_id": "specimen:cowpatty:4.8",
         "variant_id": "variant:cowpatty:4.8:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "autotools-pristine-shared",
+        "evidence": [
+          "recipe:recipe:curl-minimal:8.10.1",
+          "build_system:autotools"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:curl-minimal:8.10.1",
+        "variant_id": "variant:curl-minimal:8.10.1:pristine"
       },
       {
         "arch": "x86_64",
@@ -162439,6 +164381,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:fsverity-utils:1.6",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:fsverity-utils:1.6",
+        "variant_id": "variant:fsverity-utils:1.6:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
           "recipe:recipe:gensio:2.8.6",
@@ -162460,6 +164414,30 @@
         "platform": "linux",
         "specimen_id": "specimen:getdns:1.7.3",
         "variant_id": "variant:getdns:1.7.3:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:gmnisrv:1.0",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:gmnisrv:1.0",
+        "variant_id": "variant:gmnisrv:1.0:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:gostsum:3.0.3+git20251212.7f6d61a",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:gostsum:3.0.3+git20251212.7f6d61a",
+        "variant_id": "variant:gostsum:3.0.3+git20251212.7f6d61a:pristine"
       },
       {
         "arch": "x86_64",
@@ -162532,6 +164510,18 @@
         "platform": "linux",
         "specimen_id": "specimen:httping:2.5",
         "variant_id": "variant:httping:2.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "autotools-pristine-shared",
+        "evidence": [
+          "recipe:recipe:httrack:3.49.2",
+          "build_system:autotools"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:httrack:3.49.2",
+        "variant_id": "variant:httrack:3.49.2:pristine"
       },
       {
         "arch": "x86_64",
@@ -163089,6 +165079,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:openssh-client:9.9p1",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:openssh-client:9.9p1",
+        "variant_id": "variant:openssh-client:9.9p1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:openssh-server:9.9p1",
           "build_system:configure"
         ],
@@ -163221,6 +165223,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:rhash:1.4.5",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:rhash:1.4.5",
+        "variant_id": "variant:rhash:1.4.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:rsync:3.3.0",
           "build_system:configure"
         ],
@@ -163240,6 +165254,18 @@
         "platform": "linux",
         "specimen_id": "specimen:s-nail:14.9.25",
         "variant_id": "variant:s-nail:14.9.25:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "autotools-pristine-shared",
+        "evidence": [
+          "recipe:recipe:siege:4.1.6",
+          "build_system:autotools"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:siege:4.1.6",
+        "variant_id": "variant:siege:4.1.6:pristine"
       },
       {
         "arch": "x86_64",
@@ -163423,6 +165449,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:wrk:4.2.0",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:wrk:4.2.0",
+        "variant_id": "variant:wrk:4.2.0:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "cmake-pristine-shared",
         "evidence": [
           "recipe:recipe:znc:1.10.3",
@@ -163435,7 +165473,7 @@
       }
     ]
   },
-  "body_hash": "92f722b216acb8b400a9e1c15f0afbe758b3c0f0b159b0b7a117556ac6550e2f",
+  "body_hash": "5de32fe32df7e86f0202b27e58e7f8e02f3080e4b5e583e209b76beb815374fe",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
@@ -163451,7 +165489,7 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "69cc1ce96e0e644d22ae09b387fcf3c08aee811623f0efc73f024d46af566587"
+      "sha256": "87a902150f1fcb28cfa9abbb3da9b020406ce070d2a9a0ab8ebfa6593ccae8bd"
     },
     {
       "name": "downstream-build-link",
