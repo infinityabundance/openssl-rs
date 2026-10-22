@@ -562,8 +562,10 @@ Retain the historical **33-family** cohort. Rank actionable obligations by
 **importance of the consumer × demonstrated reachability × security consequence
 ÷ engineering effort**, never raw file/token/unsafe-block counts. First deepen
 current-candidate functional courts for curl, nginx, OpenSSH, HAProxy and Redis;
-recover the missing per-family symbol fingerprints. Preserve 25 L4-only
-families as build/link results until each earns meaningful L7 evidence.
+recover the missing per-family symbol fingerprints. Preserve any remaining
+L4-only families as build/link results until each earns meaningful L7 evidence
+(as of 2026-10-20 the 33-family cohort is 33/33 at `L7-functional` in
+`runtime-functional-atlas.json`).
 Additional candidates (Git/CPython/Apache HTTP Server) must first earn their
 own precise compatibility evidence and are not retroactively counted in 33.
 
