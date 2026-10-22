@@ -35,10 +35,15 @@ before/after counts from the live census plus the removed set, and refuses:
   * any operation classified `HIDDEN` (a wrapper), or any "removed" site still present in the live
     census (the operation was not removed at all);
   * any claimed count that is not `after + removed` (a typed count);
-  * any downstream verdict that moved: the Phase-24 headline -- the DROP_IN_PASS verdicts, the
-    `p1000-run.json` ladder and the eight functional workloads -- is re-derived from the committed
-    Phase-24 measurement and compared with the frozen baseline, so a reconstruction that changed what
-    downstream observes is inadmissible;
+  * any Phase-24 downstream verdict that moved: the DROP_IN_PASS verdicts and the `p1000-run.json`
+    ladder are re-derived from the committed Phase-24 measurement and compared with the frozen
+    baseline, so a reconstruction that changed what downstream observes is inadmissible. The
+    functional-workload cohort is reported as **two separate values with distinct provenance**: the
+    **current** count read from the committed runtime atlas (which is expected to grow as new
+    consumers are added) and the **frozen Phase-24 baseline** read from this tool's reconstruction
+    declaration (a historical value that is never edited). Growth is recorded as an observation
+    (`functional_workloads_growth`) and is never a finding; only a **shrink** below the Phase-24
+    baseline is a finding, because evidence was lost;
   * a weakened safety lint (the frozen policy is read and checked);
   * a record that **conflates a count increase with a reduction**, or that **drops the negative
     result**: an attempted conversion whose measured operation count rose must be recorded (with its
@@ -128,8 +133,10 @@ RECONSTRUCTION = REPO_ROOT / "forensics" / "memory-safety" / "unsafe-reconstruct
 SPARSE_ARRAY_DIFFERENTIAL = REPO_ROOT / "forensics" / "memory-safety" / "sparse-array-differential.json"
 
 # The committed Phase-24 downstream measurement the conservation check re-reads: the DROP_IN_PASS
-# verdicts and the ladder from the final P1000 run, and the eight functional workloads of the
-# runtime atlas. Both are measurement artefacts, never regenerated here.
+# verdicts and the ladder from the final P1000 run, and the current functional-workload cohort of the
+# runtime atlas. The counted verdicts must match the frozen Phase-24 baseline; the workload cohort is
+# reported as current vs the (never-edited) Phase-24 baseline, because it is expected to grow. Both
+# are measurement artefacts, never regenerated here.
 DOWNSTREAM_P1000 = REPO_ROOT / "forensics" / "downstream" / "p1000-run.json"
 DOWNSTREAM_RUNTIME = REPO_ROOT / "forensics" / "downstream" / "runtime-functional-atlas.json"
 
@@ -482,12 +489,24 @@ def _kind_counts(kinds: object) -> dict:
 
 
 def _derive_downstream(authority: dict) -> dict:
-    """The Phase-24 downstream headline, re-derived from the committed measurement.
+    """The downstream headline, re-derived from the two committed sources with distinct provenance.
 
-    The DROP_IN_PASS verdicts, the counted families, the ladder and the eight functional workloads
-    are read from the committed `p1000-run.json` and `runtime-functional-atlas.json`, never typed. A
-    reconstruction that moved any of them is inadmissible, and this is the value the frozen baseline
-    is compared against.
+    The DROP_IN_PASS verdicts, the counted families and the ladder are read from the committed
+    `p1000-run.json`, and the **current** functional-workload count is read from the committed
+    `runtime-functional-atlas.json`; a reconstruction that moved any of those verdicts is
+    inadmissible. The functional-workload cohort is reported explicitly as two values, because the
+    two are different facts:
+
+      * `functional_workloads_current` -- the live count in the committed runtime atlas (provenance:
+        `forensics/downstream/runtime-functional-atlas.json`), which may grow as consumers are
+        added;
+      * `functional_workloads_phase24_baseline` -- the historical Phase-24 count, read from this
+        tool's committed reconstruction declaration (`downstream_baseline.functional_workloads`,
+        never typed), which must never change.
+
+    `functional_workloads` is retained as an alias of the **current** value for existing consumers,
+    and `functional_workloads_growth` records the observed difference as an observation, never as a
+    finding. Only a current value below the Phase-24 baseline is a finding (evidence was lost).
     """
     ds = authority.get("downstream") or {}
     p1000 = _body(ds.get("p1000") or {})
@@ -497,12 +516,22 @@ def _derive_downstream(authority: dict) -> dict:
     verdicts = counts.get("verdicts") or {}
     levels = ladder.get("levels") or {}
     specimens = runtime.get("specimens") or []
+    decl = _body(authority.get("reconstruction") or {})
+    baseline = decl.get("downstream_baseline") or {}
+    frozen_workloads = baseline.get("functional_workloads")
+    frozen_workloads = int(frozen_workloads) if frozen_workloads is not None else None
+    current_workloads = len(specimens)
     return {
         "drop_in_pass": int(verdicts.get("DROP_IN_PASS", 0)),
         "measurable_families": int(counts.get("measurable_families",
                                              ladder.get("measurable_families", 0))),
         "families": int(counts.get("families", ladder.get("families", 0))),
-        "functional_workloads": len(specimens),
+        # Compatibility alias: existing consumers of this artefact read the current cohort here.
+        "functional_workloads": current_workloads,
+        "functional_workloads_current": current_workloads,
+        "functional_workloads_phase24_baseline": frozen_workloads,
+        "functional_workloads_growth": (current_workloads - frozen_workloads
+                                        if frozen_workloads is not None else None),
         "p1000_ladder_levels": {k: int(v) for k, v in sorted(levels.items())},
         "verdicts": {k: int(v) for k, v in sorted(verdicts.items())},
         "sources": [rel(DOWNSTREAM_P1000), rel(DOWNSTREAM_RUNTIME)],
@@ -878,7 +907,7 @@ def reconstruction_findings(body: dict, census_body: dict, authority: dict) -> l
 
     baseline = decl.get("downstream_baseline") or {}
     live = derived["downstream"]
-    for key in ("drop_in_pass", "measurable_families", "families", "functional_workloads"):
+    for key in ("drop_in_pass", "measurable_families", "families"):
         if key in baseline and int(baseline[key]) != int(live.get(key, -1)):
             problems.append(f"a downstream verdict changed: the Phase-24 {key} is {live.get(key)}, "
                             f"not the frozen {baseline[key]}")
@@ -892,6 +921,30 @@ def reconstruction_findings(body: dict, census_body: dict, authority: dict) -> l
         if want != live["verdicts"]:
             problems.append("a downstream verdict changed: the p1000-run.json verdict histogram "
                             "no longer matches the frozen baseline")
+
+    # The functional-workload cohort is the one downstream figure that is EXPECTED to grow as new
+    # consumers are added. Its historical Phase-24 value is frozen in the declaration and must never
+    # be edited; the live count from the committed runtime atlas may exceed it. Growth is an
+    # observation (`functional_workloads_growth`), never a finding. A SHRINK below the frozen
+    # baseline is a finding: downstream evidence was lost.
+    if "functional_workloads" in baseline:
+        frozen_workloads = int(baseline["functional_workloads"])
+        recorded_baseline = live.get("functional_workloads_phase24_baseline")
+        if recorded_baseline is None or int(recorded_baseline) != frozen_workloads:
+            problems.append(f"the derived Phase-24 functional_workloads baseline is "
+                            f"{recorded_baseline}, not the frozen {frozen_workloads}: the "
+                            f"historical baseline was altered")
+        committed_live = ((body.get("reconstruction") or {}).get("downstream") or {})
+        committed_baseline = committed_live.get("functional_workloads_phase24_baseline")
+        if committed_baseline is not None and int(committed_baseline) != frozen_workloads:
+            problems.append(f"the committed record altered the Phase-24 functional_workloads "
+                            f"baseline: it records {committed_baseline}, not the frozen "
+                            f"{frozen_workloads}")
+        current_workloads = int(live.get("functional_workloads_current", -1))
+        if current_workloads < frozen_workloads:
+            problems.append(f"the current functional workload count SHRANK to {current_workloads}, "
+                            f"below the Phase-24 baseline {frozen_workloads}: downstream "
+                            f"evidence was lost")
     return problems
 
 
@@ -1668,7 +1721,9 @@ def _measure() -> int:
           f"removed ({r['operations']['by_class']}); subsystem {r['counts']['before']['sites']} -> "
           f"{r['counts']['after']['sites']}, crate {c['sites_before']} -> {c['sites_after']}; "
           f"downstream drop_in_pass={r['downstream']['drop_in_pass']}, "
-          f"workloads={r['downstream']['functional_workloads']}")
+          f"workloads={r['downstream']['functional_workloads_current']} "
+          f"(Phase-24 baseline {r['downstream']['functional_workloads_phase24_baseline']}, "
+          f"growth {r['downstream']['functional_workloads_growth']})")
     print(f"  census: {c['sites_after']} compiler-derived site(s); frozen sha256 "
           f"{body['frozen_census']['sha256'][:16]}; body_hash "
           f"{body['frozen_census']['body_hash'][:16]}")
