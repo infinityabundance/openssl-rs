@@ -27,6 +27,22 @@ from atlas_common import (  # noqa: E402
 
 STATUS = FORENSICS / "STATUS.md"
 RECEIPTS = FORENSICS / "receipts"
+DOWNSTREAM_ATLAS = FORENSICS / "downstream" / "runtime-functional-atlas.json"
+CAMPAIGN_STATUS = (FORENSICS / "memory-safety" / "campaign" / "safe-c33" /
+                   "CAMPAIGN-STATUS.json")
+
+# A Phase-24/25 ledger states the downstream plane as it was frozen in
+# `artifacts/phase25/COURTS.json`. That plane is historical. The live figures are in
+# `forensics/downstream/runtime-functional-atlas.json`, which is regenerated per
+# candidate, so the frozen sentence is *matched and superseded* at render time
+# rather than rendered verbatim. Matching (not a hardcoded string) keeps a
+# regenerated ledger that no longer carries the sentence from being rewritten on
+# faith. The live numerator (101) is not hardcoded either: it is read from the
+# atlas, because a hardcoded number is exactly the defect this section fixes.
+_FROZEN_DOWNSTREAM = re.compile(
+    r"the runtime-functional atlas records (?P<functional>\d+) functional candidate "
+    r"run\(s\) and the p1000 ladder (?P<cohort>\d+) `DROP_IN_PASS` family\(ies\);"
+)
 
 
 def load(path: Path):
@@ -77,6 +93,98 @@ def _phase22_figures(p22: Path) -> list[tuple[str, int]]:
         ("root-reachable entities", count("compatibility-closure.json", "reachable_entities")),
     ]
     return [(label, value) for label, value in rows if isinstance(value, int)]
+
+
+def _runtime_functional() -> dict | None:
+    """The live downstream plane, or `None` when the atlas is not present.
+
+    The corpus counts come from `body.counts.by_subject`. The Safe-33 cohort's
+    *membership* is not carried by the atlas (it is a campaign selection), so it is
+    read from `CAMPAIGN-STATUS.json` (`consumers.l7_families`) and its *levels* are
+    then looked up in `body.runs`: a family the atlas does not list at
+    `L7-functional` is not counted, so the rendered cohort figure can only be the
+    atlas's own answer, never a copied campaign claim.
+    """
+    atlas = load(DOWNSTREAM_ATLAS)
+    body = (atlas or {}).get("body") or {}
+    counts = body.get("counts") or {}
+    by_subject = counts.get("by_subject") or {}
+    candidate = by_subject.get("candidate")
+    authority = by_subject.get("authority")
+    if not candidate or not authority:
+        return None
+
+    membership = ((load(CAMPAIGN_STATUS) or {}).get("consumers") or {}).get("l7_families") or []
+    levels: dict[str, object] = {}
+    for run in body.get("runs") or []:
+        if run.get("subject") != "candidate":
+            continue
+        name = run.get("canonical_name")
+        if name in membership:
+            levels[name] = run.get("level")
+
+    figures: dict[str, object] = {
+        "families": counts.get("p1000"),
+        "candidate": candidate,
+        "authority": authority,
+    }
+    if membership and len(levels) == len(membership):
+        figures["cohort"] = {
+            "total": len(membership),
+            "at_l7": sum(1 for level in levels.values() if level == "L7-functional"),
+        }
+    return figures
+
+
+def _downstream_sentence(figures: dict | None, frozen: tuple[int, int]) -> str:
+    """The superseding sentence for the frozen Phase-24/25 finding."""
+    if figures is None:
+        return ("the runtime-functional atlas "
+                "(`forensics/downstream/runtime-functional-atlas.json`) is absent, so no "
+                "current downstream figure is rendered; the Phase-24/25 frozen value "
+                f"({frozen[0]} functional candidate run(s), {frozen[1]} `DROP_IN_PASS` "
+                "families) is historical and **superseded**;")
+    cand, auth = figures["candidate"], figures["authority"]
+    sentence = ("the runtime-functional atlas "
+                "(`forensics/downstream/runtime-functional-atlas.json`, "
+                f"`body.counts.by_subject`) records {cand['functional']} candidate and "
+                f"{auth['functional']} authority run(s) at `L7-functional` over the "
+                f"{figures['families']} frozen families: {cand['loaded']} loaded, "
+                f"{cand['not_attempted']} not attempted, {cand['failed']} failed;")
+    cohort = figures.get("cohort")
+    if cohort:
+        sentence += (f" the {cohort['total']}-family Safe-33 cohort is "
+                     f"{cohort['at_l7']}/{cohort['total']} at `L7-functional` (levels "
+                     "from `body.runs`, membership `CAMPAIGN-STATUS.json` `consumers`);")
+    else:
+        sentence += (" the atlas carries no cohort membership and no cohort verdict is "
+                     "rendered from it;")
+    return sentence
+
+
+def _supersede_frozen_downstream(body: dict, figures: dict | None):
+    """Return `(body, frozen)` with the frozen downstream finding replaced.
+
+    `body` is copied only when a frozen sentence is found, so every other ledger and
+    every other finding is rendered exactly as the artefact states it.
+    """
+    frozen = None
+    units = []
+    for unit in body.get("contract_units") or []:
+        findings = []
+        for finding in unit.get("findings") or []:
+            match = _FROZEN_DOWNSTREAM.search(finding)
+            if match is None:
+                findings.append(finding)
+                continue
+            frozen = (int(match.group("functional")), int(match.group("cohort")))
+            # Keep the sentence's tail (the fingerprint residual, which the atlas
+            # does not measure) so the supersession changes only the stale plane.
+            findings.append(_downstream_sentence(figures, frozen) + finding[match.end():])
+        units.append(dict(unit, findings=findings))
+    if frozen is None:
+        return body, None
+    return dict(body, contract_units=units), frozen
 
 
 def main() -> int:
@@ -294,10 +402,13 @@ def main() -> int:
             continue
         ledgers.append((int(m.group(1)), load(path),
                         f"forensics/tools/phase{m.group(1)}_obligations.py"))
+    runtime = _runtime_functional()
     for phase, ledger, generator in ledgers:
         if not ledger:
             continue
-        counts = ledger["body"]["counts"]
+        ledger_body = ledger["body"]
+        render_body, frozen_downstream = _supersede_frozen_downstream(ledger_body, runtime)
+        counts = ledger_body["counts"]
         L.append(f"### Phase {phase} obligation ledger")
         L.append("")
         L.append(f"Generated by `{generator}`, which fails closed: an export the")
@@ -316,9 +427,38 @@ def main() -> int:
         L.append("")
         # A stratum whose unit is not an export publishes its working set as contract units;
         # render both axes so a passing court cannot read as a property claim.
-        L.extend(contract_unit_lines(ledger["body"]))
+        L.extend(contract_unit_lines(render_body))
+        if frozen_downstream is not None:
+            # The frozen plane is kept only as an explicitly labelled historical row:
+            # a reader must be able to see the superseded number and its provenance
+            # without being able to mistake it for the current measurement.
+            ffunctional, fcohort = frozen_downstream
+            L.append("#### Downstream functional plane (frozen row is historical)")
+            L.append("")
+            L.append("The Phase-25 ledger's downstream figure was frozen in Phase 24/25 and is")
+            L.append("**superseded**. It is shown below only as provenance for the sentence")
+            L.append("above; the current plane is the runtime-functional atlas.")
+            L.append("")
+            L.append("| plane | functional candidate runs | p1000 cohort `DROP_IN_PASS` "
+                     "families | source |")
+            L.append("|---|---|---|---|")
+            L.append(f"| Phase-24/25 frozen (historical, **superseded**) | {ffunctional} "
+                     f"| {fcohort} | `forensics/phase25-obligations.json`, verbatim from "
+                     "`artifacts/phase25/COURTS.json` |")
+            if runtime is None:
+                L.append("| current | not rendered | not rendered | "
+                         "`forensics/downstream/runtime-functional-atlas.json` is absent |")
+            else:
+                cohort = runtime.get("cohort")
+                cohort_cell = (f"{cohort['at_l7']}/{cohort['total']} at `L7-functional`"
+                               if cohort else "not carried by the atlas")
+                L.append(f"| current | {runtime['candidate']['functional']} "
+                         f"| {cohort_cell} "
+                         "| `forensics/downstream/runtime-functional-atlas.json` "
+                         "(`body.counts.by_subject`, `body.runs`) |")
+            L.append("")
         by_phase: dict[int, list[dict]] = {}
-        for row in ledger["body"].get("deferred", []):
+        for row in ledger_body.get("deferred", []):
             by_phase.setdefault(row["owning_phase"], []).append(row)
         for owner in sorted(by_phase):
             rows_here = by_phase[owner]
@@ -332,8 +472,8 @@ def main() -> int:
                          f"phase {phase} does not count them as its own work: "
                          + ", ".join(f"`{s}`" for s in discharged))
                 L.append("")
-        for source in sorted(ledger["body"].get("handoffs_discharged") or {}):
-            symbols = ledger["body"]["handoffs_discharged"][source]
+        for source in sorted(ledger_body.get("handoffs_discharged") or {}):
+            symbols = ledger_body["handoffs_discharged"][source]
             L.append(f"Hand-offs from phase {source} discharged by this stratum: "
                      + ", ".join(f"`{s}`" for s in symbols))
             L.append("")

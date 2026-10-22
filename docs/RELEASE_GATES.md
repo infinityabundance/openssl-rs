@@ -190,7 +190,8 @@ that a gate is not a procedure.
    makes skipping it a failure rather than a silent lie. `grep -rl "$(cargo metadata
    --format-version 1 --no-deps | python3 -c 'import json,sys;
    print(json.load(sys.stdin)["packages"][0]["version"])')" .` lists the carriers.
-4. `python3 forensics/tools/gen_frf_courts.py --check` and `cargo fmt --all --
+4. `python3 forensics/tools/gen_frf_courts.py --check`,
+   `python3 forensics/tools/render_docs.py --check` and `cargo fmt --all --
    --check` locally, so the release commit is green on its own account rather than
    on the strength of CI.
 5. Push, and let `main` go green. A red `main` is not a state this project keeps, and since

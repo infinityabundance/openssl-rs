@@ -425,7 +425,7 @@
   },
   "remaining_obligations": [
     "Independent review of the remaining per-file audit receipts: no per-file record claims INDEPENDENTLY_CHECKED. B39-B43 are checked at their signed scopes; B44's isolation fix and salt_len guard move are author-evidenced only (re-review NOT_RUN).",
-    "OPEN STOP-CLASS B27-X2: OSSL_STORE_attach can publish a NULL loader after a refused loader_set_params, and OSSL_STORE_close/OSSL_STORE_load then dereference it. Recorded in boundary-sweep-B27.json; blocks promotion of src/store/store_lib.rs. Owner wave: next boundary repair.",
+    "B27-X2 is CLOSED by boundary-sweep-B28: OSSL_STORE_attach now assigns loader_ctx only after loader_set_params accepts, the refusal probe passes in the normal court and under ASan, and restoring the pre-fix ordering makes it fail (child-process canary faults at OSSL_STORE_close and OSSL_STORE_load). The pre-existing B27-R1 allocation-refusal leak remains recorded. The earlier OPEN entry in this list was stale.",
     "BIO mechanism closure: 73 SSL BIO call sites unaudited, non-memory methods unexamined, serial full suite and seam-coordinate differential NOT_RUN. BIO remains CONTRACTED despite B39/B40. Owner wave: BIO family closure.",
     "RUNTIME_ALLOC_OWNERSHIP batches 5..N: 1281 alloc/release sites remained after B44; Miri/ASan/BOUNDARY and SEAL evidence NOT_RUN. Owner wave: allocator decomposition (deferred behind the L7 campaign by owner instruction).",
     "SEAL dependency-closure evidence for any consumer family.",
