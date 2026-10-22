@@ -144,10 +144,15 @@ pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, le
     if len == 0 {
         return 1;
     }
+    // The plaintext is validated once: every fragment below is a bounded sub-slice, so no fragment
+    // pointer can leave the caller's range.
+    // SAFETY: `buf` is readable for `len` bytes per the contract and `len != 0`.
+    let src: &[u8] = unsafe { core::slice::from_raw_parts(buf, len) };
     // The encrypted record paths need a record-sized scratch block. It is heap-allocated through
     // the crate's allocator seam at the authority's own write-buffer site so no record-sized frame
     // lands on the caller's thread stack (a 32 KiB accept thread, radsecproxy's, previously
-    // overflowed here). The handle's single release is its `Drop` on every return below.
+    // overflowed here). The handle's single release is its `Drop` on every return below. Nothing
+    // reallocates it: the block is allocated once per write and its start never moves.
     // SAFETY: `s` is live per this function's contract.
     let scratch = if unsafe { write_needs_scratch(s) } {
         match OwnedBuf::new(
@@ -168,29 +173,20 @@ pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, le
         None => ptr::null_mut(),
     };
     let mut off = 0usize;
-    loop {
-        let remaining = len - off;
-        let chunk = if remaining > SSL3_RT_MAX_PLAIN_LENGTH {
-            SSL3_RT_MAX_PLAIN_LENGTH
-        } else {
-            remaining
+    while off < src.len() {
+        // `off < src.len()` keeps the subtraction in range; the fragment is then a checked
+        // sub-slice, so the encoder is never handed a length it could walk past.
+        let remaining = src.len() - off;
+        let chunk = remaining.min(SSL3_RT_MAX_PLAIN_LENGTH);
+        let Some(fragment) = src.get(off..off + chunk) else {
+            return -1;
         };
-        // `buf.add(0)` on a NULL `buf` would be UB, so only advance when a fragment has been sent.
-        let p = if off == 0 {
-            buf
-        } else {
-            // SAFETY: `off < len`, so `off` is in bounds of the caller's `len` readable bytes.
-            unsafe { buf.add(off) }
-        };
-        // SAFETY: `s`/`p` are per this function's contract, with `chunk` readable bytes at `p`;
-        // `rec` is the scratch block above when an encrypted path needs it, NULL otherwise.
-        if unsafe { ssl3_write_one_record(s, type_, p, chunk, rec) } <= 0 {
+        // SAFETY: `s`/`p` are per this function's contract, with `fragment.len()` readable bytes
+        // at `fragment.as_ptr()`; `rec` is the scratch block above when needed, NULL otherwise.
+        if unsafe { ssl3_write_one_record(s, type_, fragment.as_ptr(), fragment.len(), rec) } <= 0 {
             return -1;
         }
         off += chunk;
-        if off >= len {
-            break;
-        }
     }
     1
 }
@@ -218,10 +214,19 @@ unsafe fn write_needs_scratch(s: *const Ssl) -> bool {
 /// `s` must be a live connection whose write BIO is the caller's to write; `p` must be readable for
 /// `len` bytes.
 unsafe fn ssl3_write_all(s: *mut Ssl, p: *const u8, len: usize) -> c_int {
+    if len == 0 {
+        return 1;
+    }
+    // SAFETY: `p` is readable for `len` bytes per the contract and `len != 0`.
+    let src: &[u8] = unsafe { core::slice::from_raw_parts(p, len) };
     let mut off = 0usize;
-    while off < len {
-        // SAFETY: `s` is live; `p.add(off)` is `len - off` readable bytes; `wbio` is the caller's.
-        let n = unsafe { BIO_write((*s).wbio, p.add(off).cast(), (len - off) as c_int) };
+    while off < src.len() {
+        // `off < src.len()`, so the remaining range is non-empty and in bounds.
+        let remaining = &src[off..];
+        // `BIO_write` takes an `int`; cap the offered length rather than truncating the cast.
+        let offered = remaining.len().min(c_int::MAX as usize);
+        // SAFETY: `s` is live; `remaining` is `offered` readable bytes; `wbio` is the caller's.
+        let n = unsafe { BIO_write((*s).wbio, remaining.as_ptr().cast(), offered as c_int) };
         if n <= 0 {
             // The authority's `ossl_tls_handle_rlayer_return` sets `rwstate = SSL_WRITING` on a
             // retryable record write (`rec_layer_s3.c:491-498`), which `SSL_get_error` turns into
@@ -235,7 +240,18 @@ unsafe fn ssl3_write_all(s: *mut Ssl, p: *const u8, len: usize) -> c_int {
             }
             return -1;
         }
-        off += n as usize;
+        // A BIO that claims to have accepted more than it was offered violates `BIO_write`'s
+        // contract; advancing by that count would walk `off` past the slice and silently truncate.
+        let Some(written) = usize::try_from(n).ok().filter(|w| *w <= offered) else {
+            // SAFETY: `s` is live.
+            unsafe { (*s).rwstate = SSL_NOTHING };
+            return -1;
+        };
+        // SAFETY: `s` is live.
+        let Some(next) = off.checked_add(written) else {
+            return -1;
+        };
+        off = next;
     }
     1
 }
@@ -279,12 +295,17 @@ unsafe fn ssl3_write_one_record(
         }
         // SAFETY: `s` is live; `rec` is the caller's record scratch; `buf` is `len` readable.
         let n = unsafe { crate::ssl::tls13_enc::tls13_encrypt_record(s, type_, buf, len, rec) };
-        if n < 0 {
+        // The encoder may not write past the scratch it was given, and the two bytes below carry
+        // its result to `ssl3_write_all`; refuse a count that cannot be the scratch's extent.
+        let Some(n) = usize::try_from(n)
+            .ok()
+            .filter(|n| *n <= SSL3_RT_MAX_ENCRYPTED_LENGTH)
+        else {
             return -1;
-        }
+        };
         // SAFETY: `s` is live; `wbio` is the caller's BIO.
         unsafe {
-            if ssl3_write_all(s, rec, n as usize) <= 0 {
+            if ssl3_write_all(s, rec, n) <= 0 {
                 return -1;
             }
             BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
@@ -301,12 +322,16 @@ unsafe fn ssl3_write_one_record(
         }
         // SAFETY: `s` is live; `rec` is the caller's record scratch; `buf` is `len` readable.
         let n = unsafe { crate::ssl::t1_enc::tls12_encrypt_record(s, type_, buf, len, rec) };
-        if n < 0 {
+        // SAFETY: as in the TLS1.3 arm.
+        let Some(n) = usize::try_from(n)
+            .ok()
+            .filter(|n| *n <= SSL3_RT_MAX_ENCRYPTED_LENGTH)
+        else {
             return -1;
-        }
+        };
         // SAFETY: `s` is live; `wbio` is the caller's BIO.
         unsafe {
-            if ssl3_write_all(s, rec, n as usize) <= 0 {
+            if ssl3_write_all(s, rec, n) <= 0 {
                 return -1;
             }
             BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
@@ -327,12 +352,15 @@ unsafe fn ssl3_write_one_record(
         recversion = TLS1_VERSION;
     }
 
-    let mut hdr = [0u8; SSL3_RT_HEADER_LENGTH];
-    hdr[0] = type_;
-    hdr[1] = (recversion >> 8) as u8;
-    hdr[2] = recversion as u8;
-    hdr[3] = (len >> 8) as u8;
-    hdr[4] = len as u8;
+    // `len <= SSL3_RT_MAX_PLAIN_LENGTH` (16384) was checked above, so both the two-byte length
+    // field and the 16-bit version field are represented exactly.
+    let hdr: [u8; SSL3_RT_HEADER_LENGTH] = [
+        type_,
+        (recversion >> 8) as u8,
+        recversion as u8,
+        (len >> 8) as u8,
+        len as u8,
+    ];
 
     // SAFETY: `s` is live; `wbio` is the caller's BIO.
     unsafe {
@@ -347,6 +375,26 @@ unsafe fn ssl3_write_one_record(
         BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
     }
     1
+}
+
+/// The handshake message length declared by `bytes`' four-byte header (header plus body), or
+/// `None` when the header is not buffered yet or the declared length overflows `usize`.
+fn framed_message_len(bytes: &[u8]) -> Option<usize> {
+    let header = bytes.get(..4)?;
+    let body = ((header[1] as usize) << 16) | ((header[2] as usize) << 8) | header[3] as usize;
+    4usize.checked_add(body)
+}
+
+/// The record accumulator's new length after `got` bytes were added at `off`.
+///
+/// `None` (and therefore a refusal) when the count exceeds the space the read was offered or when
+/// the resulting length would leave the accumulator's `cap`-byte extent.
+fn accumulated(off: usize, got: c_int, offered: usize, cap: usize) -> Option<usize> {
+    let got = usize::try_from(got).ok()?;
+    if got > offered {
+        return None;
+    }
+    off.checked_add(got).filter(|n| *n <= cap)
 }
 
 /// `int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf, size_t len,` —
@@ -372,25 +420,39 @@ pub(crate) unsafe fn ssl3_read_bytes(
     buf: *mut u8,
     cap: usize,
 ) -> c_int {
-    // SAFETY: `s` is live per the caller's contract; every read/write below is to it.
-    unsafe {
-        loop {
-            let mut rec_ty = 0u8;
-            // SAFETY: `s` is live; `buf`/`cap` are the caller's; `rec_ty` is writable.
-            let n = ssl3_read_one_record(s, &mut rec_ty, buf, cap);
-            if n <= 0 {
-                return n;
-            }
-            if rec_ty != SSL3_RT_ALERT {
-                *rectype = rec_ty;
-                return n;
-            }
-            // `rec_layer_s3.c:864-944`.
-            match ssl3_read_bytes_alert(s, buf, n) {
-                AlertOutcome::Terminal => return 0,
-                AlertOutcome::Fatal => return -1,
-                AlertOutcome::Ignored => continue,
-            }
+    // The caller's output is validated once. A zero capacity needs no slice: `from_raw_parts_mut`
+    // requires a non-null aligned pointer even for length zero, and the record layer may legally be
+    // asked for a zero-byte read.
+    // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
+    let out: &mut [u8] = if cap == 0 {
+        &mut []
+    } else {
+        // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
+        unsafe { core::slice::from_raw_parts_mut(buf, cap) }
+    };
+    let (out_ptr, out_len) = (out.as_mut_ptr(), out.len());
+    loop {
+        let mut rec_ty = 0u8;
+        // SAFETY: `s` is live; `out_ptr`/`out_len` are the validated output above.
+        let n = unsafe { ssl3_read_one_record(s, &mut rec_ty, out_ptr, out_len) };
+        if n <= 0 {
+            return n;
+        }
+        // The reader refuses to report more body bytes than the output it was given.
+        let Some(n) = usize::try_from(n).ok().filter(|n| *n <= out.len()) else {
+            return -1;
+        };
+        if rec_ty != SSL3_RT_ALERT {
+            // SAFETY: `rectype` is writable per the contract.
+            unsafe { *rectype = rec_ty };
+            return n as c_int;
+        }
+        // `rec_layer_s3.c:864-944`.
+        // SAFETY: `s` is live; `out[..n]` is the alert record's body.
+        match unsafe { ssl3_read_bytes_alert(s, &out[..n]) } {
+            AlertOutcome::Terminal => return 0,
+            AlertOutcome::Fatal => return -1,
+            AlertOutcome::Ignored => continue,
         }
     }
 }
@@ -409,18 +471,19 @@ enum AlertOutcome {
 /// Decode one received alert (`ssl3_read_bytes`, `ssl/record/rec_layer_s3.c:864-944`).
 ///
 /// # Safety
-/// `s` is a live connection; `buf` holds `len` alert bytes.
-unsafe fn ssl3_read_bytes_alert(s: *mut Ssl, buf: *const u8, len: c_int) -> AlertOutcome {
+/// `s` is a live connection; `alert` is the whole received alert body.
+unsafe fn ssl3_read_bytes_alert(s: *mut Ssl, alert: &[u8]) -> AlertOutcome {
     // SAFETY: `s` is live per the caller's contract.
     unsafe {
-        if len != 2 {
+        if alert.len() != 2 {
             // `rec_layer_s3.c:868-874`: `PACKET_remaining(&alert) != 0` after the level and the
             // description, so any packet other than exactly two bytes is an invalid alert.
             ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_INVALID_ALERT);
             return AlertOutcome::Fatal;
         }
-        let alert_level = c_int::from(*buf);
-        let alert_descr = c_int::from(*buf.add(1));
+        // The two-byte precondition above makes both indexings in bounds.
+        let alert_level = c_int::from(alert[0]);
+        let alert_descr = c_int::from(alert[1]);
         let is_tls13 = (*s).version == TLS1_3_VERSION;
 
         // `rec_layer_s3.c:891-903`: a TLS1.2 warning (or a TLS1.3 `user_cancelled`) is counted;
@@ -562,33 +625,53 @@ unsafe fn ssl3_read_bytes_rlayer_return(s: *mut Ssl, got: c_int) -> c_int {
 /// `s` must be a live connection whose read BIO is the caller's to read; `buf` must be writable for
 /// `cap` bytes; `rectype` must be writable.
 unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap: usize) -> c_int {
-    // Accumulate the five-byte header, resuming after a short read.
-    // SAFETY: `s` is live per the caller's contract.
-    while unsafe { (*s).rec_hdr_len } < SSL3_RT_HEADER_LENGTH {
-        // SAFETY: `s` is live.
+    // The output is validated once, so every copy below is a bounded slice assignment. A zero
+    // capacity needs no slice (`from_raw_parts_mut` requires a non-null aligned pointer).
+    // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
+    let out: &mut [u8] = if cap == 0 {
+        &mut []
+    } else {
+        // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
+        unsafe { core::slice::from_raw_parts_mut(buf, cap) }
+    };
+
+    // Accumulate the five-byte header, resuming after a short read. The accumulator length is the
+    // only state; it is always within `rec_hdr`, so the next read targets the exact tail.
+    loop {
+        // SAFETY: `s` is live per the caller's contract.
         let off = unsafe { (*s).rec_hdr_len };
-        let want = SSL3_RT_HEADER_LENGTH - off;
-        // SAFETY: `s` is live; `rec_hdr[off..]` is `want` writable bytes; `rbio` is the caller's.
-        let got = unsafe {
-            BIO_read(
-                (*s).rbio,
-                (*s).rec_hdr.as_mut_ptr().add(off).cast(),
-                want as c_int,
-            )
+        // SAFETY: `s` is live; the accumulator invariant keeps `off <= rec_hdr.len()`.
+        let Some(dst) = (unsafe { (*s).rec_hdr.get_mut(off..) }) else {
+            return -1;
         };
+        if dst.is_empty() {
+            break;
+        }
+        let offered = dst.len();
+        // SAFETY: `s` is live; `dst` is `offered` writable bytes; `rbio` is the caller's.
+        let got = unsafe { BIO_read((*s).rbio, dst.as_mut_ptr().cast(), offered as c_int) };
         if got <= 0 {
             // SAFETY: `s` is live; the partial header stays in `rec_hdr` for the next call.
             return unsafe { ssl3_read_bytes_rlayer_return(s, got) };
         }
-        // SAFETY: `got` is a positive count no larger than `want`.
-        unsafe { (*s).rec_hdr_len = off + got as usize };
+        // SAFETY: `s` is live.
+        let Some(next) = accumulated(off, got, offered, SSL3_RT_HEADER_LENGTH) else {
+            // A BIO that reports more than it was offered violates `BIO_read`'s contract; the
+            // accumulator must not leave `rec_hdr`, so report a transport failure.
+            // SAFETY: `s` is live per the caller's contract.
+            unsafe { (*s).rwstate = SSL_NOTHING };
+            return -1;
+        };
+        // SAFETY: `s` is live; `next <= SSL3_RT_HEADER_LENGTH` by the check above.
+        unsafe { (*s).rec_hdr_len = next };
     }
-    // SAFETY: the header is complete (five valid bytes).
-    let hdr = unsafe { (*s).rec_hdr };
+    // SAFETY: the header is complete; all five bytes are valid.
+    let hdr = unsafe { &(*s).rec_hdr };
     let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
 
-    // SAFETY: `s` is live per the caller's contract.
-    if len > unsafe { (*s).rec_body.len() } {
+    // SAFETY: `s` is live.
+    let body_cap = unsafe { (*s).rec_body.len() };
+    if len > body_cap {
         // `rec_layer_s3.c:669-672`: a length that does not fit the record buffer is a fatal
         // record overflow. The header bytes have already been consumed, so a silent -1 would
         // desynchronise the stream on the peer's body bytes; poison instead. Reset the
@@ -600,26 +683,36 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
         }
         return -1;
     }
-    // Accumulate the body, resuming after a short read.
-    // SAFETY: `s` is live per the caller's contract.
-    while unsafe { (*s).rec_body_len } < len {
+
+    // Accumulate the body, resuming after a short read. `[off..len]` is exactly the unwritten
+    // remainder, so no manual pointer arithmetic is needed and `len` can never leave `rec_body`.
+    loop {
         // SAFETY: `s` is live.
         let off = unsafe { (*s).rec_body_len };
-        let want = len - off;
-        // SAFETY: `s` is live; `rec_body[off..]` is `want` writable bytes; `rbio` is the caller's.
-        let got = unsafe {
-            BIO_read(
-                (*s).rbio,
-                (*s).rec_body.as_mut_ptr().add(off).cast(),
-                want as c_int,
-            )
+        if off >= len {
+            break;
+        }
+        // SAFETY: `s` is live; `off < len <= rec_body.len()`.
+        let Some(dst) = (unsafe { (*s).rec_body.get_mut(off..len) }) else {
+            return -1;
         };
+        let offered = dst.len();
+        // SAFETY: `s` is live; `dst` is `offered` writable bytes; `rbio` is the caller's.
+        let got = unsafe { BIO_read((*s).rbio, dst.as_mut_ptr().cast(), offered as c_int) };
         if got <= 0 {
             // SAFETY: `s` is live; the partial body stays in `rec_body` for the next call.
             return unsafe { ssl3_read_bytes_rlayer_return(s, got) };
         }
-        // SAFETY: `got` is a positive count no larger than `want`.
-        unsafe { (*s).rec_body_len = off + got as usize };
+        // SAFETY: `s` is live.
+        let Some(next) = accumulated(off, got, offered, len) else {
+            // As for the header: a count beyond the offered space cannot be folded into the
+            // accumulator, and the body length is the bound every later stage relies on.
+            // SAFETY: `s` is live per the caller's contract.
+            unsafe { (*s).rwstate = SSL_NOTHING };
+            return -1;
+        };
+        // SAFETY: `s` is live; `next <= len` by the check above.
+        unsafe { (*s).rec_body_len = next };
     }
 
     // The record is complete; reset the accumulator before processing it.
@@ -628,6 +721,8 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
         (*s).rec_hdr_len = 0;
         (*s).rec_body_len = 0;
     }
+    // SAFETY: `s` is live; `len <= rec_body.len()` and every body byte is initialised.
+    let body = unsafe { &(&(*s).rec_body)[..len] };
 
     // Phase 17.2c: once the TLS 1.3 read key is installed the record is AEAD-protected
     // (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
@@ -635,15 +730,16 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
     if unsafe { (*s).dec_active } != 0 {
         // Phase 17: a TLS1.2 AEAD record (`tls1_enc`, `ssl/t1_enc.c`) decrypts whenever the read
         // key is installed; unlike TLS1.3 the outer type is the real content type.
-        // SAFETY: `s` is live; `rec_body` holds `len` bytes; `rectype` is writable.
+        // SAFETY: `s` is live; `body` is the record body; `buf`/`rectype` are the caller's.
         if unsafe { (*s).version } == TLS1_2_VERSION {
-            // SAFETY: `s` is live; `rec_body` holds `len` bytes; `buf`/`rectype` are the caller's.
+            // SAFETY: `s` is live; `body` holds `body.len()` bytes; `buf`/`rectype` are the
+            // caller's.
             return unsafe {
                 crate::ssl::t1_enc::tls12_decrypt_record(
                     s,
-                    &hdr,
-                    (*s).rec_body.as_ptr(),
-                    len,
+                    hdr,
+                    body.as_ptr(),
+                    body.len(),
                     buf,
                     cap,
                     rectype,
@@ -654,24 +750,21 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
         // middlebox-compatibility `ChangeCipherSpec` (20) or a plaintext alert is *not* protected
         // and is read straight through (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
         if hdr[0] != SSL3_RT_APPLICATION_DATA {
-            if len > cap {
+            let Some(dst) = out.get_mut(..body.len()) else {
                 return -1;
-            }
-            if len != 0 {
-                // SAFETY: `buf` is `cap >= len` writable bytes; `rec_body` holds `len` bytes.
-                unsafe { ptr::copy_nonoverlapping((*s).rec_body.as_ptr(), buf, len) };
-            }
+            };
+            dst.copy_from_slice(body);
             // SAFETY: `rectype` is writable per the contract.
             unsafe { *rectype = hdr[0] };
-            return len as c_int;
+            return body.len() as c_int;
         }
-        // SAFETY: `s` is live; `rec_body` holds `len` bytes; `rectype` is writable.
+        // SAFETY: `s` is live; `body` is the record body; `buf`/`rectype` are the caller's.
         return unsafe {
             crate::ssl::tls13_enc::tls13_decrypt_record(
                 s,
-                &hdr,
-                (*s).rec_body.as_ptr(),
-                len,
+                hdr,
+                body.as_ptr(),
+                body.len(),
                 buf,
                 cap,
                 rectype,
@@ -679,16 +772,13 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
         };
     }
 
-    if len > cap {
+    let Some(dst) = out.get_mut(..body.len()) else {
         return -1;
-    }
-    if len != 0 {
-        // SAFETY: `buf` is `cap >= len` writable bytes; `rec_body` holds `len` bytes.
-        unsafe { ptr::copy_nonoverlapping((*s).rec_body.as_ptr(), buf, len) };
-    }
+    };
+    dst.copy_from_slice(body);
     // SAFETY: `rectype` is writable per the contract.
     unsafe { *rectype = hdr[0] };
-    len as c_int
+    body.len() as c_int
 }
 
 /// Read the next TLS 1.3 handshake message into `buf`, returning its length (including the
@@ -705,41 +795,88 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
 /// # Safety
 /// `s` must be a live connection; `buf` must be writable for `cap` bytes.
 pub(crate) unsafe fn tls13_next_handshake_message(s: *mut Ssl, buf: *mut u8, cap: usize) -> c_int {
+    // SAFETY: `buf` is writable for `cap` bytes per the contract; a zero capacity needs no slice.
+    let out: &mut [u8] = if cap == 0 {
+        &mut []
+    } else {
+        // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
+        unsafe { core::slice::from_raw_parts_mut(buf, cap) }
+    };
     // SAFETY: `s` is live per the caller's contract.
     unsafe {
-        // Deliver the next buffered message, if one remains.
-        if (*s).rd_msg_off + 4 <= (*s).rd_msg_len {
-            let p = (*s).rd_msg_off;
-            let blen = (((*s).rd_msg_buf[p + 1] as usize) << 16)
-                | (((*s).rd_msg_buf[p + 2] as usize) << 8)
-                | ((*s).rd_msg_buf[p + 3] as usize);
-            let msg_len = 4 + blen;
-            if p + msg_len <= (*s).rd_msg_len && msg_len <= cap {
-                core::ptr::copy_nonoverlapping((*s).rd_msg_buf.as_ptr().add(p), buf, msg_len);
-                (*s).rd_msg_off = p + msg_len;
-                return msg_len as c_int;
-            }
-            return -1;
-        }
-
-        // Read one record. `SSL3_RT_CHANGE_CIPHER_SPEC` (20) records are interleaved by middleware
-        // compatibility and skipped; any other non-handshake record is not part of the flight.
         loop {
+            // The buffered extent is the invariant every index below relies on.
+            if (*s).rd_msg_len > (*s).rd_msg_buf.len() {
+                (*s).rd_msg_len = 0;
+                (*s).rd_msg_off = 0;
+                return -1;
+            }
+            let off = (*s).rd_msg_off;
+            let buffered = &(&(*s).rd_msg_buf)[..(*s).rd_msg_len];
+            if off < buffered.len() {
+                if let Some(msg_len) = framed_message_len(&buffered[off..]) {
+                    if msg_len <= buffered.len() - off {
+                        // The message is complete: hand it out and advance the offset.
+                        let msg = &buffered[off..off + msg_len];
+                        let Some(dst) = out.get_mut(..msg_len) else {
+                            return -1;
+                        };
+                        dst.copy_from_slice(msg);
+                        (*s).rd_msg_off = off + msg_len;
+                        return msg_len as c_int;
+                    }
+                    if msg_len > (*s).rd_msg_buf.len() {
+                        // A message that can never fit the assembly buffer is refused rather
+                        // than accumulated forever.
+                        (*s).rd_msg_len = 0;
+                        (*s).rd_msg_off = 0;
+                        return -1;
+                    }
+                    // Otherwise the body continues in a following record: append below.
+                }
+            }
+
+            // Make room by discarding the consumed prefix. This is an overlapping move, so it is
+            // `copy_within` rather than a raw copy; the message's own bytes stay contiguous.
+            if (*s).rd_msg_len == (*s).rd_msg_buf.len() {
+                let consumed = (*s).rd_msg_off;
+                if consumed == 0 {
+                    return -1;
+                }
+                (*s).rd_msg_buf.copy_within(consumed..(*s).rd_msg_len, 0);
+                (*s).rd_msg_len -= consumed;
+                (*s).rd_msg_off = 0;
+            }
+
+            // Read one record directly into the unused tail, so the buffered prefix and the new
+            // bytes form one contiguous handshake message. `SSL3_RT_CHANGE_CIPHER_SPEC` (20)
+            // records are interleaved by middleware compatibility and skipped; any other
+            // non-handshake record is not part of the flight.
+            let used = (*s).rd_msg_len;
             let mut rt = 0u8;
-            let n = ssl3_read_bytes(
-                s,
-                &mut rt,
-                (*s).rd_msg_buf.as_mut_ptr(),
-                (*s).rd_msg_buf.len(),
-            );
+            let (dst_ptr, dst_len) = {
+                let dst = &mut (&mut (*s).rd_msg_buf)[used..];
+                (dst.as_mut_ptr(), dst.len())
+            };
+            let n = ssl3_read_bytes(s, &mut rt, dst_ptr, dst_len);
             if n <= 0 {
                 return -1;
             }
-            (*s).rd_msg_len = n as usize;
-            (*s).rd_msg_off = 0;
+            let Some(n) = usize::try_from(n).ok().filter(|n| *n <= dst_len) else {
+                return -1;
+            };
             match rt {
-                22 => break,    // SSL3_RT_HANDSHAKE
-                20 => continue, // SSL3_RT_CHANGE_CIPHER_SPEC
+                22 => {
+                    // SSL3_RT_HANDSHAKE: append and re-parse the framing at the top of the loop.
+                    let Some(end) = used.checked_add(n) else {
+                        return -1;
+                    };
+                    if end > (*s).rd_msg_buf.len() {
+                        return -1;
+                    }
+                    (*s).rd_msg_len = end;
+                }
+                20 => {} // SSL3_RT_CHANGE_CIPHER_SPEC: consumed and skipped.
                 _ => {
                     // The record was fully consumed from the BIO and discarded. Clear the
                     // buffered-message state before reporting the wait: leaving `rd_msg_len`
@@ -751,20 +888,6 @@ pub(crate) unsafe fn tls13_next_handshake_message(s: *mut Ssl, buf: *mut u8, cap
                 }
             }
         }
-
-        if (*s).rd_msg_len < 4 {
-            return -1;
-        }
-        let blen = (((*s).rd_msg_buf[1] as usize) << 16)
-            | (((*s).rd_msg_buf[2] as usize) << 8)
-            | ((*s).rd_msg_buf[3] as usize);
-        let msg_len = 4 + blen;
-        if msg_len > (*s).rd_msg_len || msg_len > cap {
-            return -1;
-        }
-        core::ptr::copy_nonoverlapping((*s).rd_msg_buf.as_ptr(), buf, msg_len);
-        (*s).rd_msg_off = msg_len;
-        msg_len as c_int
     }
 }
 
@@ -873,10 +996,18 @@ mod boundary_tests {
 
     use super::*;
     use crate::runtime::bio::bss_mem::BIO_s_mem;
-    use crate::runtime::bio::{BIO_ctrl_pending, BIO_free, BIO_new, BIO_write};
+    use crate::runtime::bio::method::{BIO_meth_free, BIO_meth_new, BIO_meth_set_write};
+    use crate::runtime::bio::{BIO_ctrl_pending, BIO_free, BIO_new, BIO_write, Bio};
     use crate::runtime::mem::CRYPTO_free;
     use crate::ssl::adv_alloc::zeroed_ssl;
     use crate::ssl::statem::statem::ossl_statem_in_error;
+
+    /// A TLS1.2-versioned record: `type || 0x0303 || length || body`.
+    fn record(type_: u8, body: &[u8]) -> Vec<u8> {
+        let mut v = vec![type_, 0x03, 0x03, (body.len() >> 8) as u8, body.len() as u8];
+        v.extend_from_slice(body);
+        v
+    }
 
     /// Build a frame-owned zeroed connection over a fresh memory BIO carrying `bytes`. The
     /// caller releases the BIO and the block.
@@ -905,6 +1036,229 @@ mod boundary_tests {
             (*s).version = TLS1_2_VERSION;
         }
         (s, bio)
+    }
+
+    /// A handshake message split across two records is accumulated by the message layer and
+    /// delivered once, with the same bytes as the unfragmented message.
+    #[test]
+    fn a_fragmented_handshake_message_is_reassembled() {
+        // `ServerHello` type (2) with a one-byte body; split 3/2 across two records.
+        let msg = [2u8, 0x00, 0x00, 0x01, 0xBB];
+        let first = record(22, &msg[..3]);
+        let second = record(22, &msg[3..]);
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&first);
+            assert_eq!(
+                BIO_write(bio, second.as_ptr().cast(), second.len() as c_int),
+                second.len() as c_int
+            );
+            let mut out = [0u8; 16];
+            let n = tls13_next_handshake_message(s, out.as_mut_ptr(), out.len());
+            assert_eq!(n, 5, "the two record fragments form one message");
+            assert_eq!(&out[..5], &msg, "the reassembled bytes are exact");
+            assert_eq!((*s).rd_msg_len, 5);
+            assert_eq!((*s).rd_msg_off, 5);
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Two complete messages in one record are handed out in order; the pending offset advances
+    /// by exactly each message's framed length.
+    #[test]
+    fn two_messages_in_one_record_are_delivered_in_order() {
+        let first = [2u8, 0x00, 0x00, 0x01, 0xAA];
+        let second = [4u8, 0x00, 0x00, 0x02, 0xCC, 0xDD];
+        let mut body = first.to_vec();
+        body.extend_from_slice(&second);
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&record(22, &body));
+            let mut out = [0u8; 16];
+            assert_eq!(
+                tls13_next_handshake_message(s, out.as_mut_ptr(), out.len()),
+                5
+            );
+            assert_eq!(&out[..5], &first);
+            assert_eq!((*s).rd_msg_off, 5);
+            assert_eq!(
+                tls13_next_handshake_message(s, out.as_mut_ptr(), out.len()),
+                6
+            );
+            assert_eq!(&out[..6], &second);
+            assert_eq!((*s).rd_msg_off, 11);
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A record whose length field exceeds the record buffer is a fatal record overflow: -1, the
+    /// connection is poisoned, and the header accumulator is reset.
+    #[test]
+    fn a_record_length_beyond_the_buffer_is_a_record_overflow() {
+        // 0x4269 = 17001 > the 17000-byte record body buffer.
+        let record = [23u8, 0x03, 0x03, 0x42, 0x69];
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&record);
+            let mut rt = 0u8;
+            let mut out = [0u8; 16];
+            let n = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr(), out.len());
+            assert_eq!(n, -1);
+            assert_ne!(ossl_statem_in_error(s), 0, "the connection is poisoned");
+            assert_eq!((*s).rec_hdr_len, 0, "the accumulator cannot be re-entered");
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A zero-length record is legal and delivers zero bytes without poisoning the connection.
+    #[test]
+    fn a_zero_length_record_delivers_zero_bytes() {
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&record(23, &[]));
+            let mut rt = 0u8;
+            let mut out = [0u8; 16];
+            let n = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr(), out.len());
+            assert_eq!(n, 0);
+            assert_eq!(ossl_statem_in_error(s), 0);
+            assert_eq!((*s).rec_hdr_len, 0);
+            assert_eq!((*s).rec_body_len, 0);
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A maximum-size plaintext record (16384 bytes) is delivered byte for byte.
+    #[test]
+    fn a_maximum_size_record_is_delivered() {
+        let body: Vec<u8> = (0..SSL3_RT_MAX_PLAIN_LENGTH)
+            .map(|i| (i % 251) as u8)
+            .collect();
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&record(23, &body));
+            let mut out = vec![0u8; SSL3_RT_MAX_PLAIN_LENGTH];
+            let mut rt = 0u8;
+            let n = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr(), out.len());
+            assert_eq!(n, SSL3_RT_MAX_PLAIN_LENGTH as c_int);
+            assert_eq!(rt, 23);
+            assert_eq!(out, body);
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A partial header is retained across the short read and resumed on the next call; the body
+    /// then arrives intact. `SSL_OP_IGNORE_UNEXPECTED_EOF` makes the interim EOF graceful, which is
+    /// the only way a non-blocking stream can pause mid-record.
+    #[test]
+    fn a_partial_read_then_a_second_read_resumes_the_header() {
+        let full = record(23, b"hello");
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&full[..2]);
+            (*s).options |= SSL_OP_IGNORE_UNEXPECTED_EOF;
+            let mut rt = 0u8;
+            let mut out = [0u8; 16];
+            let first = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr(), out.len());
+            assert_eq!(first, -1, "a short header is a retryable read");
+            assert_eq!((*s).rwstate, SSL_READING);
+            assert_eq!((*s).rec_hdr_len, 2, "the partial header is retained");
+            assert_eq!(
+                BIO_write(bio, full[2..].as_ptr().cast(), (full.len() - 2) as c_int),
+                (full.len() - 2) as c_int
+            );
+            let second = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr(), out.len());
+            assert_eq!(second, 5);
+            assert_eq!(&out[..5], b"hello");
+            assert_eq!((*s).rec_hdr_len, 0);
+            assert_eq!((*s).rec_body_len, 0);
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A handshake message larger than the caller's output is refused with -1 and writes nothing
+    /// past the declared capacity. The backing array is deliberately larger than `cap` so the
+    /// sensitivity control can observe an over-write without corrupting the frame.
+    #[test]
+    fn a_handshake_message_larger_than_the_output_is_refused() {
+        let body = [2u8, 0x00, 0x00, 0x01, 0xBB];
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&record(22, &body));
+            let mut backing = [0u8; 64];
+            let n = tls13_next_handshake_message(s, backing.as_mut_ptr(), 2);
+            assert_eq!(n, -1, "a message that does not fit the output is refused");
+            assert_eq!(&backing[..], &[0u8; 64], "nothing is written past `cap`");
+            assert_eq!((*s).rd_msg_off, 0, "the buffered message is not consumed");
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A write BIO that claims to have accepted more bytes than it was offered violates the BIO
+    /// contract; the record writer must refuse rather than advance past the buffer.
+    unsafe extern "C" fn overreporting_write(
+        _bio: *mut Bio,
+        _data: *const c_char,
+        len: c_int,
+    ) -> c_int {
+        len.saturating_add(1)
+    }
+
+    #[test]
+    fn a_write_bio_that_overreports_is_refused() {
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let s = zeroed_ssl();
+            assert!(!s.is_null());
+            let method = BIO_meth_new(0, c"overreporting".as_ptr());
+            assert!(!method.is_null());
+            assert_eq!(BIO_meth_set_write(method, Some(overreporting_write)), 1);
+            let bio = BIO_new(method);
+            assert!(!bio.is_null());
+            (*s).wbio = bio;
+            let plain = [7u8; 16];
+            let r = ssl3_write_bytes(s, 23, plain.as_ptr(), plain.len());
+            assert_eq!(r, -1, "an over-reporting BIO is refused");
+            assert_eq!((*s).rwstate, SSL_NOTHING);
+            BIO_free(bio);
+            BIO_meth_free(method);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A deterministic sweep of malformed record streams: the reader must answer a bounded
+    /// result and never panic, whatever the header length and type bytes say.
+    #[test]
+    fn a_seeded_malformed_record_stream_never_panics() {
+        let mut seed = 0x1234_5678u32;
+        for _ in 0..64 {
+            seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            let body_len = (seed % 96) as usize;
+            let mut bytes = Vec::with_capacity(5 + body_len);
+            for _ in 0..5 + body_len {
+                seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                bytes.push((seed >> 24) as u8);
+            }
+            // SAFETY: the connection and BIO are exclusive frame-owned objects.
+            unsafe {
+                let (s, bio) = connection_with_read_bytes(&bytes);
+                let mut out = [0u8; 32];
+                let mut rt = 0u8;
+                let n = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr(), out.len());
+                assert!(
+                    n >= -1 && n <= out.len() as c_int,
+                    "a malformed stream must answer in range, got {n}"
+                );
+                BIO_free(bio);
+                CRYPTO_free(s.cast(), ptr::null(), 0);
+            }
+        }
     }
 
     /// The authority requires an alert packet to be exactly two bytes
