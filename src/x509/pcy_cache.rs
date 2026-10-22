@@ -594,3 +594,97 @@ pub(crate) unsafe fn ossl_policy_cache_set_mapping(x: *mut X509, maps: *mut Open
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(X509PolicyCache => zero_state_sweep_x509_policy_cache);
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used)]
+
+    use super::*;
+    use crate::runtime::obj::{NID_basic_constraints, OBJ_nid2obj};
+    use crate::runtime::stack::OPENSSL_sk_new_null;
+    use crate::x509::v3_cpols::POLICYINFO_new;
+    use crate::x509::x_x509::{X509_free, X509_new};
+
+    /// A certificate with an allocated, empty policy cache (`policy_cache_new`'s no-extension
+    /// path), which is exactly `policy_cache_create`'s precondition.
+    unsafe fn cache_for() -> *mut X509 {
+        let x = X509_new();
+        assert!(!x.is_null());
+        // SAFETY: `x` is fresh, so its `policy_cache` is NULL.
+        let created = unsafe { policy_cache_new(x) };
+        assert_eq!(created, 1);
+        // SAFETY: `x` is live; the cache pointer was just installed.
+        let cache = unsafe { (*x).policy_cache };
+        assert!(!cache.is_null());
+        x
+    }
+
+    unsafe fn policy(nid: c_int) -> *mut PolicyInfo {
+        let p = POLICYINFO_new();
+        assert!(!p.is_null());
+        // SAFETY: `p` is fresh; `OBJ_nid2obj` answers the shared static object the item's free
+        // treats as unowned.
+        unsafe { (*p).policyid = OBJ_nid2obj(nid) };
+        p
+    }
+
+    unsafe fn stack_of(pols: &[*mut PolicyInfo]) -> *mut OpenSslStack {
+        let sk = OPENSSL_sk_new_null();
+        assert!(!sk.is_null());
+        for &p in pols {
+            // SAFETY: `sk` is fresh and `p` transfers to it. `sk_push` answers the new count.
+            assert!(unsafe { OPENSSL_sk_push(sk, p.cast()) } > 0);
+        }
+        sk
+    }
+
+    #[test]
+    fn a_valid_policy_and_an_any_policy_are_classified() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `X509_free` releases the cache.
+        unsafe {
+            let x = cache_for();
+            let sk = stack_of(&[policy(NID_basic_constraints), policy(NID_any_policy)]);
+            // SAFETY: `x` has a live empty cache and `sk` transfers to this call.
+            assert_eq!(policy_cache_create(x, sk, -1), 1);
+            let cache = (*x).policy_cache.cast::<X509PolicyCache>();
+            assert!(
+                !(*cache).anyPolicy.is_null(),
+                "anyPolicy is classified apart"
+            );
+            assert_eq!(OPENSSL_sk_num((*cache).data), 1, "the other OID is data");
+            X509_free(x);
+        }
+    }
+
+    #[test]
+    fn an_empty_policy_extension_is_rejected_without_the_invalid_flag() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `X509_free` releases the cache.
+        unsafe {
+            let x = cache_for();
+            // A `certificatePolicies` extension with zero elements is the authority's
+            // `num <= 0` "bad policy" arm; it answers 0 and (per `pcy_cache.c:70`) leaves
+            // `EXFLAG_INVALID_POLICY` clear because `ret` never became -1.
+            assert_eq!(policy_cache_create(x, stack_of(&[]), -1), 0);
+            assert_eq!((*x).ex_flags & EXFLAG_INVALID_POLICY, 0);
+            let cache = (*x).policy_cache.cast::<X509PolicyCache>();
+            assert!((*cache).data.is_null());
+            X509_free(x);
+        }
+    }
+
+    #[test]
+    fn a_duplicate_any_policy_is_malformed() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `X509_free` releases the cache.
+        unsafe {
+            let x = cache_for();
+            let sk = stack_of(&[policy(NID_any_policy), policy(NID_any_policy)]);
+            // SAFETY: `x` has a live empty cache and `sk` transfers to this call.
+            assert_eq!(policy_cache_create(x, sk, -1), -1);
+            assert_ne!((*x).ex_flags & EXFLAG_INVALID_POLICY, 0);
+            X509_free(x);
+        }
+    }
+}
