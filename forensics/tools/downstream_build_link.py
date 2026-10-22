@@ -124,6 +124,11 @@ import downstream_recipe_campaign as campaign  # noqa: E402
 # importing it here adds no execution.
 import downstream_close_batch as close_batch  # noqa: E402
 
+# The declarative template layer: its pristine recipes and its pkg-config shim are part of the
+# shared catalogue, so a templated family is measured by exactly the same build/link path as a
+# bespoke one.  The module executes nothing at import time (it reads one small JSON file).
+import downstream_templates as templates  # noqa: E402
+
 # The stratum's four non-claims, imported from 24.4 so the atlas and the freeze cannot drift about
 # what the model never claims.
 from downstream_freeze import NON_CLAIMS as STRATUM_NON_CLAIMS  # noqa: E402
@@ -1975,6 +1980,13 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The declarative template cohort.  Each entry is a small config row (URL + SHA-256 +
+    # build-system fields + a bucket workload) rather than a bespoke recipe; the same pristine
+    # acquire/configure/make path is used, and `{prefix}` is still the only substitution.
+    for spec in templates.recipe_specs():
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     # Two recipes the earlier venue recorded as blocked are buildable in the expansion image:
     # libssh ships only CMakeLists.txt (cmake is present), and lighttpd ships configure.ac (the
     # pinned autotools shim regenerates its configure). The subject prefix is still the only
@@ -2926,6 +2938,14 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
     # A recipe may name pinned auxiliary dependency packages the venue does not ship as
     # development headers (fido2's libudev-dev). They are acquired by digest and added to the
     # build environment; the subject prefix remains the only OpenSSL.
+    # A template recipe may name a ``pkgconfig_shim``: several upstream configure scripts probe
+    # with `pkg-config libssl`, while the candidate drop-in install ships no openssl.pc.  The shim
+    # is a generated build input (never a source patch) and is written identically for both
+    # subjects, so the identical-build-intent rule is preserved.
+    if recipe.get("pkgconfig_shim"):
+        shim = templates.write_pkgconfig_shim(work, prefix)
+        env["PKG_CONFIG_PATH"] = os.pathsep.join([str(shim), env["PKG_CONFIG_PATH"]])
+
     aux, aux_err = _prepare_aux(recipe, work)
     if aux_err:
         return _subject_row(

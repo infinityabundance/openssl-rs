@@ -132,6 +132,11 @@ import downstream_census as census  # noqa: E402
 # divergent predicate").
 import downstream_build_link as bl  # noqa: E402
 
+# The declarative template layer: its programs and bucket runners are merged into the runtime
+# intent, and its loader-closure admission gate refuses L7 for a binary that never loads the
+# subject.  The module executes nothing at import time.
+import downstream_templates as templates  # noqa: E402
+
 # The stratum's four non-claims, imported from 24.4 so the atlas and the freeze cannot drift.
 from downstream_freeze import NON_CLAIMS as STRATUM_NON_CLAIMS  # noqa: E402
 
@@ -1109,6 +1114,11 @@ PROGRAMS: dict[str, dict] = {
                  "a fixed fixture gives an exact info hash and a modified file changes it"),
     },
 }
+
+# The declarative template cohort: each entry is a config row in
+# forensics/tools/downstream_template_families.json.  Merging (rather than growing another
+# literal) keeps the template layer's family set and the build/link catalogue in one place.
+PROGRAMS.update(templates.programs())
 
 # The frozen runtime/functional rule, recorded verbatim in the artefact and re-derived by the court.
 RULE: dict = {
@@ -8910,6 +8920,11 @@ RUNNERS = {
     "libssh": _wl_libssh,
 }
 
+# The declarative template cohort's bucket runners.  Each is the same parameterised Python
+# fixture; only the family's config row (argv, expectation, negative control, CA/port policy)
+# differs, so ten template families do not add ten bespoke runners.
+RUNNERS.update(templates.runners())
+
 
 # --------------------------------------------------------------------------------------------
 # the load proof (L5): the subject's libssl/libcrypto are actually loaded
@@ -9081,6 +9096,12 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     lib_paths = expanded
     lib_paths += _aux_runtime_lib_dirs(recipe, root)
     env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(lib_paths))
+    # A template program may need a runtime environment variable (siege's SIEGERC is the released
+    # configuration file).  The values are expanded from the same root/prefix tokens the recipe
+    # uses, so they are not candidate-specific.
+    for key, val in (prog.get("env") or {}).items():
+        env[str(key)] = (str(val).replace("{root}", str(root))
+                         .replace("{prefix}", str(prefix)))
     aux_bins = _aux_runtime_bin_dirs(recipe, root)
     if aux_bins:
         env["PATH"] = os.pathsep.join([*aux_bins, env.get("PATH", "")])
@@ -9181,11 +9202,21 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
                             re.IGNORECASE) is not None
                   and "error while loading shared libraries" not in launch["stderr"])
     proof = load_proof(program, prefix, authority_prefix, prog["launch"], env)
+    # The generic admission gate: a template family must load the subject's libssl/libcrypto.  A
+    # build that linked a different OpenSSL, or a program whose loader closure never names one, is
+    # refused here and cannot reach L6/L7 on the strength of a version banner.
+    template_admission = None
+    if prog.get("template"):
+        template_admission = templates.admit_binary(program, prefix, authority_prefix, env)
 
     base_canvas = {"load_proof": proof, "linkage_proven": proof["proven"],
                    "resolved_under_authority": proof["resolved_under_authority"],
                    "link": {"all_under_prefix": proof["all_under_prefix"],
                             "sonames": proof["sonames"]}}
+    if template_admission is not None:
+        base_canvas["template_admission"] = template_admission
+        base_canvas["linkage_proven"] = (base_canvas["linkage_proven"]
+                                         and template_admission["admitted"])
 
     if not version_ok or not proof["proven"]:
         reason = ("the program did not start and report its version" if not version_ok else
@@ -9194,6 +9225,16 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
             fam, recipe, subject, level=L4, outcome="failed", residual="runtime-failure",
             failure_class="load-failure", reason=reason, specimen_id=spec_id, variant_id=variant_id,
             source_sha256=source_sha256, evidence=evidence, canvas=base_canvas, limits=limits,
+            prefix=prefix, source_root_hash=source_root_hash, launch=list(prog["launch"]),
+            workload=None, transcript=_transcript(("launch", launch)), local_only=True)
+
+    if template_admission is not None and not template_admission["admitted"]:
+        return _runtime_row(
+            fam, recipe, subject, level=L4, outcome="failed", residual="runtime-failure",
+            failure_class="link-failure",
+            reason=f"template admission refused: {template_admission['reason']}",
+            specimen_id=spec_id, variant_id=variant_id, source_sha256=source_sha256,
+            evidence=evidence + ["admission:template"], canvas=base_canvas, limits=limits,
             prefix=prefix, source_root_hash=source_root_hash, launch=list(prog["launch"]),
             workload=None, transcript=_transcript(("launch", launch)), local_only=True)
 
