@@ -71,6 +71,7 @@ use crate::ssl::ssl_ciph_table::SslCipher;
 use crate::ssl::ssl_lib::{SSL_get_ciphers, Ssl};
 use crate::ssl::statem::extensions_clnt::tls_construct_extensions;
 use crate::ssl::statem::statem::{ossl_statem_fatal, ossl_statem_in_error};
+use crate::ssl::statem::statem_srvr::SliceCursor;
 use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled};
 
 // --- hand states (`include/openssl/ssl.h`) -----------------------------------
@@ -1081,6 +1082,8 @@ const SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE: c_int = 113;
 const SSL_R_BAD_EXTENSION: c_int = 110;
 /// `TLSEXT_TYPE_key_share` — `tls1.h:165`.
 const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
+/// `TLSEXT_TYPE_pre_shared_key` — `tls1.h:163`.
+const TLSEXT_TYPE_PRE_SHARED_KEY: u16 = 41;
 /// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
 const TLSEXT_TYPE_ALPN: u16 = 16;
 /// `MSG_FLOW_READING` — `ssl/statem/statem.h`.
@@ -1150,6 +1153,171 @@ unsafe fn client_derive_and_install(s: *mut Ssl) -> c_int {
     1
 }
 
+/// The fixed part of a ServerHello that both version parsers read identically:
+/// `legacy_version(2) || random(32) || session_id(1+n) || cipher_suite(2) ||
+/// compression_method(1)` and the unconsumed remainder (the extension block).
+struct ServerHelloLayout<'a> {
+    version: u16,
+    random: &'a [u8],
+    session_id: &'a [u8],
+    cipher: &'a [u8],
+    compression: u8,
+    rest: &'a [u8],
+}
+
+/// Read the handshake header and the fixed ServerHello prefix.
+///
+/// `None` is exactly the set of inputs the previous offset arithmetic refused: a short header, a
+/// handshake length that runs past `msg`, a body shorter than version+random+session-id+
+/// cipher+compression, or a version/session-id/cipher field crossing the body's end. Trailing
+/// bytes after the declared handshake length are ignored, as before.
+fn read_server_hello_layout<'a>(msg: &'a [u8], expected_type: u8) -> Option<ServerHelloLayout<'a>> {
+    let mut msg_cur = SliceCursor::new(msg);
+    if msg_cur.take_u8()? != expected_type {
+        return None;
+    }
+    let blen = ((msg_cur.take_u8()? as usize) << 16)
+        | ((msg_cur.take_u8()? as usize) << 8)
+        | msg_cur.take_u8()? as usize;
+    let body = msg_cur.take(blen)?;
+    let mut cur = SliceCursor::new(body);
+    let version = cur.take_u16()?;
+    let random = cur.take(SSL3_RANDOM_SIZE)?;
+    let sid_len = cur.take_u8()? as usize;
+    let session_id = cur.take(sid_len)?;
+    let cipher = cur.take(2)?;
+    let compression = cur.take_u8()?;
+    Some(ServerHelloLayout {
+        version,
+        random,
+        session_id,
+        cipher,
+        compression,
+        rest: &body[cur.pos()..],
+    })
+}
+
+/// `Extension extensions<0..2^16-1>` at the end of a ServerHello body.
+enum ServerHelloExtensionBlock<'a> {
+    /// Fewer than two bytes remain: the previous `p + 2 <= b.len()` guard read this as "no
+    /// extension block" and accepted the message.
+    Absent,
+    Present(&'a [u8]),
+}
+
+/// Read the extension vector. `None` is a declared extent that runs past `rest`.
+fn read_extension_block(rest: &[u8]) -> Option<ServerHelloExtensionBlock<'_>> {
+    if rest.len() < 2 {
+        return Some(ServerHelloExtensionBlock::Absent);
+    }
+    let mut cur = SliceCursor::new(rest);
+    let len = cur.take_u16()? as usize;
+    let exts = cur.take(len)?;
+    Some(ServerHelloExtensionBlock::Present(exts))
+}
+
+/// Walk an `Extension extensions<2>` vector in order.
+///
+/// `None` means one extension's declared body crosses the block's end; the caller turns that into
+/// the authority's error. A trailing 1..=3 bytes are ignored, matching the previous
+/// `off + 4 <= exts.len()` loop.
+fn walk_server_hello_extensions<'a, F>(exts: &'a [u8], mut visit: F) -> Option<()>
+where
+    F: FnMut(u16, &'a [u8]),
+{
+    let mut walk = SliceCursor::new(exts);
+    while walk.remaining() >= 4 {
+        let etype = walk.take_u16()?;
+        let elen = walk.take_u16()? as usize;
+        let eb = walk.take(elen)?;
+        visit(etype, eb);
+    }
+    Some(())
+}
+
+/// `supported_versions` in a ServerHello: the selected `ProtocolVersion` (`extensions_clnt.c`).
+///
+/// A body shorter than two bytes is ignored (the previous `eb.len() >= 2` guard).
+fn read_supported_versions(eb: &[u8]) -> Option<u16> {
+    let mut cur = SliceCursor::new(eb);
+    cur.take_u16()
+}
+
+/// `key_share` in a ServerHello: `group(2) || key_exchange<2..2^16-1>`.
+///
+/// `None` is a body shorter than four bytes or a key extent crossing the body; the previous
+/// reader ignored both and kept the previously seen share.
+fn read_key_share(eb: &[u8]) -> Option<(u16, &[u8])> {
+    let mut cur = SliceCursor::new(eb);
+    let group = cur.take_u16()?;
+    let klen = cur.take_u16()? as usize;
+    Some((group, cur.take(klen)?))
+}
+
+/// `pre_shared_key` in a ServerHello: `selected_identity(2)` (`tls_parse_stoc_psk`).
+fn read_pre_shared_key(eb: &[u8]) -> Option<u16> {
+    let mut cur = SliceCursor::new(eb);
+    cur.take_u16()
+}
+
+/// The `key_share` selection a ServerHello carries (zero/empty when absent or unusable).
+struct ServerHelloKeyShare<'a> {
+    group: u16,
+    share: &'a [u8],
+}
+
+/// Read the TLS1.3 ServerHello extensions the reduced client consumes.
+///
+/// `supported_versions` and `pre_shared_key` are read for shape but their values are not applied:
+/// the reduced client marks TLS1.3 by the extension's presence (`process_server_hello_dispatch`),
+/// always installs `TLS1_3_VERSION`, and offers no PSK (`extensions_clnt.rs`, recorded boundary).
+/// A duplicate extension keeps the last value, as the previous in-order walk did.
+fn read_tls13_server_hello_extensions(exts: &[u8]) -> Option<ServerHelloKeyShare<'_>> {
+    let mut chosen = ServerHelloKeyShare {
+        group: 0,
+        share: &[],
+    };
+    walk_server_hello_extensions(exts, |etype, eb| match etype {
+        TLSEXT_TYPE_SUPPORTED_VERSIONS => {
+            let _selected = read_supported_versions(eb);
+        }
+        TLSEXT_TYPE_KEY_SHARE => {
+            if let Some((group, share)) = read_key_share(eb) {
+                chosen.group = group;
+                chosen.share = share;
+            }
+        }
+        TLSEXT_TYPE_PRE_SHARED_KEY => {
+            let _selected_identity = read_pre_shared_key(eb);
+        }
+        _ => {}
+    })?;
+    Some(chosen)
+}
+
+/// The dispatch decision used by [`process_server_hello_dispatch`].
+///
+/// `Ok(true)` means a `supported_versions` extension (type 43) is present. `Ok(false)` means it is
+/// absent; a declared extension vector that runs past the body is also treated as absent here,
+/// because the previous dispatcher fell through to the legacy arm on that input. `Err(())` is a
+/// framing or in-block extension overrun, which the previous dispatcher refused.
+fn server_hello_selects_tls13(msg: &[u8]) -> Result<bool, ()> {
+    let sh = read_server_hello_layout(msg, SSL3_MT_SERVER_HELLO as u8).ok_or(())?;
+    let mut has_supported_versions = false;
+    match read_extension_block(sh.rest) {
+        Some(ServerHelloExtensionBlock::Present(exts)) => {
+            walk_server_hello_extensions(exts, |etype, _| {
+                if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS {
+                    has_supported_versions = true;
+                }
+            })
+            .ok_or(())?;
+        }
+        Some(ServerHelloExtensionBlock::Absent) | None => {}
+    }
+    Ok(has_supported_versions)
+}
+
 /// `MSG_PROCESS_RETURN tls_process_server_hello(SSL_CONNECTION *s, PACKET *pkt)` —
 /// `statem_clnt.c:1467-1836`, reduced to the fresh-connection, non-HRR, non-PSK path.
 ///
@@ -1157,57 +1325,33 @@ unsafe fn client_derive_and_install(s: *mut Ssl) -> c_int {
 /// `s` is live; `msg` is the full handshake message (`type || length || body`).
 pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
     use crate::ssl::tls13_enc as k;
-    if msg.len() < 4 || msg[0] != SSL3_MT_SERVER_HELLO as u8 {
+    let Some(sh) = read_server_hello_layout(msg, SSL3_MT_SERVER_HELLO as u8) else {
         return 0;
-    }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
-        return 0;
-    }
-    let b = &msg[4..4 + blen];
-    if b.len() < 2 + SSL3_RANDOM_SIZE + 1 + 2 + 1 {
-        return 0;
-    }
-    let sversion = ((b[0] as c_int) << 8) | b[1] as c_int;
-    if sversion != TLS1_2_VERSION {
+    };
+    if sh.version != TLS1_2_VERSION as u16 {
         return 0;
     }
     // server random is not used by the TLS1.3 schedule, but the authority stores it.
-    // SAFETY: `s` is live; `b[2..34]` is 32 bytes.
-    unsafe {
-        (*s).server_random
-            .copy_from_slice(&b[2..2 + SSL3_RANDOM_SIZE])
-    };
-    let mut p = 2 + SSL3_RANDOM_SIZE;
-    let sid_len = b[p] as usize;
-    p += 1;
-    if p + sid_len + 2 + 1 > b.len() {
-        return 0;
-    }
+    // SAFETY: `s` is live; the layout fixed `random` at exactly `SSL3_RANDOM_SIZE` bytes.
+    unsafe { (*s).server_random.copy_from_slice(sh.random) };
     // The authority bounds the echoed id before using it (`statem_clnt.c:1519-1524`);
     // `tmp_session_id` is `SSL_MAX_SSL_SESSION_ID_LENGTH` bytes.
-    if sid_len > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+    if sh.session_id.len() > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_SSL3_SESSION_ID_TOO_LONG) };
         return 0;
     }
     // The TLS1.3 ServerHello echoes the ClientHello session id (`statem_clnt.c:1568`).
-    let sid = &b[p..p + sid_len];
     // SAFETY: `s` is live; `tmp_session_id` is a 32-byte array.
     let (tmp_len, tmp_id) = unsafe { ((*s).tmp_session_id_len, (*s).tmp_session_id) };
-    if sid_len != tmp_len || sid != &tmp_id[..sid_len] {
+    if sh.session_id.len() != tmp_len || sh.session_id != &tmp_id[..sh.session_id.len()] {
         return 0;
     }
-    p += sid_len;
-    let cipher = &b[p..p + 2];
-    p += 2;
-    let compression = b[p];
-    p += 1;
-    if compression != 0 {
+    if sh.compression != 0 {
         return 0;
     }
-    // SAFETY: `cipher` is two readable bytes.
-    let chosen = unsafe { crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(cipher.as_ptr()) };
+    // SAFETY: `sh.cipher` is exactly two readable bytes by construction.
+    let chosen = unsafe { crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(sh.cipher.as_ptr()) };
     if chosen.is_null() {
         return 0;
     }
@@ -1215,39 +1359,19 @@ pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int 
     unsafe { (*s).pending_cipher = chosen };
 
     // supported_versions (43) confirms TLS1.3; key_share (51) carries the server share.
-    // SAFETY: `s` is live.
-    let mut group: u16 = 0;
-    let mut share: &[u8] = &[];
-    if p + 2 <= b.len() {
-        let ext_len = ((b[p] as usize) << 8) | b[p + 1] as usize;
-        p += 2;
-        if p + ext_len > b.len() {
-            return 0;
-        }
-        let exts = &b[p..p + ext_len];
-        let mut off = 0usize;
-        while off + 4 <= exts.len() {
-            let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-            let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-            off += 4;
-            if off + elen > exts.len() {
+    let ServerHelloKeyShare { group, share } = match read_extension_block(sh.rest) {
+        Some(ServerHelloExtensionBlock::Present(exts)) => {
+            let Some(chosen_share) = read_tls13_server_hello_extensions(exts) else {
                 return 0;
-            }
-            let eb = &exts[off..off + elen];
-            if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS && eb.len() >= 2 {
-                // SAFETY: `s` is live; the body is the selected version.
-                unsafe { (*s).version = ((eb[0] as c_int) << 8) | eb[1] as c_int };
-            }
-            if etype == TLSEXT_TYPE_KEY_SHARE && eb.len() >= 4 {
-                group = ((eb[0] as u16) << 8) | eb[1] as u16;
-                let klen = ((eb[2] as usize) << 8) | eb[3] as usize;
-                if 4 + klen <= eb.len() {
-                    share = &eb[4..4 + klen];
-                }
-            }
-            off += elen;
+            };
+            chosen_share
         }
-    }
+        Some(ServerHelloExtensionBlock::Absent) => ServerHelloKeyShare {
+            group: 0,
+            share: &[],
+        },
+        None => return 0,
+    };
     // SAFETY: `s` is live.
     unsafe {
         (*s).group_id = group;
@@ -2020,50 +2144,12 @@ pub(crate) unsafe fn tls13_client_process_post_handshake(s: *mut Ssl, msg: &[u8]
 /// # Safety
 /// `s` is live; `msg` is the full ServerHello message.
 unsafe fn process_server_hello_dispatch(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_SERVER_HELLO as u8 {
-        return 0;
-    }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
-        return 0;
-    }
-    let b = &msg[4..4 + blen];
-    if b.len() < 2 + SSL3_RANDOM_SIZE + 1 {
-        return 0;
-    }
-    let sid_len = b[2 + SSL3_RANDOM_SIZE] as usize;
-    let mut p = 2 + SSL3_RANDOM_SIZE + 1 + sid_len;
-    if p + 3 > b.len() {
-        return 0;
-    }
-    p += 3; // cipher_suite(2) + compression_method(1)
-    let mut has_supported_versions = false;
-    if p + 2 <= b.len() {
-        let ext_len = ((b[p] as usize) << 8) | b[p + 1] as usize;
-        p += 2;
-        if p + ext_len <= b.len() {
-            let exts = &b[p..p + ext_len];
-            let mut off = 0usize;
-            while off + 4 <= exts.len() {
-                let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-                let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-                off += 4;
-                if off + elen > exts.len() {
-                    return 0;
-                }
-                if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS {
-                    has_supported_versions = true;
-                }
-                off += elen;
-            }
-        }
-    }
-    if has_supported_versions {
+    match server_hello_selects_tls13(msg) {
+        Err(()) => 0,
         // SAFETY: `s`/`msg` are live.
-        unsafe { tls_process_server_hello(s, msg) }
-    } else {
+        Ok(true) => unsafe { tls_process_server_hello(s, msg) },
         // SAFETY: `s`/`msg` are live.
-        unsafe { tls12_process_server_hello(s, msg) }
+        Ok(false) => unsafe { tls12_process_server_hello(s, msg) },
     }
 }
 
@@ -2074,55 +2160,33 @@ unsafe fn process_server_hello_dispatch(s: *mut Ssl, msg: &[u8]) -> c_int {
 /// # Safety
 /// `s` is live; `msg` is the full ServerHello message.
 unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_SERVER_HELLO as u8 {
+    let Some(sh) = read_server_hello_layout(msg, SSL3_MT_SERVER_HELLO as u8) else {
         return 0;
-    }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
-        return 0;
-    }
-    let b = &msg[4..4 + blen];
-    if b.len() < 2 + SSL3_RANDOM_SIZE + 1 + 2 + 1 {
-        return 0;
-    }
-    let sversion = ((b[0] as c_int) << 8) | b[1] as c_int;
-    if sversion != TLS1_2_VERSION {
-        return 0;
-    }
-    // SAFETY: `s` is live; `b[2..34]` is 32 bytes.
-    unsafe {
-        (*s).server_random
-            .copy_from_slice(&b[2..2 + SSL3_RANDOM_SIZE])
     };
-    let mut p = 2 + SSL3_RANDOM_SIZE;
-    let sid_len = b[p] as usize;
-    p += 1;
-    if p + sid_len + 2 + 1 > b.len() {
+    if sh.version != TLS1_2_VERSION as u16 {
         return 0;
     }
+    // SAFETY: `s` is live; the layout fixed `random` at exactly `SSL3_RANDOM_SIZE` bytes.
+    unsafe { (*s).server_random.copy_from_slice(sh.random) };
     // The authority bounds the server's session id before copying it into the
     // `SSL_MAX_SSL_SESSION_ID_LENGTH`-byte `session_id` (`statem_clnt.c:1519-1524`); without
     // this check a hostile ServerHello length (up to 255) overruns the field and the
     // session block it lives in.
-    if sid_len > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+    if sh.session_id.len() > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_SSL3_SESSION_ID_TOO_LONG) };
         return 0;
     }
-    let session_id = &b[p..p + sid_len];
-    p += sid_len;
-    let cipher = &b[p..p + 2];
-    p += 2;
-    let compression = b[p];
-    p += 1;
-    if compression != 0 {
+    if sh.compression != 0 {
         return 0;
     }
-    // SAFETY: `cipher` is two readable bytes.
-    let chosen = unsafe { crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(cipher.as_ptr()) };
+    // SAFETY: `sh.cipher` is exactly two readable bytes by construction.
+    let chosen = unsafe { crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(sh.cipher.as_ptr()) };
     if chosen.is_null() {
         return 0;
     }
+    let sid_len = sh.session_id.len();
+    let session_id = sh.session_id;
     // SAFETY: `s` is live; `chosen` is a table row.
     unsafe {
         (*s).pending_cipher = chosen;
@@ -2186,19 +2250,20 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
     }
     // The `session_ticket` extension in the ServerHello announces a following ticket
     // (`tls_parse_stoc_session_ticket`, `extensions_clnt.c`).
-    if p + 2 <= b.len() {
-        let ext_len = ((b[p] as usize) << 8) | b[p + 1] as usize;
-        p += 2;
-        if p + ext_len <= b.len() {
-            let exts = &b[p..p + ext_len];
-            let mut off = 0usize;
-            while off + 4 <= exts.len() {
-                let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-                let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-                off += 4;
-                if off + elen > exts.len() {
+    match read_extension_block(sh.rest) {
+        Some(ServerHelloExtensionBlock::Present(exts)) => {
+            let mut walk = SliceCursor::new(exts);
+            while walk.remaining() >= 4 {
+                let Some(etype) = walk.take_u16() else {
                     return 0;
-                }
+                };
+                let Some(elen) = walk.take_u16() else {
+                    return 0;
+                };
+                let elen = elen as usize;
+                let Some(eb) = walk.take(elen) else {
+                    return 0;
+                };
                 if etype == TLSEXT_TYPE_SESSION_TICKET {
                     // SAFETY: `s` is live.
                     unsafe { (*s).ext_ticket_expected = 1 };
@@ -2209,7 +2274,8 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
                     // `CertificateStatus` follows.
                     // SAFETY: `s` is live.
                     let status_type = unsafe { (*s).ext_status_type };
-                    if elen != 0 || status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP {
+                    if !eb.is_empty() || status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP
+                    {
                         // SAFETY: `s` is live.
                         unsafe {
                             ossl_statem_fatal(s, SSL_AD_UNSUPPORTED_EXTENSION, SSL_R_BAD_EXTENSION)
@@ -2219,9 +2285,11 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
                     // SAFETY: `s` is live.
                     unsafe { (*s).ext_status_expected = 1 };
                 }
-                off += elen;
             }
         }
+        // A ServerHello without an extension vector, or with a malformed one, was accepted here
+        // before the conversion; the TLS1.2 processor leaves the flags unset.
+        Some(ServerHelloExtensionBlock::Absent) | None => {}
     }
     // `ssl_cipher_get_evp`: install the AEAD/hash and replay the buffered ClientHello.
     // SAFETY: `s` is live; `chosen` is the table row.
@@ -3822,6 +3890,317 @@ mod server_hello_bounds {
             assert!((*s).session.is_null(), "no session is created on refusal");
             assert_eq!((*s).statem_state, MSG_FLOW_ERROR_13);
             CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// ServerHello parse cluster: version selection, extension readers, and malformed input.
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod server_hello_parse {
+    #![allow(clippy::panic, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new, SslCtx};
+
+    /// The echoed TLS1.3 `legacy_session_id` used by the valid cases.
+    const SID: &[u8] = &[0xA1, 0xB2, 0xC3, 0xD4];
+    const TLS_AES_128_GCM_SHA256: u16 = 0x1301;
+    const ECDHE_RSA_AES_128_GCM_SHA256: u16 = 0xC02F;
+    const X25519: u16 = 0x001D;
+
+    fn extension(etype: u16, body: &[u8]) -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(&etype.to_be_bytes());
+        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(body);
+        out
+    }
+
+    fn extension_block(exts: &[Vec<u8>]) -> Vec<u8> {
+        let mut body = Vec::new();
+        for ext in exts {
+            body.extend_from_slice(ext);
+        }
+        let mut out = Vec::new();
+        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(&body);
+        out
+    }
+
+    fn frame(mut body: Vec<u8>) -> Vec<u8> {
+        let mut msg = vec![SSL3_MT_SERVER_HELLO as u8];
+        msg.push((body.len() >> 16) as u8);
+        msg.push((body.len() >> 8) as u8);
+        msg.push(body.len() as u8);
+        msg.append(&mut body);
+        msg
+    }
+
+    /// `legacy_version || random || session_id || cipher_suite || compression`.
+    fn hello_prefix(sid: &[u8], cipher: u16) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&[0x03, 0x03]);
+        body.extend_from_slice(&[0x42; SSL3_RANDOM_SIZE]);
+        body.push(sid.len() as u8);
+        body.extend_from_slice(sid);
+        body.extend_from_slice(&cipher.to_be_bytes());
+        body.push(0);
+        body
+    }
+
+    fn server_hello(sid: &[u8], cipher: u16, exts: Option<&[Vec<u8>]>) -> Vec<u8> {
+        let mut body = hello_prefix(sid, cipher);
+        if let Some(exts) = exts {
+            body.extend_from_slice(&extension_block(exts));
+        }
+        frame(body)
+    }
+
+    fn supported_versions_ext(version: u16) -> Vec<u8> {
+        extension(TLSEXT_TYPE_SUPPORTED_VERSIONS, &version.to_be_bytes())
+    }
+
+    fn key_share_ext(group: u16, share: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&group.to_be_bytes());
+        body.extend_from_slice(&(share.len() as u16).to_be_bytes());
+        body.extend_from_slice(share);
+        extension(TLSEXT_TYPE_KEY_SHARE, &body)
+    }
+
+    /// Generate one X25519 key and open a live connection with it installed as the client's
+    /// ephemeral. The server's encoded public share is returned for the ServerHello.
+    ///
+    /// # Safety
+    /// The returned connection is owned by the caller and released with `SSL_free`; the context
+    /// is owned by the caller and released with `SSL_CTX_free`.
+    unsafe fn tls13_connection() -> (*mut SslCtx, *mut Ssl, [u8; 32]) {
+        use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
+        // SAFETY: every constructor below answers a fresh object owned by this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(crate::ssl::methods::TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            (&mut (*s).tmp_session_id)[..SID.len()].copy_from_slice(SID);
+            (*s).tmp_session_id_len = SID.len();
+
+            let params = [crate::params::END; 1];
+            let client = evp_pkey_keygen(
+                core::ptr::null_mut(),
+                c"X25519".as_ptr(),
+                core::ptr::null(),
+                params.as_ptr(),
+            );
+            assert!(!client.is_null(), "a client X25519 key must be generated");
+            (*s).pkey = client.cast();
+
+            let server = evp_pkey_keygen(
+                core::ptr::null_mut(),
+                c"X25519".as_ptr(),
+                core::ptr::null(),
+                params.as_ptr(),
+            );
+            assert!(!server.is_null(), "a server X25519 key must be generated");
+            let mut pubp: *mut u8 = core::ptr::null_mut();
+            let n = EVP_PKEY_get1_encoded_public_key(server, &mut pubp);
+            assert_eq!(n, 32, "X25519 public keys are 32 bytes");
+            let mut share = [0u8; 32];
+            core::ptr::copy_nonoverlapping(pubp, share.as_mut_ptr(), 32);
+            CRYPTO_free(pubp.cast(), core::ptr::null(), 0);
+            EVP_PKEY_free(server);
+            (ctx, s, share)
+        }
+    }
+
+    #[test]
+    fn valid_tls13_server_hello_is_accepted() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the connection and context are this test's own objects.
+        unsafe {
+            let (ctx, s, share) = tls13_connection();
+            let msg = server_hello(
+                SID,
+                TLS_AES_128_GCM_SHA256,
+                Some(&[
+                    key_share_ext(X25519, &share),
+                    supported_versions_ext(0x0304),
+                ]),
+            );
+            assert_eq!(
+                tls_process_server_hello(s, &msg),
+                1,
+                "a well-formed TLS1.3 ServerHello must be accepted"
+            );
+            assert_eq!((*s).version, TLS1_3_VERSION);
+            assert_eq!((*s).group_id, X25519);
+            assert_eq!((*(*s).pending_cipher).id as u16, TLS_AES_128_GCM_SHA256);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn valid_tls12_server_hello_selects_the_tls12_processor() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the connection and context are this test's own objects.
+        unsafe {
+            let ctx = SSL_CTX_new(crate::ssl::methods::TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            let msg = server_hello(&[], ECDHE_RSA_AES_128_GCM_SHA256, None);
+            assert_eq!(
+                process_server_hello_dispatch(s, &msg),
+                1,
+                "a TLS1.2 ServerHello must be accepted by the legacy arm"
+            );
+            assert_eq!((*s).version, TLS1_2_VERSION);
+            assert_eq!((*s).tls12_driver, 1);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn missing_supported_versions_selects_the_legacy_processor() {
+        let msg = server_hello(&[], ECDHE_RSA_AES_128_GCM_SHA256, None);
+        assert_eq!(
+            server_hello_selects_tls13(&msg),
+            Ok(false),
+            "absence of supported_versions must select the TLS1.2 arm"
+        );
+    }
+
+    #[test]
+    fn unknown_cipher_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = server_hello(&[], 0xFFFF, None);
+        // SAFETY: the refusal happens before any connection state is read.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls12_process_server_hello(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn session_id_echo_mismatch_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = server_hello(
+            SID,
+            TLS_AES_128_GCM_SHA256,
+            Some(&[supported_versions_ext(0x0304)]),
+        );
+        // SAFETY: the mismatch is detected before the cipher or context is used.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_server_hello(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn duplicate_extension_keeps_the_last_value() {
+        let first = key_share_ext(X25519, &[0x11; 32]);
+        let second = key_share_ext(0x0100, &[0x22; 16]);
+        let mut exts = Vec::new();
+        exts.extend_from_slice(&first);
+        exts.extend_from_slice(&second);
+        let parsed =
+            read_tls13_server_hello_extensions(&exts).expect("both entries are well formed");
+        assert_eq!(parsed.group, 0x0100, "the later key_share wins");
+        assert_eq!(parsed.share, &[0x22; 16]);
+    }
+
+    #[test]
+    fn key_share_group_not_offered_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the connection and context are this test's own objects.
+        unsafe {
+            let (ctx, s, _) = tls13_connection();
+            let msg = server_hello(
+                SID,
+                TLS_AES_128_GCM_SHA256,
+                Some(&[
+                    key_share_ext(0x0100, &[0x33; 16]),
+                    supported_versions_ext(0x0304),
+                ]),
+            );
+            assert_eq!(
+                tls_process_server_hello(s, &msg),
+                0,
+                "a group this client did not offer cannot complete the exchange"
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn truncated_extension_block_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let mut body = hello_prefix(SID, TLS_AES_128_GCM_SHA256);
+        // `extensions<2>` declares 255 bytes but the body ends here.
+        body.extend_from_slice(&[0x00, 0xFF]);
+        let msg = frame(body);
+        let sh = read_server_hello_layout(&msg, SSL3_MT_SERVER_HELLO as u8)
+            .expect("the fixed prefix is well formed");
+        assert!(
+            read_extension_block(sh.rest).is_none(),
+            "a declared extension extent past the body must be rejected"
+        );
+        // SAFETY: the mismatch is detected before the cipher or context is used.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (&mut (*s).tmp_session_id)[..SID.len()].copy_from_slice(SID);
+            (*s).tmp_session_id_len = SID.len();
+            assert_eq!(tls_process_server_hello(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    /// Deterministic (seeded, bounded) mutation of a well-formed ServerHello. Every parse helper
+    /// must answer `None`/`Err` rather than panic; the production entry points are not called here
+    /// because a zeroed connection has no context and a valid frame would reach it.
+    #[test]
+    fn malformed_server_hello_loop_does_not_panic() {
+        let good = server_hello(
+            SID,
+            TLS_AES_128_GCM_SHA256,
+            Some(&[
+                key_share_ext(X25519, &[0x44; 32]),
+                supported_versions_ext(0x0304),
+            ]),
+        );
+        let mut state = 0x9E37_79B9_7F4A_7C15u64;
+        for _ in 0..512 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut msg = good.clone();
+            let edits = 1 + (state as usize % 4);
+            for i in 0..edits {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                let at = (state as usize) % msg.len();
+                msg[at] ^= (state >> 32) as u8 | (i as u8 + 1);
+            }
+            if let Some(sh) = read_server_hello_layout(&msg, SSL3_MT_SERVER_HELLO as u8) {
+                if let Some(ServerHelloExtensionBlock::Present(exts)) =
+                    read_extension_block(sh.rest)
+                {
+                    let _ = read_tls13_server_hello_extensions(exts);
+                }
+            }
+            let _ = server_hello_selects_tls13(&msg);
         }
     }
 }
