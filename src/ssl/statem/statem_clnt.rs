@@ -2175,6 +2175,13 @@ pub(crate) unsafe fn tls13_client_process_post_handshake(s: *mut Ssl, msg: &[u8]
     if unsafe { tls_process_certificate_request(s, msg) } == 0 {
         return 0;
     }
+    // The same hook before the post-handshake client certificate is selected. The reduced
+    // synchronous driver cannot resume a half-built PHA flight, so a negative answer is
+    // reported as failure rather than an `SSL_X509_LOOKUP` wait.
+    // SAFETY: `s` is live.
+    if unsafe { crate::ssl::statem::statem_srvr::invoke_cert_cb(s) } <= 0 {
+        return 0;
+    }
     // `tls_construct_client_certificate` (`statem_clnt.c:3851-3910`): the stored context is echoed.
     // SAFETY: `s` is live; its `pha_context` member obeys the member-buffer invariant.
     let (ctx, ctx_len) = unsafe { (*s).pha_context() };
@@ -3126,6 +3133,12 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                             ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                             return -1;
                         }
+                        // `tls_prepare_client_certificate` (`statem_clnt.c:3772-3785`): the hook
+                        // runs before `TLS_ST_CW_CERT` decides whether a certificate is sent.
+                        // SAFETY: `s` is live.
+                        if crate::ssl::statem::statem_srvr::invoke_cert_cb(s) <= 0 {
+                            return -1;
+                        }
                         // A CertificateRequest is followed by ServerHelloDone.
                         continue;
                     }
@@ -3635,6 +3648,14 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
                         // (`statem_clnt.c:171-187`).
                         if tls_process_certificate_request(s, &buf[..n]) == 0 {
                             ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                            return -1;
+                        }
+                        // `tls_post_process_certificate_request` → `tls_prepare_client_certificate`
+                        // (`statem_clnt.c:1172`, `:3772-3785`): the certificate hook runs after
+                        // the request and before the client certificate is selected, so a
+                        // certificate it installs is the one the client sends.
+                        // SAFETY: `s` is live.
+                        if crate::ssl::statem::statem_srvr::invoke_cert_cb(s) <= 0 {
                             return -1;
                         }
                         (*s).hand_state = TLS_ST_CR_CERT_REQ;
