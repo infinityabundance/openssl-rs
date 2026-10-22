@@ -3336,6 +3336,19 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             }
             X509_VERIFY_PARAM_inherit((*s).param, (*ctx).param);
 
+            // `ssl_lib.c:769-772`: shallow-copy the context's TLSv1.3 suite stack. The
+            // connection's `SSL_set_cipher_list`/`SSL_set_ciphersuites` build their result from
+            // this stack, so a NULL one would drop every TLSv1.3 suite from the connection's
+            // cipher list (jimtcl's `SSL_set_cipher_list(ssl, "ALL")` then fails a TLSv1.3
+            // handshake with `no shared cipher`). The duplicate is released by `SSL_free`'s body.
+            if (*ctx).tls13_ciphersuites.is_null() {
+                return ptr::null_mut();
+            }
+            (*s).tls13_ciphersuites = OPENSSL_sk_dup((*ctx).tls13_ciphersuites);
+            if (*s).tls13_ciphersuites.is_null() {
+                return ptr::null_mut();
+            }
+
             (*s).cert = ssl_cert_dup((*ctx).cert);
             if (*s).cert.is_null() {
                 return ptr::null_mut();
