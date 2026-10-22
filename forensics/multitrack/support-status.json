@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "boundary": "the ladder records how far each release node reached, not how compatible anything is: `support_role` is ladder bookkeeping (`support-target` or `archaeology`) and is not a compatibility verdict, and no row is a `PARITY_VERIFIED` or any other one-boolean compatibility claim. The core rungs catalogued, admitted-source, built-authority and atlas-complete are the contiguous climb every supported node makes; candidate-view, runtime-evidenced, downstream-evidenced and maintained are each read from an independent evidence plane (23.10), so a node may attain them without the intermediate additive rungs -- 0.9.8zh is downstream-evidenced from a real consumer without candidate-view/runtime-evidenced. A status is derived from the evidence and never typed, and an archaeological-only node has climbed no rung",
-    "content_hash": "6dfe5637f416c5a4d75cbd8488d2f42640947a8bbfdb9d94ab28cd9174e6832f",
+    "content_hash": "6402ef11e3708a522993bf1d91b1d4c62aa3924b0e5ef05eb26eb5933f2e6222",
     "core_rungs": [
       "catalogued",
       "admitted-source",
@@ -12408,7 +12408,7 @@
           },
           {
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "what": "the compatible candidate view the authority carries"
           },
           {
@@ -12445,7 +12445,7 @@
           },
           "candidate-view": {
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "what": "the compatible candidate view the authority carries"
           },
           "catalogued": {
@@ -14452,7 +14452,7 @@
     {
       "name": "historical-population",
       "path": "forensics/multitrack/historical-population.json",
-      "sha256": "4ac5e33705c0962405202cf343f1ce231a97f8af9284a31163c18d7a07c73e58"
+      "sha256": "bd5026f6d8e1fe2a48f8dc8bdbac1d2d24f188a5fd6f60bee9fbe48719876ee3"
     },
     {
       "name": "release-catalog",
@@ -14487,7 +14487,7 @@
     {
       "name": "compatibility-views",
       "path": "forensics/multitrack/compatibility-views.json",
-      "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84"
+      "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7"
     },
     {
       "name": "semantic-courts",

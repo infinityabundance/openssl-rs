@@ -25262,12 +25262,12 @@
     {
       "name": "downstream-census",
       "path": "forensics/tools/downstream_census.py",
-      "sha256": "025921fa1197d6e56d5c6e664b3685150bf31a270a7b3150f719c27d85807875"
+      "sha256": "cb297dc4e1a66b2fc7c31ad0d98518a2d1976e2c5527df6a88e61673e0b142f9"
     },
     {
       "name": "phase24-guard",
       "path": "forensics/tools/phase24_guard.py",
-      "sha256": "94ea35a66565d01f3a82dc7113e571e7f59eb5c5f378911196c0783600b41192"
+      "sha256": "cb9c5d2949c9997f4d239514225330ffac5f91f295596f413bd8604d1052b026"
     },
     {
       "name": "phase-24-plan",
