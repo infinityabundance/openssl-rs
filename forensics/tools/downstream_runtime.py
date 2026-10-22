@@ -647,6 +647,55 @@ PROGRAMS: dict[str, dict] = {
         "note": ("dcap-tunnel-ssl's libsslTunnel plugin: a TLS tunnel carries the auth line and a "
                  "payload round trip, while a non-TLS peer is rejected"),
     },
+    # The Phase-25 L7 expansion batch (b11): three more library-level OpenSSL consumers. gensio
+    # and sofia-sip are driven by TLS harnesses; jimtcl's aio SSL extension is driven from a
+    # Tcl script evaluated by libjim.
+    "gensio": {
+        "program": ".l7-gensio-harness", "launch": ["--version"],
+        "version_re": r"gensio-l7-harness", "lib_paths": ["lib/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_gensio.c",
+            "cflags": ["-I{root}/include", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/lib/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/lib/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lgensio", "-lgensioosh", "-lssl",
+                        "-lcrypto", "-lpthread"],
+        },
+        "note": ("gensio's ssl gensio: a loopback TLS request/response round trip with the "
+                 "fixture CA, and an unrelated CA rejected"),
+    },
+    "jimtcl": {
+        "program": ".l7-jimtcl-harness", "launch": ["--version"],
+        "version_re": r"jimtcl-l7-harness", "lib_paths": [""],
+        "harness": {
+            "source": "forensics/tools/l7_jimtcl.c",
+            "cflags": ["-I{root}", "-I{prefix}/include",
+                       "-DL7_SCRIPT_PATH=\"{repo}/forensics/tools/l7_jimtcl.tcl\""],
+            "ldflags": ["-L{root}", "-L{prefix}/lib", "-Wl,-rpath,{root}",
+                        "-Wl,-rpath,{prefix}/lib", "-Wl,--no-as-needed",
+                        "-l:libjim.so.0.81", "-lssl", "-lcrypto", "-lm", "-ldl"],
+        },
+        "note": ("jimtcl's aio SSL extension: a TLS server accepts a request and writes the "
+                 "exact response, and a mismatched private key is rejected"),
+    },
+    "sofia-sip": {
+        "program": ".l7-sofia-sip-harness", "launch": ["--version"],
+        "version_re": r"sofia-sip-l7-harness", "lib_paths": ["libsofia-sip-ua/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_sofia_sip.c",
+            "cflags": ["-I{prefix}/include", "-I{root}/libsofia-sip-ua/su",
+                       "-I{root}/libsofia-sip-ua/msg", "-I{root}/libsofia-sip-ua/sip",
+                       "-I{root}/libsofia-sip-ua/tport", "-I{root}/libsofia-sip-ua/url",
+                       "-I{root}/libsofia-sip-ua/nea", "-I{root}/libsofia-sip-ua/stun",
+                       "-I{root}/libsofia-sip-ua/features", "-I{root}/libsofia-sip-ua"],
+            "ldflags": ["-L{root}/libsofia-sip-ua/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/libsofia-sip-ua/.libs",
+                        "-Wl,-rpath,{prefix}/lib", "-Wl,--no-as-needed",
+                        "-lsofia-sip-ua", "-lssl", "-lcrypto", "-lpthread", "-lrt"],
+        },
+        "note": ("sofia-sip's tport TLS transport: a SIP MESSAGE over loopback TLS returns its "
+                 "payload, and an unrelated CA is rejected"),
+    },
     # The Phase-25 L7 server batch: three TLS servers, an FTPS server and a TLS terminator. Each is
     # a real local exchange with a concrete observable and a negative control, not a banner.
     "memcached": {
@@ -7986,6 +8035,82 @@ def _wl_dcap_tunnel(ctx: dict) -> dict:
     }
 
 
+def _wl_gensio(ctx: dict) -> dict:
+    """gensio's ssl gensio request/response round trip and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"]),
+              "--ca", str(pki["ca_crt"]), "--other-ca", str(pki["other_crt"])]
+    res = _run_captured([prog] + common, cwd=d, env=ctx["env"], timeout=120)
+    text = res["stdout"] + res["stderr"]
+    ok = bool(res["ok"] and "tls_session=ok" in text and
+              "payload_round_trip=ok" in text and "wrong_ca=rejected" in text)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else (
+            "the ssl gensio did not complete the request/response round trip or accepted an "
+            "unrelated CA"),
+        "transcript": _transcript(("gensio TLS session", res)),
+        "workload": ("gensio: ssl gensio over loopback TCP carries a request and response with "
+                     "the fixture CA + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_jimtcl(ctx: dict) -> dict:
+    """jimtcl's aio SSL server response and a mismatched-key reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    res = _run_captured([prog, "--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"]),
+                         "--wrong-key", str(pki["other_key"])],
+                        cwd=d, env=ctx["env"], timeout=120)
+    text = res["stdout"] + res["stderr"]
+    ok = bool(res["ok"] and "tls_session=ok" in text and
+              "payload=jimtcl-l7-response" in text and "wrong_key=rejected" in text)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else (
+            "jimtcl's aio SSL server did not return the exact response or accepted a "
+            "mismatched private key"),
+        "transcript": _transcript(("jimtcl aio SSL server", res)),
+        "workload": ("jimtcl: the aio extension's OpenSSL server accepts a TLS request and "
+                     "writes the exact response + mismatched-key reject"),
+        "local_only": True,
+    }
+
+
+def _wl_sofia_sip(ctx: dict) -> dict:
+    """sofia-sip's tport TLS transport round trip and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    res = _run_captured([prog, "--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"]),
+                         "--ca", str(pki["ca_crt"]), "--other-ca", str(pki["other_crt"]),
+                         "--client-cert", str(pki["client_crt"]),
+                         "--client-key", str(pki["client_key"])],
+                        cwd=d, env=ctx["env"], timeout=120)
+    text = res["stdout"] + res["stderr"]
+    ok = bool(res["ok"] and "tls_session=ok" in text and
+              "payload=sofia-sip-l7-payload" in text and "wrong_ca=rejected" in text)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else (
+            "the tport TLS session did not deliver the SIP payload or accepted an unrelated CA"),
+        "transcript": _transcript(("sofia-sip tport TLS", res)),
+        "workload": ("sofia-sip: a SIP MESSAGE over tport TLS carries its payload on loopback "
+                     "+ unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -8084,6 +8209,10 @@ RUNNERS = {
     "lua-sec": _wl_luasec,
     "duo_unix": _wl_duo_unix,
     "dcap-tunnel-ssl": _wl_dcap_tunnel,
+    # The Phase-25 L7 expansion batch (b11).
+    "gensio": _wl_gensio,
+    "jimtcl": _wl_jimtcl,
+    "sofia-sip": _wl_sofia_sip,
 }
 
 
