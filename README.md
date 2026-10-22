@@ -46,6 +46,19 @@ which strata are complete. For shape, the strata group as:
 | 19–21 | performance / CPU dispatch, the 3.6.4 custodian seal, and the maintenance-delta machinery |
 | 22 | authority exhaustiveness and the whole-program compatibility atlas |
 
+> **Safe-33 conversion status (2026-10-20, reconciled 2026-10-22).** The
+> generated blocker block below is stale relative to later L7 runs: it records
+> 967 blocked / 33 measurable families (25 at L4-linked, 8 above), while the
+> current `forensics/downstream/runtime-functional-atlas.json` records 103
+> recipe-backed families, 102 loaded and 100 candidate / 101 authority
+> functional rows over the 1000-family corpus, with **33/33 cohort families at
+> `L7-functional`**. For conversion, discharge, test-count and consumer claims
+> read
+> [`forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`](forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md);
+> `forensics/STATUS.md` is generated and requires regeneration by
+> `forensics/tools/render_status.py` before its downstream figures can be
+> quoted.
+
 <!-- BEGIN GENERATED: downstream-blockers -->
 
 ## Downstream-1000 biggest movers (generated)
