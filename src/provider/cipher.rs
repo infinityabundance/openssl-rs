@@ -8501,11 +8501,20 @@ unsafe fn ccm_tls_init(ctx: *mut ProvCcmCtx, aad: *const c_uchar, alen: usize) -
             return 0;
         }
 
-        /* Save the aad for later use. */
-        ptr::copy_nonoverlapping(aad, (*ctx).buf.as_mut_ptr(), alen);
+        /* Save the aad for later use. `alen` is exactly the thirteen-byte TLS AAD, so the
+         * thirteen-byte `buf` prefix is always in range; the fallible forms state that rather
+         * than relying on the length check above. */
+        let src = core::slice::from_raw_parts(aad, alen);
+        let Some(dst) = (*ctx).buf.get_mut(..alen) else {
+            return 0;
+        };
+        dst.copy_from_slice(src);
         (*ctx).tls_aad_len = alen;
 
-        let mut len = ((*ctx).buf[alen - 2] as usize) << 8 | (*ctx).buf[alen - 1] as usize;
+        let Some(len_bytes) = dst.get(alen - 2..alen) else {
+            return 0;
+        };
+        let mut len = u16::from_be_bytes([len_bytes[0], len_bytes[1]]) as usize;
         if len < EVP_CCM_TLS_EXPLICIT_IV_LEN {
             return 0;
         }
@@ -8520,8 +8529,10 @@ unsafe fn ccm_tls_init(ctx: *mut ProvCcmCtx, aad: *const c_uchar, alen: usize) -
             /* Correct length for tag. */
             len -= (*ctx).m;
         }
-        (*ctx).buf[alen - 2] = (len >> 8) as c_uchar;
-        (*ctx).buf[alen - 1] = (len & 0xff) as c_uchar;
+        let Some(slot) = dst.get_mut(alen - 2..alen) else {
+            return 0;
+        };
+        slot.copy_from_slice(&(len as u16).to_be_bytes());
 
         /* Extra padding: tag appended to record. */
         (*ctx).m as c_int
@@ -8539,8 +8550,13 @@ unsafe fn ccm_tls_iv_set_fixed(ctx: *mut ProvCcmCtx, fixed: *const c_uchar, flen
             return 0;
         }
 
-        /* Copy to first part of the iv. */
-        ptr::copy_nonoverlapping(fixed, (*ctx).iv.as_mut_ptr(), flen);
+        /* Copy to first part of the iv. `flen` is exactly the four-byte fixed IV and `iv` is
+         * sixteen bytes, so the fallible prefix is a restatement, not a reachable failure. */
+        let src = core::slice::from_raw_parts(fixed, flen);
+        let Some(dst) = (*ctx).iv.get_mut(..flen) else {
+            return 0;
+        };
+        dst.copy_from_slice(src);
         1
     }
 }
@@ -8643,11 +8659,12 @@ unsafe extern "C" fn ossl_ccm_set_ctx_params(vctx: *mut c_void, params: *const O
                 if (*ctx).flags.enc() != 0 {
                     return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_196);
                 }
-                ptr::copy_nonoverlapping(
-                    (*p).data.cast::<c_uchar>(),
-                    (*ctx).buf.as_mut_ptr(),
-                    (*p).data_size,
-                );
+                // `data_size` was checked into `[4, 16]` and `buf` is sixteen bytes.
+                let src = core::slice::from_raw_parts((*p).data.cast::<c_uchar>(), (*p).data_size);
+                let Some(dst) = (*ctx).buf.get_mut(..(*p).data_size) else {
+                    return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_190);
+                };
+                dst.copy_from_slice(src);
                 (*ctx).flags.set_tag_set(true);
             }
             (*ctx).m = (*p).data_size;
@@ -8819,7 +8836,12 @@ unsafe fn ccm_init(
             if ivlen != ccm_get_ivlen(ctx) {
                 return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_476);
             }
-            ptr::copy_nonoverlapping(iv, (*ctx).iv.as_mut_ptr(), ivlen);
+            // `ivlen == 15 - ctx->l` is in `[2, 8]` and `iv` is sixteen bytes.
+            let src = core::slice::from_raw_parts(iv, ivlen);
+            let Some(dst) = (*ctx).iv.get_mut(..ivlen) else {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_476);
+            };
+            dst.copy_from_slice(src);
             (*ctx).flags.set_iv_set(true);
         }
         if !key.is_null() {
@@ -9005,8 +9027,6 @@ unsafe fn ccm_tls_cipher(
     unsafe {
         let mut rv = 0;
         let mut olen = 0usize;
-        let mut in_ = in_;
-        let mut out = out;
 
         'arm: {
             if is_running() == 0 {
@@ -9021,42 +9041,80 @@ unsafe fn ccm_tls_cipher(
                 break 'arm;
             }
 
+            // The record is one writable region: explicit IV, payload, tag. Deriving the three
+            // parts by `split_at_mut` means every later store is inside the region the dispatch
+            // contract declared writable, with no offset arithmetic on a raw pointer.
+            let buf = core::slice::from_raw_parts_mut(out, len);
+
             /* If encrypting set explicit IV from sequence number (start of AAD) */
             if (*ctx).flags.enc() != 0 {
-                ptr::copy_nonoverlapping((*ctx).buf.as_ptr(), out, EVP_CCM_TLS_EXPLICIT_IV_LEN);
+                let Some(src) = (*ctx).buf.get(..EVP_CCM_TLS_EXPLICIT_IV_LEN) else {
+                    break 'arm;
+                };
+                let Some(dst) = buf.get_mut(..EVP_CCM_TLS_EXPLICIT_IV_LEN) else {
+                    break 'arm;
+                };
+                dst.copy_from_slice(src);
             }
             /* Get rest of IV from explicit IV */
-            ptr::copy_nonoverlapping(
-                in_,
-                (*ctx).iv.as_mut_ptr().add(EVP_CCM_TLS_FIXED_IV_LEN),
-                EVP_CCM_TLS_EXPLICIT_IV_LEN,
-            );
+            {
+                let Some(src) = buf.get(..EVP_CCM_TLS_EXPLICIT_IV_LEN) else {
+                    break 'arm;
+                };
+                let Some(dst) = (*ctx).iv.get_mut(
+                    EVP_CCM_TLS_FIXED_IV_LEN
+                        ..EVP_CCM_TLS_FIXED_IV_LEN + EVP_CCM_TLS_EXPLICIT_IV_LEN,
+                ) else {
+                    break 'arm;
+                };
+                dst.copy_from_slice(src);
+            }
             /* Correct length value */
-            let len = len - (EVP_CCM_TLS_EXPLICIT_IV_LEN + (*ctx).m);
-            if ccm_set_iv(ctx, len) == 0 {
+            let plen = len - (EVP_CCM_TLS_EXPLICIT_IV_LEN + (*ctx).m);
+            if ccm_set_iv(ctx, plen) == 0 {
                 break 'arm;
             }
 
             /* Use saved AAD */
             let hw = (*ctx).hw;
-            if ((*hw).setaad)(ctx, (*ctx).buf.as_ptr(), (*ctx).tls_aad_len) == 0 {
+            let Some(aad) = (*ctx).buf.get(..(*ctx).tls_aad_len) else {
+                break 'arm;
+            };
+            if ((*hw).setaad)(ctx, aad.as_ptr(), aad.len()) == 0 {
                 break 'arm;
             }
 
-            /* Fix buffer to point to payload */
-            in_ = in_.add(EVP_CCM_TLS_EXPLICIT_IV_LEN);
-            out = out.add(EVP_CCM_TLS_EXPLICIT_IV_LEN);
+            /* Fix buffer to point to payload, with the tag at its exact full-record offset. */
+            let (_explicit_iv, rest) = buf.split_at_mut(EVP_CCM_TLS_EXPLICIT_IV_LEN);
+            let (payload, tag_slot) = rest.split_at_mut(plen);
             if (*ctx).flags.enc() != 0 {
-                if ((*hw).auth_encrypt)(ctx, in_, out, len, out.add(len), (*ctx).m) == 0 {
-                    break 'arm;
-                }
-                olen = len + EVP_CCM_TLS_EXPLICIT_IV_LEN + (*ctx).m;
-            } else {
-                if ((*hw).auth_decrypt)(ctx, in_, out, len, in_.add(len).cast_mut(), (*ctx).m) == 0
+                if ((*hw).auth_encrypt)(
+                    ctx,
+                    payload.as_ptr(),
+                    payload.as_mut_ptr(),
+                    plen,
+                    tag_slot.as_mut_ptr(),
+                    (*ctx).m,
+                ) == 0
                 {
                     break 'arm;
                 }
                 olen = len;
+            } else {
+                // The expected tag sits where the payload ends, at the same offset in the
+                // in-place record. `auth_decrypt` cleanses `payload` itself when the tag differs.
+                if ((*hw).auth_decrypt)(
+                    ctx,
+                    payload.as_ptr(),
+                    payload.as_mut_ptr(),
+                    plen,
+                    tag_slot.as_mut_ptr(),
+                    (*ctx).m,
+                ) == 0
+                {
+                    break 'arm;
+                }
+                olen = plen;
             }
             rv = 1;
             break 'arm;
@@ -9134,9 +9192,11 @@ unsafe fn ccm_cipher_internal(
                         break 'arm;
                     }
 
-                    if ((*hw).auth_decrypt)(ctx, in_, out, len, (*ctx).buf.as_mut_ptr(), (*ctx).m)
-                        == 0
-                    {
+                    // `m` was checked into `[4, 16]` and `buf` is sixteen bytes.
+                    let Some(tag) = (*ctx).buf.get_mut(..(*ctx).m) else {
+                        break 'arm;
+                    };
+                    if ((*hw).auth_decrypt)(ctx, in_, out, len, tag.as_mut_ptr(), tag.len()) == 0 {
                         break 'arm;
                     }
                     /* Finished - reset flags so calling this method again will fail */
@@ -9322,6 +9382,9 @@ unsafe fn ossl_ccm_generic_auth_decrypt(
             {
                 rv = 0;
             }
+            // Deliberate safety improvement over the authority, which leaves this stack buffer to
+            // be recycled: the computed tag is secret-dependent and is cleansed on both outcomes.
+            OPENSSL_cleanse(tag.as_mut_ptr().cast(), tag.len());
         }
         if rv == 0 {
             OPENSSL_cleanse(out.cast(), len);
@@ -15996,17 +16059,12 @@ struct ProvCipherHwChacha20Poly1305 {
 /// agree. The little-endian arms are *not* factored: they are a `memcpy` of [`ChaCha20Poly1305Len`]
 /// and have no text to get wrong.
 ///
-/// # Safety
-/// `out` is writable for sixteen bytes.
-unsafe fn chacha20_poly1305_len_be(l: &ChaCha20Poly1305Len, out: *mut c_uchar) {
-    // SAFETY: the caller's contract.
-    unsafe {
-        let mut i = 0;
-        while i < 8 {
-            *out.add(i) = (l.aad >> (8 * i)) as c_uchar;
-            *out.add(8 + i) = (l.text >> (8 * i)) as c_uchar;
-            i += 1;
-        }
+fn chacha20_poly1305_len_be(l: &ChaCha20Poly1305Len, out: &mut [c_uchar; POLY1305_BLOCK_SIZE]) {
+    let mut i = 0;
+    while i < 8 {
+        out[i] = (l.aad >> (8 * i)) as c_uchar;
+        out[8 + i] = (l.text >> (8 * i)) as c_uchar;
+        i += 1;
     }
 }
 
@@ -16086,13 +16144,15 @@ unsafe extern "C" fn chacha20_poly1305_initiv(bctx: *mut ProvCipherCtx) -> c_int
         cpp_set(ctx, CHACHA20_POLY1305_F_MAC_INITED, false);
         (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
 
-        ptr::copy_nonoverlapping(
-            (*ctx).base.oiv.as_ptr(),
-            tempiv
-                .as_mut_ptr()
-                .add(crate::chacha::CHACHA_CTR_SIZE - CHACHA20_POLY1305_IVLEN),
-            CHACHA20_POLY1305_IVLEN,
-        );
+        let Some(iv_dst) =
+            tempiv.get_mut(crate::chacha::CHACHA_CTR_SIZE - CHACHA20_POLY1305_IVLEN..)
+        else {
+            return 0;
+        };
+        let Some(iv_src) = (*ctx).base.oiv.get(..CHACHA20_POLY1305_IVLEN) else {
+            return 0;
+        };
+        iv_dst.copy_from_slice(iv_src);
 
         let ret = if bits(bctx) & CTX_ENC != 0 {
             ossl_chacha20_einit(
@@ -16145,31 +16205,46 @@ unsafe extern "C" fn chacha_poly1305_tls_init(
     // SAFETY: the caller's contract.
     unsafe {
         let ctx = bctx.cast::<ProvChacha20Poly1305Ctx>();
-        let mut len: c_uint;
 
         if alen != EVP_AEAD_TLS1_AAD_LEN {
             return 0;
         }
 
-        ptr::copy_nonoverlapping(aad, (*ctx).tls_aad.as_mut_ptr(), EVP_AEAD_TLS1_AAD_LEN);
-        len = ((*aad.add(EVP_AEAD_TLS1_AAD_LEN - 2) as c_uint) << 8)
-            | (*aad.add(EVP_AEAD_TLS1_AAD_LEN - 1) as c_uint);
-        let aad = (*ctx).tls_aad.as_mut_ptr();
+        // `alen` is exactly the thirteen-byte TLS AAD and `tls_aad` is sixteen bytes, so these
+        // prefixes are always in range; the fallible forms state that rather than assume it.
+        let src = core::slice::from_raw_parts(aad, alen);
+        let Some(dst) = (*ctx).tls_aad.get_mut(..alen) else {
+            return 0;
+        };
+        dst.copy_from_slice(src);
+        let Some(len_bytes) = dst.get(alen - 2..alen) else {
+            return 0;
+        };
+        let mut len = u16::from_be_bytes([len_bytes[0], len_bytes[1]]) as c_uint;
         if bits(bctx) & CTX_ENC == 0 {
             if len < POLY1305_BLOCK_SIZE as c_uint {
                 return 0;
             }
             len -= POLY1305_BLOCK_SIZE as c_uint;
-            *aad.add(EVP_AEAD_TLS1_AAD_LEN - 2) = (len >> 8) as c_uchar;
-            *aad.add(EVP_AEAD_TLS1_AAD_LEN - 1) = len as c_uchar;
+            let Some(slot) = dst.get_mut(alen - 2..alen) else {
+                return 0;
+            };
+            slot.copy_from_slice(&(len as u16).to_be_bytes());
         }
         (*ctx).tls_payload_length = len as usize;
 
+        // RFC 7905's merge: the AAD's first eight bytes are the record sequence number, XORed
+        // into the nonce's last two words. The AAD view is `tls_aad`, which is what the tag
+        // commits to -- including the length rewrite above and the three padding bytes.
+        let Some(seq_lo) = dst.get(0..4) else {
+            return 0;
+        };
+        let Some(seq_hi) = dst.get(4..8) else {
+            return 0;
+        };
         (*ctx).chacha.counter[1] = (*ctx).nonce[0];
-        (*ctx).chacha.counter[2] =
-            (*ctx).nonce[1] ^ crate::chacha::u8tou32(core::slice::from_raw_parts(aad, 4));
-        (*ctx).chacha.counter[3] =
-            (*ctx).nonce[2] ^ crate::chacha::u8tou32(core::slice::from_raw_parts(aad.add(4), 4));
+        (*ctx).chacha.counter[2] = (*ctx).nonce[1] ^ crate::chacha::u8tou32(seq_lo);
+        (*ctx).chacha.counter[3] = (*ctx).nonce[2] ^ crate::chacha::u8tou32(seq_hi);
         cpp_set(ctx, CHACHA20_POLY1305_F_MAC_INITED, false);
 
         POLY1305_BLOCK_SIZE as c_int
@@ -16198,11 +16273,21 @@ unsafe extern "C" fn chacha_poly1305_tls_iv_set_fixed(
         if flen != CHACHA20_POLY1305_IVLEN {
             return 0;
         }
-        (*ctx).nonce[0] = crate::chacha::u8tou32(core::slice::from_raw_parts(fixed, 4));
+        let src = core::slice::from_raw_parts(fixed, flen);
+        let Some(w0) = src.get(0..4) else {
+            return 0;
+        };
+        let Some(w1) = src.get(4..8) else {
+            return 0;
+        };
+        let Some(w2) = src.get(8..12) else {
+            return 0;
+        };
+        (*ctx).nonce[0] = crate::chacha::u8tou32(w0);
         (*ctx).chacha.counter[1] = (*ctx).nonce[0];
-        (*ctx).nonce[1] = crate::chacha::u8tou32(core::slice::from_raw_parts(fixed.add(4), 4));
+        (*ctx).nonce[1] = crate::chacha::u8tou32(w1);
         (*ctx).chacha.counter[2] = (*ctx).nonce[1];
-        (*ctx).nonce[2] = crate::chacha::u8tou32(core::slice::from_raw_parts(fixed.add(8), 4));
+        (*ctx).nonce[2] = crate::chacha::u8tou32(w2);
         (*ctx).chacha.counter[3] = (*ctx).nonce[2];
         1
     }
@@ -16244,6 +16329,9 @@ unsafe fn chacha20_poly1305_tls_cipher(
         let poly = core::ptr::addr_of_mut!((*ctx).poly1305);
         let enc = bits(bctx) & CTX_ENC != 0;
         let plen = (*ctx).tls_payload_length;
+        // The record's first byte, kept so the failure path can wipe exactly the staged plaintext
+        // without an offset subtraction on a raw pointer.
+        let out_base = out;
         let mut in_ = in_;
         let mut out = out;
         let mut len = len;
@@ -16366,16 +16454,15 @@ unsafe fn chacha20_poly1305_tls_cipher(
         }
 
         // The length block, at the advanced `ctr` in the fast arm and at `tohash` in the slow one --
-        // which is the same address there.
+        // which is the same address there. The bytes are built in a checked array and copied once.
+        let mut len_block = [0 as c_uchar; POLY1305_BLOCK_SIZE];
         if cfg!(target_endian = "little") {
-            ptr::copy_nonoverlapping(
-                core::ptr::addr_of!((*ctx).len).cast::<c_uchar>(),
-                ctr,
-                POLY1305_BLOCK_SIZE,
-            );
+            len_block[..8].copy_from_slice(&(*ctx).len.aad.to_le_bytes());
+            len_block[8..].copy_from_slice(&(*ctx).len.text.to_le_bytes());
         } else {
-            chacha20_poly1305_len_be(&(*ctx).len, ctr);
+            chacha20_poly1305_len_be(&(*ctx).len, &mut len_block);
         }
+        ptr::copy_nonoverlapping(len_block.as_ptr(), ctr, POLY1305_BLOCK_SIZE);
         tohash_len += POLY1305_BLOCK_SIZE;
 
         crate::mac::poly1305::Poly1305_Update(poly, tohash, tohash_len);
@@ -16388,16 +16475,24 @@ unsafe fn chacha20_poly1305_tls_cipher(
         (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
 
         if enc {
-            ptr::copy_nonoverlapping((*ctx).tag.as_ptr(), out, POLY1305_BLOCK_SIZE);
+            let tag_dst = core::slice::from_raw_parts_mut(out, POLY1305_BLOCK_SIZE);
+            tag_dst.copy_from_slice(&(*ctx).tag);
         } else {
-            if CRYPTO_memcmp(tohash.cast(), in_.cast(), POLY1305_BLOCK_SIZE) != 0 {
-                if len > POLY1305_BLOCK_SIZE {
-                    ptr::write_bytes(
-                        out.sub(len - POLY1305_BLOCK_SIZE),
-                        0,
-                        len - POLY1305_BLOCK_SIZE,
-                    );
-                }
+            let computed = core::slice::from_raw_parts(tohash, POLY1305_BLOCK_SIZE);
+            let received = core::slice::from_raw_parts(in_, POLY1305_BLOCK_SIZE);
+            if CRYPTO_memcmp(
+                computed.as_ptr().cast(),
+                received.as_ptr().cast(),
+                POLY1305_BLOCK_SIZE,
+            ) != 0
+            {
+                // `len` is the payload plus the tag, so the staged plaintext starts at
+                // `out_base` and is exactly `len - POLY1305_BLOCK_SIZE` bytes.
+                let staged = core::slice::from_raw_parts_mut(out_base, len - POLY1305_BLOCK_SIZE);
+                staged.fill(0);
+                // Deliberate safety improvement over the authority: the computed tag is
+                // secret-dependent and would otherwise be left in the scratch buffer.
+                OPENSSL_cleanse(tohash.cast(), POLY1305_BLOCK_SIZE);
                 return 0;
             }
             // Strip the tag.
@@ -16441,6 +16536,8 @@ unsafe extern "C" fn chacha20_poly1305_aead_cipher(
         let mut inl = inl;
         let mut in_ = in_;
         let mut out = out;
+        // The text's first byte, so the failure path can wipe exactly the staged plaintext.
+        let out_base = out;
         let mut olen: usize = 0;
         let mut rv: c_int = 0;
 
@@ -16569,7 +16666,7 @@ unsafe extern "C" fn chacha20_poly1305_aead_cipher(
                         POLY1305_BLOCK_SIZE,
                     );
                 } else {
-                    chacha20_poly1305_len_be(&(*ctx).len, temp.as_mut_ptr());
+                    chacha20_poly1305_len_be(&(*ctx).len, &mut temp);
                     crate::mac::poly1305::Poly1305_Update(poly, temp.as_ptr(), POLY1305_BLOCK_SIZE);
                 }
                 crate::mac::poly1305::Poly1305_Final(
@@ -16584,11 +16681,17 @@ unsafe extern "C" fn chacha20_poly1305_aead_cipher(
 
                 if !in_.is_null() && inl != plen {
                     if enc {
-                        ptr::copy_nonoverlapping((*ctx).tag.as_ptr(), out, POLY1305_BLOCK_SIZE);
+                        let tag_dst = core::slice::from_raw_parts_mut(out, POLY1305_BLOCK_SIZE);
+                        tag_dst.copy_from_slice(&(*ctx).tag);
                     } else {
                         if CRYPTO_memcmp(temp.as_ptr().cast(), in_.cast(), POLY1305_BLOCK_SIZE) != 0
                         {
-                            ptr::write_bytes(out.sub(plen), 0, plen);
+                            // Wipe the plaintext staged at the text's start, exactly `plen`
+                            // bytes, rather than subtracting an offset from a raw pointer.
+                            let staged = core::slice::from_raw_parts_mut(out_base, plen);
+                            staged.fill(0);
+                            // Deliberate safety improvement: cleanse the computed tag.
+                            OPENSSL_cleanse(temp.as_mut_ptr().cast(), temp.len());
                             break 'arm;
                         }
                         // Strip the tag.
@@ -23241,5 +23344,1008 @@ mod tests {
         );
         // SAFETY: `unarmed` is this frame's allocation and the duplicate did not take it.
         unsafe { EVP_CIPHER_CTX_free(unarmed) };
+    }
+
+    // -------------------------------------------------------------------------------------
+    // AES-CCM and ChaCha20-Poly1305: the AEAD cluster's vectors and adversarial cases
+    // -------------------------------------------------------------------------------------
+
+    fn hex_bytes(s: &str) -> Vec<u8> {
+        assert_eq!(s.len() % 2, 0, "hex strings are byte-aligned");
+        (0..s.len() / 2)
+            .map(|i| u8::from_str_radix(&s[2 * i..2 * i + 2], 16).unwrap())
+            .collect()
+    }
+
+    /// NIST CAVS AES-CCM, as pinned in the authority's own test data
+    /// (`forensics/authorities/src/openssl-3.5.9/test/recipes/30-test_evp_data/evpciph_aes_ccm_cavs.txt:1692-1699`):
+    /// `K = f9fdca4a..7571`, `N = 5a8aa485c316e9` (so `L = 8`), a 28-byte AAD, a 24-byte
+    /// plaintext, `M = 4`, `C = 6be31860..d65b3`, `T = 38f125fa`.
+    ///
+    /// Both directions run, so neither the tag emission nor the tag check can drift without the
+    /// comparison failing.
+    #[test]
+    fn aes_ccm_cavs_aad_and_message_is_byte_exact() {
+        let key = hex_bytes("f9fdca4ac64fe7f014de0f43039c7571");
+        let nonce = hex_bytes("5a8aa485c316e9");
+        let aad = hex_bytes("3796cf51b8726652a4204733b8fbb047cf00fb91a9837e22ec22b1a268f88e2c");
+        let pt = hex_bytes("a265480ca88d5f536db0dc6abc40faf0d05be7a966977768");
+        let want_ct = hex_bytes("6be31860ca271ef448de8f8d8b39346daf4b81d7e92d65b3");
+        let want_tag = hex_bytes("38f125fa");
+
+        // SAFETY: every pointer below is a live local of this frame for the duration of the call,
+        // each buffer is sized by its own slice, and the context is freed exactly once.
+        unsafe {
+            let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+            assert!(!ctx.is_null(), "the AES-CCM context must allocate");
+            // A tag *length* with a NULL data pointer is how `M` is set on the encrypting side.
+            // The tag length must reach the mode context, which `ccm_generic_aes_initkey`
+            // initialises from `ctx->m`; `ccm_init` applies its parameter list *after* the key
+            // (`ciphercommon_ccm.c:484-489`), so the parameter has to arrive first -- exactly the
+            // order `EVP_CIPHER_CTX_ctrl(EVP_CTRL_AEAD_SET_TAG, 4, NULL)` before init produces.
+            let mut tag_len = param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG);
+            tag_len.data_size = 4;
+            let params = [tag_len, END];
+            assert_eq!(
+                ossl_ccm_set_ctx_params(ctx, params.as_ptr()),
+                1,
+                "tag length"
+            );
+            assert_eq!(
+                ossl_ccm_einit(
+                    ctx,
+                    key.as_ptr(),
+                    key.len(),
+                    nonce.as_ptr(),
+                    nonce.len(),
+                    ptr::null(),
+                ),
+                1,
+                "init"
+            );
+            let mut outl = 0usize;
+            // AES-CCM requires the message length before AAD (`ciphercommon_ccm.c:419-421`),
+            // which `EVP_EncryptUpdate(ctx, NULL, &outl, NULL, len)` reaches through the update
+            // entry point, not the one-shot `ossl_ccm_cipher`.
+            assert_eq!(
+                ossl_ccm_stream_update(
+                    ctx,
+                    ptr::null_mut(),
+                    &mut outl,
+                    pt.len(),
+                    ptr::null(),
+                    pt.len()
+                ),
+                1,
+                "message length"
+            );
+            assert_eq!(
+                ossl_ccm_cipher(
+                    ctx,
+                    ptr::null_mut(),
+                    &mut outl,
+                    aad.len(),
+                    aad.as_ptr(),
+                    aad.len()
+                ),
+                1,
+                "AAD"
+            );
+            let mut ct = vec![0u8; pt.len()];
+            assert_eq!(
+                ossl_ccm_cipher(
+                    ctx,
+                    ct.as_mut_ptr(),
+                    &mut outl,
+                    ct.len(),
+                    pt.as_ptr(),
+                    pt.len()
+                ),
+                1,
+                "encrypt"
+            );
+            assert_eq!(outl, pt.len());
+            assert_eq!(
+                ossl_ccm_cipher(ctx, ptr::null_mut(), &mut outl, 0, ptr::null(), 0),
+                1,
+                "finish"
+            );
+            let mut tag = [0u8; 4];
+            let mut get = [
+                param_octet_string_with(OSSL_CIPHER_PARAM_AEAD_TAG, tag.as_mut_ptr().cast(), 4),
+                END,
+            ];
+            assert_eq!(ossl_ccm_get_ctx_params(ctx, get.as_mut_ptr()), 1, "get tag");
+            assert_eq!(
+                ct.as_slice(),
+                want_ct.as_slice(),
+                "CAVS AAD+message ciphertext"
+            );
+            assert_eq!(tag.as_slice(), want_tag.as_slice(), "CAVS AAD+message tag");
+            aes_ccm_freectx(ctx);
+
+            // The decrypting side takes the tag as an input parameter.
+            let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+            assert!(!ctx.is_null());
+            let mut supplied = want_tag.clone();
+            let params = [
+                param_octet_string_with(
+                    OSSL_CIPHER_PARAM_AEAD_TAG,
+                    supplied.as_mut_ptr().cast(),
+                    supplied.len(),
+                ),
+                END,
+            ];
+            assert_eq!(ossl_ccm_set_ctx_params(ctx, params.as_ptr()), 1, "tag");
+            assert_eq!(
+                ossl_ccm_dinit(
+                    ctx,
+                    key.as_ptr(),
+                    key.len(),
+                    nonce.as_ptr(),
+                    nonce.len(),
+                    ptr::null(),
+                ),
+                1,
+                "dinit"
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                ossl_ccm_stream_update(
+                    ctx,
+                    ptr::null_mut(),
+                    &mut outl,
+                    pt.len(),
+                    ptr::null(),
+                    pt.len()
+                ),
+                1,
+                "message length"
+            );
+            assert_eq!(
+                ossl_ccm_cipher(
+                    ctx,
+                    ptr::null_mut(),
+                    &mut outl,
+                    aad.len(),
+                    aad.as_ptr(),
+                    aad.len()
+                ),
+                1,
+                "AAD"
+            );
+            let mut out = vec![0u8; pt.len()];
+            assert_eq!(
+                ossl_ccm_cipher(
+                    ctx,
+                    out.as_mut_ptr(),
+                    &mut outl,
+                    out.len(),
+                    want_ct.as_ptr(),
+                    want_ct.len()
+                ),
+                1,
+                "decrypt"
+            );
+            assert_eq!(outl, pt.len());
+            assert_eq!(out.as_slice(), pt.as_slice(), "CAVS AAD+message plaintext");
+            assert_eq!(
+                ossl_ccm_cipher(ctx, ptr::null_mut(), &mut outl, 0, ptr::null(), 0),
+                1,
+                "finish"
+            );
+            aes_ccm_freectx(ctx);
+        }
+    }
+
+    /// A tag mismatch must answer `0`, leave `*outl` at zero, and leave **no plaintext** in the
+    /// caller's buffer: `ossl_ccm_generic_auth_decrypt` cleanses it, which is an observable effect
+    /// of the authority's own design and not an added one.
+    #[test]
+    fn aes_ccm_tampered_tag_writes_no_plaintext() {
+        let key = [0x11u8; 16];
+        let nonce = [0x22u8; 7];
+        let aad = [0x33u8; 16];
+        let pt = *b"sixteen bytes!!!";
+
+        // SAFETY: as above; all buffers are frame locals.
+        unsafe {
+            let mut ct = [0u8; 16];
+            let mut tag = [0u8; 16];
+            {
+                let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+                assert!(!ctx.is_null());
+                let mut tag_len = param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG);
+                tag_len.data_size = 16;
+                let params = [tag_len, END];
+                assert_eq!(ossl_ccm_set_ctx_params(ctx, params.as_ptr()), 1);
+                assert_eq!(
+                    ossl_ccm_einit(ctx, key.as_ptr(), 16, nonce.as_ptr(), 7, ptr::null()),
+                    1
+                );
+                let mut outl = 0usize;
+                assert_eq!(
+                    ossl_ccm_stream_update(
+                        ctx,
+                        ptr::null_mut(),
+                        &mut outl,
+                        pt.len(),
+                        ptr::null(),
+                        pt.len()
+                    ),
+                    1,
+                    "message length"
+                );
+                assert_eq!(
+                    ossl_ccm_cipher(
+                        ctx,
+                        ptr::null_mut(),
+                        &mut outl,
+                        aad.len(),
+                        aad.as_ptr(),
+                        aad.len()
+                    ),
+                    1
+                );
+                assert_eq!(
+                    ossl_ccm_cipher(
+                        ctx,
+                        ct.as_mut_ptr(),
+                        &mut outl,
+                        ct.len(),
+                        pt.as_ptr(),
+                        pt.len()
+                    ),
+                    1
+                );
+                assert_eq!(
+                    ossl_ccm_cipher(ctx, ptr::null_mut(), &mut outl, 0, ptr::null(), 0),
+                    1
+                );
+                let mut get = [
+                    param_octet_string_with(
+                        OSSL_CIPHER_PARAM_AEAD_TAG,
+                        tag.as_mut_ptr().cast(),
+                        16,
+                    ),
+                    END,
+                ];
+                assert_eq!(ossl_ccm_get_ctx_params(ctx, get.as_mut_ptr()), 1);
+                aes_ccm_freectx(ctx);
+            }
+            tag[0] ^= 0x01;
+
+            let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+            assert!(!ctx.is_null());
+            let params = [
+                param_octet_string_with(
+                    OSSL_CIPHER_PARAM_AEAD_TAG,
+                    tag.as_mut_ptr().cast(),
+                    tag.len(),
+                ),
+                END,
+            ];
+            assert_eq!(ossl_ccm_set_ctx_params(ctx, params.as_ptr()), 1);
+            assert_eq!(
+                ossl_ccm_dinit(ctx, key.as_ptr(), 16, nonce.as_ptr(), 7, ptr::null()),
+                1
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                ossl_ccm_stream_update(
+                    ctx,
+                    ptr::null_mut(),
+                    &mut outl,
+                    ct.len(),
+                    ptr::null(),
+                    ct.len()
+                ),
+                1,
+                "message length"
+            );
+            assert_eq!(
+                ossl_ccm_cipher(
+                    ctx,
+                    ptr::null_mut(),
+                    &mut outl,
+                    aad.len(),
+                    aad.as_ptr(),
+                    aad.len()
+                ),
+                1
+            );
+            let mut out = [0xa5u8; 16];
+            assert_eq!(
+                ossl_ccm_cipher(
+                    ctx,
+                    out.as_mut_ptr(),
+                    &mut outl,
+                    out.len(),
+                    ct.as_ptr(),
+                    ct.len()
+                ),
+                0,
+                "a flipped tag must be refused"
+            );
+            assert_eq!(outl, 0, "a refused decrypt reports no output");
+            assert_eq!(out, [0u8; 16], "the staged plaintext must be cleansed");
+            aes_ccm_freectx(ctx);
+        }
+    }
+
+    /// CCM's tag window is `[4, 16]` and even (`ciphercommon_ccm.c:190`); a three-byte tag is a
+    /// truncated tag and is refused at init, before any record is processed.
+    #[test]
+    fn aes_ccm_tag_shorter_than_four_bytes_is_refused() {
+        // SAFETY: frame locals only; `params` borrows `short` for the call's duration.
+        unsafe {
+            let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+            assert!(!ctx.is_null());
+            let mut short = [0u8; 3];
+            let params = [
+                param_octet_string_with(
+                    OSSL_CIPHER_PARAM_AEAD_TAG,
+                    short.as_mut_ptr().cast(),
+                    short.len(),
+                ),
+                END,
+            ];
+            assert_eq!(
+                ossl_ccm_set_ctx_params(ctx, params.as_ptr()),
+                0,
+                "a three-byte CCM tag must be refused"
+            );
+            aes_ccm_freectx(ctx);
+        }
+    }
+
+    /// The TLS 1.2 record shape: no explicit IV in the AAD length on encrypt, `8 + payload + 12`
+    /// on decrypt, in-place operation only. Covers a zero-length payload, a too-small record and a
+    /// maximum-size (16384-byte) payload.
+    #[test]
+    fn aes_ccm_tls_record_round_trip_and_limits() {
+        fn aad13(payload_len: usize) -> [u8; 13] {
+            let mut a = [0u8; 13];
+            a[8] = 0x17;
+            a[9] = 0x03;
+            a[10] = 0x03;
+            a[11] = (payload_len >> 8) as u8;
+            a[12] = payload_len as u8;
+            a
+        }
+
+        // SAFETY: every buffer is a frame local sized by its slice; the context is freed once per
+        // direction, and the in-place contract (`out == in`) is satisfied by construction.
+        unsafe {
+            for plen in [0usize, 16, 16384] {
+                let key = [0x5au8; 16];
+                let fixed = [0x01u8, 0x02, 0x03, 0x04];
+                let pt: Vec<u8> = (0..plen).map(|i| (i * 7) as u8).collect();
+                let mut rec = vec![0u8; 8 + plen + 12];
+                rec[8..8 + plen].copy_from_slice(&pt);
+
+                let mut ivlen = 12usize;
+                let mut ivlen_param = param_size_t(OSSL_CIPHER_PARAM_IVLEN);
+                ivlen_param.data = (&mut ivlen as *mut usize).cast();
+                let mut aad = aad13(8 + plen);
+                let params = [
+                    ivlen_param,
+                    param_octet_string_with(
+                        OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+                        aad.as_mut_ptr().cast(),
+                        aad.len(),
+                    ),
+                    param_octet_string_with(
+                        OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED,
+                        fixed.as_ptr().cast_mut().cast(),
+                        fixed.len(),
+                    ),
+                    END,
+                ];
+                let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+                assert!(!ctx.is_null());
+                assert_eq!(
+                    ossl_ccm_einit(ctx, key.as_ptr(), 16, ptr::null(), 0, params.as_ptr()),
+                    1,
+                    "TLS init (plen={plen})"
+                );
+                let mut outl = 0usize;
+                assert_eq!(
+                    ossl_ccm_cipher(
+                        ctx,
+                        rec.as_mut_ptr(),
+                        &mut outl,
+                        rec.len(),
+                        rec.as_ptr(),
+                        rec.len()
+                    ),
+                    1,
+                    "TLS encrypt (plen={plen})"
+                );
+                assert_eq!(outl, rec.len());
+                aes_ccm_freectx(ctx);
+
+                // The record's last twelve bytes are the tag; decrypt rewrites only the payload.
+                let mut aad_dec = aad13(rec.len());
+                let params_dec = [
+                    ivlen_param,
+                    param_octet_string_with(
+                        OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+                        aad_dec.as_mut_ptr().cast(),
+                        aad_dec.len(),
+                    ),
+                    param_octet_string_with(
+                        OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED,
+                        fixed.as_ptr().cast_mut().cast(),
+                        fixed.len(),
+                    ),
+                    END,
+                ];
+                let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+                assert!(!ctx.is_null());
+                assert_eq!(
+                    ossl_ccm_dinit(ctx, key.as_ptr(), 16, ptr::null(), 0, params_dec.as_ptr()),
+                    1,
+                    "TLS dinit (plen={plen})"
+                );
+                let mut outl = 0usize;
+                assert_eq!(
+                    ossl_ccm_cipher(
+                        ctx,
+                        rec.as_mut_ptr(),
+                        &mut outl,
+                        rec.len(),
+                        rec.as_ptr(),
+                        rec.len()
+                    ),
+                    1,
+                    "TLS decrypt (plen={plen})"
+                );
+                // `ossl_ccm_cipher` answers the **input** length on both sides
+                // (`ciphercommon_ccm.c:330`); `ccm_tls_cipher`'s own `padlen` is overwritten by
+                // its caller, so the record length is what the dispatch reports.
+                assert_eq!(outl, rec.len(), "decrypt reports the record length");
+                assert_eq!(&rec[8..8 + plen], pt.as_slice(), "round trip (plen={plen})");
+                aes_ccm_freectx(ctx);
+            }
+
+            // One byte short of `explicit IV + tag`: refused without output.
+            let mut short = [0u8; 8 + 12 - 1];
+            let mut ivlen = 12usize;
+            let mut ivlen_param = param_size_t(OSSL_CIPHER_PARAM_IVLEN);
+            ivlen_param.data = (&mut ivlen as *mut usize).cast();
+            let fixed = [0x01u8, 0x02, 0x03, 0x04];
+            let mut aad = aad13(short.len());
+            let params = [
+                ivlen_param,
+                param_octet_string_with(
+                    OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+                    aad.as_mut_ptr().cast(),
+                    aad.len(),
+                ),
+                param_octet_string_with(
+                    OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED,
+                    fixed.as_ptr().cast_mut().cast(),
+                    fixed.len(),
+                ),
+                END,
+            ];
+            let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+            assert!(!ctx.is_null());
+            assert_eq!(
+                ossl_ccm_einit(
+                    ctx,
+                    [0x5au8; 16].as_ptr(),
+                    16,
+                    ptr::null(),
+                    0,
+                    params.as_ptr()
+                ),
+                1
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                ossl_ccm_cipher(
+                    ctx,
+                    short.as_mut_ptr(),
+                    &mut outl,
+                    short.len(),
+                    short.as_ptr(),
+                    short.len()
+                ),
+                0,
+                "a record shorter than explicit IV + tag is refused"
+            );
+            assert_eq!(outl, 0);
+            aes_ccm_freectx(ctx);
+
+            // A decryption AAD whose length field is shorter than the tag is refused at init.
+            let ctx = aes_ccm_newctx(ptr::null_mut(), 128);
+            assert!(!ctx.is_null());
+            let mut aad_trunc = aad13(11);
+            let mut ivlen = 12usize;
+            let mut ivlen_param = param_size_t(OSSL_CIPHER_PARAM_IVLEN);
+            ivlen_param.data = (&mut ivlen as *mut usize).cast();
+            let params = [
+                ivlen_param,
+                param_octet_string_with(
+                    OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+                    aad_trunc.as_mut_ptr().cast(),
+                    aad_trunc.len(),
+                ),
+                END,
+            ];
+            assert_eq!(
+                ossl_ccm_dinit(
+                    ctx,
+                    [0x5au8; 16].as_ptr(),
+                    16,
+                    ptr::null(),
+                    0,
+                    params.as_ptr()
+                ),
+                0,
+                "an AAD length below the explicit IV must be refused"
+            );
+            aes_ccm_freectx(ctx);
+        }
+    }
+
+    /// **RFC 8439 §2.8.2** for ChaCha20-Poly1305, driven through the generic (non-TLS) provider
+    /// path: `K = 808182..9f`, `N = 070000004041424344454647`, `A = 50515253c0c1c2c3c4c5c6c7`,
+    /// 114 bytes of plaintext, and the RFC's ciphertext and tag.
+    #[test]
+    fn chacha20_poly1305_rfc8439_is_byte_exact() {
+        let key = hex_bytes("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f");
+        let nonce = hex_bytes("070000004041424344454647");
+        let aad = hex_bytes("50515253c0c1c2c3c4c5c6c7");
+        let pt = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
+        let want_ct = hex_bytes(
+            "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d6\
+             3dbea45e8ca9671282fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b36\
+             92ddbd7f2d778b8c9803aee328091b58fab324e4fad675945585808b4831d7bc\
+             3ff4def08e4b7a9de576d26586cec64b6116",
+        );
+        let want_tag = hex_bytes("1ae10b594f09e26a7e902ecbd0600691");
+        assert_eq!(pt.len(), 114);
+
+        // SAFETY: frame-local buffers only; the context is freed once per direction.
+        unsafe {
+            let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                chacha20_poly1305_einit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                1
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                chacha20_poly1305_cipher(
+                    ctx,
+                    ptr::null_mut(),
+                    &mut outl,
+                    aad.len(),
+                    aad.as_ptr(),
+                    aad.len()
+                ),
+                1
+            );
+            let mut ct = vec![0u8; pt.len()];
+            assert_eq!(
+                chacha20_poly1305_cipher(
+                    ctx,
+                    ct.as_mut_ptr(),
+                    &mut outl,
+                    ct.len(),
+                    pt.as_ptr(),
+                    pt.len()
+                ),
+                1
+            );
+            assert_eq!(outl, pt.len());
+            assert_eq!(
+                chacha20_poly1305_final(ctx, ptr::null_mut(), &mut outl, 0),
+                1
+            );
+            let mut tag = [0u8; 16];
+            let mut get = [
+                param_octet_string_with(OSSL_CIPHER_PARAM_AEAD_TAG, tag.as_mut_ptr().cast(), 16),
+                END,
+            ];
+            assert_eq!(chacha20_poly1305_get_ctx_params(ctx, get.as_mut_ptr()), 1);
+            assert_eq!(ct, want_ct, "RFC 8439 §2.8.2 ciphertext");
+            assert_eq!(tag.to_vec(), want_tag, "RFC 8439 §2.8.2 tag");
+            chacha20_poly1305_freectx(ctx);
+
+            let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+            assert!(!ctx.is_null());
+            let mut supplied = want_tag.clone();
+            let params = [
+                param_octet_string_with(
+                    OSSL_CIPHER_PARAM_AEAD_TAG,
+                    supplied.as_mut_ptr().cast(),
+                    supplied.len(),
+                ),
+                END,
+            ];
+            assert_eq!(
+                chacha20_poly1305_dinit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, params.as_ptr()),
+                1
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                chacha20_poly1305_cipher(
+                    ctx,
+                    ptr::null_mut(),
+                    &mut outl,
+                    aad.len(),
+                    aad.as_ptr(),
+                    aad.len()
+                ),
+                1
+            );
+            let mut out = vec![0u8; want_ct.len()];
+            assert_eq!(
+                chacha20_poly1305_cipher(
+                    ctx,
+                    out.as_mut_ptr(),
+                    &mut outl,
+                    out.len(),
+                    want_ct.as_ptr(),
+                    want_ct.len()
+                ),
+                1
+            );
+            assert_eq!(out, pt.to_vec(), "RFC 8439 §2.8.2 plaintext");
+            assert_eq!(
+                chacha20_poly1305_final(ctx, ptr::null_mut(), &mut outl, 0),
+                1
+            );
+            chacha20_poly1305_freectx(ctx);
+        }
+    }
+
+    /// The TLS record path of ChaCha20-Poly1305. The payload keystream is RFC 8439 §2.8.2's, so
+    /// the ciphertext is that vector exactly; the tag is recomputed at the primitive layer because
+    /// the TLS AAD is sixteen bytes (thirteen plus three zero pads) while the length block declares
+    /// thirteen -- the authority's own framing, pinned here rather than assumed.
+    #[test]
+    fn chacha20_poly1305_tls_record_round_trip_and_limits() {
+        fn tls_aad(len: usize) -> [u8; 13] {
+            let mut a = [0u8; 13];
+            a[8] = 0x17;
+            a[9] = 0x03;
+            a[10] = 0x03;
+            a[11] = (len >> 8) as u8;
+            a[12] = len as u8;
+            a
+        }
+
+        fn expected_tag(key: &[u8], nonce: &[u8; 12], aad: &[u8; 13], ct: &[u8]) -> [u8; 16] {
+            // SAFETY: every pointer is a live frame local; the counter block is the RFC 8439
+            // little-endian layout and each buffer is sized by its own slice.
+            unsafe {
+                let mut iv = [0u8; 16];
+                iv[4..].copy_from_slice(nonce);
+                let mut words = [0u32; 4];
+                for i in 0..4 {
+                    words[i] = crate::chacha::u8tou32(&iv[i * 4..i * 4 + 4]);
+                }
+                let mut block = [0u8; 64];
+                crate::chacha::ChaCha20_ctr32(
+                    block.as_mut_ptr(),
+                    CHACHA20_POLY1305_ZERO.as_ptr(),
+                    block.len(),
+                    key.as_ptr().cast(),
+                    words.as_ptr(),
+                );
+                let mut poly = core::mem::MaybeUninit::<crate::mac::poly1305::Poly1305>::uninit();
+                crate::mac::poly1305::Poly1305_Init(poly.as_mut_ptr(), block.as_ptr());
+                let mut aad16 = [0u8; 16];
+                aad16[..13].copy_from_slice(aad);
+                crate::mac::poly1305::Poly1305_Update(
+                    poly.as_mut_ptr(),
+                    aad16.as_ptr(),
+                    aad16.len(),
+                );
+                crate::mac::poly1305::Poly1305_Update(poly.as_mut_ptr(), ct.as_ptr(), ct.len());
+                // Poly1305 pads each half to a sixteen-byte boundary, and the provider hashes
+                // the ciphertext plus its zero pad as one contiguous run.
+                let pad =
+                    (POLY1305_BLOCK_SIZE - ct.len() % POLY1305_BLOCK_SIZE) % POLY1305_BLOCK_SIZE;
+                if pad != 0 {
+                    crate::mac::poly1305::Poly1305_Update(
+                        poly.as_mut_ptr(),
+                        CHACHA20_POLY1305_ZERO.as_ptr(),
+                        pad,
+                    );
+                }
+                let mut tail = [0u8; 16];
+                tail[..8].copy_from_slice(&13u64.to_le_bytes());
+                tail[8..].copy_from_slice(&(ct.len() as u64).to_le_bytes());
+                crate::mac::poly1305::Poly1305_Update(poly.as_mut_ptr(), tail.as_ptr(), tail.len());
+                let mut tag = [0u8; 16];
+                crate::mac::poly1305::Poly1305_Final(poly.as_mut_ptr(), tag.as_mut_ptr());
+                tag
+            }
+        }
+
+        let key = hex_bytes("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f");
+        let nonce: [u8; 12] = hex_bytes("070000004041424344454647").try_into().unwrap();
+        let rfc_pt = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
+        let want_ct = hex_bytes(
+            "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d6\
+             3dbea45e8ca9671282fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b36\
+             92ddbd7f2d778b8c9803aee328091b58fab324e4fad675945585808b4831d7bc\
+             3ff4def08e4b7a9de576d26586cec64b6116",
+        );
+
+        // SAFETY: frame-local buffers; each context is freed once.
+        unsafe {
+            let mut rec = vec![0u8; rfc_pt.len() + 16];
+            rec[..rfc_pt.len()].copy_from_slice(rfc_pt);
+            let mut aad = tls_aad(rfc_pt.len());
+            let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                chacha20_poly1305_einit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                1
+            );
+            assert_eq!(
+                chacha_poly1305_tls_init(ctx.cast(), aad.as_mut_ptr(), aad.len()),
+                16,
+                "the TLS AAD pad is the sixteen-byte Poly1305 block"
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                chacha20_poly1305_tls_cipher(
+                    ctx.cast(),
+                    rec.as_mut_ptr(),
+                    &mut outl,
+                    rec.as_ptr(),
+                    rec.len()
+                ),
+                1
+            );
+            assert_eq!(outl, rec.len());
+            assert_eq!(
+                &rec[..rfc_pt.len()],
+                want_ct.as_slice(),
+                "RFC 8439 §2.8.2 ciphertext"
+            );
+            assert_eq!(
+                &rec[rfc_pt.len()..],
+                expected_tag(&key, &nonce, &aad, &want_ct).as_slice(),
+                "the TLS framing's tag"
+            );
+            chacha20_poly1305_freectx(ctx);
+
+            // Decrypt: the AAD's length field carries payload + tag.
+            let mut aad_dec = tls_aad(rfc_pt.len() + 16);
+            let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                chacha20_poly1305_dinit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                1
+            );
+            assert_eq!(
+                chacha_poly1305_tls_init(ctx.cast(), aad_dec.as_mut_ptr(), aad_dec.len()),
+                16
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                chacha20_poly1305_tls_cipher(
+                    ctx.cast(),
+                    rec.as_mut_ptr(),
+                    &mut outl,
+                    rec.as_ptr(),
+                    rec.len()
+                ),
+                1
+            );
+            assert_eq!(outl, rfc_pt.len());
+            assert_eq!(&rec[..rfc_pt.len()], rfc_pt.as_slice());
+            chacha20_poly1305_freectx(ctx);
+        }
+
+        // Zero-length payload, maximum-size payload and a truncated tag.
+        for plen in [0usize, 16384] {
+            // SAFETY: as above.
+            unsafe {
+                let pt: Vec<u8> = (0..plen).map(|i| (i * 3) as u8).collect();
+                let mut rec = vec![0u8; plen + 16];
+                rec[..plen].copy_from_slice(&pt);
+                let mut aad = tls_aad(plen);
+                let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+                assert!(!ctx.is_null());
+                assert_eq!(
+                    chacha20_poly1305_einit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                    1
+                );
+                assert_eq!(
+                    chacha_poly1305_tls_init(ctx.cast(), aad.as_mut_ptr(), 13),
+                    16
+                );
+                let mut outl = 0usize;
+                assert_eq!(
+                    chacha20_poly1305_tls_cipher(
+                        ctx.cast(),
+                        rec.as_mut_ptr(),
+                        &mut outl,
+                        rec.as_ptr(),
+                        rec.len()
+                    ),
+                    1,
+                    "encrypt (plen={plen})"
+                );
+                chacha20_poly1305_freectx(ctx);
+
+                let mut aad_dec = tls_aad(plen + 16);
+                let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+                assert!(!ctx.is_null());
+                assert_eq!(
+                    chacha20_poly1305_dinit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                    1
+                );
+                assert_eq!(
+                    chacha_poly1305_tls_init(ctx.cast(), aad_dec.as_mut_ptr(), 13),
+                    16
+                );
+                let mut outl = 0usize;
+                assert_eq!(
+                    chacha20_poly1305_tls_cipher(
+                        ctx.cast(),
+                        rec.as_mut_ptr(),
+                        &mut outl,
+                        rec.as_ptr(),
+                        rec.len()
+                    ),
+                    1,
+                    "decrypt (plen={plen})"
+                );
+                assert_eq!(outl, plen);
+                assert_eq!(&rec[..plen], pt.as_slice(), "round trip (plen={plen})");
+                chacha20_poly1305_freectx(ctx);
+            }
+        }
+
+        // A record one tag byte short is a truncated tag: `aead_cipher` refuses it before the
+        // cipher sees a payload, and the output length stays zero.
+        // SAFETY: as above.
+        unsafe {
+            let mut rec = vec![0u8; 16 + 15];
+            let mut aad = tls_aad(16);
+            let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                chacha20_poly1305_dinit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                1
+            );
+            assert_eq!(
+                chacha_poly1305_tls_init(ctx.cast(), aad.as_mut_ptr(), 13),
+                16
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                chacha20_poly1305_aead_cipher(
+                    ctx.cast(),
+                    rec.as_mut_ptr(),
+                    &mut outl,
+                    rec.as_ptr(),
+                    rec.len()
+                ),
+                0,
+                "a truncated tag is refused"
+            );
+            assert_eq!(outl, 0);
+            chacha20_poly1305_freectx(ctx);
+        }
+
+        // A TLS AAD whose length is below the tag is refused by the AAD handler itself.
+        // SAFETY: as above.
+        unsafe {
+            let mut aad = tls_aad(15);
+            let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                chacha20_poly1305_dinit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                1
+            );
+            assert_eq!(
+                chacha_poly1305_tls_init(ctx.cast(), aad.as_mut_ptr(), 13),
+                0,
+                "an AAD length below the Poly1305 block is refused"
+            );
+            chacha20_poly1305_freectx(ctx);
+        }
+    }
+
+    /// A failed tag on the TLS one-shot path must answer `0` and leave **no plaintext** in the
+    /// record: the staged plaintext is zeroed and the computed tag is cleansed.
+    #[test]
+    fn chacha20_poly1305_tls_tampered_tag_wipes_plaintext() {
+        // SAFETY: frame-local buffers; each context is freed once.
+        unsafe {
+            let key = [0x42u8; 32];
+            let nonce = [0x24u8; 12];
+            let pt = *b"attack at dawn!!";
+            let mut rec = vec![0u8; pt.len() + 16];
+            rec[..pt.len()].copy_from_slice(&pt);
+            let mut aad = [0u8; 13];
+            aad[8] = 0x17;
+            aad[9] = 0x03;
+            aad[10] = 0x03;
+            aad[12] = pt.len() as u8;
+            let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                chacha20_poly1305_einit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                1
+            );
+            assert_eq!(
+                chacha_poly1305_tls_init(ctx.cast(), aad.as_mut_ptr(), 13),
+                16
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                chacha20_poly1305_tls_cipher(
+                    ctx.cast(),
+                    rec.as_mut_ptr(),
+                    &mut outl,
+                    rec.as_ptr(),
+                    rec.len()
+                ),
+                1
+            );
+            chacha20_poly1305_freectx(ctx);
+
+            let last = rec.len() - 1;
+            rec[last] ^= 0x80;
+            let mut aad_dec = aad;
+            aad_dec[11] = (rec.len() >> 8) as u8;
+            aad_dec[12] = rec.len() as u8;
+            let ctx = chacha20_poly1305_newctx(ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                chacha20_poly1305_dinit(ctx, key.as_ptr(), 32, nonce.as_ptr(), 12, ptr::null()),
+                1
+            );
+            assert_eq!(
+                chacha_poly1305_tls_init(ctx.cast(), aad_dec.as_mut_ptr(), 13),
+                16
+            );
+            let mut outl = 0usize;
+            assert_eq!(
+                chacha20_poly1305_tls_cipher(
+                    ctx.cast(),
+                    rec.as_mut_ptr(),
+                    &mut outl,
+                    rec.as_ptr(),
+                    rec.len()
+                ),
+                0,
+                "a flipped tag must be refused"
+            );
+            assert_eq!(outl, 0);
+            assert_eq!(
+                &rec[..pt.len()],
+                vec![0u8; pt.len()].as_slice(),
+                "the staged plaintext must be wiped"
+            );
+            chacha20_poly1305_freectx(ctx);
+        }
+    }
+
+    /// The factored big-endian length block writes both counters least-significant byte first, at
+    /// the two eight-byte offsets the Poly1305 length block requires.
+    #[test]
+    fn chacha20_poly1305_len_block_is_the_big_endian_spelling() {
+        let l = ChaCha20Poly1305Len {
+            aad: 0x0102_0304_0506_0708,
+            text: 0x1112_1314_1516_1718,
+        };
+        let mut out = [0u8; POLY1305_BLOCK_SIZE];
+        chacha20_poly1305_len_be(&l, &mut out);
+        assert_eq!(out[..8], [8, 7, 6, 5, 4, 3, 2, 1]);
+        assert_eq!(out[8..], [0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11]);
     }
 }
