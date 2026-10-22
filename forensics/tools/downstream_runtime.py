@@ -10672,6 +10672,47 @@ def _wl_xmlsec(ctx: dict) -> dict:
     }
 
 
+def _wl_ima(ctx: dict) -> dict:
+    """ima-evm-utils: sign a file's IMA digest and verify it, then tamper."""
+    d = ctx["workdir"]
+    key, cert = d / "ima.key", d / "ima.crt"
+    payload, tampered = d / "ima.bin", d / "ima-bad.bin"
+    payload.write_bytes(b"ima-fixture\n")
+    tampered.write_bytes(b"ima-fixturf\n")
+    gen = _ossl(ctx["authority_prefix"], [
+        "req", "-x509", "-newkey", "rsa:2048", "-sha256", "-nodes", "-days", "2",
+        "-subj", "/CN=ima-l7", "-keyout", str(key), "-out", str(cert)], cwd=d)
+    sign = _run_captured([str(ctx["program"]), "ima_sign", "--sigfile", "--key", str(key),
+                          str(payload)], cwd=d, env=ctx["env"], timeout=60)
+    signed = Path(str(payload) + ".sig")
+    # The negative control reuses the valid signature over modified bytes.
+    if signed.is_file():
+        Path(str(tampered) + ".sig").write_bytes(signed.read_bytes())
+    verify = _run_captured([str(ctx["program"]), "ima_verify", "--sigfile", "--key", str(cert),
+                            str(payload)], cwd=d, env=ctx["env"], timeout=60)
+    neg = _run_captured([str(ctx["program"]), "ima_verify", "--sigfile", "--key", str(cert),
+                         str(tampered)], cwd=d, env=ctx["env"], timeout=60)
+    verify_text = verify["stdout"] + verify["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    ok = bool(gen["ok"] and sign["ok"] and verify["ok"] and signed.is_file())
+    neg_ok = neg["exit_code"] != 0 or "verification failed" in neg_text.lower()
+    functional = ok and neg_ok
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if ok else
+                                                  "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if ok else
+                                               "runtime-failure"),
+        "reason": None if functional else (
+            "evmctl did not sign and verify the fixture" if not ok else
+            "a modified file still verified"),
+        "transcript": _transcript([("ima_sign", sign), ("ima_verify", verify),
+                                   ("tampered verify (must fail)", neg)]),
+        "workload": "evmctl: IMA SHA-256 sign/verify and tampered-file reject",
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "icecast2": _wl_icecast,
     "libevent-openssl-2.1-7": _wl_libevent,
@@ -10828,6 +10869,29 @@ RUNNERS = {
 # fixture; only the family's config row (argv, expectation, negative control, CA/port policy)
 # differs, so ten template families do not add ten bespoke runners.
 RUNNERS.update(templates.runners())
+
+# The Phase-25 c2 split rows: the same program intent and admitted workload as the parent, with
+# only the package-specific artifact (and the cyrus-sasl mechanism) changed.
+_SPLIT_RUNTIME: tuple[tuple[str, str, dict], ...] = (
+    ("libcjose0", "cjose", {}),
+    ("libgetdns10", "getdns", {}),
+    ("asterisk-srtp", "srtp", {}),
+    ("epic5-lite", "epic5", {}),
+    ("httpd", "apache2-bin", {}),
+    ("librabbitmq", "rabbitmq-c", {}),
+)
+for _new, _base, _overrides in _SPLIT_RUNTIME:
+    PROGRAMS[_new] = copy.deepcopy(PROGRAMS[_base])
+    PROGRAMS[_new].update(_overrides)
+    RUNNERS[_new] = RUNNERS[_base]
+
+PROGRAMS["ima-evm-utils"] = {
+    "program": "src/.libs/evmctl", "launch": ["--version"], "version_re": r"evmctl",
+    "lib_paths": ["src/.libs"],
+    "note": ("evmctl signs a file's IMA digest with the subject libcrypto and verifies it; a "
+             "modified file no longer verifies"),
+}
+RUNNERS["ima-evm-utils"] = _wl_ima
 
 
 # --------------------------------------------------------------------------------------------
