@@ -1,0 +1,44 @@
+{
+  "receipt": "publish-0.0.31",
+  "date": "2026-10-22",
+  "crate": "openssl-rs",
+  "version": "0.0.31",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "branch": "main",
+    "commit": "e82845c1a540cab44a81c0e6450594849adec770",
+    "commit_subject": "Merge pull request #49 from infinityabundance/integrate/safe-c33",
+    "working_tree": "clean at publish time"
+  },
+  "packaging": {
+    "entries": 1010,
+    "uncompressed": "39.6MiB",
+    "compressed": "8.2MiB",
+    "compressed_bytes": 8637979,
+    "limit_bytes": 10000000,
+    "dry_run_exit": 0,
+    "allow_dirty_used": false
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs",
+    "max_version": "0.0.31",
+    "newest_version": "0.0.31",
+    "default_version": "0.0.31",
+    "checksum_prefix": "d574588e",
+    "crate_size": 8637979,
+    "published_at": "2026-10-22T04:42:02Z"
+  },
+  "content_delta_since_0_0_30": [
+    "README leads with generated achievement, L7 family and memory-safety blocks",
+    "render_docs.py --check drift gate",
+    "render_status.py derives downstream counts from the runtime atlas",
+    "B27-X2 correctly recorded as closed by B28",
+    "observed test baseline of 1747 in AGENTS.md"
+  ],
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "No SEAL dependency-closure run backs this release; it is a documentation checkpoint.",
+    "The published package excludes forensics/** evidence by design."
+  ]
+}
