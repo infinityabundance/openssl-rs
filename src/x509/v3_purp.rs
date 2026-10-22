@@ -103,7 +103,7 @@ use crate::runtime::stack::{
 use crate::runtime::thread::{CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock};
 use crate::x509::v3_akeya::AuthorityKeyid;
 use crate::x509::v3_bcons::{BASIC_CONSTRAINTS_free, BasicConstraints};
-use crate::x509::v3_crld::{DIST_POINT_set_dpname, DistPoint};
+use crate::x509::v3_crld::{ossl_dist_point_name_full, DistPoint};
 use crate::x509::v3_genn::{GeneralName, GEN_DIRNAME};
 use crate::x509::v3_pcia::{PROXY_CERT_INFO_EXTENSION_free, ProxyCertInfoExtension};
 use crate::x509::x509_cmp::{
@@ -1195,17 +1195,20 @@ pub unsafe extern "C" fn X509_supported_extension(ex: *mut X509Extension) -> c_i
 // Building the extension cache — `v3_purp.c:349-679`
 // ---------------------------------------------------------------------------------------------
 
-/// `static int setup_dp(const X509 *x, DIST_POINT *dp)` — `v3_purp.c:349-388`.
+/// `static int setup_dp(DIST_POINT *dp)` — `v3_purp.c:357-376` (3.6.5).
 ///
-/// Validates one distribution point, unpacks its reason flags and, for a `relativename`, resolves
-/// the name fragment against the CRL issuer. Answers 1 on success, 0 for an invalid point and -1
-/// for an internal error.
+/// Validates one distribution point and unpacks its reason flags. **The full relative name is not
+/// computed here**: 3.6.5 moved that to [`crldp_full_name`], which the CRL-checking code calls only
+/// when a CRL is actually matched against the certificate. Constructing it eagerly cost an
+/// `X509_NAME_dup` of the issuer name per relative distribution point, which a certificate with
+/// many such points could turn into hundreds of megabytes of heap on a plain handshake (CVE-2026-
+/// 35189). Answers 1 on success and 0 for an invalid point.
 ///
 /// # Safety
 ///
-/// `x` must be a live `X509`; `dp` must be a live `DIST_POINT` whose `distpoint`, `reasons` and
-/// `CRLissuer` members are its own.
-unsafe fn setup_dp(x: *const X509, dp: *mut DistPoint) -> c_int {
+/// `dp` must be a live `DIST_POINT` whose `distpoint`, `reasons` and `CRLissuer` members are its
+/// own.
+unsafe fn setup_dp(dp: *mut DistPoint) -> c_int {
     // SAFETY: `dp` is live per the contract.
     if unsafe { (*dp).distpoint.is_null() && OPENSSL_sk_num((*dp).CRLissuer) <= 0 } {
         // SAFETY: the site is a compiled-in constant.
@@ -1232,11 +1235,27 @@ unsafe fn setup_dp(x: *const X509, dp: *mut DistPoint) -> c_int {
         // SAFETY: `dp` is live and writable.
         unsafe { (*dp).dp_reasons = CRLDP_ALL_REASONS };
     }
-    // SAFETY: `dp` is live.
-    if unsafe { (*dp).distpoint.is_null() || (*(*dp).distpoint).type_ != 1 } {
-        return 1;
-    }
+    1
+}
 
+/// `static X509_NAME *crldp_full_name(const X509 *x, const DIST_POINT *dp)` —
+/// `x509_vfy.c:1756-1782` (3.6.5).
+///
+/// The full name of a `nameRelativeToCRLIssuer` distribution point: the CRL issuer name (the
+/// `directoryName` in `dp->CRLissuer` when there is one, else the certificate's issuer) with the
+/// relative fragment appended. The result is a **fresh** `X509_NAME` owned by the caller and is
+/// deliberately not stored in `dp->distpoint->dpname`: once the extension cache is published the
+/// certificate is shared without locking, and naming it here rather than at parse time is the
+/// CVE-2026-35189 repair. NULL on error.
+///
+/// The issuer choice is the 3.6.4 reader's, including its non-compliance note: RFC 5280 §4.2.1.13
+/// says `CRLissuer` has at most one `GEN_DIRNAME`, and this takes the first one that is one.
+///
+/// # Safety
+///
+/// `x` must be a live `X509` whose `crldp` holds `dp`; `dp` must be a live `DIST_POINT` of
+/// `relativename` type.
+pub(crate) unsafe fn crldp_full_name(x: *const X509, dp: *const DistPoint) -> *mut X509Name {
     let mut iname: *const X509Name = ptr::null();
     // SAFETY: `dp` is live; `CRLissuer` is a live stack.
     let n = unsafe { OPENSSL_sk_num((*dp).CRLissuer) };
@@ -1254,18 +1273,15 @@ unsafe fn setup_dp(x: *const X509, dp: *mut DistPoint) -> c_int {
         // SAFETY: `x` is live per the contract.
         iname = unsafe { X509_get_issuer_name(x) };
     }
-    // SAFETY: `dp->distpoint` is a live `relativename` and `iname` is a live name.
-    if unsafe { DIST_POINT_set_dpname((*dp).distpoint, iname) } != 0 {
-        1
-    } else {
-        -1
-    }
+    // SAFETY: `dp` is a live `relativename` and `iname` is a live name.
+    unsafe { ossl_dist_point_name_full((*dp).distpoint, iname) }
 }
 
-/// `static int setup_crldp(X509 *x)` — `v3_purp.c:391-406`.
+/// `static int setup_crldp(X509 *x)` — `v3_purp.c:376-395` (3.6.5).
 ///
 /// Decodes and validates the certificate's CRL distribution points, caching the stack in
-/// `x->crldp`. Answers 1 on success, 0 for an invalid extension and -1 for an internal error.
+/// `x->crldp`, but does **not** expand any relative name. Answers 1 on success and 0 for an
+/// invalid extension.
 ///
 /// # Safety
 ///
@@ -1287,10 +1303,9 @@ unsafe fn setup_crldp(x: *mut X509) -> c_int {
     for i in 0..n {
         // SAFETY: `i` is a valid index and `crldp` is the live stack.
         let dp = unsafe { OPENSSL_sk_value(crldp, i) }.cast::<DistPoint>();
-        // SAFETY: `x` is live and `dp` is a live distribution point.
-        let res = unsafe { setup_dp(x, dp) };
-        if res < 1 {
-            return res;
+        // SAFETY: `dp` is a live distribution point.
+        if unsafe { setup_dp(dp) } == 0 {
+            return 0;
         }
     }
     1
@@ -2471,3 +2486,261 @@ pub unsafe extern "C" fn X509_get_proxy_pathlen(x: *mut X509) -> c_long {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(X509Purpose => zero_state_sweep_x509_purpose);
+
+#[cfg(test)]
+mod crldp_lazy_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::asn1::layout::MBSTRING_UTF8;
+    use crate::asn1::string::{ASN1_OCTET_STRING_new, ASN1_OCTET_STRING_set};
+    use crate::x509::v3_crld::DIST_POINT_set_dpname;
+    use crate::x509::x509_ext::X509_add_ext;
+    use crate::x509::x509_set::{X509_set_issuer_name, X509_set_subject_name, X509_set_version};
+    use crate::x509::x509_v3::X509_EXTENSION_create_by_NID;
+    use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+    use crate::x509::x_exten::X509_EXTENSION_free;
+    use crate::x509::x_x509::{X509_free, X509_new, X509};
+    use core::ffi::c_int;
+
+    const OID_CN: &[u8] = &[0x06, 0x03, 0x55, 0x04, 0x03];
+    const OID_O: &[u8] = &[0x06, 0x03, 0x55, 0x04, 0x0a];
+
+    fn der_len(n: usize) -> Vec<u8> {
+        if n < 0x80 {
+            vec![n as u8]
+        } else if n < 0x100 {
+            vec![0x81, n as u8]
+        } else {
+            vec![0x82, (n >> 8) as u8, n as u8]
+        }
+    }
+
+    fn tlv(tag: u8, body: &[u8]) -> Vec<u8> {
+        let mut v = vec![tag];
+        v.extend_from_slice(&der_len(body.len()));
+        v.extend_from_slice(body);
+        v
+    }
+
+    fn atv(oid: &[u8], value: &[u8]) -> Vec<u8> {
+        let mut body = oid.to_vec();
+        body.extend_from_slice(&tlv(0x0c, value)); // UTF8String
+        tlv(0x30, &body)
+    }
+
+    /// `DistributionPoint ::= SEQUENCE { distributionPoint [0] EXPLICIT DistributionPointName }`
+    /// with `DistributionPointName ::= [1] IMPLICIT SET OF AttributeTypeAndValue`.
+    fn relative_dp(entries: &[Vec<u8>]) -> Vec<u8> {
+        let mut rdn = Vec::new();
+        for e in entries {
+            rdn.extend_from_slice(e);
+        }
+        tlv(0x30, &tlv(0xA0, &tlv(0xA1, &rdn)))
+    }
+
+    /// `CRLDistributionPoints ::= SEQUENCE OF DistributionPoint`.
+    fn crldp_der(points: &[Vec<u8>]) -> Vec<u8> {
+        let mut body = Vec::new();
+        for p in points {
+            body.extend_from_slice(p);
+        }
+        tlv(0x30, &body)
+    }
+
+    /// A certificate whose issuer name is `rdns` entries of `value_len` bytes and whose CRLDP
+    /// extension is `der`. Subject differs from issuer so the self-signed arm is not taken.
+    ///
+    /// # Safety
+    /// The caller owns the returned certificate and releases it with `X509_free`.
+    unsafe fn cert_with_crldp(rdns: usize, value_len: usize, der: &[u8]) -> *mut X509 {
+        // SAFETY: every object is created here; the extension takes over its octet string.
+        unsafe {
+            let x = X509_new();
+            assert!(!x.is_null());
+            assert_eq!(X509_set_version(x, 2), 1);
+            let issuer = crate::x509::x_name::X509_NAME_new();
+            let subject = crate::x509::x_name::X509_NAME_new();
+            assert!(!issuer.is_null() && !subject.is_null());
+            let long = vec![b'i'; value_len];
+            for _ in 0..rdns {
+                assert_eq!(
+                    X509_NAME_add_entry_by_txt(
+                        issuer,
+                        c"O".as_ptr(),
+                        MBSTRING_UTF8,
+                        long.as_ptr(),
+                        long.len() as c_int,
+                        -1,
+                        0,
+                    ),
+                    1
+                );
+            }
+            assert_eq!(
+                X509_NAME_add_entry_by_txt(
+                    subject,
+                    c"CN".as_ptr(),
+                    MBSTRING_UTF8,
+                    c"leaf".as_ptr().cast::<u8>(),
+                    4,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            assert_eq!(X509_set_issuer_name(x, issuer), 1);
+            assert_eq!(X509_set_subject_name(x, subject), 1);
+            crate::x509::x_name::X509_NAME_free(issuer);
+            crate::x509::x_name::X509_NAME_free(subject);
+            let os = ASN1_OCTET_STRING_new();
+            assert!(!os.is_null());
+            assert_eq!(
+                ASN1_OCTET_STRING_set(os, der.as_ptr(), der.len() as c_int),
+                1
+            );
+            let ext =
+                X509_EXTENSION_create_by_NID(ptr::null_mut(), NID_crl_distribution_points, 0, os);
+            assert!(!ext.is_null(), "the CRLDP extension must build");
+            assert_eq!(X509_add_ext(x, ext, -1), 1);
+            X509_EXTENSION_free(ext);
+            x
+        }
+    }
+
+    /// # Safety
+    /// `x` must be a live certificate whose extensions were cached.
+    unsafe fn dp_at(x: *mut X509, i: c_int) -> *mut DistPoint {
+        // SAFETY: `x` is live; `crldp` is its cached stack.
+        let stack = unsafe { (*x).crldp }.cast::<OpenSslStack>();
+        // SAFETY: `i` is in range per the caller.
+        unsafe { OPENSSL_sk_value(stack, i) }.cast::<DistPoint>()
+    }
+
+    /// The whole point of the 3.6.5 repair: caching a certificate expands no relative name.
+    #[test]
+    fn caching_a_certificate_expands_no_relative_name() {
+        let _g = crate::test_support::lock_global_state();
+        // The allocation the attacker controls is `distribution points x issuer size`: each
+        // relative point is expanded against the whole issuer name. `organizationName`
+        // is capped at 64 bytes by the string table, so 64 RDNs of 64 bytes is the largest
+        // legal issuer this fixture can build; 64 points therefore request 64 issuer
+        // duplicates (~64 x 64 entries) at cache time.
+        const DPS: usize = 64;
+        const RDNS: usize = 64;
+        let points: Vec<Vec<u8>> = (0..DPS)
+            .map(|i| {
+                let mut v = b"dp".to_vec();
+                v.extend_from_slice(i.to_string().as_bytes());
+                relative_dp(&[atv(OID_CN, &v)])
+            })
+            .collect();
+        let der = crldp_der(&points);
+        // SAFETY: the certificate is created and released in this frame.
+        unsafe {
+            let x = cert_with_crldp(RDNS, 64, &der);
+            assert_eq!(ossl_x509v3_cache_extensions(x), 1);
+            // SAFETY: `x` is live and cached.
+            let stack = (*x).crldp.cast::<OpenSslStack>();
+            // SAFETY: the stack is live.
+            assert_eq!(OPENSSL_sk_num(stack), DPS as c_int);
+            let mut expanded = 0usize;
+            for i in 0..DPS as c_int {
+                let dp = dp_at(x, i);
+                // SAFETY: `dp` is live.
+                let dpn = (*dp).distpoint;
+                assert!(!dpn.is_null());
+                // SAFETY: `dpn` is live.
+                assert_eq!((*dpn).type_, 1, "the fixture is a relative name");
+                // SAFETY: `dpn` is live; the cache field is NULL until a CRL match builds it.
+                assert!(
+                    (*dpn).dpname.is_null(),
+                    "dp {i} was expanded during certificate parsing"
+                );
+                expanded += 1;
+            }
+            assert_eq!(expanded, DPS);
+            // Measure what the eager path would have materialised: one name of this exact DER
+            // size per point. `i2d` with a NULL out-param reports the length without encoding.
+            // SAFETY: `x` is live and cached; `dp0` is in range.
+            let dp0 = dp_at(x, 0);
+            // SAFETY: `dp0` is live and relative; `x` is live.
+            let full = crldp_full_name(x, dp0);
+            assert!(!full.is_null());
+            // SAFETY: `full` is a live name; a NULL out-param asks only for the length.
+            let name_len = crate::x509::x_name::i2d_X509_NAME(full, ptr::null_mut());
+            // SAFETY: `full` is this frame's own name.
+            crate::x509::x_name::X509_NAME_free(full);
+            assert!(name_len > 0);
+            let eager_bytes = name_len as usize * DPS;
+            eprintln!(
+                "fixture: {DPS} relative DPs x {name_len} B expanded issuer name = {eager_bytes} B"
+            );
+            assert!(
+                eager_bytes > 256 * 1024,
+                "the fixture must be large enough to be meaningful"
+            );
+            X509_free(x);
+        }
+    }
+
+    /// Querying a relative point on demand yields exactly the name the eager path produced.
+    #[test]
+    fn on_demand_full_name_matches_the_eager_expansion() {
+        let _g = crate::test_support::lock_global_state();
+        let der = crldp_der(&[relative_dp(&[atv(OID_CN, b"dp1"), atv(OID_O, b"org")])]);
+        // SAFETY: the certificate is created and released in this frame.
+        unsafe {
+            let x = cert_with_crldp(3, 40, &der);
+            assert_eq!(ossl_x509v3_cache_extensions(x), 1);
+            let dp = dp_at(x, 0);
+            // SAFETY: `dp` is live and relative; `x` is live.
+            let full = crldp_full_name(x, dp);
+            assert!(!full.is_null(), "an on-demand name must be available");
+            // SAFETY: `x` is live.
+            let issuer = crate::x509::x509_cmp::X509_get_issuer_name(x);
+            // SAFETY: `issuer` is live.
+            let issuer_entries = crate::x509::x509name::X509_NAME_entry_count(issuer);
+            // SAFETY: `full` is live.
+            assert_eq!(
+                crate::x509::x509name::X509_NAME_entry_count(full),
+                issuer_entries + 2,
+                "issuer entries plus the two-entry fragment"
+            );
+            // The eager path, still used for the CRL's own issuing distribution point, is the
+            // reference result.
+            // SAFETY: `dp` is live; `issuer` is live; the cache belongs to `dp`.
+            assert_eq!(DIST_POINT_set_dpname((*dp).distpoint, issuer), 1);
+            // SAFETY: both names are live.
+            assert_eq!(
+                crate::x509::x509_cmp::X509_NAME_cmp(full, (*(*dp).distpoint).dpname),
+                0
+            );
+            crate::x509::x_name::X509_NAME_free(full);
+            X509_free(x);
+        }
+    }
+
+    /// A malformed CRLDP encoding is still refused by the cache (the decode fails, so the
+    /// certificate is marked invalid), and nothing is expanded.
+    #[test]
+    fn malformed_crldp_is_refused_without_expansion() {
+        let _g = crate::test_support::lock_global_state();
+        // A relative-name point whose outer [0] wrapper is truncated.
+        let bad = tlv(0x30, &[0xA0, 0x05, 0xA1, 0x01, 0x30]);
+        let der = tlv(0x30, &bad);
+        // SAFETY: the certificate is created and released in this frame.
+        unsafe {
+            let x = cert_with_crldp(1, 4, &der);
+            let _ = ossl_x509v3_cache_extensions(x);
+            // SAFETY: `x` is live.
+            assert!(
+                (*x).crldp.is_null(),
+                "the malformed extension must not decode"
+            );
+            // SAFETY: `x` is live.
+            assert_ne!((*x).ex_flags & EXFLAG_INVALID, 0);
+            X509_free(x);
+        }
+    }
+}
