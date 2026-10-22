@@ -46,7 +46,7 @@
         "family:httrack": "L0-catalogued",
         "family:icecast": "L7-functional",
         "family:iperf3": "L7-functional",
-        "family:irssi": "L4-linked",
+        "family:irssi": "L7-functional",
         "family:isync": "L7-functional",
         "family:jimtcl": "L7-functional",
         "family:jwt": "L7-functional",
@@ -83,7 +83,7 @@
         "family:minizip-ng": "L7-functional",
         "family:mktorrent": "L7-functional",
         "family:monit": "L7-functional",
-        "family:mosquitto": "L0-catalogued",
+        "family:mosquitto": "L7-functional",
         "family:mumble-server": "L7-functional",
         "family:net-snmp": "L7-functional",
         "family:nginx": "L7-functional",
@@ -98,19 +98,19 @@
         "family:osslsigncode": "L7-functional",
         "family:partclone": "L7-functional",
         "family:proftpd": "L7-functional",
-        "family:prosody": "L5-loaded",
+        "family:prosody": "L7-functional",
         "family:proxytunnel": "L7-functional",
         "family:pure-ftpd": "L7-functional",
         "family:radsecproxy": "L7-functional",
         "family:redis": "L7-functional",
         "family:rhash": "L0-catalogued",
-        "family:rsync": "L0-catalogued",
+        "family:rsync": "L7-functional",
         "family:s-nail": "L7-functional",
         "family:siege": "L0-catalogued",
         "family:slrn": "L7-functional",
         "family:socat": "L7-functional",
         "family:sofia-sip": "L7-functional",
-        "family:squid": "L0-catalogued",
+        "family:squid": "L7-functional",
         "family:sslscan": "L7-functional",
         "family:sslsplit": "L7-functional",
         "family:ssmtp": "L7-functional",
@@ -126,37 +126,154 @@
       },
       "by_subject": {
         "authority": {
-          "failed": 2,
-          "functional": 96,
-          "loaded": 98,
-          "not_attempted": 901,
-          "runtime": 97
+          "failed": 0,
+          "functional": 101,
+          "loaded": 102,
+          "not_attempted": 898,
+          "runtime": 102
         },
         "candidate": {
-          "failed": 2,
-          "functional": 96,
-          "loaded": 98,
-          "not_attempted": 901,
-          "runtime": 97
+          "failed": 0,
+          "functional": 101,
+          "loaded": 102,
+          "not_attempted": 898,
+          "runtime": 102
         }
       },
-      "candidate_baseline_not_linked": 14,
+      "candidate_baseline_not_linked": 11,
       "candidate_below_baseline": 0,
       "candidate_failures": {
-        "acquire-failure": 890,
-        "functional-failure": 1,
-        "link-failure": 11,
-        "load-failure": 1
+        "acquire-failure": 887,
+        "link-failure": 11
       },
       "candidate_reaches_baseline": 113,
-      "candidate_reaches_linked_baseline": 99,
+      "candidate_reaches_linked_baseline": 102,
       "candidate_specific_patch_count": 0,
       "no_recipe": 887,
       "p1000": 1000,
       "rows": 2000,
       "with_recipe": 113
     },
-    "evidence_reuse": null,
+    "evidence_reuse": {
+      "candidate_identity_match": true,
+      "families_reused": 112,
+      "mode": "committed-rows",
+      "reused_families": [
+        "aircrack-ng",
+        "apache2-utils",
+        "appx-util",
+        "apr-util",
+        "arm-trusted-firmware-tools",
+        "axel",
+        "bannergrab",
+        "cowpatty",
+        "curl",
+        "curl-minimal",
+        "cyrus-sasl",
+        "dcap-tunnel-ssl",
+        "dovecot",
+        "duo_unix",
+        "eggdrop",
+        "elinks",
+        "epic5",
+        "exim",
+        "fastd",
+        "fetchmail",
+        "fido2",
+        "fossil",
+        "fsverity-utils",
+        "gensio",
+        "getdns",
+        "gmnisrv",
+        "gostsum",
+        "haproxy",
+        "hcxtools",
+        "hiredis-ssl",
+        "hitch",
+        "httperf",
+        "httping",
+        "httrack",
+        "icecast",
+        "iperf3",
+        "isync",
+        "jimtcl",
+        "jwt",
+        "kea",
+        "keepalived",
+        "kmod",
+        "ldns",
+        "lftp",
+        "libarchive",
+        "libcoap",
+        "libesmtp",
+        "libevent",
+        "libjose",
+        "libnetconf2",
+        "liboauth2",
+        "librdkafka",
+        "libre",
+        "libretls",
+        "libssh",
+        "libstrophe",
+        "libtins",
+        "libtpms",
+        "libu2f-server",
+        "libwebsockets",
+        "libzip",
+        "lighttpd",
+        "links",
+        "lua-luaossl",
+        "lua-sec",
+        "lynx",
+        "makepasswd",
+        "memcached",
+        "mini-httpd",
+        "minizip-ng",
+        "mktorrent",
+        "monit",
+        "mosquitto",
+        "mumble-server",
+        "net-snmp",
+        "nginx",
+        "nmap",
+        "nrpe",
+        "nsd",
+        "opendkim",
+        "openssh",
+        "openssh-client",
+        "openssh-server",
+        "openvpn",
+        "osslsigncode",
+        "partclone",
+        "proftpd",
+        "prosody",
+        "proxytunnel",
+        "pure-ftpd",
+        "radsecproxy",
+        "redis",
+        "rhash",
+        "rsync",
+        "s-nail",
+        "siege",
+        "slrn",
+        "socat",
+        "sofia-sip",
+        "squid",
+        "sslscan",
+        "sslsplit",
+        "ssmtp",
+        "stunnel",
+        "swtpm",
+        "tcpdump",
+        "tinc",
+        "tnftp",
+        "u-boot-tools",
+        "w3m",
+        "wrk",
+        "znc"
+      ],
+      "superseded_identity": null
+    },
     "non_claims": [
       "a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software",
       "1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and it makes no statement about an unmeasured consumer",
@@ -366,8 +483,8 @@
       {
         "family": "squid",
         "program": "src/squid",
-        "recipe_id": "recipe:squid:6.12",
-        "version": "6.12"
+        "recipe_id": "recipe:squid:6.13",
+        "version": "6.13"
       },
       {
         "family": "ssmtp",
@@ -79005,7 +79122,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L4-linked",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "irssi",
@@ -79018,16 +79135,58 @@
           "artifact:src/fe-text/irssi",
           "local_only:loopback"
         ],
-        "failure_class": "load-failure",
+        "failure_class": null,
         "family_id": "family:irssi",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L4-linked",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "287498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "287498:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "287498:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "287498:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "287498:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "287498:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -79047,13 +79206,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "failed",
+        "outcome": "reached",
         "p1000_rank": 72,
         "reaches_baseline": true,
-        "reason": "the rebuilt pristine tree holds no program at src/fe-text/irssi",
+        "reason": null,
         "recipe_id": "recipe:irssi:1.4.5",
-        "residual_class": "runtime-failure",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -79074,13 +79233,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "transcript_excerpt": [
+          "exit=0",
+          "[m\u001b[24m\u001b[27m\u001b[23m \u001b[36m\u001b[1ml7client\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[30m\u001b[1m[\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36ml7client@l7.stub\u001b[30m\u001b[1m]\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m has joined \u001b[1m:\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[79b\u001b[23;1H \u001b[36m[\u001b[37m13:00\u001b[36m]\u001b[37m \u001b[36m[\u001b[37ml7irssi\u001b[36m]\u001b[37m \u001b[36m[\u001b[37m1:l7net (change with ^X)\u001b[36m]\u001b[37m \u001b[36m[\u001b[37mAct: \u001b[35m\u001b[1m2\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36m\u001b[44m]\u001b[37m\u001b[23;80H \u001b[24;12H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[?25l\u001b[21;1H13:00 \u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m!\u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m Welcome to the Phase-25 fixture network\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[K\u001b[K\u001b[?25l\u001b[2;1H\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[?25l\u001b[24;1H\u001b[K[#l7] \u001b[K\u001b[?12l\u001b[?25h\u001b[K\u001b[37m\u001b[44m\u001b[?25l\u001b[1;1H \u001b[79b\u001b[1;1H \u001b[23;19H \u001b[61b\u001b[23;19H\u001b[23;9H \u001b[36m[\u001b[37ml7irssi\u001b[36m]\u001b[37m \u001b[36m[\u001b[37m3:l7net/#l7\u001b[36m]\u001b[37m \u001b[36m[\u001b[37mAct: \u001b[35m\u001b[1m2\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36m\u001b[44m]\u001b[37m\u001b[23;80H \u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[36m[\u001b[37m13:00\u001b[36m]\u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[?25l\u001b[2;1H13:00 \u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m!\u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[36m\u001b[1ml7irssi\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[30m\u001b[1m[\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36ml7irssi@l7.stub\u001b[30m\u001b[1m]\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m has joined \u001b[1m#l7\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[K\u001b[3;1H13:00 \u001b[30m\u001b[1m<\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m l7irssi\u001b[30m\u001b[1m>\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m phase24 runtime irc fixture\u001b[K\u001b[24;7H\u001b[?12l\u001b[?25h"
+        ],
+        "transcript_sha256": "f3cba764f81329b042dc963fa859b247ac2476876da89aec2c97513075aaec7f",
         "variant_id": "variant:irssi:1.4.5:pristine",
-        "workload": null
+        "workload": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L4-linked",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "irssi",
@@ -79093,16 +79299,58 @@
           "artifact:src/fe-text/irssi",
           "local_only:loopback"
         ],
-        "failure_class": "load-failure",
+        "failure_class": null,
         "family_id": "family:irssi",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L4-linked",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "287528:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "287528:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "287528:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "287528:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "287528:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "287528:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -79122,12 +79370,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "failed",
+        "outcome": "reached",
         "p1000_rank": 72,
         "reaches_baseline": true,
-        "reason": "the rebuilt pristine tree holds no program at src/fe-text/irssi",
+        "reason": null,
         "recipe_id": "recipe:irssi:1.4.5",
-        "residual_class": "runtime-failure",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -79149,10 +79397,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "transcript_excerpt": [
+          "exit=0",
+          "[m\u001b[24m\u001b[27m\u001b[23m \u001b[36m\u001b[1ml7client\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[30m\u001b[1m[\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36ml7client@l7.stub\u001b[30m\u001b[1m]\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m has joined \u001b[1m:\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[79b\u001b[23;1H \u001b[36m[\u001b[37m13:00\u001b[36m]\u001b[37m \u001b[36m[\u001b[37ml7irssi\u001b[36m]\u001b[37m \u001b[36m[\u001b[37m1:l7net (change with ^X)\u001b[36m]\u001b[37m \u001b[36m[\u001b[37mAct: \u001b[35m\u001b[1m2\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36m\u001b[44m]\u001b[37m\u001b[23;80H \u001b[24;12H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[?25l\u001b[21;1H13:00 \u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m!\u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m Welcome to the Phase-25 fixture network\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[K\u001b[K\u001b[?25l\u001b[2;1H\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K",
+          "",
+          "\u001b[K\u001b[24;12H\u001b[?12l\u001b[?25h\u001b[?25l\u001b[24;1H\u001b[K[#l7] \u001b[K\u001b[?12l\u001b[?25h\u001b[K\u001b[37m\u001b[44m\u001b[?25l\u001b[1;1H \u001b[79b\u001b[1;1H \u001b[23;19H \u001b[61b\u001b[23;19H\u001b[23;9H \u001b[36m[\u001b[37ml7irssi\u001b[36m]\u001b[37m \u001b[36m[\u001b[37m3:l7net/#l7\u001b[36m]\u001b[37m \u001b[36m[\u001b[37mAct: \u001b[35m\u001b[1m2\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36m\u001b[44m]\u001b[37m\u001b[23;80H \u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[37m\u001b[44m\u001b[?25l\u001b[23;1H \u001b[36m[\u001b[37m13:01\u001b[36m]\u001b[24;7H\u001b[?12l\u001b[?25h\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[?25l\u001b[2;1H13:01 \u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m!\u001b[34m\u001b[1m-\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[36m\u001b[1ml7irssi\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m \u001b[30m\u001b[1m[\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[36ml7irssi@l7.stub\u001b[30m\u001b[1m]\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m has joined \u001b[1m#l7\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m\u001b[K\u001b[3;1H13:01 \u001b[30m\u001b[1m<\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m l7irssi\u001b[30m\u001b[1m>\u001b(B\u001b[m\u001b[24m\u001b[27m\u001b[23m phase24 runtime irc fixture\u001b[K\u001b[24;7H\u001b[?12l\u001b[?25h"
+        ],
+        "transcript_sha256": "0c8498d105710bb0617a39162e142c2b8bbda2dc9b406a31473952e447b73e5e",
         "variant_id": "variant:irssi:1.4.5:pristine",
-        "workload": null
+        "workload": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "irssi: IRC-over-TLS registration and channel join; unrelated CA refused",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -116008,7 +116303,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "mosquitto",
@@ -116016,18 +116311,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:mosquitto"
+          "family:family:mosquitto",
+          "recipe:recipe:mosquitto:2.0.20",
+          "artifact:src/mosquitto",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:mosquitto",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-h"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "157187:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "157187:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "157187:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "157187:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "157187:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "157187:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 3
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -116047,13 +116387,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 28,
         "reaches_baseline": true,
-        "reason": "fetching the pristine source from https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz failed: curl: (7) Failed to connect to mosquitto.org port 443 after 74 ms: Couldn't connect to server",
+        "reason": null,
         "recipe_id": "recipe:mosquitto:2.0.20",
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -116063,9 +116403,9 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:mosquitto",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": "https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz",
+        "source_root_hash": "13486482a6bc2f029c2efb017664c2c81831d13aa15ef25f68119cd249a84efa",
+        "source_sha256": "851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a",
+        "source_url": "https://github.com/eclipse-mosquitto/mosquitto/archive/refs/tags/v2.0.20.tar.gz",
         "specimen_id": "specimen:mosquitto:2.0.20",
         "static_linkage": {
           "applicable": false,
@@ -116074,13 +116414,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "transcript_excerpt": [
+          "== workload ==",
+          "exit=0",
+          "== mosquitto_pub over TLS ==",
+          "exit=0",
+          "== mosquitto_sub over TLS ==",
+          "exit=0",
+          "phase25-mosquitto-payload",
+          "== mosquitto_pub unrelated-ca (must fail) ==",
+          "exit=14",
+          "Error: Protocol error",
+          "== mosquitto broker ==",
+          "exit=0",
+          "1792673035: Warning: Mosquitto should not be run as root/administrator.",
+          "1792673035: mosquitto version 2.0.20 starting",
+          "1792673035: Config loaded from {scratch}/mosquitto.conf.",
+          "1792673035: Opening ipv4 listen socket on port {port}.",
+          "1792673035: mosquitto version 2.0.20 running",
+          "1792673035: Client connection from {addr} failed: error:0A000126:SSL routines::unexpected eof while reading.",
+          "1792673035: New connection from {addr} on port {port}.",
+          "1792673035: New client connected from {addr} as auto-486DDE03-6953-65B3-977D-67C7BCF85DF7 (p2, c1, k60).",
+          "1792673035: No will message specified.",
+          "1792673035: Sending CONNACK to auto-486DDE03-6953-65B3-977D-67C7BCF85DF7 (0, 0)",
+          "1792673035: Received PUBLISH from auto-486DDE03-6953-65B3-977D-67C7BCF85DF7 (d0, q0, r1, m0, 'phase25/runtime', ... (25 bytes))",
+          "1792673035: Received DISCONNECT from auto-486DDE03-6953-65B3-977D-67C7BCF85DF7",
+          "1792673035: Client auto-486DDE03-6953-65B3-977D-67C7BCF85DF7 disconnected.",
+          "1792673035: New connection from {addr} on port {port}.",
+          "1792673035: New client connected from {addr} as auto-FEA8C2DA-087A-327E-0370-48BCC659908B (p2, c1, k60).",
+          "1792673035: No will message specified.",
+          "1792673035: Sending CONNACK to auto-FEA8C2DA-087A-327E-0370-48BCC659908B (0, 0)",
+          "1792673035: Received SUBSCRIBE from auto-FEA8C2DA-087A-327E-0370-48BCC659908B",
+          "1792673035: \tphase25/runtime (QoS 0)",
+          "1792673035: auto-FEA8C2DA-087A-327E-0370-48BCC659908B 0 phase25/runtime",
+          "1792673035: Sending SUBACK to auto-FEA8C2DA-087A-327E-0370-48BCC659908B",
+          "1792673035: Sending PUBLISH to auto-FEA8C2DA-087A-327E-0370-48BCC659908B (d0, q0, r1, m0, 'phase25/runtime', ... (25 bytes))",
+          "1792673035: Received DISCONNECT from auto-FEA8C2DA-087A-327E-0370-48BCC659908B",
+          "1792673035: Client auto-FEA8C2DA-087A-327E-0370-48BCC659908B disconnected.",
+          "1792673035: New connection from {addr} on port {port}.",
+          "1792673035: OpenSSL Error[0]: error:0A000418:SSL routines::tlsv1 alert unknown ca",
+          "1792673035: Client <unknown> disconnected: Protocol error.",
+          "1792673035: mosquitto version 2.0.20 terminating"
+        ],
+        "transcript_sha256": "764db377d7d4f8591af63952c29c10a0b8313da4e2364bab0b6e1f804ad86cca",
         "variant_id": "variant:mosquitto:2.0.20:pristine",
-        "workload": null
+        "workload": "mosquitto: broker TLS listener + retained publish + subscribe over TLS + exact payload match + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "mosquitto: broker TLS listener + retained publish + subscribe over TLS + exact payload match + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "mosquitto",
@@ -116088,18 +116475,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:mosquitto"
+          "family:family:mosquitto",
+          "recipe:recipe:mosquitto:2.0.20",
+          "artifact:src/mosquitto",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:mosquitto",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-h"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "157559:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "157559:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "157559:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "157559:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "157559:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "157559:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 3
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -116119,12 +116551,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 28,
         "reaches_baseline": true,
-        "reason": "fetching the pristine source from https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz failed: curl: (7) Failed to connect to mosquitto.org port 443 after 74 ms: Couldn't connect to server",
+        "reason": null,
         "recipe_id": "recipe:mosquitto:2.0.20",
-        "residual_class": "unavailable",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -116135,9 +116567,9 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:mosquitto",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": "https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz",
+        "source_root_hash": "13486482a6bc2f029c2efb017664c2c81831d13aa15ef25f68119cd249a84efa",
+        "source_sha256": "851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a",
+        "source_url": "https://github.com/eclipse-mosquitto/mosquitto/archive/refs/tags/v2.0.20.tar.gz",
         "specimen_id": "specimen:mosquitto:2.0.20",
         "static_linkage": {
           "applicable": false,
@@ -116146,10 +116578,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "transcript_excerpt": [
+          "== workload ==",
+          "exit=0",
+          "== mosquitto_pub over TLS ==",
+          "exit=0",
+          "== mosquitto_sub over TLS ==",
+          "exit=0",
+          "phase25-mosquitto-payload",
+          "== mosquitto_pub unrelated-ca (must fail) ==",
+          "exit=14",
+          "Error: Protocol error",
+          "== mosquitto broker ==",
+          "exit=0",
+          "1792673037: Warning: Mosquitto should not be run as root/administrator.",
+          "1792673037: mosquitto version 2.0.20 starting",
+          "1792673037: Config loaded from {scratch}/mosquitto.conf.",
+          "1792673037: Opening ipv4 listen socket on port {port}.",
+          "1792673037: mosquitto version 2.0.20 running",
+          "1792673037: Client connection from {addr} failed: error:0A000126:SSL routines::unexpected eof while reading.",
+          "1792673037: New connection from {addr} on port {port}.",
+          "1792673037: New client connected from {addr} as auto-AE637014-15BC-CF68-4879-487F9A9E7DBB (p2, c1, k60).",
+          "1792673037: No will message specified.",
+          "1792673037: Sending CONNACK to auto-AE637014-15BC-CF68-4879-487F9A9E7DBB (0, 0)",
+          "1792673037: Received PUBLISH from auto-AE637014-15BC-CF68-4879-487F9A9E7DBB (d0, q0, r1, m0, 'phase25/runtime', ... (25 bytes))",
+          "1792673037: Received DISCONNECT from auto-AE637014-15BC-CF68-4879-487F9A9E7DBB",
+          "1792673037: Client auto-AE637014-15BC-CF68-4879-487F9A9E7DBB disconnected.",
+          "1792673037: New connection from {addr} on port {port}.",
+          "1792673037: New client connected from {addr} as auto-BC6FB3E2-9DB5-D4ED-51E1-93945ED66EE9 (p2, c1, k60).",
+          "1792673037: No will message specified.",
+          "1792673037: Sending CONNACK to auto-BC6FB3E2-9DB5-D4ED-51E1-93945ED66EE9 (0, 0)",
+          "1792673037: Received SUBSCRIBE from auto-BC6FB3E2-9DB5-D4ED-51E1-93945ED66EE9",
+          "1792673037: \tphase25/runtime (QoS 0)",
+          "1792673037: auto-BC6FB3E2-9DB5-D4ED-51E1-93945ED66EE9 0 phase25/runtime",
+          "1792673037: Sending SUBACK to auto-BC6FB3E2-9DB5-D4ED-51E1-93945ED66EE9",
+          "1792673037: Sending PUBLISH to auto-BC6FB3E2-9DB5-D4ED-51E1-93945ED66EE9 (d0, q0, r1, m0, 'phase25/runtime', ... (25 bytes))",
+          "1792673037: Received DISCONNECT from auto-BC6FB3E2-9DB5-D4ED-51E1-93945ED66EE9",
+          "1792673037: Client auto-BC6FB3E2-9DB5-D4ED-51E1-93945ED66EE9 disconnected.",
+          "1792673037: New connection from {addr} on port {port}.",
+          "1792673037: OpenSSL Error[0]: error:0A000418:SSL routines::tlsv1 alert unknown ca",
+          "1792673037: Client <unknown> disconnected: Protocol error.",
+          "1792673037: mosquitto version 2.0.20 terminating"
+        ],
+        "transcript_sha256": "2687c41fb67128c5d5abc0c08b8a93df58e99d33822ef068eaafc6aa0a437ab2",
         "variant_id": "variant:mosquitto:2.0.20:pristine",
-        "workload": null
+        "workload": "mosquitto: broker TLS listener + retained publish + subscribe over TLS + exact payload match + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "mosquitto: broker TLS listener + retained publish + subscribe over TLS + exact payload match + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -134425,7 +134904,7 @@
         }
       },
       {
-        "authority_applicable_level": "L5-loaded",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "prosody",
@@ -134438,14 +134917,14 @@
           "artifact:.l7-prosody-harness",
           "local_only:loopback"
         ],
-        "failure_class": "functional-failure",
+        "failure_class": null,
         "family_id": "family:prosody",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": [
           "--version"
         ],
-        "level": "L5-loaded",
+        "level": "L7-functional",
         "link": {
           "all_under_prefix": true,
           "sonames": {
@@ -134466,12 +134945,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2873130:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2873130:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2873130:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "2873130:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "2873130:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "2873130:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "270387:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "270387:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "270387:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "270387:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "270387:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "270387:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -134509,12 +134988,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "failed",
+        "outcome": "reached",
         "p1000_rank": 99,
         "reaches_baseline": true,
-        "reason": "prosody did not register/authenticate and answer the XMPP ping",
+        "reason": null,
         "recipe_id": "recipe:prosody:0.12.4",
-        "residual_class": "functional-divergence",
+        "residual_class": "none",
         "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -134537,59 +135016,45 @@
         "steps": [],
         "subject": "authority",
         "transcript_excerpt": [
-          "accepted",
-          "== prosody stderr tail ==",
+          "== launch ==",
           "exit=0",
-          "== prosody log tail ==",
+          "prosody-l7-harness 0.12.4",
+          "== workload ==",
           "exit=0",
-          "ity/src/prosody-0.12.4/util/events.lua:77>",
-          "\t(...tail calls...)",
-          "\t...rosody/authority/src/prosody-0.12.4/core/hostmanager.lua:108: in function 'core.hostmanager.activate'",
-          "\t...rosody/authority/src/prosody-0.12.4/core/hostmanager.lua:58: in field '?'",
-          "\t...ink/prosody/authority/src/prosody-0.12.4/util/events.lua:81: in function <...ink/prosody/authority/src/prosody-0.12.4/util/events.lua:77>",
-          "\t(...tail calls...)",
-          "\t...nk/prosody/authority/src/prosody-0.12.4/util/startup.lua:428: in function 'util.startup.prepare_to_start'",
-          "\t...nk/prosody/authority/src/prosody-0.12.4/util/startup.lua:707: in function 'util.startup.prosody'",
-          "\t...link/prosody/authority/src/prosody-0.12.4/util/async.lua:156: in upvalue 'func'",
-          "\t...link/prosody/authority/src/prosody-0.12.4/util/async.lua:144: in function <...link/prosody/authority/src/prosody-0.12.4/util/async.lua:142>",
-          "Oct 22 {clock} portmanager\tdebug\tNo active service for s2s, activating...",
-          "Oct 22 {clock} portmanager\tinfo\tActivated service 's2s' on no ports",
-          "Oct 22 {clock} portmanager\tdebug\tGathering certificates for SNI for host localhost, s2s service",
-          "Oct 22 {clock} portmanager\tdebug\tNo active service for s2s_direct_tls, activating...",
-          "Oct 22 {clock} portmanager\tinfo\tActivated service 's2s_direct_tls' on no ports",
-          "Oct 22 {clock} portmanager\tdebug\tGathering certificates for SNI for host localhost, s2s_direct_tls service",
-          "Oct 22 {clock} localhost:tls\tdebug\tCreating context for c2s",
-          "Oct 22 {clock} certmanager\tdebug\tAutomatically locating certs for host localhost",
-          "Oct 22 {clock} certmanager\tdebug\tSearching {scratch}/certs for a key and certificate for localhost...",
-          "Oct 22 {clock} certmanager\tdebug\tNo certificate/key found for localhost",
-          "Oct 22 {clock} localhost:tls\tdebug\tCreating context for s2sout",
-          "Oct 22 {clock} certmanager\tdebug\tAutomatically locating certs for host localhost",
-          "Oct 22 {clock} certmanager\tdebug\tSearching {scratch}/certs for a key and certificate for localhost...",
-          "Oct 22 {clock} certmanager\tdebug\tNo certificate/key found for localhost",
-          "Oct 22 {clock} localhost:tls\tdebug\tCreating context for s2sin",
-          "Oct 22 {clock} certmanager\tdebug\tAutomatically locating certs for host localhost",
-          "Oct 22 {clock} certmanager\tdebug\tSearching {scratch}/certs for a key and certificate for localhost...",
-          "Oct 22 {clock} certmanager\tdebug\tNo certificate/key found for localhost",
-          "Oct 22 {clock} localhost:tls\tinfo\tCertificates loaded",
-          "== prosody error lines ==",
+          "== prosodyctl register ==",
           "exit=0",
-          "Oct 22 {clock} certmanager\terror\tError indexing certificate directory {scratch}/certs: cannot open {scratch}/certs: No such file or directory",
-          "Oct 22 {clock} mod_posix\terror\tDanger, Will Robinson! Prosody doesn't need to be run as root, so don't do it!",
-          "Oct 22 {clock} mod_posix\terror\tFor more information on running Prosody as root, see https://prosody.im/doc/root",
-          "Oct 22 {clock} modulemanager\terror\tError initializing module 'posix' on 'localhost': ...nk/prosody/authority/src/prosody-0.12.4/util/startup.lua:357: attempt to index a nil value (field 'main_thread')"
+          "**************************",
+          "Prosody was unable to find lua-unbound",
+          "This package can be obtained in the following ways:",
+          "",
+          "  Debian/Ubuntu | sudo apt install lua-unbound                                  ",
+          "       luarocks | luarocks install luaunbound                                   ",
+          "         Source | https://www.zash.se/luaunbound.html                           ",
+          "",
+          "Old DNS resolver library will be used",
+          "More help can be found on our website, at https://prosody.im/doc/depends",
+          "**************************",
+          "",
+          "certmanager         error\tError indexing certificate directory {scratch}/certs: cannot open {scratch}/certs: No such file or directory",
+          "== XMPP STARTTLS session ==",
+          "exit=0",
+          "starttls-offered=True proceed=True tls=TLSv1.3 sasl-success=True bind-result=True ping-result=True",
+          "== XMPP session with the unrelated CA ==",
+          "exit=0",
+          "rejected"
         ],
-        "transcript_sha256": "ed572f42c31e12e973a016cf63f1fb9820fb66fda0fb4d66a5ee328889b6420b",
+        "transcript_sha256": "2aecd1a299bb84e6c71453f06616ce82709a4f5b0f8a702bd506fbfd965934ec",
         "variant_id": "variant:prosody:0.12.4:pristine",
         "workload": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA rejected",
         "workload_result": {
-          "functional_ok": false,
+          "functional_ok": true,
           "local_only": true,
           "name": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA rejected",
-          "runtime_ok": false
+          "runtime_ok": true
         }
       },
       {
-        "authority_applicable_level": "L5-loaded",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "prosody",
@@ -134602,14 +135067,14 @@
           "artifact:.l7-prosody-harness",
           "local_only:loopback"
         ],
-        "failure_class": "functional-failure",
+        "failure_class": null,
         "family_id": "family:prosody",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
         "launch": [
           "--version"
         ],
-        "level": "L5-loaded",
+        "level": "L7-functional",
         "link": {
           "all_under_prefix": true,
           "sonames": {
@@ -134630,12 +135095,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "2873150:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "2873150:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2873150:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "2873150:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "2873150:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "2873150:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "270407:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "270407:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "270407:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "270407:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "270407:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "270407:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -134673,12 +135138,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "failed",
+        "outcome": "reached",
         "p1000_rank": 99,
         "reaches_baseline": true,
-        "reason": "prosody did not register/authenticate and answer the XMPP ping",
+        "reason": null,
         "recipe_id": "recipe:prosody:0.12.4",
-        "residual_class": "functional-divergence",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -134701,55 +135166,41 @@
         "steps": [],
         "subject": "candidate",
         "transcript_excerpt": [
+          "== launch ==",
           "exit=0",
-          "== prosody log tail ==",
+          "prosody-l7-harness 0.12.4",
+          "== workload ==",
           "exit=0",
-          "ug\tClosing now",
-          "Oct 22 {clock} portmanager\tdebug\tRemoved listening service c2s from [::]:{port}",
-          "Oct 22 {clock} servpdMztD4oMtf0\tdebug\tClosing now",
-          "Oct 22 {clock} portmanager\tdebug\tRemoved listening service c2s from [*]:{port}",
-          "Oct 22 {clock} portmanager\tinfo\tDeactivated service 'c2s'",
-          "Oct 22 {clock} portmanager\tdebug\tUnregistering service: c2s_direct_tls",
-          "Oct 22 {clock} portmanager\tinfo\tDeactivated service 'c2s_direct_tls'",
-          "Oct 22 {clock} portmanager\tdebug\tUnregistering service: legacy_ssl",
-          "Oct 22 {clock} portmanager\tinfo\tDeactivated service 'legacy_ssl'",
-          "Oct 22 {clock} portmanager\tdebug\tUnregistering service: s2s",
-          "Oct 22 {clock} portmanager\tinfo\tDeactivated service 's2s'",
-          "Oct 22 {clock} portmanager\tdebug\tUnregistering service: s2s_direct_tls",
-          "Oct 22 {clock} portmanager\tinfo\tDeactivated service 's2s_direct_tls'",
-          "Oct 22 {clock} modulemanager\terror\tError initializing module 'posix' on 'localhost': ...nk/prosody/candidate/src/prosody-0.12.4/util/startup.lua:357: attempt to index a nil value (field 'main_thread')",
-          "\tstack traceback:",
-          "\t...nk/prosody/candidate/src/prosody-0.12.4/util/startup.lua:357: in field 'shutdown'",
-          "\t...osody/candidate/src/prosody-0.12.4/plugins/mod_posix.lua:38: in main chunk",
-          "\t[C]: in function 'xpcall'",
-          "\t...sody/candidate/src/prosody-0.12.4/core/modulemanager.lua:270: in upvalue 'do_load_module'",
-          "\t...sody/candidate/src/prosody-0.12.4/core/modulemanager.lua:353: in function 'core.modulemanager.load'",
-          "\t...sody/candidate/src/prosody-0.12.4/core/modulemanager.lua:131: in function 'core.modulemanager.load_modules_for_host'",
-          "\t...ink/prosody/candidate/src/prosody-0.12.4/util/events.lua:81: in function <...ink/prosody/candidate/src/prosody-0.12.4/util/events.lua:77>",
-          "\t(...tail calls...)",
-          "\t...rosody/candidate/src/prosody-0.12.4/core/hostmanager.lua:108: in function 'core.hostmanager.activate'",
-          "\t...rosody/candidate/src/prosody-0.12.4/core/hostmanager.lua:58: in field '?'",
-          "\t...ink/prosody/candidate/src/prosody-0.12.4/util/events.lua:81: in function <...ink/prosody/candidate/src/prosody-0.12.4/util/events.lua:77>",
-          "\t(...tail calls...)",
-          "\t...nk/prosody/candidate/src/prosody-0.12.4/util/startup.lua:428: in function 'util.startup.prepare_to_start'",
-          "\t...nk/prosody/candidate/src/prosody-0.12.4/util/startup.lua:707: in function 'util.startup.prosody'",
-          "\t...link/prosody/candidate/src/prosody-0.12.4/util/async.lua:156: in upvalue 'func'",
-          "\t...link/prosody/candidate/src/prosody-0.12.4/util/async.lua:144: in function <...link/prosody/candidate/src/prosody-0.12.4/util/async.lua:142>",
-          "== prosody error lines ==",
+          "== prosodyctl register ==",
           "exit=0",
-          "Oct 22 {clock} certmanager\terror\tError indexing certificate directory {scratch}/certs: cannot open {scratch}/certs: No such file or directory",
-          "Oct 22 {clock} mod_posix\terror\tDanger, Will Robinson! Prosody doesn't need to be run as root, so don't do it!",
-          "Oct 22 {clock} mod_posix\terror\tFor more information on running Prosody as root, see https://prosody.im/doc/root",
-          "Oct 22 {clock} modulemanager\terror\tError initializing module 'posix' on 'localhost': ...nk/prosody/candidate/src/prosody-0.12.4/util/startup.lua:357: attempt to index a nil value (field 'main_thread')"
+          "**************************",
+          "Prosody was unable to find lua-unbound",
+          "This package can be obtained in the following ways:",
+          "",
+          "  Debian/Ubuntu | sudo apt install lua-unbound                                  ",
+          "       luarocks | luarocks install luaunbound                                   ",
+          "         Source | https://www.zash.se/luaunbound.html                           ",
+          "",
+          "Old DNS resolver library will be used",
+          "More help can be found on our website, at https://prosody.im/doc/depends",
+          "**************************",
+          "",
+          "certmanager         error\tError indexing certificate directory {scratch}/certs: cannot open {scratch}/certs: No such file or directory",
+          "== XMPP STARTTLS session ==",
+          "exit=0",
+          "starttls-offered=True proceed=True tls=TLSv1.3 sasl-success=True bind-result=True ping-result=True",
+          "== XMPP session with the unrelated CA ==",
+          "exit=0",
+          "rejected"
         ],
-        "transcript_sha256": "993c1b9666da5db7364cc262082b7fe71f962e82d01948503aff04a89688ba0b",
+        "transcript_sha256": "2aecd1a299bb84e6c71453f06616ce82709a4f5b0f8a702bd506fbfd965934ec",
         "variant_id": "variant:prosody:0.12.4:pristine",
         "workload": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA rejected",
         "workload_result": {
-          "functional_ok": false,
+          "functional_ok": true,
           "local_only": true,
           "name": "prosody: XMPP STARTTLS, SASL PLAIN, resource bind and IQ ping; unrelated CA rejected",
-          "runtime_ok": false
+          "runtime_ok": true
         }
       },
       {
@@ -139965,7 +140416,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "rsync",
@@ -139973,18 +140424,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:rsync"
+          "family:family:rsync",
+          "recipe:recipe:rsync:3.3.0",
+          "artifact:rsync",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:rsync",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "277098:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "277098:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "277098:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "277098:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "277098:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "277098:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "277098:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "277098:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -140004,13 +140492,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 381,
         "reaches_baseline": true,
-        "reason": "fetching the pristine source from https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz failed: curl: (22) The requested URL returned error: 504",
+        "reason": null,
         "recipe_id": "recipe:rsync:3.3.0",
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -140020,9 +140508,9 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:rsync",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "source_root_hash": "186a1fd44c5d8b2e7b7d4ca967becfdd5a81d78daa1485b25442d6503edbab6c",
+        "source_sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
+        "source_url": "https://snapshot.debian.org/archive/debian/20240412T023350Z/pool/main/r/rsync/rsync_3.3.0.orig.tar.gz",
         "specimen_id": "specimen:rsync:3.3.0",
         "static_linkage": {
           "applicable": false,
@@ -140031,13 +140519,52 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "rsync  version 3.3.0  protocol version 31",
+          "Copyright (C) 1996-2024 by Andrew Tridgell, Wayne Davison, and others.",
+          "Web site: https://rsync.samba.org/",
+          "Capabilities:",
+          "    64-bit files, 64-bit inums, 64-bit timestamps, 64-bit long ints,",
+          "    socketpairs, symlinks, symtimes, hardlinks, hardlink-specials,",
+          "    hardlink-symlinks, IPv6, atimes, batchfiles, inplace, append, no ACLs,",
+          "    xattrs, optional secluded-args, iconv, prealloc, stop-at, no crtimes",
+          "Optimizations:",
+          "    SIMD-roll, no asm-roll, openssl-crypto, no asm-MD5",
+          "Checksum list:",
+          "    md5 md4 sha1 none",
+          "Compress list:",
+          "    zlibx zlib none",
+          "Daemon auth list:",
+          "    sha512 sha256 sha1 md5 md4",
+          "",
+          "rsync comes with ABSOLUTELY NO WARRANTY.  This is free software, and you",
+          "are welcome to redistribute it under certain conditions.  See the GNU",
+          "General Public Licence for details.",
+          "== workload ==",
+          "exit=0",
+          "== rsync -a copy ==",
+          "exit=0",
+          "== rsync -ac unchanged ==",
+          "exit=0",
+          ".f..t...... probe.txt",
+          "== rsync -ac changed ==",
+          "exit=0",
+          ">fcst...... probe.txt"
+        ],
+        "transcript_sha256": "7f4b58ac2150a37e9f5a9fe410142b9f2779e52bb9fc5d3166f945f854f1bac2",
         "variant_id": "variant:rsync:3.3.0:pristine",
-        "workload": null
+        "workload": "rsync: local copy + OpenSSL-MD5 checksum skip/transfer",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "rsync: local copy + OpenSSL-MD5 checksum skip/transfer",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "rsync",
@@ -140045,18 +140572,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:rsync"
+          "family:family:rsync",
+          "recipe:recipe:rsync:3.3.0",
+          "artifact:rsync",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:rsync",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "277116:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "277116:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "277116:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "277116:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "277116:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "277116:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "277116:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "277116:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -140076,12 +140640,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 381,
         "reaches_baseline": true,
-        "reason": "fetching the pristine source from https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz failed: curl: (22) The requested URL returned error: 504",
+        "reason": null,
         "recipe_id": "recipe:rsync:3.3.0",
-        "residual_class": "unavailable",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -140092,9 +140656,9 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:rsync",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "source_root_hash": "186a1fd44c5d8b2e7b7d4ca967becfdd5a81d78daa1485b25442d6503edbab6c",
+        "source_sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
+        "source_url": "https://snapshot.debian.org/archive/debian/20240412T023350Z/pool/main/r/rsync/rsync_3.3.0.orig.tar.gz",
         "specimen_id": "specimen:rsync:3.3.0",
         "static_linkage": {
           "applicable": false,
@@ -140103,10 +140667,49 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "rsync  version 3.3.0  protocol version 31",
+          "Copyright (C) 1996-2024 by Andrew Tridgell, Wayne Davison, and others.",
+          "Web site: https://rsync.samba.org/",
+          "Capabilities:",
+          "    64-bit files, 64-bit inums, 64-bit timestamps, 64-bit long ints,",
+          "    socketpairs, symlinks, symtimes, hardlinks, hardlink-specials,",
+          "    hardlink-symlinks, IPv6, atimes, batchfiles, inplace, append, no ACLs,",
+          "    xattrs, optional secluded-args, iconv, prealloc, stop-at, no crtimes",
+          "Optimizations:",
+          "    SIMD-roll, no asm-roll, openssl-crypto, no asm-MD5",
+          "Checksum list:",
+          "    md5 md4 sha1 none",
+          "Compress list:",
+          "    zlibx zlib none",
+          "Daemon auth list:",
+          "    sha512 sha256 sha1 md5 md4",
+          "",
+          "rsync comes with ABSOLUTELY NO WARRANTY.  This is free software, and you",
+          "are welcome to redistribute it under certain conditions.  See the GNU",
+          "General Public Licence for details.",
+          "== workload ==",
+          "exit=0",
+          "== rsync -a copy ==",
+          "exit=0",
+          "== rsync -ac unchanged ==",
+          "exit=0",
+          ".f..t...... probe.txt",
+          "== rsync -ac changed ==",
+          "exit=0",
+          ">fcst...... probe.txt"
+        ],
+        "transcript_sha256": "7f4b58ac2150a37e9f5a9fe410142b9f2779e52bb9fc5d3166f945f854f1bac2",
         "variant_id": "variant:rsync:3.3.0:pristine",
-        "workload": null
+        "workload": "rsync: local copy + OpenSSL-MD5 checksum skip/transfer",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "rsync: local copy + OpenSSL-MD5 checksum skip/transfer",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -145251,7 +145854,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "squid",
@@ -145259,18 +145862,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:squid"
+          "family:family:squid",
+          "recipe:recipe:squid:6.13",
+          "artifact:src/squid",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:squid",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "269741:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "269741:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "269741:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "269741:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libssl.so.3",
+            "269741:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "269741:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libssl.so.3",
+            "269741:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libssl.so.3",
+            "269741:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libssl.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -145290,13 +145940,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 45,
         "reaches_baseline": true,
-        "reason": "fetching the pristine source from http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz failed: curl: (7) Failed to connect to www.squid-cache.org port 80 after 472 ms: Couldn't connect to server",
-        "recipe_id": "recipe:squid:6.12",
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:squid:6.13",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -145306,10 +145956,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:squid",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
-        "specimen_id": "specimen:squid:6.12",
+        "source_root_hash": "9d151cce321ed5a7f3fcdeb6ef3ed56714eac00e295c4802866ae29a01a707a5",
+        "source_sha256": "9b33de09d733b5933f6c2b54ebe0be51a9fa4751f183f3aead90b3c5d930aa72",
+        "source_url": "https://github.com/squid-cache/squid/releases/download/SQUID_6_13/squid-6.13.tar.gz",
+        "specimen_id": "specimen:squid:6.13",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -145317,13 +145967,39 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": "variant:squid:6.12:pristine",
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "Squid Cache: Version 6.13",
+          "Service Name: squid",
+          "",
+          "This binary uses OpenSSL 3.6.4 25 Aug 2026. configure options:  '--with-openssl' '--disable-ecap' '--disable-esi' '--without-libxml2' '--disable-ident-lookups' '--enable-removal-policies=heap' '--without-expat' 'LDFLAGS=-L{prefix}/lib' 'LIBS=-L{prefix}/lib -lssl -lcrypto -lz' 'CPPFLAGS=-I{prefix}/include' 'PKG_CONFIG_PATH={prefix}/lib/pkgconfig' --enable-ltdl-convenience",
+          "== workload ==",
+          "exit=0",
+          "== authority s_client GET via https_port ==",
+          "exit=0",
+          "HTTP/1.1 200 OK",
+          "phase24-squid-ok",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "80BB3A20B87F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "80BB3A20B87F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:"
+        ],
+        "transcript_sha256": "a28bd9c5a101a711edb9275e272a819ae3955e919fbc170a310f2b1419d66ddb",
+        "variant_id": "variant:squid:6.13:pristine",
+        "workload": "squid: verified TLS1.3 https_port proxy fetch + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "squid: verified TLS1.3 https_port proxy fetch + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "squid",
@@ -145331,18 +146007,65 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:squid"
+          "family:family:squid",
+          "recipe:recipe:squid:6.13",
+          "artifact:src/squid",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:squid",
         "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "-v"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "269765:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libssl.so.3",
+            "269765:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libssl.so.3",
+            "269765:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libssl.so.3",
+            "269765:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libssl.so.3",
+            "269765:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "269765:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libssl.so.3",
+            "269765:\t  trying file=/work/artifacts/phase2/install/lib/tls/libssl.so.3",
+            "269765:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libssl.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -145362,12 +146085,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 45,
         "reaches_baseline": true,
-        "reason": "fetching the pristine source from http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz failed: curl: (7) Failed to connect to www.squid-cache.org port 80 after 472 ms: Couldn't connect to server",
-        "recipe_id": "recipe:squid:6.12",
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:squid:6.13",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -145378,10 +146101,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:squid",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
-        "specimen_id": "specimen:squid:6.12",
+        "source_root_hash": "9d151cce321ed5a7f3fcdeb6ef3ed56714eac00e295c4802866ae29a01a707a5",
+        "source_sha256": "9b33de09d733b5933f6c2b54ebe0be51a9fa4751f183f3aead90b3c5d930aa72",
+        "source_url": "https://github.com/squid-cache/squid/releases/download/SQUID_6_13/squid-6.13.tar.gz",
+        "specimen_id": "specimen:squid:6.13",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -145389,10 +146112,36 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": "variant:squid:6.12:pristine",
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "Squid Cache: Version 6.13",
+          "Service Name: squid",
+          "",
+          "This binary uses OpenSSL 3.6.4 25 Aug 2026. configure options:  '--with-openssl' '--disable-ecap' '--disable-esi' '--without-libxml2' '--disable-ident-lookups' '--enable-removal-policies=heap' '--without-expat' 'LDFLAGS=-L{prefix}/lib' 'LIBS=-L{prefix}/lib -lssl -lcrypto -lz' 'CPPFLAGS=-I{prefix}/include' 'PKG_CONFIG_PATH={prefix}/lib/pkgconfig' --enable-ltdl-convenience",
+          "== workload ==",
+          "exit=0",
+          "== authority s_client GET via https_port ==",
+          "exit=0",
+          "HTTP/1.1 200 OK",
+          "phase24-squid-ok",
+          "== authority s_client unrelated-ca (must fail) ==",
+          "exit=1",
+          "Connecting to {addr}",
+          "depth=0 CN={addr}",
+          "verify error:num=20:unable to get local issuer certificate",
+          "800B6329147F0000:error:0A000086:SSL routines:tls_post_process_server_certificate:certificate verify failed:../../src/openssl-3.6.4/ssl/statem/statem_clnt.c:2125:",
+          "800B6329147F0000:error:0A000197:SSL routines:SSL_shutdown:shutdown while in init:../../src/openssl-3.6.4/ssl/ssl_lib.c:2804:"
+        ],
+        "transcript_sha256": "aeef3f9827bc1e434187a3165e25f7fb1ca8cb80c6043cce28ee788b16817ad8",
+        "variant_id": "variant:squid:6.13:pristine",
+        "workload": "squid: verified TLS1.3 https_port proxy fetch + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "squid: verified TLS1.3 https_port proxy fetch + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -160930,16 +161679,16 @@
       },
       {
         "evidence": [
-          "source:https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz#ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8",
+          "source:https://github.com/eclipse-mosquitto/mosquitto/archive/refs/tags/v2.0.20.tar.gz#851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a",
           "recipe:recipe:mosquitto:2.0.20",
-          "pinned_sha256:ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8"
+          "pinned_sha256:851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a"
         ],
         "family_id": "family:mosquitto",
         "licence": "unknown",
-        "pristine_source_root_hash": "unknown",
-        "pristine_source_sha256": "ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8",
+        "pristine_source_root_hash": "13486482a6bc2f029c2efb017664c2c81831d13aa15ef25f68119cd249a84efa",
+        "pristine_source_sha256": "851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a",
         "specimen_id": "specimen:mosquitto:2.0.20",
-        "upstream_ref": "https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz",
+        "upstream_ref": "https://github.com/eclipse-mosquitto/mosquitto/archive/refs/tags/v2.0.20.tar.gz",
         "version": "2.0.20"
       },
       {
@@ -161196,16 +161945,16 @@
       },
       {
         "evidence": [
-          "source:https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz#7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
+          "source:https://snapshot.debian.org/archive/debian/20240412T023350Z/pool/main/r/rsync/rsync_3.3.0.orig.tar.gz#7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
           "recipe:recipe:rsync:3.3.0",
           "pinned_sha256:7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90"
         ],
         "family_id": "family:rsync",
         "licence": "unknown",
-        "pristine_source_root_hash": "unknown",
+        "pristine_source_root_hash": "186a1fd44c5d8b2e7b7d4ca967becfdd5a81d78daa1485b25442d6503edbab6c",
         "pristine_source_sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
         "specimen_id": "specimen:rsync:3.3.0",
-        "upstream_ref": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "upstream_ref": "https://snapshot.debian.org/archive/debian/20240412T023350Z/pool/main/r/rsync/rsync_3.3.0.orig.tar.gz",
         "version": "3.3.0"
       },
       {
@@ -161277,6 +162026,20 @@
         "specimen_id": "specimen:squid:6.12",
         "upstream_ref": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
         "version": "6.12"
+      },
+      {
+        "evidence": [
+          "source:https://github.com/squid-cache/squid/releases/download/SQUID_6_13/squid-6.13.tar.gz#9b33de09d733b5933f6c2b54ebe0be51a9fa4751f183f3aead90b3c5d930aa72",
+          "recipe:recipe:squid:6.13",
+          "pinned_sha256:9b33de09d733b5933f6c2b54ebe0be51a9fa4751f183f3aead90b3c5d930aa72"
+        ],
+        "family_id": "family:squid",
+        "licence": "unknown",
+        "pristine_source_root_hash": "9d151cce321ed5a7f3fcdeb6ef3ed56714eac00e295c4802866ae29a01a707a5",
+        "pristine_source_sha256": "9b33de09d733b5933f6c2b54ebe0be51a9fa4751f183f3aead90b3c5d930aa72",
+        "specimen_id": "specimen:squid:6.13",
+        "upstream_ref": "https://github.com/squid-cache/squid/releases/download/SQUID_6_13/squid-6.13.tar.gz",
+        "version": "6.13"
       },
       {
         "evidence": [
@@ -162528,6 +163291,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:squid:6.13",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:squid:6.13",
+        "variant_id": "variant:squid:6.13:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "make-pristine-shared",
         "evidence": [
           "recipe:recipe:sslscan:2.1.5",
@@ -162660,7 +163435,7 @@
       }
     ]
   },
-  "body_hash": "2541990f45e7026306b655550d5d3fc28413605c6a7994971fce412adb97560a",
+  "body_hash": "92f722b216acb8b400a9e1c15f0afbe758b3c0f0b159b0b7a117556ac6550e2f",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
