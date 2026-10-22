@@ -1,5 +1,13 @@
 # Phase 24 — the downstream-1000 stratum: seal
 
+> **Superseded for current corpus counts (2026-10-22).** The ladder below is the
+> frozen Phase-24 measurement (33 measurable, 967 `NOT_APPLICABLE`). The current
+> `forensics/downstream/runtime-functional-atlas.json` records 101 candidate and
+> 101 authority `L7-functional` rows (102 loaded, 898 not attempted, 0 failed)
+> and 33/33 cohort families at `L7-functional`; see
+> `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`. The seal's
+> bounded claim remains true of the frozen inputs it cites.
+
 **STATUS: derived.** This status is not typed; it is the state `forensics/tools/phase_state.py`
 derives from artefact existence. The stratum's obligation ledger is empty of open rows —
 `forensics/phase24-obligations.json` reads `open_in_this_stratum: 0`, all nineteen contract units
