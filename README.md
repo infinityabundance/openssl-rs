@@ -25,40 +25,31 @@ LibreSSL, or `ring`.
 
 ## What is achieved
 
-Measured at source identity `8c8f3c65d` (2026-10-22). Every row names its own
+Measured at the source identity rendered below. Every row names its own
 machine-readable evidence; none of them is a claim of completeness.
+
+<!-- BEGIN GENERATED: readme-achievements -->
+Source identity: `1b0288a0c` on `integrate/safe-c33`; crate version `0.0.30`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
-| **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority | `forensics/downstream/runtime-functional-atlas.json` |
-| **Downstream drop-in, 1000-family corpus** | **101 / 1000 at `L7-functional`**; candidate 101 = authority 101; **0 failed**; 102 loaded; 898 not attempted | same file, `body.counts.by_subject` |
-| **ABI surface** | **5,906 / 5,906** `libcrypto` dynamic exports and **608 / 608** `libssl` exports identical in name, version, binding and visibility; SONAMEs and version nodes match | rebuilt-candidate `nm`/`readelf` differential |
-| **Library test suite** | **1,747 passing, 0 failing, 42 ignored** | `cargo test --lib -- --test-threads=4` |
-| **Memory safety: mechanisms** | **5 discharged at mechanism scope** — RC-1 refcounting, OB-1 `OwnedBuf`, OB-2 `OwnedStr`, OB-3 `OwnedCtx`, ERR | `CAMPAIGN-STATUS.json` |
-| **Memory safety: boundaries** | B23, B25, B29, B39–B44 recorded; **B39 and B40 independently checked** at boundary scope; B41–B43 batch-checked (B43 was rejected, corrected, then accepted); B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
-| **Memory safety: file census** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (all 761 audited), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json` |
-| **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure | `consumer-status-C1.json` |
-| **Release** | **0.0.30** on crates.io, 8.2 MiB, checksum `07eb9cb4…` | `atlas-refresh/publish-0.0.30.json` |
+| **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`) |
+| **Downstream drop-in, 1000-family corpus** | **101 / 1000 at `L7-functional`**; candidate 101 = authority 101; **0 failed**; 102 loaded; 898 not attempted | same atlas, `body.counts.by_subject` |
+| **Library test suite** | **1,747 passing, 0 failing, 42 ignored** | `atlas-refresh/publish-0.0.30.json` |
+| **Memory safety: mechanisms** | **5 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
+| **Memory safety: boundaries** | 5 scoped boundary discharges (B23, B25, B27, B28, B29); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
+| **Memory safety: file census** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
+| **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure | `CAMPAIGN-STATUS.json` (`consumers`) |
+| **Release** | **0.0.30** on crates.io (2026-10-22), checksum `07eb9cb4…` | `atlas-refresh/publish-0.0.30.json` |
+<!-- END GENERATED: readme-achievements -->
 
-### The 101 families at `L7-functional`
+### The families at `L7-functional`
 
-`aircrack-ng`, `apache2-utils`, `apr-util`, `arm-trusted-firmware-tools`,
-`axel`, `bannergrab`, `cowpatty`, `curl`, `cyrus-sasl`, `dcap-tunnel-ssl`,
-`dovecot`, `duo_unix`, `eggdrop`, `elinks`, `epic5`, `exim`, `fetchmail`,
-`fido2`, `fossil`, `gensio`, `getdns`, `haproxy`, `hcxtools`, `hiredis-ssl`,
-`hitch`, `httperf`, `httping`, `icecast`, `iperf3`, `irssi`, `isync`,
-`jimtcl`, `jwt`, `kea`, `keepalived`, `kmod`, `ldns`, `lftp`, `libarchive`,
-`libcoap`, `libesmtp`, `libevent`, `libjose`, `libnetconf2`, `liboauth2`,
-`librdkafka`, `libre`, `libretls`, `libssh`, `libstrophe`, `libtins`,
-`libtpms`, `libu2f-server`, `libwebsockets`, `libzip`, `links`,
-`lua-luaossl`, `lua-sec`, `lynx`, `makepasswd`, `memcached`, `mini-httpd`,
-`minizip-ng`, `mktorrent`, `monit`, `mosquitto`, `mumble-server`,
-`net-snmp`, `nginx`, `nmap`, `nrpe`, `nsd`, `opendkim`, `openssh`,
-`openssh-server`, `openvpn`, `osslsigncode`, `partclone`, `proftpd`,
-`prosody`, `proxytunnel`, `pure-ftpd`, `radsecproxy`, `redis`, `rsync`,
-`s-nail`, `slrn`, `socat`, `sofia-sip`, `squid`, `sslscan`, `sslsplit`,
-`ssmtp`, `stunnel`, `swtpm`, `tcpdump`, `tinc`, `tnftp`, `u-boot-tools`,
-`w3m`, `znc`.
+<!-- BEGIN GENERATED: readme-l7-families -->
+**101 of 1000 counted corpus families are `L7-functional`** — candidate and authority rows agree (101 = 101); 0 failed, 102 loaded, 898 not attempted.
+
+`aircrack-ng`, `apache2-utils`, `apr-util`, `arm-trusted-firmware-tools`, `axel`, `bannergrab`, `cowpatty`, `curl`, `cyrus-sasl`, `dcap-tunnel-ssl`, `dovecot`, `duo_unix`, `eggdrop`, `elinks`, `epic5`, `exim`, `fetchmail`, `fido2`, `fossil`, `gensio`, `getdns`, `haproxy`, `hcxtools`, `hiredis-ssl`, `hitch`, `httperf`, `httping`, `icecast`, `iperf3`, `irssi`, `isync`, `jimtcl`, `jwt`, `kea`, `keepalived`, `kmod`, `ldns`, `lftp`, `libarchive`, `libcoap`, `libesmtp`, `libevent`, `libjose`, `libnetconf2`, `liboauth2`, `librdkafka`, `libre`, `libretls`, `libssh`, `libstrophe`, `libtins`, `libtpms`, `libu2f-server`, `libwebsockets`, `libzip`, `links`, `lua-luaossl`, `lua-sec`, `lynx`, `makepasswd`, `memcached`, `mini-httpd`, `minizip-ng`, `mktorrent`, `monit`, `mosquitto`, `mumble-server`, `net-snmp`, `nginx`, `nmap`, `nrpe`, `nsd`, `opendkim`, `openssh`, `openssh-server`, `openvpn`, `osslsigncode`, `partclone`, `proftpd`, `prosody`, `proxytunnel`, `pure-ftpd`, `radsecproxy`, `redis`, `rsync`, `s-nail`, `slrn`, `socat`, `sofia-sip`, `squid`, `sslscan`, `sslsplit`, `ssmtp`, `stunnel`, `swtpm`, `tcpdump`, `tinc`, `tnftp`, `u-boot-tools`, `w3m`, `znc`.
+<!-- END GENERATED: readme-l7-families -->
 
 Client, server, library, signing, interception, VPN, mail, DNS, IMAP, IRC,
 XMPP, FTP, MQTT, Kafka, TPM, SNMP and digest/KDF faces are all represented. Each
@@ -68,17 +59,20 @@ by a deterministic local workload with a negative control.
 
 ### Memory safety is partial — precisely what that means
 
-This project does **not** claim to be memory-safe yet. The honest ledger:
+This project does **not** claim to be memory-safe yet. The honest ledger is
+derived from the receipts:
 
+<!-- BEGIN GENERATED: readme-memory-safety -->
 | Status | What it covers |
 |---|---|
-| **Discharged (mechanism scope)** | Reference counting (RC-1) and the four shared ownership mechanisms OB-1…OB-3 plus ERR. Their contracts are independently adjudicated and their caller populations established. |
-| **Independently checked (boundary scope)** | The memory-BIO constructor/destructor path (B39) and the connect-BIO descriptor invariant (B40), each with a firing mutation control. |
-| **Batch checked** | Allocation-ownership batches B41–B43 (PQ key material, Argon2, password KDFs) and B44's KDF width guards. B43 was **rejected** on its first claim, corrected, and accepted; B44's isolation fix is author-evidenced only. |
-| **Scoped discharges** | WPACKET failed-init (B23), record-layer alert decode (B25), UI lifecycle (B29), `OSSL_STORE` error-path release (B26-X1). |
-| **Audited but not converted** | 761 `PARTIAL` files. Every one has been read and classified; the remaining unsafe operations are catalogued by mechanism and site. |
-| **Not discharged** | `BIO`, `RUNTIME_ALLOC_OWNERSHIP`, `SSL_SESSION`, `EVP_PKEY_PROVIDER`, `RAND_CMS_STORE_KEYFMT`, `RUNTIME_CONCURRENCY` remain open in consumer closures, which is why `SAFE_COMPATIBLE` is 0/33. |
-| **Open STOP-class defect** | `B27-X2`: `OSSL_STORE_attach` can publish a `NULL` loader after a refused `loader_set_params`, which `OSSL_STORE_close`/`OSSL_STORE_load` then dereference. Recorded in `boundary-sweep-B27.json`; it blocks promotion of `src/store/store_lib.rs`. |
+| **Discharged (mechanism scope)** | **5** — RC-1 shared reference counting; OB-1 OwnedBuf release state; OB-2 OwnedStr string ownership; OB-3 OwnedCtx/RawCtx context ownership; ERR-1 ERR error-queue ownership and allocator file-coordinate seam. Mechanism scope only; not a file-level or consumer-level graduation. |
+| **Discharged (scoped boundary)** | **5 receipts** — B23 (`B23-WPKT-1`, `B23-WPKT-2`), B25 (`B25-RL-4`, `B25-RL-5`), B27 (`B26-X1`), B28 (`B27-X2`), B29 (`B29-UI-1`, `B29-UI-2`, `B29-UI-3`). Retained boundaries stay `CONTRACTED`. |
+| **Independently checked (not discharged)** | B39–B40 boundary-checked (memory-BIO constructor/destructor, connect-BIO descriptor); B41–B43 batch-checked; B44 **author-evidenced only**. |
+| **STOP-class defects** | **0 open** — `B27-X2` (`STOP-CLASS`, B27) **closed by B28**; `NEO-ERR-1` (`STOP_LEVEL`, B33) **fixed in B33**. |
+| **Audited but not converted** | **761 `PARTIAL` files**; 761/761 audited, 0 remaining. Audit completion is not discharge. |
+| **Not discharged** | Receipt-backed mechanisms still open: `BIO`, `RUNTIME_ALLOC_OWNERSHIP`; `SAFE_COMPATIBLE` remains 0/33. |
+| **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no consumer family has a proven dependency closure. |
+<!-- END GENERATED: readme-memory-safety -->
 
 The planned conversion order is attacker exposure × eliminability: TLS state
 machines and record processing first, then key schedule and targeted AEAD, then
