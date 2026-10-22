@@ -506,6 +506,10 @@ def _expand_wl(value: Any, body: dict, *, extra: dict | None = None) -> Any:
         "root": body["root"],
         "port": body["port"],
         "ca": (body.get("ca") or ""),
+        "cert": (body.get("cert") or ""),
+        "key": (body.get("key") or ""),
+        "pem": (body.get("pem") or ""),
+        "wrong_ca": (body.get("wrong_ca") or ""),
         "url": (body.get("url") or ""),
         "config": (body.get("config") or ""),
     }
@@ -639,6 +643,15 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
     root = workdir / "root"
     root.mkdir(parents=True, exist_ok=True)
     (root / "index.gmi").write_text("template-payload\n", encoding="utf-8")
+    # A family that does not mint its own certificate (lighttpd, h2o, httpd) is given the same
+    # fixture PKI the HTTP bucket uses; the server certificate is CA-signed, so the positive
+    # client verifies it and an unrelated CA must be rejected.  A family that generates its own
+    # certificate on first use (gmnisrv) keeps `cert_path` and never references these names.
+    pki = _generate_pki(ctx)
+    pem = workdir / "pki" / "server.pem"
+    pem.write_bytes(pki["cert"].read_bytes() + pki["key"].read_bytes())
+    b["ca"], b["wrong_ca"] = pki["ca"], pki["wrong_ca"]
+    b["cert"], b["key"], b["pem"] = pki["cert"], pki["key"], pem
     config_path = workdir / "server.conf"
     b["config"] = config_path
     config_path.write_text(str(_expand_wl(wl["config"], b)), encoding="utf-8")
@@ -650,7 +663,7 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
             out, err = server.communicate(timeout=5)
             return _fail(f"the TLS server did not listen: {(err or out or '')[-300:]}",
                          "runtime-failure")
-        cert_path = Path(str(_expand_wl(wl.get("cert_path", ""), b)))
+        cert_path = Path(str(_expand_wl(wl.get("cert_path", "{ca}"), b)))
         # gmnisrv creates its self-signed certificate on first use; trigger and wait.
         deadline = time.monotonic() + 5
         while not cert_path.is_file() and time.monotonic() < deadline:
@@ -663,8 +676,7 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
                 pass
             time.sleep(0.1)
         good = _tls_exchange(b["port"], cert_path, str(wl.get("payload", "")), verify_host=True)
-        wrong = _tls_exchange(b["port"], Path(str(_expand_wl(wl.get("wrong_ca", ""), b)))
-                              if wl.get("wrong_ca") else _generate_pki(ctx)["wrong_ca"],
+        wrong = _tls_exchange(b["port"], b["wrong_ca"],
                               str(wl.get("payload", "")), verify_host=True)
     finally:
         server.terminate()
