@@ -1402,56 +1402,93 @@ pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int 
     unsafe { client_derive_and_install(s) }
 }
 
+/// Read one three-byte big-endian length (`u24`) through the bounds-checked cursor.
+fn take_u24(cur: &mut SliceCursor<'_>) -> Option<usize> {
+    let hi = cur.take_u8()? as usize;
+    let mid = cur.take_u8()? as usize;
+    let lo = cur.take_u8()? as usize;
+    Some((hi << 16) | (mid << 8) | lo)
+}
+
+/// `tls_parse_stoc_alpn` (`extensions_clnt.c:1665`): the body is
+/// `protocol_name_list<2..2^16-1> = list_len(2) || proto_len(1) || proto`.
+///
+/// The authority rejects an empty list, a declared list extent past the extension, and a list
+/// whose one entry does not span the list. `None` is that rejection; the caller answers the
+/// authority's `SSL_AD_DECODE_ERROR` path.
+fn read_alpn_selected(eb: &[u8]) -> Option<&[u8]> {
+    let mut cur = SliceCursor::new(eb);
+    let list_len = cur.take_u16()? as usize;
+    let plen = cur.take_u8()? as usize;
+    let list_end = list_len.checked_add(2)?;
+    if list_len == 0 || list_end > eb.len() || list_end != plen.checked_add(3)? {
+        return None;
+    }
+    cur.take(plen)
+}
+
 /// `MSG_PROCESS_RETURN tls_process_encrypted_extensions(...)` — `statem_clnt.c:4114-4140`: parse the
 /// `Extension extensions<0..2^16-1>` block (the negotiated ALPN, `tls_parse_stoc_alpn`,
 /// `extensions_clnt.c:1665`) and append the message to the transcript.
 ///
+/// The reduced client ignores the remaining `EncryptedExtensions` extensions
+/// (`supported_groups`, `early_data`, `max_fragment_length` and the rest), exactly as before:
+/// only ALPN has a reader on this path.
+///
 /// # Safety
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_encrypted_extensions(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_EE_BODY {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_EE_BODY) {
         return 0;
     }
-    let body = &msg[4..];
-    if body.len() >= 2 {
-        let ext_len = ((body[0] as usize) << 8) | body[1] as usize;
-        if 2 + ext_len > body.len() {
-            return 0;
-        }
-        let exts = &body[2..2 + ext_len];
-        let mut off = 0usize;
-        while off + 4 <= exts.len() {
-            let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-            let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-            off += 4;
-            if off + elen > exts.len() {
+    // The reduced reader never consulted `msg[1..4]`; keep ignoring the declared handshake length
+    // and parse every byte after it as the body.
+    if frame.take(3).is_none() {
+        return 0;
+    }
+    let rest = frame.remaining();
+    let Some(body) = frame.take(rest) else {
+        return 0;
+    };
+    let mut body_cur = SliceCursor::new(body);
+    let exts = match body_cur.take_u16() {
+        Some(ext_len) => {
+            let Some(exts) = body_cur.take(ext_len as usize) else {
                 return 0;
-            }
-            let eb = &exts[off..off + elen];
-            if etype == TLSEXT_TYPE_ALPN {
-                // `tls_parse_stoc_alpn`: `list_len(2) || proto_len(1) || proto`.
-                if eb.len() < 3 {
+            };
+            exts
+        }
+        // A body too short for the block length carries no extensions; that was accepted before.
+        None => &[],
+    };
+    let mut walk = SliceCursor::new(exts);
+    while walk.remaining() >= 4 {
+        let Some(etype) = walk.take_u16() else {
+            return 0;
+        };
+        let Some(elen) = walk.take_u16() else {
+            return 0;
+        };
+        let Some(eb) = walk.take(elen as usize) else {
+            return 0;
+        };
+        if etype == TLSEXT_TYPE_ALPN {
+            let Some(proto) = read_alpn_selected(eb) else {
+                return 0;
+            };
+            // SAFETY: `s` is live; `proto` borrows the message and holds `proto.len()` bytes.
+            unsafe {
+                use crate::runtime::mem::CRYPTO_memdup;
+                let mut slot = (*s).s3_alpn_selected_slot();
+                slot.clear(core::ptr::null(), 0);
+                let dup = CRYPTO_memdup(proto.as_ptr().cast(), proto.len(), core::ptr::null(), 0)
+                    .cast::<u8>();
+                if dup.is_null() {
                     return 0;
                 }
-                let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
-                let plen = eb[2] as usize;
-                if list_len == 0 || 2 + list_len > eb.len() || 2 + list_len != 3 + plen {
-                    return 0;
-                }
-                // SAFETY: `s` is live; `eb[3..3+plen]` holds `plen` readable bytes.
-                unsafe {
-                    use crate::runtime::mem::CRYPTO_memdup;
-                    let mut slot = (*s).s3_alpn_selected_slot();
-                    slot.clear(core::ptr::null(), 0);
-                    let dup = CRYPTO_memdup(eb.as_ptr().add(3).cast(), plen, core::ptr::null(), 0)
-                        .cast::<u8>();
-                    if dup.is_null() {
-                        return 0;
-                    }
-                    slot.store(dup, plen);
-                }
+                slot.store(dup, proto.len());
             }
-            off += elen;
         }
     }
     // SAFETY: `s` is live; `msg` is the full message.
@@ -1471,30 +1508,46 @@ pub(crate) unsafe fn tls_process_certificate_request(s: *mut Ssl, msg: &[u8]) ->
     // `SSL_AD_DECODE_ERROR` — `ssl3.h` (50); `SSL_R_LENGTH_MISMATCH` — `sslerr.h:163`.
     const SSL_AD_DECODE_ERROR: c_int = 50;
     const SSL_R_LENGTH_MISMATCH: c_int = 159;
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE_REQUEST as u8 {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE_REQUEST as u8) {
         return 0;
     }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
+    let Some(blen) = take_u24(&mut frame) else {
         return 0;
-    }
-    let body = &msg[4..4 + blen];
-    if body.is_empty() {
+    };
+    let Some(body) = frame.take(blen) else {
         return 0;
-    }
-    let ctx_len = body[0] as usize;
-    let p = 1 + ctx_len;
-    if p + 2 > body.len() {
+    };
+    let mut cur = SliceCursor::new(body);
+    // `CertificateRequest { certificate_request_context<0..2^8-1>; Extension extensions<2>; }`.
+    let Some(ctx_len) = cur.take_u8() else {
+        return 0;
+    };
+    let ctx_len = ctx_len as usize;
+    let ctx = match cur.take(ctx_len) {
+        Some(ctx) => ctx,
+        None => {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+            return 0;
+        }
+    };
+    let Some(ext_len) = cur.take_u16() else {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+        return 0;
+    };
+    let ext_len = ext_len as usize;
+    if cur.remaining() != ext_len {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
         return 0;
     }
-    let ext_len = ((body[p] as usize) << 8) | body[p + 1] as usize;
-    if p + 2 + ext_len != body.len() {
+    let Some(_extensions) = cur.take(ext_len) else {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
         return 0;
-    }
+    };
     // The request context is copied into `pha_context` (`tls_process_certificate_request`,
     // `statem_clnt.c:2637`); the reduced client stores it in `tmp_session_id`-like storage is not
     // available, so the empty (in-handshake) context is the only one the reduced driver reaches.
@@ -1505,7 +1558,7 @@ pub(crate) unsafe fn tls_process_certificate_request(s: *mut Ssl, msg: &[u8]) ->
             let mut slot = (*s).pha_context_slot();
             slot.clear(core::ptr::null(), 0);
             let dup = crate::runtime::mem::CRYPTO_memdup(
-                body.as_ptr().add(1).cast(),
+                ctx.as_ptr().cast(),
                 ctx_len,
                 core::ptr::null(),
                 0,
@@ -1624,6 +1677,23 @@ pub(crate) fn ssl_x509err2alert(x509err: c_int) -> c_int {
     }
 }
 
+/// One TLS1.3 `CertificateEntry` — `cert_data<1..2^24-1> || extensions<0..2^16-1>` — framed
+/// through the bounds-checked cursor. The returned slices borrow the certificate list; DER decoding
+/// of `cert_data` remains with the caller's existing `d2i_X509` boundary.
+///
+/// `None` is the authority's rejection: a zero-length `cert_data`, or a declared extent past the
+/// end of the list. The caller frees the chain built so far.
+fn read_tls13_certificate_entry<'a>(cur: &mut SliceCursor<'a>) -> Option<(&'a [u8], &'a [u8])> {
+    let der_len = take_u24(cur)?;
+    let der = cur.take(der_len)?;
+    if der_len == 0 {
+        return None;
+    }
+    let ext_len = cur.take_u16()? as usize;
+    let extensions = cur.take(ext_len)?;
+    Some((der, extensions))
+}
+
 /// `MSG_PROCESS_RETURN tls_process_server_certificate(...)` — `statem_clnt.c:1995`, generalized to
 /// also serve the server's `tls_process_client_certificate` (`statem_srvr.c:3805-4002`). The reduced
 /// path parses each TLS 1.3 `CertificateEntry`'s `cert_data` into an `X509`; the leaf becomes
@@ -1639,29 +1709,30 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
     is_server: bool,
 ) -> c_int {
     use crate::x509::x_x509::{d2i_X509, X509};
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE as u8 {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE as u8) {
         return 0;
     }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
+    let Some(blen) = take_u24(&mut frame) else {
         return 0;
-    }
-    let body = &msg[4..4 + blen];
-    // `certificate_request_context<0..2^8-1> || CertificateEntry certificate_list<0..2^24-1>`.
-    if body.len() < 4 {
+    };
+    let Some(body) = frame.take(blen) else {
         return 0;
-    }
-    let ctx_len = body[0] as usize;
-    let mut p = 1 + ctx_len;
-    if p + 3 > body.len() {
+    };
+    // `certificate_request_context<0..2^8-1> || certificate_list<0..2^24-1>`.
+    let mut cur = SliceCursor::new(body);
+    let Some(ctx_len) = cur.take_u8() else {
         return 0;
-    }
-    let list_len =
-        ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
-    p += 3;
-    if p + list_len > body.len() {
+    };
+    let Some(_ctx) = cur.take(ctx_len as usize) else {
         return 0;
-    }
+    };
+    let Some(list_len) = take_u24(&mut cur) else {
+        return 0;
+    };
+    let Some(cert_list) = cur.take(list_len) else {
+        return 0;
+    };
     if list_len == 0 {
         if !is_server {
             // A server always sends a certificate; an empty list is a protocol violation here.
@@ -1699,8 +1770,6 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
         // SAFETY: `s` is live; `msg` is the full message.
         return unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) };
     }
-    let list_end = p + list_len;
-
     // The authority appends every `CertificateEntry` to `s->session->peer_chain`
     // (`tls_process_server_certificate`, `statem_clnt.c:2026-2077`); the leaf is
     // `sk_X509_value(peer_chain, 0)` and becomes `session->peer` in
@@ -1711,20 +1780,17 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
     if chain.is_null() {
         return 0;
     }
-    // Each TLS 1.3 `CertificateEntry` is `cert_data<1..2^24-1> || extensions<0..2^16-1>`.
-    while p + 3 <= list_end {
-        let derlen =
-            ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
-        p += 3;
-        if derlen == 0 || p + derlen > list_end {
+    let mut list = SliceCursor::new(cert_list);
+    while list.remaining() >= 3 {
+        let Some((der, _extensions)) = read_tls13_certificate_entry(&mut list) else {
             // SAFETY: `chain` is a live stack of the certs pushed so far.
             unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
             return 0;
-        }
-        let mut inp = body[p..p + derlen].as_ptr();
+        };
+        let mut inp = der.as_ptr();
         let mut x: *mut X509 = core::ptr::null_mut();
-        // SAFETY: `inp` points at `derlen` readable bytes; `x` is this frame's writable slot.
-        let got = unsafe { d2i_X509(&mut x, &mut inp, derlen as core::ffi::c_long) };
+        // SAFETY: `inp` points at `der.len()` readable bytes; `x` is this frame's writable slot.
+        let got = unsafe { d2i_X509(&mut x, &mut inp, der.len() as core::ffi::c_long) };
         if got.is_null() || x.is_null() {
             // SAFETY: `chain` is a live stack of the certs pushed so far.
             unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
@@ -1734,19 +1800,6 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
         if unsafe { OPENSSL_sk_push(chain, x.cast()) } == 0 {
             // SAFETY: `x` has not been pushed, so this frame still owns it.
             unsafe { crate::x509::x_x509::X509_free(x) };
-            // SAFETY: `chain` is a live stack of the certs pushed so far.
-            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
-            return 0;
-        }
-        p += derlen;
-        if p + 2 > list_end {
-            // SAFETY: `chain` is a live stack of the certs pushed so far.
-            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
-            return 0;
-        }
-        let extlen = ((body[p] as usize) << 8) | body[p + 1] as usize;
-        p += 2 + extlen;
-        if p > list_end {
             // SAFETY: `chain` is a live stack of the certs pushed so far.
             unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
             return 0;
@@ -2513,7 +2566,16 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
 /// # Safety
 /// `s` is live; `msg` is the full CertificateRequest message.
 unsafe fn tls12_process_certificate_request(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE_REQUEST as u8 {
+    // The reduced TLS1.2 arm records the request and appends the message; it does not parse the
+    // certificate types or signature algorithms, so only the frame is checked (as before).
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE_REQUEST as u8) {
+        return 0;
+    }
+    let Some(blen) = take_u24(&mut frame) else {
+        return 0;
+    };
+    if frame.take(blen).is_none() {
         return 0;
     }
     // SAFETY: `s` is live.
@@ -4201,6 +4263,340 @@ mod server_hello_parse {
                 }
             }
             let _ = server_hello_selects_tls13(&msg);
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// EncryptedExtensions / CertificateRequest / Certificate framing on the client path.
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod post_server_hello_parse {
+    #![allow(clippy::panic, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_get0_alpn_selected, SSL_new,
+    };
+    use core::ffi::c_uint;
+
+    fn extension(etype: u16, body: &[u8]) -> Vec<u8> {
+        let mut out = etype.to_be_bytes().to_vec();
+        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(body);
+        out
+    }
+
+    fn extension_block(exts: &[Vec<u8>]) -> Vec<u8> {
+        let mut body = Vec::new();
+        for ext in exts {
+            body.extend_from_slice(ext);
+        }
+        let mut out = (body.len() as u16).to_be_bytes().to_vec();
+        out.extend_from_slice(&body);
+        out
+    }
+
+    /// `type || declared_length (ignored by the reduced reader) || extensions<2> || body`.
+    fn encrypted_extensions(block: &[u8]) -> Vec<u8> {
+        let mut msg = vec![SSL3_MT_EE_BODY, 0, 0, block.len() as u8];
+        msg.extend_from_slice(block);
+        msg
+    }
+
+    /// `type || u24(body_len) || body`.
+    fn framed(mt: c_int, body: &[u8]) -> Vec<u8> {
+        let mut msg = vec![mt as u8];
+        msg.extend_from_slice(&(body.len() as u32).to_be_bytes()[1..]);
+        msg.extend_from_slice(body);
+        msg
+    }
+
+    fn alpn_ext(proto: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&((proto.len() + 1) as u16).to_be_bytes());
+        body.push(proto.len() as u8);
+        body.extend_from_slice(proto);
+        extension(TLSEXT_TYPE_ALPN, &body)
+    }
+
+    #[test]
+    fn encrypted_extensions_with_alpn_h2_selects_it() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = encrypted_extensions(&extension_block(&[alpn_ext(b"h2")]));
+        // SAFETY: the context and connection are this test's own objects.
+        unsafe {
+            let ctx = SSL_CTX_new(crate::ssl::methods::TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            assert_eq!(
+                tls_process_encrypted_extensions(s, &msg),
+                1,
+                "a well-formed ALPN extension must be accepted"
+            );
+            let mut data: *const u8 = core::ptr::null();
+            let mut len: c_uint = 0;
+            SSL_get0_alpn_selected(s, &mut data, &mut len);
+            assert_eq!(len, 2, "the selected protocol is recorded");
+            assert_eq!(
+                core::slice::from_raw_parts(data, len as usize),
+                b"h2",
+                "the selected protocol is the one the server named"
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn encrypted_extensions_unknown_extension_is_ignored() {
+        let _g = crate::test_support::lock_global_state();
+        let msg = encrypted_extensions(&extension_block(&[extension(0x1234, &[0xAA, 0xBB])]));
+        // SAFETY: `s` is this frame's zeroed block; the accepted path only appends to the
+        // transcript buffer and records no extension.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(
+                tls_process_encrypted_extensions(s, &msg),
+                1,
+                "an unrecognised extension must be ignored, not rejected"
+            );
+            let mut data: *const u8 = core::ptr::null();
+            let mut len: c_uint = 0;
+            SSL_get0_alpn_selected(s, &mut data, &mut len);
+            assert!(data.is_null() && len == 0, "no ALPN was selected");
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn truncated_encrypted_extensions_is_refused() {
+        // The extension block declares 255 bytes but the message ends after two.
+        let msg = encrypted_extensions(&[0x00, 0xFF]);
+        // SAFETY: the refusal happens before any connection state is read.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_encrypted_extensions(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        // An extension declares four body bytes but carries two.
+        let msg = encrypted_extensions(&[0x00, 0x06, 0x12, 0x34, 0x00, 0x04, 0x00, 0x00]);
+        // SAFETY: as above.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_encrypted_extensions(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn tls12_certificate_request_frame_is_accepted_and_bounded() {
+        let _g = crate::test_support::lock_global_state();
+        // `certificate_types<1>(rsa_sign) || supported_signature_algorithms<2>(empty)`.
+        let body = [0x01, 0x01, 0x00, 0x00];
+        let msg = framed(SSL3_MT_CERTIFICATE_REQUEST, &body);
+        // SAFETY: `s` is this frame's zeroed block; the accepted path appends to the transcript.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls12_process_certificate_request(s, &msg), 1);
+            assert_eq!((*s).s3_tmp_cert_req, 1, "the request is recorded");
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        // The declared body length overruns the message.
+        let msg = vec![
+            SSL3_MT_CERTIFICATE_REQUEST as u8,
+            0x00,
+            0x00,
+            0x08,
+            0x01,
+            0x01,
+        ];
+        // SAFETY: as above; the refusal reads no connection state.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls12_process_certificate_request(s, &msg), 0);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn tls13_certificate_request_frame_is_accepted() {
+        let _g = crate::test_support::lock_global_state();
+        // `context<1>(empty) || extensions<2>(empty)`.
+        let msg = framed(SSL3_MT_CERTIFICATE_REQUEST, &[0x00, 0x00, 0x00]);
+        // SAFETY: `s` is this frame's zeroed block; the accepted path appends to the transcript.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_certificate_request(s, &msg), 1);
+            assert_eq!((*s).s3_tmp_cert_req, 1, "the request is recorded");
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+        // The extension block length does not end the body.
+        let msg = framed(SSL3_MT_CERTIFICATE_REQUEST, &[0x00, 0x00, 0x02, 0xAA]);
+        // SAFETY: as above; the length mismatch sends the authority's fatal alert.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls_process_certificate_request(s, &msg), 0);
+            assert_eq!((*s).statem_state, MSG_FLOW_ERROR_13);
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn zero_length_certificate_list_is_refused_for_a_server_but_legal_for_a_peer() {
+        let _g = crate::test_support::lock_global_state();
+        // `context<1>(empty) || certificate_list<3>(empty)`.
+        let msg = framed(SSL3_MT_CERTIFICATE, &[0x00, 0x00, 0x00, 0x00]);
+        // SAFETY: `s` is this frame's zeroed block; no certificate is decoded.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(
+                tls13_process_peer_certificate(s, &msg, false),
+                0,
+                "a server may not send an empty certificate list"
+            );
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(
+                tls13_process_peer_certificate(s, &msg, true),
+                1,
+                "an empty client certificate list is legal without a verification demand"
+            );
+            assert!((*s).peer_cert.is_null() && (*s).peer_chain.is_null());
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn certificate_list_length_that_overruns_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // `context<1>(empty) || certificate_list<3>(5)` followed by only two bytes.
+        let msg = framed(SSL3_MT_CERTIFICATE, &[0x00, 0x00, 0x00, 0x05, 0x30, 0x01]);
+        // SAFETY: the refusal happens before any certificate is decoded.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            assert_eq!(tls13_process_peer_certificate(s, &msg, true), 0);
+            assert!((*s).peer_chain.is_null());
+            CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
+    }
+
+    #[test]
+    fn tls13_entry_with_a_truncated_extension_block_is_refused() {
+        let der = [0x30, 0x03, 0x02, 0x01, 0x05];
+        // One `CertificateEntry`: `cert_data<3>(5) || extensions<2>(3)` followed by only one
+        // extension byte.
+        let mut entry = vec![0x00, 0x00, 0x05];
+        entry.extend_from_slice(&der);
+        entry.extend_from_slice(&[0x00, 0x03, 0xAA]);
+
+        // `context<1>(empty) || certificate_list<3> || entry`.
+        let mut body = vec![0x00];
+        body.extend_from_slice(&(entry.len() as u32).to_be_bytes()[1..]);
+        body.extend_from_slice(&entry);
+
+        let cert_list = &body[4..];
+        let mut cur = SliceCursor::new(cert_list);
+        assert!(
+            read_tls13_certificate_entry(&mut cur).is_none(),
+            "an entry whose extension block overruns the list must be refused"
+        );
+
+        // The same entry is accepted when the extension block fits, and the frame's trailing
+        // one- or two-byte remainder is ignored exactly as before.
+        let mut good = Vec::new();
+        good.extend_from_slice(&(der.len() as u32).to_be_bytes()[1..]);
+        good.extend_from_slice(&der);
+        good.extend_from_slice(&[0x00, 0x00]);
+        good.extend_from_slice(&[0x00, 0x00]);
+        let mut cur = SliceCursor::new(&good);
+        let Some((entry, exts)) = read_tls13_certificate_entry(&mut cur) else {
+            panic!("a complete entry must parse");
+        };
+        assert_eq!(entry, der);
+        assert!(exts.is_empty());
+        assert_eq!(cur.remaining(), 2, "a short remainder ends the walk");
+    }
+
+    #[test]
+    fn zero_length_certificate_entry_is_refused() {
+        let list = [0x00, 0x00, 0x00, 0x00, 0x00];
+        let mut cur = SliceCursor::new(&list);
+        assert!(
+            read_tls13_certificate_entry(&mut cur).is_none(),
+            "cert_data<1..2^24-1> may not be empty"
+        );
+    }
+
+    /// Deterministic (seeded, bounded) mutation of an EncryptedExtensions message and a
+    /// certificate list. The production EncryptedExtensions parser and the entry framer must
+    /// answer a code rather than panic.
+    #[test]
+    fn malformed_post_server_hello_loop_does_not_panic() {
+        let _g = crate::test_support::lock_global_state();
+        let good_ee = encrypted_extensions(&extension_block(&[
+            alpn_ext(b"h2"),
+            extension(0x1234, &[0x01]),
+        ]));
+        let mut good_cert_list = Vec::new();
+        good_cert_list.extend_from_slice(&[0x00, 0x00, 0x05]);
+        good_cert_list.extend_from_slice(&[0x30, 0x03, 0x02, 0x01, 0x05]);
+        good_cert_list.extend_from_slice(&[0x00, 0x00]);
+
+        let mut state = 0x9E37_79B9_7F4A_7C15u64;
+        for _ in 0..256 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut ee = good_ee.clone();
+            let edits = 1 + (state as usize % 4);
+            for i in 0..edits {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                let at = (state as usize) % ee.len();
+                ee[at] ^= (state >> 32) as u8 | (i as u8 + 1);
+            }
+            // SAFETY: `s` is this iteration's own zeroed block; any recorded ALPN buffer is
+            // released here before the enclosing block.
+            unsafe {
+                let s = crate::ssl::adv_alloc::zeroed_ssl();
+                assert!(!s.is_null());
+                let _ = tls_process_encrypted_extensions(s, &ee);
+                let mut data: *const u8 = core::ptr::null();
+                let mut len: c_uint = 0;
+                SSL_get0_alpn_selected(s, &mut data, &mut len);
+                if !data.is_null() {
+                    CRYPTO_free(data.cast_mut().cast(), core::ptr::null(), 0);
+                }
+                CRYPTO_free(s.cast(), core::ptr::null(), 0);
+            }
+
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut list = good_cert_list.clone();
+            let at = (state as usize) % list.len();
+            list[at] ^= ((state >> 32) as u8) | 0x01;
+            let mut cur = SliceCursor::new(&list);
+            while cur.remaining() >= 3 {
+                let Some((_der, _exts)) = read_tls13_certificate_entry(&mut cur) else {
+                    break;
+                };
+            }
         }
     }
 }
