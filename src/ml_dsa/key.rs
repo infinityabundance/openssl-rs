@@ -559,6 +559,129 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pub_alloc(key: *mut MlDsaKey) -> c_int {
     }
 }
 
+/// The single secret block `s1`, `s2` and `t0` are laid out in.
+///
+/// `ml_dsa_key.h:55`: `s1.poly` names `l + 2k` polynomials, `s2` starts at `l`, `t0` at `l + k`.
+/// The handle borrows the three members and the two counts, so the extent is checked once and each
+/// component is a safe sub-slice of the one block. Construction is unsafe (the member invariant is
+/// the key's); the accessors after it are safe.
+struct PrivBlock<'a> {
+    s1: &'a mut Vector,
+    s2: &'a mut Vector,
+    t0: &'a mut Vector,
+    l: usize,
+    k: usize,
+}
+
+impl<'a> PrivBlock<'a> {
+    /// `l + 2k`, checked.
+    fn count(l: usize, k: usize) -> Option<usize> {
+        l.checked_add(k.checked_mul(2)?)
+    }
+
+    /// Allocate the block and point `s2`/`t0` into its tail.
+    ///
+    /// # Safety
+    ///
+    /// `key` is live and `key.s1` is empty (the authority's `vector_secure_alloc` precondition).
+    unsafe fn alloc(key: &'a mut MlDsaKey) -> c_int {
+        let params = key.params;
+        // SAFETY: `params` is the key's static parameter set.
+        let (k, l) = unsafe { ((*params).k, (*params).l) };
+        let Some(count) = Self::count(l, k) else {
+            return 0;
+        };
+        if !key.s1.poly.is_null() {
+            return 0;
+        }
+        // SAFETY: `s1` is empty and the secure allocator takes the checked extent.
+        if unsafe { key.s1.secure_alloc(count, FILE, LINE_PRIV_ALLOC) } == 0 {
+            return 0;
+        }
+        let mut block = PrivBlock {
+            s1: &mut key.s1,
+            s2: &mut key.s2,
+            t0: &mut key.t0,
+            l,
+            k,
+        };
+        // SAFETY: `secure_alloc` just published the `count`-polynomial block.
+        unsafe { block.fix_tails() };
+        1
+    }
+
+    /// Borrow an already-allocated block.
+    ///
+    /// # Safety
+    ///
+    /// `s1.poly` is non-null and names `count(l, k)` polynomials, with `s2`/`t0` at the offsets
+    /// [`Self::alloc`] published.
+    unsafe fn of(key: &'a mut MlDsaKey) -> PrivBlock<'a> {
+        let params = key.params;
+        // SAFETY: `params` is the key's static parameter set.
+        let (k, l) = unsafe { ((*params).k, (*params).l) };
+        PrivBlock {
+            s1: &mut key.s1,
+            s2: &mut key.s2,
+            t0: &mut key.t0,
+            l,
+            k,
+        }
+    }
+
+    /// Publish `s1.num_poly` and the two tail members.
+    ///
+    /// # Safety
+    ///
+    /// `s1.poly` names `count(l, k)` polynomials.
+    unsafe fn fix_tails(&mut self) {
+        let base = self.s1.poly;
+        self.s1.num_poly = self.l;
+        // SAFETY: the checked extent puts both offsets inside the block.
+        *self.s2 = Vector::init(unsafe { base.add(self.l) }, self.k);
+        // SAFETY: `l + k <= l + 2k` for the checked extent.
+        *self.t0 = Vector::init(unsafe { base.add(self.l + self.k) }, self.k);
+    }
+
+    /// Release the whole block (secure-cleansing) and empty all three members.
+    fn clear(self, file: *const c_char, line: c_int) {
+        let Some(count) = Self::count(self.l, self.k) else {
+            return;
+        };
+        // `secure_free` cleanses the `count`-polynomial extent and empties `s1`.
+        // SAFETY: `s1` is the block this handle owns; `count` is its checked extent.
+        unsafe { self.s1.secure_free(count, file, line) };
+        self.s2.poly = ptr::null_mut();
+        self.s2.num_poly = 0;
+        self.t0.poly = ptr::null_mut();
+        self.t0.num_poly = 0;
+    }
+
+    /// The `s1` component.
+    fn s1(&self) -> &[Poly] {
+        // SAFETY: the handle's invariant gives `s1.poly` `l` polynomials.
+        unsafe { core::slice::from_raw_parts(self.s1.poly, self.l) }
+    }
+
+    /// The `s2` component (the tail starting at `l`).
+    fn s2(&self) -> &[Poly] {
+        // SAFETY: `s2.poly` names `k` polynomials inside the block.
+        unsafe { core::slice::from_raw_parts(self.s2.poly, self.k) }
+    }
+
+    /// The `t0` component (the tail starting at `l + k`).
+    fn t0(&self) -> &[Poly] {
+        // SAFETY: `t0.poly` names `k` polynomials inside the block.
+        unsafe { core::slice::from_raw_parts(self.t0.poly, self.k) }
+    }
+
+    /// The `s1` component, mutably.
+    fn s1_mut(&mut self) -> &mut [Poly] {
+        // SAFETY: the handle's invariant gives `s1.poly` `l` polynomials and the borrow is unique.
+        unsafe { core::slice::from_raw_parts_mut(self.s1.poly, self.l) }
+    }
+}
+
 /// `ossl_ml_dsa_key_priv_alloc(key)` — `ml_dsa_key.c:116-131`.
 ///
 /// Allocates `s1`'s `l + 2 * k` polynomials and re-points `s2`/`t0` into the tail; answers 0 if
@@ -567,25 +690,8 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pub_alloc(key: *mut MlDsaKey) -> c_int {
 /// # Safety
 /// `key` must be a live `ML_DSA_KEY`.
 pub(crate) unsafe fn ossl_ml_dsa_key_priv_alloc(key: *mut MlDsaKey) -> c_int {
-    // SAFETY: `key` is live per the contract.
-    unsafe {
-        let params = (*key).params;
-        let k = (*params).k;
-        let l = (*params).l;
-
-        if !(*key).s1.poly.is_null() {
-            return 0;
-        }
-        if (*key).s1.secure_alloc(l + 2 * k, FILE, LINE_PRIV_ALLOC) == 0 {
-            return 0;
-        }
-
-        let poly = (*key).s1.poly;
-        (*key).s1.num_poly = l;
-        (*key).s2 = Vector::init(poly.add(l), k);
-        (*key).t0 = Vector::init(poly.add(l + k), k);
-        1
-    }
+    // SAFETY: `key` is live per the contract; `PrivBlock::alloc` establishes the member layout.
+    unsafe { PrivBlock::alloc(&mut *key) }
 }
 
 /// `ossl_ml_dsa_key_free(key)` — `ml_dsa_key.c:136-145`. Destroy a key.
@@ -615,15 +721,10 @@ pub(crate) unsafe fn ossl_ml_dsa_key_reset(key: *mut MlDsaKey) {
         // The allocation for |s1.poly| subsumes those for |s2| and |t0|, which must not be
         // accessed after |s1|'s poly is freed.
         if !(*key).s1.poly.is_null() {
-            let params = (*key).params;
-            let k = (*params).k;
-            let l = (*params).l;
-
-            (*key)
-                .s1
-                .secure_free(l + 2 * k, FILE, LINE_RESET_SECURE_FREE_S1);
-            (*key).s2 = Vector::init(ptr::null_mut(), 0);
-            (*key).t0 = Vector::init(ptr::null_mut(), 0);
+            // SAFETY: the block was published by `ossl_ml_dsa_key_priv_alloc`. The handle's
+            // `clear` is the single cleansing release of the `l + 2k` extent.
+            let block = PrivBlock::of(&mut *key);
+            block.clear(FILE, LINE_RESET_SECURE_FREE_S1);
         }
         // The |t1| vector is public and allocated separately.
         (*key).t1.free(FILE, LINE_RESET_T1_FREE);
@@ -701,7 +802,7 @@ pub(crate) unsafe fn ossl_ml_dsa_key_dup(src: *const MlDsaKey, selection: c_int)
                             ok = 0;
                             break 'err;
                         }
-                        vector_copy(&mut (*ret).t1, &(*src).t1);
+                        vector_copy((*ret).t1.as_mut_slice(), (*src).t1.as_slice());
                     }
                     // `CRYPTO_memdup` answers NULL or a plain `pk_len`-byte block the crate
                     // allocated; the handle adopts it so the refusal arm releases it at the
@@ -737,9 +838,9 @@ pub(crate) unsafe fn ossl_ml_dsa_key_dup(src: *const MlDsaKey, selection: c_int)
                                 ok = 0;
                                 break 'err;
                             }
-                            vector_copy(&mut (*ret).s1, &(*src).s1);
-                            vector_copy(&mut (*ret).s2, &(*src).s2);
-                            vector_copy(&mut (*ret).t0, &(*src).t0);
+                            vector_copy((*ret).s1.as_mut_slice(), (*src).s1.as_slice());
+                            vector_copy((*ret).s2.as_mut_slice(), (*src).s2.as_slice());
+                            vector_copy((*ret).t0.as_mut_slice(), (*src).t0.as_slice());
                         }
                         match OwnedBuf::new_secure_cleansed(
                             (*(*src).params).sk_len,
@@ -922,11 +1023,11 @@ unsafe fn public_from_private(
             }
 
             // t = NTT_inv(A' * NTT(s1)) + s2
-            vector_copy(&mut s1_ntt, &(*key).s1);
-            vector_ntt(&mut s1_ntt);
+            vector_copy(s1_ntt.as_mut_slice(), (*key).s1.as_slice());
+            vector_ntt(s1_ntt.as_mut_slice());
 
             matrix_mult_vector(&a_ntt, &s1_ntt, &mut t);
-            vector_ntt_inverse(&mut t);
+            vector_ntt_inverse(t.as_mut_slice());
             // `vector_add(&t, &key->s2, &t)` accumulates in place. `ml_dsa_vector.h:99-106` is a
             // `poly_add` per polynomial and `Poly` is `Copy`, so a value copy of each left operand
             // expresses the same thing — as `ntt.rs` does for its own in-place `poly_add`.
@@ -974,7 +1075,7 @@ pub(crate) unsafe fn ossl_ml_dsa_key_public_from_private(key: *mut MlDsaKey) -> 
         if !md_ctx.is_null()
             && ossl_ml_dsa_key_pub_alloc(key) != 0
             && public_from_private(key, md_ctx, &mut (*key).t1, &mut t0) != 0
-            && vector_equal(&t0, &(*key).t0) != 0
+            && vector_equal(t0.as_slice(), (*key).t0.as_slice()) != 0
             && ossl_ml_dsa_pk_encode(key) != 0
             && shake_xof(
                 md_ctx,
@@ -988,7 +1089,7 @@ pub(crate) unsafe fn ossl_ml_dsa_key_public_from_private(key: *mut MlDsaKey) -> 
             ret = 1;
         }
 
-        t0.zero();
+        Vector::zero(t0.as_mut_slice());
         t0.free(FILE, LINE_PFP_T0_FREE);
         EVP_MD_CTX_free(md_ctx);
         ret
@@ -1033,8 +1134,9 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pairwise_check(key: *const MlDsaKey) -> c_i
                 break 'err;
             }
 
-            ret =
-                (vector_equal(&t1, &(*key).t1) != 0 && vector_equal(&t0, &(*key).t0) != 0) as c_int;
+            ret = (vector_equal(t1.as_slice(), (*key).t1.as_slice()) != 0
+                && vector_equal(t0.as_slice(), (*key).t0.as_slice()) != 0)
+                as c_int;
         }
         EVP_MD_CTX_free(md_ctx);
         ret
@@ -1292,4 +1394,46 @@ pub(crate) unsafe fn ossl_ml_dsa_key_get0_libctx(key: *const MlDsaKey) -> *mut c
 pub(crate) unsafe fn ossl_ml_dsa_key_get_name(key: *const MlDsaKey) -> *const c_char {
     // SAFETY: `key` is live per the contract.
     unsafe { (*(*key).params).alg }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used)]
+
+    use super::*;
+
+    #[test]
+    fn the_private_block_derives_the_three_components() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the key is created, generated and freed here; the block is borrowed only while
+        // the key is live.
+        unsafe {
+            let key = ossl_ml_dsa_key_new(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                super::super::EVP_PKEY_ML_DSA_65,
+            );
+            assert!(!key.is_null());
+            assert_eq!(ossl_ml_dsa_generate_key(key), 1);
+            let params = (*key).params;
+            let (k, l) = ((*params).k, (*params).l);
+
+            let mut block = PrivBlock::of(&mut *key);
+            assert_eq!(block.s1().len(), l);
+            assert_eq!(block.s2().len(), k);
+            assert_eq!(block.t0().len(), k);
+            // The tails are the exact offsets `alloc` published.
+            assert_eq!(block.s2().as_ptr(), block.s1().as_ptr().add(l));
+            assert_eq!(block.t0().as_ptr(), block.s1().as_ptr().add(l + k));
+
+            // The mutable view is the same storage.
+            block.s1_mut()[0].coeff[0] = 0xDEAD_BEEF;
+            assert_eq!(block.s1()[0].coeff[0], 0xDEAD_BEEF);
+            let _ = block;
+
+            // A refused re-allocation leaves the published block untouched.
+            assert_eq!(ossl_ml_dsa_key_priv_alloc(key), 0);
+            ossl_ml_dsa_key_free(key);
+        }
+    }
 }

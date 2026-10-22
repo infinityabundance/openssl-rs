@@ -186,6 +186,55 @@ fn signature_init(
     sig.c_tilde_len = c_tilde_len;
 }
 
+/// A checked sequential partition of the scratch blob.
+///
+/// The authority points each temporary at an offset of one `OPENSSL_malloc` block. The cursor
+/// keeps the remaining bytes as a slice and hands out byte or `Poly` partitions, so every offset
+/// is a checked length and no `.add()` chain remains. `take_polys` is the one place a byte span is
+/// viewed as `Poly`s; `Poly` is `[u32; 256]`, so every bit pattern is valid, and `align_to_mut`
+/// refuses a non-multiple or misaligned split.
+struct Scratch<'a> {
+    bytes: &'a mut [u8],
+}
+
+impl<'a> Scratch<'a> {
+    /// # Safety
+    ///
+    /// `ptr` names `len` writable bytes owned by the caller for `'a` (the `OwnedBuf` that outlives
+    /// every partition).
+    unsafe fn new(ptr: *mut u8, len: usize) -> Scratch<'a> {
+        Scratch {
+            // SAFETY: the contract gives `ptr` that extent for `'a`.
+            bytes: unsafe { core::slice::from_raw_parts_mut(ptr, len) },
+        }
+    }
+
+    fn take_bytes(&mut self, n: usize) -> Option<&'a mut [u8]> {
+        if self.bytes.len() < n {
+            return None;
+        }
+        let bytes = core::mem::take(&mut self.bytes);
+        let (head, tail) = bytes.split_at_mut(n);
+        self.bytes = tail;
+        Some(head)
+    }
+
+    fn take_polys(&mut self, n: usize) -> Option<&'a mut [Poly]> {
+        let need = n.checked_mul(core::mem::size_of::<Poly>())?;
+        if self.bytes.len() < need
+            || !(self.bytes.as_ptr() as usize).is_multiple_of(core::mem::align_of::<Poly>())
+        {
+            return None;
+        }
+        let bytes = core::mem::take(&mut self.bytes);
+        let (head, tail) = bytes.split_at_mut(need);
+        self.bytes = tail;
+        // SAFETY: `head` is `need == n * size_of::<Poly>()` bytes, its start is aligned for
+        // `Poly`, and `Poly` is `[u32; 256]` so every bit pattern is a valid value.
+        Some(unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<Poly>(), n) })
+    }
+}
+
 /// `ossl_ml_dsa_mu_init(key, encode, ctx, ctx_len)` — `ml_dsa_sign.c:69-109`.
 ///
 /// Begins `H(tr || M')` and answers the live digest context, or NULL on any failure. `M'` is
@@ -298,7 +347,10 @@ unsafe fn ml_dsa_sign_internal(
         let num_polys_sig_k = 2 * k as usize;
         let num_polys_k = 5 * k as usize;
         let num_polys_l = 3 * l as usize;
-        let num_polys_k_by_l = k as usize * l as usize;
+        // `k * l` and the total are checked: a wrapped shape must be a refusal, not a short blob.
+        let Some(num_polys_k_by_l) = (k as usize).checked_mul(l as usize) else {
+            return 0;
+        };
         let mut rho_prime = [0u8; ML_DSA_RHO_PRIME_BYTES];
         let mut c_tilde = [0u8; ML_DSA_MAX_LAMBDA / 4];
         let c_tilde_len = ((*params).bit_strength >> 2) as usize;
@@ -316,9 +368,22 @@ unsafe fn ml_dsa_sign_internal(
             } else {
                 128
             };
-        let alloc_len = w1_encoded_len
-            + core::mem::size_of::<Poly>()
-                * (1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig_k);
+        let Some(polys) = (1usize)
+            .checked_add(num_polys_k)
+            .and_then(|n| n.checked_add(num_polys_l))
+            .and_then(|n| n.checked_add(num_polys_k_by_l))
+            .and_then(|n| n.checked_add(num_polys_sig_k))
+        else {
+            return 0;
+        };
+        let Some(alloc_len) =
+            w1_encoded_len.checked_add(core::mem::size_of::<Poly>().saturating_mul(polys))
+        else {
+            return 0;
+        };
+        if polys == 0 {
+            return 0;
+        }
         // The scratch blob is owned by the handle, whose `Drop` is the authority's own clearing free
         // at `LINE_SIGN_CLEAR_FREE`.
         let Some(alloc) = OwnedBuf::new(
@@ -332,38 +397,55 @@ unsafe fn ml_dsa_sign_internal(
         let alloc_ptr = alloc.as_ptr();
         let md_ctx = EVP_MD_CTX_new();
 
-        // Point every temporary at its slice of the blob.
-        let w1_encoded = alloc_ptr;
-        let mut p: *mut Poly = w1_encoded.add(w1_encoded_len).cast();
-        let c_ntt = p;
-        p = p.add(1);
-        let mut a_ntt = matrix_init(p, k as usize, l as usize);
-        p = p.add(num_polys_k_by_l);
-        let mut s2_ntt = Vector::init(p, k as usize);
-        let mut t0_ntt = Vector::init(s2_ntt.poly.add(k as usize), k as usize);
-        let mut w = Vector::init(t0_ntt.poly.add(k as usize), k as usize);
-        let mut w1 = Vector::init(w.poly.add(k as usize), k as usize);
-        let mut cs2 = Vector::init(w1.poly.add(k as usize), k as usize);
-        p = p.add(num_polys_k);
-        let mut s1_ntt = Vector::init(p, l as usize);
-        let mut y = Vector::init(p.add(l as usize), l as usize);
-        let mut cs1 = Vector::init(p.add(2 * l as usize), l as usize);
-        p = p.add(num_polys_l);
-        let mut sig = MlDsaSig {
-            z: Vector::empty(),
-            hint: Vector::empty(),
-            c_tilde: ptr::null_mut(),
-            c_tilde_len: 0,
+        // Partition the blob through the checked cursor; each refusal is an allocation failure.
+        // SAFETY: `alloc_ptr` is the blob's start and `alloc_len` its extent; `alloc` owns it for
+        // the rest of this frame.
+        let mut scratch = Scratch::new(alloc_ptr, alloc_len);
+        let (Some(w1_encoded), Some(c_ntt_slice), Some(a_polys)) = (
+            scratch.take_bytes(w1_encoded_len),
+            scratch.take_polys(1),
+            scratch.take_polys(num_polys_k_by_l),
+        ) else {
+            return 0;
         };
-        signature_init(
-            &mut sig,
-            p,
-            k,
-            p.add(k as usize),
-            l,
-            c_tilde.as_mut_ptr(),
+        let (Some(s2), Some(t0), Some(w), Some(w1), Some(cs2)) = (
+            scratch.take_polys(k as usize),
+            scratch.take_polys(k as usize),
+            scratch.take_polys(k as usize),
+            scratch.take_polys(k as usize),
+            scratch.take_polys(k as usize),
+        ) else {
+            return 0;
+        };
+        let (Some(s1), Some(y), Some(cs1)) = (
+            scratch.take_polys(l as usize),
+            scratch.take_polys(l as usize),
+            scratch.take_polys(l as usize),
+        ) else {
+            return 0;
+        };
+        let (Some(sig_z), Some(sig_hint)) = (
+            scratch.take_polys(l as usize),
+            scratch.take_polys(k as usize),
+        ) else {
+            return 0;
+        };
+        let c_ntt = c_ntt_slice.as_mut_ptr();
+        let mut a_ntt = matrix_init(a_polys.as_mut_ptr(), k as usize, l as usize);
+        let mut s2_ntt = Vector::init(s2.as_mut_ptr(), k as usize);
+        let mut t0_ntt = Vector::init(t0.as_mut_ptr(), k as usize);
+        let mut w = Vector::init(w.as_mut_ptr(), k as usize);
+        let mut w1 = Vector::init(w1.as_mut_ptr(), k as usize);
+        let mut cs2 = Vector::init(cs2.as_mut_ptr(), k as usize);
+        let mut s1_ntt = Vector::init(s1.as_mut_ptr(), l as usize);
+        let mut y = Vector::init(y.as_mut_ptr(), l as usize);
+        let mut cs1 = Vector::init(cs1.as_mut_ptr(), l as usize);
+        let mut sig = MlDsaSig {
+            z: Vector::init(sig_z.as_mut_ptr(), l as usize),
+            hint: Vector::init(sig_hint.as_mut_ptr(), k as usize),
+            c_tilde: c_tilde.as_mut_ptr(),
             c_tilde_len,
-        );
+        };
 
         'err: {
             if md_ctx.is_null() {
@@ -396,12 +478,12 @@ unsafe fn ml_dsa_sign_internal(
                 break 'err;
             }
 
-            vector_copy(&mut s1_ntt, &(*priv_).s1);
-            vector_ntt(&mut s1_ntt);
-            vector_copy(&mut s2_ntt, &(*priv_).s2);
-            vector_ntt(&mut s2_ntt);
-            vector_copy(&mut t0_ntt, &(*priv_).t0);
-            vector_ntt(&mut t0_ntt);
+            vector_copy(s1_ntt.as_mut_slice(), (*priv_).s1.as_slice());
+            vector_ntt(s1_ntt.as_mut_slice());
+            vector_copy(s2_ntt.as_mut_slice(), (*priv_).s2.as_slice());
+            vector_ntt(s2_ntt.as_mut_slice());
+            vector_copy(t0_ntt.as_mut_slice(), (*priv_).t0.as_slice());
+            vector_ntt(t0_ntt.as_mut_slice());
 
             // kappa must not exceed 2^16, but the chance of reaching even 1000 iterations is
             // vanishingly small.
@@ -420,21 +502,21 @@ unsafe fn ml_dsa_sign_internal(
                     md_ctx,
                     (*priv_).shake256_md,
                 );
-                vector_copy(&mut cs1, &y);
-                vector_ntt(&mut cs1);
+                vector_copy(cs1.as_mut_slice(), y.as_slice());
+                vector_ntt(cs1.as_mut_slice());
 
                 matrix_mult_vector(&a_ntt, &cs1, &mut w);
-                vector_ntt_inverse(&mut w);
+                vector_ntt_inverse(w.as_mut_slice());
 
                 vector_high_bits(&w, gamma2, &mut w1);
-                ossl_ml_dsa_w1_encode(&w1, gamma2, w1_encoded, w1_encoded_len);
+                ossl_ml_dsa_w1_encode(&w1, gamma2, w1_encoded.as_mut_ptr(), w1_encoded_len);
 
                 if shake_xof_2(
                     md_ctx,
                     (*priv_).shake256_md,
                     mu,
                     mu_len,
-                    w1_encoded,
+                    w1_encoded.as_mut_ptr(),
                     w1_encoded_len,
                     c_tilde.as_mut_ptr(),
                     c_tilde_len,
@@ -456,9 +538,9 @@ unsafe fn ml_dsa_sign_internal(
                 }
 
                 vector_mult_scalar(&s1_ntt, &*c_ntt, &mut cs1);
-                vector_ntt_inverse(&mut cs1);
+                vector_ntt_inverse(cs1.as_mut_slice());
                 vector_mult_scalar(&s2_ntt, &*c_ntt, &mut cs2);
-                vector_ntt_inverse(&mut cs2);
+                vector_ntt_inverse(cs2.as_mut_slice());
 
                 vector_add(&y, &cs1, &mut sig.z);
 
@@ -474,8 +556,8 @@ unsafe fn ml_dsa_sign_internal(
 
                 // Leaking that the signature is rejected is fine: the next attempt is
                 // indistinguishable from an independent one.
-                let z_max = vector_max(&sig.z);
-                let r0_max = vector_max_signed(&w1);
+                let z_max = vector_max(sig.z.as_slice());
+                let r0_max = vector_max_signed(w1.as_slice());
                 if core::hint::black_box(
                     constant_time_ge_u32(z_max, gamma1.wrapping_sub((*params).beta as u32))
                         | constant_time_ge_u32(r0_max, gamma2.wrapping_sub((*params).beta as u32)),
@@ -486,11 +568,11 @@ unsafe fn ml_dsa_sign_internal(
 
                 // ct0 is `w1`; the same reasoning applies to the leak as above.
                 vector_mult_scalar(&t0_ntt, &*c_ntt, &mut w1);
-                vector_ntt_inverse(&mut w1);
+                vector_ntt_inverse(w1.as_mut_slice());
                 vector_make_hint(&w1, &cs2, &w, gamma2, &mut sig.hint);
 
-                let ct0_max = vector_max(&w1);
-                let h_ones = vector_count_ones(&sig.hint) as u32;
+                let ct0_max = vector_max(w1.as_slice());
+                let h_ones = vector_count_ones(sig.hint.as_slice()) as u32;
                 if core::hint::black_box(
                     constant_time_ge_u32(ct0_max, gamma2)
                         | constant_time_lt_u32((*params).omega as u32, h_ones),
@@ -538,7 +620,9 @@ unsafe fn ml_dsa_verify_internal(
         // The authority's `1 * l`; clippy's `identity_op` refuses the literal spelling.
         #[allow(clippy::identity_op)]
         let num_polys_l = 1 * l as usize;
-        let num_polys_k_by_l = k as usize * l as usize;
+        let Some(num_polys_k_by_l) = (k as usize).checked_mul(l as usize) else {
+            return 0;
+        };
         let mut c_tilde = [0u8; ML_DSA_MAX_LAMBDA / 4];
         let mut c_tilde_sig = [0u8; ML_DSA_MAX_LAMBDA / 4];
         let c_tilde_len = ((*params).bit_strength >> 2) as usize;
@@ -556,12 +640,26 @@ unsafe fn ml_dsa_verify_internal(
             } else {
                 128
             };
+        let Some(polys) = (1usize)
+            .checked_add(num_polys_k)
+            .and_then(|n| n.checked_add(num_polys_l))
+            .and_then(|n| n.checked_add(num_polys_k_by_l))
+            .and_then(|n| n.checked_add(num_polys_sig))
+        else {
+            return 0;
+        };
+        let Some(alloc_len) =
+            w1_encoded_len.checked_add(core::mem::size_of::<Poly>().saturating_mul(polys))
+        else {
+            return 0;
+        };
+        if polys == 0 {
+            return 0;
+        }
         // The scratch blob is owned by the handle, whose `Drop` is the authority's own plain free
         // at `LINE_VERIFY_FREE`.
         let Some(alloc) = OwnedBuf::new(
-            w1_encoded_len
-                + core::mem::size_of::<Poly>()
-                    * (1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig),
+            alloc_len,
             LINE_VERIFY_ALLOC,
             LINE_VERIFY_FREE,
             Release::Plain,
@@ -571,31 +669,39 @@ unsafe fn ml_dsa_verify_internal(
         let alloc_ptr = alloc.as_ptr();
         let md_ctx = EVP_MD_CTX_new();
 
-        // Point every temporary at its slice of the blob.
-        let w1_encoded = alloc_ptr;
-        let mut p: *mut Poly = w1_encoded.add(w1_encoded_len).cast();
-        let c_ntt = p;
-        p = p.add(1);
-        let mut a_ntt = matrix_init(p, k as usize, l as usize);
-        p = p.add(num_polys_k_by_l);
-        let mut sig = MlDsaSig {
-            z: Vector::empty(),
-            hint: Vector::empty(),
-            c_tilde: ptr::null_mut(),
-            c_tilde_len: 0,
+        // Partition the blob through the checked cursor.
+        // SAFETY: `alloc_ptr` is the blob's start and `alloc_len` its extent; `alloc` owns it for
+        // the rest of this frame.
+        let mut scratch = Scratch::new(alloc_ptr, alloc_len);
+        let (Some(w1_encoded), Some(c_ntt_slice), Some(a_polys)) = (
+            scratch.take_bytes(w1_encoded_len),
+            scratch.take_polys(1),
+            scratch.take_polys(num_polys_k_by_l),
+        ) else {
+            return 0;
         };
-        signature_init(
-            &mut sig,
-            p,
-            k,
-            p.add(k as usize),
-            l,
-            c_tilde_sig.as_mut_ptr(),
+        let (Some(sig_hint), Some(sig_z)) = (
+            scratch.take_polys(k as usize),
+            scratch.take_polys(l as usize),
+        ) else {
+            return 0;
+        };
+        let (Some(az), Some(ct1)) = (
+            scratch.take_polys(k as usize),
+            scratch.take_polys(k as usize),
+        ) else {
+            return 0;
+        };
+        let c_ntt = c_ntt_slice.as_mut_ptr();
+        let mut a_ntt = matrix_init(a_polys.as_mut_ptr(), k as usize, l as usize);
+        let mut sig = MlDsaSig {
+            z: Vector::init(sig_z.as_mut_ptr(), l as usize),
+            hint: Vector::init(sig_hint.as_mut_ptr(), k as usize),
+            c_tilde: c_tilde_sig.as_mut_ptr(),
             c_tilde_len,
-        );
-        p = p.add(num_polys_sig);
-        let mut az_ntt = Vector::init(p, k as usize);
-        let mut ct1_ntt = Vector::init(p.add(k as usize), k as usize);
+        };
+        let mut az_ntt = Vector::init(az.as_mut_ptr(), k as usize);
+        let mut ct1_ntt = Vector::init(ct1.as_mut_ptr(), k as usize);
 
         'err: {
             if md_ctx.is_null() {
@@ -635,10 +741,10 @@ unsafe fn ml_dsa_verify_internal(
             }
 
             // Compute z_max early in order to reuse sig.z.
-            let z_max = vector_max(&sig.z);
+            let z_max = vector_max(sig.z.as_slice());
 
             // w_approx = NTT_inverse(A * NTT(z) - ct1_ntt), with w_approx aliased onto az_ntt.
-            vector_ntt(&mut sig.z);
+            vector_ntt(sig.z.as_mut_slice());
             matrix_mult_vector(&a_ntt, &sig.z, &mut az_ntt);
             for i in 0..az_ntt.num_poly {
                 // SAFETY: `az_ntt.poly + i` and `ct1_ntt.poly + i` each name one polynomial; the
@@ -647,7 +753,7 @@ unsafe fn ml_dsa_verify_internal(
                 let rhs = *ct1_ntt.poly.add(i);
                 poly_sub(&lhs, &rhs, &mut *az_ntt.poly.add(i));
             }
-            vector_ntt_inverse(&mut az_ntt);
+            vector_ntt_inverse(az_ntt.as_mut_slice());
 
             // w1_encoded, with `w1` aliased onto `w_approx` (`az_ntt`) as well.
             for i in 0..az_ntt.num_poly {
@@ -656,14 +762,14 @@ unsafe fn ml_dsa_verify_internal(
                 let r = *az_ntt.poly.add(i);
                 poly_use_hint(&*sig.hint.poly.add(i), &r, gamma2, &mut *az_ntt.poly.add(i));
             }
-            ossl_ml_dsa_w1_encode(&az_ntt, gamma2, w1_encoded, w1_encoded_len);
+            ossl_ml_dsa_w1_encode(&az_ntt, gamma2, w1_encoded.as_mut_ptr(), w1_encoded_len);
 
             if shake_xof_3(
                 md_ctx,
                 (*pub_).shake256_md,
                 mu,
                 mu_len,
-                w1_encoded,
+                w1_encoded.as_mut_ptr(),
                 w1_encoded_len,
                 ptr::null(),
                 0,
