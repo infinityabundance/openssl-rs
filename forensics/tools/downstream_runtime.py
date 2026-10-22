@@ -541,6 +541,112 @@ PROGRAMS: dict[str, dict] = {
                  "reproduces the 802.11i vector and a corrupted passphrase derives a different "
                  "key"),
     },
+    # The Phase-25 L7 expansion batch (b10): six more LIBRARY-only families. Each harness links
+    # the rebuilt family library and the subject prefix with --no-as-needed, and asserts one
+    # concrete observable plus a negative control.
+    "getdns": {
+        "program": ".l7-getdns-harness", "launch": ["--version"],
+        "version_re": r"getdns-l7-harness", "lib_paths": ["b"],
+        "harness": {
+            "source": "forensics/tools/l7_getdns.c",
+            "cflags": ["-I{root}/b", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lgetdns", "-lssl", "-lcrypto",
+                        "-lpthread"],
+        },
+        "note": ("getdns' DNS-over-TLS client: a verified TLS query returns the fixture A record, "
+                 "and an unrelated CA is rejected"),
+    },
+    "libu2f-server": {
+        "program": ".l7-libu2f-server-harness", "launch": ["--version"],
+        "version_re": r"libu2f-server-l7-harness", "lib_paths": ["u2f-server/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_libu2f_server.c",
+            "cflags": ["-I{root}", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/u2f-server/.libs", "-L{prefix}/lib",
+                        "-L{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,-rpath,{root}/u2f-server/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,--no-as-needed", "-lu2f-server", "-ljson-c", "-lssl",
+                        "-lcrypto"],
+        },
+        "note": ("libu2f-server's ES256 registration and authentication: both verify, and a "
+                 "signature made with the wrong key is rejected"),
+    },
+    "lua-luaossl": {
+        "program": ".l7-luaossl-harness", "launch": ["--version"],
+        "version_re": r"luaossl-l7-harness", "lib_paths": ["src/5.4", "src"],
+        "harness": {
+            "source": "forensics/tools/l7_lua_runner.c",
+            "cflags": ["-I{aux}/usr/include/lua5.4",
+                       "-I{aux}/usr/include/x86_64-linux-gnu",
+                       "-DL7_NAME=\"luaossl-l7-harness\"",
+                       "-DL7_SCRIPT_PATH=\"{repo}/forensics/tools/l7_luaossl.lua\"",
+                       "-DL7_LUA_PATH=\"{root}/.l7-install/share/lua/5.4/?.lua;"
+                       "{root}/.l7-install/share/lua/5.4/?/init.lua\"",
+                       "-DL7_LUA_CPATH=\"{root}/.l7-install/lib/lua/5.4/?.so\""],
+            "ldflags": ["-L{root}/src/5.4", "-L{prefix}/lib",
+                        "-L{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,-rpath,{root}/src/5.4", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,--no-as-needed", "-l:openssl.so", "-lssl", "-lcrypto",
+                        "-llua5.4", "-lm", "-ldl", "-lpthread"],
+        },
+        "note": ("lua-luaossl: SHA-256 and HMAC-SHA256 vectors through the Lua binding, and a "
+                 "corrupted input produces a different HMAC"),
+    },
+    "lua-sec": {
+        "program": ".l7-luasec-harness", "launch": ["--version"],
+        "version_re": r"luasec-l7-harness", "lib_paths": ["src", "src/luasocket"],
+        "harness": {
+            "source": "forensics/tools/l7_luasec.c",
+            "cflags": ["-I{aux}/usr/include/lua5.4",
+                       "-I{aux}/usr/include/x86_64-linux-gnu",
+                       "-I{prefix}/include",
+                       "-DL7_SCRIPT_PATH=\"{repo}/forensics/tools/l7_luasec.lua\"",
+                       "-DL7_LUA_PATH=\"{root}/src/?.lua;{aux}/usr/share/lua/5.4/?.lua;"
+                       "{aux}/usr/share/lua/5.4/?/init.lua\"",
+                       "-DL7_LUA_CPATH=\"{root}/src/?.so;"
+                       "{aux}/usr/lib/x86_64-linux-gnu/lua/5.4/?.so\""],
+            "ldflags": ["-L{root}/src", "-L{prefix}/lib",
+                        "-L{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,-rpath,{root}/src", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,--no-as-needed", "-l:ssl.so", "-lssl", "-lcrypto",
+                        "-llua5.4", "-lm", "-ldl", "-lpthread"],
+        },
+        "note": ("LuaSec's TLS client against a local server: a TLS1.3 handshake and payload round "
+                 "trip with peer verification, and an unrelated CA is rejected"),
+    },
+    "duo_unix": {
+        "program": ".l7-duo-unix-harness", "launch": ["--version"],
+        "version_re": r"duo_unix-l7-harness", "lib_paths": ["lib/.libs", "compat/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_duo_unix.c",
+            "cflags": ["-I{root}/lib", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/lib/.libs", "-L{root}/compat/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/lib/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lduo", "-lcompat", "-lssl", "-lcrypto",
+                        "-lpthread"],
+        },
+        "note": ("duo_unix's libduo HMAC-SHA1 request signing: a local HTTPS endpoint verifies the "
+                 "signature and authenticates, while a corrupted secret is rejected"),
+    },
+    "dcap-tunnel-ssl": {
+        "program": ".l7-dcap-tunnel-ssl-harness", "launch": ["--version"],
+        "version_re": r"dcap-tunnel-ssl-l7-harness", "lib_paths": ["plugins/ssl/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_dcap_tunnel_ssl.c",
+            "cflags": ["-I{prefix}/include"],
+            "ldflags": ["-L{root}/plugins/ssl/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/plugins/ssl/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lsslTunnel", "-lssl", "-lcrypto",
+                        "-lpthread"],
+        },
+        "note": ("dcap-tunnel-ssl's libsslTunnel plugin: a TLS tunnel carries the auth line and a "
+                 "payload round trip, while a non-TLS peer is rejected"),
+    },
     # The Phase-25 L7 server batch: three TLS servers, an FTPS server and a TLS terminator. Each is
     # a real local exchange with a concrete observable and a negative control, not a banner.
     "memcached": {
@@ -1116,6 +1222,24 @@ def _gen_pki(authority_prefix: Path, d: Path) -> dict:
                                    "-days", "7", "-extfile", str(ext)], timeout=60)
     if not res["ok"]:
         raise RuntimeError(f"signing the server certificate failed: {census._error_line(res)}")
+    # A second server certificate with the same SAN but signed by the unrelated CA. It is an extra
+    # fixture file used only by the getdns negative control, so a wrong-CA reject can be told apart
+    # from a hostname mismatch.
+    other_srv_key, other_srv_csr = d / "other-server.key", d / "other-server.csr"
+    other_srv_crt = d / "other-server.crt"
+    res = _ossl(authority_prefix, ["req", "-newkey", "rsa:2048", "-nodes", "-keyout",
+                                   str(other_srv_key), "-out", str(other_srv_csr), "-subj",
+                                   "/CN=127.0.0.1"], timeout=60)
+    if not res["ok"]:
+        raise RuntimeError(f"generating the unrelated server csr failed: "
+                           f"{census._error_line(res)}")
+    res = _ossl(authority_prefix, ["x509", "-req", "-in", str(other_srv_csr), "-CA",
+                                   str(other_crt), "-CAkey", str(other_key), "-CAcreateserial",
+                                   "-out", str(other_srv_crt), "-days", "7", "-extfile",
+                                   str(ext)], timeout=60)
+    if not res["ok"]:
+        raise RuntimeError(f"signing the unrelated server certificate failed: "
+                           f"{census._error_line(res)}")
     # the combined PEM a TLS server that takes cert+key in one file expects (nginx/haproxy/monit/
     # pure-ftpd/redis all accept separate files, but the combined form is portable)
     srv_pem = d / "server.pem"
@@ -1137,7 +1261,8 @@ def _gen_pki(authority_prefix: Path, d: Path) -> dict:
     if not res["ok"]:
         raise RuntimeError(f"signing the client certificate failed: {census._error_line(res)}")
     return {"ca_crt": ca_crt, "ca_key": ca_key, "srv_crt": srv_crt, "srv_key": srv_key,
-            "srv_pem": srv_pem, "other_crt": other_crt,
+            "srv_pem": srv_pem, "other_crt": other_crt, "other_key": other_key,
+            "other_srv_crt": other_srv_crt, "other_srv_key": other_srv_key,
             "client_crt": cli_crt, "client_key": cli_key}
 
 
@@ -7719,6 +7844,148 @@ def _wl_libtins(ctx: dict) -> dict:
                        "corrupted passphrase differs")
 
 
+def _wl_getdns(ctx: dict) -> dict:
+    """A DNS-over-TLS query answered by a loopback resolver and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"]),
+              "--pin-cert", str(pki["srv_crt"])]
+    good = _run_captured([prog] + common + ["--ca", str(pki["ca_crt"])],
+                         cwd=d, env=ctx["env"], timeout=60)
+    neg = _run_captured([prog, "--cert", str(pki["other_srv_crt"]), "--key",
+                         str(pki["other_srv_key"]), "--pin-cert", str(pki["srv_crt"]),
+                         "--ca", str(pki["ca_crt"])],
+                        cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    runtime_ok = bool(good["ok"] and "dot_query=answered" in text and
+                      "answer=192.0.2.53" in text)
+    neg_rejected = bool(neg["ok"] and "dot_query=rejected" in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the DoT query did not return the fixture answer" if not runtime_ok else
+            "an unrelated CA completed the DoT session"),
+        "transcript": _transcript(("DNS over TLS", good), ("unrelated CA", neg)),
+        "workload": ("getdns: DNS-over-TLS query for the fixture zone answered with 192.0.2.53 "
+                     "over a verified session + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_libu2f_server(ctx: dict) -> dict:
+    """libu2f-server's ES256 registration/authentication plus an altered-signature reject."""
+    return _wl_markers(ctx, ["u2f_register=ok", "u2f_authenticate=ok",
+                             "altered_signature=rejected"],
+                       "libu2f-server: ES256 U2F registration and authentication + "
+                       "altered-signature reject")
+
+
+def _wl_luaossl(ctx: dict) -> dict:
+    """lua-luaossl's digest/HMAC vectors and a corrupted-input control."""
+    return _wl_markers(ctx, ["sha256_vector=ok", "hmac_vector=ok", "wrong_input_differs=ok"],
+                       "lua-luaossl: SHA-256 and HMAC-SHA256 vectors through the Lua binding + "
+                       "corrupted-input difference")
+
+
+def _wl_luasec(ctx: dict) -> dict:
+    """LuaSec's TLS client handshake/payload and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"])]
+    good = _run_captured([prog] + common + ["--ca", str(pki["ca_crt"])],
+                         cwd=d, env=ctx["env"], timeout=60)
+    neg = _run_captured([prog] + common + ["--ca", str(pki["other_crt"])],
+                        cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    runtime_ok = bool(good["ok"] and "handshake=ok" in text and
+                      "payload=phase25-l7-luasec-pong" in text)
+    neg_rejected = bool(neg["ok"] and "negative=rejected" in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the LuaSec client did not complete the handshake and payload round trip"
+            if not runtime_ok else "an unrelated CA completed the LuaSec handshake"),
+        "transcript": _transcript(("LuaSec TLS client", good), ("unrelated CA", neg)),
+        "workload": ("lua-sec: LuaSec TLS1.3 client handshake and payload round trip against a "
+                     "local server with peer verification + unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_duo_unix(ctx: dict) -> dict:
+    """libduo's HMAC-signed authentication and a corrupted-secret reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    common = ["--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"]),
+              "--ca", str(pki["ca_crt"])]
+    good = _run_captured([prog] + common, cwd=d, env=ctx["env"], timeout=60)
+    neg = _run_captured([prog, "--corrupt"] + common, cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    runtime_ok = bool(good["ok"] and "hmac_vector=ok" in text and "duo_login=ok" in text)
+    neg_rejected = bool(neg["ok"] and "corrupt_signature=rejected" in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "libduo's signed authentication did not complete" if not runtime_ok else
+            "a corrupted secret was accepted"),
+        "transcript": _transcript(("signed Duo login", good), ("corrupted secret", neg)),
+        "workload": ("duo_unix: libduo HMAC-SHA1-signed preauth and authentication verified by a "
+                     "local endpoint, plus a corrupted-secret reject"),
+        "local_only": True,
+    }
+
+
+def _wl_dcap_tunnel(ctx: dict) -> dict:
+    """The dcap SSL tunnel's payload round trip and a non-TLS peer reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = str(ctx["program"])
+    good = _run_captured([prog, "--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"])],
+                         cwd=d, env=ctx["env"], timeout=60)
+    neg = _run_captured([prog, "--plain"], cwd=d, env=ctx["env"], timeout=60)
+    text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    runtime_ok = bool(good["ok"] and "tunnel=ok" in text and
+                      "payload=phase25-l7-dcap-tunnel" in text)
+    neg_rejected = bool(neg["ok"] and "tunnel_peer=rejected" in neg_text)
+    functional_ok = runtime_ok and neg_rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the SSL tunnel did not carry the auth line and payload" if not runtime_ok else
+            "a non-TLS peer was accepted as a tunnel"),
+        "transcript": _transcript(("TLS tunnel", good), ("non-TLS peer", neg)),
+        "workload": ("dcap-tunnel-ssl: libsslTunnel establishes a TLS tunnel, sends its auth line "
+                     "and round-trips a payload, plus a non-TLS peer reject"),
+        "local_only": True,
+    }
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -7810,6 +8077,13 @@ RUNNERS = {
     "libesmtp": _wl_libesmtp,
     "minizip-ng": _wl_minizip_ng,
     "libtins": _wl_libtins,
+    # The Phase-25 L7 expansion batch (b10).
+    "getdns": _wl_getdns,
+    "libu2f-server": _wl_libu2f_server,
+    "lua-luaossl": _wl_luaossl,
+    "lua-sec": _wl_luasec,
+    "duo_unix": _wl_duo_unix,
+    "dcap-tunnel-ssl": _wl_dcap_tunnel,
 }
 
 
