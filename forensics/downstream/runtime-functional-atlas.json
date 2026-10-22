@@ -5,14 +5,15 @@
     "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
     "candidate_identity": {
       "install_prefix": "artifacts/phase2/install",
-      "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
-      "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+      "libcrypto_so_3_sha256": "891cf18bcd185bfc2cea87254a50775f9f9800558338674b99295cde93bc6f1b",
+      "libssl_so_3_sha256": "51fec2d3c9ac4568974a6f2f82520e9411525e4ec3a1093f9077c2807e4ae4aa"
     },
     "counts": {
       "authority_applicable_level": {
         "family:aircrack-ng": "L7-functional",
         "family:apache2-utils": "L7-functional",
         "family:apr-util": "L7-functional",
+        "family:arm-trusted-firmware-tools": "L7-functional",
         "family:axel": "L7-functional",
         "family:bannergrab": "L7-functional",
         "family:cowpatty": "L7-functional",
@@ -50,11 +51,15 @@
         "family:libesmtp": "L7-functional",
         "family:libevent": "L7-functional",
         "family:libjose": "L7-functional",
+        "family:libnetconf2": "L7-functional",
+        "family:liboauth2": "L7-functional",
         "family:librdkafka": "L7-functional",
+        "family:libre": "L7-functional",
         "family:libretls": "L7-functional",
         "family:libssh": "L1-admitted-source",
         "family:libstrophe": "L7-functional",
         "family:libtins": "L7-functional",
+        "family:libtpms": "L7-functional",
         "family:libu2f-server": "L7-functional",
         "family:libwebsockets": "L7-functional",
         "family:libzip": "L7-functional",
@@ -107,38 +112,38 @@
       "by_subject": {
         "authority": {
           "failed": 1,
-          "functional": 89,
-          "loaded": 91,
-          "not_attempted": 909,
-          "runtime": 90
+          "functional": 94,
+          "loaded": 96,
+          "not_attempted": 904,
+          "runtime": 95
         },
         "candidate": {
           "failed": 2,
-          "functional": 88,
-          "loaded": 91,
-          "not_attempted": 909,
-          "runtime": 89
+          "functional": 93,
+          "loaded": 96,
+          "not_attempted": 904,
+          "runtime": 94
         }
       },
       "candidate_baseline_not_linked": 2,
       "candidate_below_baseline": 1,
       "candidate_failures": {
-        "acquire-failure": 907,
+        "acquire-failure": 902,
         "functional-failure": 2,
         "link-failure": 2
       },
-      "candidate_reaches_baseline": 92,
-      "candidate_reaches_linked_baseline": 90,
+      "candidate_reaches_baseline": 97,
+      "candidate_reaches_linked_baseline": 95,
       "candidate_specific_patch_count": 0,
-      "no_recipe": 907,
+      "no_recipe": 902,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 93
+      "with_recipe": 98
     },
     "evidence_reuse": {
-      "candidate_identity_match": true,
-      "families_reused": 90,
-      "mode": "committed-rows",
+      "candidate_identity_match": false,
+      "families_reused": 92,
+      "mode": "committed-rows-carried-forward",
       "reused_families": [
         "aircrack-ng",
         "apache2-utils",
@@ -158,6 +163,7 @@
         "fetchmail",
         "fido2",
         "fossil",
+        "gensio",
         "getdns",
         "haproxy",
         "hcxtools",
@@ -168,6 +174,7 @@
         "iperf3",
         "irssi",
         "isync",
+        "jimtcl",
         "jwt",
         "kea",
         "keepalived",
@@ -230,7 +237,17 @@
         "u-boot-tools",
         "w3m",
         "znc"
-      ]
+      ],
+      "superseded_identity": {
+        "libcrypto_so_3_sha256": {
+          "committed": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "current": "891cf18bcd185bfc2cea87254a50775f9f9800558338674b99295cde93bc6f1b"
+        },
+        "libssl_so_3_sha256": {
+          "committed": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d",
+          "current": "51fec2d3c9ac4568974a6f2f82520e9411525e4ec3a1093f9077c2807e4ae4aa"
+        }
+      }
     },
     "non_claims": [
       "a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software",
@@ -797,6 +814,36 @@
         "program": ".l7-sofia-sip-harness",
         "recipe_id": "recipe:sofia-sip:1.12.11+20110422.1",
         "version": "1.12.11+20110422.1"
+      },
+      {
+        "family": "libtpms",
+        "program": ".l7-libtpms-harness",
+        "recipe_id": "recipe:libtpms:0.9.2",
+        "version": "0.9.2"
+      },
+      {
+        "family": "libre",
+        "program": ".l7-libre-harness",
+        "recipe_id": "recipe:libre:1.1.0",
+        "version": "1.1.0"
+      },
+      {
+        "family": "arm-trusted-firmware-tools",
+        "program": "tools/cert_create/cert_create",
+        "recipe_id": "recipe:arm-trusted-firmware-tools:2.8.0+dfsg",
+        "version": "2.8.0+dfsg"
+      },
+      {
+        "family": "libnetconf2",
+        "program": ".l7-libnetconf2-harness",
+        "recipe_id": "recipe:libnetconf2:2.0.24",
+        "version": "2.0.24"
+      },
+      {
+        "family": "liboauth2",
+        "program": ".l7-liboauth2-harness",
+        "recipe_id": "recipe:liboauth2:1.4.5.4",
+        "version": "1.4.5.4"
       }
     ],
     "resource_limits": {
@@ -3105,6 +3152,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:aircrack-ng",
         "source_root_hash": "34fd90e88e57b986dd0f75d2c0e2135db388d5e03c586f467fe01485fdd74259",
         "source_sha256": "05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
@@ -3260,6 +3312,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:aircrack-ng",
         "source_root_hash": "34fd90e88e57b986dd0f75d2c0e2135db388d5e03c586f467fe01485fdd74259",
@@ -5009,6 +5066,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:apache2-utils",
         "source_root_hash": "df2fce0682a62c04b34e75c83665bac532ec001035b49f45881fcb8a65c7f3dc",
         "source_sha256": "88fc236ab99b2864b248de7d49a008ec2afd7551e64dce8b95f58f32f94c46ab",
@@ -5172,6 +5234,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:apache2-utils",
         "source_root_hash": "df2fce0682a62c04b34e75c83665bac532ec001035b49f45881fcb8a65c7f3dc",
@@ -5625,6 +5692,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:apr-util",
         "source_root_hash": "2efd5c22615b071ed96ac28cf58f067ed819421dce7d53a6a32b13b26b593a91",
         "source_sha256": "2b74d8932703826862ca305b094eef2983c27b39d5c9414442e9976a9acf1983",
@@ -5761,6 +5833,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:apr-util",
         "source_root_hash": "2efd5c22615b071ed96ac28cf58f067ed819421dce7d53a6a32b13b26b593a91",
@@ -6376,7 +6453,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "arm-trusted-firmware-tools",
@@ -6384,18 +6461,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:arm-trusted-firmware-tools"
+          "family:family:arm-trusted-firmware-tools",
+          "recipe:recipe:arm-trusted-firmware-tools:2.8.0+dfsg",
+          "artifact:tools/cert_create/cert_create",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:arm-trusted-firmware-tools",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--help"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1159597:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1159597:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1159597:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1159597:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1159597:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1159597:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "1159597:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "1159597:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -6415,13 +6529,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 180,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:arm-trusted-firmware-tools:2.8.0+dfsg",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -6431,10 +6545,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:arm-trusted-firmware-tools",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "f170fc197a1783a1d574918e9009be0a4de8e9a6783596d06d0e95d0e12f6b25",
+        "source_sha256": "a4ecc35e0b893fe8682c075fc1bdb858de87e4cb18fbed9a1597e2c9f6d320de",
+        "source_url": "https://deb.debian.org/debian/pool/main/a/arm-trusted-firmware/arm-trusted-firmware_2.8.0+dfsg.orig.tar.xz",
+        "specimen_id": "specimen:arm-trusted-firmware-tools:2.8.0+dfsg",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -6442,13 +6556,60 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "\t--scp-fw-key <arg>               SCP Firmware Content Certificate key (input/output file)",
+          "\t--soc-fw-key <arg>               SoC Firmware Content Certificate key (input/output file)",
+          "\t--tos-fw-key <arg>               Trusted OS Firmware Content Certificate key (input/output file)",
+          "\t--nt-fw-key <arg>                Non Trusted Firmware Content Certificate key (input/output file)",
+          "\t--tfw-nvctr <arg>                Trusted Firmware Non-Volatile counter value",
+          "\t--ntfw-nvctr <arg>               Non-Trusted Firmware Non-Volatile counter value",
+          "\t--tb-fw <arg>                    Trusted Boot Firmware image file",
+          "\t--tb-fw-config <arg>             Trusted Boot Firmware Config file",
+          "\t--hw-config <arg>                HW Config file",
+          "\t--fw-config <arg>                Firmware Config file",
+          "\t--scp-fw <arg>                   SCP Firmware image file",
+          "\t--soc-fw <arg>                   SoC AP Firmware image file",
+          "\t--soc-fw-config <arg>            SoC Firmware Config file",
+          "\t--tos-fw <arg>                   Trusted OS image file",
+          "\t--tos-fw-extra1 <arg>            Trusted OS Extra1 image file",
+          "\t--tos-fw-extra2 <arg>            Trusted OS Extra2 image file",
+          "\t--tos-fw-config <arg>            Trusted OS Firmware Config file",
+          "\t--nt-fw <arg>                    Non-Trusted World Bootloader image file",
+          "\t--nt-fw-config <arg>             Non Trusted OS Firmware Config file",
+          "\t--sp-pkg1 <arg>                  Secure Partition Package1 file",
+          "\t--sp-pkg2 <arg>                  Secure Partition Package2 file",
+          "\t--sp-pkg3 <arg>                  Secure Partition Package3 file",
+          "\t--sp-pkg4 <arg>                  Secure Partition Package4 file",
+          "\t--sp-pkg5 <arg>                  Secure Partition Package5 file",
+          "\t--sp-pkg6 <arg>                  Secure Partition Package6 file",
+          "\t--sp-pkg7 <arg>                  Secure Partition Package7 file",
+          "\t--sp-pkg8 <arg>                  Secure Partition Package8 file",
+          "\t--scp-fwu-cfg <arg>              SCP Firmware Update Config image file",
+          "\t--ap-fwu-cfg <arg>               AP Firmware Update Config image file",
+          "\t--fwu <arg>                      Firmware Updater image file",
+          "== workload ==",
+          "exit=0",
+          "== arm-trusted-firmware-tools ==",
+          "exit=0",
+          "cert_create=exit-0",
+          "sign_verify=ok",
+          "cert_tamper=rejected",
+          "fiptool=ok",
+          "fip_tamper=rejected",
+          "result=ok"
+        ],
+        "transcript_sha256": "6463e12336df336499750cfd47864c7aee0605aea7fac7f04d470406fc4068c6",
+        "variant_id": "variant:arm-trusted-firmware-tools:2.8.0+dfsg:pristine",
+        "workload": "TF-A: cert_create signs a chain, openssl verifies it, a tampered certificate and FIP are rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "TF-A: cert_create signs a chain, openssl verifies it, a tampered certificate and FIP are rejected",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "arm-trusted-firmware-tools",
@@ -6456,18 +6617,55 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:arm-trusted-firmware-tools"
+          "family:family:arm-trusted-firmware-tools",
+          "recipe:recipe:arm-trusted-firmware-tools:2.8.0+dfsg",
+          "artifact:tools/cert_create/cert_create",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:arm-trusted-firmware-tools",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--help"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1159614:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "1159614:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "1159614:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "1159614:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "1159614:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1159614:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "1159614:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "1159614:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -6487,12 +6685,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 180,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:arm-trusted-firmware-tools:2.8.0+dfsg",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -6503,10 +6701,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:arm-trusted-firmware-tools",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "f170fc197a1783a1d574918e9009be0a4de8e9a6783596d06d0e95d0e12f6b25",
+        "source_sha256": "a4ecc35e0b893fe8682c075fc1bdb858de87e4cb18fbed9a1597e2c9f6d320de",
+        "source_url": "https://deb.debian.org/debian/pool/main/a/arm-trusted-firmware/arm-trusted-firmware_2.8.0+dfsg.orig.tar.xz",
+        "specimen_id": "specimen:arm-trusted-firmware-tools:2.8.0+dfsg",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -6514,10 +6712,57 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "\t--scp-fw-key <arg>               SCP Firmware Content Certificate key (input/output file)",
+          "\t--soc-fw-key <arg>               SoC Firmware Content Certificate key (input/output file)",
+          "\t--tos-fw-key <arg>               Trusted OS Firmware Content Certificate key (input/output file)",
+          "\t--nt-fw-key <arg>                Non Trusted Firmware Content Certificate key (input/output file)",
+          "\t--tfw-nvctr <arg>                Trusted Firmware Non-Volatile counter value",
+          "\t--ntfw-nvctr <arg>               Non-Trusted Firmware Non-Volatile counter value",
+          "\t--tb-fw <arg>                    Trusted Boot Firmware image file",
+          "\t--tb-fw-config <arg>             Trusted Boot Firmware Config file",
+          "\t--hw-config <arg>                HW Config file",
+          "\t--fw-config <arg>                Firmware Config file",
+          "\t--scp-fw <arg>                   SCP Firmware image file",
+          "\t--soc-fw <arg>                   SoC AP Firmware image file",
+          "\t--soc-fw-config <arg>            SoC Firmware Config file",
+          "\t--tos-fw <arg>                   Trusted OS image file",
+          "\t--tos-fw-extra1 <arg>            Trusted OS Extra1 image file",
+          "\t--tos-fw-extra2 <arg>            Trusted OS Extra2 image file",
+          "\t--tos-fw-config <arg>            Trusted OS Firmware Config file",
+          "\t--nt-fw <arg>                    Non-Trusted World Bootloader image file",
+          "\t--nt-fw-config <arg>             Non Trusted OS Firmware Config file",
+          "\t--sp-pkg1 <arg>                  Secure Partition Package1 file",
+          "\t--sp-pkg2 <arg>                  Secure Partition Package2 file",
+          "\t--sp-pkg3 <arg>                  Secure Partition Package3 file",
+          "\t--sp-pkg4 <arg>                  Secure Partition Package4 file",
+          "\t--sp-pkg5 <arg>                  Secure Partition Package5 file",
+          "\t--sp-pkg6 <arg>                  Secure Partition Package6 file",
+          "\t--sp-pkg7 <arg>                  Secure Partition Package7 file",
+          "\t--sp-pkg8 <arg>                  Secure Partition Package8 file",
+          "\t--scp-fwu-cfg <arg>              SCP Firmware Update Config image file",
+          "\t--ap-fwu-cfg <arg>               AP Firmware Update Config image file",
+          "\t--fwu <arg>                      Firmware Updater image file",
+          "== workload ==",
+          "exit=0",
+          "== arm-trusted-firmware-tools ==",
+          "exit=0",
+          "cert_create=exit-0",
+          "sign_verify=ok",
+          "cert_tamper=rejected",
+          "fiptool=ok",
+          "fip_tamper=rejected",
+          "result=ok"
+        ],
+        "transcript_sha256": "cf6721a73e1ba37374002cb09b106b3b846cccfb3a26bee16d3440eba57c0fe8",
+        "variant_id": "variant:arm-trusted-firmware-tools:2.8.0+dfsg:pristine",
+        "workload": "TF-A: cert_create signs a chain, openssl verifies it, a tampered certificate and FIP are rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "TF-A: cert_create signs a chain, openssl verifies it, a tampered certificate and FIP are rejected",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -8781,6 +9026,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:axel",
         "source_root_hash": "35260cf30600e586fe74ff870fa795cb75bb5fbddd6616cfcedb10b2b24dcb53",
         "source_sha256": "575f73f640ee836a95d27b54aeed216c45bc1e914cad92da6f00b907d1c94925",
@@ -8937,6 +9187,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:axel",
         "source_root_hash": "35260cf30600e586fe74ff870fa795cb75bb5fbddd6616cfcedb10b2b24dcb53",
@@ -9671,6 +9926,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:bannergrab",
         "source_root_hash": "afa6b57de5b81b479be19cc9eec4f1ab2cac9a6aac3f30431395f7b56e6f5cb7",
         "source_sha256": "f9995bc1f750234b08034d4bc8c214ec505690a8d939eeda176da46328a7638d",
@@ -9836,6 +10096,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:bannergrab",
         "source_root_hash": "afa6b57de5b81b479be19cc9eec4f1ab2cac9a6aac3f30431395f7b56e6f5cb7",
@@ -25257,6 +25522,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:cowpatty",
         "source_root_hash": "d851b80a492d0f09e43b694723cf93d06a9954d064fd87f53aaff0f5b3055c38",
         "source_sha256": "b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
@@ -25401,6 +25671,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:cowpatty",
         "source_root_hash": "d851b80a492d0f09e43b694723cf93d06a9954d064fd87f53aaff0f5b3055c38",
@@ -26707,6 +26982,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:curl",
         "source_root_hash": "34735156e3978b653ea4ea6f1b073ca3ccd5bd8c493ec708160a2dc289598d08",
         "source_sha256": "d15ebab765d793e2e96db090f0e172d127859d78ca6f6391d7eafecfd894bbc0",
@@ -26856,6 +27136,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:curl",
         "source_root_hash": "34735156e3978b653ea4ea6f1b073ca3ccd5bd8c493ec708160a2dc289598d08",
@@ -28159,6 +28444,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:cyrus-sasl",
         "source_root_hash": "6150c1d0a94de8e5616b422ff0bb2851c579e2a7e81d763c248bc6e1894ce700",
         "source_sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c",
@@ -28295,6 +28585,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:cyrus-sasl",
         "source_root_hash": "6150c1d0a94de8e5616b422ff0bb2851c579e2a7e81d763c248bc6e1894ce700",
@@ -29299,6 +29594,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:dcap-tunnel-ssl",
         "source_root_hash": "57e1998e9efbb325bbfc1003287b6711127c01f2c7a787bd08c5d22ba3a8faac",
         "source_sha256": "dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
@@ -29439,6 +29739,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:dcap-tunnel-ssl",
         "source_root_hash": "57e1998e9efbb325bbfc1003287b6711127c01f2c7a787bd08c5d22ba3a8faac",
@@ -36062,6 +36367,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:dovecot",
         "source_root_hash": "34b1653e2240b8ea14aa1a6e8a879954fb2c95a3b34e726641744dc5e597c7d6",
         "source_sha256": "05b11093a71c237c2ef309ad587510721cc93bbee6828251549fc1586c36502d",
@@ -36209,6 +36519,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:dovecot",
         "source_root_hash": "34b1653e2240b8ea14aa1a6e8a879954fb2c95a3b34e726641744dc5e597c7d6",
@@ -37510,6 +37825,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:duo_unix",
         "source_root_hash": "fa08d8d101922385b3fbd607b46b0a627020721435add961f594613d95f41d83",
         "source_sha256": "0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
@@ -37651,6 +37971,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:duo_unix",
         "source_root_hash": "fa08d8d101922385b3fbd607b46b0a627020721435add961f594613d95f41d83",
@@ -39664,6 +39989,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:eggdrop",
         "source_root_hash": "85f306d897c4e56b8f8b1b12d621feb2ca300e06b40045eaab3696dec659df9c",
         "source_sha256": "e26918ea8a64d9857579c5b60c661a337f20773edd83086b356525beb581736a",
@@ -39827,6 +40157,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:eggdrop",
         "source_root_hash": "85f306d897c4e56b8f8b1b12d621feb2ca300e06b40045eaab3696dec659df9c",
@@ -40856,6 +41191,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:epic5",
         "source_root_hash": "faff357c1b643bed806d4bd839d39f50ba645194e44c58cae3fe766e456e9bf3",
         "source_sha256": "63a411215c14040b65b5d728aff10f7523d55e170f6298fb01e1cf958d79d326",
@@ -41019,6 +41359,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:epic5",
         "source_root_hash": "faff357c1b643bed806d4bd839d39f50ba645194e44c58cae3fe766e456e9bf3",
@@ -43632,6 +43977,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:exim",
         "source_root_hash": "3d3094944886276681408c8ff36d1cc1106aa959d8b9b34cdf37e1913fb3f1ca",
         "source_sha256": "e9fb41f6724a5b136d64c9d19dbc5f26494af879a3e7e3190f91639eaa79fa0d",
@@ -43795,6 +44145,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:exim",
         "source_root_hash": "3d3094944886276681408c8ff36d1cc1106aa959d8b9b34cdf37e1913fb3f1ca",
@@ -44380,6 +44735,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:fastd",
         "source_root_hash": "cd0f0b11ed709bb86cc1d71992714ac7c5c0fbc2fe429eac9c109be1c5ebd586",
         "source_sha256": "19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951",
@@ -44499,6 +44859,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:fastd",
         "source_root_hash": "cd0f0b11ed709bb86cc1d71992714ac7c5c0fbc2fe429eac9c109be1c5ebd586",
@@ -46651,6 +47016,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:fetchmail",
         "source_root_hash": "79903f72383b447fe16ebb6cb2d5c4fddd629d01cdc287d226070160264db169",
         "source_sha256": "42611aea4861a5311e5116843f01c203dceadf440bf2eb1b4a43a445f2977668",
@@ -46817,6 +47187,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:fetchmail",
         "source_root_hash": "79903f72383b447fe16ebb6cb2d5c4fddd629d01cdc287d226070160264db169",
@@ -47270,6 +47645,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:fido2",
         "source_root_hash": "17789703651af7fe6bb451aa581ee1bea6f49ccff201e8a96227b2376544c0bc",
         "source_sha256": "32e3e431cfe29b45f497300fdb7076971cb77fc584fcfa80084d823a6ed94fbb",
@@ -47403,6 +47783,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:fido2",
         "source_root_hash": "17789703651af7fe6bb451aa581ee1bea6f49ccff201e8a96227b2376544c0bc",
@@ -48258,6 +48643,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:fossil",
         "source_root_hash": "f9f4a2e7b21a04a2be08c9a4f92036c93c2c32846cc6284d7ebb2a11c57f587f",
         "source_sha256": "01aafcff3309ba9eb0ca6bcf4267108961676af336727b8adbc05475d96edd36",
@@ -48415,6 +48805,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:fossil",
         "source_root_hash": "f9f4a2e7b21a04a2be08c9a4f92036c93c2c32846cc6284d7ebb2a11c57f587f",
@@ -53182,6 +53577,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:gensio",
         "source_root_hash": "ae5a637d684811779009204b29790036555830471dee4903f66ee033defffc30",
         "source_sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
@@ -53317,6 +53717,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:gensio",
         "source_root_hash": "ae5a637d684811779009204b29790036555830471dee4903f66ee033defffc30",
@@ -53454,6 +53859,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:getdns",
         "source_root_hash": "2f7421b9ea4460f4e21cfb6c3cff91b74ab6765c54325fee0c9a8d6834cbf185",
         "source_sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
@@ -53590,6 +54000,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:getdns",
         "source_root_hash": "2f7421b9ea4460f4e21cfb6c3cff91b74ab6765c54325fee0c9a8d6834cbf185",
@@ -68416,6 +68831,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:haproxy",
         "source_root_hash": "ae57f573cda0ae83f0c5e5bc83712672547a8e08410ff590164237b5ba91752c",
         "source_sha256": "cf1bf58b5bc79c48db7b01667596ffd98343adb29a41096f075f00a8f90a7335",
@@ -68574,6 +68994,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:haproxy",
         "source_root_hash": "ae57f573cda0ae83f0c5e5bc83712672547a8e08410ff590164237b5ba91752c",
@@ -69014,6 +69439,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:hcxtools",
         "source_root_hash": "2f33586acd75121a7d58ea287b686ec3619e0c84bd264332a9b6b8a8b2a955ec",
         "source_sha256": "c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
@@ -69144,6 +69574,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:hcxtools",
         "source_root_hash": "2f33586acd75121a7d58ea287b686ec3619e0c84bd264332a9b6b8a8b2a955ec",
@@ -70438,6 +70873,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:hiredis-ssl",
         "source_root_hash": "c577051a368c13ae7bc66dcf99d0dcff738cdc355cce798e93c7a20a103df5a3",
         "source_sha256": "25cee4500f359cf5cad3b51ed62059aadfc0939b05150c1f19c7e2829123631c",
@@ -70591,6 +71031,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:candidate:hiredis-ssl",
         "source_root_hash": "c577051a368c13ae7bc66dcf99d0dcff738cdc355cce798e93c7a20a103df5a3",
         "source_sha256": "25cee4500f359cf5cad3b51ed62059aadfc0939b05150c1f19c7e2829123631c",
@@ -70743,6 +71188,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:authority:hitch",
         "source_root_hash": "f2665b45c77f1b254c8a016eb918f322663f0256cc685538d9a3f5938710021c",
@@ -70899,6 +71349,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:hitch",
         "source_root_hash": "f2665b45c77f1b254c8a016eb918f322663f0256cc685538d9a3f5938710021c",
@@ -72352,6 +72807,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:httperf",
         "source_root_hash": "3312ddcc7944f5ff77e309d49a5a0c33c8c54903368f16b13910fd5e629136c3",
         "source_sha256": "ba1c68b8eed4fcdae72e932c8810faf76bde77c50c5791b3a3d88d0f4f7e69b2",
@@ -72512,6 +72972,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:httperf",
         "source_root_hash": "3312ddcc7944f5ff77e309d49a5a0c33c8c54903368f16b13910fd5e629136c3",
@@ -73826,6 +74291,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:icecast",
         "source_root_hash": "89ea88a03289b36e8d762cebde655fdd772764c7cc6def0b66e93d2cf6fdcef9",
         "source_sha256": "49b5979f9f614140b6a38046154203ee28218d8fc549888596a683ad604e4d44",
@@ -73986,6 +74456,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:icecast",
         "source_root_hash": "89ea88a03289b36e8d762cebde655fdd772764c7cc6def0b66e93d2cf6fdcef9",
@@ -77446,6 +77921,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:iperf3",
         "source_root_hash": "a4eedd56c06a793266e2eda470735927f372ed7f9ab89559b19036689a38f545",
         "source_sha256": "84404ca8431b595e86c473d8f23d8bb102810001f15feaf610effd3b318788aa",
@@ -77583,6 +78063,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:iperf3",
         "source_root_hash": "a4eedd56c06a793266e2eda470735927f372ed7f9ab89559b19036689a38f545",
@@ -78598,6 +79083,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:irssi",
         "source_root_hash": "2861801c6446f68403bf28b78c4192460340848da3265025f622c9dfaa46cc13",
         "source_sha256": "72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062",
@@ -78761,6 +79251,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:irssi",
         "source_root_hash": "2861801c6446f68403bf28b78c4192460340848da3265025f622c9dfaa46cc13",
@@ -79360,6 +79855,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:isync",
         "source_root_hash": "d7d37870b9ac484e6c911c5c23ab1e77c975c268143d1c4e00fcc882d081015b",
         "source_sha256": "a0c81e109387bf279da161453103399e77946afecf5c51f9413c5e773557f78d",
@@ -79509,6 +80009,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:isync",
         "source_root_hash": "d7d37870b9ac484e6c911c5c23ab1e77c975c268143d1c4e00fcc882d081015b",
@@ -80522,6 +81027,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:jimtcl",
         "source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
         "source_sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
@@ -80660,6 +81170,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:jimtcl",
         "source_root_hash": "8d08026d1ed92d4715d7d5d93001950436ac213edecf00d8842db9918832a7f6",
@@ -81090,6 +81605,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:jwt",
         "source_root_hash": "da91befa92e9f66b60f2d1ae612d3ebaa04472b8df9b1e55f91aa27188520089",
         "source_sha256": "ea13f42713edd113e65c05f9601ba25383f89b34a644b64f30ee0ecbf282dc83",
@@ -81228,6 +81748,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:jwt",
         "source_root_hash": "da91befa92e9f66b60f2d1ae612d3ebaa04472b8df9b1e55f91aa27188520089",
@@ -82664,6 +83189,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:kea",
         "source_root_hash": "c674f5766de5ed935cae8d1d1f1454c69a7e24f082604381861bbc8f3c4d3d78",
         "source_sha256": "00241a5955ffd3d215a2c098c4527f9d7f4b203188b276f9a36250dd3d9dd612",
@@ -82803,6 +83333,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:kea",
         "source_root_hash": "c674f5766de5ed935cae8d1d1f1454c69a7e24f082604381861bbc8f3c4d3d78",
@@ -83234,6 +83769,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:keepalived",
         "source_root_hash": "05a3f55cf14bcbbd5c8305c478e641a4cc428a17181b183cdef5b38a0ea85454",
         "source_sha256": "92f4b69bfd998e2306d1995ad16fdad1b59e70be694c883385c5f55e02c62aa3",
@@ -83382,6 +83922,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:keepalived",
         "source_root_hash": "05a3f55cf14bcbbd5c8305c478e641a4cc428a17181b183cdef5b38a0ea85454",
@@ -84963,6 +85508,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:kmod",
         "source_root_hash": "90891a25274d31e7d4b7bfbe41948950735867d7d0a1d48b7095bc06ad9621de",
         "source_sha256": "dc768b3155172091f56dc69430b5481f2d76ecd9ccb54ead8c2540dbcf5ea9bc",
@@ -85104,6 +85654,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:kmod",
         "source_root_hash": "90891a25274d31e7d4b7bfbe41948950735867d7d0a1d48b7095bc06ad9621de",
@@ -88841,6 +89396,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:ldns",
         "source_root_hash": "e67f352d900fa6f5fc90887804e96c1c32e6182b1b23107b56fb3516db95089b",
         "source_sha256": "c3f72dd1036b2907e3a56e6acf9dfb2e551256b3c1bbd9787942deeeb70e7860",
@@ -88991,6 +89551,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:ldns",
         "source_root_hash": "e67f352d900fa6f5fc90887804e96c1c32e6182b1b23107b56fb3516db95089b",
@@ -91303,6 +91868,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:libarchive",
         "source_root_hash": "8ca62cbcd3bae76614c8b0d71c8c5ddcdf578a81ae7d2dedfedae97c23f6dc8d",
         "source_sha256": "4cc540a3e9a1eebdefa1045d2e4184831100667e6d7d5b315bb1cbc951f8ddff",
@@ -91434,6 +92004,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libarchive",
         "source_root_hash": "8ca62cbcd3bae76614c8b0d71c8c5ddcdf578a81ae7d2dedfedae97c23f6dc8d",
@@ -92876,6 +93451,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:libcoap",
         "source_root_hash": "c555db7b0a9a4aef6894822c9959f0f54f4bdc91523013841f5c2b9135c0afd2",
         "source_sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
@@ -93009,6 +93589,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libcoap",
         "source_root_hash": "c555db7b0a9a4aef6894822c9959f0f54f4bdc91523013841f5c2b9135c0afd2",
@@ -98760,6 +99345,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:libesmtp",
         "source_root_hash": "ba1bde35a8d87aeaebcb4d4a66ba8531fe0c67e905603dacee26f5017d7644b4",
         "source_sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
@@ -98898,6 +99488,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:candidate:libesmtp",
         "source_root_hash": "ba1bde35a8d87aeaebcb4d4a66ba8531fe0c67e905603dacee26f5017d7644b4",
         "source_sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
@@ -99035,6 +99630,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:authority:libevent",
         "source_root_hash": "ff5c6c0b93b626438f50f9c5d92a68dd5b1c0af84cbfa10e7c79b685056db9b0",
@@ -99182,6 +99782,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libevent",
         "source_root_hash": "ff5c6c0b93b626438f50f9c5d92a68dd5b1c0af84cbfa10e7c79b685056db9b0",
@@ -103794,6 +104399,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:libjose",
         "source_root_hash": "1591e15d59a34f56f7d15c5f73988d8796317feeadbb27da98ca279b4b1de086",
         "source_sha256": "e272afe7717e22790c383f3164480627a567c714ccb80c1ee96f62c9929d8225",
@@ -103927,6 +104537,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libjose",
         "source_root_hash": "1591e15d59a34f56f7d15c5f73988d8796317feeadbb27da98ca279b4b1de086",
@@ -104395,7 +105010,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libnetconf2",
@@ -104403,18 +105018,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libnetconf2"
+          "family:family:libnetconf2",
+          "recipe:recipe:libnetconf2:2.0.24",
+          "artifact:.l7-libnetconf2-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libnetconf2",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1160444:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1160444:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1160444:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1160444:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1160444:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1160444:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -104434,13 +105094,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 270,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libnetconf2:2.0.24",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -104450,10 +105110,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libnetconf2",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "478508d21b2a8ff12e8839485bcd2bcfe16878126e549493ba144a5a0b037998",
+        "source_sha256": "78ffa0bd85823abd321a1dbb09c1ead36612f2a12049638a14bb081567f86ade",
+        "source_url": "https://deb.debian.org/debian/pool/main/libn/libnetconf2/libnetconf2_2.0.24.orig.tar.gz",
+        "specimen_id": "specimen:libnetconf2:2.0.24",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -104461,13 +105121,36 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libnetconf2-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== libnetconf2 TLS client ==",
+          "exit=0",
+          "tls_session=ok",
+          "netconf_hello=ok",
+          "wrong_ca=rejected",
+          "result=ok",
+          "Session 1 [ERR]: Communication socket unexpectedly closed (OpenSSL).",
+          "Session 1 [ERR]: Invalid session to write to.",
+          "Session 1 [ERR]: Invalid session to read from.",
+          "Session 1 [ERR]: Failed to receive a reply to <close-session>.",
+          "[ERR]: SSL_connect failed (certificate verify failed)."
+        ],
+        "transcript_sha256": "675dd7ad9ce19cd1f5f7adde7bf949e66d846982f443045a87bc24c3200952da",
+        "variant_id": "variant:libnetconf2:2.0.24:pristine",
+        "workload": "libnetconf2: a verified TLS session completes the NETCONF hello exchange + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libnetconf2: a verified TLS session completes the NETCONF hello exchange + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libnetconf2",
@@ -104475,18 +105158,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libnetconf2"
+          "family:family:libnetconf2",
+          "recipe:recipe:libnetconf2:2.0.24",
+          "artifact:.l7-libnetconf2-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libnetconf2",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1160470:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1160470:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1160470:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1160470:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1160470:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1160470:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -104506,12 +105234,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 270,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libnetconf2:2.0.24",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -104522,10 +105250,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libnetconf2",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "478508d21b2a8ff12e8839485bcd2bcfe16878126e549493ba144a5a0b037998",
+        "source_sha256": "78ffa0bd85823abd321a1dbb09c1ead36612f2a12049638a14bb081567f86ade",
+        "source_url": "https://deb.debian.org/debian/pool/main/libn/libnetconf2/libnetconf2_2.0.24.orig.tar.gz",
+        "specimen_id": "specimen:libnetconf2:2.0.24",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -104533,10 +105261,33 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libnetconf2-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== libnetconf2 TLS client ==",
+          "exit=0",
+          "tls_session=ok",
+          "netconf_hello=ok",
+          "wrong_ca=rejected",
+          "result=ok",
+          "Session 1 [ERR]: Communication socket unexpectedly closed (OpenSSL).",
+          "Session 1 [ERR]: Invalid session to write to.",
+          "Session 1 [ERR]: Invalid session to read from.",
+          "Session 1 [ERR]: Failed to receive a reply to <close-session>.",
+          "[ERR]: SSL_connect failed (certificate verify failed)."
+        ],
+        "transcript_sha256": "675dd7ad9ce19cd1f5f7adde7bf949e66d846982f443045a87bc24c3200952da",
+        "variant_id": "variant:libnetconf2:2.0.24:pristine",
+        "workload": "libnetconf2: a verified TLS session completes the NETCONF hello exchange + unrelated-CA reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libnetconf2: a verified TLS session completes the NETCONF hello exchange + unrelated-CA reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -104683,7 +105434,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "liboauth2",
@@ -104691,18 +105442,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:liboauth2"
+          "family:family:liboauth2",
+          "recipe:recipe:liboauth2:1.4.5.4",
+          "artifact:.l7-liboauth2-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:liboauth2",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1169390:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1169390:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1169390:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1169390:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1169390:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1169390:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -104722,13 +105518,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 271,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:liboauth2:1.4.5.4",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -104738,10 +105534,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:liboauth2",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "3eea63533a32d4cc2b1f6aba17e5909d10d3336bdf4e137e3e9d8841d9398a36",
+        "source_sha256": "a7ab1fee6d9c88501e22ca73e28365aaaac298c811b01beacb3bf7e1cddbe9e5",
+        "source_url": "https://deb.debian.org/debian/pool/main/libo/liboauth2/liboauth2_1.4.5.4.orig.tar.gz",
+        "specimen_id": "specimen:liboauth2:1.4.5.4",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -104749,13 +105545,31 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "liboauth2-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== liboauth2 JOSE ==",
+          "exit=0",
+          "sha256=ok",
+          "jwe_roundtrip=ok",
+          "tamper=rejected",
+          "result=ok"
+        ],
+        "transcript_sha256": "2d175ff740e82a392e8c8d14983c5a42c5ab96b10845b006220c2b907b4cbbb7",
+        "variant_id": "variant:liboauth2:1.4.5.4:pristine",
+        "workload": "liboauth2: EVP SHA-256 vector, cjose JWE encrypt/decrypt round trip and a flipped ciphertext byte rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "liboauth2: EVP SHA-256 vector, cjose JWE encrypt/decrypt round trip and a flipped ciphertext byte rejected",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "liboauth2",
@@ -104763,18 +105577,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:liboauth2"
+          "family:family:liboauth2",
+          "recipe:recipe:liboauth2:1.4.5.4",
+          "artifact:.l7-liboauth2-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:liboauth2",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1169405:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1169405:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1169405:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1169405:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1169405:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1169405:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -104794,12 +105653,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 271,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:liboauth2:1.4.5.4",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -104810,10 +105669,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:liboauth2",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "3eea63533a32d4cc2b1f6aba17e5909d10d3336bdf4e137e3e9d8841d9398a36",
+        "source_sha256": "a7ab1fee6d9c88501e22ca73e28365aaaac298c811b01beacb3bf7e1cddbe9e5",
+        "source_url": "https://deb.debian.org/debian/pool/main/libo/liboauth2/liboauth2_1.4.5.4.orig.tar.gz",
+        "specimen_id": "specimen:liboauth2:1.4.5.4",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -104821,10 +105680,28 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "liboauth2-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== liboauth2 JOSE ==",
+          "exit=0",
+          "sha256=ok",
+          "jwe_roundtrip=ok",
+          "tamper=rejected",
+          "result=ok"
+        ],
+        "transcript_sha256": "2d175ff740e82a392e8c8d14983c5a42c5ab96b10845b006220c2b907b4cbbb7",
+        "variant_id": "variant:liboauth2:1.4.5.4:pristine",
+        "workload": "liboauth2: EVP SHA-256 vector, cjose JWE encrypt/decrypt round trip and a flipped ciphertext byte rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "liboauth2: EVP SHA-256 vector, cjose JWE encrypt/decrypt round trip and a flipped ciphertext byte rejected",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -105646,6 +106523,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:librdkafka",
         "source_root_hash": "33865e2f8c58d5b71bca4812a37d20af0bb9d865003873fa0a7196a17177b0a5",
         "source_sha256": "abe0212ecd3e7ed3c4818a4f2baf7bf916e845e902bb15ae48834ca2d36ac745",
@@ -105788,6 +106670,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:candidate:librdkafka",
         "source_root_hash": "33865e2f8c58d5b71bca4812a37d20af0bb9d865003873fa0a7196a17177b0a5",
         "source_sha256": "abe0212ecd3e7ed3c4818a4f2baf7bf916e845e902bb15ae48834ca2d36ac745",
@@ -105831,7 +106718,7 @@
         }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libre",
@@ -105839,18 +106726,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libre"
+          "family:family:libre",
+          "recipe:recipe:libre:1.1.0",
+          "artifact:.l7-libre-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libre",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1171078:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1171078:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1171078:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1171078:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1171078:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1171078:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -105870,13 +106802,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 275,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libre:1.1.0",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -105886,10 +106818,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libre",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "585736259b64c34f2dd6d3530ac80e15dfdd697837f0e11b5a39bfcaa144dbaf",
+        "source_sha256": "82afc903a6b1e436b357f05eb11560ec681712291dd9c83c408465c895f28b5d",
+        "source_url": "https://deb.debian.org/debian/pool/main/libr/libre/libre_1.1.0.orig.tar.gz",
+        "specimen_id": "specimen:libre:1.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -105897,13 +106829,31 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libre-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== libre SRTP ==",
+          "exit=0",
+          "srtp_encrypt=ok",
+          "srtp_roundtrip=ok",
+          "tamper=rejected",
+          "result=ok"
+        ],
+        "transcript_sha256": "87399baddb7a8d45e785e0e0a1f174ba539cfefa2d7b37fca85836422055544f",
+        "variant_id": "variant:libre:1.1.0:pristine",
+        "workload": "libre: an RTP packet protected with SRTP_AES_CM_128_HMAC_SHA1_80 is recovered by a fresh context + a flipped tag byte rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libre: an RTP packet protected with SRTP_AES_CM_128_HMAC_SHA1_80 is recovered by a fresh context + a flipped tag byte rejected",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libre",
@@ -105911,18 +106861,63 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libre"
+          "family:family:libre",
+          "recipe:recipe:libre:1.1.0",
+          "artifact:.l7-libre-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libre",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1171093:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1171093:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1171093:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1171093:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1171093:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1171093:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -105942,12 +106937,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 275,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libre:1.1.0",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -105958,10 +106953,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libre",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "585736259b64c34f2dd6d3530ac80e15dfdd697837f0e11b5a39bfcaa144dbaf",
+        "source_sha256": "82afc903a6b1e436b357f05eb11560ec681712291dd9c83c408465c895f28b5d",
+        "source_url": "https://deb.debian.org/debian/pool/main/libr/libre/libre_1.1.0.orig.tar.gz",
+        "specimen_id": "specimen:libre:1.1.0",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -105969,10 +106964,28 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libre-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== libre SRTP ==",
+          "exit=0",
+          "srtp_encrypt=ok",
+          "srtp_roundtrip=ok",
+          "tamper=rejected",
+          "result=ok"
+        ],
+        "transcript_sha256": "87399baddb7a8d45e785e0e0a1f174ba539cfefa2d7b37fca85836422055544f",
+        "variant_id": "variant:libre:1.1.0:pristine",
+        "workload": "libre: an RTP packet protected with SRTP_AES_CM_128_HMAC_SHA1_80 is recovered by a fresh context + a flipped tag byte rejected",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libre: an RTP packet protected with SRTP_AES_CM_128_HMAC_SHA1_80 is recovered by a fresh context + a flipped tag byte rejected",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L0-catalogued",
@@ -106362,6 +107375,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:libretls",
         "source_root_hash": "aa285d8d1b06a88eb5f5faa372fe9e4e4f6aa77a5af3d78d90c7e5414b3ac20e",
         "source_sha256": "3bc9fc0e61827ee2f608e5e44993a8fda6d610b80a1e01a9c75610cc292997b5",
@@ -106511,6 +107529,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libretls",
         "source_root_hash": "aa285d8d1b06a88eb5f5faa372fe9e4e4f6aa77a5af3d78d90c7e5414b3ac20e",
@@ -106904,6 +107927,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:libssh",
         "source_root_hash": null,
         "source_sha256": null,
@@ -106975,6 +108003,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libssh",
         "source_root_hash": null,
@@ -107092,6 +108125,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:authority:libstrophe",
         "source_root_hash": "994bc81e59f406b234911936ce24d97743595819de678b575bc40bcfbdf0107c",
@@ -107234,6 +108272,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:candidate:libstrophe",
         "source_root_hash": "994bc81e59f406b234911936ce24d97743595819de678b575bc40bcfbdf0107c",
         "source_sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
@@ -107362,6 +108405,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:libtins",
         "source_root_hash": "6a1a80f21fdff1cfe82eff0411ced3ebb8a3cb539ea1ebae8875dddd651efe2a",
         "source_sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
@@ -107482,6 +108530,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libtins",
         "source_root_hash": "6a1a80f21fdff1cfe82eff0411ced3ebb8a3cb539ea1ebae8875dddd651efe2a",
@@ -107806,7 +108859,7 @@
         "workload": null
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libtpms",
@@ -107814,18 +108867,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libtpms"
+          "family:family:libtpms",
+          "recipe:recipe:libtpms:0.9.2",
+          "artifact:.l7-libtpms-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libtpms",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1159396:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1159396:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1159396:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -107845,13 +108930,13 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 81,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:libtpms:0.9.2",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -107861,10 +108946,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:authority:libtpms",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "1c76ebc03ca92567edde1ea46efde2390565bc4f7bb68adc7ed6bed21e8e822c",
+        "source_sha256": "460047f880c5a17dfb8f5c92668fd2f0c508279d4cc3de0a779c21a09f966766",
+        "source_url": "https://deb.debian.org/debian/pool/main/libt/libtpms/libtpms_0.9.2.orig.tar.gz",
+        "specimen_id": "specimen:libtpms:0.9.2",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -107872,13 +108957,33 @@
         },
         "steps": [],
         "subject": "authority",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libtpms-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== libtpms TPM2 command interface ==",
+          "exit=0",
+          "tpm2_startup=ok",
+          "family=2.0",
+          "manufacturer=IBM",
+          "random=32",
+          "unknown_cc=rejected rc={addr}",
+          "result=ok"
+        ],
+        "transcript_sha256": "65eaa2bfd01d2794a8b36c1b44fa5eb809db56c5a17f01d1dd38b1c9ccc8851e",
+        "variant_id": "variant:libtpms:0.9.2:pristine",
+        "workload": "libtpms: TPM2_Startup, GetCapability(PT_FIXED) and GetRandom over TPMLIB_Process + unknown-command reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libtpms: TPM2_Startup, GetCapability(PT_FIXED) and GetRandom over TPMLIB_Process + unknown-command reject",
+          "runtime_ok": true
+        }
       },
       {
-        "authority_applicable_level": "L0-catalogued",
+        "authority_applicable_level": "L7-functional",
         "beyond_baseline": false,
         "candidate_specific_patch_count": 0,
         "canonical_name": "libtpms",
@@ -107886,18 +108991,50 @@
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
         "dt_needed": [],
         "evidence": [
-          "family:family:libtpms"
+          "family:family:libtpms",
+          "recipe:recipe:libtpms:0.9.2",
+          "artifact:.l7-libtpms-harness",
+          "local_only:loopback"
         ],
-        "failure_class": "acquire-failure",
+        "failure_class": null,
         "family_id": "family:libtpms",
-        "has_recipe": false,
+        "has_recipe": true,
         "imported_openssl_symbols_count": 0,
-        "launch": null,
-        "level": "L0-catalogued",
-        "link": null,
+        "launch": [
+          "--version"
+        ],
+        "level": "L7-functional",
+        "link": {
+          "all_under_prefix": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          }
+        },
         "linkage": null,
-        "linkage_proven": false,
-        "load_proof": null,
+        "linkage_proven": true,
+        "load_proof": {
+          "all_under_prefix": true,
+          "dynamic_load_trace": [
+            "1159411:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1159411:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1159411:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+          ],
+          "ldd_exit": 0,
+          "proven": true,
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "trace_exit": 0
+        },
         "local_only": true,
         "normalisation": {
           "never": [
@@ -107917,12 +109054,12 @@
           "tag": "runtime-transcript-normalisation/1"
         },
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 81,
         "reaches_baseline": true,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:libtpms:0.9.2",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -107933,10 +109070,10 @@
           "platform": "linux"
         },
         "run_id": "run:runtime:candidate:libtpms",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "1c76ebc03ca92567edde1ea46efde2390565bc4f7bb68adc7ed6bed21e8e822c",
+        "source_sha256": "460047f880c5a17dfb8f5c92668fd2f0c508279d4cc3de0a779c21a09f966766",
+        "source_url": "https://deb.debian.org/debian/pool/main/libt/libtpms/libtpms_0.9.2.orig.tar.gz",
+        "specimen_id": "specimen:libtpms:0.9.2",
         "static_linkage": {
           "applicable": false,
           "proven": false,
@@ -107944,10 +109081,30 @@
         },
         "steps": [],
         "subject": "candidate",
-        "transcript_excerpt": [],
-        "transcript_sha256": "",
-        "variant_id": null,
-        "workload": null
+        "transcript_excerpt": [
+          "== launch ==",
+          "exit=0",
+          "libtpms-l7-harness 1",
+          "== workload ==",
+          "exit=0",
+          "== libtpms TPM2 command interface ==",
+          "exit=0",
+          "tpm2_startup=ok",
+          "family=2.0",
+          "manufacturer=IBM",
+          "random=32",
+          "unknown_cc=rejected rc={addr}",
+          "result=ok"
+        ],
+        "transcript_sha256": "65eaa2bfd01d2794a8b36c1b44fa5eb809db56c5a17f01d1dd38b1c9ccc8851e",
+        "variant_id": "variant:libtpms:0.9.2:pristine",
+        "workload": "libtpms: TPM2_Startup, GetCapability(PT_FIXED) and GetRandom over TPMLIB_Process + unknown-command reject",
+        "workload_result": {
+          "functional_ok": true,
+          "local_only": true,
+          "name": "libtpms: TPM2_Startup, GetCapability(PT_FIXED) and GetRandom over TPMLIB_Process + unknown-command reject",
+          "runtime_ok": true
+        }
       },
       {
         "authority_applicable_level": "L7-functional",
@@ -108048,6 +109205,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:authority:libu2f-server",
         "source_root_hash": "abad174b7880906699918f7d7d4b9aceb36b36ef4c7af634ee5da10a7aead3d5",
@@ -108183,6 +109345,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:candidate:libu2f-server",
         "source_root_hash": "abad174b7880906699918f7d7d4b9aceb36b36ef4c7af634ee5da10a7aead3d5",
         "source_sha256": "8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
@@ -108316,6 +109483,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:authority:libwebsockets",
         "source_root_hash": "cb66a6a4db2df84632e74484380ee857a8c1411a79c4cfa7ae900816ab426929",
@@ -108454,6 +109626,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libwebsockets",
         "source_root_hash": "cb66a6a4db2df84632e74484380ee857a8c1411a79c4cfa7ae900816ab426929",
@@ -108737,6 +109914,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:libzip",
         "source_root_hash": "6db360896a4dc2553d26a7cf421037a293f9fd593d58854e5d97576fa8cca9f1",
         "source_sha256": "c0e6fa52a62ba11efd30262290dc6970947aef32e0cc294ee50e9005ceac092a",
@@ -108870,6 +110052,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:libzip",
         "source_root_hash": "6db360896a4dc2553d26a7cf421037a293f9fd593d58854e5d97576fa8cca9f1",
@@ -109104,6 +110291,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:lighttpd",
         "source_root_hash": null,
         "source_sha256": null,
@@ -109175,6 +110367,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:lighttpd",
         "source_root_hash": null,
@@ -109292,6 +110489,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:authority:links",
         "source_root_hash": "781b55f57bddc3d5a9b7a1ce5c80cb9b05eb2c82380353144285e2fb3b94c431",
@@ -109427,6 +110629,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:links",
         "source_root_hash": "781b55f57bddc3d5a9b7a1ce5c80cb9b05eb2c82380353144285e2fb3b94c431",
@@ -109707,6 +110914,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:lua-luaossl",
         "source_root_hash": "10e348807af79ab2ab66a80d6decd6adf6d64ea900ff5bba8b25f945a654407b",
         "source_sha256": "f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
@@ -109842,6 +111054,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:lua-luaossl",
         "source_root_hash": "10e348807af79ab2ab66a80d6decd6adf6d64ea900ff5bba8b25f945a654407b",
@@ -109979,6 +111196,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:lua-sec",
         "source_root_hash": "f7db7c3cc7489d128bd081aa2e574de8411048aeabe106f572bdd2c1cbbb67be",
         "source_sha256": "97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
@@ -110115,6 +111337,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:lua-sec",
         "source_root_hash": "f7db7c3cc7489d128bd081aa2e574de8411048aeabe106f572bdd2c1cbbb67be",
@@ -110821,6 +112048,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:makepasswd",
         "source_root_hash": "629e789c7ed86842e3420df74a2584c5424f366411b18d4c3aaf2e69cf2c2da9",
         "source_sha256": "7c68f42f810144c4380c795106a38cbb3cea20816b8903cdbc822cae99996e75",
@@ -110963,6 +112195,11 @@
           "memory_swap_max": "max",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:makepasswd",
         "source_root_hash": "629e789c7ed86842e3420df74a2584c5424f366411b18d4c3aaf2e69cf2c2da9",
@@ -112267,6 +113504,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:memcached",
         "source_root_hash": "728948ddbe93d241bf1f94f02cf539d8d3931392148ffc08c0515756315c81e8",
         "source_sha256": "4ab234219865191e8d1ba57a2f9167d8b573248fa4ff00b4d8296be13d24a82c",
@@ -112430,6 +113672,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:memcached",
         "source_root_hash": "728948ddbe93d241bf1f94f02cf539d8d3931392148ffc08c0515756315c81e8",
@@ -112739,6 +113986,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:mini-httpd",
         "source_root_hash": "e542cff7e226546435d1d85120268e65373181e8163d877351ff28900a3d6b23",
         "source_sha256": "9c4481802af8dde2e164062185c279e9274525c3af93d014fdc0b80cf30bca6e",
@@ -112900,6 +114152,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:mini-httpd",
         "source_root_hash": "e542cff7e226546435d1d85120268e65373181e8163d877351ff28900a3d6b23",
@@ -113063,6 +114320,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:minizip-ng",
         "source_root_hash": "1c1aa90a4ba501c4c5b51da80ca2539d24f75c87d2037af4f5c699fa3672137a",
         "source_sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
@@ -113197,6 +114459,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:candidate:minizip-ng",
         "source_root_hash": "1c1aa90a4ba501c4c5b51da80ca2539d24f75c87d2037af4f5c699fa3672137a",
         "source_sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
@@ -113322,6 +114589,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:authority:mktorrent",
         "source_root_hash": "3719a1a265d3c9af43d9d2352fceac080b0b553432ae1570c8a120f573f5c672",
@@ -113478,6 +114750,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:mktorrent",
         "source_root_hash": "3719a1a265d3c9af43d9d2352fceac080b0b553432ae1570c8a120f573f5c672",
@@ -114219,6 +115496,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:monit",
         "source_root_hash": "be08eb7cc90ed1fb099809b494a9bca4d23aea5139a9cae33bc7ca49849bec4c",
         "source_sha256": "669d8b95ddec124d1444ba5264f67fdeae8e90e53b2929719f4750fc5ff3ba60",
@@ -114382,6 +115664,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:monit",
         "source_root_hash": "be08eb7cc90ed1fb099809b494a9bca4d23aea5139a9cae33bc7ca49849bec4c",
@@ -114835,6 +116122,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:mosquitto",
         "source_root_hash": "c4358e17ee7d246dd4f9a71d0b7dc4c5664a4024067bf4e4d7f62e65d2ccfae3",
         "source_sha256": "ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8",
@@ -114998,6 +116290,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:mosquitto",
         "source_root_hash": "c4358e17ee7d246dd4f9a71d0b7dc4c5664a4024067bf4e4d7f62e65d2ccfae3",
@@ -115597,6 +116894,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:mumble-server",
         "source_root_hash": "7a7912419a79fec83b1f5beacb8942ffa5a268a8d19d69ced13de148db8297b8",
         "source_sha256": "db8990079f556a877218d471bcf2c24eb5e4520b652f3c20793d0aadedaae6ae",
@@ -115734,6 +117036,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:mumble-server",
         "source_root_hash": "7a7912419a79fec83b1f5beacb8942ffa5a268a8d19d69ced13de148db8297b8",
@@ -117879,6 +119186,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:net-snmp",
         "source_root_hash": "bf01ecffe845ad350839dd32099ad114ba83504375285d3efe43b90f47851dcf",
         "source_sha256": "8b4de01391e74e3c7014beb43961a2d6d6fa03acc34280b9585f4930745b0544",
@@ -118031,6 +119343,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:net-snmp",
         "source_root_hash": "bf01ecffe845ad350839dd32099ad114ba83504375285d3efe43b90f47851dcf",
@@ -119057,6 +120374,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:nginx",
         "source_root_hash": "ed3c486f205e24d5086b2c777a21e8419c8c38f606038affdd4ffba266e2d062",
         "source_sha256": "69ee2b237744036e61d24b836668aad3040dda461fe6f570f1787eab570c75aa",
@@ -119219,6 +120541,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:nginx",
         "source_root_hash": "ed3c486f205e24d5086b2c777a21e8419c8c38f606038affdd4ffba266e2d062",
@@ -119959,6 +121286,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:nmap",
         "source_root_hash": "cb1e69d90a16e48f82ecdb08c8d8d04f4c59e91368117e450269ecc631616805",
         "source_sha256": "e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
@@ -120122,6 +121454,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:nmap",
         "source_root_hash": "cb1e69d90a16e48f82ecdb08c8d8d04f4c59e91368117e450269ecc631616805",
@@ -121729,6 +123066,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:nrpe",
         "source_root_hash": "7e0747b6f94ecacac6865ab01360a08dd0de88741f16d4ee172952fa31823cb1",
         "source_sha256": "500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
@@ -121877,6 +123219,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:nrpe",
         "source_root_hash": "7e0747b6f94ecacac6865ab01360a08dd0de88741f16d4ee172952fa31823cb1",
@@ -122313,6 +123660,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:nsd",
         "source_root_hash": "1094852ec01e45e0e76e9f4cf9f05fe0913b7f98a2d2076d2c22b7c22a63d58f",
         "source_sha256": "c0190f923f0095995f2e6331dacd92c6e1f4d578b880d61690602b43a5acfd84",
@@ -122471,6 +123823,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:nsd",
         "source_root_hash": "1094852ec01e45e0e76e9f4cf9f05fe0913b7f98a2d2076d2c22b7c22a63d58f",
@@ -123913,6 +125270,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:opendkim",
         "source_root_hash": "f590ea26e16b301c8e2b9115376f39c6560a31f92d2abae99d623839787b204d",
         "source_sha256": "43a0ba57bf942095fe159d0748d8933c6b1dd1117caf0273fa9a0003215e681b",
@@ -124036,6 +125398,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:opendkim",
         "source_root_hash": "f590ea26e16b301c8e2b9115376f39c6560a31f92d2abae99d623839787b204d",
@@ -125030,6 +126397,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:openssh",
         "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
         "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
@@ -125185,6 +126557,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:openssh",
         "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
@@ -125486,6 +126863,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:openssh-server",
         "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
         "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
@@ -125641,6 +127023,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:openssh-server",
         "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
@@ -125808,6 +127195,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:openvpn",
         "source_root_hash": "92250fdce329692b3d74553782fdd8f5197dfc1c37f6492928fdeb51ec54eeaa",
         "source_sha256": "d1d38a3fc7e200f9221f988ef1cc9c7a7d62b69bb5fa52742da1229e5f24d36f",
@@ -125973,6 +127365,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:openvpn",
         "source_root_hash": "92250fdce329692b3d74553782fdd8f5197dfc1c37f6492928fdeb51ec54eeaa",
@@ -126572,6 +127969,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:osslsigncode",
         "source_root_hash": "dd4e784b347808222a4ce0746eeffc17e90eedfe4a2ffb73128a5af0b3fff467",
         "source_sha256": "3fe5488e442ad99f91410efeb7b029275366b5df9aa02371dcc89a8f8569ff55",
@@ -126737,6 +128139,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:osslsigncode",
         "source_root_hash": "dd4e784b347808222a4ce0746eeffc17e90eedfe4a2ffb73128a5af0b3fff467",
@@ -127753,6 +129160,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:partclone",
         "source_root_hash": "b9de14a73dfb454e307d011d6429918ac694c3fa1f3fe10eff1190968a610c80",
         "source_sha256": "933e81dceb9c05bd2cb6027ef115a4422eb35b2bc05ed9a5fd42f637dfba5c17",
@@ -127903,6 +129315,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:partclone",
         "source_root_hash": "b9de14a73dfb454e307d011d6429918ac694c3fa1f3fe10eff1190968a610c80",
@@ -133108,6 +134525,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:proftpd",
         "source_root_hash": "f7fb7700f54cb989c04f241027686b9b81fb3349ee81d64e5955147546b5ed86",
         "source_sha256": "183ab7c6107de271a2959ff268f55c9b6c76b2cf0029e6584fccc019686601e0",
@@ -133271,6 +134693,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:proftpd",
         "source_root_hash": "f7fb7700f54cb989c04f241027686b9b81fb3349ee81d64e5955147546b5ed86",
@@ -133436,6 +134863,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:prosody",
         "source_root_hash": "9e7dfadcded7cc8984482cf767e1c2272a03b56d1110f8fc574dc792f4542293",
         "source_sha256": "47d712273c2f29558c412f6cdaec073260bbc26b7dda243db580330183d65856",
@@ -133587,6 +135019,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:prosody",
         "source_root_hash": "9e7dfadcded7cc8984482cf767e1c2272a03b56d1110f8fc574dc792f4542293",
@@ -133886,6 +135323,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:proxytunnel",
         "source_root_hash": "842e9bccdb0e1dc39e4d4d0027fb5a96a729bcc6781fe82edd1c262cdb35a92e",
         "source_sha256": "edb33a74ba49e745b55b790f123366c8336729947225f4b5d816f1f90551ecfe",
@@ -134051,6 +135493,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:proxytunnel",
         "source_root_hash": "842e9bccdb0e1dc39e4d4d0027fb5a96a729bcc6781fe82edd1c262cdb35a92e",
@@ -134506,6 +135953,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:pure-ftpd",
         "source_root_hash": "891f6403289305204b88d4bc32c50119bf752373b6f83843bb4599f9ee7de18c",
         "source_sha256": "1126f3a95856d08889ff89703cb1aa9ec9924d939d154e96904c920f05dc3c74",
@@ -134671,6 +136123,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:pure-ftpd",
         "source_root_hash": "891f6403289305204b88d4bc32c50119bf752373b6f83843bb4599f9ee7de18c",
@@ -137286,6 +138743,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:radsecproxy",
         "source_root_hash": "e5deec65ccd173d120f3c672747432ef80f28dad17dfc954ec7602b69b17de32",
         "source_sha256": "a8fd5ca1df5e00ce34c9170a085d311b1da155a8e006f0cce46f6e95caa6af7b",
@@ -137451,6 +138913,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:radsecproxy",
         "source_root_hash": "e5deec65ccd173d120f3c672747432ef80f28dad17dfc954ec7602b69b17de32",
@@ -137760,6 +139227,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:redis",
         "source_root_hash": "0260343955b4cd5d903f7589fbf94fd2277bab5d9b798880305bd70f09d02822",
         "source_sha256": "bc34b878eb89421bbfca6fa78752343bf37af312a09eb0fae47c9575977dfaa2",
@@ -137923,6 +139395,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:redis",
         "source_root_hash": "0260343955b4cd5d903f7589fbf94fd2277bab5d9b798880305bd70f09d02822",
@@ -138944,6 +140421,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:rsync",
         "source_root_hash": "186a1fd44c5d8b2e7b7d4ca967becfdd5a81d78daa1485b25442d6503edbab6c",
         "source_sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
@@ -139091,6 +140573,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:rsync",
         "source_root_hash": "186a1fd44c5d8b2e7b7d4ca967becfdd5a81d78daa1485b25442d6503edbab6c",
@@ -139826,6 +141313,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:s-nail",
         "source_root_hash": "b2571d55c988fa6e42e2fc9621d9cd514cc7f382ac6941b80b84df959a081403",
         "source_sha256": "20ff055be9829b69d46ebc400dfe516a40d287d7ce810c74355d6bdc1a28d8a9",
@@ -139981,6 +141473,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:s-nail",
         "source_root_hash": "b2571d55c988fa6e42e2fc9621d9cd514cc7f382ac6941b80b84df959a081403",
@@ -142584,6 +144081,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:slrn",
         "source_root_hash": "ed4e675848da332b37423a624badf8fabba3c050069a4ecddfce3d7f7de4ffc6",
         "source_sha256": "3ba8a4d549201640f2b82d53fb1bec1250f908052a7983f0061c983c634c2dac",
@@ -142747,6 +144249,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:slrn",
         "source_root_hash": "ed4e675848da332b37423a624badf8fabba3c050069a4ecddfce3d7f7de4ffc6",
@@ -143058,6 +144565,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:socat",
         "source_root_hash": "d42118ed8c975a05225ff955ddfae1337e026625d290286d03ddde47063d50b2",
         "source_sha256": "6010f4f311e5ebe0e63c77f78613d264253680006ac8979f52b0711a9a231e82",
@@ -143224,6 +144736,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:candidate:socat",
         "source_root_hash": "d42118ed8c975a05225ff955ddfae1337e026625d290286d03ddde47063d50b2",
         "source_sha256": "6010f4f311e5ebe0e63c77f78613d264253680006ac8979f52b0711a9a231e82",
@@ -143330,12 +144847,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "478952:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "478952:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "478952:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "478952:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "478952:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "478952:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "1132926:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1132926:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1132926:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "1132926:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "1132926:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "1132926:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -143412,13 +144929,13 @@
           "payload=absent",
           "wrong_ca=rejected",
           "result=fail",
-          "-Error with certificate at depth: 1",
-          "  issuer   = /CN=runtime test CA",
-          "  subject  = /CN=runtime test CA",
-          "  err 19:self-signed certificate in certificate chain",
+          "-Error with certificate at depth: 0",
+          "  issuer   = /CN={addr}",
+          "  subject  = /CN={addr}",
+          "  err 18:self-signed certificate",
           "tls_connect({addr}): TLS setup failed (error:00000001:lib(0)::reason(1))"
         ],
-        "transcript_sha256": "d216c9ab91e4350fbe2a0d3aee143c96770a44b480c68e92783cbed24145f86d",
+        "transcript_sha256": "2192761307b8a95c431ee4cad981dbe41fde823297eebf2f26e38e2ddd3c6b06",
         "variant_id": "variant:sofia-sip:1.12.11+20110422.1:pristine",
         "workload": "sofia-sip: a SIP MESSAGE over tport TLS carries its payload on loopback + unrelated-CA reject",
         "workload_result": {
@@ -143470,12 +144987,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "478984:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "478984:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "478984:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "478984:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "478984:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "478984:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "1132959:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "1132959:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1132959:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "1132959:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "1132959:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "1132959:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -143553,12 +145070,12 @@
           "wrong_ca=rejected",
           "result=fail",
           "-Error with certificate at depth: 0",
-          "  issuer   = /CN=runtime test CA",
+          "  issuer   = /CN={addr}",
           "  subject  = /CN={addr}",
-          "  err 20:unable to get local issuer certificate",
+          "  err 18:self-signed certificate",
           "tls_connect({addr}): TLS setup failed (error:00000001:lib(0)::reason(1))"
         ],
-        "transcript_sha256": "83054c69e1bd01ec192615793f9bf0b50965f3e44939427ae31964c1f0346f8c",
+        "transcript_sha256": "2192761307b8a95c431ee4cad981dbe41fde823297eebf2f26e38e2ddd3c6b06",
         "variant_id": "variant:sofia-sip:1.12.11+20110422.1:pristine",
         "workload": "sofia-sip: a SIP MESSAGE over tport TLS carries its payload on loopback + unrelated-CA reject",
         "workload_result": {
@@ -144390,6 +145907,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:squid",
         "source_root_hash": "72530f59336aa891c3587347f56060a803ba143bb94e45eea2758cc30bb94c91",
         "source_sha256": "20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
@@ -144534,6 +146056,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:squid",
         "source_root_hash": "72530f59336aa891c3587347f56060a803ba143bb94e45eea2758cc30bb94c91",
@@ -145400,6 +146927,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:sslscan",
         "source_root_hash": "8f8aaf6fd2cc7345d751548d43b85fd48a1d0bf9d1d503a21acae4bfd56609d6",
         "source_sha256": "b36616b1d59f3276af6ff9495ab8178ec6812393582fb3c094c56cc873efe956",
@@ -145565,6 +147097,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:sslscan",
         "source_root_hash": "8f8aaf6fd2cc7345d751548d43b85fd48a1d0bf9d1d503a21acae4bfd56609d6",
@@ -145732,6 +147269,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:sslsplit",
         "source_root_hash": "53ac9c0f64a02e03055203da07c7b23384772d7f4bc23734b463da42ffae60f4",
         "source_sha256": "ba0473fd01428439e0cf22fae80fdd26d08a0bcf85e17c82177cb0810b700faf",
@@ -145897,6 +147439,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:sslsplit",
         "source_root_hash": "53ac9c0f64a02e03055203da07c7b23384772d7f4bc23734b463da42ffae60f4",
@@ -146065,6 +147612,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:ssmtp",
         "source_root_hash": "32cb6135b699cbdd6e7c6a6073dbfbd9093e26cae1b1daca84813183e89735f5",
         "source_sha256": "22c37dc90c871e8e052b2cab0ad219d010fa938608cd66b21c8f3c759046fa36",
@@ -146231,6 +147783,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:ssmtp",
         "source_root_hash": "32cb6135b699cbdd6e7c6a6073dbfbd9093e26cae1b1daca84813183e89735f5",
@@ -146974,6 +148531,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:stunnel",
         "source_root_hash": "ecd527d9f608fe295004633af0abec21fc4c4e6aa1d551ae1f4d316064446a9a",
         "source_sha256": "bc917c3bcd943a4d632360c067977a31e85e385f5f4845f69749bce88183cb38",
@@ -147139,6 +148701,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:stunnel",
         "source_root_hash": "ecd527d9f608fe295004633af0abec21fc4c4e6aa1d551ae1f4d316064446a9a",
@@ -148875,6 +150442,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:tcpdump",
         "source_root_hash": "ef7aef16bcaeb973f1d75f0a528b9c109173a0ee4ecd26d5779d9d6f31cde9a9",
         "source_sha256": "5839921a0f67d7d8fa3dacd9cd41e44c89ccb867e8a6db216d62628c7fd14b09",
@@ -149008,6 +150580,11 @@
           "memory_swap_max": "max",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:tcpdump",
         "source_root_hash": "ef7aef16bcaeb973f1d75f0a528b9c109173a0ee4ecd26d5779d9d6f31cde9a9",
@@ -150156,6 +151733,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:tinc",
         "source_root_hash": "eac80f920ffc079a9768771bbb4e7bdb682a1b31e50fcfe64abd0e99d3c28a1c",
         "source_sha256": "40f73bb3facc480effe0e771442a706ff0488edea7a5f2505d4ccb2aa8163108",
@@ -150311,6 +151893,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:tinc",
         "source_root_hash": "eac80f920ffc079a9768771bbb4e7bdb682a1b31e50fcfe64abd0e99d3c28a1c",
@@ -150623,6 +152210,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:tnftp",
         "source_root_hash": "2d1e40169de7ed9655c4db7f582ef861e412a815cdc2453cf05cbd6104ee62d1",
         "source_sha256": "be0134394bd7d418a3b34892b0709eeb848557e86474e1786f0d1a887d3a6580",
@@ -150789,6 +152381,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:tnftp",
         "source_root_hash": "2d1e40169de7ed9655c4db7f582ef861e412a815cdc2453cf05cbd6104ee62d1",
@@ -153260,6 +154857,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:u-boot-tools",
         "source_root_hash": "86331dd4ec57ed4137f1b943fcaef9a807330e06271a5f95f9a7025e40acf47a",
         "source_sha256": "cdef7d507c93f1bbd9f015ea9bc21fa074268481405501945abc6f854d5b686f",
@@ -153425,6 +155027,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:u-boot-tools",
         "source_root_hash": "86331dd4ec57ed4137f1b943fcaef9a807330e06271a5f95f9a7025e40acf47a",
@@ -155030,6 +156637,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:w3m",
         "source_root_hash": "d7335700fe51cfe6b31dbd0eac1a16c5100b9004652ba7e6adcf63c2421bebd3",
         "source_sha256": "974d1095a47f1976150a792fe9c5a44cc821c02b6bdd714a37a098386250e03a",
@@ -155166,6 +156778,11 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:runtime:candidate:w3m",
         "source_root_hash": "d7335700fe51cfe6b31dbd0eac1a16c5100b9004652ba7e6adcf63c2421bebd3",
@@ -158904,6 +160521,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:authority:znc",
         "source_root_hash": "2a818d1c7fc2d8f9bbc60f557b2819761893e1a6307d74e9918eaaab2d93639d",
         "source_sha256": "68f3f6641b480c041010c5596e1234043e05c9137eda06233845017603095f5b",
@@ -159044,6 +160666,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
+        },
         "run_id": "run:runtime:candidate:znc",
         "source_root_hash": "2a818d1c7fc2d8f9bbc60f557b2819761893e1a6307d74e9918eaaab2d93639d",
         "source_sha256": "68f3f6641b480c041010c5596e1234043e05c9137eda06233845017603095f5b",
@@ -159127,6 +160754,20 @@
         "specimen_id": "specimen:apr-util:1.6.3",
         "upstream_ref": "https://archive.apache.org/dist/apr/apr-util-1.6.3.tar.gz",
         "version": "1.6.3"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/a/arm-trusted-firmware/arm-trusted-firmware_2.8.0+dfsg.orig.tar.xz#a4ecc35e0b893fe8682c075fc1bdb858de87e4cb18fbed9a1597e2c9f6d320de",
+          "recipe:recipe:arm-trusted-firmware-tools:2.8.0+dfsg",
+          "pinned_sha256:a4ecc35e0b893fe8682c075fc1bdb858de87e4cb18fbed9a1597e2c9f6d320de"
+        ],
+        "family_id": "family:arm-trusted-firmware-tools",
+        "licence": "unknown",
+        "pristine_source_root_hash": "f170fc197a1783a1d574918e9009be0a4de8e9a6783596d06d0e95d0e12f6b25",
+        "pristine_source_sha256": "a4ecc35e0b893fe8682c075fc1bdb858de87e4cb18fbed9a1597e2c9f6d320de",
+        "specimen_id": "specimen:arm-trusted-firmware-tools:2.8.0+dfsg",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/a/arm-trusted-firmware/arm-trusted-firmware_2.8.0+dfsg.orig.tar.xz",
+        "version": "2.8.0+dfsg"
       },
       {
         "evidence": [
@@ -159648,6 +161289,34 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/libn/libnetconf2/libnetconf2_2.0.24.orig.tar.gz#78ffa0bd85823abd321a1dbb09c1ead36612f2a12049638a14bb081567f86ade",
+          "recipe:recipe:libnetconf2:2.0.24",
+          "pinned_sha256:78ffa0bd85823abd321a1dbb09c1ead36612f2a12049638a14bb081567f86ade"
+        ],
+        "family_id": "family:libnetconf2",
+        "licence": "unknown",
+        "pristine_source_root_hash": "478508d21b2a8ff12e8839485bcd2bcfe16878126e549493ba144a5a0b037998",
+        "pristine_source_sha256": "78ffa0bd85823abd321a1dbb09c1ead36612f2a12049638a14bb081567f86ade",
+        "specimen_id": "specimen:libnetconf2:2.0.24",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/libn/libnetconf2/libnetconf2_2.0.24.orig.tar.gz",
+        "version": "2.0.24"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/libo/liboauth2/liboauth2_1.4.5.4.orig.tar.gz#a7ab1fee6d9c88501e22ca73e28365aaaac298c811b01beacb3bf7e1cddbe9e5",
+          "recipe:recipe:liboauth2:1.4.5.4",
+          "pinned_sha256:a7ab1fee6d9c88501e22ca73e28365aaaac298c811b01beacb3bf7e1cddbe9e5"
+        ],
+        "family_id": "family:liboauth2",
+        "licence": "unknown",
+        "pristine_source_root_hash": "3eea63533a32d4cc2b1f6aba17e5909d10d3336bdf4e137e3e9d8841d9398a36",
+        "pristine_source_sha256": "a7ab1fee6d9c88501e22ca73e28365aaaac298c811b01beacb3bf7e1cddbe9e5",
+        "specimen_id": "specimen:liboauth2:1.4.5.4",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/libo/liboauth2/liboauth2_1.4.5.4.orig.tar.gz",
+        "version": "1.4.5.4"
+      },
+      {
+        "evidence": [
           "source:https://github.com/confluentinc/librdkafka/archive/refs/tags/v2.6.0.tar.gz#abe0212ecd3e7ed3c4818a4f2baf7bf916e845e902bb15ae48834ca2d36ac745",
           "recipe:recipe:librdkafka:2.6.0",
           "pinned_sha256:abe0212ecd3e7ed3c4818a4f2baf7bf916e845e902bb15ae48834ca2d36ac745"
@@ -159659,6 +161328,20 @@
         "specimen_id": "specimen:librdkafka:2.6.0",
         "upstream_ref": "https://github.com/confluentinc/librdkafka/archive/refs/tags/v2.6.0.tar.gz",
         "version": "2.6.0"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/libr/libre/libre_1.1.0.orig.tar.gz#82afc903a6b1e436b357f05eb11560ec681712291dd9c83c408465c895f28b5d",
+          "recipe:recipe:libre:1.1.0",
+          "pinned_sha256:82afc903a6b1e436b357f05eb11560ec681712291dd9c83c408465c895f28b5d"
+        ],
+        "family_id": "family:libre",
+        "licence": "unknown",
+        "pristine_source_root_hash": "585736259b64c34f2dd6d3530ac80e15dfdd697837f0e11b5a39bfcaa144dbaf",
+        "pristine_source_sha256": "82afc903a6b1e436b357f05eb11560ec681712291dd9c83c408465c895f28b5d",
+        "specimen_id": "specimen:libre:1.1.0",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/libr/libre/libre_1.1.0.orig.tar.gz",
+        "version": "1.1.0"
       },
       {
         "evidence": [
@@ -159701,6 +161384,20 @@
         "specimen_id": "specimen:libtins:4.5",
         "upstream_ref": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
         "version": "4.5"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/libt/libtpms/libtpms_0.9.2.orig.tar.gz#460047f880c5a17dfb8f5c92668fd2f0c508279d4cc3de0a779c21a09f966766",
+          "recipe:recipe:libtpms:0.9.2",
+          "pinned_sha256:460047f880c5a17dfb8f5c92668fd2f0c508279d4cc3de0a779c21a09f966766"
+        ],
+        "family_id": "family:libtpms",
+        "licence": "unknown",
+        "pristine_source_root_hash": "1c76ebc03ca92567edde1ea46efde2390565bc4f7bb68adc7ed6bed21e8e822c",
+        "pristine_source_sha256": "460047f880c5a17dfb8f5c92668fd2f0c508279d4cc3de0a779c21a09f966766",
+        "specimen_id": "specimen:libtpms:0.9.2",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/libt/libtpms/libtpms_0.9.2.orig.tar.gz",
+        "version": "0.9.2"
       },
       {
         "evidence": [
@@ -160400,6 +162097,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:arm-trusted-firmware-tools:2.8.0+dfsg",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:arm-trusted-firmware-tools:2.8.0+dfsg",
+        "variant_id": "variant:arm-trusted-firmware-tools:2.8.0+dfsg:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
           "recipe:recipe:axel:2.17.14",
@@ -160844,6 +162553,30 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "cmake-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libnetconf2:2.0.24",
+          "build_system:cmake"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libnetconf2:2.0.24",
+        "variant_id": "variant:libnetconf2:2.0.24:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "autotools-pristine-shared",
+        "evidence": [
+          "recipe:recipe:liboauth2:1.4.5.4",
+          "build_system:autotools"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:liboauth2:1.4.5.4",
+        "variant_id": "variant:liboauth2:1.4.5.4:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
           "recipe:recipe:librdkafka:2.6.0",
@@ -160853,6 +162586,18 @@
         "platform": "linux",
         "specimen_id": "specimen:librdkafka:2.6.0",
         "variant_id": "variant:librdkafka:2.6.0:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libre:1.1.0",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libre:1.1.0",
+        "variant_id": "variant:libre:1.1.0:pristine"
       },
       {
         "arch": "x86_64",
@@ -160889,6 +162634,18 @@
         "platform": "linux",
         "specimen_id": "specimen:libtins:4.5",
         "variant_id": "variant:libtins:4.5:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "autotools-pristine-shared",
+        "evidence": [
+          "recipe:recipe:libtpms:0.9.2",
+          "build_system:autotools"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:libtpms:0.9.2",
+        "variant_id": "variant:libtpms:0.9.2:pristine"
       },
       {
         "arch": "x86_64",
@@ -161456,7 +163213,7 @@
       }
     ]
   },
-  "body_hash": "924e6fe39d778b39db9266f07f661d1b2c448db1dd9494f5754f88a4e599abd3",
+  "body_hash": "604ce45672ec2a9181e626e9744c9ff8ffa66062b542778e51466ff1f1dacd7f",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
@@ -161472,12 +163229,12 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "2f663edd5d579a7ae6cc5fd6af25e8e2cd9b5e4e1806d481907b6ae0509cdd65"
+      "sha256": "f5dce24c91c66df2395e0056309666013fc2cab1bf1a0c771f6bbcca3845f1ee"
     },
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "a0755451fc7dceef4ee3b8bdf98bbc72fd1a230b492374386802f87a6db4b88b"
+      "sha256": "57344c00fb5345e4c0c38c2ef71a44d4d53f87cf116a6b2e1c89a72f3efd3bec"
     },
     {
       "name": "downstream-census",
