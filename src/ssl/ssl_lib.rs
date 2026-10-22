@@ -13651,6 +13651,9 @@ mod refcount_reentrancy_tests {
 
     #[test]
     fn ctx_free_reentrancy_is_defined_noop() {
+        // The ex-data index table is process-global; without the lock a parallel test that
+        // allocates or frees indices can race the one registered here.
+        let _g = crate::test_support::lock_global_state();
         CTX_CALLS.store(0, Ordering::Relaxed);
         let idx = CRYPTO_get_ex_new_index(
             CRYPTO_EX_INDEX_SSL_CTX,
@@ -13680,6 +13683,10 @@ mod refcount_reentrancy_tests {
 
     #[test]
     fn ssl_free_reentrancy_is_defined_noop() {
+        // Same global ex-data index table as `ctx_free_reentrancy_is_defined_noop`; taking the
+        // lock makes the index registration and the callback target deterministic under the
+        // parallel `cargo test` runner.
+        let _g = crate::test_support::lock_global_state();
         SSL_CALLS.store(0, Ordering::Relaxed);
         let idx = CRYPTO_get_ex_new_index(
             CRYPTO_EX_INDEX_SSL,
