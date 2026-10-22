@@ -9,43 +9,44 @@
       "libssl_so_3_sha256": "51fec2d3c9ac4568974a6f2f82520e9411525e4ec3a1093f9077c2807e4ae4aa"
     },
     "counts": {
-      "authority_linkage_proven": 96,
+      "authority_linkage_proven": 102,
       "by_subject": {
         "authority": {
-          "built": 96,
-          "configured": 96,
-          "failed": 2,
-          "linked": 96,
-          "not_attempted": 902
+          "built": 102,
+          "configured": 102,
+          "failed": 1,
+          "linked": 102,
+          "not_attempted": 897
         },
         "candidate": {
-          "built": 96,
-          "configured": 96,
-          "failed": 2,
-          "linked": 96,
-          "not_attempted": 902
+          "built": 102,
+          "configured": 102,
+          "failed": 1,
+          "linked": 102,
+          "not_attempted": 897
         }
       },
       "candidate_failures": {
-        "acquire-failure": 902,
-        "configure-failure": 2
+        "acquire-failure": 897,
+        "configure-failure": 1
       },
-      "candidate_linkage_proven": 96,
+      "candidate_linkage_proven": 102,
       "candidate_specific_patch_count": 0,
-      "measured_families": 98,
-      "no_recipe": 902,
+      "measured_families": 103,
+      "no_recipe": 897,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 98
+      "with_recipe": 103
     },
     "evidence_reuse": {
       "candidate_identity_match": false,
-      "families_reused": 92,
+      "families_reused": 102,
       "mode": "committed-rows-carried-forward",
       "reused_families": [
         "aircrack-ng",
         "apache2-utils",
         "apr-util",
+        "arm-trusted-firmware-tools",
         "axel",
         "bannergrab",
         "cowpatty",
@@ -55,6 +56,7 @@
         "dovecot",
         "duo_unix",
         "eggdrop",
+        "elinks",
         "epic5",
         "exim",
         "fastd",
@@ -68,6 +70,7 @@
         "hiredis-ssl",
         "hitch",
         "httperf",
+        "httping",
         "icecast",
         "iperf3",
         "irssi",
@@ -78,23 +81,28 @@
         "keepalived",
         "kmod",
         "ldns",
+        "lftp",
         "libarchive",
         "libcoap",
         "libesmtp",
         "libevent",
         "libjose",
+        "libnetconf2",
+        "liboauth2",
         "librdkafka",
+        "libre",
         "libretls",
         "libssh",
         "libstrophe",
         "libtins",
+        "libtpms",
         "libu2f-server",
         "libwebsockets",
         "libzip",
-        "lighttpd",
         "links",
         "lua-luaossl",
         "lua-sec",
+        "lynx",
         "makepasswd",
         "memcached",
         "mini-httpd",
@@ -124,11 +132,13 @@
         "s-nail",
         "slrn",
         "socat",
+        "sofia-sip",
         "squid",
         "sslscan",
         "sslsplit",
         "ssmtp",
         "stunnel",
+        "swtpm",
         "tcpdump",
         "tinc",
         "tnftp",
@@ -136,16 +146,13 @@
         "w3m",
         "znc"
       ],
-      "superseded_identity": {
-        "libcrypto_so_3_sha256": {
-          "committed": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
-          "current": "891cf18bcd185bfc2cea87254a50775f9f9800558338674b99295cde93bc6f1b"
-        },
-        "libssl_so_3_sha256": {
-          "committed": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d",
-          "current": "51fec2d3c9ac4568974a6f2f82520e9411525e4ec3a1093f9077c2807e4ae4aa"
+      "superseded_identity": [
+        {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
+          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         }
-      }
+      ]
     },
     "non_claims": [
       "a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software",
@@ -157,11 +164,11 @@
     "recipe_catalogue": [
       {
         "archive": "tar.xz",
-        "artifact": "src/libssh.so*",
-        "build_system": "autotools",
+        "artifact": "b/lib/libssh.so*",
+        "build_system": "cmake",
         "env_extra": null,
         "family": "libssh",
-        "note": "libssh 0.10.6 ships only CMakeLists.txt: still blocked in this venue, which admits no cmake; 24.17 recorded it still-blocked rather than faking a build",
+        "note": "libssh 0.10.6 built by CMake against the subject libssl/libcrypto; the admitted workload imports a pinned RSA private key and checks its exported public blob",
         "recipe_id": "recipe:libssh:0.10.6",
         "sha256": "1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1",
         "url": "https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz",
@@ -1519,6 +1526,84 @@
         "sha256": "a7ab1fee6d9c88501e22ca73e28365aaaac298c811b01beacb3bf7e1cddbe9e5",
         "url": "https://deb.debian.org/debian/pool/main/libo/liboauth2/liboauth2_1.4.5.4.orig.tar.gz",
         "version": "1.4.5.4"
+      },
+      {
+        "archive": "tar.xz",
+        "artifact": "src/elinks",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "elinks",
+        "note": "ELinks 0.16.1's HTTPS client path (src/network/ssl) linked against the subject libssl; the admitted workload dumps a local HTTPS page and rejects an unrelated CA",
+        "recipe_id": "recipe:elinks:0.16.1",
+        "sha256": "825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+        "url": "https://github.com/rkd77/elinks/releases/download/v0.16.1/elinks-0.16.1.tar.xz",
+        "version": "0.16.1"
+      },
+      {
+        "archive": "tar.bz2",
+        "artifact": "src/lynx",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "lynx",
+        "note": "Lynx 2.9.2's HTTPS client (src/HTSSL.c) linked against the subject libssl; ncursesw is the pinned terminal library and the admitted workload is a `-dump` of a local HTTPS page",
+        "recipe_id": "recipe:lynx:2.9.2",
+        "sha256": "7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+        "url": "https://deb.debian.org/debian/pool/main/l/lynx/lynx_2.9.2.orig.tar.bz2",
+        "version": "2.9.2"
+      },
+      {
+        "archive": "tar.xz",
+        "artifact": "src/lftp",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "lftp",
+        "note": "lftp 4.9.3 with --with-openssl (src/lftp_ssl.cc): the admitted workload gets a file over a verified local HTTPS session and rejects an unrelated CA; readline/ncurses are the pinned terminal libraries",
+        "recipe_id": "recipe:lftp:4.9.3",
+        "sha256": "96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+        "url": "https://deb.debian.org/debian/pool/main/l/lftp/lftp_4.9.3.orig.tar.xz",
+        "version": "4.9.3"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "src/swtpm/.libs/libswtpm_libtpms.so*",
+        "build_system": "autotools",
+        "env_extra": {
+          "ACLOCAL": "{root}/.l7-autotools/aclocal",
+          "AC_MACRODIR": "{aux}/usr/share/autoconf",
+          "AUTOCONF": "{aux}/usr/bin/autoconf",
+          "AUTOHEADER": "{aux}/usr/bin/autoheader",
+          "AUTOM4TE": "{aux}/usr/bin/autom4te",
+          "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+          "AUTOMAKE": "{root}/.l7-autotools/automake",
+          "LIBTOOLIZE": "{root}/.l7-autotools/libtoolize",
+          "M4": "{aux}/usr/bin/m4",
+          "PATH": "{root}/.l7-autotools:{root}/.l7-bin:{aux}/usr/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+          "PKG_CONFIG_PATH": "{root}/.l7-pc:{aux}/usr/lib/x86_64-linux-gnu/pkgconfig:{prefix}/lib/pkgconfig",
+          "_lt_pkgdatadir": "{aux}/usr/share/libtool",
+          "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+          "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4"
+        },
+        "family": "swtpm",
+        "note": "swtpm 0.7.1's TPM2 socket front end linked against the subject libcrypto; libtpms, glib and json-glib are pinned bookworm packages and the admitted workload drives TPM2_Startup/GetRandom over swtpm's TCP data channel",
+        "recipe_id": "recipe:swtpm:0.7.1",
+        "sha256": "6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+        "url": "https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz",
+        "version": "0.7.1"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "httping",
+        "build_system": "make",
+        "env_extra": {
+          "CFLAGS": "-I{prefix}/include"
+        },
+        "family": "httping",
+        "note": "httping 2.5 built with SSL=yes (its configure probe cannot see the prefix on its own); the admitted workload pings a local HTTPS page and a plain-TCP listener must fail the TLS handshake",
+        "recipe_id": "recipe:httping:2.5",
+        "sha256": "be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+        "url": "https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz",
+        "version": "2.5"
       }
     ],
     "resource_limits": {
@@ -26841,24 +26926,56 @@
         "canonical_name": "elinks",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:elinks"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libexpat.so.1",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:elinks",
+          "recipe:recipe:elinks:0.16.1",
+          "source:https://github.com/rkd77/elinks/releases/download/v0.16.1/elinks-0.16.1.tar.xz#825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+          "artifact:src/elinks"
+        ],
+        "failure_class": null,
         "family_id": "family:elinks",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 49,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/elinks",
+          "artifact_sha256": "22d338f3190b6da1d3a79a77b06f3762077cf52fbda37482daa2d4ed2dce62da",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 216,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:elinks:0.16.1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -26868,41 +26985,115 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:elinks",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "f945a0d13c8403eaef546505f72376c6ce65b503d4aa85af0d945267a6b31e50",
+        "source_sha256": "825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+        "source_url": "https://github.com/rkd77/elinks/releases/download/v0.16.1/elinks-0.16.1.tar.xz",
+        "specimen_id": "specimen:elinks:0.16.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/elinks/source.tar.xz",
+              "-C",
+              "{scratch}/elinks/authority/src"
+            ],
+            "elapsed_seconds": 0.076,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/elinks/authority/src/elinks-0.16.1/.l7-install",
+              "--with-openssl={prefix}",
+              "--without-gnutls",
+              "--without-zlib",
+              "--without-bzlib",
+              "--without-lzma",
+              "--without-gpm",
+              "--without-libev",
+              "--disable-nls"
+            ],
+            "elapsed_seconds": 3.006,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 14.117,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:elinks:0.16.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "elinks",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:elinks"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libexpat.so.1",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:elinks",
+          "recipe:recipe:elinks:0.16.1",
+          "source:https://github.com/rkd77/elinks/releases/download/v0.16.1/elinks-0.16.1.tar.xz#825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+          "artifact:src/elinks"
+        ],
+        "failure_class": null,
         "family_id": "family:elinks",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 49,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/elinks",
+          "artifact_sha256": "9d24929787567c75788234aec290b14b0f0e19dabcc0e315cf778e66bba0c0e2",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 216,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:elinks:0.16.1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -26913,18 +27104,60 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:elinks",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "f945a0d13c8403eaef546505f72376c6ce65b503d4aa85af0d945267a6b31e50",
+        "source_sha256": "825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+        "source_url": "https://github.com/rkd77/elinks/releases/download/v0.16.1/elinks-0.16.1.tar.xz",
+        "specimen_id": "specimen:elinks:0.16.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/elinks/source.tar.xz",
+              "-C",
+              "{scratch}/elinks/candidate/src"
+            ],
+            "elapsed_seconds": 0.073,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/elinks/candidate/src/elinks-0.16.1/.l7-install",
+              "--with-openssl={prefix}",
+              "--without-gnutls",
+              "--without-zlib",
+              "--without-bzlib",
+              "--without-lzma",
+              "--without-gpm",
+              "--without-libev",
+              "--disable-nls"
+            ],
+            "elapsed_seconds": 2.945,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 14.077,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:elinks:0.16.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -47759,24 +47992,56 @@
         "canonical_name": "httping",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:httping"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libm.so.6",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:httping",
+          "recipe:recipe:httping:2.5",
+          "source:https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz#be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+          "artifact:httping"
+        ],
+        "failure_class": null,
         "family_id": "family:httping",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 25,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "httping",
+          "artifact_sha256": "13e5a1fd97acbacb5bf7d5357808d6dd6e6a83b123f55307ec42f996594053a0",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 245,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:httping:2.5",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -47786,41 +48051,98 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:httping",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "7c4ec057801304cf27591baed6afe708ff3bb7db840805852b15b7324a295108",
+        "source_sha256": "be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+        "source_url": "https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz",
+        "specimen_id": "specimen:httping:2.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/httping/source.tar.gz",
+              "-C",
+              "{scratch}/httping/authority/src"
+            ],
+            "elapsed_seconds": 0.003,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "SSL=yes",
+              "httping"
+            ],
+            "elapsed_seconds": 0.366,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:httping:2.5:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "httping",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:httping"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libm.so.6",
+          "libssl.so.3"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:httping",
+          "recipe:recipe:httping:2.5",
+          "source:https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz#be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+          "artifact:httping"
+        ],
+        "failure_class": null,
         "family_id": "family:httping",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 25,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "httping",
+          "artifact_sha256": "33f55fe56c7f6f9d3617952dd865343d5638c58534303c3924b2a39d246a88e4",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 245,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:httping:2.5",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -47831,18 +48153,43 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:httping",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "7c4ec057801304cf27591baed6afe708ff3bb7db840805852b15b7324a295108",
+        "source_sha256": "be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+        "source_url": "https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz",
+        "specimen_id": "specimen:httping:2.5",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/httping/source.tar.gz",
+              "-C",
+              "{scratch}/httping/candidate/src"
+            ],
+            "elapsed_seconds": 0.003,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "SSL=yes",
+              "httping"
+            ],
+            "elapsed_seconds": 0.374,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:httping:2.5:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -58639,24 +58986,59 @@
         "canonical_name": "lftp",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:lftp"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libreadline.so.8",
+          "libssl.so.3",
+          "libstdc++.so.6",
+          "libtinfo.so.6",
+          "libz.so.1"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:lftp",
+          "recipe:recipe:lftp:4.9.3",
+          "source:https://deb.debian.org/debian/pool/main/l/lftp/lftp_4.9.3.orig.tar.xz#96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+          "artifact:src/lftp"
+        ],
+        "failure_class": null,
         "family_id": "family:lftp",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 77,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/lftp",
+          "artifact_sha256": "2b0d8bda20a55949cd117abe828ea8eca4f335467b3679a3e61a30c057b5ecb7",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 916,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:lftp:4.9.3",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -58666,41 +59048,114 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:lftp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cf97cf4566af782d5c1baa61d7d65032d19ea298bc43b04f0072da98d9a5fac4",
+        "source_sha256": "96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+        "source_url": "https://deb.debian.org/debian/pool/main/l/lftp/lftp_4.9.3.orig.tar.xz",
+        "specimen_id": "specimen:lftp:4.9.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/lftp/source.tar.xz",
+              "-C",
+              "{scratch}/lftp/authority/src"
+            ],
+            "elapsed_seconds": 0.067,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/lftp/authority/src/lftp-4.9.3/.l7-install",
+              "--with-openssl={prefix}",
+              "--without-gnutls",
+              "--without-expat",
+              "--with-readline={scratch}/lftp/authority/aux/root/usr"
+            ],
+            "elapsed_seconds": 11.073,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 7.908,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:lftp:4.9.3:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "lftp",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:lftp"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libreadline.so.8",
+          "libssl.so.3",
+          "libstdc++.so.6",
+          "libtinfo.so.6",
+          "libz.so.1"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:lftp",
+          "recipe:recipe:lftp:4.9.3",
+          "source:https://deb.debian.org/debian/pool/main/l/lftp/lftp_4.9.3.orig.tar.xz#96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+          "artifact:src/lftp"
+        ],
+        "failure_class": null,
         "family_id": "family:lftp",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 77,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/lftp",
+          "artifact_sha256": "e38202579f0c06dec2bfbe40f640be4060e6e2b1939c22a0b58c5394ed699f09",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 916,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:lftp:4.9.3",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -58711,18 +59166,56 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:lftp",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "cf97cf4566af782d5c1baa61d7d65032d19ea298bc43b04f0072da98d9a5fac4",
+        "source_sha256": "96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+        "source_url": "https://deb.debian.org/debian/pool/main/l/lftp/lftp_4.9.3.orig.tar.xz",
+        "specimen_id": "specimen:lftp:4.9.3",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/lftp/source.tar.xz",
+              "-C",
+              "{scratch}/lftp/candidate/src"
+            ],
+            "elapsed_seconds": 0.067,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/lftp/candidate/src/lftp-4.9.3/.l7-install",
+              "--with-openssl={prefix}",
+              "--without-gnutls",
+              "--without-expat",
+              "--with-readline={scratch}/lftp/candidate/aux/root/usr"
+            ],
+            "elapsed_seconds": 11.074,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 7.877,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:lftp:4.9.3:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -70587,26 +71080,50 @@
         "canonical_name": "libssh",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
+        "dt_needed": [
+          "ld-linux-x86-64.so.2",
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libz.so.1"
+        ],
         "evidence": [
           "family:family:libssh",
           "recipe:recipe:libssh:0.10.6",
-          "source:https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz#1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1"
+          "source:https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz#1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1",
+          "artifact:b/lib/libssh.so.4.9.6"
         ],
-        "failure_class": "configure-failure",
+        "failure_class": null,
         "family_id": "family:libssh",
         "has_recipe": true,
-        "imported_openssl_symbols_count": 0,
-        "level": "L1-admitted-source",
-        "linkage": null,
-        "linkage_proven": false,
+        "imported_openssl_symbols_count": 162,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/lib/libssh.so.4.9.6",
+          "artifact_sha256": "62dfb0fb40d8ed986ee7da02de9c12659ccd06a0f5323880963bb068f051b5b4",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "failed",
+        "outcome": "reached",
         "p1000_rank": 1,
-        "reason": "configure failed: [Errno 2] No such file or directory: './configure'",
+        "reason": null,
         "recipe_id": "recipe:libssh:0.10.6",
-        "residual_class": "unbuildable",
-        "resolved_under_authority": false,
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -70614,11 +71131,6 @@
           "memory_swap_max": "0",
           "pids_max": "2048",
           "platform": "linux"
-        },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
-          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
         },
         "run_id": "run:build-link:authority:libssh",
         "source_root_hash": "f68373ab93e3ecb62f05e043aa540931e48e31b839346f009afc287a5d5e65f2",
@@ -70628,7 +71140,7 @@
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
         "steps": [
           {
@@ -70639,25 +71151,46 @@
               "-C",
               "{scratch}/libssh/authority/src"
             ],
-            "elapsed_seconds": 0.022,
+            "elapsed_seconds": 0.023,
             "exit_code": 0,
             "name": "extract",
             "ok": true
           },
           {
             "argv": [
-              "configure",
-              "--with-openssl={prefix}",
-              "--without-gssapi",
-              "--without-libgcrypt",
-              "--without-pcap",
-              "--without-socket-wrapper",
-              "--silent"
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_INSTALL_PREFIX={scratch}/libssh/authority/src/libssh-0.10.6/.l7-install",
+              "-DWITH_GSSAPI=OFF",
+              "-DWITH_ZLIB=ON",
+              "-DWITH_PCAP=OFF",
+              "-DWITH_SERVER=OFF",
+              "-DBUILD_EXAMPLES=OFF",
+              "-DUNIT_TESTING=OFF"
             ],
-            "elapsed_seconds": 0.0,
-            "exit_code": 127,
+            "elapsed_seconds": 2.808,
+            "exit_code": 0,
             "name": "configure",
-            "ok": false
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 1.576,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
           }
         ],
         "subject": "authority",
@@ -70668,25 +71201,49 @@
         "canonical_name": "libssh",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
+        "dt_needed": [
+          "ld-linux-x86-64.so.2",
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libz.so.1"
+        ],
         "evidence": [
           "family:family:libssh",
           "recipe:recipe:libssh:0.10.6",
-          "source:https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz#1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1"
+          "source:https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz#1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1",
+          "artifact:b/lib/libssh.so.4.9.6"
         ],
-        "failure_class": "configure-failure",
+        "failure_class": null,
         "family_id": "family:libssh",
         "has_recipe": true,
-        "imported_openssl_symbols_count": 0,
-        "level": "L1-admitted-source",
-        "linkage": null,
-        "linkage_proven": false,
+        "imported_openssl_symbols_count": 162,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "b/lib/libssh.so.4.9.6",
+          "artifact_sha256": "a750bf8a56eed47828a84ac37179a9699adb14632691d455cb86a22accc7893a",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "failed",
+        "outcome": "reached",
         "p1000_rank": 1,
-        "reason": "configure failed: [Errno 2] No such file or directory: './configure'",
+        "reason": null,
         "recipe_id": "recipe:libssh:0.10.6",
-        "residual_class": "unbuildable",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -70696,11 +71253,6 @@
           "pids_max": "2048",
           "platform": "linux"
         },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
-          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
-        },
         "run_id": "run:build-link:candidate:libssh",
         "source_root_hash": "f68373ab93e3ecb62f05e043aa540931e48e31b839346f009afc287a5d5e65f2",
         "source_sha256": "1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1",
@@ -70709,7 +71261,7 @@
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
         "steps": [
           {
@@ -70727,18 +71279,39 @@
           },
           {
             "argv": [
-              "configure",
-              "--with-openssl={prefix}",
-              "--without-gssapi",
-              "--without-libgcrypt",
-              "--without-pcap",
-              "--without-socket-wrapper",
-              "--silent"
+              "cmake",
+              "-S",
+              ".",
+              "-B",
+              "b",
+              "-DCMAKE_BUILD_TYPE=Release",
+              "-DOPENSSL_ROOT_DIR={prefix}",
+              "-DCMAKE_PREFIX_PATH={prefix}",
+              "-DCMAKE_INSTALL_PREFIX={scratch}/libssh/candidate/src/libssh-0.10.6/.l7-install",
+              "-DWITH_GSSAPI=OFF",
+              "-DWITH_ZLIB=ON",
+              "-DWITH_PCAP=OFF",
+              "-DWITH_SERVER=OFF",
+              "-DBUILD_EXAMPLES=OFF",
+              "-DUNIT_TESTING=OFF"
             ],
-            "elapsed_seconds": 0.0,
-            "exit_code": 127,
+            "elapsed_seconds": 2.779,
+            "exit_code": 0,
             "name": "configure",
-            "ok": false
+            "ok": true
+          },
+          {
+            "argv": [
+              "cmake",
+              "--build",
+              "b",
+              "--parallel",
+              "8"
+            ],
+            "elapsed_seconds": 1.634,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
           }
         ],
         "subject": "candidate",
@@ -72633,11 +73206,6 @@
           "pids_max": "2048",
           "platform": "linux"
         },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
-          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
-        },
         "run_id": "run:build-link:authority:lighttpd",
         "source_root_hash": "e8caafc435698fe4d13bf81d09f895972b43fc453db320dd43f3868bbe0fd39c",
         "source_sha256": "ba14a030889518194fd88b33e419d51cc38c8fe917126d5a7a965be79b53e995",
@@ -72657,7 +73225,7 @@
               "-C",
               "{scratch}/lighttpd/authority/src"
             ],
-            "elapsed_seconds": 0.023,
+            "elapsed_seconds": 0.02,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -72710,11 +73278,6 @@
           "pids_max": "2048",
           "platform": "linux"
         },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "269512c3cd1cde95ff600ba33e5a7fe4abe3091fcaacef085983a549336cfa26",
-          "libssl_so_3_sha256": "fb7478cac66f6f413281e0029846ec82445c7792e7dea2ef3ff29f4dfea96c9d"
-        },
         "run_id": "run:build-link:candidate:lighttpd",
         "source_root_hash": "e8caafc435698fe4d13bf81d09f895972b43fc453db320dd43f3868bbe0fd39c",
         "source_sha256": "ba14a030889518194fd88b33e419d51cc38c8fe917126d5a7a965be79b53e995",
@@ -72734,7 +73297,7 @@
               "-C",
               "{scratch}/lighttpd/candidate/src"
             ],
-            "elapsed_seconds": 0.022,
+            "elapsed_seconds": 0.021,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -73809,24 +74372,57 @@
         "canonical_name": "lynx",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:lynx"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libncursesw.so.6",
+          "libssl.so.3",
+          "libtinfo.so.6"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:lynx",
+          "recipe:recipe:lynx:2.9.2",
+          "source:https://deb.debian.org/debian/pool/main/l/lynx/lynx_2.9.2.orig.tar.bz2#7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+          "artifact:src/lynx"
+        ],
+        "failure_class": null,
         "family_id": "family:lynx",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 41,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/lynx",
+          "artifact_sha256": "6c35d362771bda4daba140fbdd3638fb44d5de1b017fefc526c7b103286dd08e",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 286,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:lynx:2.9.2",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -73836,41 +74432,114 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:lynx",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "5299adaee6e249f78c7ded9c0afe8ddeaa5462983e0a9ca8516b737b7992edb8",
+        "source_sha256": "7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+        "source_url": "https://deb.debian.org/debian/pool/main/l/lynx/lynx_2.9.2.orig.tar.bz2",
+        "specimen_id": "specimen:lynx:2.9.2",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/lynx/source.tar.bz2",
+              "-C",
+              "{scratch}/lynx/authority/src"
+            ],
+            "elapsed_seconds": 0.216,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/lynx/authority/src/lynx2.9.2/.l7-install",
+              "--with-ssl={prefix}",
+              "--with-screen=ncursesw",
+              "--with-curses-dir={scratch}/lynx/authority/aux/root/usr",
+              "--disable-nls",
+              "--without-bzlib",
+              "--without-zlib"
+            ],
+            "elapsed_seconds": 3.393,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 14.627,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:lynx:2.9.2:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "lynx",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:lynx"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libncursesw.so.6",
+          "libssl.so.3",
+          "libtinfo.so.6"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:lynx",
+          "recipe:recipe:lynx:2.9.2",
+          "source:https://deb.debian.org/debian/pool/main/l/lynx/lynx_2.9.2.orig.tar.bz2#7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+          "artifact:src/lynx"
+        ],
+        "failure_class": null,
         "family_id": "family:lynx",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 41,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/lynx",
+          "artifact_sha256": "c26f55ac94e641b59ab9a3251070b0f843178282e15c00348b07879c1158ad6f",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "libssl.so.3": "/work/artifacts/phase2/install/lib/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 286,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:lynx:2.9.2",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -73881,18 +74550,58 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:lynx",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "5299adaee6e249f78c7ded9c0afe8ddeaa5462983e0a9ca8516b737b7992edb8",
+        "source_sha256": "7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+        "source_url": "https://deb.debian.org/debian/pool/main/l/lynx/lynx_2.9.2.orig.tar.bz2",
+        "specimen_id": "specimen:lynx:2.9.2",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/lynx/source.tar.bz2",
+              "-C",
+              "{scratch}/lynx/candidate/src"
+            ],
+            "elapsed_seconds": 0.211,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/lynx/candidate/src/lynx2.9.2/.l7-install",
+              "--with-ssl={prefix}",
+              "--with-screen=ncursesw",
+              "--with-curses-dir={scratch}/lynx/candidate/aux/root/usr",
+              "--disable-nls",
+              "--without-bzlib",
+              "--without-zlib"
+            ],
+            "elapsed_seconds": 3.394,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 14.59,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:lynx:2.9.2:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -95513,7 +96222,7 @@
               "-C",
               "{scratch}/sofia-sip/authority/src"
             ],
-            "elapsed_seconds": 0.051,
+            "elapsed_seconds": 0.05,
             "exit_code": 0,
             "name": "extract",
             "ok": true
@@ -95524,7 +96233,7 @@
               "--prefix={scratch}/sofia-sip/authority/src/sofia-sip-1.12.11+20110422.1/.l7-install",
               "--with-openssl={prefix}"
             ],
-            "elapsed_seconds": 2.602,
+            "elapsed_seconds": 2.595,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -95534,7 +96243,7 @@
               "make",
               "-j4"
             ],
-            "elapsed_seconds": 16.175,
+            "elapsed_seconds": 16.217,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -95635,7 +96344,7 @@
               "--prefix={scratch}/sofia-sip/candidate/src/sofia-sip-1.12.11+20110422.1/.l7-install",
               "--with-openssl={prefix}"
             ],
-            "elapsed_seconds": 2.588,
+            "elapsed_seconds": 2.58,
             "exit_code": 0,
             "name": "configure",
             "ok": true
@@ -95645,7 +96354,7 @@
               "make",
               "-j4"
             ],
-            "elapsed_seconds": 16.23,
+            "elapsed_seconds": 16.318,
             "exit_code": 0,
             "name": "make",
             "ok": true
@@ -98149,24 +98858,49 @@
         "canonical_name": "swtpm",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:swtpm"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libtpms.so.0"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:swtpm",
+          "recipe:recipe:swtpm:0.7.1",
+          "source:https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz#6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+          "artifact:src/swtpm/.libs/libswtpm_libtpms.so.0.0.0"
+        ],
+        "failure_class": null,
         "family_id": "family:swtpm",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 27,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/swtpm/.libs/libswtpm_libtpms.so.0.0.0",
+          "artifact_sha256": "58f95cca68a0152046ee0834c30dc9166836d9251072f9e3e54af06585cc7a44",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 105,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:swtpm:0.7.1",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -98176,41 +98910,127 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:swtpm",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "766f076787acd8f81a5c98ed339d83b43dc7d1b35fef41718b0524313746873e",
+        "source_sha256": "6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+        "source_url": "https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz",
+        "specimen_id": "specimen:swtpm:0.7.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/swtpm/source.tar.gz",
+              "-C",
+              "{scratch}/swtpm/authority/src"
+            ],
+            "elapsed_seconds": 0.008,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "set -e; mkdir -p m4 {scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-bin {scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-pc; printf '#!/bin/sh\\nexec /usr/bin/awk \"$@\"\\n' > {scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-bin/gawk; for t in netstat expect socat; do printf '#!/bin/sh\\nexit 0\\n' > {scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-bin/$t; done; chmod +x {scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-bin/*; printf 'prefix=/nonexistent\\nName: mount\\nDescription: mount\\nVersion: 2.38\\nLibs:\\nCflags:\\n' > {scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-pc/mount.pc; printf 'prefix=/nonexistent\\nName: libselinux\\nDescription: libselinux\\nVersion: 3.4\\nLibs:\\nCflags:\\n' > {scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-pc/libselinux.pc"
+            ],
+            "elapsed_seconds": 0.001,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "set -e; W={scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-autotools; mkdir -p $W; printf '#!/bin/sh\\nexec {scratch}/swtpm/authority/aux/root/usr/bin/aclocal-1.16 --system-acdir={scratch}/swtpm/authority/aux/root/usr/share/aclocal-1.16 -I {scratch}/swtpm/authority/aux/root/usr/share/aclocal -I /usr/share/aclocal --automake-acdir={scratch}/swtpm/authority/aux/root/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; printf '#!/bin/sh\\nexec {scratch}/swtpm/authority/aux/root/usr/bin/automake-1.16 --libdir={scratch}/swtpm/authority/aux/root/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; printf '#!/bin/sh\\nexec {scratch}/swtpm/authority/aux/root/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; chmod +x $W/aclocal $W/automake $W/libtoolize; sed -i 's#/usr/share/autoconf#{scratch}/swtpm/authority/aux/root/usr/share/autoconf#g' {scratch}/swtpm/authority/aux/root/usr/share/autoconf/autom4te.cfg; mkdir -p {scratch}/swtpm/authority/aux/root/usr/share/libtool/m4; cp {scratch}/swtpm/authority/aux/root/usr/share/aclocal/libtool.m4 {scratch}/swtpm/authority/aux/root/usr/share/aclocal/lt*.m4 {scratch}/swtpm/authority/aux/root/usr/share/libtool/m4/; touch NEWS; autoreconf -fi"
+            ],
+            "elapsed_seconds": 2.3,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/swtpm/authority/src/swtpm-0.7.1/.l7-install",
+              "--with-openssl",
+              "--without-cuse",
+              "--without-selinux",
+              "--without-seccomp",
+              "--without-gnutls"
+            ],
+            "elapsed_seconds": 1.745,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 2.005,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:swtpm:0.7.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "swtpm",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:swtpm"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libtpms.so.0"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:swtpm",
+          "recipe:recipe:swtpm:0.7.1",
+          "source:https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz#6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+          "artifact:src/swtpm/.libs/libswtpm_libtpms.so.0.0.0"
+        ],
+        "failure_class": null,
         "family_id": "family:swtpm",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 27,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "src/swtpm/.libs/libswtpm_libtpms.so.0.0.0",
+          "artifact_sha256": "2b2b059344afdf8b06e2642e236a4fd020604e28dd20d2a362192faa65960142",
+          "default_resolution": {
+            "libcrypto.so.3": "/work/artifacts/phase2/install/lib/libcrypto.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 105,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:swtpm:0.7.1",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -98221,18 +99041,79 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:swtpm",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "766f076787acd8f81a5c98ed339d83b43dc7d1b35fef41718b0524313746873e",
+        "source_sha256": "6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+        "source_url": "https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz",
+        "specimen_id": "specimen:swtpm:0.7.1",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/swtpm/source.tar.gz",
+              "-C",
+              "{scratch}/swtpm/candidate/src"
+            ],
+            "elapsed_seconds": 0.007,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "set -e; mkdir -p m4 {scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-bin {scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-pc; printf '#!/bin/sh\\nexec /usr/bin/awk \"$@\"\\n' > {scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-bin/gawk; for t in netstat expect socat; do printf '#!/bin/sh\\nexit 0\\n' > {scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-bin/$t; done; chmod +x {scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-bin/*; printf 'prefix=/nonexistent\\nName: mount\\nDescription: mount\\nVersion: 2.38\\nLibs:\\nCflags:\\n' > {scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-pc/mount.pc; printf 'prefix=/nonexistent\\nName: libselinux\\nDescription: libselinux\\nVersion: 3.4\\nLibs:\\nCflags:\\n' > {scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-pc/libselinux.pc"
+            ],
+            "elapsed_seconds": 0.002,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "sh",
+              "-c",
+              "set -e; W={scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-autotools; mkdir -p $W; printf '#!/bin/sh\\nexec {scratch}/swtpm/candidate/aux/root/usr/bin/aclocal-1.16 --system-acdir={scratch}/swtpm/candidate/aux/root/usr/share/aclocal-1.16 -I {scratch}/swtpm/candidate/aux/root/usr/share/aclocal -I /usr/share/aclocal --automake-acdir={scratch}/swtpm/candidate/aux/root/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; printf '#!/bin/sh\\nexec {scratch}/swtpm/candidate/aux/root/usr/bin/automake-1.16 --libdir={scratch}/swtpm/candidate/aux/root/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; printf '#!/bin/sh\\nexec {scratch}/swtpm/candidate/aux/root/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; chmod +x $W/aclocal $W/automake $W/libtoolize; sed -i 's#/usr/share/autoconf#{scratch}/swtpm/candidate/aux/root/usr/share/autoconf#g' {scratch}/swtpm/candidate/aux/root/usr/share/autoconf/autom4te.cfg; mkdir -p {scratch}/swtpm/candidate/aux/root/usr/share/libtool/m4; cp {scratch}/swtpm/candidate/aux/root/usr/share/aclocal/libtool.m4 {scratch}/swtpm/candidate/aux/root/usr/share/aclocal/lt*.m4 {scratch}/swtpm/candidate/aux/root/usr/share/libtool/m4/; touch NEWS; autoreconf -fi"
+            ],
+            "elapsed_seconds": 2.314,
+            "exit_code": 0,
+            "name": "pre-build",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/swtpm/candidate/src/swtpm-0.7.1/.l7-install",
+              "--with-openssl",
+              "--without-cuse",
+              "--without-selinux",
+              "--without-seccomp",
+              "--without-gnutls"
+            ],
+            "elapsed_seconds": 1.723,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j4"
+            ],
+            "elapsed_seconds": 2.032,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:swtpm:0.7.1:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -105980,6 +106861,20 @@
       },
       {
         "evidence": [
+          "source:https://github.com/rkd77/elinks/releases/download/v0.16.1/elinks-0.16.1.tar.xz#825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+          "recipe:recipe:elinks:0.16.1",
+          "pinned_sha256:825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae"
+        ],
+        "family_id": "family:elinks",
+        "licence": "unknown",
+        "pristine_source_root_hash": "f945a0d13c8403eaef546505f72376c6ce65b503d4aa85af0d945267a6b31e50",
+        "pristine_source_sha256": "825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+        "specimen_id": "specimen:elinks:0.16.1",
+        "upstream_ref": "https://github.com/rkd77/elinks/releases/download/v0.16.1/elinks-0.16.1.tar.xz",
+        "version": "0.16.1"
+      },
+      {
+        "evidence": [
           "source:https://ftp.epicsol.org/pub/epic/EPIC5-PRODUCTION/epic5-3.0.3.tar.xz#63a411215c14040b65b5d728aff10f7523d55e170f6298fb01e1cf958d79d326",
           "recipe:recipe:epic5:3.0.3",
           "pinned_sha256:63a411215c14040b65b5d728aff10f7523d55e170f6298fb01e1cf958d79d326"
@@ -106162,6 +107057,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz#be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+          "recipe:recipe:httping:2.5",
+          "pinned_sha256:be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d"
+        ],
+        "family_id": "family:httping",
+        "licence": "unknown",
+        "pristine_source_root_hash": "7c4ec057801304cf27591baed6afe708ff3bb7db840805852b15b7324a295108",
+        "pristine_source_sha256": "be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+        "specimen_id": "specimen:httping:2.5",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz",
+        "version": "2.5"
+      },
+      {
+        "evidence": [
           "source:https://downloads.xiph.org/releases/icecast/icecast-2.4.4.tar.gz#49b5979f9f614140b6a38046154203ee28218d8fc549888596a683ad604e4d44",
           "recipe:recipe:icecast:2.4.4",
           "pinned_sha256:49b5979f9f614140b6a38046154203ee28218d8fc549888596a683ad604e4d44"
@@ -106299,6 +107208,20 @@
         "specimen_id": "specimen:ldns:1.8.3",
         "upstream_ref": "https://www.nlnetlabs.nl/downloads/ldns/ldns-1.8.3.tar.gz",
         "version": "1.8.3"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/l/lftp/lftp_4.9.3.orig.tar.xz#96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+          "recipe:recipe:lftp:4.9.3",
+          "pinned_sha256:96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc"
+        ],
+        "family_id": "family:lftp",
+        "licence": "unknown",
+        "pristine_source_root_hash": "cf97cf4566af782d5c1baa61d7d65032d19ea298bc43b04f0072da98d9a5fac4",
+        "pristine_source_sha256": "96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+        "specimen_id": "specimen:lftp:4.9.3",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/l/lftp/lftp_4.9.3.orig.tar.xz",
+        "version": "4.9.3"
       },
       {
         "evidence": [
@@ -106593,6 +107516,20 @@
         "specimen_id": "specimen:lua-sec:1.3.2",
         "upstream_ref": "https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz",
         "version": "1.3.2"
+      },
+      {
+        "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/l/lynx/lynx_2.9.2.orig.tar.bz2#7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+          "recipe:recipe:lynx:2.9.2",
+          "pinned_sha256:7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce"
+        ],
+        "family_id": "family:lynx",
+        "licence": "unknown",
+        "pristine_source_root_hash": "5299adaee6e249f78c7ded9c0afe8ddeaa5462983e0a9ca8516b737b7992edb8",
+        "pristine_source_sha256": "7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+        "specimen_id": "specimen:lynx:2.9.2",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/l/lynx/lynx_2.9.2.orig.tar.bz2",
+        "version": "2.9.2"
       },
       {
         "evidence": [
@@ -107086,6 +108023,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz#6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+          "recipe:recipe:swtpm:0.7.1",
+          "pinned_sha256:6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937"
+        ],
+        "family_id": "family:swtpm",
+        "licence": "unknown",
+        "pristine_source_root_hash": "766f076787acd8f81a5c98ed339d83b43dc7d1b35fef41718b0524313746873e",
+        "pristine_source_sha256": "6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+        "specimen_id": "specimen:swtpm:0.7.1",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz",
+        "version": "0.7.1"
+      },
+      {
+        "evidence": [
           "source:https://www.tcpdump.org/release/tcpdump-4.99.6.tar.gz#5839921a0f67d7d8fa3dacd9cd41e44c89ccb867e8a6db216d62628c7fd14b09",
           "recipe:recipe:tcpdump:4.99.6",
           "pinned_sha256:5839921a0f67d7d8fa3dacd9cd41e44c89ccb867e8a6db216d62628c7fd14b09"
@@ -107330,6 +108281,18 @@
         "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
+          "recipe:recipe:elinks:0.16.1",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:elinks:0.16.1",
+        "variant_id": "variant:elinks:0.16.1:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
           "recipe:recipe:epic5:3.0.3",
           "build_system:configure"
         ],
@@ -107484,6 +108447,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "make-pristine-shared",
+        "evidence": [
+          "recipe:recipe:httping:2.5",
+          "build_system:make"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:httping:2.5",
+        "variant_id": "variant:httping:2.5:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
           "recipe:recipe:icecast:2.4.4",
@@ -107601,6 +108576,18 @@
         "platform": "linux",
         "specimen_id": "specimen:ldns:1.8.3",
         "variant_id": "variant:ldns:1.8.3:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:lftp:4.9.3",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:lftp:4.9.3",
+        "variant_id": "variant:lftp:4.9.3:pristine"
       },
       {
         "arch": "x86_64",
@@ -107724,10 +108711,10 @@
       },
       {
         "arch": "x86_64",
-        "build_profile": "autotools-pristine-shared",
+        "build_profile": "cmake-pristine-shared",
         "evidence": [
           "recipe:recipe:libssh:0.10.6",
-          "build_system:autotools"
+          "build_system:cmake"
         ],
         "patch_set": "pristine",
         "platform": "linux",
@@ -107853,6 +108840,18 @@
         "platform": "linux",
         "specimen_id": "specimen:lua-sec:1.3.2",
         "variant_id": "variant:lua-sec:1.3.2:pristine"
+      },
+      {
+        "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:lynx:2.9.2",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:lynx:2.9.2",
+        "variant_id": "variant:lynx:2.9.2:pristine"
       },
       {
         "arch": "x86_64",
@@ -108276,6 +109275,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "autotools-pristine-shared",
+        "evidence": [
+          "recipe:recipe:swtpm:0.7.1",
+          "build_system:autotools"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:swtpm:0.7.1",
+        "variant_id": "variant:swtpm:0.7.1:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "configure-pristine-shared",
         "evidence": [
           "recipe:recipe:tcpdump:4.99.6",
@@ -108348,7 +109359,7 @@
       }
     ]
   },
-  "body_hash": "55ffad27ef4c395671fef8eb9d780be27ed5e7bbf975c74c4ff7e1f3bba6e9e5",
+  "body_hash": "344c4f2209447648935748b8b2ee3cbb8dc754296a331a32a48edef9b0894153",
   "generator": "forensics/tools/downstream_build_link.py",
   "inputs": [
     {
