@@ -796,6 +796,57 @@ pub(crate) fn tls1_nid2group_id(nid: c_int) -> u16 {
     }
 }
 
+/// `int tls1_save_u16(PACKET *pkt, uint16_t **p, size_t *len)` — `t1_lib.c:3490-3517`, for the
+/// `signature_algorithms` vector `tls_parse_ctos_sig_algs` saves (`extensions_srvr.c:303-320`).
+///
+/// The extension body is `list_len(2) || scheme(2)...`; a zero-length or odd list, or one whose
+/// declared length runs past the body, is refused *before* the incumbent list is released, so a
+/// malformed renegotiation leaves the previous list intact (the authority parses into the packet
+/// before it stores). On success the schemes are stored as native-endian `u16`s — that is the
+/// representation `SSL_get_sigalgs` reads — in a `CRYPTO_malloc` block this connection owns and
+/// `SSL_free` releases.
+///
+/// # Safety
+/// `s` must be a live connection.
+pub(crate) unsafe fn tls1_save_peer_sigalgs(s: *mut Ssl, body: &[u8]) -> c_int {
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    if body.len() < 2 {
+        return 0;
+    }
+    let list_len = ((body[0] as usize) << 8) | body[1] as usize;
+    if list_len == 0 || !list_len.is_multiple_of(2) || 2 + list_len > body.len() {
+        return 0;
+    }
+    let count = list_len / 2;
+    let Some(bytes) = count.checked_mul(core::mem::size_of::<u16>()) else {
+        return 0;
+    };
+    // SAFETY: `s` is live; the incumbent (if any) is this connection's own block.
+    unsafe {
+        CRYPTO_free((*s).peer_sigalgs.cast(), FILE, 0);
+        (*s).peer_sigalgs = ptr::null_mut();
+        (*s).peer_sigalgslen = 0;
+    }
+    // SAFETY: no preconditions; the refusal arm leaves the connection's list empty.
+    let p = unsafe { CRYPTO_malloc(bytes, FILE, 0) }.cast::<u16>();
+    if p.is_null() {
+        return 0;
+    }
+    // SAFETY: `p` is `bytes` writable bytes from `CRYPTO_malloc` (maximally aligned) and
+    // `bytes == count * size_of::<u16>()`, so it is a valid `count`-element `u16` slice; this
+    // frame is its only writer until it is published below.
+    let out = unsafe { core::slice::from_raw_parts_mut(p, count) };
+    for (slot, pair) in out.iter_mut().zip(body[2..2 + list_len].as_chunks::<2>().0) {
+        *slot = u16::from_be_bytes(*pair);
+    }
+    // SAFETY: `s` is live; `p` is the block just filled, now owned by the connection.
+    unsafe {
+        (*s).peer_sigalgs = p;
+        (*s).peer_sigalgslen = count;
+    }
+    1
+}
+
 /// `uint16_t tls1_group_name2id(SSL_CTX *ctx, const char *name)` — `t1_lib.c:709-719`, reduced to
 /// the provider names the admitted group table publishes (`providers/common/capabilities.c:150-260`).
 ///
