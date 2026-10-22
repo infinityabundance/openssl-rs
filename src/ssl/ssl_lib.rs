@@ -1831,9 +1831,11 @@ pub struct Ssl {
     /// `EVP_MD_CTX *pha_dgst` — the handshake digest through the client Finished, saved for PHA
     /// (`tls13_save_handshake_digest_for_pha`, `statem_lib.c:2846-2867`). Owned; freed by `SSL_free`.
     pub pha_dgst: *mut c_void,
-    /// `uint16_t *s3.tmp.peer_sigalgs` — the peer's signature-algorithm list (always NULL here).
+    /// `uint16_t *s3.tmp.peer_sigalgs` — the peer's signature-algorithm list, as native-endian
+    /// schemes. NULL until a ClientHello's `signature_algorithms` is parsed; the connection owns
+    /// the `CRYPTO_malloc` block and `SSL_free` releases it.
     pub peer_sigalgs: *mut u16,
-    /// `size_t s3.tmp.peer_sigalgslen`.
+    /// `size_t s3.tmp.peer_sigalgslen` — the element count of `peer_sigalgs`.
     pub peer_sigalgslen: usize,
     /// `SIGALG_LOOKUP **shared_sigalgs` — the negotiated list (always NULL here).
     pub shared_sigalgs: *mut c_void,
@@ -3577,6 +3579,7 @@ unsafe impl CtxDestroy for Ssl {
             SSL_SESSION_free((*s).session);
             crate::ssl::tls_srp::ssl_srp_ctx_free_intern(s);
             CRYPTO_free((*s).session_ticket.cast(), FILE, 0);
+            CRYPTO_free((*s).peer_sigalgs.cast(), FILE, 0);
             dtls1_free(s);
             BIO_free_all((*s).wbio);
             BIO_free_all((*s).rbio);
