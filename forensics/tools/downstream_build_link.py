@@ -2026,6 +2026,17 @@ def _build_catalogue() -> tuple[dict, ...]:
         late = _LATE_RECIPE_OVERRIDES.get(rec["family"])
         if late:
             rec.update(late)
+    # The c2 split rows are appended after every parent recipe (and its late override) exists,
+    # so each row is a byte-for-byte copy of the admitted parent build intent.
+    by_family = {rec["family"]: rec for rec in recipes}
+    for new, base, overrides in _L7_SPLIT_RECIPES:
+        rec = copy.deepcopy(by_family[base])
+        rec.update({"family": new, "recipe_id": f"recipe:{new}:{rec['version']}"})
+        rec.update(overrides)
+        recipes.append(rec)
+    ima = copy.deepcopy(_L7_IMA_SPEC)
+    ima["recipe_id"] = f"recipe:ima-evm-utils:{ima['version']}"
+    recipes.append(ima)
     return tuple(recipes)
 
 
@@ -3471,6 +3482,77 @@ _LATE_RECIPE_OVERRIDES: dict[str, dict] = {
         "note": ("libssh 0.10.6 built by CMake against the subject libssl/libcrypto; the admitted "
                  "workload imports a pinned RSA private key and checks its exported public blob"),
     },
+}
+
+# --------------------------------------------------------------------------------------------
+# Phase-25 L7 split-row batch (c2, 2026-10-22).
+#
+# Ten frozen-P1000 families that are package rows of an upstream this venue already builds and
+# already drives with an admitted workload.  Each row is the same pristine archive, the same
+# build intent and the same `{prefix}` substitution as its parent; only the package's own
+# artifact (and, for cyrus-sasl-md5, the mechanism the harness selects) differs.  No candidate
+# is patched and no new source is introduced.  `libfsverity` and `monitoring-plugins` are
+# declared in the template layer's family registry instead, because their workload is a bucket.
+_L7_SPLIT_RECIPES: tuple[tuple[str, str, dict], ...] = (
+    ("libcjose0", "cjose", {
+        "artifact": "src/.libs/libcjose.so*",
+        "note": ("the libcjose0 package row of cjose 0.8.1: the same JWS HS256 harness signs, "
+                 "imports and verifies a compact JWS, and rejects a tampered signature and a "
+                 "wrong key"),
+    }),
+    ("libgetdns10", "getdns", {
+        "artifact": "b/libgetdns.so*",
+        "note": ("the libgetdns10 package row of getdns 1.7.3: the same DNS-over-TLS client "
+                 "harness retrieves the fixture A record and rejects an unrelated CA"),
+    }),
+    ("asterisk-srtp", "srtp", {
+        "artifact": "b/libsrtp2.so*",
+        "note": ("the asterisk-srtp package row of libsrtp 2.6.0: the same AES-CM/HMAC "
+                 "protect/unprotect harness rejects a session with the wrong key"),
+    }),
+    ("epic5-lite", "epic5", {
+        "artifact": "source/epic5",
+        "note": ("the epic5-lite package row of epic5 3.0.3: the same IRC-over-TLS client "
+                 "registers and joins the fixture channel and refuses the unrelated CA"),
+    }),
+
+    ("httpd", "apache2-bin", {
+        "artifact": "httpd",
+        "note": ("the httpd package row of Apache 2.4.62: static mod_ssl serves the fixture "
+                 "over verified TLS and an unrelated CA is refused"),
+    }),
+    ("librabbitmq", "rabbitmq-c", {
+        "artifact": "b/librabbitmq/librabbitmq.so*",
+        "note": ("the librabbitmq package row of rabbitmq-c 0.15.0: the same TLS socket "
+                 "harness completes the connection and rejects an unrelated CA"),
+    }),
+)
+
+# ima-evm-utils 1.4 is the only new upstream in this batch: its `evmctl` signs and verifies a
+# file's extended-attribute digest with the subject libcrypto.  The release ships configure.ac
+# only, so the pinned bookworm autotools regenerate `configure` as a build input (never a source
+# edit).  keyutils is the one non-OpenSSL dependency and comes from pinned bookworm packages.
+_L7_IMA_AUX: tuple[dict, ...] = (
+    _aux_deb("k/keyutils", "libkeyutils1_1.6.3-2_amd64.deb",
+             "cfac89e6a7a54ff3c6a4f843310e25efeddaa771baeae470bd98bd588c373563",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("k/keyutils", "libkeyutils-dev_1.6.3-2_amd64.deb",
+             "b26aa6df93bbf977f3b945ea7329cb89cc800b93cc0e4a3542c964f3e387d64a",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_L7_IMA_SPEC: dict = {
+    "family": "ima-evm-utils", "version": "1.4",
+    "url": "https://deb.debian.org/debian/pool/main/i/ima-evm-utils/ima-evm-utils_1.4.orig.tar.gz",
+    "archive": "tar.gz", "build_system": "autotools",
+    "sha256": "fcf85b31d6292051b3679e5f17ffa7f89b6898957aad0f59aa4e9878884b27d1",
+    "configure": ["--disable-tests"], "make": [MAKE_JOBS],
+    "artifact": "src/.libs/evmctl", "launch": ["--version"],
+    "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX) + list(_L7_IMA_AUX),
+    "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+    "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+    "note": ("ima-evm-utils 1.4's evmctl signs a file's IMA digest with the subject libcrypto "
+             "and verifies it; a modified file no longer verifies"),
 }
 
 RECIPES: tuple[dict, ...] = _build_catalogue()
