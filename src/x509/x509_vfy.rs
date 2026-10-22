@@ -798,6 +798,71 @@ unsafe fn replace_chain(ctx: *mut X509StoreCtx, next: *mut OpenSslStack) {
     unsafe { OPENSSL_sk_pop_free(incumbent, Some(x509_free_void)) };
 }
 
+/// A CRL reference this frame owns and releases exactly once.
+///
+/// The authority expresses the same transfer with `X509_CRL_free` at each exit. An owner makes the
+/// release structural: a frame that acquires a CRL from a `get_crl` callback, from
+/// `get_crl_delta`, or by constructing one (`X509_CRL_diff`) cannot leak it on a newly added early
+/// exit and cannot release it twice. A CRL crossing an out-parameter is transferred with
+/// `into_raw`; a producer that fills the owner's slot is `slot`, which keeps the incumbent so a
+/// second candidate search that finds nothing retains the first answer, as the authority does.
+struct OwnedCrl {
+    raw: *mut X509Crl,
+}
+
+impl OwnedCrl {
+    /// The empty owner.
+    const fn none() -> OwnedCrl {
+        OwnedCrl {
+            raw: ptr::null_mut(),
+        }
+    }
+
+    /// Adopt a reference produced by a callback or a constructor.
+    ///
+    /// # Safety
+    ///
+    /// `raw` is NULL or a live `X509_CRL` whose reference transfers to this owner and which no
+    /// other owner will release.
+    unsafe fn adopt(raw: *mut X509Crl) -> OwnedCrl {
+        OwnedCrl { raw }
+    }
+
+    /// The CRL address, for the read-only C calls.
+    fn as_ptr(&self) -> *mut X509Crl {
+        self.raw
+    }
+
+    /// The writable out-slot a producer fills. The incumbent is **preserved**: the authority's
+    /// `get_crl` is called with a NULL slot, and `get_crl_sk` frees and replaces `*pcrl` only when
+    /// it has a new candidate (a second call that finds none must keep the first answer). The
+    /// owner's `raw` is therefore always the current reference; `reset` is the explicit release.
+    fn slot(&mut self) -> *mut *mut X509Crl {
+        &raw mut self.raw
+    }
+
+    /// Release the incumbent and become empty (the authority's `X509_CRL_free(x); x = NULL`).
+    fn reset(&mut self) {
+        let raw = core::mem::replace(&mut self.raw, ptr::null_mut());
+        // SAFETY: `raw` is NULL or the reference this owner held and no longer does.
+        unsafe { X509_CRL_free(raw) };
+    }
+
+    /// Give the reference back to C, for an out-parameter or a return value.
+    fn into_raw(self) -> *mut X509Crl {
+        let raw = self.raw;
+        core::mem::forget(self);
+        raw
+    }
+}
+
+impl Drop for OwnedCrl {
+    fn drop(&mut self) {
+        // SAFETY: `raw` is NULL or the exclusively owned reference; `Drop` runs once.
+        unsafe { X509_CRL_free(self.raw) }
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // `X509_self_signed` — `crypto/x509/x509_vfy.c:100-115`.
 // ---------------------------------------------------------------------------------------------
@@ -1491,37 +1556,38 @@ pub unsafe extern "C" fn X509_CRL_diff(
         }
     }
 
-    // Create new CRL.
-    // SAFETY: `base` is live.
-    let crl = unsafe { X509_CRL_new_ex((*base).libctx, (*base).propq()) };
+    // Create new CRL. The owner is the single release on every failure exit below.
+    // SAFETY: `base` is live; the constructor answers NULL or a fresh object.
+    let crl = unsafe { OwnedCrl::adopt(X509_CRL_new_ex((*base).libctx, (*base).propq())) };
     let mut failed = false;
     'body: {
         // SAFETY: `crl` is NULL or a fresh object; `newer` is live.
         unsafe {
-            if crl.is_null() || X509_CRL_set_version(crl, X509_CRL_VERSION_2) == 0 {
+            if crl.as_ptr().is_null() || X509_CRL_set_version(crl.as_ptr(), X509_CRL_VERSION_2) == 0
+            {
                 raise_site(&X509_VFY_2449);
                 failed = true;
                 break 'body;
             }
             // Set issuer name.
-            if X509_CRL_set_issuer_name(crl, X509_CRL_get_issuer(newer)) == 0 {
+            if X509_CRL_set_issuer_name(crl.as_ptr(), X509_CRL_get_issuer(newer)) == 0 {
                 raise_site(&X509_VFY_2454);
                 failed = true;
                 break 'body;
             }
-            if X509_CRL_set1_lastUpdate(crl, X509_CRL_get0_lastUpdate(newer)) == 0 {
+            if X509_CRL_set1_lastUpdate(crl.as_ptr(), X509_CRL_get0_lastUpdate(newer)) == 0 {
                 raise_site(&X509_VFY_2459);
                 failed = true;
                 break 'body;
             }
-            if X509_CRL_set1_nextUpdate(crl, X509_CRL_get0_nextUpdate(newer)) == 0 {
+            if X509_CRL_set1_nextUpdate(crl.as_ptr(), X509_CRL_get0_nextUpdate(newer)) == 0 {
                 raise_site(&X509_VFY_2463);
                 failed = true;
                 break 'body;
             }
             // Set base CRL number: must be critical.
             if X509_CRL_add1_ext_i2d(
-                crl,
+                crl.as_ptr(),
                 NID_delta_crl,
                 (*base).crl_number.cast::<c_void>(),
                 1,
@@ -1537,7 +1603,7 @@ pub unsafe extern "C" fn X509_CRL_diff(
             let nunm = X509_CRL_get_ext_count(newer);
             for i in 0..nunm {
                 let ext = X509_CRL_get_ext(newer, i);
-                if X509_CRL_add_ext(crl, ext, -1) == 0 {
+                if X509_CRL_add_ext(crl.as_ptr(), ext, -1) == 0 {
                     raise_site(&X509_VFY_2481);
                     failed = true;
                     break 'body;
@@ -1559,7 +1625,7 @@ pub unsafe extern "C" fn X509_CRL_diff(
                         failed = true;
                         break 'body;
                     }
-                    if X509_CRL_add0_revoked(crl, dup) == 0 {
+                    if X509_CRL_add0_revoked(crl.as_ptr(), dup) == 0 {
                         X509_REVOKED_free(dup);
                         raise_site(&X509_VFY_2506);
                         failed = true;
@@ -1568,7 +1634,7 @@ pub unsafe extern "C" fn X509_CRL_diff(
                 }
             }
 
-            if !skey.is_null() && !md.is_null() && X509_CRL_sign(crl, skey, md) == 0 {
+            if !skey.is_null() && !md.is_null() && X509_CRL_sign(crl.as_ptr(), skey, md) == 0 {
                 raise_site(&X509_VFY_2513);
                 failed = true;
                 break 'body;
@@ -1577,11 +1643,10 @@ pub unsafe extern "C" fn X509_CRL_diff(
     }
 
     if failed {
-        // SAFETY: `crl` is NULL or owned here.
-        unsafe { X509_CRL_free(crl) };
+        // The owner releases the partially populated (but fully initialized) CRL exactly once.
         return ptr::null_mut();
     }
-    crl
+    crl.into_raw()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2478,15 +2543,11 @@ pub(crate) unsafe fn verify_cb_cert(
         } else {
             OPENSSL_sk_value((*ctx).chain, depth).cast::<X509>()
         };
-        if err != X509_V_OK {
-            (*ctx).error = err;
-        }
-        match (*ctx).verify_cb {
-            Some(cb) => cb(0, ctx.cast()),
-            // The authority calls a NULL pointer here; that is unreachable in the landed surface
-            // because `X509_STORE_CTX_init` always installs a callback (`null_callback` by default).
-            None => 0,
-        }
+        // Dispatch last: `dispatch_verify` publishes `err` (when non-zero) and then calls the
+        // application, which may replace any of these fields.
+        // The `None` arm of the authority's call is unreachable in the landed surface because
+        // `X509_STORE_CTX_init` always installs a callback (`null_callback` by default).
+        dispatch_verify(ctx, 0, (err != X509_V_OK).then_some(err))
     }
 }
 
@@ -2708,6 +2769,37 @@ unsafe fn lookup_cert_match(result: *mut *mut X509, ctx: *mut X509StoreCtx, x: *
     }
 }
 
+/// The one application-callback dispatch in this unit.
+///
+/// `err` is published **before** the callback (so the application sees the exact `X509_V_ERR_*`
+/// being reported), the callback pointer is copied out of the context before it is called (the
+/// callback may replace `verify_cb`, and the copy is what this call uses), no Rust reference is
+/// held across the call (every access is through the raw `ctx`), and nothing is written to the
+/// context afterwards. `err = None` is the "no new error" case (`verify_cb_cert`'s `X509_V_OK`
+/// argument and `internal_verify`'s success call).
+///
+/// # Safety
+///
+/// `ctx` must be live with a live `verify_cb` slot, and the callback must satisfy the authority's
+/// `X509_STORE_CTX_verify_cb` contract for this context.
+unsafe fn dispatch_verify(ctx: *mut X509StoreCtx, ok: c_int, err: Option<c_int>) -> c_int {
+    if let Some(err) = err {
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { (*ctx).error = err };
+    }
+    // Copy the function pointer out before the call: the callback is the last operation, and it
+    // may itself replace `ctx->verify_cb`.
+    // SAFETY: `ctx` is live per the contract; reading one field is in bounds.
+    let cb = unsafe { (*ctx).verify_cb };
+    // SAFETY: `ctx` is live and `cb`, when present, is the live callback the contract names.
+    unsafe {
+        match cb {
+            Some(cb) => cb(ok, ctx.cast()),
+            None => 0,
+        }
+    }
+}
+
 /// `static int verify_cb_crl(X509_STORE_CTX *ctx, int err)` — `crypto/x509/x509_vfy.c:185-189`.
 ///
 /// # Safety
@@ -2715,13 +2807,7 @@ unsafe fn lookup_cert_match(result: *mut *mut X509, ctx: *mut X509StoreCtx, x: *
 /// `ctx` must be live with a live `verify_cb` slot.
 unsafe fn verify_cb_crl(ctx: *mut X509StoreCtx, err: c_int) -> c_int {
     // SAFETY: `ctx` is live per the contract.
-    unsafe {
-        (*ctx).error = err;
-        match (*ctx).verify_cb {
-            Some(cb) => cb(0, ctx.cast()),
-            None => 0,
-        }
-    }
+    unsafe { dispatch_verify(ctx, 0, Some(err)) }
 }
 
 /// `static int verify_cb_ocsp(X509_STORE_CTX *ctx, int err)` — `crypto/x509/x509_vfy.c:201-205`.
@@ -2731,13 +2817,7 @@ unsafe fn verify_cb_crl(ctx: *mut X509StoreCtx, err: c_int) -> c_int {
 /// `ctx` must be live with a live `verify_cb` slot.
 unsafe fn verify_cb_ocsp(ctx: *mut X509StoreCtx, err: c_int) -> c_int {
     // SAFETY: `ctx` is live per the contract.
-    unsafe {
-        (*ctx).error = err;
-        match (*ctx).verify_cb {
-            Some(cb) => cb(0, ctx.cast()),
-            None => 0,
-        }
-    }
+    unsafe { dispatch_verify(ctx, 0, Some(err)) }
 }
 
 /// `static int check_auth_level(X509_STORE_CTX *ctx)` — `crypto/x509/x509_vfy.c:209-234`.
@@ -3810,8 +3890,8 @@ unsafe extern "C" fn check_policy(ctx: *mut c_void) -> c_int {
 unsafe fn check_cert_crl(ctx: *mut X509StoreCtx) -> c_int {
     // SAFETY: `ctx` is live per the contract; the CRL callees obey their own contracts.
     unsafe {
-        let mut crl: *mut X509Crl = ptr::null_mut();
-        let mut dcrl: *mut X509Crl = ptr::null_mut();
+        let mut crl = OwnedCrl::none();
+        let mut dcrl = OwnedCrl::none();
         let mut ok: c_int = 0;
         let cnum = (*ctx).error_depth;
         let x = OPENSSL_sk_value((*ctx).chain, cnum).cast::<X509>();
@@ -3835,39 +3915,44 @@ unsafe fn check_cert_crl(ctx: *mut X509StoreCtx) -> c_int {
                 if let Some(get_crl) = (*ctx).get_crl {
                     let mut crl_issuer: *mut X509 = ptr::null_mut();
                     let mut reasons: c_uint = 0;
-                    ok = get_crl(ctx.cast(), &raw mut crl, x);
-                    if !crl.is_null() {
-                        (*ctx).current_crl_score =
-                            get_crl_score(ctx, &raw mut crl_issuer, &raw mut reasons, crl, x);
+                    ok = get_crl(ctx.cast(), crl.slot(), x);
+                    if !crl.as_ptr().is_null() {
+                        (*ctx).current_crl_score = get_crl_score(
+                            ctx,
+                            &raw mut crl_issuer,
+                            &raw mut reasons,
+                            crl.as_ptr(),
+                            x,
+                        );
                         (*ctx).current_issuer = crl_issuer;
                         (*ctx).current_reasons = reasons;
                     }
                 } else {
-                    ok = get_crl_delta(ctx, &raw mut crl, &raw mut dcrl, x);
+                    ok = get_crl_delta(ctx, crl.slot(), dcrl.slot(), x);
                 }
                 if ok == 0 {
                     ok = verify_cb_crl(ctx, X509_V_ERR_UNABLE_TO_GET_CRL);
                     break 'done;
                 }
-                (*ctx).current_crl = crl;
+                (*ctx).current_crl = crl.as_ptr();
                 ok = match (*ctx).check_crl {
-                    Some(cb) => cb(ctx.cast(), crl),
+                    Some(cb) => cb(ctx.cast(), crl.as_ptr()),
                     None => 0,
                 };
                 if ok == 0 {
                     break 'done;
                 }
 
-                if !dcrl.is_null() {
+                if !dcrl.as_ptr().is_null() {
                     ok = match (*ctx).check_crl {
-                        Some(cb) => cb(ctx.cast(), dcrl),
+                        Some(cb) => cb(ctx.cast(), dcrl.as_ptr()),
                         None => 0,
                     };
                     if ok == 0 {
                         break 'done;
                     }
                     ok = match (*ctx).cert_crl {
-                        Some(cb) => cb(ctx.cast(), dcrl, x),
+                        Some(cb) => cb(ctx.cast(), dcrl.as_ptr(), x),
                         None => 0,
                     };
                     if ok == 0 {
@@ -3879,7 +3964,7 @@ unsafe fn check_cert_crl(ctx: *mut X509StoreCtx) -> c_int {
 
                 if ok != 2 {
                     ok = match (*ctx).cert_crl {
-                        Some(cb) => cb(ctx.cast(), crl, x),
+                        Some(cb) => cb(ctx.cast(), crl.as_ptr(), x),
                         None => 0,
                     };
                     if ok == 0 {
@@ -3888,18 +3973,16 @@ unsafe fn check_cert_crl(ctx: *mut X509StoreCtx) -> c_int {
                 }
 
                 (*ctx).current_crl = ptr::null_mut();
-                X509_CRL_free(crl);
-                X509_CRL_free(dcrl);
-                crl = ptr::null_mut();
-                dcrl = ptr::null_mut();
+                // One release site for both handles on the loop's continue path; a future early
+                // exit releases through the owners instead.
+                crl.reset();
+                dcrl.reset();
                 if last_reasons == (*ctx).current_reasons {
                     ok = verify_cb_crl(ctx, X509_V_ERR_UNABLE_TO_GET_CRL);
                     break 'done;
                 }
             }
         }
-        X509_CRL_free(crl);
-        X509_CRL_free(dcrl);
         (*ctx).current_crl = ptr::null_mut();
         ok
     }
@@ -4485,15 +4568,15 @@ unsafe fn get_crl_delta(
     unsafe {
         let mut issuer: *mut X509 = ptr::null_mut();
         let mut crl_score: c_int = 0;
-        let mut crl: *mut X509Crl = ptr::null_mut();
-        let mut dcrl: *mut X509Crl = ptr::null_mut();
+        let mut crl = OwnedCrl::none();
+        let mut dcrl = OwnedCrl::none();
         let nm = X509_get_issuer_name(x);
         let mut reasons = (*ctx).current_reasons;
 
         let ok = get_crl_sk(
             ctx,
-            &raw mut crl,
-            &raw mut dcrl,
+            crl.slot(),
+            dcrl.slot(),
             &raw mut issuer,
             &raw mut crl_score,
             &raw mut reasons,
@@ -4504,11 +4587,11 @@ unsafe fn get_crl_delta(
                 Some(cb) => cb(ctx.cast(), nm),
                 None => ptr::null_mut(),
             };
-            if !skcrl.is_null() || crl.is_null() {
+            if !skcrl.is_null() || crl.as_ptr().is_null() {
                 get_crl_sk(
                     ctx,
-                    &raw mut crl,
-                    &raw mut dcrl,
+                    crl.slot(),
+                    dcrl.slot(),
                     &raw mut issuer,
                     &raw mut crl_score,
                     &raw mut reasons,
@@ -4518,12 +4601,13 @@ unsafe fn get_crl_delta(
             OPENSSL_sk_pop_free(skcrl, Some(x509_crl_free_void));
         }
 
-        if !crl.is_null() {
+        if !crl.as_ptr().is_null() {
             (*ctx).current_issuer = issuer;
             (*ctx).current_crl_score = crl_score;
             (*ctx).current_reasons = reasons;
-            *pcrl = crl;
-            *pdcrl = dcrl;
+            // Ownership of both references transfers to the caller's out-parameters.
+            *pcrl = crl.into_raw();
+            *pdcrl = dcrl.into_raw();
             return 1;
         }
         0
@@ -4667,10 +4751,7 @@ unsafe extern "C" fn internal_verify(ctx: *mut c_void) -> c_int {
         let param = (*ctx).param.cast::<X509VerifyParam>();
 
         if !(*ctx).rpk.is_null() {
-            let ok = match (*ctx).verify_cb {
-                Some(cb) => cb(c_int::from((*ctx).error == X509_V_OK), ctx.cast()),
-                None => 0,
-            };
+            let ok = dispatch_verify(ctx, c_int::from((*ctx).error == X509_V_OK), None);
             if ok == 0 {
                 return 0;
             }
@@ -4737,10 +4818,9 @@ unsafe extern "C" fn internal_verify(ctx: *mut c_void) -> c_int {
             (*ctx).current_issuer = xi;
             (*ctx).current_cert = xs;
             (*ctx).error_depth = n;
-            let ok = match (*ctx).verify_cb {
-                Some(cb) => cb(1, ctx.cast()),
-                None => 0,
-            };
+            // The per-certificate success dispatch: no new error, and the callback is the last
+            // operation in the iteration (it may replace `current_cert`, the chain or `verify_cb`).
+            let ok = dispatch_verify(ctx, 1, None);
             if ok == 0 {
                 return 0;
             }
@@ -5594,11 +5674,13 @@ unsafe fn dane_verify(ctx: *mut X509StoreCtx) -> c_int {
 mod tests {
     #![allow(clippy::panic, clippy::unwrap_used)]
 
+    use core::cell::Cell;
     use core::sync::atomic::{AtomicBool, AtomicI32, AtomicUsize, Ordering};
 
     use super::*;
     use crate::asn1::layout::MBSTRING_UTF8;
     use crate::asn1::prim::ASN1_INTEGER_set;
+    use crate::asn1::string::ASN1_INTEGER_new;
     use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free};
     use crate::runtime::obj::NID_basic_constraints;
@@ -5611,6 +5693,7 @@ mod tests {
     };
     use crate::x509::x509name::X509_NAME_add_entry_by_txt;
     use crate::x509::x_all::X509_sign;
+    use crate::x509::x_crl::X509_REVOKED_new;
     use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
     use crate::x509::x_x509::X509_new;
 
@@ -6043,6 +6126,284 @@ mod tests {
             X509_STORE_CTX_set0_verified_chain(ctx, ptr::null_mut());
             assert!(X509_STORE_CTX_get0_chain(ctx).is_null());
             X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Revocation: CRL ownership and the per-certificate signature loop
+    // -----------------------------------------------------------------------------------------
+
+    /// Flip one bit of a certificate's outer signature, leaving the signed body and its encoding
+    /// untouched. The signature algorithm still parses; only verification fails.
+    unsafe fn break_signature(cert: *mut X509) {
+        // SAFETY: `cert` is live and its signature bit string is its own storage.
+        unsafe {
+            let sig = &raw mut (*cert).signature;
+            assert!((*sig).length > 0 && !(*sig).data.is_null());
+            *(*sig).data ^= 0x01;
+        }
+    }
+
+    /// A v2 CRL over `issuer`'s name, optionally revoking one serial.
+    unsafe fn make_crl(
+        issuer: &CStr,
+        issuer_key: *mut EvpPkey,
+        last_update: c_long,
+        next_update: c_long,
+        revoked: Option<c_long>,
+    ) -> *mut X509Crl {
+        // SAFETY: the constructor answers NULL or a fresh object this frame owns.
+        let crl = unsafe { X509_CRL_new_ex(ptr::null_mut(), ptr::null()) };
+        assert!(!crl.is_null());
+        // SAFETY: `crl` is fresh and every callee is called under its own contract.
+        unsafe {
+            assert_eq!(X509_CRL_set_version(crl, X509_CRL_VERSION_2), 1);
+            let n = name(issuer);
+            assert_eq!(X509_CRL_set_issuer_name(crl, n), 1);
+            X509_NAME_free(n);
+            let last = X509_gmtime_adj(ptr::null_mut(), last_update);
+            let next = X509_gmtime_adj(ptr::null_mut(), next_update);
+            assert!(!last.is_null() && !next.is_null());
+            assert_eq!(X509_CRL_set1_lastUpdate(crl, last), 1);
+            assert_eq!(X509_CRL_set1_nextUpdate(crl, next), 1);
+            ASN1_TIME_free(last);
+            ASN1_TIME_free(next);
+            if let Some(serial) = revoked {
+                let rev = X509_REVOKED_new();
+                assert!(!rev.is_null());
+                assert_eq!(ASN1_INTEGER_set(&raw mut (*rev).serialNumber, serial), 1);
+                (*rev).revocationDate = X509_gmtime_adj(ptr::null_mut(), 0);
+                assert_eq!(X509_CRL_add0_revoked(crl, rev), 1);
+            }
+            assert!(X509_CRL_sign(crl, issuer_key, EVP_sha256()) > 0);
+        }
+        crl
+    }
+
+    /// Give a fresh CRL a number without encoding the extension: `X509_CRL_diff` reads only the
+    /// decoded field, and the CRL's own free releases it.
+    unsafe fn set_crl_number(crl: *mut X509Crl, n: c_long) {
+        // SAFETY: both constructors allocate this frame's own integer; the write targets the
+        // fresh CRL's empty `crl_number` slot.
+        unsafe {
+            let num = ASN1_INTEGER_new();
+            assert!(!num.is_null());
+            assert_eq!(ASN1_INTEGER_set(num, n), 1);
+            (*crl).crl_number = num;
+        }
+    }
+
+    thread_local! {
+        static PROVIDED_CRL: Cell<*mut X509Crl> = const { Cell::new(ptr::null_mut()) };
+    }
+
+    /// The application's `get_crl`: up-ref the configured CRL and hand it to the engine.
+    unsafe extern "C" fn provide_crl(
+        _ctx: *mut c_void,
+        pcrl: *mut *mut X509Crl,
+        _x: *mut X509,
+    ) -> c_int {
+        PROVIDED_CRL.with(|cell| {
+            let crl = cell.get();
+            if crl.is_null() {
+                return 0;
+            }
+            // SAFETY: `crl` is the live CRL this test built and has not freed yet; the engine
+            // takes one reference of its own.
+            unsafe {
+                if X509_CRL_up_ref(crl) == 0 {
+                    return 0;
+                }
+                *pcrl = crl;
+            }
+            1
+        })
+    }
+
+    static CRL_CALLBACK_SAW_REVOKED: AtomicBool = AtomicBool::new(false);
+    static CRL_CALLBACK_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// Queries the published state and rejects, proving the CRL dispatch publishes its error
+    /// before the application runs.
+    unsafe extern "C" fn rejecting_crl_cb(_ok: c_int, raw: *mut c_void) -> c_int {
+        let ctx = raw.cast::<X509StoreCtx>();
+        // SAFETY: `ctx` is the live context the engine is verifying.
+        unsafe {
+            if X509_STORE_CTX_get_error(ctx) == X509_V_ERR_CERT_REVOKED {
+                CRL_CALLBACK_SAW_REVOKED.store(true, Ordering::Relaxed);
+            }
+            let owned = X509_STORE_CTX_get1_chain(ctx);
+            if !owned.is_null() {
+                // SAFETY: the `get1` answer is this callback's to release.
+                OPENSSL_sk_pop_free(owned, Some(x509_free_void));
+            }
+        }
+        CRL_CALLBACK_CALLS.fetch_add(1, Ordering::Relaxed);
+        0
+    }
+
+    /// Require a CRL for the leaf, as `openssl verify -crl_check` does.
+    unsafe fn require_crl(ctx: *mut X509StoreCtx) {
+        // SAFETY: `ctx` is initialised, so its param is live.
+        let rc = unsafe {
+            X509_VERIFY_PARAM_set_flags(
+                X509_STORE_CTX_get0_param(ctx).cast::<X509VerifyParam>(),
+                X509_V_FLAG_CRL_CHECK,
+            )
+        };
+        assert_eq!(rc, 1);
+    }
+
+    #[test]
+    fn a_broken_leaf_signature_fails_at_depth_zero() {
+        // SAFETY: the fixture owns every object.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            break_signature(chain.leaf);
+            let ctx = chain.ctx();
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(
+                X509_STORE_CTX_get_error(ctx),
+                X509_V_ERR_CERT_SIGNATURE_FAILURE
+            );
+            assert_eq!(X509_STORE_CTX_get_error_depth(ctx), 0);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn a_broken_intermediate_signature_fails_at_depth_one() {
+        // SAFETY: the fixture owns every object.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            break_signature(chain.inter);
+            let ctx = chain.ctx();
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(
+                X509_STORE_CTX_get_error(ctx),
+                X509_V_ERR_CERT_SIGNATURE_FAILURE
+            );
+            assert_eq!(X509_STORE_CTX_get_error_depth(ctx), 1);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn a_crl_that_revokes_the_leaf_fails() {
+        // SAFETY: the fixture owns every object and the CRL is released by this frame.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let crl = make_crl(c"inter", chain.inter_key, 0, 86_400, Some(3));
+            let ctx = chain.ctx();
+            require_crl(ctx);
+            X509_STORE_CTX_set_get_crl(ctx, Some(provide_crl));
+            PROVIDED_CRL.with(|c| c.set(crl));
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_CERT_REVOKED);
+            PROVIDED_CRL.with(|c| c.set(ptr::null_mut()));
+            X509_STORE_CTX_free(ctx);
+            X509_CRL_free(crl);
+        }
+    }
+
+    #[test]
+    fn an_expired_crl_fails() {
+        // SAFETY: as `a_crl_that_revokes_the_leaf_fails`.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let crl = make_crl(c"inter", chain.inter_key, -172_800, -86_400, None);
+            let ctx = chain.ctx();
+            require_crl(ctx);
+            X509_STORE_CTX_set_get_crl(ctx, Some(provide_crl));
+            PROVIDED_CRL.with(|c| c.set(crl));
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_CRL_HAS_EXPIRED);
+            PROVIDED_CRL.with(|c| c.set(ptr::null_mut()));
+            X509_STORE_CTX_free(ctx);
+            X509_CRL_free(crl);
+        }
+    }
+
+    #[test]
+    fn a_missing_crl_fails_when_required() {
+        // SAFETY: the fixture owns every object.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let ctx = chain.ctx();
+            require_crl(ctx);
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_UNABLE_TO_GET_CRL);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn a_crl_callback_that_queries_and_rejects_keeps_the_error() {
+        // SAFETY: the fixture owns every object and the CRL is released by this frame.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let crl = make_crl(c"inter", chain.inter_key, 0, 86_400, Some(3));
+            let ctx = chain.ctx();
+            require_crl(ctx);
+            X509_STORE_CTX_set_get_crl(ctx, Some(provide_crl));
+            X509_STORE_CTX_set_verify_cb(ctx, Some(rejecting_crl_cb));
+            PROVIDED_CRL.with(|c| c.set(crl));
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_CERT_REVOKED);
+            assert!(CRL_CALLBACK_CALLS.load(Ordering::Relaxed) > 0);
+            assert!(CRL_CALLBACK_SAW_REVOKED.load(Ordering::Relaxed));
+            PROVIDED_CRL.with(|c| c.set(ptr::null_mut()));
+            X509_STORE_CTX_free(ctx);
+            X509_CRL_free(crl);
+        }
+    }
+
+    #[test]
+    fn a_half_built_crl_is_released_on_failure() {
+        // SAFETY: both CRLs and the builder's output are this frame's.
+        unsafe {
+            let base = X509_CRL_new_ex(ptr::null_mut(), ptr::null());
+            let newer = X509_CRL_new_ex(ptr::null_mut(), ptr::null());
+            assert!(!base.is_null() && !newer.is_null());
+            set_crl_number(base, 1);
+            set_crl_number(newer, 2);
+            // Drop both issuer names so the pre-checks agree (`X509_NAME_cmp(NULL, NULL)` is 0)
+            // and the builder fails at `X509_CRL_set_issuer_name(crl, NULL)` -- *after* creating
+            // and partially populating the delta CRL. The owner releases it once.
+            X509_NAME_free((*base).crl.issuer);
+            (*base).crl.issuer = ptr::null_mut();
+            X509_NAME_free((*newer).crl.issuer);
+            (*newer).crl.issuer = ptr::null_mut();
+            let out = X509_CRL_diff(base, newer, ptr::null_mut(), ptr::null(), 0);
+            assert!(out.is_null());
+            X509_CRL_free(base);
+            X509_CRL_free(newer);
+        }
+    }
+
+    #[test]
+    fn a_delta_crl_diff_returns_an_owned_crl() {
+        // SAFETY: both inputs and the returned CRL are this frame's.
+        unsafe {
+            let base = X509_CRL_new_ex(ptr::null_mut(), ptr::null());
+            let newer = X509_CRL_new_ex(ptr::null_mut(), ptr::null());
+            assert!(!base.is_null() && !newer.is_null());
+            let n = name(c"inter");
+            assert_eq!(X509_CRL_set_issuer_name(base, n), 1);
+            assert_eq!(X509_CRL_set_issuer_name(newer, n), 1);
+            X509_NAME_free(n);
+            let t = X509_gmtime_adj(ptr::null_mut(), 0);
+            assert_eq!(X509_CRL_set1_lastUpdate(base, t), 1);
+            assert_eq!(X509_CRL_set1_lastUpdate(newer, t), 1);
+            ASN1_TIME_free(t);
+            set_crl_number(base, 1);
+            set_crl_number(newer, 2);
+            let out = X509_CRL_diff(base, newer, ptr::null_mut(), ptr::null(), 0);
+            assert!(!out.is_null(), "a comparable pair must produce a delta CRL");
+            // The owner transferred on success; the reference is the caller's to release once.
+            X509_CRL_free(out);
+            X509_CRL_free(base);
+            X509_CRL_free(newer);
         }
     }
 }
