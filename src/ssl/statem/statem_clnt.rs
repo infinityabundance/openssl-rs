@@ -138,6 +138,10 @@ const SSL_R_BAD_SIGNATURE: c_int = 148;
 const SSL_R_BAD_KEY_SHARE: c_int = 108;
 /// `SSL_R_SSL3_SESSION_ID_TOO_LONG` — `sslerr.h:300`.
 const SSL_R_SSL3_SESSION_ID_TOO_LONG: c_int = 300;
+/// `SSL_R_WRONG_CURVE` — `sslerr.h:378`.
+const SSL_R_WRONG_CURVE: c_int = 378;
+/// `SSL_R_WRONG_SIGNATURE_TYPE` — `sslerr.h:370`.
+const SSL_R_WRONG_SIGNATURE_TYPE: c_int = 370;
 
 // --- connection flags --------------------------------------------------------
 const SSL3_VERSION: c_int = 0x0300;
@@ -1862,7 +1866,6 @@ pub(crate) unsafe fn tls13_process_peer_certificate(
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server: bool) -> c_int {
     use crate::evp::digest::{EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_new};
-    use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
     use crate::rsa::ctrl::{
         EVP_PKEY_CTX_set_rsa_mgf1_md, EVP_PKEY_CTX_set_rsa_padding,
@@ -1887,12 +1890,14 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
         return 0;
     }
     let sig = &body[4..4 + siglen];
-    let is_pss = match sigalg {
-        0x0804 => true,
-        0x0401 => false,
-        // `ecdsa_secp256r1_sha256` (0x0403): an EC key needs no RSA padding; the reduced
-        // client's SHA-256 digest matches the scheme.
-        0x0403 => false,
+    // `tls1_lookup_sigalg` (`t1_lib.c:2367-2432`): the scheme names its key type and digest. An
+    // ECDSA scheme carries the curve it may be used with and takes no RSA padding.
+    let (is_pss, md) = match sigalg {
+        0x0804 => (true, crate::evp::legacy_sha::EVP_sha256()),
+        0x0401 => (false, crate::evp::legacy_sha::EVP_sha256()),
+        0x0403 => (false, crate::evp::legacy_sha::EVP_sha256()),
+        0x0503 => (false, crate::evp::legacy_sha::EVP_sha384()),
+        0x0603 => (false, crate::evp::legacy_sha::EVP_sha512()),
         _ => return 0,
     };
 
@@ -1904,6 +1909,27 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
     // SAFETY: `peer_cert` is a live certificate.
     let pkey = unsafe { X509_get0_pubkey(peer_cert.cast()) };
     if pkey.is_null() {
+        return 0;
+    }
+    // `tls12_check_peer_sigalg` (`t1_lib.c:2690-2770`): the scheme must be consistent with the
+    // peer's key. An EC key signs only under the scheme whose curve column names its own curve
+    // (`SSL_R_WRONG_CURVE`); an RSA key only under a PSS scheme or PKCS1-SHA256. Without this a
+    // P-384 key's signature could be labelled with the P-256 scheme (or an ECDSA signature with
+    // an RSA label) and still verify, because the TBS does not bind the scheme id.
+    // SAFETY: `pkey` is live.
+    let base_id = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) };
+    if base_id == crate::evp::pkey_ctx::EVP_PKEY_EC {
+        // SAFETY: `pkey` is live; a non-EC key answers `NID_undef`.
+        let curve = unsafe { crate::ssl::statem::statem_srvr::ssl_get_ec_curve_nid(pkey) };
+        let expected = crate::ssl::statem::statem_srvr::ec_sigalg_for_curve(curve);
+        if expected.map(|(scheme, _)| scheme) != Some(sigalg) {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_WRONG_CURVE) };
+            return 0;
+        }
+    } else if sigalg != 0x0804 && sigalg != 0x0401 {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_WRONG_SIGNATURE_TYPE) };
         return 0;
     }
 
@@ -1944,7 +1970,6 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8], is_server:
     // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
     // handle's `Drop` at the end of the frame.
     let mctx = mctx_owner.as_ptr();
-    let md = EVP_sha256();
     let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
     let mut ok = false;
     // SAFETY: `mctx`/`pkey` are live; `tbs`/`sig` are the caller's.

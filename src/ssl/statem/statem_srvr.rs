@@ -138,6 +138,8 @@ const SSL_R_UNSUPPORTED_PROTOCOL: c_int = 258;
 /// `SSL_R_NO_SUITABLE_KEY_SHARE` — `sslerr.h:215` (101). The value 380 is
 /// `SSL_R_ILLEGAL_SUITEB_DIGEST`, which made a TLS1.3 group mismatch report the wrong reason.
 const SSL_R_NO_SUITABLE_KEY_SHARE: c_int = 101;
+/// `SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM` — `sslerr.h:188` (118).
+const SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM: c_int = 118;
 /// `SSL_AD_ILLEGAL_PARAMETER` — `ssl3.h` (47).
 #[allow(dead_code)]
 const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
@@ -197,6 +199,8 @@ const TLSEXT_TYPE_STATUS_REQUEST: u16 = 5;
 const TLSEXT_TYPE_POST_HANDSHAKE_AUTH: u16 = 49;
 /// `TLSEXT_TYPE_session_ticket` — `tls1.h:148`.
 const TLSEXT_TYPE_SESSION_TICKET: u16 = 35;
+/// `TLSEXT_TYPE_signature_algorithms` — `tls1.h:145`.
+const TLSEXT_TYPE_SIG_ALGS: u16 = 13;
 /// `SSL_PHA_EXT_RECEIVED` — `ssl_local.h:373`.
 const SSL_PHA_EXT_RECEIVED: c_int = 2;
 /// `TLS1_AD_NO_APPLICATION_PROTOCOL` — `tls1.h:80`.
@@ -1728,6 +1732,19 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 }
             }
         }
+        if etype == TLSEXT_TYPE_SIG_ALGS {
+            // `tls_parse_ctos_sig_algs` (`extensions_srvr.c:303-320`): the body is
+            // `supported_signature_algorithms<2..2^16-2>`. The authority refuses a missing,
+            // empty or truncated vector with `SSL_R_BAD_EXTENSION`, and saves the rest for
+            // `tls_choose_sigalg`. The saved list is re-read by the certificate-verify
+            // constructor, so it lives on the connection rather than in this frame.
+            // SAFETY: `s` is live; `eb` is the extension body.
+            if unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs(s, eb) } == 0 {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                return 0;
+            }
+        }
         if etype == TLSEXT_TYPE_PSK_KEX_MODES && !eb.is_empty() {
             // `tls_parse_ctos_psk_kex_modes` (`extensions_srvr.c:568`): `PskKeyExchangeModes` is
             // `ke_modes<1..255>`; only `psk_dhe_ke` is honoured (a `psk_ke`-only offer is a
@@ -2667,17 +2684,108 @@ pub(crate) unsafe fn tls13_construct_certificate(s: *mut Ssl, context: &[u8]) ->
     unsafe { crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, out.as_ptr(), n) }
 }
 
+/// The ECDSA signature scheme and digest a key on `curve_nid` signs with — the curve column of
+/// `sigalg_lookup_tbl[]` (`t1_lib.c:1964-2142`) that `find_sig_alg` (`t1_lib.c:4575-4589`)
+/// matches against `ssl_get_EC_curve_nid`. `None` for a curve with no TLS1.3 ECDSA scheme.
+pub(crate) fn ec_sigalg_for_curve(
+    curve_nid: c_int,
+) -> Option<(u16, *const crate::evp::digest::EvpMd)> {
+    use crate::evp::legacy_sha::{EVP_sha256, EVP_sha384, EVP_sha512};
+    use crate::runtime::obj as o;
+    match curve_nid {
+        // `ecdsa_secp256r1_sha256`, `ecdsa_secp384r1_sha384`, `ecdsa_secp521r1_sha512`.
+        o::NID_X9_62_prime256v1 => Some((0x0403, EVP_sha256())),
+        o::NID_secp384r1 => Some((0x0503, EVP_sha384())),
+        o::NID_secp521r1 => Some((0x0603, EVP_sha512())),
+        _ => None,
+    }
+}
+
+/// `int ssl_get_EC_curve_nid(const EVP_PKEY *pkey)` — `t1_lib.c:4884-4892`: the key's group
+/// name read through `EVP_PKEY_get_group_name` and resolved with `OBJ_txt2nid`.
+///
+/// The authority reaches a legacy key through `EVP_PKEY_get_params`' params-to-ctrl translation.
+/// This port's `EVP_PKEY_get_params` answers `EVP_R_INVALID_KEY` for a legacy key instead (a
+/// recorded divergence), so a refused name read falls back to the low-level group — the value
+/// that translation would have produced — rather than failing a legacy certificate. The refused
+/// read's error is popped so a successful lookup leaves the queue as the authority leaves it.
+///
+/// # Safety
+/// `pkey` must be live.
+pub(crate) unsafe fn ssl_get_ec_curve_nid(pkey: *const crate::evp::pkey::EvpPkey) -> c_int {
+    // `OSSL_MAX_NAME_SIZE` — `crypto/objects/obj_local.h`.
+    const OSSL_MAX_NAME_SIZE: usize = 50;
+    let mut gname = [0 as core::ffi::c_char; OSSL_MAX_NAME_SIZE];
+    crate::runtime::err::ERR_set_mark();
+    // SAFETY: `pkey` is live per the contract; `gname` is writable for its whole extent.
+    let named = unsafe {
+        crate::evp::pkey::EVP_PKEY_get_group_name(
+            pkey,
+            gname.as_mut_ptr(),
+            gname.len(),
+            core::ptr::null_mut(),
+        )
+    } > 0;
+    // A mark was set above; this discards the refused read's error when one was raised.
+    crate::runtime::err::ERR_pop_to_mark();
+    if named {
+        // SAFETY: a positive answer means `gname` holds NUL-terminated text.
+        return unsafe { crate::runtime::obj::OBJ_txt2nid(gname.as_ptr()) };
+    }
+    // SAFETY: `pkey` is live.
+    if unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) } != crate::evp::pkey_ctx::EVP_PKEY_EC
+    {
+        return crate::runtime::obj::NID_undef;
+    }
+    // SAFETY: `pkey` is a live EC key; the accessor answers its low-level key or NULL.
+    let ec = unsafe { crate::evp::p_legacy_assign::EVP_PKEY_get0_EC_KEY(pkey) };
+    if ec.is_null() {
+        return crate::runtime::obj::NID_undef;
+    }
+    // SAFETY: `ec` is the key `pkey` owns; its group (if any) is live with it.
+    let group = unsafe { crate::ec::key::EC_KEY_get0_group(ec) };
+    if group.is_null() {
+        return crate::runtime::obj::NID_undef;
+    }
+    // SAFETY: `group` is live.
+    unsafe { crate::ec::lib::EC_GROUP_get_curve_name(group) }
+}
+
+/// `find_sig_alg` (`t1_lib.c:4551-4592`) for this port's single configured certificate: the
+/// scheme this key signs with, provided the peer offered it in `signature_algorithms`.
+///
+/// The authority walks the *shared* list in preference order; only one scheme per key type is
+/// implemented here, so the test is membership of that scheme. A key with no implemented scheme
+/// (an EC key on a curve outside the table, or a non-RSA/non-EC key) answers `None`, which the
+/// caller reports as `SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM`.
+fn choose_sigalg(
+    base_id: c_int,
+    curve_nid: c_int,
+    offered: &[u16],
+) -> Option<(u16, *const crate::evp::digest::EvpMd)> {
+    if base_id == crate::evp::pkey_ctx::EVP_PKEY_EC {
+        let (scheme, md) = ec_sigalg_for_curve(curve_nid)?;
+        offered.contains(&scheme).then_some((scheme, md))
+    } else {
+        // TLS1.3 requires RSASSA-PSS for an RSA key (`tls12_check_peer_sigalg`,
+        // `t1_lib.c:2700-2739`): `rsa_pss_rsae_sha256`.
+        offered
+            .contains(&0x0804)
+            .then(|| (0x0804, crate::evp::legacy_sha::EVP_sha256()))
+    }
+}
+
 /// `CON_FUNC_RETURN tls_construct_cert_verify(...)` — `statem_lib.c:313-439`, reduced to a real RSA
 /// or ECDSA signature produced with the crate's `EVP_DigestSign` over the TLS1.3 TBS preamble
-/// (`get_cert_verify_tbs_data`, `statem_lib.c:258-311`) and the scheme id picked by the signer's key
-/// type. `is_server` selects the server context string; the client uses
+/// (`get_cert_verify_tbs_data`, `statem_lib.c:258-311`) and the scheme id selected by
+/// `find_sig_alg` from the signing key's curve and the peer's `signature_algorithms`.
+/// `is_server` selects the server context string; the client uses
 /// `"TLS 1.3, client CertificateVerify"` (`statem_lib.c:264-266`). The reduced peer verifies it.
 ///
 /// # Safety
 /// `s` is live.
 pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -> c_int {
     use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_new};
-    use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey::EvpPkey;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
     use crate::rsa::ctrl::{
@@ -2698,6 +2806,38 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
     if unsafe { (*cpk).privatekey }.is_null() {
         return 0;
     }
+    // SAFETY: `cpk` is a live slot; `privatekey` is the loaded signing key.
+    let pkey = unsafe { (*cpk).privatekey }.cast::<EvpPkey>();
+    // `tls1_lookup_sigalg`/`find_sig_alg` (`tls1_lib.c:4551-4592`): the scheme follows the
+    // signing key — an EC key uses the scheme whose curve column names its own curve, an RSA
+    // key uses `rsa_pss_rsae_sha256` — and it must be one the peer actually offered. The
+    // authority reports `SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM` (`tls_choose_sigalg`,
+    // `t1_lib.c:4617-4626`) rather than signing with a scheme the peer cannot verify.
+    // SAFETY: `pkey` is the live key.
+    let base_id = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) };
+    // SAFETY: `pkey` is the live key; a non-EC key answers `NID_undef`.
+    let curve_nid = unsafe { ssl_get_ec_curve_nid(pkey) };
+    // SAFETY: `s` is live; `peer_sigalgs` is the connection's own list of `peer_sigalgslen`
+    // native-endian schemes, alive until `SSL_free`.
+    let (sp, sn) = unsafe { ((*s).peer_sigalgs, (*s).peer_sigalgslen) };
+    let offered: &[u16] = if sp.is_null() || sn == 0 {
+        &[]
+    } else {
+        // SAFETY: the invariant above: a saved list is `sn` live `u16`s owned by `s`.
+        unsafe { core::slice::from_raw_parts(sp, sn) }
+    };
+    let Some((scheme, md)) = choose_sigalg(base_id, curve_nid, offered) else {
+        // SAFETY: `s` is live.
+        unsafe {
+            ossl_statem_fatal(
+                s,
+                SSL_AD_HANDSHAKE_FAILURE,
+                SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM,
+            )
+        };
+        return 0;
+    };
+    let is_ec = base_id == crate::evp::pkey_ctx::EVP_PKEY_EC;
     let ctx_str: &[u8] = if is_server {
         b"TLS 1.3, server CertificateVerify"
     } else {
@@ -2733,20 +2873,11 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
     // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
     // handle's `Drop` at the end of the frame.
     let mctx = mctx_owner.as_ptr();
-    // SAFETY: `cpk` is a live slot; `privatekey` is the loaded signing key.
-    let pkey = unsafe { (*cpk).privatekey }.cast::<EvpPkey>();
-    // The authority's `tls12_get_sigandhash`/`tls1_lookup_sigalg` picks the scheme by key type
-    // (`tls1_lib.c`): an EC key signs with `ecdsa_secp256r1_sha256` (0x0403) and takes no RSA
-    // padding; an RSA key signs with `rsa_pss_rsae_sha256` (0x0804).
-    // SAFETY: `pkey` is the live key.
-    let is_ec = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) }
-        == crate::evp::pkey_ctx::EVP_PKEY_EC;
     let mut ok = false;
     // SAFETY: `mctx`/`pkey` are live; `tbs` is `pos` initialised bytes.
     unsafe {
         let mut siglen = 0usize;
         let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
-        let md = EVP_sha256();
         let init_ok = EVP_DigestSignInit(mctx, &mut pctx, md, core::ptr::null_mut(), pkey) > 0
             && !pctx.is_null()
             && EVP_PKEY_CTX_set_signature_md(pctx, md) > 0;
@@ -2778,16 +2909,8 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
                         // SAFETY (enclosing block): `body_block` owns 1030 initialised
                         // bytes; this frame holds the only reference for the borrow.
                         let body = core::slice::from_raw_parts_mut(body_block.as_ptr(), 1030);
-                        // `ecdsa_secp256r1_sha256` (0x0403) for an EC key, else
-                        // `rsa_pss_rsae_sha256` (0x0804).
-                        let sigalg: [u8; 2] = if is_ec {
-                            [0x04, 0x03]
-                        } else {
-                            // TLS 1.3 requires an RSASSA-PSS scheme for an RSA key
-                            // (`tls12_check_peer_sigalg`, `tls1_lib.c:2700-2739`; RFC 8446
-                            // §4.2.3).
-                            [0x08, 0x04]
-                        };
+                        // The scheme `find_sig_alg` selected above.
+                        let sigalg = scheme.to_be_bytes();
                         if let Some(n) = write_cert_verify_body(body, sigalg, &sig[..siglen]) {
                             // SAFETY: `s` is live; `body[..n]` is the framed body written above.
                             ok = crate::ssl::tls13_enc::write_handshake_message(
@@ -3156,15 +3279,17 @@ unsafe fn tls12_choose_group(s: *const Ssl, clnt_groups: &[u16]) -> u16 {
     0
 }
 
-/// Sign `data` with the active certificate's key, TLS1.2 style: an EC key signs with
-/// `ecdsa_secp256r1_sha256` (`0x0403`), an RSA key with `rsa_pkcs1_sha256` (`0x0401`). Returns the
-/// `(sigalg, sig_len)` for a signature written to `sig`, or `None`.
+/// Sign `data` with the active certificate's key, TLS1.2 style: an EC key signs with the ECDSA
+/// scheme whose curve column names its own curve (`ecdsa_secp256r1_sha256` 0x0403,
+/// `ecdsa_secp384r1_sha384` 0x0503, `ecdsa_secp521r1_sha512` 0x0603), an RSA key with
+/// `rsa_pkcs1_sha256` (0x0401). Returns the `(sigalg, sig_len)` for a signature written to `sig`,
+/// or `None` when the key has no usable scheme or the peer's `signature_algorithms` did not offer
+/// it.
 ///
 /// # Safety
 /// `s` is live; `sig` is writable.
 pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Option<(u16, usize)> {
     use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_new};
-    use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey::EvpPkey;
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
     // SAFETY: `s` is live.
@@ -3176,8 +3301,28 @@ pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Opt
     // SAFETY: `cpk.privatekey` is a live signing key.
     let pkey = unsafe { (*cpk).privatekey }.cast::<EvpPkey>();
     // SAFETY: `pkey` is live.
-    let is_ec = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) }
-        == crate::evp::pkey_ctx::EVP_PKEY_EC;
+    let base_id = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) };
+    // SAFETY: `pkey` is live; a non-EC key answers `NID_undef`.
+    let curve_nid = unsafe { ssl_get_ec_curve_nid(pkey) };
+    // The scheme follows the key (`find_sig_alg`, `t1_lib.c:4551-4592`); an EC key on a curve with
+    // no table row cannot sign in either protocol version.
+    let (scheme, md) = if base_id == crate::evp::pkey_ctx::EVP_PKEY_EC {
+        ec_sigalg_for_curve(curve_nid)?
+    } else {
+        (0x0401, crate::evp::legacy_sha::EVP_sha256())
+    };
+    // The authority's TLS1.2 arm selects from `shared_sigalgs`; the peer's list is saved for every
+    // version, and a TLS1.2 peer that sent none keeps the historical default.
+    // SAFETY: `s` is live; `peer_sigalgs` is the connection's own list of `peer_sigalgslen`
+    // native-endian schemes, alive until `SSL_free`.
+    let (sp, sn) = unsafe { ((*s).peer_sigalgs, (*s).peer_sigalgslen) };
+    if !sp.is_null() && sn != 0 {
+        // SAFETY: the invariant above: a saved list is `sn` live `u16`s owned by `s`.
+        let offered = unsafe { core::slice::from_raw_parts(sp, sn) };
+        if !offered.contains(&scheme) {
+            return None;
+        }
+    }
     // SAFETY: `EVP_MD_CTX_new` is the matching constructor: it answered the whole, aligned
     // `EVP_MD_CTX` block (or NULL, which yields `None`), live and owned solely by this handle, whose
     // `Drop` runs `EVP_MD_CTX_free` -- its single release.
@@ -3185,8 +3330,6 @@ pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Opt
     // The owned `EVP_MD_CTX`'s stable address, for the raw calls below; its single release is the
     // handle's `Drop` at the end of the frame.
     let mctx = mctx_owner.as_ptr();
-    // SAFETY: no preconditions.
-    let md = EVP_sha256();
     let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
     let mut siglen = sig.len();
     let mut ok = false;
@@ -3217,11 +3360,11 @@ pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Opt
     if !ok {
         return None;
     }
-    Some((if is_ec { 0x0403 } else { 0x0401 }, siglen))
+    Some((scheme, siglen))
 }
 
 /// Verify `sig` over `data` with `pkey` for the TLS1.2 `sigalg` (`0x0401` RSA-PKCS1-SHA256,
-/// `0x0403` ECDSA-SHA256).
+/// `0x0403` ECDSA-SHA256, `0x0503` ECDSA-SHA384, `0x0603` ECDSA-SHA512).
 ///
 /// # Safety
 /// `pkey` is live; `data`/`sig` are readable.
@@ -3232,13 +3375,16 @@ pub(crate) unsafe fn tls12_verify(
     sig: &[u8],
 ) -> bool {
     use crate::evp::digest::{EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_new};
-    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::legacy_sha::{EVP_sha256, EVP_sha384, EVP_sha512};
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
-    if sigalg != 0x0401 && sigalg != 0x0403 {
-        return false;
-    }
-    // SAFETY: no preconditions.
-    let md = EVP_sha256();
+    // The scheme names its digest (`sigalg_lookup_tbl[]`, `t1_lib.c:1964-2142`); an unknown scheme
+    // is refused rather than verified with a guessed digest.
+    let md = match sigalg {
+        0x0401 | 0x0403 => EVP_sha256(),
+        0x0503 => EVP_sha384(),
+        0x0603 => EVP_sha512(),
+        _ => return false,
+    };
     // SAFETY: `EVP_MD_CTX_new` is the matching constructor: it answered the whole, aligned
     // `EVP_MD_CTX` block (or NULL, which yields `None`), live and owned solely by this handle, whose
     // `Drop` runs `EVP_MD_CTX_free` -- its single release.
@@ -3705,7 +3851,14 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
 /// `s` is live.
 unsafe fn tls12_construct_certificate_request(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc::write_handshake_message;
-    const SIGALGS: [u8; 8] = [0x04, 0x01, 0x04, 0x03, 0x05, 0x01, 0x06, 0x01];
+    const SIGALGS: [u8; 12] = [
+        0x04, 0x01, // rsa_pkcs1_sha256
+        0x04, 0x03, // ecdsa_secp256r1_sha256
+        0x05, 0x01, // rsa_pkcs1_sha384
+        0x05, 0x03, // ecdsa_secp384r1_sha384
+        0x06, 0x01, // rsa_pkcs1_sha512
+        0x06, 0x03, // ecdsa_secp521r1_sha512
+    ];
     // `certificate_types`: `rsa_sign(1) || ecdsa_sign(64)`.
     const CERT_TYPES: [u8; 2] = [1, 64];
     let mut body = [0u8; 64];
@@ -6424,6 +6577,68 @@ mod tls12_group_tests {
         }
     }
 
+    /// A self-signed provider identity on the curve `nid` names, its certificate signed under
+    /// that curve's own ECDSA scheme. The key is generated through `EVP_PKEY_gen` exactly as an
+    /// application's P-384 certificate key is.
+    ///
+    /// # Safety
+    /// Every object is created and released by this function's caller.
+    unsafe fn ec_identity(nid: c_int) -> (*mut EvpPkey, *mut X509) {
+        use crate::asn1::layout::MBSTRING_UTF8;
+        use crate::asn1::prim::ASN1_INTEGER_set;
+        use crate::evp::legacy_sha::{EVP_sha384, EVP_sha512};
+        let group = match nid {
+            o::NID_secp384r1 => c"P-384",
+            o::NID_secp521r1 => c"P-521",
+            _ => c"P-256",
+        };
+        // SAFETY: constructors below answer fresh objects owned by this frame.
+        unsafe {
+            // `kind == 2` passes the group name (`EVP_PKEY_Q_keygen(libctx, propq, "EC", group)`).
+            let pkey = openssl_rs_evp_pkey_q_keygen(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                c"EC".as_ptr(),
+                2,
+                0,
+                group.as_ptr(),
+            );
+            assert!(!pkey.is_null(), "curve {nid} must create a key");
+            let x = X509_new();
+            let name = X509_NAME_new();
+            assert!(!x.is_null() && !name.is_null());
+            assert_eq!(
+                X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    MBSTRING_UTF8,
+                    c"tls13.test".as_ptr().cast::<u8>(),
+                    10,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(ASN1_INTEGER_set(&mut (*x).cert_info.serialNumber, 1), 1);
+            assert_eq!(X509_set_subject_name(x, name), 1);
+            assert_eq!(X509_set_issuer_name(x, name), 1);
+            (*x).cert_info.validity.notBefore = X509_gmtime_adj(core::ptr::null_mut(), 0);
+            (*x).cert_info.validity.notAfter = X509_gmtime_adj(core::ptr::null_mut(), 86_400);
+            assert!(!(*x).cert_info.validity.notBefore.is_null());
+            assert!(!(*x).cert_info.validity.notAfter.is_null());
+            assert_eq!(X509_set_pubkey(x, pkey), 1);
+            let md = match nid {
+                o::NID_secp384r1 => EVP_sha384(),
+                o::NID_secp521r1 => EVP_sha512(),
+                _ => EVP_sha256(),
+            };
+            assert!(X509_sign(x, pkey, md) > 0, "signing must succeed");
+            X509_NAME_free(name);
+            (pkey, x)
+        }
+    }
+
     /// Move every pending byte from one memory BIO to the other. The peer never blocks: an empty
     /// source is the handshake's "want read".
     ///
@@ -6483,6 +6698,25 @@ mod tls12_group_tests {
         server_group: Option<c_int>,
         rsa_bits: usize,
     ) -> Pair {
+        // SAFETY: the identity constructor answers fresh objects owned by this frame.
+        let identity = unsafe { rsa_identity(rsa_bits) };
+        // SAFETY: `identity` is owned here and taken over by the pair's constructor.
+        unsafe { make_pair_identity(cipher, version, client_group, server_group, identity) }
+    }
+
+    /// As [`make_pair_bits`], with the server identity supplied by the caller. The `(pkey, x)`
+    /// pair is consumed: the context takes its own references and the caller's pair is released
+    /// before this function returns.
+    ///
+    /// # Safety
+    /// `pkey`/`x` must be live objects owned by this frame.
+    unsafe fn make_pair_identity(
+        cipher: &CStr,
+        version: c_int,
+        client_group: Option<c_int>,
+        server_group: Option<c_int>,
+        (pkey, x): (*mut EvpPkey, *mut X509),
+    ) -> Pair {
         // SAFETY: every constructor below answers a fresh object owned by this frame.
         unsafe {
             let cctx = SSL_CTX_new(TLS_method());
@@ -6529,7 +6763,6 @@ mod tls12_group_tests {
                 }
             }
 
-            let (pkey, x) = rsa_identity(rsa_bits);
             assert_eq!(SSL_CTX_use_certificate(sctx, x), 1);
             assert_eq!(SSL_CTX_use_PrivateKey(sctx, pkey), 1);
             EVP_PKEY_free(pkey);
@@ -6952,6 +7185,213 @@ mod tls12_group_tests {
     #[test]
     fn tls12_handshake_x448() {
         assert_group_handshake(o::NID_X448);
+    }
+
+    // --- ECDSA scheme selection -------------------------------------------------------------
+
+    /// `find_sig_alg` (`t1_lib.c:4551-4592`): the scheme follows the signing key's curve and
+    /// must be one the peer offered. A P-384 key offered only the P-256 scheme has no usable
+    /// scheme; a peer that sent no `signature_algorithms` offered none.
+    #[test]
+    fn ecdsa_scheme_follows_the_key_curve_and_the_peer_offer() {
+        use crate::evp::pkey_ctx::{EVP_PKEY_EC, EVP_PKEY_RSA};
+        for (nid, expected) in [
+            (o::NID_X9_62_prime256v1, 0x0403u16),
+            (o::NID_secp384r1, 0x0503),
+            (o::NID_secp521r1, 0x0603),
+        ] {
+            assert_eq!(
+                ec_sigalg_for_curve(nid).map(|(scheme, _)| scheme),
+                Some(expected),
+                "curve {nid}"
+            );
+            assert_eq!(
+                choose_sigalg(EVP_PKEY_EC, nid, &[0x0804, expected]).map(|(scheme, _)| scheme),
+                Some(expected)
+            );
+            let other = if expected == 0x0403 { 0x0503 } else { 0x0403 };
+            assert_eq!(choose_sigalg(EVP_PKEY_EC, nid, &[other]), None);
+            assert_eq!(choose_sigalg(EVP_PKEY_EC, nid, &[]), None);
+        }
+        assert_eq!(
+            choose_sigalg(EVP_PKEY_RSA, 0, &[0x0804]).map(|(scheme, _)| scheme),
+            Some(0x0804)
+        );
+        assert_eq!(choose_sigalg(EVP_PKEY_RSA, 0, &[0x0403]), None);
+    }
+
+    /// A TLS1.3 handshake with an EC server certificate completes for every curve the port's
+    /// ECDSA table names. The client rejects a scheme whose curve is not the key's, so success
+    /// proves the server selected the curve's own scheme (0x0403/0x0503/0x0603 respectively).
+    fn assert_ec_certificate_handshake(nid: c_int) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let identity = ec_identity(nid);
+            let p = make_pair_identity(
+                c"TLS_AES_128_GCM_SHA256",
+                TLS1_3_VERSION,
+                None,
+                None,
+                identity,
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = if client_ok && server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "TLS1.3 handshake with a curve {nid} certificate failed \
+                 (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+        }
+    }
+
+    #[test]
+    fn tls13_p256_certificate_signs_with_ecdsa_secp256r1_sha256() {
+        assert_ec_certificate_handshake(o::NID_X9_62_prime256v1);
+    }
+
+    #[test]
+    fn tls13_p384_certificate_signs_with_ecdsa_secp384r1_sha384() {
+        assert_ec_certificate_handshake(o::NID_secp384r1);
+    }
+
+    #[test]
+    fn tls13_p521_certificate_signs_with_ecdsa_secp521r1_sha512() {
+        assert_ec_certificate_handshake(o::NID_secp521r1);
+    }
+
+    /// The gmnisrv shape: an application-assigned legacy `EC_KEY` (not a provider key). The
+    /// curve must still be found — through `ssl_get_EC_curve_nid`'s legacy fallback — and the
+    /// scheme must be the curve's own.
+    #[test]
+    fn legacy_ec_key_reports_its_curve_and_scheme() {
+        use crate::ec::key::EC_KEY_new_by_curve_name;
+        use crate::evp::pkey_ctx::EVP_PKEY_EC;
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released by this frame.
+        unsafe {
+            for (nid, expected) in [
+                (o::NID_X9_62_prime256v1, 0x0403u16),
+                (o::NID_secp384r1, 0x0503),
+                (o::NID_secp521r1, 0x0603),
+            ] {
+                let pkey = crate::evp::pkey::EVP_PKEY_new();
+                let ec = EC_KEY_new_by_curve_name(nid);
+                assert!(!pkey.is_null() && !ec.is_null(), "curve {nid}");
+                assert_eq!(
+                    crate::evp::pkey::EVP_PKEY_assign(pkey, EVP_PKEY_EC, ec.cast()),
+                    1
+                );
+                assert_eq!(ssl_get_ec_curve_nid(pkey), nid, "legacy curve {nid}");
+                assert_eq!(
+                    choose_sigalg(
+                        EVP_PKEY_EC,
+                        ssl_get_ec_curve_nid(pkey),
+                        &[0x0403, 0x0503, 0x0603]
+                    )
+                    .map(|(scheme, _)| scheme),
+                    Some(expected)
+                );
+                EVP_PKEY_free(pkey);
+            }
+        }
+    }
+
+    /// The authority's refusal (`tls_choose_sigalg`, `t1_lib.c:4617-4626`): a P-384 certificate
+    /// with a peer that offered only P-256 schemes is `SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM`,
+    /// not a signature under a scheme the peer cannot verify.
+    #[test]
+    fn tls13_no_offered_scheme_for_the_key_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released by this frame.
+        unsafe {
+            ERR_clear_error();
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let (pkey, x) = ec_identity(o::NID_secp384r1);
+            assert_eq!(SSL_CTX_use_certificate(ctx, x), 1);
+            assert_eq!(SSL_CTX_use_PrivateKey(ctx, pkey), 1);
+            EVP_PKEY_free(pkey);
+            X509_free(x);
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            // `signature_algorithms` carrying only `ecdsa_secp256r1_sha256`.
+            assert_eq!(
+                crate::ssl::t1_lib::tls1_save_peer_sigalgs(s, &[0x00, 0x02, 0x04, 0x03]),
+                1
+            );
+            assert_eq!((*s).peer_sigalgslen, 1);
+            assert_eq!(tls13_construct_cert_verify(s, true), 0);
+            let reasons = error_reasons();
+            assert!(
+                reasons.contains(&SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM),
+                "expected SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM, reasons={reasons:?}"
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// The saved list is what `SSL_get_sigalgs` reports (authority shape: native-endian
+    /// schemes) and it is released with the connection.
+    #[test]
+    fn saved_peer_sigalgs_round_trip_and_release() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: `s` is created and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            assert_eq!(
+                crate::ssl::t1_lib::tls1_save_peer_sigalgs(
+                    s,
+                    &[0x00, 0x04, 0x04, 0x03, 0x05, 0x03]
+                ),
+                1
+            );
+            let mut sign = -1;
+            let mut hash = -1;
+            let mut signhash = -1;
+            let mut rsig = 0u8;
+            let mut rhash = 0u8;
+            assert_eq!(
+                crate::ssl::t1_lib::SSL_get_sigalgs(
+                    s,
+                    1,
+                    &mut sign,
+                    &mut hash,
+                    &mut signhash,
+                    &mut rsig,
+                    &mut rhash,
+                ),
+                2
+            );
+            // `ecdsa_secp384r1_sha384` = 0x0503; `SSL_get_sigalgs` reports the authority's
+            // split (high byte to `rhash`, low byte to `rsig`, `t1_lib.c:3595-3600`).
+            assert_eq!((rsig, rhash), (0x03, 0x05));
+            assert_eq!(
+                crate::ssl::t1_lib::SSL_get_sigalgs(
+                    s,
+                    2,
+                    &mut sign,
+                    &mut hash,
+                    &mut signhash,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                ),
+                0,
+                "an index past the saved list is out of range"
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
     }
 
     #[test]
