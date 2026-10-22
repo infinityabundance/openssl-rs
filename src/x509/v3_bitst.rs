@@ -46,7 +46,7 @@ use crate::runtime::err::err_reasons::X509V3_R_UNKNOWN_BIT_STRING_ARGUMENT;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::obj::{NID_key_usage, NID_netscape_cert_type};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
-use crate::x509::v3_lib::{X509V3ExtI2v, X509V3ExtMethod, X509V3ExtV2i};
+use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_utl::X509V3_add_value;
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in:99`.
@@ -345,45 +345,25 @@ pub unsafe extern "C" fn v2i_ASN1_BIT_STRING(
     bs.cast::<c_void>()
 }
 
-/// The `i2v` slot for the `EXT_BITSTRING` rows, cast from [`i2v_ASN1_BIT_STRING`]'s `*mut` method
-/// prototype to the slot's `*const` one.
-const fn bitst_i2v() -> X509V3ExtI2v {
-    // SAFETY: both function types take three pointer arguments and answer a pointer; the
-    // authority writes exactly this cast in the `EXT_BITSTRING` macro.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(
-                *mut X509V3ExtMethod,
-                *mut c_void,
-                *mut OpenSslStack,
-            ) -> *mut OpenSslStack,
-            unsafe extern "C" fn(
-                *const X509V3ExtMethod,
-                *mut c_void,
-                *mut OpenSslStack,
-            ) -> *mut OpenSslStack,
-        >(i2v_ASN1_BIT_STRING)
-    })
+/// The `i2v` slot for the `EXT_BITSTRING` rows.
+unsafe extern "C" fn bitst_i2v(
+    meth: *const X509V3ExtMethod,
+    value: *mut c_void,
+    out: *mut OpenSslStack,
+) -> *mut OpenSslStack {
+    // SAFETY: `meth` is the table's live row (read only); `value` is the `ASN1_BIT_STRING` in the
+    // slot.
+    unsafe { i2v_ASN1_BIT_STRING(meth.cast_mut(), value, out) }
 }
 
-/// The `v2i` slot for the `EXT_BITSTRING` rows, cast the same way.
-const fn bitst_v2i() -> X509V3ExtV2i {
-    // SAFETY: both function types take three pointer arguments and answer a pointer; the
-    // authority writes exactly this cast in the `EXT_BITSTRING` macro.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(
-                *mut X509V3ExtMethod,
-                *mut c_void,
-                *mut OpenSslStack,
-            ) -> *mut c_void,
-            unsafe extern "C" fn(
-                *const X509V3ExtMethod,
-                *mut c_void,
-                *mut OpenSslStack,
-            ) -> *mut c_void,
-        >(v2i_ASN1_BIT_STRING)
-    })
+/// The `v2i` slot for the `EXT_BITSTRING` rows.
+unsafe extern "C" fn bitst_v2i(
+    meth: *const X509V3ExtMethod,
+    ctx: *mut c_void,
+    out: *mut OpenSslStack,
+) -> *mut c_void {
+    // SAFETY: as `bitst_i2v`; the answer is a fresh bit-string stack.
+    unsafe { v2i_ASN1_BIT_STRING(meth.cast_mut(), ctx, out) }
 }
 
 /// `const X509V3_EXT_METHOD ossl_v3_nscert` — `crypto/x509/v3_bitst.c:42`, from
@@ -398,8 +378,8 @@ pub static ossl_v3_nscert: X509V3ExtMethod = X509V3ExtMethod {
     i2d: None,
     i2s: None,
     s2i: None,
-    i2v: bitst_i2v(),
-    v2i: bitst_v2i(),
+    i2v: Some(bitst_i2v),
+    v2i: Some(bitst_v2i),
     i2r: None,
     r2i: None,
     usr_data: ptr::addr_of!(NS_CERT_TYPE_TABLE).cast_mut().cast(),
@@ -417,8 +397,8 @@ pub static ossl_v3_key_usage: X509V3ExtMethod = X509V3ExtMethod {
     i2d: None,
     i2s: None,
     s2i: None,
-    i2v: bitst_i2v(),
-    v2i: bitst_v2i(),
+    i2v: Some(bitst_i2v),
+    v2i: Some(bitst_v2i),
     i2r: None,
     r2i: None,
     usr_data: ptr::addr_of!(KEY_USAGE_TYPE_TABLE).cast_mut().cast(),
