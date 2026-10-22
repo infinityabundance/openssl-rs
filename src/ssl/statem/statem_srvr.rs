@@ -140,6 +140,12 @@ const SSL_R_UNSUPPORTED_PROTOCOL: c_int = 258;
 const SSL_R_NO_SUITABLE_KEY_SHARE: c_int = 101;
 /// `SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM` — `sslerr.h:188` (118).
 const SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM: c_int = 118;
+/// `SSL_R_CERT_CB_ERROR` — `sslerr.h` (377).
+const SSL_R_CERT_CB_ERROR: c_int = 377;
+/// `SSL_X509_LOOKUP` — `ssl.h:935` (4), the `rwstate` a certificate callback asks for.
+const SSL_X509_LOOKUP: c_int = 4;
+/// `SSL_NOTHING` — `ssl.h:932` (1), the idle `rwstate`.
+const SSL_NOTHING: c_int = 1;
 /// `SSL_AD_ILLEGAL_PARAMETER` — `ssl3.h` (47).
 #[allow(dead_code)]
 const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
@@ -2114,6 +2120,19 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             }
         }
     }
+    // `tls_post_process_client_hello`'s `WORK_MORE_B` (`statem_srvr.c:2486-2502`): the
+    // application's certificate hook runs after the ClientHello has been processed and before
+    // the certificate is selected, so a certificate it installs (lighttpd's mod_openssl loads
+    // its certificate only here) is the one selection and signing use. A resumed session does
+    // not re-run it (`if (!s->hit && cert_cb)`).
+    // SAFETY: `s` is live.
+    if unsafe { (*s).hit } == 0 {
+        // SAFETY: `s` is live.
+        let rv = unsafe { invoke_cert_cb(s) };
+        if rv <= 0 {
+            return rv;
+        }
+    }
     if session_version != TLS1_3_VERSION {
         // The TLS1.2 half of `ssl3_choose_cipher` (`ssl3_lib.c`): server preference over the
         // supported `ECDHE-{RSA,ECDSA}-AES{128,256}-GCM` suites, filtered by the certificate the
@@ -2597,6 +2616,60 @@ unsafe fn tls12_construct_cert_status(s: *mut Ssl) -> c_int {
     }
     // SAFETY: `s` is live; `out` is `body_len` initialised bytes owned by `body`.
     unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE_STATUS as u8, out.as_ptr(), body_len) }
+}
+
+/// The application's certificate hook (`SSL_CTX_set_cert_cb`, `ssl_lib.rs:5938`) —
+/// `tls_post_process_client_hello` (`statem_srvr.c:2486-2502`) on the server and
+/// `tls_prepare_client_certificate` (`statem_clnt.c:3772-3785`) on the client.
+///
+/// Returns 1 to continue, 0 after raising the authority's fatal (server: `SSL_R_CERT_CB_ERROR`;
+/// client: `SSL_R_CALLBACK_FAILED`), or -1 when the callback asked for an `SSL_X509_LOOKUP`
+/// retry, in which case `s->rwstate` is set. **No reference into `s` is held across the call**
+/// and nothing read from `s->cert` survives it: the certificate selection that follows re-reads
+/// the container and the active key slot, which is what lets the callback install a certificate
+/// (lighttpd's mod_openssl loads its certificate only here).
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn invoke_cert_cb(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live; `cert` is its certificate container.
+    let cert = unsafe { (*s).cert };
+    if cert.is_null() {
+        return 1;
+    }
+    // SAFETY: `cert` is live; `cert_cb` is the setter's stored hook.
+    let cb = unsafe { (*cert).cert_cb };
+    let Some(cb) = cb else {
+        return 1;
+    };
+    // SAFETY: `cert` is live; the argument is the one the setter stored.
+    let arg = unsafe { (*cert).cert_cb_arg };
+    // SAFETY: the callback is the application's `int (*)(SSL *, void *)`; `s` is live for the
+    // duration of the call, and this frame holds no Rust reference into `s` across it (AGENTS
+    // §21.3) — every value the callback may change is re-read by the caller.
+    let rv = unsafe { cb(s, arg) };
+    if rv == 0 {
+        // SAFETY: `s` is live.
+        let reason = if unsafe { (*s).server } != 0 {
+            SSL_R_CERT_CB_ERROR
+        } else {
+            SSL_R_CALLBACK_FAILED
+        };
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, reason) };
+        return 0;
+    }
+    if rv < 0 {
+        // `s->rwstate = SSL_X509_LOOKUP` on the authority's retry arm (`statem_srvr.c:2496`,
+        // `statem_clnt.c:3776`). The reduced synchronous driver reports the wait rather than
+        // resuming a half-built flight (the same recorded boundary as the ClientHello callback).
+        // SAFETY: `s` is live.
+        unsafe { (*s).rwstate = SSL_X509_LOOKUP };
+        return -1;
+    }
+    // SAFETY: `s` is live.
+    unsafe { (*s).rwstate = SSL_NOTHING };
+    1
 }
 
 /// `CON_FUNC_RETURN tls_construct_server_certificate(...)` — `statem_srvr.c:4019-4055` over
@@ -7264,6 +7337,186 @@ mod tls12_group_tests {
     #[test]
     fn tls13_p521_certificate_signs_with_ecdsa_secp521r1_sha512() {
         assert_ec_certificate_handshake(o::NID_secp521r1);
+    }
+
+    // --- certificate callback (`SSL_CTX_set_cert_cb`) ---------------------------------------
+
+    /// The identity the callback installs, and whether it should refuse.
+    struct CertCbArgs {
+        x509: *mut X509,
+        pkey: *mut EvpPkey,
+        fail: bool,
+    }
+
+    /// Installs the certificate and key on the connection, as lighttpd's mod_openssl does.
+    ///
+    /// # Safety
+    /// `arg` points at a live `CertCbArgs` for the duration of the handshake.
+    unsafe extern "C" fn cert_install_cb(ssl: *mut Ssl, arg: *mut c_void) -> c_int {
+        // SAFETY: `arg` is this test's live argument.
+        let a = unsafe { &*(arg.cast::<CertCbArgs>()) };
+        if a.fail {
+            return 0;
+        }
+        // SAFETY: both objects are live; the connection takes its own references.
+        if unsafe { crate::ssl::ssl_rsa::SSL_use_certificate(ssl, a.x509) } != 1 {
+            return 0;
+        }
+        // SAFETY: as above.
+        if unsafe { crate::ssl::ssl_rsa::SSL_use_PrivateKey(ssl, a.pkey) } != 1 {
+            return 0;
+        }
+        1
+    }
+
+    /// A pair whose server has no certificate at context setup; the callback installs it.
+    ///
+    /// # Safety
+    /// The caller owns the pair ([`free_pair`]); `arg` must outlive the handshake.
+    unsafe fn make_pair_certcb(
+        cipher: &CStr,
+        version: c_int,
+        cb: crate::ssl::ssl_lib::CertCb,
+        arg: *mut c_void,
+    ) -> Pair {
+        // SAFETY: every constructor below answers a fresh object owned by this frame.
+        unsafe {
+            let cctx = SSL_CTX_new(TLS_method());
+            let sctx = SSL_CTX_new(TLS_method());
+            assert!(!cctx.is_null() && !sctx.is_null());
+            if !cipher.to_bytes().starts_with(b"TLS_") {
+                assert_eq!(SSL_CTX_set_cipher_list(cctx, cipher.as_ptr()), 1);
+                assert_eq!(SSL_CTX_set_cipher_list(sctx, cipher.as_ptr()), 1);
+            }
+            SSL_CTX_set_verify(cctx, 0, None);
+            for ctx in [cctx, sctx] {
+                assert_eq!(
+                    SSL_CTX_ctrl(
+                        ctx,
+                        SSL_CTRL_SET_MIN_PROTO_VERSION,
+                        version as c_long,
+                        core::ptr::null_mut(),
+                    ),
+                    1
+                );
+                assert_eq!(
+                    SSL_CTX_ctrl(
+                        ctx,
+                        SSL_CTRL_SET_MAX_PROTO_VERSION,
+                        version as c_long,
+                        core::ptr::null_mut(),
+                    ),
+                    1
+                );
+            }
+            crate::ssl::ssl_lib::SSL_CTX_set_cert_cb(sctx, Some(cb), arg);
+            let c = SSL_new(cctx);
+            let s = SSL_new(sctx);
+            assert!(!c.is_null() && !s.is_null());
+            SSL_set_connect_state(c);
+            SSL_set_accept_state(s);
+            let c_r = BIO_new(BIO_s_mem());
+            let c_w = BIO_new(BIO_s_mem());
+            let s_r = BIO_new(BIO_s_mem());
+            let s_w = BIO_new(BIO_s_mem());
+            assert!(!c_r.is_null() && !c_w.is_null() && !s_r.is_null() && !s_w.is_null());
+            SSL_set_bio(c, c_r, c_w);
+            SSL_set_bio(s, s_r, s_w);
+            Pair {
+                cctx,
+                sctx,
+                c,
+                s,
+                c_r,
+                c_w,
+                s_r,
+                s_w,
+            }
+        }
+    }
+
+    /// A certificate installed only from `cert_cb` is the one the handshake uses, in both
+    /// protocol versions. Without the invocation the server sends an empty Certificate and the
+    /// TLS1.2 cipher choice finds no certificate at all.
+    fn assert_cert_cb_handshake(version: c_int, cipher: &CStr) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair and the identity are created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let (pkey, x) = rsa_identity(2048);
+            let mut args = CertCbArgs {
+                x509: x,
+                pkey,
+                fail: false,
+            };
+            let p = make_pair_certcb(
+                cipher,
+                version,
+                cert_install_cb,
+                (&mut args as *mut CertCbArgs).cast(),
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = if client_ok && server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            EVP_PKEY_free(pkey);
+            X509_free(x);
+            assert!(
+                client_ok && server_ok,
+                "cert_cb handshake (version {version:#x}) failed \
+                 (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+        }
+    }
+
+    #[test]
+    fn tls13_certificate_installed_only_from_cert_cb_is_sent() {
+        assert_cert_cb_handshake(TLS1_3_VERSION, c"TLS_AES_128_GCM_SHA256");
+    }
+
+    #[test]
+    fn tls12_certificate_installed_only_from_cert_cb_is_sent() {
+        assert_cert_cb_handshake(TLS1_2_VERSION, c"ECDHE-RSA-AES128-GCM-SHA256");
+    }
+
+    /// A callback that answers 0 is the authority's `SSL_R_CERT_CB_ERROR` under
+    /// `SSL_AD_INTERNAL_ERROR`, and the handshake does not complete.
+    #[test]
+    fn cert_cb_failure_raises_cert_cb_error() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair and the identity are created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let (pkey, x) = rsa_identity(2048);
+            let mut args = CertCbArgs {
+                x509: x,
+                pkey,
+                fail: true,
+            };
+            let p = make_pair_certcb(
+                c"TLS_AES_128_GCM_SHA256",
+                TLS1_3_VERSION,
+                cert_install_cb,
+                (&mut args as *mut CertCbArgs).cast(),
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = error_reasons();
+            free_pair(p);
+            EVP_PKEY_free(pkey);
+            X509_free(x);
+            assert!(
+                !server_ok,
+                "a refusing cert_cb must not complete the handshake"
+            );
+            assert!(!client_ok);
+            assert!(
+                reasons.contains(&SSL_R_CERT_CB_ERROR),
+                "expected SSL_R_CERT_CB_ERROR ({SSL_R_CERT_CB_ERROR}), reasons={reasons:?}"
+            );
+        }
     }
 
     /// The gmnisrv shape: an application-assigned legacy `EC_KEY` (not a provider key). The
