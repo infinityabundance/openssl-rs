@@ -1589,18 +1589,29 @@ pub(crate) unsafe fn tls13_construct_finished(s: *mut Ssl, secret: *const u8) ->
     // `SSL3_MT_FINISHED` — `ssl3.h` (20).
     const SSL3_MT_FINISHED: u8 = 20;
     let mut out = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: `s` is live; `out` is writable.
+    // SAFETY: `s` is live; `out` is writable for `out.len()` bytes; the callee reports how many
+    // it initialised.
     let n = unsafe { tls13_finished_mac(s, secret, out.as_mut_ptr()) };
-    if n == 0 {
+    let Some(verify_data) = out.get(..n).filter(|data| !data.is_empty()) else {
+        return 0;
+    };
+    // Refuse before writing if the verify_data cannot be recorded for `SSL_get_finished`.
+    // The binding array is fixed at `EVP_MAX_MD_SIZE`.
+    if crate::ssl::ssl_lib::EVP_MAX_MD_SIZE < verify_data.len() {
         return 0;
     }
-    // SAFETY: `s` is live; `out` is `n` initialised bytes.
-    let r = unsafe { write_handshake_message(s, SSL3_MT_FINISHED, out.as_ptr(), n) };
+    // SAFETY: `s` is live; `verify_data` is initialised and bounded by `out`.
+    let r = unsafe {
+        write_handshake_message(s, SSL3_MT_FINISHED, verify_data.as_ptr(), verify_data.len())
+    };
     if r > 0 {
-        // SAFETY: `s` is live.
+        // SAFETY: `s` is live; the check above established that `finish_md` holds this value.
         unsafe {
-            (*s).finish_md_len = n;
-            ptr::copy_nonoverlapping(out.as_ptr(), (*s).finish_md.as_mut_ptr(), n);
+            let Some(slot) = (*s).finish_md.get_mut(..verify_data.len()) else {
+                return 0;
+            };
+            slot.copy_from_slice(verify_data);
+            (*s).finish_md_len = verify_data.len();
         }
     }
     r
@@ -1622,22 +1633,34 @@ pub(crate) unsafe fn tls13_process_finished(s: *mut Ssl, msg: &[u8], secret: *co
     }
     let body = &msg[4..4 + blen];
     let mut expected = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: `s` is live; `expected` is writable.
+    // SAFETY: `s` is live; `expected` is writable for `expected.len()` bytes; the callee reports
+    // how many it initialised.
     let n = unsafe { tls13_finished_mac(s, secret, expected.as_mut_ptr()) };
-    if n == 0 || n != body.len() {
+    let Some(verify_data) = expected.get(..n).filter(|data| !data.is_empty()) else {
+        return 0;
+    };
+    if verify_data.len() != body.len() {
         return 0;
     }
     let mut diff = 0u8;
-    for i in 0..n {
-        diff |= expected[i] ^ body[i];
+    for (a, b) in verify_data.iter().zip(body) {
+        diff |= a ^ b;
     }
     if diff != 0 {
         return 0;
     }
-    // SAFETY: `s` is live; `msg` is the full message.
+    // The binding array is fixed at `EVP_MAX_MD_SIZE`.
+    if crate::ssl::ssl_lib::EVP_MAX_MD_SIZE < verify_data.len() {
+        return 0;
+    }
+    // SAFETY: `s` is live; the check above established that `peer_finish_md` holds this value;
+    // `msg` is the full message.
     unsafe {
-        (*s).peer_finish_md_len = n;
-        ptr::copy_nonoverlapping(expected.as_ptr(), (*s).peer_finish_md.as_mut_ptr(), n);
+        let Some(slot) = (*s).peer_finish_md.get_mut(..verify_data.len()) else {
+            return 0;
+        };
+        slot.copy_from_slice(verify_data);
+        (*s).peer_finish_md_len = verify_data.len();
         transcript_update(s, msg.as_ptr(), msg.len())
     }
 }
