@@ -1724,11 +1724,60 @@ unsafe extern "C" fn i2r_object(
     1
 }
 
+/// `X509_NAME *ossl_dist_point_name_full(const DIST_POINT_NAME *dpn, const X509_NAME *iname)` —
+/// `crypto/x509/v3_crld.c:525-550` (3.6.5).
+///
+/// Returns a **fresh** name: `iname` with the `nameRelativeToCRLIssuer` fragment appended, its DER
+/// encoding already cached. `dpn` must be a relative name (`type_ == 1`). NULL on error.
+///
+/// 3.6.5 added this split so the expansion can be done on demand (see `crldp_full_name`) instead of
+/// once per distribution point during certificate parsing.
+///
+/// # Safety
+/// `dpn` is a live relative `DIST_POINT_NAME`; `iname` is a live `X509_NAME`.
+pub(crate) unsafe fn ossl_dist_point_name_full(
+    dpn: *const DistPointName,
+    iname: *const X509Name,
+) -> *mut X509Name {
+    // SAFETY: `dpn` and `iname` are live per the contract; the answer is owned by the caller.
+    let dpname = unsafe { X509_NAME_dup(iname) };
+    if dpname.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dpn` is a live relative name; its fragment stack is live.
+    let frag = unsafe { (*dpn).name.relativename };
+    // SAFETY: `frag` is a live stack.
+    let num = unsafe { OPENSSL_sk_num(frag) };
+    let mut i = 0;
+    'body: {
+        while i < num {
+            // SAFETY: `frag` is live and `i` is in bounds.
+            let ne = unsafe { OPENSSL_sk_value(frag, i) }.cast::<X509NameEntry>();
+            // The authority's `i ? 0 : 1`: the first entry is added with `set = 1`, the rest with
+            // `set = 0` (`crypto/x509/v3_crld.c:541`).
+            // SAFETY: `dpname` and `ne` are live.
+            if unsafe { X509_NAME_add_entry(dpname, ne, -1, c_int::from(i == 0)) } == 0 {
+                break 'body;
+            }
+            i += 1;
+        }
+        // Generate the cached encoding of the name.
+        // SAFETY: `dpname` is live and `NULL` asks for the length only.
+        if unsafe { i2d_X509_NAME(dpname, ptr::null_mut()) } >= 0 {
+            return dpname;
+        }
+    }
+    // SAFETY: `dpname` is a live value this call owns.
+    unsafe { X509_NAME_free(dpname) };
+    ptr::null_mut()
+}
+
 /// `int DIST_POINT_set_dpname(DIST_POINT_NAME *dpn, const X509_NAME *iname)` —
-/// `crypto/x509/v3_crld.c:526-552`, `include/openssl/x509v3.h:622`.
+/// `crypto/x509/v3_crld.c:526-552` (3.6.4) / `:554-561` (3.6.5), `include/openssl/x509v3.h:622`.
 ///
 /// Appends any `nameRelativeToCRLIssuer` fragment to `iname` and caches the result in `dpn->dpname`.
-/// A non-`relativename` (or NULL) `dpn` is a no-op success.
+/// A non-`relativename` (or NULL) `dpn` is a no-op success. 3.6.5 keeps this entry point (the CRL's
+/// `setup_idp` still uses it) but delegates the construction to [`ossl_dist_point_name_full`].
 ///
 /// # Safety
 ///
@@ -1743,43 +1792,13 @@ pub unsafe extern "C" fn DIST_POINT_set_dpname(
     if dpn.is_null() || unsafe { (*dpn).type_ } != 1 {
         return 1;
     }
-    // SAFETY: `dpn` is live and of `relativename` type.
-    let frag = unsafe { (*dpn).name.relativename };
     // SAFETY: `dpn` is live; freeing its cached name is the authority's `just in case` release.
     unsafe { X509_NAME_free((*dpn).dpname) };
-    // SAFETY: `iname` is live; the answer is owned by `dpn`.
-    let dup = unsafe { X509_NAME_dup(iname) };
+    // SAFETY: `dpn` is live and of `relativename` type; `iname` is live.
+    let dup = unsafe { ossl_dist_point_name_full(dpn, iname) };
     // SAFETY: `dpn` is live; the field slot is writable.
     unsafe { (*dpn).dpname = dup };
-    if dup.is_null() {
-        return 0;
-    }
-    // SAFETY: `frag` is a live stack.
-    let num = unsafe { OPENSSL_sk_num(frag) };
-    let mut i = 0;
-    'body: {
-        while i < num {
-            // SAFETY: `frag` is live and `i` is in bounds.
-            let ne = unsafe { OPENSSL_sk_value(frag, i) }.cast::<X509NameEntry>();
-            // SAFETY: `dpn`'s `dpname` and `ne` are live.
-            // The authority's `i ? 0 : 1`: the first entry is added with `set = 1`, the rest with
-            // `set = 0` (`crypto/x509/v3_crld.c:541`).
-            if unsafe { X509_NAME_add_entry((*dpn).dpname, ne, -1, c_int::from(i == 0)) } == 0 {
-                break 'body;
-            }
-            i += 1;
-        }
-        // Generate the cached encoding of the name.
-        // SAFETY: `dpn`'s `dpname` is live and `NULL` asks for the length only.
-        if unsafe { i2d_X509_NAME((*dpn).dpname, ptr::null_mut()) } >= 0 {
-            return 1;
-        }
-    }
-    // SAFETY: `dpn`'s `dpname` is a live value this call owns.
-    unsafe { X509_NAME_free((*dpn).dpname) };
-    // SAFETY: `dpn` is live; the field slot is writable.
-    unsafe { (*dpn).dpname = ptr::null_mut() };
-    0
+    c_int::from(!dup.is_null())
 }
 
 /// `static int print_boolean(BIO *out, ASN1_BOOLEAN b)` — `crypto/x509/v3_crld.c:565-568`.
