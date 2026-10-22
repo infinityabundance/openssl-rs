@@ -55,6 +55,7 @@ use super::poly::{
     vector_ntt_inverse, vector_power2_round, Poly, Vector,
 };
 use super::sample::{ossl_ml_dsa_matrix_expand_A, ossl_ml_dsa_vector_expand_S};
+use super::sign::Scratch;
 use super::{
     ossl_ml_dsa_params_get, MlDsaKey, MlDsaParams, ML_DSA_KEY_PROV_FLAGS_DEFAULT,
     ML_DSA_KEY_RETAIN_SEED, ML_DSA_K_BYTES, ML_DSA_PRIV_SEED_BYTES, ML_DSA_RHO_BYTES,
@@ -993,21 +994,42 @@ unsafe fn public_from_private(
         let k = (*params).k as u32;
         let l = (*params).l as u32;
 
+        // The block's three components are taken through the checked cursor below; a wrapped
+        // shape or a short block is a refusal, never an out-of-bounds view.
+        let Some(k_by_l) = (k as usize).checked_mul(l as usize) else {
+            return 0;
+        };
+        let Some(count) = (k as usize)
+            .checked_add(l as usize)
+            .and_then(|n| n.checked_add(k_by_l))
+        else {
+            return 0;
+        };
+        let Some(block_len) = count.checked_mul(core::mem::size_of::<Poly>()) else {
+            return 0;
+        };
         // `polys` is this frame's scratch block; the handle owns it, so its `Drop` runs the
         // authority's own plain `CRYPTO_free` at the authority's own site.
         let Some(polys) = OwnedBuf::new_array(
-            (k + l + k * l) as usize,
+            count,
             core::mem::size_of::<Poly>(),
             FILE_SEAM,
             LINE_PFP_ALLOC_POLYS,
         ) else {
             return 0;
         };
-        let polys_ptr = polys.as_ptr().cast::<Poly>();
 
-        let mut t = Vector::init(polys_ptr, k as usize);
-        let mut s1_ntt = Vector::init(t.poly.add(k as usize), l as usize);
-        let mut a_ntt = matrix_init(s1_ntt.poly.add(l as usize), k as usize, l as usize);
+        let mut scratch = Scratch::new(polys.as_ptr(), block_len);
+        let (Some(t_polys), Some(s1_polys), Some(a_polys)) = (
+            scratch.take_polys(k as usize),
+            scratch.take_polys(l as usize),
+            scratch.take_polys(k_by_l),
+        ) else {
+            return 0;
+        };
+        let mut t = Vector::init(t_polys.as_mut_ptr(), k as usize);
+        let mut s1_ntt = Vector::init(s1_polys.as_mut_ptr(), l as usize);
+        let mut a_ntt = matrix_init(a_polys.as_mut_ptr(), k as usize, l as usize);
 
         // The C's `goto err`.
         'err: {
@@ -1108,17 +1130,23 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pairwise_check(key: *const MlDsaKey) -> c_i
         }
         let k = (*(*key).params).k as u32;
 
+        let Some(count) = (k as usize).checked_mul(2) else {
+            return 0;
+        };
+        let Some(block_len) = count.checked_mul(core::mem::size_of::<Poly>()) else {
+            return 0;
+        };
         // `polys` is this frame's scratch block; the handle owns it, so its `Drop` runs the
         // authority's own cleansing `CRYPTO_clear_free` at the authority's own site.
         let Some(polys) = OwnedBuf::new_array_cleansed(
-            (2 * k) as usize,
+            count,
             core::mem::size_of::<Poly>(),
             FILE_SEAM,
             LINE_PWC_ALLOC_POLYS,
         ) else {
             return 0;
         };
-        let polys_ptr = polys.as_ptr().cast::<Poly>();
+        let mut scratch = Scratch::new(polys.as_ptr(), block_len);
         let md_ctx = EVP_MD_CTX_new();
 
         let mut ret = 0;
@@ -1128,8 +1156,14 @@ pub(crate) unsafe fn ossl_ml_dsa_key_pairwise_check(key: *const MlDsaKey) -> c_i
                 break 'err;
             }
 
-            let mut t1 = Vector::init(polys_ptr, k as usize);
-            let mut t0 = Vector::init(polys_ptr.add(k as usize), k as usize);
+            let (Some(t1_polys), Some(t0_polys)) = (
+                scratch.take_polys(k as usize),
+                scratch.take_polys(k as usize),
+            ) else {
+                break 'err;
+            };
+            let mut t1 = Vector::init(t1_polys.as_mut_ptr(), k as usize);
+            let mut t0 = Vector::init(t0_polys.as_mut_ptr(), k as usize);
             if public_from_private(key, md_ctx, &mut t1, &mut t0) == 0 {
                 break 'err;
             }
@@ -1157,9 +1191,6 @@ unsafe fn keygen_internal(out: *mut MlDsaKey) -> c_int {
         let mut ret = 0;
         let mut augmented_seed = [0u8; ML_DSA_SEED_BYTES + 2];
         let mut expanded_seed = [0u8; ML_DSA_RHO_BYTES + ML_DSA_PRIV_SEED_BYTES + ML_DSA_K_BYTES];
-        let rho = expanded_seed.as_ptr(); /* p = Public Random Seed */
-        let priv_seed = expanded_seed.as_ptr().add(ML_DSA_RHO_BYTES);
-        let k_seed = priv_seed.add(ML_DSA_PRIV_SEED_BYTES);
         let params = (*out).params;
 
         let mut md_ctx: *mut EvpMdCtx = ptr::null_mut();
@@ -1193,14 +1224,17 @@ unsafe fn keygen_internal(out: *mut MlDsaKey) -> c_int {
                 break 'err;
             }
 
-            ptr::copy_nonoverlapping(rho, (*out).rho.as_mut_ptr(), ML_DSA_RHO_BYTES);
-            ptr::copy_nonoverlapping(k_seed, (*out).k.as_mut_ptr(), ML_DSA_K_BYTES);
+            // `p = rho || rho' || K`, as three slices of the buffer `shake_xof` just filled.
+            let (rho, rest) = expanded_seed.split_at(ML_DSA_RHO_BYTES);
+            let (priv_seed, k_seed) = rest.split_at(ML_DSA_PRIV_SEED_BYTES);
+            ptr::copy_nonoverlapping(rho.as_ptr(), (*out).rho.as_mut_ptr(), ML_DSA_RHO_BYTES);
+            ptr::copy_nonoverlapping(k_seed.as_ptr(), (*out).k.as_mut_ptr(), ML_DSA_K_BYTES);
 
             ret = (ossl_ml_dsa_vector_expand_S(
                 md_ctx,
                 (*out).shake256_md,
                 (*params).eta,
-                priv_seed,
+                priv_seed.as_ptr(),
                 &mut (*out).s1,
                 &mut (*out).s2,
             ) != 0
@@ -1435,5 +1469,76 @@ mod tests {
             assert_eq!(ossl_ml_dsa_key_priv_alloc(key), 0);
             ossl_ml_dsa_key_free(key);
         }
+    }
+
+    #[test]
+    fn public_key_derivation_is_byte_identical() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the key is created, generated and freed here; the encoding slices are live
+        // across their comparisons.
+        unsafe {
+            let key = ossl_ml_dsa_key_new(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                super::super::EVP_PKEY_ML_DSA_65,
+            );
+            assert!(!key.is_null());
+            assert_eq!(ossl_ml_dsa_generate_key(key), 1);
+            let k = (*(*key).params).k;
+
+            // Derive t1/t0 again, through the converted partition, into fresh vectors and compare
+            // with the halves keygen stored: byte-identical derivation.
+            let md_ctx = EVP_MD_CTX_new();
+            assert!(!md_ctx.is_null());
+            let mut t1 = Vector::empty();
+            let mut t0 = Vector::empty();
+            assert_eq!(t1.alloc(k, FILE, 0), 1);
+            assert_eq!(t0.alloc(k, FILE, 0), 1);
+            assert_eq!(public_from_private(key, md_ctx, &mut t1, &mut t0), 1);
+            assert_eq!(vector_equal(t1.as_slice(), (*key).t1.as_slice()), 1);
+            assert_eq!(vector_equal(t0.as_slice(), (*key).t0.as_slice()), 1);
+            t1.free(FILE, 0);
+            t0.free(FILE, 0);
+            EVP_MD_CTX_free(md_ctx);
+            ossl_ml_dsa_key_free(key);
+        }
+    }
+
+    #[test]
+    fn a_corrupted_private_key_fails_the_pairwise_check() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the key is created, generated and freed here; the block is borrowed only while
+        // the key is live.
+        unsafe {
+            let key = ossl_ml_dsa_key_new(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                super::super::EVP_PKEY_ML_DSA_44,
+            );
+            assert!(!key.is_null());
+            assert_eq!(ossl_ml_dsa_generate_key(key), 1);
+            assert_eq!(ossl_ml_dsa_key_pairwise_check(key), 1);
+
+            // One flipped s1 coefficient changes the derived public half.
+            let mut block = PrivBlock::of(&mut *key);
+            block.s1_mut()[0].coeff[0] ^= 1;
+            let _ = block;
+            assert_eq!(ossl_ml_dsa_key_pairwise_check(key), 0);
+            ossl_ml_dsa_key_free(key);
+        }
+    }
+
+    #[test]
+    fn a_short_scratch_partition_is_refused() {
+        let mut buf = [0u32; 16]; // 64 bytes, aligned for `Poly`
+                                  // SAFETY: `buf` is a live 64-byte, 4-aligned local owned by this frame.
+        let mut scratch = unsafe { Scratch::new(buf.as_mut_ptr().cast(), 64) };
+        assert!(scratch.take_polys(1).is_none(), "one Poly needs 1024 bytes");
+        assert!(
+            scratch.take_polys(usize::MAX).is_none(),
+            "an overflowing element count is a refusal"
+        );
+        assert!(scratch.take_bytes(65).is_none());
+        assert!(scratch.take_bytes(64).is_some());
     }
 }
