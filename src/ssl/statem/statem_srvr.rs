@@ -7482,6 +7482,128 @@ mod tls12_group_tests {
         assert_cert_cb_handshake(TLS1_2_VERSION, c"ECDHE-RSA-AES128-GCM-SHA256");
     }
 
+    /// Accepts every candidate certificate, so the mutual-auth test exercises the client's
+    /// CertificateRequest handling rather than chain verification.
+    unsafe extern "C" fn accept_any_cert(_ok: c_int, _ctx: *mut c_void) -> c_int {
+        1
+    }
+
+    /// A pair where the server requests and a client presents a certificate.
+    ///
+    /// # Safety
+    /// The caller owns the pair and releases it with [`free_pair`].
+    unsafe fn make_pair_mutual(cipher: &CStr, version: c_int) -> Pair {
+        // SAFETY: every constructor below answers a fresh object owned by this frame.
+        unsafe {
+            let cctx = SSL_CTX_new(TLS_method());
+            let sctx = SSL_CTX_new(TLS_method());
+            assert!(!cctx.is_null() && !sctx.is_null());
+            if !cipher.to_bytes().starts_with(b"TLS_") {
+                assert_eq!(SSL_CTX_set_cipher_list(cctx, cipher.as_ptr()), 1);
+                assert_eq!(SSL_CTX_set_cipher_list(sctx, cipher.as_ptr()), 1);
+            }
+            SSL_CTX_set_verify(cctx, 0, None);
+            SSL_CTX_set_verify(sctx, SSL_VERIFY_PEER, Some(accept_any_cert));
+            for ctx in [cctx, sctx] {
+                assert_eq!(
+                    SSL_CTX_ctrl(
+                        ctx,
+                        SSL_CTRL_SET_MIN_PROTO_VERSION,
+                        version as c_long,
+                        core::ptr::null_mut()
+                    ),
+                    1
+                );
+                assert_eq!(
+                    SSL_CTX_ctrl(
+                        ctx,
+                        SSL_CTRL_SET_MAX_PROTO_VERSION,
+                        version as c_long,
+                        core::ptr::null_mut()
+                    ),
+                    1
+                );
+            }
+            let (spkey, sx) = rsa_identity(2048);
+            assert_eq!(SSL_CTX_use_certificate(sctx, sx), 1);
+            assert_eq!(SSL_CTX_use_PrivateKey(sctx, spkey), 1);
+            EVP_PKEY_free(spkey);
+            X509_free(sx);
+            let (cpkey, cx) = rsa_identity(2048);
+            assert_eq!(SSL_CTX_use_certificate(cctx, cx), 1);
+            assert_eq!(SSL_CTX_use_PrivateKey(cctx, cpkey), 1);
+            EVP_PKEY_free(cpkey);
+            X509_free(cx);
+            let c = SSL_new(cctx);
+            let s = SSL_new(sctx);
+            assert!(!c.is_null() && !s.is_null());
+            SSL_set_connect_state(c);
+            SSL_set_accept_state(s);
+            let c_r = BIO_new(BIO_s_mem());
+            let c_w = BIO_new(BIO_s_mem());
+            let s_r = BIO_new(BIO_s_mem());
+            let s_w = BIO_new(BIO_s_mem());
+            assert!(!c_r.is_null() && !c_w.is_null() && !s_r.is_null() && !s_w.is_null());
+            SSL_set_bio(c, c_r, c_w);
+            SSL_set_bio(s, s_r, s_w);
+            Pair {
+                cctx,
+                sctx,
+                c,
+                s,
+                c_r,
+                c_w,
+                s_r,
+                s_w,
+            }
+        }
+    }
+
+    /// The client's certificate is signed under a scheme the server's request offered: before the
+    /// request's `signature_algorithms` was saved, the signer refused with 118 and mutual auth
+    /// could never complete.
+    #[test]
+    fn tls13_mutual_auth_signs_the_client_certificate() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair_mutual(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION);
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = if client_ok && server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "TLS1.3 mutual auth failed (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+        }
+    }
+
+    #[test]
+    fn tls12_mutual_auth_signs_the_client_certificate() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair_mutual(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION);
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = if client_ok && server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "TLS1.2 mutual auth failed (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+        }
+    }
+
     /// A callback that answers 0 is the authority's `SSL_R_CERT_CB_ERROR` under
     /// `SSL_AD_INTERNAL_ERROR`, and the handshake does not complete.
     #[test]
