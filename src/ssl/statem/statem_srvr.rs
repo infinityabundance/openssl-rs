@@ -1005,11 +1005,18 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         return 0;
     }
     let session_id = &body[p..p + sid_len];
-    // SAFETY: `s` is live; the length is bounded by `SSL_MAX_SSL_SESSION_ID_LENGTH` by the client.
+    // The wire length is attacker-chosen (`0..=255`); the reduced reader keeps the authority's
+    // echo buffer bounded by storing at most `SSL_MAX_SSL_SESSION_ID_LENGTH` bytes and clamping
+    // the recorded length. The bounded slice copy makes that clamp the *only* rule: a short id
+    // is copied whole, a zero-length id records 0, and a truncated id was rejected above.
+    // (The authority rejects `sid_len > SSL_MAX_SSL_SESSION_ID_LENGTH` outright at
+    // `statem_srvr.c:1743`; that pre-existing divergence is unchanged here.)
+    let sid_copy = sid_len.min(crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH);
+    // SAFETY: `s` is live; `session_id` has `sid_len >= sid_copy` readable bytes and
+    // `tmp_session_id` has `SSL_MAX_SSL_SESSION_ID_LENGTH >= sid_copy` writable bytes.
     unsafe {
-        let n = sid_len.min(crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH);
-        core::ptr::copy_nonoverlapping(body.as_ptr().add(p), (*s).tmp_session_id.as_mut_ptr(), n);
-        (*s).tmp_session_id_len = n;
+        (&mut (*s).tmp_session_id)[..sid_copy].copy_from_slice(&session_id[..sid_copy]);
+        (*s).tmp_session_id_len = sid_copy;
     }
     p += sid_len;
     // cipher_suites (2 + n).
@@ -1035,13 +1042,16 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         &[]
     };
     p += comp_len;
-    // extensions (2 + n), if present.
+    // extensions (2 + n), if present. `exts_at` records the sub-slice's offset within `body`, so
+    // the binder transcript offset below needs no pointer-to-integer subtraction.
+    let mut exts_at = 0usize;
     let exts: &[u8] = if p + 2 <= body.len() {
         let ext_len = ((body[p] as usize) << 8) | body[p + 1] as usize;
         p += 2;
         if p + ext_len > body.len() {
             return 0;
         }
+        exts_at = p;
         &body[p..p + ext_len]
     } else {
         &[]
@@ -1108,14 +1118,14 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 unsafe { ossl_statem_fatal(s, SSL_AD_UNRECOGNIZED_NAME, SSL_R_BAD_EXTENSION) };
                 return 0;
             }
-            // SAFETY: `s` is live; `eb[5..]` holds `nlen` readable bytes with no interior NUL, so
-            // `CRYPTO_strndup` copies exactly `nlen` bytes and appends the terminator, and the
-            // `ext_hostname` member obeys the member-buffer invariant.
+            // SAFETY: `s` is live; `eb[5..5 + nlen]` holds `nlen` readable bytes with no
+            // interior NUL, so `CRYPTO_strndup` copies exactly `nlen` bytes and appends the
+            // terminator, and the `ext_hostname` member obeys the member-buffer invariant.
             unsafe {
                 let mut slot = (*s).ext_hostname_slot();
                 let empty = slot.clear(SeamFile::NULL, 0);
                 let Some(dup) =
-                    OwnedCStr::strndup(eb.as_ptr().add(5).cast(), nlen, SeamFile::NULL, 0)
+                    OwnedCStr::strndup(eb[5..5 + nlen].as_ptr().cast(), nlen, SeamFile::NULL, 0)
                 else {
                     ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                     return 0;
@@ -1311,9 +1321,18 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                         psk_identity = &ids[2..2 + idlen];
                         psk_binder = &bvec[1..1 + binder_len];
                         // Absolute offset of the `binders` vector within the ClientHello message
-                        // (the binder transcript ends at the vector's own length prefix).
-                        psk_binderoffset =
-                            (eb.as_ptr() as usize - hs.as_ptr() as usize) + binders_at;
+                        // (the binder transcript ends at the vector's own length prefix): the
+                        // 4-byte handshake header, then the extension block, then this
+                        // extension, then the vector. The operands are offsets into the same
+                        // `hs` slice, so the sum is checked rather than assumed.
+                        let Some(abs) = 4usize
+                            .checked_add(exts_at)
+                            .and_then(|v| v.checked_add(off))
+                            .and_then(|v| v.checked_add(binders_at))
+                        else {
+                            return 0;
+                        };
+                        psk_binderoffset = abs;
                         saw_psk = true;
                     }
                 }
@@ -1456,12 +1475,15 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             // SAFETY: `looked` is a live, reference-owning session.
             unsafe {
                 let kind = crate::ssl::tls13_enc::tls13_cipher_md_kind((*looked).cipher_id as u16);
-                let psk_len = (*looked).master_key_length;
+                // A ticket cannot produce a length past the session's own key buffer, but the
+                // slice is bounded explicitly so a corrupt session cannot request an
+                // out-of-range read. Clamping can only act on an already-invalid session.
+                let psk_len = (*looked).master_key_length.min((*looked).master_key.len());
                 let mut ok = kind >= 0 && psk_len > 0 && (*looked).ssl_version == TLS1_3_VERSION;
                 if ok {
                     let md = crate::ssl::tls13_enc::tls13_md_for_kind(kind);
                     let mut calc = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-                    let psk = core::slice::from_raw_parts((*looked).master_key.as_ptr(), psk_len);
+                    let psk = &(&(*looked).master_key)[..psk_len];
                     // `tls_psk_do_binder(..., sign=0, ...)` (`extensions_srvr.c:1523`).
                     if crate::ssl::tls13_enc::tls13_psk_do_binder(
                         md,
@@ -1477,12 +1499,9 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                     }
                 }
                 if ok {
-                    core::ptr::copy_nonoverlapping(
-                        (*looked).master_key.as_ptr(),
-                        (*s).psk_secret.as_mut_ptr(),
-                        psk_len.min((*s).psk_secret.len()),
-                    );
-                    (*s).psk_secret_len = psk_len.min((*s).psk_secret.len());
+                    let n = psk_len.min((*s).psk_secret.len());
+                    (&mut (*s).psk_secret)[..n].copy_from_slice(&(&(*looked).master_key)[..n]);
+                    (*s).psk_secret_len = n;
                     (*s).hit = 1;
                     crate::ssl::ssl_sess::SSL_SESSION_free((*s).session);
                     (*s).session = looked;
@@ -1707,13 +1726,19 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_push};
         let sk = OPENSSL_sk_new_null();
         if !sk.is_null() {
-            let mut q = 0usize;
-            while q + 2 <= clnt_ciphers.len() {
-                let c = crate::ssl::ssl_ciph::ssl3_get_cipher_by_char(clnt_ciphers.as_ptr().add(q));
+            // `as_chunks::<2>()` walks whole wire suites only (its remainder is ignored, as the
+            // previous `q + 2 <= len` pointer walk did). The id is assembled with the same
+            // `SSL3_CK_CIPHERSUITE_FLAG | (hi << 8) | lo` rule as `ssl3_get_cipher_by_char`,
+            // whose only precondition is the two readable bytes the chunk guarantees.
+            for pair in clnt_ciphers.as_chunks::<2>().0 {
+                let wire = u16::from_be_bytes(*pair);
+                // SAFETY: `ssl3_get_cipher_by_id` has no precondition on the lookup itself.
+                let c = crate::ssl::ssl_ciph::ssl3_get_cipher_by_id(
+                    t::SSL3_CK_CIPHERSUITE_FLAG as u32 | wire as u32,
+                );
                 if !c.is_null() {
                     OPENSSL_sk_push(sk, c.cast());
                 }
-                q += 2;
             }
             OPENSSL_sk_free((*s).peer_ciphers);
             (*s).peer_ciphers = sk;
@@ -6464,6 +6489,260 @@ mod tls12_group_tests {
             cmd_tx.send(Cmd::Stop).expect("stop channel");
             worker.join().expect("the 32 KiB worker must not fault");
             free_pair(p);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// ClientHello parsing cluster: the attacker-supplied session id and cipher-suite vector
+// ---------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod client_hello_parse_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use core::ffi::c_long;
+
+    use crate::runtime::err::ERR_clear_error;
+    use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_ciph_table::SslCipher;
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new, SSL_set_accept_state, SslCtx,
+    };
+
+    const TLS1_3_VERSION: c_int = 0x0304;
+    const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
+    const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
+    const TLS_AES_128_GCM_SHA256: u16 = 0x1301;
+    const X25519_GROUP: u16 = 0x001d;
+
+    struct Server {
+        ctx: *mut SslCtx,
+        s: *mut Ssl,
+    }
+
+    impl Drop for Server {
+        fn drop(&mut self) {
+            // SAFETY: both objects are this frame's; `SSL_free` releases the connection's
+            // references and `SSL_CTX_free` the context's remaining one.
+            unsafe {
+                SSL_free(self.s);
+                SSL_CTX_free(self.ctx);
+            }
+        }
+    }
+
+    /// A TLS1.3-only accept connection. No certificate is needed: TLS1.3 suite selection never
+    /// consults one.
+    fn tls13_server() -> Server {
+        // SAFETY: every constructor answers a fresh object owned by the returned `Server`.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null(), "a TLS context must be allocatable");
+            for ctrl in [
+                SSL_CTRL_SET_MIN_PROTO_VERSION,
+                SSL_CTRL_SET_MAX_PROTO_VERSION,
+            ] {
+                assert_eq!(
+                    SSL_CTX_ctrl(ctx, ctrl, TLS1_3_VERSION as c_long, core::ptr::null_mut()),
+                    1
+                );
+            }
+            let s = SSL_new(ctx);
+            assert!(!s.is_null(), "a TLS connection must be allocatable");
+            SSL_set_accept_state(s);
+            Server { ctx, s }
+        }
+    }
+
+    /// A reduced-server `ClientHello`: TLS1.3 via `supported_versions`, one `x25519`
+    /// `supported_groups` entry, one null compression method, and the supplied wire vectors.
+    fn client_hello(session_id: &[u8], suites: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&[0x03, 0x03]); // legacy_version
+        body.extend_from_slice(&[0x5a; 32]); // random
+        body.push(session_id.len() as u8); // legacy_session_id<0..255>
+        body.extend_from_slice(session_id);
+        body.extend_from_slice(&(suites.len() as u16).to_be_bytes());
+        body.extend_from_slice(suites);
+        body.extend_from_slice(&[1, 0]); // compression_methods: null only
+        let mut exts = Vec::new();
+        exts.extend_from_slice(&[0x00, 43, 0x00, 0x03, 0x02, 0x03, 0x04]); // supported_versions
+        let mut groups = X25519_GROUP.to_be_bytes().to_vec();
+        let mut group_ext = Vec::new();
+        group_ext.extend_from_slice(&(groups.len() as u16).to_be_bytes());
+        group_ext.append(&mut groups);
+        exts.extend_from_slice(&[0x00, 10]);
+        exts.extend_from_slice(&(group_ext.len() as u16).to_be_bytes());
+        exts.extend_from_slice(&group_ext);
+        body.extend_from_slice(&(exts.len() as u16).to_be_bytes());
+        body.extend_from_slice(&exts);
+
+        frame_client_hello(&body)
+    }
+
+    fn frame_client_hello(body: &[u8]) -> Vec<u8> {
+        let mut hs = Vec::with_capacity(4 + body.len());
+        hs.push(SSL3_MT_CLIENT_HELLO_BODY);
+        hs.push((body.len() >> 16) as u8);
+        hs.push((body.len() >> 8) as u8);
+        hs.push(body.len() as u8);
+        hs.extend_from_slice(body);
+        hs
+    }
+
+    fn pending_id(s: *mut Ssl) -> u16 {
+        // SAFETY: `s` is live; the pointer is checked before it is dereferenced.
+        unsafe {
+            let c = (*s).pending_cipher;
+            assert!(!c.is_null(), "a suite must have been selected");
+            (*c).id as u16
+        }
+    }
+
+    fn peer_cipher_ids(s: *mut Ssl) -> Vec<u16> {
+        // SAFETY: `s` is live and `peer_ciphers` is NULL or a live stack.
+        unsafe {
+            let sk = (*s).peer_ciphers;
+            assert!(!sk.is_null(), "the peer cipher stack must be built");
+            (0..OPENSSL_sk_num(sk))
+                .map(|i| (*(OPENSSL_sk_value(sk, i) as *const SslCipher)).id as u16)
+                .collect()
+        }
+    }
+
+    #[test]
+    fn valid_suite_list_selects_and_records_the_expected_suite() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let hs = client_hello(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes());
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        let r = unsafe { tls_process_client_hello(srv.s, &hs) };
+        assert_eq!(r, 1, "a well-formed TLS1.3 ClientHello must be accepted");
+        assert_eq!(pending_id(srv.s), TLS_AES_128_GCM_SHA256);
+        assert_eq!(peer_cipher_ids(srv.s), vec![TLS_AES_128_GCM_SHA256]);
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).tmp_session_id_len }, 32);
+    }
+
+    #[test]
+    fn odd_length_suite_list_ignores_the_trailing_byte() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut suites = TLS_AES_128_GCM_SHA256.to_be_bytes().to_vec();
+        suites.push(0x13); // half a suite: ignored, as the `q + 2 <= len` walk did
+        let hs = client_hello(&[], &suites);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        let r = unsafe { tls_process_client_hello(srv.s, &hs) };
+        assert_eq!(r, 1, "the trailing half-suite must not reject the hello");
+        assert_eq!(pending_id(srv.s), TLS_AES_128_GCM_SHA256);
+        assert_eq!(peer_cipher_ids(srv.s), vec![TLS_AES_128_GCM_SHA256]);
+    }
+
+    #[test]
+    fn zero_and_duplicate_suites_keep_the_authority_walk_semantics() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut suites = vec![0x00, 0x00];
+        suites.extend_from_slice(&TLS_AES_128_GCM_SHA256.to_be_bytes());
+        suites.extend_from_slice(&TLS_AES_128_GCM_SHA256.to_be_bytes());
+        suites.extend_from_slice(&[0xff, 0xff]); // unknown suite
+        let hs = client_hello(&[], &suites);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        let r = unsafe { tls_process_client_hello(srv.s, &hs) };
+        assert_eq!(r, 1, "the unknown entries must not reject the hello");
+        assert_eq!(pending_id(srv.s), TLS_AES_128_GCM_SHA256);
+        // The zero and unknown ids resolve to no table row and are skipped; both copies of the
+        // known suite are pushed, in wire order, exactly as before.
+        assert_eq!(
+            peer_cipher_ids(srv.s),
+            vec![TLS_AES_128_GCM_SHA256, TLS_AES_128_GCM_SHA256]
+        );
+    }
+
+    #[test]
+    fn over_long_session_id_is_clamped_like_before() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let hs = client_hello(&[0xab; 40], &TLS_AES_128_GCM_SHA256.to_be_bytes());
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        let r = unsafe { tls_process_client_hello(srv.s, &hs) };
+        assert_eq!(
+            r, 1,
+            "the reduced reader clamps rather than rejecting this id"
+        );
+        // SAFETY: `srv.s` is live.
+        unsafe {
+            assert_eq!((*srv.s).tmp_session_id_len, 32);
+            assert_eq!((*srv.s).tmp_session_id, [0xab; 32]);
+        }
+    }
+
+    #[test]
+    fn zero_length_session_id_records_zero() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let hs = client_hello(&[], &TLS_AES_128_GCM_SHA256.to_be_bytes());
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        let r = unsafe { tls_process_client_hello(srv.s, &hs) };
+        assert_eq!(r, 1, "a zero-length session id is legal");
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).tmp_session_id_len }, 0);
+    }
+
+    #[test]
+    fn truncated_session_id_is_rejected() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut body = Vec::new();
+        body.extend_from_slice(&[0x03, 0x03]);
+        body.extend_from_slice(&[0x5a; 32]);
+        body.push(8); // claims eight bytes ...
+        body.extend_from_slice(&[0x01, 0x02, 0x03, 0x04]); // ... supplies four
+        let hs = frame_client_hello(&body);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        let r = unsafe { tls_process_client_hello(srv.s, &hs) };
+        assert_eq!(r, 0, "a session id that overruns the body must be rejected");
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).tmp_session_id_len }, 0);
+    }
+
+    #[test]
+    fn random_short_buffers_never_panic() {
+        let _g = crate::test_support::lock_global_state();
+        let baseline = client_hello(&[0x22; 16], &TLS_AES_128_GCM_SHA256.to_be_bytes());
+        let mut state = 0x9e37_79b9_7f4a_7c15u64; // xorshift64, deterministic seed
+        let next = |state: &mut u64| {
+            *state ^= *state << 13;
+            *state ^= *state >> 7;
+            *state ^= *state << 17;
+            *state
+        };
+        // A fresh connection per case: a failed parse must never be retried on the same state.
+        // SAFETY: the context is this frame's and every connection is released below.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            for i in 0..128usize {
+                let s = SSL_new(ctx);
+                assert!(!s.is_null());
+                SSL_set_accept_state(s);
+                let bytes = if i % 2 == 0 {
+                    // Mutate a well-formed hello so the deeper paths are reached too.
+                    let mut m = baseline.clone();
+                    let bit = (next(&mut state) as usize) % (m.len() * 8);
+                    m[bit / 8] ^= 1 << (bit % 8);
+                    m
+                } else {
+                    let len = (next(&mut state) as usize) % 96;
+                    (0..len).map(|_| next(&mut state) as u8).collect()
+                };
+                let _ = tls_process_client_hello(s, &bytes);
+                ERR_clear_error();
+                SSL_free(s);
+            }
+            SSL_CTX_free(ctx);
         }
     }
 }
