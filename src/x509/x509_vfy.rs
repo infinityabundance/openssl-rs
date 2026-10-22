@@ -146,9 +146,9 @@ use crate::x509::v3_crld::{DistPoint, DistPointName, IssuingDistPoint};
 use crate::x509::v3_genn::{GENERAL_NAMES_free, GENERAL_NAME_cmp, GeneralName};
 use crate::x509::v3_ncons::{NAME_CONSTRAINTS_check, NAME_CONSTRAINTS_check_CN, NameConstraints};
 use crate::x509::v3_purp::{
-    ossl_x509_likely_issued, ossl_x509_signing_allowed, ossl_x509v3_cache_extensions,
-    X509_PURPOSE_get0, X509_PURPOSE_get_by_id, X509_PURPOSE_get_trust, X509_check_akid,
-    X509_check_ca, X509_check_purpose,
+    crldp_full_name, ossl_x509_likely_issued, ossl_x509_signing_allowed,
+    ossl_x509v3_cache_extensions, X509_PURPOSE_get0, X509_PURPOSE_get_by_id,
+    X509_PURPOSE_get_trust, X509_check_akid, X509_check_ca, X509_check_purpose,
 };
 use crate::x509::v3_utl::{X509_check_email, X509_check_host, X509_check_ip};
 use crate::x509::x509_cmp::{
@@ -4397,32 +4397,42 @@ unsafe fn check_crl_chain(
     }
 }
 
-/// `static int idp_check_dp(DIST_POINT_NAME *a, DIST_POINT_NAME *b)` —
-/// `crypto/x509/x509_vfy.c:1750-1803`.
+/// `static int idp_check_dp(DIST_POINT_NAME *a, const X509_NAME *aname, DIST_POINT_NAME *b)` —
+/// `crypto/x509/x509_vfy.c:1786-1850` (3.6.5).
+///
+/// `aname` is `a`'s full name when `a` is a `relativename`, built on demand by
+/// [`crldp_full_name`]; `a->dpname` itself is not consulted (3.6.5 no longer populates it at parse
+/// time). `b` is the CRL's issuing distribution point, whose `dpname` was set when the CRL was
+/// parsed.
 ///
 /// # Safety
 ///
-/// `a` and `b` must be NULL or live `DIST_POINT_NAME`s whose `fullname` stacks are live where read.
-unsafe fn idp_check_dp(a: *mut DistPointName, b: *mut DistPointName) -> c_int {
+/// `a` and `b` must be NULL or live `DIST_POINT_NAME`s whose `fullname` stacks are live where
+/// read; `aname` must be NULL or a live `X509_NAME`.
+unsafe fn idp_check_dp(
+    a: *mut DistPointName,
+    aname: *const X509Name,
+    b: *mut DistPointName,
+) -> c_int {
     // SAFETY: `a` and `b` are NULL or live per the contract; the union arms read are the live ones.
     unsafe {
         if a.is_null() || b.is_null() {
             return 1;
         }
-        let mut nm: *mut X509Name = ptr::null_mut();
+        let mut nm: *const X509Name = ptr::null();
         let mut gens: *mut OpenSslStack = ptr::null_mut();
 
         if (*a).type_ == 1 {
-            if (*a).dpname.is_null() {
+            if aname.is_null() {
                 return 0;
             }
             if (*b).type_ == 1 {
                 if (*b).dpname.is_null() {
                     return 0;
                 }
-                return c_int::from(X509_NAME_cmp((*a).dpname, (*b).dpname) == 0);
+                return c_int::from(X509_NAME_cmp(aname, (*b).dpname) == 0);
             }
-            nm = (*a).dpname;
+            nm = aname;
             gens = (*b).name.fullname;
         } else if (*b).type_ == 1 {
             if (*b).dpname.is_null() {
@@ -4528,12 +4538,32 @@ unsafe fn crl_crldp_check(
         let mut i = 0;
         while i < n {
             let dp = OPENSSL_sk_value(crldp, i).cast::<DistPoint>();
-            if crldp_check_crlissuer(dp, crl, crl_score) != 0 {
-                let idp = (*crl).idp.cast::<IssuingDistPoint>();
-                if idp.is_null() || idp_check_dp((*dp).distpoint, (*idp).distpoint) != 0 {
-                    *preasons &= (*dp).dp_reasons as c_uint;
-                    return 1;
+            if crldp_check_crlissuer(dp, crl, crl_score) == 0 {
+                i += 1;
+                continue;
+            }
+            let match_ = if (*crl).idp.is_null() {
+                1
+            } else {
+                // A relative distribution point name is only comparable in full form. Build it
+                // for this one comparison and discard it (3.6.5 `x509_vfy.c:1893-1902`); if that
+                // fails the entry simply does not match.
+                let mut dpname: *mut X509Name = ptr::null_mut();
+                if !(*dp).distpoint.is_null() && (*(*dp).distpoint).type_ == 1 {
+                    dpname = crldp_full_name(x, dp);
+                    if dpname.is_null() {
+                        i += 1;
+                        continue;
+                    }
                 }
+                let idp = (*crl).idp.cast::<IssuingDistPoint>();
+                let m = idp_check_dp((*dp).distpoint, dpname, (*idp).distpoint);
+                X509_NAME_free(dpname);
+                m
+            };
+            if match_ != 0 {
+                *preasons &= (*dp).dp_reasons as c_uint;
+                return 1;
             }
             i += 1;
         }
