@@ -28,8 +28,8 @@ counts and the machine-readable pointer live in
 > production unsafe sites; it does not establish whole-file safety, does not
 > discharge its residual obligations, and is not an `INDEPENDENTLY_CHECKED`
 > result. A file graduates only through the AGENTS.md §7 dependency-closure and
-> independent-evidence gates. Campaign progress is **6 of 761 PARTIAL files
-> audited**; no file in this set has graduated.
+> independent-evidence gates. Campaign progress is **761 of 761 PARTIAL files
+> audited (0 remaining)**; no file in this set has graduated.
 
 The old cumulative content was split without modification. To compare against
 the pre-split document, use the campaign commit that introduced this pointer; the
