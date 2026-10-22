@@ -797,29 +797,90 @@ pub(crate) fn tls1_nid2group_id(nid: c_int) -> u16 {
 }
 
 /// `int tls1_save_u16(PACKET *pkt, uint16_t **p, size_t *len)` — `t1_lib.c:3490-3517`, for the
-/// `signature_algorithms` vector `tls_parse_ctos_sig_algs` saves (`extensions_srvr.c:303-320`).
+/// `signature_algorithms` vector `tls_parse_ctos_sig_algs` saves (`extensions_srvr.c:303-320`)
+/// and the client's `CertificateRequest` reader (`statem_clnt.c:2650-2690`, `:2686`).
 ///
 /// The extension body is `list_len(2) || scheme(2)...`; a zero-length or odd list, or one whose
 /// declared length runs past the body, is refused *before* the incumbent list is released, so a
-/// malformed renegotiation leaves the previous list intact (the authority parses into the packet
-/// before it stores). On success the schemes are stored as native-endian `u16`s — that is the
+/// malformed request leaves the previous list intact (the authority parses into the packet before
+/// it stores). On success the schemes are stored as native-endian `u16`s — that is the
 /// representation `SSL_get_sigalgs` reads — in a `CRYPTO_malloc` block this connection owns and
 /// `SSL_free` releases.
 ///
 /// # Safety
 /// `s` must be a live connection.
 pub(crate) unsafe fn tls1_save_peer_sigalgs(s: *mut Ssl, body: &[u8]) -> c_int {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
     if body.len() < 2 {
         return 0;
     }
     let list_len = ((body[0] as usize) << 8) | body[1] as usize;
-    if list_len == 0 || !list_len.is_multiple_of(2) || 2 + list_len > body.len() {
+    if list_len == 0 || 2 + list_len > body.len() {
         return 0;
     }
-    let count = list_len / 2;
-    let Some(bytes) = count.checked_mul(core::mem::size_of::<u16>()) else {
+    // SAFETY: the declared vector is inside `body`.
+    unsafe { tls1_save_peer_sigalgs_raw(s, &body[2..2 + list_len]) }
+}
+
+/// The scheme bytes of a `signature_algorithms` vector (`list_len(2)` already stripped), saved
+/// exactly as [`tls1_save_peer_sigalgs`] saves them. The TLS1.2 `CertificateRequest` reader has
+/// the vector in this shape after `PACKET_get_length_prefixed_2`.
+///
+/// # Safety
+/// `s` must be a live connection.
+pub(crate) unsafe fn tls1_save_peer_sigalgs_raw(s: *mut Ssl, schemes: &[u8]) -> c_int {
+    if schemes.is_empty() || !schemes.len().is_multiple_of(2) {
         return 0;
+    }
+    let count = schemes.len() / 2;
+    // SAFETY: `s` is live; the block is the connection's own.
+    let p = unsafe { alloc_peer_sigalgs(s, count) };
+    if p.is_null() {
+        return 0;
+    }
+    // SAFETY: `p` is `count * size_of::<u16>()` writable bytes from `CRYPTO_malloc` (maximally
+    // aligned), so it is a valid `count`-element `u16` slice; this frame is its only writer.
+    let out = unsafe { core::slice::from_raw_parts_mut(p, count) };
+    for (slot, pair) in out.iter_mut().zip(schemes.as_chunks::<2>().0) {
+        *slot = u16::from_be_bytes(*pair);
+    }
+    1
+}
+
+/// Stores `schemes` as the connection's peer signature-algorithm list.
+///
+/// The authority's default list is what it uses when the peer sent no `signature_algorithms` at
+/// all: the client falls back to the list it advertised (`tls1_get_legacy_sigalg` + the
+/// `tls12_get_psigalgs(s, 1, ...)` membership test in `tls_choose_sigalg`, `t1_lib.c:4685-4713`;
+/// `tls1_set_shared_sigalgs`'s NULL-`peer_sigalgs` arm, `t1_lib.c:3490-3509`). This stores that
+/// list so the certificate constructors' scheme check can consult it.
+///
+/// # Safety
+/// `s` must be a live connection.
+pub(crate) unsafe fn tls1_save_peer_sigalgs_default(s: *mut Ssl, schemes: &[u16]) -> c_int {
+    if schemes.is_empty() {
+        return 0;
+    }
+    // SAFETY: `s` is live; the block is the connection's own.
+    let p = unsafe { alloc_peer_sigalgs(s, schemes.len()) };
+    if p.is_null() {
+        return 0;
+    }
+    // SAFETY: `p` is `schemes.len()` writable `u16`s; this frame is its only writer.
+    let out = unsafe { core::slice::from_raw_parts_mut(p, schemes.len()) };
+    out.copy_from_slice(schemes);
+    1
+}
+
+/// Releases the incumbent peer list and answers a writable block for `count` schemes, publishing
+/// it as the connection's own. NULL on a refused allocation; the checked multiply is what refuses
+/// an impossible extent before anything is released.
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn alloc_peer_sigalgs(s: *mut Ssl, count: usize) -> *mut u16 {
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    let Some(bytes) = count.checked_mul(core::mem::size_of::<u16>()) else {
+        return ptr::null_mut();
     };
     // SAFETY: `s` is live; the incumbent (if any) is this connection's own block.
     unsafe {
@@ -830,21 +891,14 @@ pub(crate) unsafe fn tls1_save_peer_sigalgs(s: *mut Ssl, body: &[u8]) -> c_int {
     // SAFETY: no preconditions; the refusal arm leaves the connection's list empty.
     let p = unsafe { CRYPTO_malloc(bytes, FILE, 0) }.cast::<u16>();
     if p.is_null() {
-        return 0;
+        return ptr::null_mut();
     }
-    // SAFETY: `p` is `bytes` writable bytes from `CRYPTO_malloc` (maximally aligned) and
-    // `bytes == count * size_of::<u16>()`, so it is a valid `count`-element `u16` slice; this
-    // frame is its only writer until it is published below.
-    let out = unsafe { core::slice::from_raw_parts_mut(p, count) };
-    for (slot, pair) in out.iter_mut().zip(body[2..2 + list_len].as_chunks::<2>().0) {
-        *slot = u16::from_be_bytes(*pair);
-    }
-    // SAFETY: `s` is live; `p` is the block just filled, now owned by the connection.
+    // SAFETY: `s` is live; `p` is the block just allocated for `count` schemes.
     unsafe {
         (*s).peer_sigalgs = p;
         (*s).peer_sigalgslen = count;
     }
-    1
+    p
 }
 
 /// `uint16_t tls1_group_name2id(SSL_CTX *ctx, const char *name)` — `t1_lib.c:709-719`, reduced to
