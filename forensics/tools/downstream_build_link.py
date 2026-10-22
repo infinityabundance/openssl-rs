@@ -1961,6 +1961,13 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b12): libtpms, libre, arm-trusted-firmware-tools,
+    # libnetconf2 and liboauth2. Same pristine-source/aux seam; libnetconf2's libssh/libyang
+    # and liboauth2's cjose/libcurl are pinned bookworm packages, never a distribution OpenSSL.
+    for spec in _L7_EXPAND9_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -2311,6 +2318,170 @@ _L7_EXPAND8_SPECS: tuple[dict, ...] = (
         "note": ("sofia-sip 1.12.11's tport TLS transport (libsofia-sip-ua/tport/tport_tls.c) "
                  "built against the subject libssl; the admitted workload is the SIP-over-TLS "
                  "tport harness"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b12): five more pristine-source consumers. libtpms 0.9.2 and
+# liboauth2 1.4.5.4 need a generated `configure`; the same pinned autotools packages dcap-tunnel-ssl
+# already uses provide it. libnetconf2 links libssh/libyang and liboauth2 links cjose/libcurl from
+# pinned bookworm packages extracted through `aux_sources`; none of them provides an OpenSSL.
+_LIBSSH_AUX: tuple[dict, ...] = (
+    _aux_deb("libs/libssh", "libssh-4_0.10.6-0+deb12u2_amd64.deb",
+             "2158d90ac21364655fe0372b23341fa3f871146bf3525f7dffef6dfa8f28448a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libs/libssh", "libssh-dev_0.10.6-0+deb12u2_amd64.deb",
+             "c5dff9b2b855677e6451e35ab6f7e9a467c4c36a3d76c30526f9f66b0f978df7",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_LIBYANG_AUX: tuple[dict, ...] = (
+    _aux_deb("liby/libyang2", "libyang2_2.1.30-2_amd64.deb",
+             "a2d950fa7729dedad0d7bc581b67a185180bec49d03b38cf1917f3869b8bc618",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("liby/libyang2", "libyang2-dev_2.1.30-2_amd64.deb",
+             "419f94a3b360b71987e3810e09553b36a6e1e4d583cd2cd2132ccf41911544c0",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    # libyang's public headers include <pcre2.h>; the runtime library is the venue's.
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_CJOSE_AUX: tuple[dict, ...] = (
+    _aux_deb("c/cjose", "libcjose0_0.6.2.1-1+deb12u1_amd64.deb",
+             "f62f0a16704103dfcff1b6b9423839655bb5f1f7a84dd90e14f00cebf483107b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("c/cjose", "libcjose-dev_0.6.2.1-1+deb12u1_amd64.deb",
+             "97ffc1c18565f835b47914e904f261c0aee849a5c356dad8f60f5cc5fd792de7",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# liboauth2 1.4.5.4's configure requires a libcurl development entry point; the venue carries the
+# runtime library but no headers or `.pc`.
+_LIBCURL_AUX: tuple[dict, ...] = (
+    _aux_deb("c/curl", "libcurl4_7.88.1-10+deb12u15_amd64.deb",
+             "3042904de01f9c4fbdcf1452b8f81abedcf2b015f9b9deba109063322b5bd68b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("c/curl", "libcurl4-openssl-dev_7.88.1-10+deb12u15_amd64.deb",
+             "dbd69b15ecb49331f53fbc3483b0508997e2fab551e48c53951391f254b73890",
+             include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# The dcap-tunnel-ssl autotools shim, reused verbatim: the pinned aclocal/automake wrappers keep
+# the extracted macros and libtool files off the venue's missing autotools installation.
+_AUTORECONF_PRE_BUILD = [["sh", "-c", (
+    "set -e; "
+    "W={root}/.l7-autotools; mkdir -p $W; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+    "--system-acdir={aux}/usr/share/aclocal-1.16 -I {aux}/usr/share/aclocal "
+    "-I /usr/share/aclocal --automake-acdir={aux}/usr/share/aclocal-1.16 "
+    "\"$@\"\\n' > $W/aclocal; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+    "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+    "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/share/autoconf/autom4te.cfg; "
+    "mkdir -p {aux}/usr/share/libtool/m4; "
+    "cp {aux}/usr/share/aclocal/libtool.m4 {aux}/usr/share/aclocal/lt*.m4 "
+    "{aux}/usr/share/libtool/m4/; "
+    "touch NEWS; "
+    "autoreconf -fi"
+)]]
+
+_AUTORECONF_ENV = {
+    "_lt_pkgdatadir": "{aux}/usr/share/libtool",
+    "M4": "{aux}/usr/bin/m4",
+    "AUTOM4TE": "{aux}/usr/bin/autom4te",
+    "AUTOCONF": "{aux}/usr/bin/autoconf",
+    "AUTOHEADER": "{aux}/usr/bin/autoheader",
+    "ACLOCAL": "{root}/.l7-autotools/aclocal",
+    "AUTOMAKE": "{root}/.l7-autotools/automake",
+    "LIBTOOLIZE": "{root}/.l7-autotools/libtoolize",
+    "AC_MACRODIR": "{aux}/usr/share/autoconf",
+    "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+    "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+    "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+    "PATH": "{root}/.l7-autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+    "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+}
+
+_L7_EXPAND9_SPECS: tuple[dict, ...] = (
+    {
+        "family": "libtpms", "version": "0.9.2",
+        "url": ("https://deb.debian.org/debian/pool/main/libt/libtpms/"
+                "libtpms_0.9.2.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "460047f880c5a17dfb8f5c92668fd2f0c508279d4cc3de0a779c21a09f966766",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl", "--with-tpm2"],
+        "make": ["-j4"], "artifact": "src/.libs/libtpms.so*", "launch": None,
+        "aux_sources": list(_DCAP_AUTOTOOLS),
+        "pre_build": _AUTORECONF_PRE_BUILD, "env_extra": dict(_AUTORECONF_ENV),
+        "note": ("libtpms 0.9.2 with TPM2 and the OpenSSL crypto library; the admitted workload "
+                 "drives TPM2_Startup/GetCapability/GetRandom through TPMLIB_Process"),
+    },
+    {
+        "family": "libre", "version": "1.1.0",
+        "url": "https://deb.debian.org/debian/pool/main/libr/libre/libre_1.1.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "82afc903a6b1e436b357f05eb11560ec681712291dd9c83c408465c895f28b5d",
+        "make": ["-j4", "SYSROOT_ALT={prefix}", "PREFIX={root}/.l7-install"],
+        "artifact": "libre.so*", "launch": None,
+        "note": ("libre 1.1.0's tls/tcp backend (src/tls/openssl) with USE_OPENSSL from the "
+                 "subject prefix; the admitted workload is a loopback TLS session + wrong-CA "
+                 "reject"),
+    },
+    {
+        "family": "arm-trusted-firmware-tools", "version": "2.8.0+dfsg",
+        "url": ("https://deb.debian.org/debian/pool/main/a/arm-trusted-firmware/"
+                "arm-trusted-firmware_2.8.0+dfsg.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "make", "configure": None,
+        "sha256": "a4ecc35e0b893fe8682c075fc1bdb858de87e4cb18fbed9a1597e2c9f6d320de",
+        "pre_build": [["make", "-C", "tools/cert_create", "OPENSSL_DIR={prefix}"]],
+        "make": ["-C", "tools/fiptool", "OPENSSL_DIR={prefix}"],
+        "artifact": "tools/fiptool/fiptool", "launch": None,
+        "note": ("TF-A 2.8.0's cert_create and fiptool built against the subject libcrypto; the "
+                 "admitted workload signs a certificate chain, verifies it, and rejects a "
+                 "tampered certificate and a tampered FIP"),
+    },
+    {
+        "family": "libnetconf2", "version": "2.0.24",
+        "url": ("https://deb.debian.org/debian/pool/main/libn/libnetconf2/"
+                "libnetconf2_2.0.24.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "78ffa0bd85823abd321a1dbb09c1ead36612f2a12049638a14bb081567f86ade",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_TESTS=OFF",
+                      "-DENABLE_SSH=ON", "-DENABLE_TLS=ON", "-DENABLE_COVERAGE=OFF",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_INCLUDE_PATH={aux}/usr/include",
+                      "-DCMAKE_LIBRARY_PATH={aux}/usr/lib/x86_64-linux-gnu",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include"],
+        "make": [], "artifact": "b/libnetconf2.so*", "launch": None,
+        "aux_sources": list(_LIBSSH_AUX) + list(_LIBYANG_AUX),
+        "note": ("libnetconf2 2.0.24 with SSH and TLS enabled: its TLS session client uses the "
+                 "subject libssl, while libssh 0.10.6 and libyang 2.1.30 are the pinned "
+                 "bookworm dependencies (neither provides an OpenSSL on the link line)"),
+    },
+    {
+        "family": "liboauth2", "version": "1.4.5.4",
+        "url": ("https://deb.debian.org/debian/pool/main/libo/liboauth2/"
+                "liboauth2_1.4.5.4.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "a7ab1fee6d9c88501e22ca73e28365aaaac298c811b01beacb3bf7e1cddbe9e5",
+        "configure": ["--prefix={root}/.l7-install", "--with-apache=no",
+                      "--with-memcache=no", "--with-redis=no"],
+        "make": ["-j4"], "artifact": ".libs/liboauth2.so*", "launch": None,
+        "aux_sources": (list(_DCAP_AUTOTOOLS) + list(_CJOSE_AUX) + list(_LIBCURL_AUX)),
+        "pre_build": _AUTORECONF_PRE_BUILD, "env_extra": dict(_AUTORECONF_ENV),
+        "note": ("liboauth2 1.4.5.4's JOSE path: cjose 0.6.2.1 performs JWS/JWE with the subject "
+                 "libcrypto while liboauth2 hashes with the subject EVP interface; libcurl is "
+                 "the pinned development entry point its configure requires"),
     },
 )
 
@@ -2888,13 +3059,15 @@ def candidate_identity() -> dict:
 
 def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
                  *, only: set[str] | None = None,
-                 reuse: dict | None = None) -> dict:
+                 reuse: dict | None = None,
+                 allow_superseded: bool = False) -> dict:
     """Measure the whole P1000 under both subjects and return the atlas `body`.
 
     `only`/`reuse` are the evidence-reuse seam: with a committed atlas whose candidate identity
     is byte-identical to the current candidate install, the unchanged families keep their
-    previously measured rows and only `only` is rebuilt.  The reused rows are copied verbatim and
-    the body records the reuse and the committed artefact digest it came from.
+    previously measured rows and only `only` is rebuilt.  `allow_superseded` is the explicit
+    escape hatch for a candidate rebuild (it never claims a match): the reused rows remain bound
+    to the committed identity, which is recorded in `evidence_reuse.superseded_identity`.
     """
     auth_prefix = resolve_authority(authority_id).prefix
     if not (CANDIDATE_PREFIX / "lib" / "libssl.so.3").is_file():
@@ -2912,14 +3085,20 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
     reuse_specimens: dict[str, dict] = {}
     reuse_variants: dict[str, dict] = {}
     reused_families: list[str] = []
+    superseded: dict[str, dict] = {}
+    committed_identity: dict = {}
     if reuse:
         current = candidate_identity()
         committed = reuse.get("candidate_identity") or {}
+        committed_identity = copy.deepcopy(committed)
         for field in ("libssl_so_3_sha256", "libcrypto_so_3_sha256", "install_prefix"):
             if str(current.get(field)) != str(committed.get(field)):
-                raise SystemExit(
-                    f"[downstream-build-link] --reuse-committed refuses the committed atlas: its "
-                    f"candidate_identity.{field} is not the current candidate install")
+                if not allow_superseded:
+                    raise SystemExit(
+                        f"[downstream-build-link] --reuse-committed refuses the committed atlas: "
+                        f"its candidate_identity.{field} is not the current candidate install")
+                superseded[field] = {"committed": str(committed.get(field)),
+                                     "current": str(current.get(field))}
         for r in reuse.get("runs") or []:
             reuse_runs[(str(r.get("family_id")), str(r.get("subject")))] = r
         reuse_specimens = {str(s.get("specimen_id")): s for s in reuse.get("specimens") or []}
@@ -2947,6 +3126,11 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
                 == recipe["recipe_id"]):
             rows.append(copy.deepcopy(reuse_runs[(str(entry.get("family_id")), "authority")]))
             rows.append(copy.deepcopy(reuse_runs[(str(entry.get("family_id")), "candidate")]))
+            if superseded:
+                # Durable provenance: the marker survives into the next atlas so a subsequent
+                # incremental run cannot silently relabel these rows as current-candidate evidence.
+                for row in rows[-2:]:
+                    row["reused_from_candidate_identity"] = committed_identity
             spec = reuse_specimens.get(f"specimen:{name}:{recipe['version']}")
             var = reuse_variants.get(f"variant:{name}:{recipe['version']}:pristine")
             if spec:
@@ -2973,6 +3157,12 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
     variants.sort(key=lambda v: str(v["variant_id"]))
 
     counts = _counts(p1000, rows)
+    current_identity = candidate_identity()
+    carried = {}
+    for r in rows:
+        marker = r.get("reused_from_candidate_identity")
+        if marker and marker != current_identity:
+            carried[tuple(sorted(marker.items()))] = marker
     body = {
         "rule": RULE,
         "authority": authority_id,
@@ -2993,10 +3183,12 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
         "resource_limits": limits,
         "non_claims": NON_CLAIMS,
         "evidence_reuse": ({
-            "mode": "committed-rows",
+            "mode": ("committed-rows-carried-forward"
+                     if (superseded or carried) else "committed-rows"),
             "families_reused": len(reused_families),
             "reused_families": sorted(reused_families),
-            "candidate_identity_match": True,
+            "candidate_identity_match": not (superseded or carried),
+            "superseded_identity": superseded or (list(carried.values()) or None),
         } if reuse else None),
     }
     return body
@@ -3365,7 +3557,7 @@ def _load_freeze() -> tuple[dict, dict]:
 
 
 def cmd_measure(authority_id: str, only: set[str] | None = None,
-                reuse: dict | None = None) -> int:
+                reuse: dict | None = None, allow_superseded: bool = False) -> int:
     freeze_doc, families_body = _load_freeze()
     freeze_body = freeze_doc["body"]
     if len(freeze_body.get("p1000") or []) != 1000:
@@ -3376,7 +3568,8 @@ def cmd_measure(authority_id: str, only: set[str] | None = None,
     print(f"[downstream-build-link] building the P1000 recipes against both subjects "
           f"(authority {authority_id} + candidate {rel(CANDIDATE_PREFIX)})")
     started = time.monotonic()
-    body = derive_atlas(families_body, freeze_body, authority_id, only=only, reuse=reuse)
+    body = derive_atlas(families_body, freeze_body, authority_id, only=only, reuse=reuse,
+                        allow_superseded=allow_superseded)
     census._cleanup(SCRATCH)
     findings = build_link_findings(families_body, freeze_body, body)
     control = build_link_sensitivity_control(families_body, freeze_body, body)
@@ -3496,6 +3689,9 @@ def main(argv: list[str]) -> int:
                     help="comma-separated families to rebuild; the rest are reused")
     ap.add_argument("--reuse-committed", action="store_true",
                     help="reuse unchanged families' rows from the committed atlas")
+    ap.add_argument("--reuse-previous-candidate", action="store_true",
+                    help=("with --reuse-committed, allow rows bound to a different (previous) "
+                          "candidate install and record the mismatch explicitly"))
     ap.add_argument("--check", action="store_true",
                     help="validate the committed atlas without rebuilding (in-container)")
     ap.add_argument("--self-test", action="store_true",
@@ -3512,7 +3708,8 @@ def main(argv: list[str]) -> int:
         return cmd_check(args.authority)
     only = {s.strip() for s in str(args.only).split(",") if s.strip()} or None
     reuse = _load_atlas() if args.reuse_committed and OUT.is_file() else None
-    return cmd_measure(args.authority, only=only, reuse=reuse)
+    return cmd_measure(args.authority, only=only, reuse=reuse,
+                       allow_superseded=bool(args.reuse_previous_candidate))
 
 
 if __name__ == "__main__":
