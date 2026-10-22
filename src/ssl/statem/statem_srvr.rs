@@ -141,6 +141,8 @@ const SSL_R_NO_SUITABLE_KEY_SHARE: c_int = 101;
 /// `SSL_AD_ILLEGAL_PARAMETER` — `ssl3.h` (47).
 #[allow(dead_code)]
 const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
+/// `SSL_R_LENGTH_MISMATCH` — `sslerr.h:163` (159).
+const SSL_R_LENGTH_MISMATCH: c_int = 159;
 /// `SSL3_MT_SERVER_KEY_EXCHANGE` — `ssl3.h` (12).
 const SSL3_MT_SERVER_KEY_EXCHANGE: c_int = 12;
 /// `SSL3_MT_SERVER_HELLO_DONE` — `ssl3.h` (14).
@@ -935,6 +937,62 @@ unsafe fn tls_handle_alpn(s: *mut Ssl) -> c_int {
     1
 }
 
+/// A bounds-checked forward cursor over an attacker-supplied byte slice.
+///
+/// Every accessor answers `None` rather than reading outside `bytes`, so a malformed
+/// ClientHello can only end the walk with the authority's error. The cursor is the only
+/// place the extension readers advance an offset; callers never add a length to an index
+/// themselves.
+struct SliceCursor<'a> {
+    bytes: &'a [u8],
+    pos: usize,
+}
+
+impl<'a> SliceCursor<'a> {
+    fn new(bytes: &'a [u8]) -> Self {
+        Self { bytes, pos: 0 }
+    }
+
+    /// Bytes not yet consumed. `pos` is never advanced past `bytes.len()`.
+    fn remaining(&self) -> usize {
+        self.bytes.len() - self.pos
+    }
+
+    /// Offset of the next unconsumed byte, always within `0..=bytes.len()`.
+    fn pos(&self) -> usize {
+        self.pos
+    }
+
+    /// Consume exactly `n` bytes, or nothing when they are not all present.
+    fn take(&mut self, n: usize) -> Option<&'a [u8]> {
+        let end = self.pos.checked_add(n)?;
+        let out = self.bytes.get(self.pos..end)?;
+        self.pos = end;
+        Some(out)
+    }
+
+    /// Consume `n` bytes when present, otherwise consume the remainder and answer `None`.
+    /// This mirrors the authority's `PACKET_remaining` readers, which leave an over-long
+    /// field as an empty value rather than rejecting the message.
+    fn take_or_rest(&mut self, n: usize) -> Option<&'a [u8]> {
+        match self.take(n) {
+            Some(s) => Some(s),
+            None => {
+                self.pos = self.bytes.len();
+                None
+            }
+        }
+    }
+
+    fn take_u8(&mut self) -> Option<u8> {
+        self.take(1).map(|b| b[0])
+    }
+
+    fn take_u16(&mut self) -> Option<u16> {
+        self.take(2).map(|b| u16::from_be_bytes([b[0], b[1]]))
+    }
+}
+
 /// `SSL3_MT_SERVER_HELLO` — `ssl3.h`.
 const SSL3_MT_SERVER_HELLO: u8 = 2;
 /// `SSL3_MT_CLIENT_HELLO` — `ssl3.h`.
@@ -986,79 +1044,70 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     }
     let body = &hs[4..4 + hs_len];
 
-    let mut p = 0usize;
+    let mut cur = SliceCursor::new(body);
     // legacy_version (2) + random (32).
-    if body.len() < 2 + 32 {
+    let Some(legacy) = cur.take(2) else {
         return 0;
-    }
-    p += 2;
-    // SAFETY: the slice is 32 bytes; `client_random` is a 32-byte array.
-    unsafe { (*s).client_random.copy_from_slice(&body[p..p + 32]) };
-    p += 32;
-    // session_id (1 + n): the TLSv1.3 ServerHello echoes it (`statem_srvr.c:2064-2068`).
-    if p >= body.len() {
-        return 0;
-    }
-    let sid_len = body[p] as usize;
-    p += 1;
-    if p + sid_len > body.len() {
-        return 0;
-    }
-    let session_id = &body[p..p + sid_len];
-    // The wire length is attacker-chosen (`0..=255`); the reduced reader keeps the authority's
-    // echo buffer bounded by storing at most `SSL_MAX_SSL_SESSION_ID_LENGTH` bytes and clamping
-    // the recorded length. The bounded slice copy makes that clamp the *only* rule: a short id
-    // is copied whole, a zero-length id records 0, and a truncated id was rejected above.
-    // (The authority rejects `sid_len > SSL_MAX_SSL_SESSION_ID_LENGTH` outright at
-    // `statem_srvr.c:1743`; that pre-existing divergence is unchanged here.)
-    let sid_copy = sid_len.min(crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH);
-    // SAFETY: `s` is live; `session_id` has `sid_len >= sid_copy` readable bytes and
-    // `tmp_session_id` has `SSL_MAX_SSL_SESSION_ID_LENGTH >= sid_copy` writable bytes.
-    unsafe {
-        (&mut (*s).tmp_session_id)[..sid_copy].copy_from_slice(&session_id[..sid_copy]);
-        (*s).tmp_session_id_len = sid_copy;
-    }
-    p += sid_len;
-    // cipher_suites (2 + n).
-    if p + 2 > body.len() {
-        return 0;
-    }
-    let cip_len = ((body[p] as usize) << 8) | body[p + 1] as usize;
-    p += 2;
-    if p + cip_len > body.len() {
-        return 0;
-    }
-    let clnt_ciphers = &body[p..p + cip_len];
-    p += cip_len;
-    // compression_methods (1 + n).
-    if p >= body.len() {
-        return 0;
-    }
-    let comp_len = body[p] as usize;
-    p += 1;
-    let compressions: &[u8] = if p + comp_len <= body.len() {
-        &body[p..p + comp_len]
-    } else {
-        &[]
     };
-    p += comp_len;
+    let legacy_version = ((legacy[0] as c_int) << 8) | legacy[1] as c_int;
+    let Some(random) = cur.take(32) else {
+        return 0;
+    };
+    // SAFETY: `random` is a 32-byte slice; `client_random` is a 32-byte array.
+    unsafe { (*s).client_random.copy_from_slice(random) };
+    // session_id (1 + n): the TLSv1.3 ServerHello echoes it (`statem_srvr.c:2064-2068`).
+    let Some(sid_len) = cur.take_u8() else {
+        return 0;
+    };
+    let Some(session_id) = cur.take(sid_len as usize) else {
+        return 0;
+    };
+    // The authority rejects an id longer than `SSL_MAX_SSL_SESSION_ID_LENGTH` rather than
+    // truncating it. A regular TLS ClientHello (our path) is not an SSLv2-compatible record
+    // (`clienthello->isv2 = RECORD_LAYER_is_sslv2_record(...)`, `statem_srvr.c:1682`), so it
+    // takes the `else` arm at `statem_srvr.c:1776-1781`: `PACKET_copy_all` into the 32-byte
+    // buffer fails and the authority raises `SSL_AD_DECODE_ERROR` / `SSL_R_LENGTH_MISMATCH`.
+    // The reduced reader previously clamped to 32; it now matches that arm.
+    if session_id.len() > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+        return 0;
+    }
+    // SAFETY: `s` is live; `session_id` has exactly `tmp_session_id`'s (32-byte) capacity or less.
+    unsafe {
+        (&mut (*s).tmp_session_id)[..session_id.len()].copy_from_slice(session_id);
+        (*s).tmp_session_id_len = session_id.len();
+    }
+    // cipher_suites (2 + n).
+    let Some(cip_len) = cur.take_u16() else {
+        return 0;
+    };
+    let Some(clnt_ciphers) = cur.take(cip_len as usize) else {
+        return 0;
+    };
+    // compression_methods (1 + n). A body that ends inside the vector leaves the list empty,
+    // exactly as the previous `p + comp_len <= body.len()` reader did, and the extension
+    // reader then sees the truncated remainder (so no extensions are parsed).
+    let Some(comp_len) = cur.take_u8() else {
+        return 0;
+    };
+    let compressions: &[u8] = cur.take_or_rest(comp_len as usize).unwrap_or(&[]);
     // extensions (2 + n), if present. `exts_at` records the sub-slice's offset within `body`, so
     // the binder transcript offset below needs no pointer-to-integer subtraction.
     let mut exts_at = 0usize;
-    let exts: &[u8] = if p + 2 <= body.len() {
-        let ext_len = ((body[p] as usize) << 8) | body[p + 1] as usize;
-        p += 2;
-        if p + ext_len > body.len() {
-            return 0;
+    let exts: &[u8] = match cur.take_u16() {
+        Some(ext_len) => {
+            let at = cur.pos();
+            let Some(exts) = cur.take(ext_len as usize) else {
+                return 0;
+            };
+            exts_at = at;
+            exts
         }
-        exts_at = p;
-        &body[p..p + ext_len]
-    } else {
-        &[]
+        None => &[],
     };
 
     // Choose the server version and the key-exchange group from the extensions.
-    let legacy_version = ((body[0] as c_int) << 8) | body[1] as c_int;
     let mut wants_tls13 = false;
     let mut sup_versions = [0u16; 8];
     let mut sup_versions_cnt = 0usize;
@@ -1074,21 +1123,26 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     let mut psk_binderoffset: usize = 0;
     let mut saw_psk = false;
     let mut psk_kex_dhe = false;
-    let mut off = 0usize;
     let mut sni_sent = false;
     // `tls_get_ticket_from_client` (`t1_lib.c:2996-3010`): `ticket_expected` is only armed when
     // the ClientHello actually carries the `session_ticket` extension. The previous unconditional
     // arm made the server announce and issue a ticket to a client that had disabled them
     // (`s_client -no_ticket`), which is the unsolicited-extension defect.
     let mut ticket_ext_present = false;
-    while off + 4 <= exts.len() {
-        let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
-        let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
-        off += 4;
-        if off + elen > exts.len() {
+    let mut walk = SliceCursor::new(exts);
+    while walk.remaining() >= 4 {
+        // `remaining() >= 4` makes the type and length reads infallible; the body read is the
+        // one bounds check that decides acceptance, and it answers `None` rather than reading
+        // past the extension block.
+        let (Some(etype_bytes), Some(elen_bytes)) = (walk.take(2), walk.take(2)) else {
             return 0;
-        }
-        let eb = &exts[off..off + elen];
+        };
+        let etype = u16::from_be_bytes([etype_bytes[0], etype_bytes[1]]);
+        let elen = u16::from_be_bytes([elen_bytes[0], elen_bytes[1]]) as usize;
+        let ext_body_off = walk.pos();
+        let Some(eb) = walk.take(elen) else {
+            return 0;
+        };
         if etype == TLSEXT_TYPE_SERVERNAME {
             // `tls_parse_ctos_server_name` (`extensions_srvr.c:100-175`): a
             // `ServerNameList` (2-byte length) holding one `host_name` entry
@@ -1173,32 +1227,35 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             }
         }
         if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS && eb.len() >= 3 {
-            // The body is `list_len || (version_hi || version_lo)...`.
+            // The body is `list_len || (version_hi || version_lo)...`. The declared list may
+            // overrun the extension; the walk stops at the shorter of the two, as the
+            // authority's `PACKET_remaining` loop does.
             let list_len = eb[0] as usize;
-            let mut q = 1usize;
-            while q + 2 <= 1 + list_len.min(eb.len() - 1) {
-                let v = ((eb[q] as c_int) << 8) | eb[q + 1] as c_int;
+            let end = 1 + list_len.min(eb.len() - 1);
+            let mut versions = SliceCursor::new(&eb[1..end]);
+            while let Some(v) = versions.take_u16() {
                 if sup_versions_cnt < sup_versions.len() {
-                    sup_versions[sup_versions_cnt] = v as u16;
+                    sup_versions[sup_versions_cnt] = v;
                     sup_versions_cnt += 1;
                 }
-                if v == TLS1_3_VERSION {
+                if v == TLS1_3_VERSION as u16 {
                     // `tls_parse_ctos_supported_versions` records the request; the version itself
                     // is resolved after the whole extension walk (`tls_early_post_process_client_hello`).
                     wants_tls13 = true;
                 }
-                q += 2;
             }
         }
         if etype == TLSEXT_TYPE_SUPPORTED_GROUPS && eb.len() >= 2 {
             // `tls_parse_ctos_supported_groups` (`extensions_srvr.c`): the `NamedGroupList`.
             let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
             let end = (2 + list_len).min(eb.len());
-            let mut q = 2usize;
-            while q + 2 <= end && clnt_group_cnt < clnt_groups.len() {
-                clnt_groups[clnt_group_cnt] = ((eb[q] as u16) << 8) | eb[q + 1] as u16;
+            let mut groups = SliceCursor::new(&eb[2..end]);
+            while clnt_group_cnt < clnt_groups.len() {
+                let Some(g) = groups.take_u16() else {
+                    break;
+                };
+                clnt_groups[clnt_group_cnt] = g;
                 clnt_group_cnt += 1;
-                q += 2;
             }
         }
         if etype == TLSEXT_TYPE_ALPN {
@@ -1269,22 +1326,26 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             // with a two-byte list length (`extensions_srvr.c:857`, RFC 8446 §4.2.8). The reduced
             // server can only complete an `X25519` exchange, so it selects the `X25519` entry
             // wherever it appears in the list (the authority sends X25519MLKEM768 first, then
-            // X25519).
+            // X25519). The declared list length bounds where an entry may *start*; an entry's
+            // key may still run to the end of the extension, as the authority's reader allows.
             let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
-            let end = (2 + list_len).min(eb.len());
-            let mut q = 2usize;
-            while q + 4 <= end {
-                let g = ((eb[q] as u16) << 8) | eb[q + 1] as u16;
-                let klen = ((eb[q + 2] as usize) << 8) | eb[q + 3] as usize;
-                if q + 4 + klen > eb.len() {
+            let list_end = (2 + list_len).min(eb.len());
+            let mut shares = SliceCursor::new(eb);
+            let _ = shares.take(2); // the list length word, already read
+            while shares.pos() + 4 <= list_end {
+                let (Some(g_bytes), Some(klen_bytes)) = (shares.take(2), shares.take(2)) else {
                     break;
-                }
+                };
+                let g = u16::from_be_bytes([g_bytes[0], g_bytes[1]]);
+                let klen = u16::from_be_bytes([klen_bytes[0], klen_bytes[1]]) as usize;
+                let Some(key) = shares.take(klen) else {
+                    break;
+                };
                 if g == crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519 && klen == 32 {
                     saw_keyshare_group = g;
-                    client_share = &eb[q + 4..q + 4 + klen];
+                    client_share = key;
                     break;
                 }
-                q += 4 + klen;
             }
         }
         if etype == TLSEXT_TYPE_PSK_KEX_MODES && !eb.is_empty() {
@@ -1292,53 +1353,55 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             // `ke_modes<1..255>`; only `psk_dhe_ke` is honoured (a `psk_ke`-only offer is a
             // recorded boundary).
             let list_len = eb[0] as usize;
-            let mut q = 1usize;
-            while q < 1 + list_len && q < eb.len() {
-                if eb[q] == TLSEXT_KEX_MODE_FLAG_KE_DHE {
+            for &mode in eb[1..].iter().take(list_len) {
+                if mode == TLSEXT_KEX_MODE_FLAG_KE_DHE {
                     psk_kex_dhe = true;
                 }
-                q += 1;
             }
         }
         if etype == TLSEXT_TYPE_PSK && eb.len() >= 2 {
             // `tls_parse_ctos_psk` (`extensions_srvr.c:1310`): the body is
             // `identities<2>(identity<2> || obfuscated_ticket_age(4)) || binders<2>(binder<1>)`.
-            let ids_len = ((eb[0] as usize) << 8) | eb[1] as usize;
-            if 2 + ids_len + 2 > eb.len() {
+            let mut psk = SliceCursor::new(eb);
+            let ids_len = psk.take_u16().unwrap_or(0) as usize;
+            let ids = psk.take(ids_len);
+            let binders_len = psk.take_u16();
+            let (Some(ids), Some(blen)) = (ids, binders_len) else {
+                // The identities vector runs past the extension, or no binders vector follows
+                // it: the authority refuses the whole extension here.
                 // SAFETY: `s` is live.
                 unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
                 return 0;
-            }
-            let ids = &eb[2..2 + ids_len];
-            let binders_at = 2 + ids_len;
-            let blen = ((eb[binders_at] as usize) << 8) | eb[binders_at + 1] as usize;
-            if ids.len() >= 2 && binders_at + 2 + blen <= eb.len() && blen >= 1 {
-                let idlen = ((ids[0] as usize) << 8) | ids[1] as usize;
-                if idlen != 0 && 2 + idlen + 4 <= ids.len() {
-                    let bvec = &eb[binders_at + 2..binders_at + 2 + blen];
-                    let binder_len = bvec[0] as usize;
-                    if binder_len != 0 && binder_len < bvec.len() {
-                        psk_identity = &ids[2..2 + idlen];
-                        psk_binder = &bvec[1..1 + binder_len];
-                        // Absolute offset of the `binders` vector within the ClientHello message
-                        // (the binder transcript ends at the vector's own length prefix): the
-                        // 4-byte handshake header, then the extension block, then this
-                        // extension, then the vector. The operands are offsets into the same
-                        // `hs` slice, so the sum is checked rather than assumed.
-                        let Some(abs) = 4usize
-                            .checked_add(exts_at)
-                            .and_then(|v| v.checked_add(off))
-                            .and_then(|v| v.checked_add(binders_at))
-                        else {
-                            return 0;
-                        };
-                        psk_binderoffset = abs;
-                        saw_psk = true;
+            };
+            let blen = blen as usize;
+            if let Some(bvec) = psk.take(blen) {
+                if ids.len() >= 2 && blen >= 1 {
+                    let idlen = ((ids[0] as usize) << 8) | ids[1] as usize;
+                    if idlen != 0 && 2 + idlen + 4 <= ids.len() {
+                        let binder_len = bvec[0] as usize;
+                        if binder_len != 0 && binder_len < bvec.len() {
+                            psk_identity = &ids[2..2 + idlen];
+                            psk_binder = &bvec[1..1 + binder_len];
+                            // Absolute offset of the `binders` vector within the ClientHello
+                            // message (the binder transcript ends at the vector's own length
+                            // prefix): the 4-byte handshake header, then the extension block,
+                            // then this extension, then the vector. The operands are offsets
+                            // into the same `hs` slice, so the sum is checked rather than
+                            // assumed.
+                            let Some(abs) = 4usize
+                                .checked_add(exts_at)
+                                .and_then(|v| v.checked_add(ext_body_off))
+                                .and_then(|v| v.checked_add(ids_len + 2))
+                            else {
+                                return 0;
+                            };
+                            psk_binderoffset = abs;
+                            saw_psk = true;
+                        }
                     }
                 }
             }
         }
-        off += elen;
     }
 
     // `tls_parse_ctos_supported_versions`/the legacy-version fallback (`statem_srvr.c`): the
@@ -2806,23 +2869,23 @@ unsafe fn tls12_construct_server_hello(s: *mut Ssl) -> c_int {
     let id = unsafe { (*cipher).id as u16 };
     // `tls_construct_server_hello` echoes `s->session->session_id`: the resumed id on a hit, or
     // the freshly generated id (empty for an RFC5077 stateless ticket) otherwise.
-    let mut sid = [0u8; 32];
-    let mut sid_len = 0usize;
-    // SAFETY: `s` is live.
+    let mut sid = [0u8; crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH];
+    let sid_len;
+    // SAFETY: `s` is live; a non-NULL `session` is a live session whose `session_id` member is
+    // the same 32-byte array size as `tmp_session_id`, both bounded below by construction.
     unsafe {
-        if !(*s).session.is_null() {
-            sid_len = (*(*s).session).session_id_length.min(sid.len());
-            if sid_len > 0 {
-                core::ptr::copy_nonoverlapping(
-                    (*(*s).session).session_id.as_ptr(),
-                    sid.as_mut_ptr(),
-                    sid_len,
-                );
-            }
-        }
-        if sid_len > 0 {
-            core::ptr::copy_nonoverlapping(sid.as_ptr(), (*s).tmp_session_id.as_mut_ptr(), sid_len);
-        }
+        // Borrow the session id as a slice, bounded by the member's own storage so a corrupt
+        // recorded length can only shorten the echo, never index outside the array.
+        let session_id: &[u8] = if (*s).session.is_null() {
+            &[]
+        } else {
+            let sess = &*(*s).session;
+            let n = sess.session_id_length.min(sess.session_id.len());
+            &sess.session_id[..n]
+        };
+        sid_len = session_id.len().min(sid.len());
+        sid[..sid_len].copy_from_slice(&session_id[..sid_len]);
+        (&mut (*s).tmp_session_id)[..sid_len].copy_from_slice(&sid[..sid_len]);
         (*s).tmp_session_id_len = sid_len;
     }
     let mut body = [0u8; 96];
@@ -6503,7 +6566,9 @@ mod client_hello_parse_tests {
     use super::*;
     use core::ffi::c_long;
 
+    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_ctrl_pending, BIO_new, BIO_read};
     use crate::runtime::err::ERR_clear_error;
+    use crate::runtime::err::ERR_get_error;
     use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
     use crate::ssl::methods::TLS_method;
     use crate::ssl::ssl_ciph_table::SslCipher;
@@ -6536,19 +6601,33 @@ mod client_hello_parse_tests {
     /// A TLS1.3-only accept connection. No certificate is needed: TLS1.3 suite selection never
     /// consults one.
     fn tls13_server() -> Server {
+        server_with_version_range(TLS1_3_VERSION, TLS1_3_VERSION)
+    }
+
+    /// An accept connection restricted to an explicit protocol range.
+    fn server_with_version_range(min: c_int, max: c_int) -> Server {
         // SAFETY: every constructor answers a fresh object owned by the returned `Server`.
         unsafe {
             let ctx = SSL_CTX_new(TLS_method());
             assert!(!ctx.is_null(), "a TLS context must be allocatable");
-            for ctrl in [
-                SSL_CTRL_SET_MIN_PROTO_VERSION,
-                SSL_CTRL_SET_MAX_PROTO_VERSION,
-            ] {
-                assert_eq!(
-                    SSL_CTX_ctrl(ctx, ctrl, TLS1_3_VERSION as c_long, core::ptr::null_mut()),
-                    1
-                );
-            }
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_MIN_PROTO_VERSION,
+                    min as c_long,
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_MAX_PROTO_VERSION,
+                    max as c_long,
+                    core::ptr::null_mut()
+                ),
+                1
+            );
             let s = SSL_new(ctx);
             assert!(!s.is_null(), "a TLS connection must be allocatable");
             SSL_set_accept_state(s);
@@ -6559,14 +6638,6 @@ mod client_hello_parse_tests {
     /// A reduced-server `ClientHello`: TLS1.3 via `supported_versions`, one `x25519`
     /// `supported_groups` entry, one null compression method, and the supplied wire vectors.
     fn client_hello(session_id: &[u8], suites: &[u8]) -> Vec<u8> {
-        let mut body = Vec::new();
-        body.extend_from_slice(&[0x03, 0x03]); // legacy_version
-        body.extend_from_slice(&[0x5a; 32]); // random
-        body.push(session_id.len() as u8); // legacy_session_id<0..255>
-        body.extend_from_slice(session_id);
-        body.extend_from_slice(&(suites.len() as u16).to_be_bytes());
-        body.extend_from_slice(suites);
-        body.extend_from_slice(&[1, 0]); // compression_methods: null only
         let mut exts = Vec::new();
         exts.extend_from_slice(&[0x00, 43, 0x00, 0x03, 0x02, 0x03, 0x04]); // supported_versions
         let mut groups = X25519_GROUP.to_be_bytes().to_vec();
@@ -6576,10 +6647,102 @@ mod client_hello_parse_tests {
         exts.extend_from_slice(&[0x00, 10]);
         exts.extend_from_slice(&(group_ext.len() as u16).to_be_bytes());
         exts.extend_from_slice(&group_ext);
-        body.extend_from_slice(&(exts.len() as u16).to_be_bytes());
-        body.extend_from_slice(&exts);
+        client_hello_with_exts(session_id, suites, &exts)
+    }
 
+    /// The same body with a caller-supplied extension block, so a test can emit exact bytes.
+    fn client_hello_with_exts(session_id: &[u8], suites: &[u8], exts: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&[0x03, 0x03]); // legacy_version
+        body.extend_from_slice(&[0x5a; 32]); // random
+        body.push(session_id.len() as u8); // legacy_session_id<0..255>
+        body.extend_from_slice(session_id);
+        body.extend_from_slice(&(suites.len() as u16).to_be_bytes());
+        body.extend_from_slice(suites);
+        body.extend_from_slice(&[1, 0]); // compression_methods: null only
+        body.extend_from_slice(&(exts.len() as u16).to_be_bytes());
+        body.extend_from_slice(exts);
         frame_client_hello(&body)
+    }
+
+    /// `ExtensionType(2) || ExtensionData<2> || body`.
+    fn ext(etype: u16, body: &[u8]) -> Vec<u8> {
+        let mut out = etype.to_be_bytes().to_vec();
+        out.extend_from_slice(&(body.len() as u16).to_be_bytes());
+        out.extend_from_slice(body);
+        out
+    }
+
+    /// `server_version<1> || versions<2>...`.
+    fn supported_versions_ext(versions: &[u16]) -> Vec<u8> {
+        let mut body = vec![(versions.len() * 2) as u8];
+        for v in versions {
+            body.extend_from_slice(&v.to_be_bytes());
+        }
+        ext(TLSEXT_TYPE_SUPPORTED_VERSIONS, &body)
+    }
+
+    /// `NamedGroupList<2> || groups<2>...`.
+    fn supported_groups_ext(groups: &[u16]) -> Vec<u8> {
+        let mut body = ((groups.len() * 2) as u16).to_be_bytes().to_vec();
+        for g in groups {
+            body.extend_from_slice(&g.to_be_bytes());
+        }
+        ext(TLSEXT_TYPE_SUPPORTED_GROUPS, &body)
+    }
+
+    /// `KeyShareClientHello<2> || (group<2> || key<2> || key)...`.
+    fn key_share_ext(entries: &[(u16, &[u8])]) -> Vec<u8> {
+        let mut list = Vec::new();
+        for (group, key) in entries {
+            list.extend_from_slice(&group.to_be_bytes());
+            list.extend_from_slice(&(key.len() as u16).to_be_bytes());
+            list.extend_from_slice(key);
+        }
+        let mut body = (list.len() as u16).to_be_bytes().to_vec();
+        body.extend_from_slice(&list);
+        ext(TLSEXT_TYPE_KEY_SHARE, &body)
+    }
+
+    /// Attach a fresh memory BIO as the write side so a fatal alert's wire bytes are observable.
+    fn attach_wbio(s: *mut Ssl) {
+        // SAFETY: `s` is live; ownership of the BIO transfers to the connection, released by
+        // `SSL_free`.
+        unsafe {
+            let bio = BIO_new(BIO_s_mem());
+            assert!(!bio.is_null(), "a memory BIO must be allocatable");
+            (*s).wbio = bio;
+        }
+    }
+
+    /// Drain the write side's pending bytes.
+    fn wbio_bytes(s: *mut Ssl) -> Vec<u8> {
+        // SAFETY: `s` is live and `wbio` is the memory BIO `attach_wbio` installed.
+        unsafe {
+            let wbio = (*s).wbio;
+            assert!(!wbio.is_null());
+            let n = BIO_ctrl_pending(wbio);
+            let mut out = vec![0u8; n];
+            if n > 0 {
+                let got = BIO_read(wbio, out.as_mut_ptr().cast(), n as c_int);
+                assert!(got >= 0);
+                out.truncate(got as usize);
+            }
+            out
+        }
+    }
+
+    /// Drain this thread's error queue and return the reason codes.
+    fn error_reasons() -> Vec<c_int> {
+        let mut reasons = Vec::new();
+        loop {
+            let e = ERR_get_error();
+            if e == 0 {
+                break;
+            }
+            reasons.push((e & 0x7f_ffff) as c_int);
+        }
+        reasons
     }
 
     fn frame_client_hello(body: &[u8]) -> Vec<u8> {
@@ -6661,21 +6824,302 @@ mod client_hello_parse_tests {
         );
     }
 
+    /// Compatibility correction: the authority's regular-ClientHello arm rejects
+    /// `session_id_len` above `SSL_MAX_SSL_SESSION_ID_LENGTH` with `SSL_AD_DECODE_ERROR` /
+    /// `SSL_R_LENGTH_MISMATCH` (`statem_srvr.c:1776-1781`) instead of truncating it. The
+    /// reduced reader used to clamp to 32; it now raises that alert and reason.
     #[test]
-    fn over_long_session_id_is_clamped_like_before() {
+    fn over_long_session_id_is_rejected_with_the_authority_alert() {
         let _g = crate::test_support::lock_global_state();
         let srv = tls13_server();
+        attach_wbio(srv.s);
+        ERR_clear_error();
         let hs = client_hello(&[0xab; 40], &TLS_AES_128_GCM_SHA256.to_be_bytes());
         // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
         let r = unsafe { tls_process_client_hello(srv.s, &hs) };
+        assert_eq!(r, 0, "an over-long session id must be rejected");
+        // SAFETY: `srv.s` is live.
+        unsafe {
+            assert_eq!(
+                (*srv.s).tmp_session_id_len,
+                0,
+                "the rejected id must not be recorded"
+            );
+        }
         assert_eq!(
-            r, 1,
-            "the reduced reader clamps rather than rejecting this id"
+            error_reasons(),
+            vec![SSL_R_LENGTH_MISMATCH],
+            "the reason must be the authority's SSL_R_LENGTH_MISMATCH"
         );
+        let wire = wbio_bytes(srv.s);
+        assert!(
+            wire.len() >= 2,
+            "the fatal alert must reach the write side: {wire:?}"
+        );
+        assert_eq!(
+            &wire[wire.len() - 2..],
+            &[2, SSL_AD_DECODE_ERROR as u8],
+            "level fatal (2) and SSL_AD_DECODE_ERROR (50)"
+        );
+    }
+
+    #[test]
+    fn largest_legal_session_id_is_accepted_and_echoed() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let id = [0xcd; 32];
+        let hs = client_hello(&id, &TLS_AES_128_GCM_SHA256.to_be_bytes());
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
         // SAFETY: `srv.s` is live.
         unsafe {
             assert_eq!((*srv.s).tmp_session_id_len, 32);
-            assert_eq!((*srv.s).tmp_session_id, [0xab; 32]);
+            assert_eq!((*srv.s).tmp_session_id, id);
+        }
+    }
+
+    // --- extension walk ------------------------------------------------------------------
+
+    #[test]
+    fn supported_versions_present_selects_tls13() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).version }, TLS1_3_VERSION);
+    }
+
+    #[test]
+    fn supported_versions_absent_falls_back_to_the_legacy_version() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = server_with_version_range(0x0303, TLS1_3_VERSION);
+        let exts = supported_groups_ext(&[X25519_GROUP]);
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // Without `supported_versions` the legacy 0x0303 governs; this context has no TLS1.2
+        // certificate, so the parse stops at cipher selection, after recording the version.
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 0);
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).version }, 0x0303);
+    }
+
+    #[test]
+    fn supported_versions_prefers_tls13_regardless_of_list_order() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut exts = supported_versions_ext(&[0x0303, 0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).version }, TLS1_3_VERSION);
+    }
+
+    #[test]
+    fn supported_versions_without_the_selected_version_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut exts = supported_versions_ext(&[0x0303]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        ERR_clear_error();
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 0);
+        assert_eq!(error_reasons(), vec![SSL_R_UNSUPPORTED_PROTOCOL]);
+    }
+
+    #[test]
+    fn duplicate_supported_versions_is_accepted() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut exts = supported_versions_ext(&[0x0303]);
+        exts.extend_from_slice(&supported_versions_ext(&[0x0304]));
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_eq!(
+            // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+            unsafe { tls_process_client_hello(srv.s, &hs) },
+            1,
+            "both occurrences are walked; the TLS1.3 offer wins"
+        );
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).version }, TLS1_3_VERSION);
+    }
+
+    #[test]
+    fn extension_order_does_not_change_the_selection() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let share = [0x42u8; 32];
+        let mut exts = key_share_ext(&[(X25519_GROUP, &share)]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&supported_versions_ext(&[0x0304]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
+        // SAFETY: `srv.s` is live.
+        unsafe {
+            assert_eq!((*srv.s).version, TLS1_3_VERSION);
+            assert_eq!((*srv.s).group_id, X25519_GROUP);
+        }
+    }
+
+    #[test]
+    fn extension_body_overrunning_the_block_is_rejected() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        // A complete, acceptable TLS1.3 preamble, then a trailing `key_share` that claims eight
+        // body bytes where only four remain. The overrun alone must reject the hello.
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&[0x00, 51, 0x00, 0x08, 0xaa, 0xbb, 0xcc, 0xdd]);
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_eq!(
+            // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+            unsafe { tls_process_client_hello(srv.s, &hs) },
+            0,
+            "an extension body that overruns the block must be refused"
+        );
+    }
+
+    #[test]
+    fn truncated_extension_header_is_accepted_as_no_extensions() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = server_with_version_range(0x0303, TLS1_3_VERSION);
+        // One stray byte cannot hold a four-byte extension header; the walk stops cleanly and
+        // the legacy version governs.
+        let exts = [0x00];
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 0);
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).version }, 0x0303);
+    }
+
+    #[test]
+    fn oversized_supported_versions_list_is_clamped_not_read_past() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        // The declared list is 200 bytes but only one version follows; the walk stops at the
+        // extension body's end, exactly as the previous `min` bound did.
+        let body = [200u8, 0x03, 0x04];
+        let mut exts = ext(TLSEXT_TYPE_SUPPORTED_VERSIONS, &body);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
+        // SAFETY: `srv.s` is live.
+        assert_eq!(unsafe { (*srv.s).version }, TLS1_3_VERSION);
+    }
+
+    #[test]
+    fn key_share_entry_overrunning_the_body_stops_the_walk() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        // One entry declaring a 32-byte key but supplying none: the entry is dropped, and the
+        // `supported_groups` selection alone remains (no key share, so no group is recorded).
+        let mut body = 6u16.to_be_bytes().to_vec();
+        body.extend_from_slice(&X25519_GROUP.to_be_bytes());
+        body.extend_from_slice(&32u16.to_be_bytes());
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_KEY_SHARE, &body));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
+        // SAFETY: `srv.s` is live.
+        unsafe {
+            assert_eq!((*srv.s).group_id, 0);
+            assert!((*srv.s).peer_tmp.is_null());
+        }
+    }
+
+    #[test]
+    fn key_share_with_an_unknown_group_is_ignored() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let share = [0x42u8; 32];
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&key_share_ext(&[(0x0100, &share)]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
+        // SAFETY: `srv.s` is live.
+        unsafe {
+            assert_eq!(
+                (*srv.s).group_id,
+                0,
+                "an unknown group must not be selected"
+            );
+            assert!((*srv.s).peer_tmp.is_null(), "no peer share must be built");
+        }
+    }
+
+    #[test]
+    fn key_share_with_an_empty_share_list_is_ignored() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&key_share_ext(&[]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
+        // SAFETY: `srv.s` is live.
+        unsafe {
+            assert_eq!((*srv.s).group_id, 0);
+            assert!((*srv.s).peer_tmp.is_null());
+        }
+    }
+
+    /// Deterministic, bounded malformed-extension loop: every generated block is walked by a
+    /// fresh connection, and the only acceptable outcomes are the authority's accept (1) and
+    /// reject (0). A panic would fail the test; nothing here depends on process state.
+    #[test]
+    fn seeded_malformed_extension_walk_never_panics() {
+        let _g = crate::test_support::lock_global_state();
+        let mut state = 0x0ddc_0ffe_e15e_beefu64;
+        let next = |state: &mut u64| {
+            *state ^= *state << 13;
+            *state ^= *state >> 7;
+            *state ^= *state << 17;
+            *state
+        };
+        let suite = TLS_AES_128_GCM_SHA256.to_be_bytes();
+        // SAFETY: the context is this frame's and every connection is released below.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            for i in 0..256usize {
+                let s = SSL_new(ctx);
+                assert!(!s.is_null());
+                SSL_set_accept_state(s);
+                let mut exts = Vec::new();
+                if i % 4 == 0 {
+                    // Structured-but-wrong: a valid header with a random length, then noise.
+                    let etype = (next(&mut state) % 3) as u16 * 20 + 10;
+                    let len = (next(&mut state) % 40) as u16;
+                    exts.extend_from_slice(&etype.to_be_bytes());
+                    exts.extend_from_slice(&len.to_be_bytes());
+                    let n = (next(&mut state) % 48) as usize;
+                    exts.extend((0..n).map(|_| next(&mut state) as u8));
+                } else {
+                    let n = (next(&mut state) % 64) as usize;
+                    exts.extend((0..n).map(|_| next(&mut state) as u8));
+                }
+                let hs = client_hello_with_exts(&[0x33; 16], &suite, &exts);
+                let r = tls_process_client_hello(s, &hs);
+                assert!(r == 0 || r == 1, "unexpected parse answer {r}");
+                ERR_clear_error();
+                SSL_free(s);
+            }
+            SSL_CTX_free(ctx);
         }
     }
 
