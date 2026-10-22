@@ -65,6 +65,10 @@ fn cipher_for_id(id: u16) -> Option<(&'static [u8], usize, usize, c_int)> {
     match id {
         0xc02b | 0xc02f => Some((b"AES-128-GCM\0", 16, 16, 0)),
         0xc02c | 0xc030 => Some((b"AES-256-GCM\0", 32, 16, 1)),
+        // Static-RSA key transport with the same AEADs: `TLS_RSA_WITH_AES_128_GCM_SHA256`
+        // (`0x009c`) and `TLS_RSA_WITH_AES_256_GCM_SHA384` (`0x009d`).
+        0x009c => Some((b"AES-128-GCM\0", 16, 16, 0)),
+        0x009d => Some((b"AES-256-GCM\0", 32, 16, 1)),
         _ => None,
     }
 }

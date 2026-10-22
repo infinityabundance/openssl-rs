@@ -30,7 +30,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int};
+use core::ffi::{c_char, c_int, CStr};
 use core::ptr;
 
 use crate::runtime::bio::iolib::{BIO_read, BIO_write};
@@ -42,6 +42,8 @@ use crate::runtime::err::err_reasons::{
     SSL_R_TOO_MANY_WARN_ALERTS, SSL_R_UNEXPECTED_EOF_WHILE_READING, SSL_R_UNKNOWN_ALERT_TYPE,
 };
 use crate::runtime::err::{openssl_rs_err_set_error, ERR_new, ERR_set_debug};
+use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_ciph_table::SSL_OP_IGNORE_UNEXPECTED_EOF;
 use crate::ssl::ssl_lib::{Ssl, SslCtx};
 use crate::ssl::statem::statem::ossl_statem_fatal;
@@ -63,6 +65,16 @@ const SSL3_RT_HEADER_LENGTH: usize = 5;
 /// carry, and the fragment size `tls_write_records_default` (`ssl/record/methods/tls_common.c`)
 /// splits a larger `SSL_write` into.
 const SSL3_RT_MAX_PLAIN_LENGTH: usize = 16384;
+
+/// The record scratch bound: a plaintext fragment plus the TLS1.3 inner content-type byte, the
+/// AEAD tag and the five-byte record header (`SSL3_RT_MAX_ENCRYPTED_LENGTH`).
+const SSL3_RT_MAX_ENCRYPTED_LENGTH: usize = 17000;
+
+/// The allocator-seam coordinate of the authority's write-buffer allocation
+/// (`p = OPENSSL_malloc(len)`, `ssl/record/ssl3_buffer.c:124`). The reduced record layer keeps no
+/// `SSL3_BUFFER`, so the record scratch is allocated at that site for the duration of a write.
+const WRITE_BUF_FILE: &CStr = c"ssl/record/ssl3_buffer.c";
+const WRITE_BUF_LINE: c_int = 124;
 
 // --- record types (`include/openssl/ssl3.h`) ---------------------------------
 /// `SSL3_RT_ALERT` — `ssl3.h` (21).
@@ -132,6 +144,29 @@ pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, le
     if len == 0 {
         return 1;
     }
+    // The encrypted record paths need a record-sized scratch block. It is heap-allocated through
+    // the crate's allocator seam at the authority's own write-buffer site so no record-sized frame
+    // lands on the caller's thread stack (a 32 KiB accept thread, radsecproxy's, previously
+    // overflowed here). The handle's single release is its `Drop` on every return below.
+    // SAFETY: `s` is live per this function's contract.
+    let scratch = if unsafe { write_needs_scratch(s) } {
+        match OwnedBuf::new(
+            SSL3_RT_MAX_ENCRYPTED_LENGTH,
+            SeamFile::new(WRITE_BUF_FILE),
+            WRITE_BUF_LINE,
+        ) {
+            Some(block) => Some(block),
+            // The authority's `ssl3_setup_write_buffer` failure: this function's documented
+            // failure value.
+            None => return -1,
+        }
+    } else {
+        None
+    };
+    let rec = match scratch.as_ref() {
+        Some(block) => block.as_ptr(),
+        None => ptr::null_mut(),
+    };
     let mut off = 0usize;
     loop {
         let remaining = len - off;
@@ -147,8 +182,9 @@ pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, le
             // SAFETY: `off < len`, so `off` is in bounds of the caller's `len` readable bytes.
             unsafe { buf.add(off) }
         };
-        // SAFETY: `s`/`p` are per this function's contract, with `chunk` readable bytes at `p`.
-        if unsafe { ssl3_write_one_record(s, type_, p, chunk) } <= 0 {
+        // SAFETY: `s`/`p` are per this function's contract, with `chunk` readable bytes at `p`;
+        // `rec` is the scratch block above when an encrypted path needs it, NULL otherwise.
+        if unsafe { ssl3_write_one_record(s, type_, p, chunk, rec) } <= 0 {
             return -1;
         }
         off += chunk;
@@ -157,6 +193,17 @@ pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, le
         }
     }
     1
+}
+
+/// Whether [`ssl3_write_one_record`] will take an encrypted path and therefore need the record
+/// scratch block (`tls13_enc`/`tls1_enc`, selected by the installed version and cipher state).
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn write_needs_scratch(s: *const Ssl) -> bool {
+    // SAFETY: `s` is live per the contract.
+    let (version, active) = unsafe { ((*s).version, (*s).enc_active) };
+    active != 0 && (version == TLS1_3_VERSION || version == TLS1_2_VERSION)
 }
 
 /// Write `len` bytes from `p` to the connection's write BIO, resuming a short `BIO_write`.
@@ -197,8 +244,15 @@ unsafe fn ssl3_write_all(s: *mut Ssl, p: *const u8, len: usize) -> c_int {
 ///
 /// # Safety
 /// `s` must be a live connection whose write BIO is the caller's to write; `buf` must be readable
-/// for `len` bytes and `len` must not exceed [`SSL3_RT_MAX_PLAIN_LENGTH`].
-unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usize) -> c_int {
+/// for `len` bytes and `len` must not exceed [`SSL3_RT_MAX_PLAIN_LENGTH`]; `rec` must be NULL or
+/// writable for [`SSL3_RT_MAX_ENCRYPTED_LENGTH`] bytes.
+unsafe fn ssl3_write_one_record(
+    s: *mut Ssl,
+    type_: u8,
+    buf: *const u8,
+    len: usize,
+    rec: *mut u8,
+) -> c_int {
     // The record encoders size their output from `len`; both the encoded scratch block and the
     // two-byte record-length field are bounded by the plaintext fragment limit. The only caller
     // ([`ssl3_write_bytes`]) fragments at this length, so this is a defensive refusal, not a
@@ -220,17 +274,17 @@ unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usi
     // (`tls13_enc`, `ssl/record/methods/tls13_meth.c`).
     // SAFETY: `s` is live per the caller's contract.
     if version == TLS1_3_VERSION && unsafe { (*s).enc_active } != 0 {
-        let mut rec = [0u8; 17000];
-        // SAFETY: `s` is live; `rec` is the record buffer; `buf` is `len` readable.
-        let n = unsafe {
-            crate::ssl::tls13_enc::tls13_encrypt_record(s, type_, buf, len, rec.as_mut_ptr())
-        };
+        if rec.is_null() {
+            return -1;
+        }
+        // SAFETY: `s` is live; `rec` is the caller's record scratch; `buf` is `len` readable.
+        let n = unsafe { crate::ssl::tls13_enc::tls13_encrypt_record(s, type_, buf, len, rec) };
         if n < 0 {
             return -1;
         }
         // SAFETY: `s` is live; `wbio` is the caller's BIO.
         unsafe {
-            if ssl3_write_all(s, rec.as_ptr(), n as usize) <= 0 {
+            if ssl3_write_all(s, rec, n as usize) <= 0 {
                 return -1;
             }
             BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
@@ -242,17 +296,17 @@ unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usi
     // tag are built by the TLS1.2 record method, so no generic header follows.
     // SAFETY: `s` is live per the caller's contract.
     if version == TLS1_2_VERSION && unsafe { (*s).enc_active } != 0 {
-        let mut rec = [0u8; 17000];
-        // SAFETY: `s` is live; `rec` is the record buffer; `buf` is `len` readable.
-        let n = unsafe {
-            crate::ssl::t1_enc::tls12_encrypt_record(s, type_, buf, len, rec.as_mut_ptr())
-        };
+        if rec.is_null() {
+            return -1;
+        }
+        // SAFETY: `s` is live; `rec` is the caller's record scratch; `buf` is `len` readable.
+        let n = unsafe { crate::ssl::t1_enc::tls12_encrypt_record(s, type_, buf, len, rec) };
         if n < 0 {
             return -1;
         }
         // SAFETY: `s` is live; `wbio` is the caller's BIO.
         unsafe {
-            if ssl3_write_all(s, rec.as_ptr(), n as usize) <= 0 {
+            if ssl3_write_all(s, rec, n as usize) <= 0 {
                 return -1;
             }
             BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());

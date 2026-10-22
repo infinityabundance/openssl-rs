@@ -32,6 +32,19 @@
       "reason": "The refusal is correctly classified, raises byte-identical error state (PROV_ARGON2_741, 'cannot allocate required memory', 0x1C8000EB), and its input set is exactly the documented cap; both cleanse fixes are sound and their probes fire."
     }
   ],
+  "reviewer": {
+    "independent": true,
+    "author": "conversion subagent",
+    "reviewer": "separate adversarial subagent (did not write the change)",
+    "round_1_verdict": "REJECT",
+    "round_2_verdict": "ACCEPT",
+    "signed_hashes": {
+      "src/provider/kdf.rs": "5b87cd3b8561ba8f8ca1ec95532191660f535adb29923ff87d7a1deb8cda3b65",
+      "scripts/adv-probe.sh": "18f94e8d5e6b12acfbdc1e88ba03f436321b9a7b1b7f2a01caa8e0f0fa8e5f95"
+    },
+    "strongest_reason": "After correction the refusal is correctly classified as a section 17 divergence, raises byte-identical error state, and its input set is exactly the documented cap; both cleanse fixes are sound and their probes fire.",
+    "comment_only_edit_audited": "The orchestrator applied the reviewer's item-7 wording correction; the reviewer re-diffed and confirmed it was comment-only before re-signing the hash."
+  },
   "authority": {
     "source": "openssl-3.6.4 (pinned), ELF 64-bit x86-64",
     "abi": "No C ABI change; no #[repr(C)], exported symbol, extern \"C\" signature, seam constant or lint attribute changed.",

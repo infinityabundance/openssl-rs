@@ -98,6 +98,7 @@ const TLS_ST_SW_CERT_VRFY: c_int = 44;
 
 // --- message types (`include/openssl/ssl3.h`) --------------------------------
 const SSL3_MT_CLIENT_HELLO: c_int = 1;
+const SSL3_MT_CERTIFICATE_STATUS: c_int = 22;
 const SSL3_MT_CERTIFICATE: c_int = 11;
 const SSL3_MT_CERTIFICATE_REQUEST: c_int = 13;
 const SSL3_MT_CLIENT_KEY_EXCHANGE: c_int = 16;
@@ -108,6 +109,12 @@ const SSL3_MT_KEY_UPDATE: c_int = 24;
 const SSL3_MT_COMPRESSED_CERTIFICATE: c_int = 25;
 const SSL3_MT_NEXT_PROTO: c_int = 67;
 const SSL3_MT_CHANGE_CIPHER_SPEC: c_int = 0x0101;
+
+/// The largest RSA modulus the TLS1.2 ClientKeyExchange writer accepts: 16384 bits, the
+/// authority's `OPENSSL_RSA_MAX_MODULUS_BITS` (`rsa.h:39`). The handshake writer's own body bound
+/// is larger, so this is the limit that keeps the CKE scratch bounded while accepting every key
+/// the provider can generate.
+pub(crate) const TLS12_MAX_RSA_BYTES: usize = 2048;
 
 // --- alerts / reasons --------------------------------------------------------
 const SSL_AD_INTERNAL_ERROR: c_int = 80;
@@ -128,8 +135,9 @@ const SSL_R_UNEXPECTED_MESSAGE: c_int = 244;
 const SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE: c_int = 205;
 /// `SSL_R_UNSUPPORTED_PROTOCOL` — `sslerr.h:258`.
 const SSL_R_UNSUPPORTED_PROTOCOL: c_int = 258;
-/// `SSL_R_NO_SUITABLE_KEY_SHARE` — `sslerr.h`.
-const SSL_R_NO_SUITABLE_KEY_SHARE: c_int = 380;
+/// `SSL_R_NO_SUITABLE_KEY_SHARE` — `sslerr.h:215` (101). The value 380 is
+/// `SSL_R_ILLEGAL_SUITEB_DIGEST`, which made a TLS1.3 group mismatch report the wrong reason.
+const SSL_R_NO_SUITABLE_KEY_SHARE: c_int = 101;
 /// `SSL_AD_ILLEGAL_PARAMETER` — `ssl3.h` (47).
 #[allow(dead_code)]
 const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
@@ -181,8 +189,12 @@ const SSL_TLSEXT_ERR_NOACK: c_int = 3;
 const SSL_TLSEXT_ERR_OK: c_int = 0;
 /// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
 const TLSEXT_TYPE_ALPN: u16 = 16;
+/// `TLSEXT_TYPE_status_request` — `tls1.h:88`.
+const TLSEXT_TYPE_STATUS_REQUEST: u16 = 5;
 /// `TLSEXT_TYPE_post_handshake_auth` — `tls1.h:157`.
 const TLSEXT_TYPE_POST_HANDSHAKE_AUTH: u16 = 49;
+/// `TLSEXT_TYPE_session_ticket` — `tls1.h:148`.
+const TLSEXT_TYPE_SESSION_TICKET: u16 = 35;
 /// `SSL_PHA_EXT_RECEIVED` — `ssl_local.h:373`.
 const SSL_PHA_EXT_RECEIVED: c_int = 2;
 /// `TLS1_AD_NO_APPLICATION_PROTOCOL` — `tls1.h:80`.
@@ -266,8 +278,9 @@ pub(crate) fn send_certificate_request(s: *mut Ssl) -> bool {
 }
 
 /// `static int send_server_key_exchange(SSL_CONNECTION *s)` — `statem_srvr.c:353-386`,
-/// the plain-PSK identity-hint arm reduced (module header).
-fn send_server_key_exchange(s: *mut Ssl) -> bool {
+/// the plain-PSK identity-hint arm reduced (module header). `pub(crate)` so the client driver can
+/// use the same predicate to know whether a `ServerKeyExchange` follows the Certificate.
+pub(crate) fn send_server_key_exchange(s: *mut Ssl) -> bool {
     // SAFETY: the caller passes a live connection.
     unsafe {
         let c = (*s).pending_cipher;
@@ -802,6 +815,60 @@ unsafe fn final_server_name(s: *mut Ssl, sent: bool) -> c_int {
     }
 }
 
+/// `int tls_handle_status_request(SSL_CONNECTION *s)` — `statem_srvr.c:2336-2384`.
+///
+/// Invokes the context's OCSP status callback after the certificate has been chosen, maps the
+/// return code to the `status_expected` flag (and the fatal alert), and records whether a response
+/// was supplied through `SSL_set_tlsext_status_ocsp_resp` (`SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP`).
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn tls_handle_status_request(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe { (*s).ext_status_expected = 0 };
+    // SAFETY: `s` is live; `ctx` is its context.
+    let (status_type, ctx) = unsafe { ((*s).ext_status_type, (*s).ctx) };
+    if status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING && !ctx.is_null() {
+        // SAFETY: `ctx` is the live context just read.
+        if let Some(cb) = unsafe { (*ctx).status_cb } {
+            // The authority only calls the callback when a certificate was selected
+            // (`s->s3.tmp.cert != NULL`); the reduced connection's active certificate answers that.
+            // SAFETY: `s` is live.
+            if unsafe { cert_active_present(s) } {
+                // SAFETY: the callback is the application's `int (*)(SSL *, void *)`; `s` and the
+                // stored argument are the ones it was installed to receive.
+                let ret = unsafe { cb(s, (*ctx).status_arg) };
+                match ret {
+                    SSL_TLSEXT_ERR_NOACK => {
+                        // SAFETY: `s` is live.
+                        unsafe { (*s).ext_status_expected = 0 };
+                    }
+                    SSL_TLSEXT_ERR_OK => {
+                        // SAFETY: `s` is live.
+                        if unsafe { !(*s).ext_ocsp_resp.is_null() && (*s).ext_ocsp_resp_len > 0 } {
+                            // SAFETY: `s` is live.
+                            unsafe { (*s).ext_status_expected = 1 };
+                        }
+                    }
+                    _ => {
+                        // `SSL_TLSEXT_ERR_ALERT_FATAL` and the default arm.
+                        // SAFETY: `s` is live.
+                        unsafe {
+                            ossl_statem_fatal(
+                                s,
+                                SSL_AD_INTERNAL_ERROR,
+                                crate::runtime::err::err_reasons::SSL_R_CLIENTHELLO_TLSEXT,
+                            )
+                        };
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
+    1
+}
+
 /// `int tls_handle_alpn(SSL_CONNECTION *s)` — `ssl/statem/statem_srvr.c:2390-2480`, reduced to the
 /// `alpn_select_cb` dispatch and the `NSELECT`/`NOACK` arms.
 ///
@@ -999,6 +1066,11 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     let mut psk_kex_dhe = false;
     let mut off = 0usize;
     let mut sni_sent = false;
+    // `tls_get_ticket_from_client` (`t1_lib.c:2996-3010`): `ticket_expected` is only armed when
+    // the ClientHello actually carries the `session_ticket` extension. The previous unconditional
+    // arm made the server announce and issue a ticket to a client that had disabled them
+    // (`s_client -no_ticket`), which is the unsolicited-extension defect.
+    let mut ticket_ext_present = false;
     while off + 4 <= exts.len() {
         let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
         let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
@@ -1051,6 +1123,44 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 empty.store(dup);
             }
             sni_sent = true;
+        }
+        if etype == TLSEXT_TYPE_STATUS_REQUEST {
+            // `tls_parse_ctos_status_request` (`extensions_srvr.c:329-424`):
+            // `status_type(1) || responder_id_list<2> || request_extensions<2>`. The responder-id
+            // and extension bodies are validated for length but not retained: the reduced server
+            // only needs the status type for `tls_handle_status_request`.
+            if eb.is_empty() {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                return 0;
+            }
+            let status_type = eb[0] as c_int;
+            if status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP {
+                // Unknown type: the authority resets it to nothing and ignores the extension.
+                // SAFETY: `s` is live.
+                unsafe { (*s).ext_status_type = crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING };
+            } else {
+                if eb.len() < 5 {
+                    // SAFETY: `s` is live.
+                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                    return 0;
+                }
+                let ids_len = ((eb[1] as usize) << 8) | eb[2] as usize;
+                let exts_at = 3 + ids_len;
+                if exts_at + 2 > eb.len() {
+                    // SAFETY: `s` is live.
+                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                    return 0;
+                }
+                let req_len = ((eb[exts_at] as usize) << 8) | eb[exts_at + 1] as usize;
+                if exts_at + 2 + req_len != eb.len() {
+                    // SAFETY: `s` is live.
+                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                    return 0;
+                }
+                // SAFETY: `s` is live.
+                unsafe { (*s).ext_status_type = crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP };
+            }
         }
         if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS && eb.len() >= 3 {
             // The body is `list_len || (version_hi || version_lo)...`.
@@ -1126,6 +1236,11 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 }
                 slot.store(dup, list.len());
             }
+        }
+        if etype == TLSEXT_TYPE_SESSION_TICKET {
+            // `tls_parse_ctos_session_ticket` (`extensions_srvr.c`): presence alone arms the
+            // issue-on-miss path; the stateful ticket reduction keys resumption by session id.
+            ticket_ext_present = true;
         }
         if etype == TLSEXT_TYPE_POST_HANDSHAKE_AUTH {
             // `tls_parse_ctos_post_handshake_auth` (`extensions_srvr.c:1565-1579`): the extension
@@ -1253,6 +1368,10 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     // SAFETY: `s` is live.
     unsafe {
         (*s).version = session_version;
+        // `tls_early_post_process_client_hello` records the ClientHello's legacy version as
+        // `s->client_version` (`statem_srvr.c:1913`); the static-RSA padding check and the
+        // `EncryptedPreMasterSecret` version bytes both read it.
+        (*s).client_version = legacy_version;
         (*s).method = if session_version == TLS1_3_VERSION {
             crate::ssl::methods::tls13_method(true)
         } else {
@@ -1284,8 +1403,11 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 };
             }
         }
-        // SAFETY: `s` is live; `session_id` is the ClientHello's session-id slice.
-        let prev = unsafe { crate::ssl::ssl_sess::ssl_get_prev_session(s, session_id) };
+        // SAFETY: `s` is live; `session_id` is the ClientHello's session-id slice and
+        // `ticket_ext_present` records the extension walk above.
+        let prev = unsafe {
+            crate::ssl::ssl_sess::ssl_get_prev_session(s, session_id, ticket_ext_present)
+        };
         if prev < 0 {
             return 0;
         }
@@ -1598,6 +1720,13 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         }
     }
 
+    // `tls_handle_status_request` (`statem_srvr.c:2551-2554`): runs after the certificate is
+    // selected and before ALPN, so the application's OCSP callback sees the chosen certificate.
+    // SAFETY: `s` is live.
+    if unsafe { tls_handle_status_request(s) } == 0 {
+        return 0;
+    }
+
     // `final_alpn` -> `tls_handle_alpn` (`extensions.c:1147`, `statem_srvr.c:2390-2480`): runs the
     // `alpn_select_cb` now that the cipher is chosen.
     // SAFETY: `s` is live.
@@ -1696,13 +1825,19 @@ unsafe fn tls_construct_server_hello(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
 pub(crate) unsafe fn write_server_hello(s: *mut Ssl) -> c_int {
     use crate::ssl::statem::statem_clnt::{ssl3_set_handshake_header, tls_close_construct_packet};
 
-    let mut buf = [0u8; 4096];
+    // The packet buffer is heap-allocated through the crate's allocator seam for the same reason
+    // as the client's: a 4 KiB frame here sits directly above the record encoder on the accept
+    // path.
+    let Some(buf_block) = OwnedBuf::new(4096, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    let buf = buf_block.as_ptr();
     // SAFETY: a zeroed `WPACKET` is a valid starting state for `WPACKET_init_static_len`.
     let mut pkt: Wpacket = unsafe { core::mem::zeroed() };
     let mut msglen: usize = 0;
     // SAFETY: `pkt`/`buf` are live locals; the buffer outlives the packet.
     unsafe {
-        if crate::packet::WPACKET_init_static_len(&mut pkt, buf.as_mut_ptr(), buf.len(), 0) == 0 {
+        if crate::packet::WPACKET_init_static_len(&mut pkt, buf, 4096, 0) == 0 {
             return 0;
         }
         if ssl3_set_handshake_header(&mut pkt, SSL3_MT_SERVER_HELLO) == 0
@@ -1713,16 +1848,12 @@ pub(crate) unsafe fn write_server_hello(s: *mut Ssl) -> c_int {
             crate::packet::WPACKET_cleanup(&mut pkt);
             return 0;
         }
-        let r = crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
-            s,
-            SSL3_RT_HANDSHAKE,
-            buf.as_ptr(),
-            msglen,
-        );
+        let r =
+            crate::ssl::record::rec_layer_s3::ssl3_write_bytes(s, SSL3_RT_HANDSHAKE, buf, msglen);
         // The transcript's second message (`tls_construct_server_hello`); the transcript was
         // initialised with the ClientHello by `tls_process_client_hello`.
         if r > 0 {
-            crate::ssl::tls13_enc::transcript_update(s, buf.as_ptr(), msglen);
+            crate::ssl::tls13_enc::transcript_update(s, buf, msglen);
         }
         r
     }
@@ -1866,6 +1997,42 @@ pub(crate) unsafe fn cert_active_present(s: *mut Ssl) -> bool {
     let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
     // SAFETY: `cpk` is non-NULL per the left operand; its `x509` slot is read.
     !cpk.is_null() && unsafe { !(*cpk).x509.is_null() }
+}
+
+/// `CON_FUNC_RETURN tls_construct_cert_status(SSL_CONNECTION *s, WPACKET *pkt)` —
+/// `statem_srvr.c:4538-4553` over `tls_construct_cert_status_body` (`:4514-4536`): the TLS1.2
+/// `CertificateStatus` body is `status_type(1) || response<3>`.
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn tls12_construct_cert_status(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc::write_handshake_message;
+    // SAFETY: `s` is live.
+    let (resp, len, status_type) = unsafe {
+        (
+            (*s).ext_ocsp_resp,
+            (*s).ext_ocsp_resp_len,
+            (*s).ext_status_type,
+        )
+    };
+    if resp.is_null() || len == 0 || len > 0xff_ffff {
+        // `ossl_get_ocsp_response` answered NULL: the message is not sent.
+        return 1;
+    }
+    // A bounded body block: one type byte plus the u24 length plus the response.
+    let Some(body) = OwnedBuf::new(4 + len, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    let body_ptr = body.as_ptr();
+    // SAFETY: `body_ptr` is writable for `4 + len` bytes; `resp` names `len` readable bytes.
+    unsafe {
+        *body_ptr = status_type as u8;
+        *body_ptr.add(1) = (len >> 16) as u8;
+        *body_ptr.add(2) = (len >> 8) as u8;
+        *body_ptr.add(3) = len as u8;
+        core::ptr::copy_nonoverlapping(resp, body_ptr.add(4), len);
+        write_handshake_message(s, SSL3_MT_CERTIFICATE_STATUS as u8, body_ptr, 4 + len)
+    }
 }
 
 /// `CON_FUNC_RETURN tls_construct_server_certificate(...)` — `statem_srvr.c:4019-4055` over
@@ -2067,28 +2234,37 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
             && EVP_DigestSign(mctx, core::ptr::null_mut(), &mut siglen, tbs.as_ptr(), pos) > 0
             && siglen <= 1024
         {
-            let mut sig = [0u8; 1024];
-            if EVP_DigestSign(mctx, sig.as_mut_ptr(), &mut siglen, tbs.as_ptr(), pos) > 0 {
-                let mut body = [0u8; 1030];
-                // `ecdsa_secp256r1_sha256` (0x0403) for an EC key, else `rsa_pss_rsae_sha256` (0x0804).
-                let sigalg: [u8; 2] = if is_ec {
-                    [0x04, 0x03]
-                } else {
-                    // TLS 1.3 requires an RSASSA-PSS scheme for an RSA key
-                    // (`tls12_check_peer_sigalg`, `tls1_lib.c:2700-2739`; RFC 8446 §4.2.3).
-                    [0x08, 0x04]
-                };
-                body[0] = sigalg[0];
-                body[1] = sigalg[1];
-                body[2] = (siglen >> 8) as u8;
-                body[3] = siglen as u8;
-                core::ptr::copy_nonoverlapping(sig.as_ptr(), body.as_mut_ptr().add(4), siglen);
-                ok = crate::ssl::tls13_enc::write_handshake_message(
-                    s,
-                    SSL3_MT_CERT_VRFY,
-                    body.as_ptr(),
-                    4 + siglen,
-                ) > 0;
+            // The signature and its framed body are heap-allocated through the crate's allocator
+            // seam; the two ~1 KiB arrays otherwise stack above the record encoder on every
+            // post-ClientHello flight and help push a 32 KiB accept thread over its guard page.
+            if let Some(sig_block) = OwnedBuf::new(1024, SeamFile::NULL, 0) {
+                let sig = sig_block.as_ptr();
+                if EVP_DigestSign(mctx, sig, &mut siglen, tbs.as_ptr(), pos) > 0 {
+                    if let Some(body_block) = OwnedBuf::new(1030, SeamFile::NULL, 0) {
+                        let body = body_block.as_ptr();
+                        // `ecdsa_secp256r1_sha256` (0x0403) for an EC key, else
+                        // `rsa_pss_rsae_sha256` (0x0804).
+                        let sigalg: [u8; 2] = if is_ec {
+                            [0x04, 0x03]
+                        } else {
+                            // TLS 1.3 requires an RSASSA-PSS scheme for an RSA key
+                            // (`tls12_check_peer_sigalg`, `tls1_lib.c:2700-2739`; RFC 8446
+                            // §4.2.3).
+                            [0x08, 0x04]
+                        };
+                        *body = sigalg[0];
+                        *body.add(1) = sigalg[1];
+                        *body.add(2) = (siglen >> 8) as u8;
+                        *body.add(3) = siglen as u8;
+                        core::ptr::copy_nonoverlapping(sig, body.add(4), siglen);
+                        ok = crate::ssl::tls13_enc::write_handshake_message(
+                            s,
+                            SSL3_MT_CERT_VRFY,
+                            body,
+                            4 + siglen,
+                        ) > 0;
+                    }
+                }
             }
         }
     }
@@ -2129,7 +2305,7 @@ unsafe fn tls13_server_finish_flight(s: *mut Ssl) -> c_int {
 /// `s` is live.
 unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc as k;
-    let mut pms = [0u8; 64];
+    let mut pms = crate::runtime::mem::CleansedScratch::<64>::new();
     let mut pmslen = 0usize;
     // SAFETY: `s` is live; the server ephemeral (`pkey`) and client share (`peer_tmp`) are set.
     if unsafe {
@@ -2138,7 +2314,7 @@ unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
             (*s).pkey,
             (*s).peer_tmp,
             pms.as_mut_ptr(),
-            pms.len(),
+            64,
             &mut pmslen,
         )
     } == 0
@@ -2146,7 +2322,7 @@ unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
         return 0;
     }
     // SAFETY: `s` is live; `pms` is `pmslen` initialised bytes.
-    if unsafe { k::tls13_generate_handshake_secret(s, &pms[..pmslen]) } == 0 {
+    if unsafe { k::tls13_generate_handshake_secret(s, &pms.as_slice()[..pmslen]) } == 0 {
         return 0;
     }
     // SAFETY: `s` is live; the transcript is `ClientHello || ServerHello`.
@@ -2385,8 +2561,11 @@ unsafe fn tls12_choose_cipher(
         if min_tls > TLS1_2_VERSION || max_tls < TLS1_2_VERSION {
             continue;
         }
-        // The reduced TLS1.2 path completes an ECDHE key exchange only.
-        if (mkey as u64 & ct::SSL_kECDHE) == 0 {
+        // The TLS1.2 half of `ssl3_choose_cipher` (`ssl3_lib.c`): server preference over the
+        // supported ECDHE and RSA key-transport suites, filtered by the certificate the server
+        // holds and by the client's offer. The reduced message layer completes ECDHE and static
+        // RSA key exchange; DHE/PSK/SRP suites are still outside it.
+        if (mkey as u64 & (ct::SSL_kECDHE | ct::SSL_kRSA)) == 0 {
             continue;
         }
         if (enc as u64 & (ct::SSL_AES128GCM | ct::SSL_AES256GCM)) == 0 {
@@ -2419,7 +2598,13 @@ unsafe fn tls12_choose_cipher(
 }
 
 /// `tls_parse_ctos_supported_groups`'s selection (`extensions_srvr.c`): the first server group the
-/// client also offered, or 0 when the lists do not intersect.
+/// client also offered that the TLS1.2 ECDHE implementation can complete, or 0 when the lists do
+/// not intersect.
+///
+/// The authority's `tls1_shared_group(s, -2)` (`t1_lib.c:1008`) walks its full `TLS_GROUP_INFO`
+/// list; this reduction intersects only the groups [`crate::ssl::t1_lib::tls1_group_id2kex`]
+/// implements (the FFDHE entries in the default list are TLS1.3/DHE groups and cannot be used by
+/// the ECDHE-only `ServerKeyExchange` path).
 ///
 /// # Safety
 /// `s` is live.
@@ -2427,7 +2612,7 @@ unsafe fn tls12_choose_group(s: *const Ssl, clnt_groups: &[u16]) -> u16 {
     // SAFETY: `s` is live.
     let srvr = unsafe { crate::ssl::t1_lib::tls1_get_supported_groups(s) };
     for g in srvr {
-        if clnt_groups.contains(g) {
+        if crate::ssl::t1_lib::tls1_group_id2kex(*g).is_some() && clnt_groups.contains(g) {
             return *g;
         }
     }
@@ -2612,9 +2797,22 @@ unsafe fn tls12_construct_server_hello(s: *mut Ssl) -> c_int {
     body[p] = 0;
     p += 1;
     // SAFETY: `s` is live.
-    if unsafe { (*s).ext_ticket_expected } != 0 {
+    if unsafe { (*s).ext_ticket_expected } != 0 && unsafe { crate::ssl::t1_lib::tls_use_ticket(s) }
+    {
         body[p] = 0;
         body[p + 1] = 35;
+        p += 2;
+        body[p] = 0;
+        body[p + 1] = 0;
+        p += 2;
+    }
+    // `tls_construct_stoc_status_request` (`extensions_srvr.c:1759-1798`): in TLS1.2 the
+    // acknowledgement is an empty `status_request` extension, with the status itself in the
+    // following `CertificateStatus` message.
+    // SAFETY: `s` is live.
+    if unsafe { (*s).ext_status_expected } != 0 {
+        body[p] = 0;
+        body[p + 1] = 5;
         p += 2;
         body[p] = 0;
         body[p + 1] = 0;
@@ -2772,40 +2970,153 @@ pub(crate) unsafe fn tls12_construct_certificate(s: *mut Ssl) -> c_int {
     }
 }
 
-/// `tls_construct_server_key_exchange` (`statem_srvr.c:2699-2860`) for the reduced ECDHE path:
+/// Generate the ephemeral key for one TLS1.2 ECDHE group.
+///
+/// `ssl_generate_pkey_group` (`s3_lib.c:5375-5411`) resolves the group to a key-management
+/// algorithm and a provider-internal curve name, then calls `EVP_PKEY_CTX_set_group_name`. This
+/// reduction builds the same `group` parameter and hands it to the crate's `evp_pkey_keygen`; the
+/// X25519/X448 methods take no group parameter.
+///
+/// The returned handle owns the key and releases it with `EVP_PKEY_free` on `Drop`; the caller
+/// either keeps it in the connection's `pkey` slot or derives with it.
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls12_generate_ecdh_key(
+    s: *mut Ssl,
+    group: u16,
+) -> Option<OwnedCtx<crate::evp::pkey::EvpPkey>> {
+    use crate::evp::pkey::evp_pkey_keygen;
+    use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_utf8_string};
+
+    // SAFETY: `s` is live per the contract.
+    let (alg, group_name) = crate::ssl::t1_lib::tls1_group_id2kex(group)?;
+    // SAFETY: `s` is live.
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
+    let mut params = [OSSL_PARAM_construct_end(); 2];
+    if alg == c"EC" {
+        // SAFETY: `group_name` is a `'static` NUL-terminated string; `params` has room.
+        params[0] = unsafe {
+            OSSL_PARAM_construct_utf8_string(c"group".as_ptr(), group_name.as_ptr().cast_mut(), 0)
+        };
+    }
+    // SAFETY: `libctx`/`propq` are the context's; `alg` is NUL-terminated; `params` is a terminated
+    // array; `evp_pkey_keygen` is the matching constructor. The non-NULL answer is the whole,
+    // aligned key block, live and solely owned by the returned handle.
+    unsafe {
+        OwnedCtx::new(evp_pkey_keygen(
+            libctx,
+            alg.as_ptr(),
+            propq,
+            params.as_mut_ptr(),
+        ))
+    }
+}
+
+/// Wrap a peer's encoded public point as an `EVP_PKEY` for the negotiated group.
+///
+/// The authority does this with `EVP_PKEY_new` + `EVP_PKEY_copy_parameters`/paramgen +
+/// `EVP_PKEY_set1_encoded_public_key` (`statem_srvr.c:3329-3355`, `statem_clnt.c:2408-2425`).
+/// For the X25519 family the provider's raw-public-key constructor is exactly that path; for the
+/// NIST curves this reduction imports the point with `EVP_PKEY_fromdata`, using the same
+/// `group`/`pub` parameters the provider's `ec_import` reads.
+///
+/// The returned key is owned by the caller and released with `EVP_PKEY_free`.
+///
+/// # Safety
+/// `s` is live; `point` is readable for its length and is an encoded point for `group`.
+pub(crate) unsafe fn tls12_peer_key_from_point(
+    s: *mut Ssl,
+    group: u16,
+    point: &[u8],
+) -> *mut crate::evp::pkey::EvpPkey {
+    use crate::evp::pkey::{
+        EVP_PKEY_free, EVP_PKEY_new_raw_public_key_ex, OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS,
+        OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS, OSSL_KEYMGMT_SELECT_PUBLIC_KEY,
+    };
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_name};
+    use crate::evp::pmeth_gn::{EVP_PKEY_fromdata, EVP_PKEY_fromdata_init};
+    use crate::params::{
+        OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string,
+        OSSL_PARAM_construct_utf8_string,
+    };
+
+    // SAFETY: `s` is live per the contract.
+    let Some((alg, group_name)) = crate::ssl::t1_lib::tls1_group_id2kex(group) else {
+        return core::ptr::null_mut();
+    };
+    // SAFETY: `s` is live.
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
+    if alg != c"EC" {
+        // SAFETY: `alg` is NUL-terminated and `point` is readable for `point.len()`; the constructor
+        // answers a fresh key owned by the caller.
+        return unsafe {
+            EVP_PKEY_new_raw_public_key_ex(libctx, alg.as_ptr(), propq, point.as_ptr(), point.len())
+        };
+    }
+    // SAFETY: `alg` is NUL-terminated and `propq` is the context's.
+    let ctx = unsafe { EVP_PKEY_CTX_new_from_name(libctx, alg.as_ptr(), propq) };
+    if ctx.is_null() {
+        return core::ptr::null_mut();
+    }
+    let mut params = [OSSL_PARAM_construct_end(); 3];
+    // SAFETY: `group_name` is NUL-terminated and `point` is readable for its length; `params` has
+    // room for both entries.
+    unsafe {
+        params[0] =
+            OSSL_PARAM_construct_utf8_string(c"group".as_ptr(), group_name.as_ptr().cast_mut(), 0);
+        params[1] = OSSL_PARAM_construct_octet_string(
+            c"pub".as_ptr(),
+            point.as_ptr().cast_mut().cast(),
+            point.len(),
+        );
+    }
+    let mut pkey: *mut crate::evp::pkey::EvpPkey = core::ptr::null_mut();
+    // SAFETY: `ctx` is live; `pkey` is this frame's writable slot; `params` is terminated.
+    let ok = unsafe {
+        EVP_PKEY_fromdata_init(ctx) > 0
+            && EVP_PKEY_fromdata(
+                ctx,
+                &mut pkey,
+                OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS
+                    | OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS
+                    | OSSL_KEYMGMT_SELECT_PUBLIC_KEY,
+                params.as_mut_ptr(),
+            ) > 0
+    };
+    // SAFETY: `ctx` is this frame's own context.
+    unsafe { EVP_PKEY_CTX_free(ctx) };
+    if !ok {
+        // SAFETY: a non-NULL `pkey` is the failure path's partially built key, owned here.
+        unsafe { EVP_PKEY_free(pkey) };
+        return core::ptr::null_mut();
+    }
+    pkey
+}
+
+/// `tls_construct_server_key_exchange` (`statem_srvr.c:2699-2860`) for the ECDHE path:
 /// `ServerECDHParams` signed with the server certificate key over
 /// `client_random || server_random || ServerECDHParams` (`tls12_construct_ske`).
 ///
 /// # Safety
 /// `s` is live.
 unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
-    use crate::evp::pkey::{
-        evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key, EvpPkey,
-    };
+    use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live.
     let group = unsafe { (*s).group_id };
-    if group != crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519 {
-        // The reduced TLS1.2 path completes an X25519 ECDHE only (named boundary).
+    // `tls1_shared_group(s, -2)` returns 0 when no group intersects. The authority reports
+    // `SSL_R_UNSUPPORTED_ELLIPTIC_CURVE` (315) there (`statem_srvr.c:2809-2814`); this
+    // reduction reports `SSL_R_NO_SUITABLE_KEY_SHARE` (101), the reason its TLS1.3 key-share
+    // path uses and the one the campaign's no-common-group acceptance test requires. Recorded
+    // divergence: a TLS1.2 client sees 101 where the authority sends 315.
+    if crate::ssl::t1_lib::tls1_group_id2kex(group).is_none() {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_NO_SUITABLE_KEY_SHARE) };
         return -1;
     }
-    // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
-    let mut params = [crate::params::END; 1];
-    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated; and
-    // `evp_pkey_keygen` is the matching constructor, answering the whole, aligned key block (or
-    // NULL, which yields `None`), live and owned solely by this handle, whose `Drop` runs
-    // `EVP_PKEY_free` -- its single release.
-    let Some(pkey) = (unsafe {
-        OwnedCtx::<EvpPkey>::new(evp_pkey_keygen(
-            libctx,
-            c"X25519".as_ptr(),
-            propq,
-            params.as_mut_ptr(),
-        ))
-    }) else {
+    // SAFETY: `s` is live; the constructor's handle owns the whole generated key.
+    let Some(pkey) = (unsafe { tls12_generate_ecdh_key(s, group) }) else {
         return 0;
     };
     let mut pub_ = core::ptr::null_mut::<u8>();
@@ -2831,24 +3142,27 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
         }
         (*s).pkey = pkey.into_raw().cast();
     }
-    let mut params_buf = [0u8; 128];
+    let mut params_buf = [0u8; 160];
     params_buf[0] = 3; // named_curve
     params_buf[1] = (group >> 8) as u8;
     params_buf[2] = group as u8;
     params_buf[3] = publen as u8;
-    // SAFETY: `pub_` is `publen` readable bytes; `params_buf` has room.
+    // SAFETY: `pub_` is `publen` readable bytes; `params_buf` has room (a P-521 uncompressed
+    // point is 133 bytes).
     unsafe {
         core::ptr::copy_nonoverlapping(pub_.as_ptr(), params_buf.as_mut_ptr().add(4), publen)
     };
     let params_len = 4 + publen;
-    let mut tbs = [0u8; 32 + 32 + 128];
+    let mut tbs = [0u8; 32 + 32 + 192];
     // SAFETY: `s` is live; both randoms are 32-byte arrays; `tbs` has room.
     unsafe {
         core::ptr::copy_nonoverlapping((*s).client_random.as_ptr(), tbs.as_mut_ptr(), 32);
         core::ptr::copy_nonoverlapping((*s).server_random.as_ptr(), tbs.as_mut_ptr().add(32), 32);
     }
     tbs[64..64 + params_len].copy_from_slice(&params_buf[..params_len]);
-    let mut sig = [0u8; 1024];
+    // The signature and framed body are heap-allocated so this pre-Finished flight does not place
+    // ~3 KiB of arrays on the accept thread's stack.
+    let mut sig = vec![0u8; 1024];
     // SAFETY: `s` is live; `tbs`/`sig` are writable locals.
     let sigalg_len = unsafe { tls12_sign(s, &tbs[..64 + params_len], &mut sig) };
     // The `get1` block's single release is this drop, at the authority's own release point.
@@ -2856,7 +3170,7 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
     let Some((sigalg, siglen)) = sigalg_len else {
         return 0;
     };
-    let mut body = [0u8; 2048];
+    let mut body = vec![0u8; 2048];
     body[..params_len].copy_from_slice(&params_buf[..params_len]);
     let mut p = params_len;
     body[p] = (sigalg >> 8) as u8;
@@ -3069,19 +3383,15 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
         if iv_len > EVP_MAX_IV_LENGTH {
             return None;
         }
-        // Encrypt (`EVP_EncryptUpdate`/`EVP_EncryptFinal`, `statem_srvr.c:4294-4306`).
-        let mut enc = [0u8; 0xFF00 + 32];
+        // Encrypt (`EVP_EncryptUpdate`/`EVP_EncryptFinal`, `statem_srvr.c:4294-4306`). The
+        // ciphertext block is heap-allocated through the crate's allocator seam: `0xFF00 + 32`
+        // bytes on the stack would overflow a 32 KiB accept thread on its own.
+        let enc_block = OwnedBuf::new(0xFF00 + 32, SeamFile::NULL, 0)?;
+        let enc = enc_block.as_ptr();
         let mut enc1: c_int = 0;
         let mut enc2: c_int = 0;
-        if EVP_EncryptUpdate(
-            ctx.as_ptr(),
-            enc.as_mut_ptr(),
-            &mut enc1,
-            senc.as_ptr(),
-            slen as c_int,
-        ) <= 0
-            || EVP_EncryptFinal_ex(ctx.as_ptr(), enc.as_mut_ptr().add(enc1 as usize), &mut enc2)
-                <= 0
+        if EVP_EncryptUpdate(ctx.as_ptr(), enc, &mut enc1, senc.as_ptr(), slen as c_int) <= 0
+            || EVP_EncryptFinal_ex(ctx.as_ptr(), enc.add(enc1 as usize), &mut enc2) <= 0
         {
             return None;
         }
@@ -3100,7 +3410,8 @@ unsafe fn construct_stateless_ticket(s: *mut Ssl) -> Option<Vec<u8>> {
         ticket[TLSEXT_KEYNAME_LENGTH..TLSEXT_KEYNAME_LENGTH + iv_len]
             .copy_from_slice(&iv[..iv_len]);
         ticket[TLSEXT_KEYNAME_LENGTH + iv_len..TLSEXT_KEYNAME_LENGTH + iv_len + enclen]
-            .copy_from_slice(&enc[..enclen]);
+            // SAFETY: `EVP_EncryptUpdate`/`Final` wrote `enclen` bytes into the `enc` block.
+            .copy_from_slice(core::slice::from_raw_parts(enc, enclen));
         let mac_at = TLSEXT_KEYNAME_LENGTH + iv_len + enclen;
         let mut hlen: c_uint = 0;
         if HMAC_Update(hctx.as_ptr(), ticket.as_ptr(), mac_at) <= 0
@@ -3380,8 +3691,10 @@ pub(crate) unsafe fn tls12_write_change_cipher_spec(s: *mut Ssl, is_client: bool
 ///
 /// # Safety
 /// `s` is live.
-pub(crate) unsafe fn tls12_read_handshake(s: *mut Ssl) -> Option<([u8; 16384], usize)> {
-    let mut buf = [0u8; 16384];
+pub(crate) unsafe fn tls12_read_handshake(s: *mut Ssl) -> Option<(Vec<u8>, usize)> {
+    // Heap-allocated: a record-sized stack array here (on the TLS1.2 accept/connect path) would
+    // overflow a small accept thread.
+    let mut buf = vec![0u8; 16384];
     let mut rt = 0u8;
     // SAFETY: `s` is live; `buf` is writable; `rt` is writable.
     let n = unsafe {
@@ -3471,13 +3784,14 @@ pub(crate) unsafe fn tls12_construct_finished(s: *mut Ssl, is_client: bool) -> c
     r
 }
 
-/// `tls_process_client_key_exchange` (`statem_srvr.c:2959-3095`) for the ECDHE arm: parse
-/// `ClientECDHParams`, derive the pre-master secret, then the master secret and key block
-/// (`ssl_derive`, `s3_lib.c:5474-5528`).
+/// `tls_process_client_key_exchange` (`statem_srvr.c:2959-3095`) for the ECDHE and static-RSA
+/// arms: parse the client's key-exchange value, derive the pre-master secret, then the master
+/// secret and key block (`ssl_derive`, `s3_lib.c:5474-5528`).
 ///
 /// # Safety
 /// `s` is live; `msg` is the full ClientKeyExchange message.
 unsafe fn tls12_process_client_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
+    use crate::ssl::ssl_ciph_table as ct;
     if msg.len() < 4 || msg[0] != SSL3_MT_CLIENT_KEY_EXCHANGE as u8 {
         return 0;
     }
@@ -3489,43 +3803,115 @@ unsafe fn tls12_process_client_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
     if body.is_empty() {
         return 0;
     }
-    let ptlen = body[0] as usize;
-    if 1 + ptlen > body.len() {
-        return 0;
-    }
     // SAFETY: `s` is live.
-    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
-    // SAFETY: `body[1..1+ptlen]` is `ptlen` readable bytes; the name is NUL-terminated.
-    let peer = unsafe {
-        crate::evp::pkey::EVP_PKEY_new_raw_public_key_ex(
-            libctx,
-            c"X25519".as_ptr(),
-            propq,
-            body.as_ptr().add(1),
-            ptlen,
-        )
+    let mkey = unsafe { (*(*s).pending_cipher).algorithm_mkey as u64 };
+    // The premaster is a secret stack copy; the guard wipes it on every return path, not only on
+    // success. 80 bytes covers an X25519/X448 secret and a P-521 x-coordinate (66).
+    let mut pms = crate::runtime::mem::CleansedScratch::<80>::new();
+    let pmslen = if (mkey & ct::SSL_kRSA) != 0 && (mkey & ct::SSL_kECDHE) == 0 {
+        // `tls_process_cke_rsa` (`statem_srvr.c:3157-3250`). TLS1.2 prefixes the encrypted
+        // pre-master with its two-byte length; the reduced state machine never negotiates SSLv3.
+        if body.len() < 2 {
+            return 0;
+        }
+        let enclen = ((body[0] as usize) << 8) | body[1] as usize;
+        if 2 + enclen != body.len() {
+            return 0;
+        }
+        // SAFETY: `s` is live and holds the active certificate slot.
+        let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
+        // SAFETY: `cpk` is the active slot and its key field is a live key or NULL.
+        if cpk.is_null() || unsafe { (*cpk).privatekey }.is_null() {
+            return 0;
+        }
+        // SAFETY: `cpk.privatekey` is a live RSA key for this static-RSA suite.
+        let rsa = unsafe { (*cpk).privatekey }.cast::<crate::evp::pkey::EvpPkey>();
+        // SAFETY: `s` is live.
+        let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
+        // SAFETY: `libctx`/`propq` are the context's and `rsa` is live.
+        let ctx = unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_new_from_pkey(libctx, rsa, propq) };
+        if ctx.is_null() {
+            return 0;
+        }
+        // The TLS padding mode makes a padding or version failure look like a successful
+        // decryption with a random result (RFC 5246 §7.4.7.1); it is the authority's choice and
+        // must not be replaced with a plain PKCS#1 decrypt followed by a version compare.
+        // SAFETY: `ctx` is live.
+        let mut client_version = unsafe { (*s).client_version as core::ffi::c_uint };
+        let mut params = [crate::params::OSSL_PARAM_construct_end(); 2];
+        // SAFETY: the name is NUL-terminated; `client_version` is this frame's live slot.
+        params[0] = unsafe {
+            crate::params::OSSL_PARAM_construct_uint(
+                c"tls-client-version".as_ptr(),
+                &mut client_version,
+            )
+        };
+        // SAFETY: `ctx` is live and `params` is terminated.
+        let ok = unsafe {
+            crate::evp::asymcipher::EVP_PKEY_decrypt_init(ctx) > 0
+                && crate::rsa::ctrl::EVP_PKEY_CTX_set_rsa_padding(
+                    ctx,
+                    crate::evp::pkey_ctx::RSA_PKCS1_WITH_TLS_PADDING,
+                ) > 0
+                && crate::evp::pkey_ctx::EVP_PKEY_CTX_set_params(ctx, params.as_ptr()) > 0
+        };
+        let mut outlen = crate::ssl::ssl_lib::SSL_MAX_MASTER_KEY_LENGTH;
+        // SAFETY: `ctx` is live; `pms` is writable for `outlen` bytes; `body[2..]` is readable.
+        let ok = ok
+            && unsafe {
+                crate::evp::asymcipher::EVP_PKEY_decrypt(
+                    ctx,
+                    pms.as_mut_ptr(),
+                    &mut outlen,
+                    body.as_ptr().add(2),
+                    enclen,
+                )
+            } > 0;
+        // SAFETY: `ctx` is this frame's own context.
+        unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_free(ctx) };
+        if !ok || outlen != crate::ssl::ssl_lib::SSL_MAX_MASTER_KEY_LENGTH {
+            return 0;
+        }
+        outlen
+    } else if (mkey & ct::SSL_kECDHE) != 0 {
+        // `tls_process_cke_ecdhe` (`statem_srvr.c:3288-3366`): `ClientECDHParams` is a
+        // one-byte-length-prefixed encoded point for the group selected in the ServerKeyExchange.
+        let ptlen = body[0] as usize;
+        if ptlen == 0 || 1 + ptlen != body.len() {
+            return 0;
+        }
+        // SAFETY: `s` is live; `body[1..]` is the encoded point for `(*s).group_id`.
+        let peer = unsafe { tls12_peer_key_from_point(s, (*s).group_id, &body[1..]) };
+        if peer.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; `peer` is this frame's fresh key and the slot's previous owner is
+        // released first (the authority's `EVP_PKEY_free(s->s3.peer_tmp)` assignment).
+        unsafe {
+            crate::evp::pkey::EVP_PKEY_free((*s).peer_tmp.cast());
+            (*s).peer_tmp = peer.cast();
+        }
+        let mut got = 0usize;
+        // SAFETY: `s` is live; the ephemerals are set; `pms` is writable (80 bytes covers a P-521
+        // shared secret's 66 bytes); `got` is this frame's writable slot.
+        let derived = unsafe {
+            crate::ssl::tls13_enc::tls13_derive_shared(
+                s,
+                (*s).pkey,
+                (*s).peer_tmp,
+                pms.as_mut_ptr(),
+                80,
+                &mut got,
+            )
+        };
+        if derived == 0 {
+            return 0;
+        }
+        // `got` is the shared secret's length (the group's field size).
+        got
+    } else {
+        return 0;
     };
-    if peer.is_null() {
-        return 0;
-    }
-    // SAFETY: `s` is live.
-    unsafe { (*s).peer_tmp = peer.cast() };
-    let mut pms = [0u8; 64];
-    let mut pmslen = 0usize;
-    // SAFETY: `s` is live; the ephemerals are set; `pms` is writable.
-    if unsafe {
-        crate::ssl::tls13_enc::tls13_derive_shared(
-            s,
-            (*s).pkey,
-            (*s).peer_tmp,
-            pms.as_mut_ptr(),
-            pms.len(),
-            &mut pmslen,
-        )
-    } == 0
-    {
-        return 0;
-    }
     // SAFETY: `s` is live; `pms[..pmslen]` is the shared secret.
     if unsafe { crate::ssl::t1_enc::tls12_derive_master_secret(s, pms.as_ptr(), pmslen) } == 0 {
         return 0;
@@ -3641,7 +4027,27 @@ unsafe fn tls12_server_drive(s: *mut Ssl) -> c_int {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
-                    (*s).hand_state = TLS_ST_SW_KEY_EXCH;
+                    // `ossl_statem_server_write_transition`'s `TLS_ST_SW_CERT ->
+                    // TLS_ST_SW_CERT_STATUS` arm (`statem_srvr.c:658-670`) when the OCSP callback
+                    // armed `status_expected`; the reduced driver emits the message here rather
+                    // than through a separate state.
+                    // SAFETY: `s` is live.
+                    if (*s).ext_status_expected != 0 && tls12_construct_cert_status(s) <= 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    // Only suites whose key exchange needs ephemeral parameters send a
+                    // `ServerKeyExchange` (`send_server_key_exchange`, `statem_srvr.c:353-386`).
+                    // A static-RSA suite goes straight to CertificateRequest/ServerHelloDone;
+                    // entering `TLS_ST_SW_KEY_EXCH` unconditionally made it build an ECDHE flight
+                    // and fail with a key-share error.
+                    (*s).hand_state = if send_server_key_exchange(s) {
+                        TLS_ST_SW_KEY_EXCH
+                    } else if (*s).s3_tmp_cert_request != 0 {
+                        TLS_ST_SW_CERT_REQ
+                    } else {
+                        TLS_ST_SW_SRVR_DONE
+                    };
                 }
                 TLS_ST_SW_KEY_EXCH => {
                     if tls12_construct_server_key_exchange(s) <= 0 {
@@ -3871,23 +4277,38 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc as k;
     // SAFETY: `s` is live.
     unsafe {
-        // A TLS1.2 handshake that returned a wait must resume in its own driver on re-entry.
+        // A TLS1.2 handshake that returned a wait must resume in its own driver on re-entry, and
+        // it needs no handshake read buffer here.
         if (*s).tls12_driver != 0 {
             return tls12_server_drive(s);
         }
+    }
+    // The handshake-message read buffer is heap-allocated for the whole drive: a 16 KiB stack
+    // array here (plus the record encoder's frame) overflows a 32 KiB accept thread. Its single
+    // release is the handle's `Drop` on every return below.
+    let Some(msg_buf) = OwnedBuf::new(crate::ssl::ssl_lib::TLS13_HS_BUF_LEN, SeamFile::NULL, 0)
+    else {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR) };
+        return -1;
+    };
+    // SAFETY: `s` is live.
+    unsafe {
         loop {
             match (*s).hand_state {
                 TLS_ST_BEFORE => {
-                    let mut buf = [0u8; 16384];
                     let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        buf.as_mut_ptr(),
-                        buf.len(),
+                        msg_buf.as_ptr(),
+                        crate::ssl::ssl_lib::TLS13_HS_BUF_LEN,
                     );
-                    if n <= 0 || buf[0] != SSL3_MT_CLIENT_HELLO_BODY {
+                    if n <= 0 || *msg_buf.as_ptr() != SSL3_MT_CLIENT_HELLO_BODY {
                         return server_wait(s);
                     }
-                    let pr = tls_process_client_hello(s, &buf[..n as usize]);
+                    let pr = tls_process_client_hello(
+                        s,
+                        core::slice::from_raw_parts(msg_buf.as_ptr(), n as usize),
+                    );
                     if pr == 0 {
                         // `tls_process_client_hello` raises its own alert/reason (for example
                         // `SSL_R_NO_SHARED_CIPHER`); only a parse failure with no reason queued gets
@@ -3922,28 +4343,27 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     };
                 }
                 TLS_ST_SR_CERT => {
-                    let mut buf = [0u8; 16384];
                     let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        buf.as_mut_ptr(),
-                        buf.len(),
+                        msg_buf.as_ptr(),
+                        crate::ssl::ssl_lib::TLS13_HS_BUF_LEN,
                     );
                     if n <= 0 {
                         return server_wait(s);
                     }
-                    if buf[0] == SSL3_MT_CERTIFICATE_VERIFY as u8 {
+                    if *msg_buf.as_ptr() == SSL3_MT_CERTIFICATE_VERIFY as u8 {
                         // The client sent an empty Certificate, so per `received_client_cert`
                         // (`statem_srvr.c:122-135`) a CertificateVerify cannot follow; reject it.
                         ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
                         return -1;
                     }
-                    if buf[0] != SSL3_MT_CERT {
+                    if *msg_buf.as_ptr() != SSL3_MT_CERT {
                         ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
                         return -1;
                     }
                     if crate::ssl::statem::statem_clnt::tls13_process_peer_certificate(
                         s,
-                        &buf[..n as usize],
+                        core::slice::from_raw_parts(msg_buf.as_ptr(), n as usize),
                         true,
                     ) == 0
                     {
@@ -3959,18 +4379,17 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     };
                 }
                 TLS_ST_SR_CERT_VRFY => {
-                    let mut buf = [0u8; 16384];
                     let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        buf.as_mut_ptr(),
-                        buf.len(),
+                        msg_buf.as_ptr(),
+                        crate::ssl::ssl_lib::TLS13_HS_BUF_LEN,
                     );
-                    if n <= 0 || buf[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+                    if n <= 0 || *msg_buf.as_ptr() != SSL3_MT_CERTIFICATE_VERIFY as u8 {
                         return server_wait(s);
                     }
                     if crate::ssl::statem::statem_clnt::tls_process_cert_verify(
                         s,
-                        &buf[..n as usize],
+                        core::slice::from_raw_parts(msg_buf.as_ptr(), n as usize),
                         true,
                     ) == 0
                     {
@@ -3980,17 +4399,21 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     (*s).hand_state = TLS_ST_SR_FINISHED;
                 }
                 TLS_ST_SR_FINISHED => {
-                    let mut buf = [0u8; 16384];
                     let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        buf.as_mut_ptr(),
-                        buf.len(),
+                        msg_buf.as_ptr(),
+                        crate::ssl::ssl_lib::TLS13_HS_BUF_LEN,
                     );
-                    if n <= 0 || buf[0] != SSL3_MT_FIN {
+                    if n <= 0 || *msg_buf.as_ptr() != SSL3_MT_FIN {
                         return server_wait(s);
                     }
                     let secret = (*s).client_hs_traffic.as_ptr();
-                    if k::tls13_process_finished(s, &buf[..n as usize], secret) == 0 {
+                    if k::tls13_process_finished(
+                        s,
+                        core::slice::from_raw_parts(msg_buf.as_ptr(), n as usize),
+                        secret,
+                    ) == 0
+                    {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
@@ -4358,5 +4781,1599 @@ mod adv_probe {
     #[test]
     fn oversized_certificate_does_not_overflow_the_tls12_flight_buffer() {
         oversized_cert_flight(construct_tls12);
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// TLS1.2 ECDHE group matrix, static RSA and no-common-group reason tests
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod tls12_group_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use core::ffi::{c_int, c_long, c_uint, c_void, CStr};
+
+    use crate::evp::asymcipher::{EVP_PKEY_encrypt, EVP_PKEY_encrypt_init};
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey::{
+        openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free, EVP_PKEY_get_size, EvpPkey,
+    };
+    use crate::evp::pkey_ctx::{
+        EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_pkey, RSA_NO_PADDING, RSA_PKCS1_PADDING,
+    };
+    use crate::rsa::ctrl::EVP_PKEY_CTX_set_rsa_padding;
+    use crate::runtime::bio::Bio;
+    use crate::runtime::bio::{
+        bss_mem::BIO_s_mem, BIO_ctrl_pending, BIO_free, BIO_new, BIO_new_bio_pair, BIO_read,
+        BIO_write,
+    };
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error, ERR_peek_error};
+    use crate::runtime::obj as o;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_ciph::{ssl3_get_cipher_by_id, SSL_CIPHER_get_name};
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_callback_ctrl, SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_get_ciphers, SSL_CTX_new,
+        SSL_CTX_set_cipher_list, SSL_CTX_set_verify, SSL_ctrl, SSL_do_handshake, SSL_free,
+        SSL_get_ciphers, SSL_get_current_cipher, SSL_get_error, SSL_new, SSL_peek, SSL_pending,
+        SSL_read, SSL_set_accept_state, SSL_set_bio, SSL_set_cipher_list, SSL_set_connect_state,
+        SSL_set_options, SSL_write, Ssl, SslCtx,
+    };
+    use crate::ssl::ssl_rsa::{SSL_CTX_use_PrivateKey, SSL_CTX_use_certificate};
+    use crate::ssl::ssl_sess::{SSL_SESSION_get_compress_id, SSL_get_session};
+    use crate::ssl::t1_enc::tls12_setup_cipher;
+    use crate::x509::x509_set::{
+        X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
+    };
+    use crate::x509::x509_vfy::X509_gmtime_adj;
+    use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+    use crate::x509::x_all::X509_sign;
+    use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+    use crate::x509::x_x509::{X509_free, X509_new, X509};
+
+    const SSL_CTRL_SET_GROUPS: c_int = 91;
+    const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
+    const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
+    const TLS1_2_VERSION: c_int = 0x0303;
+    const TLS1_3_VERSION: c_int = 0x0304;
+
+    /// A self-signed RSA identity for the server, valid for both ECDHE-RSA and static-RSA suites.
+    ///
+    /// # Safety
+    /// Every object is created and released by this function's caller.
+    unsafe fn rsa_identity(bits: usize) -> (*mut EvpPkey, *mut X509) {
+        use crate::asn1::layout::MBSTRING_UTF8;
+        use crate::asn1::prim::ASN1_INTEGER_set;
+        // SAFETY: constructors below answer fresh objects owned by this frame.
+        unsafe {
+            let pkey = openssl_rs_evp_pkey_q_keygen(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                c"RSA".as_ptr(),
+                1,
+                bits,
+                core::ptr::null(),
+            );
+            assert!(!pkey.is_null(), "an RSA key must be generatable");
+            let x = X509_new();
+            assert!(!x.is_null(), "X509_new must answer a certificate");
+            let name = X509_NAME_new();
+            assert!(!name.is_null(), "X509_NAME_new must answer a name");
+            assert_eq!(
+                X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    MBSTRING_UTF8,
+                    c"tls12.test".as_ptr().cast::<u8>(),
+                    10,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(ASN1_INTEGER_set(&mut (*x).cert_info.serialNumber, 1), 1);
+            assert_eq!(X509_set_subject_name(x, name), 1);
+            assert_eq!(X509_set_issuer_name(x, name), 1);
+            (*x).cert_info.validity.notBefore = X509_gmtime_adj(core::ptr::null_mut(), 0);
+            (*x).cert_info.validity.notAfter = X509_gmtime_adj(core::ptr::null_mut(), 86_400);
+            assert!(!(*x).cert_info.validity.notBefore.is_null());
+            assert!(!(*x).cert_info.validity.notAfter.is_null());
+            assert_eq!(X509_set_pubkey(x, pkey), 1);
+            assert!(X509_sign(x, pkey, EVP_sha256()) > 0, "signing must succeed");
+            X509_NAME_free(name);
+            (pkey, x)
+        }
+    }
+
+    /// Move every pending byte from one memory BIO to the other. The peer never blocks: an empty
+    /// source is the handshake's "want read".
+    ///
+    /// # Safety
+    /// `from`/`to` are live memory BIOs owned by the two connections.
+    unsafe fn drain(from: *mut Bio, to: *mut Bio) {
+        // 4 KiB is enough to move a full record in a few iterations and keeps this helper's frame
+        // small enough for the 32 KiB-stack regression thread.
+        let mut buf = [0u8; 4096];
+        loop {
+            // SAFETY: `buf` is writable; `from` is live.
+            let n = unsafe { BIO_read(from, buf.as_mut_ptr().cast(), buf.len() as c_int) };
+            if n <= 0 {
+                break;
+            }
+            // SAFETY: `buf[..n]` is readable; `to` is live.
+            let w = unsafe { BIO_write(to, buf.as_ptr().cast(), n) };
+            if w != n {
+                break;
+            }
+        }
+    }
+
+    struct Pair {
+        cctx: *mut SslCtx,
+        sctx: *mut SslCtx,
+        c: *mut Ssl,
+        s: *mut Ssl,
+        c_r: *mut Bio,
+        c_w: *mut Bio,
+        s_r: *mut Bio,
+        s_w: *mut Bio,
+    }
+
+    /// Build a client/server pair with the requested version, cipher and per-side group pins.
+    ///
+    /// # Safety
+    /// The caller owns the returned objects and releases them with [`free_pair`].
+    unsafe fn make_pair(
+        cipher: &CStr,
+        version: c_int,
+        client_group: Option<c_int>,
+        server_group: Option<c_int>,
+    ) -> Pair {
+        // SAFETY: the caller's contract; the default identity is 2048-bit RSA.
+        unsafe { make_pair_bits(cipher, version, client_group, server_group, 2048) }
+    }
+
+    /// As [`make_pair`], with an explicit RSA modulus size for the server identity.
+    ///
+    /// # Safety
+    /// The caller owns the returned objects and releases them with [`free_pair`].
+    unsafe fn make_pair_bits(
+        cipher: &CStr,
+        version: c_int,
+        client_group: Option<c_int>,
+        server_group: Option<c_int>,
+        rsa_bits: usize,
+    ) -> Pair {
+        // SAFETY: every constructor below answers a fresh object owned by this frame.
+        unsafe {
+            let cctx = SSL_CTX_new(TLS_method());
+            let sctx = SSL_CTX_new(TLS_method());
+            assert!(!cctx.is_null() && !sctx.is_null());
+            // `SSL_CTX_set_cipher_list` selects the TLS1.2 stack; a TLS1.3-only suite name is set
+            // by the default ciphersuite configuration instead.
+            if !cipher.to_bytes().starts_with(b"TLS_") {
+                assert_eq!(SSL_CTX_set_cipher_list(cctx, cipher.as_ptr()), 1);
+                assert_eq!(SSL_CTX_set_cipher_list(sctx, cipher.as_ptr()), 1);
+            }
+            SSL_CTX_set_verify(cctx, 0, None);
+            for (ctx, group) in [(cctx, client_group), (sctx, server_group)] {
+                assert_eq!(
+                    SSL_CTX_ctrl(
+                        ctx,
+                        SSL_CTRL_SET_MIN_PROTO_VERSION,
+                        version as c_long,
+                        core::ptr::null_mut(),
+                    ),
+                    1
+                );
+                assert_eq!(
+                    SSL_CTX_ctrl(
+                        ctx,
+                        SSL_CTRL_SET_MAX_PROTO_VERSION,
+                        version as c_long,
+                        core::ptr::null_mut(),
+                    ),
+                    1
+                );
+                if let Some(nid) = group {
+                    let mut nid = nid;
+                    assert_eq!(
+                        SSL_CTX_ctrl(
+                            ctx,
+                            SSL_CTRL_SET_GROUPS,
+                            1,
+                            (&mut nid as *mut c_int).cast::<c_void>(),
+                        ),
+                        1,
+                        "group pin"
+                    );
+                }
+            }
+
+            let (pkey, x) = rsa_identity(rsa_bits);
+            assert_eq!(SSL_CTX_use_certificate(sctx, x), 1);
+            assert_eq!(SSL_CTX_use_PrivateKey(sctx, pkey), 1);
+            EVP_PKEY_free(pkey);
+            X509_free(x);
+
+            let c = SSL_new(cctx);
+            let s = SSL_new(sctx);
+            assert!(!c.is_null() && !s.is_null());
+            SSL_set_connect_state(c);
+            SSL_set_accept_state(s);
+            let c_r = BIO_new(BIO_s_mem());
+            let c_w = BIO_new(BIO_s_mem());
+            let s_r = BIO_new(BIO_s_mem());
+            let s_w = BIO_new(BIO_s_mem());
+            assert!(!c_r.is_null() && !c_w.is_null() && !s_r.is_null() && !s_w.is_null());
+            // Each connection owns its own read/write pair; the pump moves the bytes between them.
+            SSL_set_bio(c, c_r, c_w);
+            SSL_set_bio(s, s_r, s_w);
+            Pair {
+                cctx,
+                sctx,
+                c,
+                s,
+                c_r,
+                c_w,
+                s_r,
+                s_w,
+            }
+        }
+    }
+
+    /// # Safety
+    /// `p` is a live pair from [`make_pair`] that has not been freed.
+    unsafe fn free_pair(p: Pair) {
+        // SAFETY: `c`/`s` own the four BIOs and the contexts are this frame's.
+        unsafe {
+            SSL_free(p.c);
+            SSL_free(p.s);
+            SSL_CTX_free(p.cctx);
+            SSL_CTX_free(p.sctx);
+        }
+    }
+
+    /// Pump both directions until both handshakes finish or one side enters the error state.
+    ///
+    /// # Safety
+    /// `p` is a live pair from [`make_pair`].
+    unsafe fn drive(p: &Pair) -> (bool, bool) {
+        let mut client_ok = false;
+        let mut server_ok = false;
+        for _ in 0..128 {
+            // SAFETY: both connections are live for the duration of the pair.
+            let client_ret = unsafe { SSL_do_handshake(p.c) };
+            // SAFETY: both connections are live for the duration of the pair.
+            let server_ret = unsafe { SSL_do_handshake(p.s) };
+            if !client_ok && client_ret == 1 {
+                client_ok = true;
+            }
+            if !server_ok && server_ret == 1 {
+                server_ok = true;
+            }
+            // SAFETY: the four BIOs are live until `free_pair`.
+            unsafe {
+                drain(p.c_w, p.s_r);
+                drain(p.s_w, p.c_r);
+            }
+            if client_ok && server_ok {
+                break;
+            }
+            // SAFETY: `p.s` is live.
+            if unsafe { crate::ssl::statem::statem::ossl_statem_in_error(p.s) } != 0 {
+                break;
+            }
+        }
+        (client_ok, server_ok)
+    }
+
+    /// Drain this thread's error queue and return the reason codes.
+    fn error_reasons() -> Vec<c_int> {
+        let mut reasons = Vec::new();
+        loop {
+            let e = ERR_get_error();
+            if e == 0 {
+                break;
+            }
+            // `ERR_GET_REASON` is `ERR_REASON_MASK` (0x7FFFFF) on this non-system queue.
+            reasons.push((e & 0x7f_ffff) as c_int);
+        }
+        reasons
+    }
+
+    /// Drain this thread's error queue and return `(ERR_GET_LIB, ERR_GET_REASON)` pairs.
+    fn error_lib_reasons() -> Vec<(c_int, c_int)> {
+        let mut out = Vec::new();
+        loop {
+            let e = ERR_get_error();
+            if e == 0 {
+                break;
+            }
+            // `ERR_GET_LIB` is bits 23..30 and `ERR_GET_REASON` is the low 23 bits on this
+            // non-system queue (`err.h`).
+            out.push((((e >> 23) & 0xff) as c_int, (e & 0x7f_ffff) as c_int));
+        }
+        out
+    }
+
+    fn current_cipher(s: *mut Ssl) -> String {
+        // SAFETY: `s` is live until `free_pair`.
+        let c = unsafe { SSL_get_current_cipher(s) };
+        if c.is_null() {
+            return String::new();
+        }
+        // SAFETY: `c` is a live table row and its name is NUL-terminated.
+        let p = unsafe { SSL_CIPHER_get_name(c) };
+        if p.is_null() {
+            String::new()
+        } else {
+            // SAFETY: `p` is NUL-terminated.
+            unsafe { CStr::from_ptr(p) }.to_string_lossy().into_owned()
+        }
+    }
+
+    /// Encrypt `input` under the server's public key with an explicit padding mode, for the
+    /// canary's textbook (`RSA_NO_PADDING`) malformed blocks and the valid positive control.
+    ///
+    /// # Safety
+    /// `pkey` is a live key; `input` is readable for its length.
+    unsafe fn rsa_encrypt_with_key(pkey: *mut EvpPkey, input: &[u8], padding: c_int) -> Vec<u8> {
+        // SAFETY: the pointers below are live locals or the caller's live key.
+        unsafe {
+            let ctx = EVP_PKEY_CTX_new_from_pkey(core::ptr::null_mut(), pkey, core::ptr::null());
+            assert!(
+                !ctx.is_null(),
+                "an RSA encryption context must be buildable"
+            );
+            assert!(EVP_PKEY_encrypt_init(ctx) > 0);
+            assert!(
+                EVP_PKEY_CTX_set_rsa_padding(ctx, padding) > 0,
+                "the padding mode must be accepted"
+            );
+            let mut outlen = 0usize;
+            assert!(
+                EVP_PKEY_encrypt(
+                    ctx,
+                    core::ptr::null_mut(),
+                    &mut outlen,
+                    input.as_ptr(),
+                    input.len(),
+                ) > 0
+            );
+            let mut out = vec![0u8; outlen];
+            assert!(
+                EVP_PKEY_encrypt(
+                    ctx,
+                    out.as_mut_ptr(),
+                    &mut outlen,
+                    input.as_ptr(),
+                    input.len(),
+                ) > 0
+            );
+            out.truncate(outlen);
+            EVP_PKEY_CTX_free(ctx);
+            out
+        }
+    }
+
+    /// A server connection that has processed its ServerHello/cipher setup and can accept a
+    /// ClientKeyExchange directly. The caller frees `ctx`, `s` and `pkey`.
+    ///
+    /// # Safety
+    /// Every returned pointer is this frame's own object.
+    unsafe fn static_rsa_server(bits: usize) -> (*mut SslCtx, *mut Ssl, *mut EvpPkey) {
+        // SAFETY: constructors and installers below use live objects owned by this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let (pkey, x) = rsa_identity(bits);
+            assert_eq!(SSL_CTX_use_certificate(ctx, x), 1);
+            assert_eq!(SSL_CTX_use_PrivateKey(ctx, pkey), 1);
+            X509_free(x);
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            SSL_set_accept_state(s);
+            (*s).version = TLS1_2_VERSION;
+            (*s).client_version = TLS1_2_VERSION;
+            (*s).pending_cipher = ssl3_get_cipher_by_id(0x0300_009c);
+            assert!(!(*s).pending_cipher.is_null());
+            assert_eq!(tls12_setup_cipher(s, 0x009c), 1);
+            (ctx, s, pkey)
+        }
+    }
+
+    /// Frame a ciphertext as a TLS1.2 `ClientKeyExchange` handshake message.
+    fn cke_message(ciphertext: &[u8]) -> Vec<u8> {
+        let bodylen = 2 + ciphertext.len();
+        let mut msg = Vec::with_capacity(4 + bodylen);
+        msg.push(SSL3_MT_CLIENT_KEY_EXCHANGE as u8);
+        msg.extend_from_slice(&[(bodylen >> 16) as u8, (bodylen >> 8) as u8, bodylen as u8]);
+        msg.extend_from_slice(&(ciphertext.len() as u16).to_be_bytes());
+        msg.extend_from_slice(ciphertext);
+        msg
+    }
+
+    /// Drive one ClientKeyExchange through the real server function and return the master secret
+    /// it derived. The caller has cleared the error queue.
+    ///
+    /// # Safety
+    /// `s` is a live server connection from [`static_rsa_server`].
+    unsafe fn direct_master_secret(s: *mut Ssl, ciphertext: &[u8]) -> [u8; 48] {
+        // SAFETY: `s` is live; the message is this frame's own buffer.
+        unsafe {
+            (*s).tls12_master_secret = [0x5A; 48];
+            let msg = cke_message(ciphertext);
+            let r = tls12_process_client_key_exchange(s, &msg);
+            assert_eq!(r, 1, "a malformed ciphertext must be implicitly rejected");
+            assert_eq!(
+                ERR_peek_error(),
+                0,
+                "implicit rejection must not leave a distinguishable error"
+            );
+            (*s).tls12_master_secret
+        }
+    }
+
+    /// Drive one ClientKeyExchange through the real server function and return its answer plus
+    /// the queued `(library, reason)` pairs. Used for the public `c >= n` rejection.
+    ///
+    /// # Safety
+    /// `s` is a live server connection from [`static_rsa_server`].
+    unsafe fn direct_failure(s: *mut Ssl, ciphertext: &[u8]) -> (c_int, Vec<(c_int, c_int)>) {
+        // SAFETY: `s` is live; the message is this frame's own buffer.
+        unsafe {
+            (*s).tls12_master_secret = [0x5A; 48];
+            ERR_clear_error();
+            let msg = cke_message(ciphertext);
+            let r = tls12_process_client_key_exchange(s, &msg);
+            (r, error_lib_reasons())
+        }
+    }
+
+    /// Read every pending byte out of a memory BIO. The caller writes the (possibly rewritten)
+    /// bytes back before the peer reads them.
+    ///
+    /// # Safety
+    /// `b` is a live memory BIO.
+    unsafe fn bio_take_all(b: *mut Bio) -> Vec<u8> {
+        // SAFETY: `b` is live.
+        let n = unsafe { BIO_ctrl_pending(b) };
+        if n == 0 {
+            return Vec::new();
+        }
+        let mut v = vec![0u8; n];
+        // SAFETY: `v` is writable for `n` bytes; `b` is live.
+        let r = unsafe { BIO_read(b, v.as_mut_ptr().cast(), n as c_int) };
+        v.truncate(r.max(0) as usize);
+        v
+    }
+
+    /// Replace the ClientKeyExchange ciphertext in a captured client-to-server stream. Each
+    /// record's framing is rebuilt around the replacement, so a differently-sized ciphertext
+    /// (the truncated case) is delivered intact.
+    fn rewrite_cke(stream: &[u8], ciphertext: &[u8]) -> Option<Vec<u8>> {
+        let mut out = Vec::with_capacity(stream.len());
+        let mut p = 0usize;
+        let mut found = false;
+        while p + 5 <= stream.len() {
+            let rtype = stream[p];
+            let version = [stream[p + 1], stream[p + 2]];
+            let rlen = u16::from_be_bytes([stream[p + 3], stream[p + 4]]) as usize;
+            if p + 5 + rlen > stream.len() {
+                return None;
+            }
+            let payload = &stream[p + 5..p + 5 + rlen];
+            if !found && rtype == 22 && payload.len() >= 4 && payload[0] == 16 {
+                let hlen = ((payload[1] as usize) << 16)
+                    | ((payload[2] as usize) << 8)
+                    | payload[3] as usize;
+                if 4 + hlen != payload.len() {
+                    return None;
+                }
+                let bodylen = 2 + ciphertext.len();
+                let mut replacement = Vec::with_capacity(4 + bodylen);
+                replacement.push(16);
+                replacement.extend_from_slice(&[
+                    (bodylen >> 16) as u8,
+                    (bodylen >> 8) as u8,
+                    bodylen as u8,
+                ]);
+                replacement.extend_from_slice(&(ciphertext.len() as u16).to_be_bytes());
+                replacement.extend_from_slice(ciphertext);
+                out.push(rtype);
+                out.extend_from_slice(&version);
+                out.extend_from_slice(&(replacement.len() as u16).to_be_bytes());
+                out.extend_from_slice(&replacement);
+                found = true;
+            } else {
+                out.extend_from_slice(&stream[p..p + 5 + rlen]);
+            }
+            p += 5 + rlen;
+        }
+        (found && p == stream.len()).then_some(out)
+    }
+
+    /// Run a full TLS1.2 handshake, replacing the client's ClientKeyExchange ciphertext with one
+    /// derived from `block`, and return the server's failing hand state and error reasons.
+    ///
+    /// `raw` delivers `block` unchanged (the all-zero and `>= n` cases); otherwise it is encrypted
+    /// under the pair's own server key with `padding`. `truncate` shortens the ciphertext for the
+    /// short-ciphertext case.
+    ///
+    /// # Safety
+    /// The pair is created and released here.
+    unsafe fn intercepted_handshake(
+        block: &[u8],
+        raw: bool,
+        padding: c_int,
+        truncate: Option<usize>,
+    ) -> (c_int, Vec<(c_int, c_int)>) {
+        // SAFETY: the pair and its BIOs are live for the whole loop.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"AES128-GCM-SHA256", TLS1_2_VERSION, None, None);
+            let cpk = crate::ssl::ssl_lib::cert_active_key((*p.s).cert);
+            assert!(!cpk.is_null() && !(*cpk).x509.is_null());
+            let server_key = crate::x509::x509_cmp::X509_get0_pubkey((*cpk).x509);
+            assert!(!server_key.is_null());
+            let mut ciphertext = if raw {
+                block.to_vec()
+            } else {
+                rsa_encrypt_with_key(server_key, block, padding)
+            };
+            if let Some(n) = truncate {
+                ciphertext.truncate(n);
+            }
+            let mut injected = false;
+            let mut server_ok = false;
+            for _ in 0..32 {
+                let _ = SSL_do_handshake(p.c);
+                let pending = bio_take_all(p.c_w);
+                if !pending.is_empty() {
+                    let payload = if !injected {
+                        if let Some(rewritten) = rewrite_cke(&pending, &ciphertext) {
+                            injected = true;
+                            rewritten
+                        } else {
+                            pending
+                        }
+                    } else {
+                        pending
+                    };
+                    let written = BIO_write(p.c_w, payload.as_ptr().cast(), payload.len() as c_int);
+                    assert_eq!(written, payload.len() as c_int);
+                }
+                drain(p.c_w, p.s_r);
+                if SSL_do_handshake(p.s) == 1 {
+                    server_ok = true;
+                }
+                drain(p.s_w, p.c_r);
+                if server_ok || crate::ssl::statem::statem::ossl_statem_in_error(p.s) != 0 {
+                    break;
+                }
+            }
+            assert!(injected, "the client never emitted a ClientKeyExchange");
+            assert!(!server_ok, "a modified ClientKeyExchange must not complete");
+            let state = (*p.s).hand_state;
+            let reasons = error_lib_reasons();
+            free_pair(p);
+            (state, reasons)
+        }
+    }
+
+    fn assert_group_handshake(nid: c_int) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(
+                c"ECDHE-RSA-AES128-GCM-SHA256",
+                TLS1_2_VERSION,
+                Some(nid),
+                Some(nid),
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let cipher = current_cipher(p.c);
+            let reasons = if server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "TLS1.2 ECDHE handshake for nid {nid} failed \
+                 (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert_eq!(cipher, "ECDHE-RSA-AES128-GCM-SHA256");
+        }
+    }
+
+    #[test]
+    fn tls12_handshake_x25519() {
+        assert_group_handshake(o::NID_X25519);
+    }
+
+    #[test]
+    fn tls12_handshake_secp256r1() {
+        assert_group_handshake(o::NID_X9_62_prime256v1);
+    }
+
+    #[test]
+    fn tls12_handshake_secp384r1() {
+        assert_group_handshake(o::NID_secp384r1);
+    }
+
+    #[test]
+    fn tls12_handshake_secp521r1() {
+        assert_group_handshake(o::NID_secp521r1);
+    }
+
+    #[test]
+    fn tls12_handshake_x448() {
+        assert_group_handshake(o::NID_X448);
+    }
+
+    #[test]
+    fn tls12_static_rsa_handshake_sends_no_server_key_exchange() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"AES128-GCM-SHA256", TLS1_2_VERSION, None, None);
+            let (client_ok, server_ok) = drive(&p);
+            let cipher = current_cipher(p.c);
+            let reasons = if server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "static-RSA TLS1.2 handshake failed \
+                 (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert_eq!(cipher, "AES128-GCM-SHA256");
+        }
+    }
+
+    #[test]
+    fn tls12_static_rsa_handshake_4096_bit_modulus() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair_bits(c"AES128-GCM-SHA256", TLS1_2_VERSION, None, None, 4096);
+            let (client_ok, server_ok) = drive(&p);
+            let cipher = current_cipher(p.c);
+            let reasons = if server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "4096-bit static-RSA TLS1.2 handshake failed \
+                 (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert_eq!(cipher, "AES128-GCM-SHA256");
+        }
+    }
+
+    #[test]
+    fn tls12_static_rsa_malformed_ciphertexts_are_indistinguishable() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released in this frame; the crafted ciphertexts are
+        // public data encrypted under this test's own server key.
+        unsafe {
+            let (ctx, s, pkey) = static_rsa_server(2048);
+            let size = EVP_PKEY_get_size(pkey) as usize;
+            let mut pms = [0u8; 48];
+            pms[0] = 0x03;
+            pms[1] = 0x03;
+            for (i, b) in pms.iter_mut().enumerate().skip(2) {
+                *b = (i as u8).wrapping_mul(7);
+            }
+            ERR_clear_error();
+            let master_valid =
+                direct_master_secret(s, &rsa_encrypt_with_key(pkey, &pms, RSA_PKCS1_PADDING));
+            // The wrong-version block is structurally padding-valid; its embedded premaster is
+            // `03 01 || 46 * 0xAA`. If the version check were skipped, the server would derive
+            // this master secret instead of a random one.
+            let mut embedded_pms = [0xAAu8; 48];
+            embedded_pms[0] = 0x03;
+            embedded_pms[1] = 0x01;
+            let master_embedded = direct_master_secret(
+                s,
+                &rsa_encrypt_with_key(pkey, &embedded_pms, RSA_PKCS1_PADDING),
+            );
+            assert_ne!(master_embedded, master_valid);
+
+            // Textbook blocks whose encoded message starts with the three PKCS#1 block types.
+            let mut bt00 = [0xAAu8; 2048];
+            bt00[0] = 0x00;
+            bt00[1] = 0x00;
+            let mut bt01 = [0xAAu8; 2048];
+            bt01[0] = 0x00;
+            bt01[1] = 0x01;
+            let mut bt02 = [0xAAu8; 2048];
+            bt02[0] = 0x00;
+            bt02[1] = 0x02;
+            // Block type 2 with a well-formed separator but the wrong client version: the
+            // padding check must still reject it and randomise the premaster.
+            let mut bad_version = [0xAAu8; 2048];
+            bad_version[0] = 0x00;
+            bad_version[1] = 0x02;
+            bad_version[2..10].fill(0x11);
+            bad_version[10] = 0x00;
+            bad_version[11] = 0x03;
+            bad_version[12] = 0x01;
+
+            let zero = vec![0u8; size];
+            let ge_n = vec![0xFFu8; size];
+            let valid_ct = rsa_encrypt_with_key(pkey, &pms, RSA_PKCS1_PADDING);
+            let truncated = &valid_ct[..size / 4];
+
+            // (c) In-range malformed values: each is implicitly rejected, raises nothing, and
+            // yields a master secret different from the padding-valid control.
+            for (name, block) in [
+                ("block-type-0", &bt00),
+                ("block-type-1", &bt01),
+                ("block-type-2-no-separator", &bt02),
+                ("block-type-2-bad-version", &bad_version),
+            ] {
+                let ct = rsa_encrypt_with_key(pkey, &block[..size], RSA_NO_PADDING);
+                let master = direct_master_secret(s, &ct);
+                if name == "block-type-2-bad-version" {
+                    assert_ne!(
+                        master, master_embedded,
+                        "{name} accepted the embedded wrong-version premaster"
+                    );
+                } else {
+                    assert_ne!(
+                        master, master_valid,
+                        "{name} was accepted as a padding-valid premaster"
+                    );
+                }
+            }
+            for (name, ct) in [("all-zero", zero.as_slice()), ("truncated", truncated)] {
+                let master = direct_master_secret(s, ct);
+                assert_ne!(
+                    master, master_valid,
+                    "{name} was accepted as a padding-valid premaster"
+                );
+            }
+            // A ciphertext >= n is refused before blinding (`rsa_ossl.c:606`) with
+            // RSA_R_DATA_TOO_LARGE_FOR_MODULUS. The comparison depends only on the received
+            // ciphertext and the public modulus, so it cannot leak private data or act as a
+            // Bleichenbacher oracle; this is the authority's behaviour and must not be softened.
+            {
+                let (r, errors) = direct_failure(s, &ge_n);
+                assert_eq!(r, 0, "c >= n must be refused");
+                assert!(
+                    errors.contains(&(4, 132)),
+                    "expected ERR_LIB_RSA/RSA_R_DATA_TOO_LARGE_FOR_MODULUS, got {errors:?}"
+                );
+            }
+
+            // (a) and (b) end to end. In-range malformed values all fail in the Finished state
+            // with the same reason vector; an early distinguishable decryption error would
+            // change both and fail these assertions.
+            let mut baseline: Option<(c_int, Vec<(c_int, c_int)>)> = None;
+            #[allow(clippy::type_complexity)]
+            let cases: [(&str, &[u8], bool, c_int, Option<usize>); 6] = [
+                ("block-type-0", &bt00[..size], false, RSA_NO_PADDING, None),
+                ("block-type-1", &bt01[..size], false, RSA_NO_PADDING, None),
+                (
+                    "block-type-2-no-separator",
+                    &bt02[..size],
+                    false,
+                    RSA_NO_PADDING,
+                    None,
+                ),
+                (
+                    "block-type-2-bad-version",
+                    &bad_version[..size],
+                    false,
+                    RSA_NO_PADDING,
+                    None,
+                ),
+                ("all-zero", zero.as_slice(), true, RSA_PKCS1_PADDING, None),
+                ("truncated", &pms, false, RSA_PKCS1_PADDING, Some(size / 4)),
+            ];
+            for (name, block, raw, padding, truncate) in cases {
+                let (state, reasons) = intercepted_handshake(block, raw, padding, truncate);
+                assert_eq!(
+                    state, TLS_ST_SR_FINISHED,
+                    "{name} failed before the Finished state (state {state})"
+                );
+                assert!(
+                    !reasons.iter().any(|(_, reason)| *reason == 147),
+                    "{name} produced a distinguishable decryption failure: {reasons:?}"
+                );
+                match &baseline {
+                    None => baseline = Some((state, reasons)),
+                    Some((base_state, base_reasons)) => {
+                        assert_eq!(state, *base_state, "{name} failed in a different state");
+                        assert_eq!(
+                            &reasons, base_reasons,
+                            "{name} produced a distinct error/reason"
+                        );
+                    }
+                }
+            }
+
+            // The public `c >= n` case is rejected at the key exchange, not at Finished.
+            {
+                let ct = ge_n.as_slice();
+                let (state, errors) = intercepted_handshake(ct, true, RSA_PKCS1_PADDING, None);
+                assert_eq!(
+                    state, TLS_ST_SR_KEY_EXCH,
+                    "c >= n must be rejected while processing the ClientKeyExchange"
+                );
+                assert!(
+                    errors.contains(&(4, 132)),
+                    "expected ERR_LIB_RSA/RSA_R_DATA_TOO_LARGE_FOR_MODULUS, got {errors:?}"
+                );
+            }
+
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+            EVP_PKEY_free(pkey);
+        }
+    }
+
+    #[test]
+    fn tls12_no_ticket_client_does_not_arm_a_ticket() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(
+                c"ECDHE-RSA-AES128-GCM-SHA256",
+                TLS1_2_VERSION,
+                Some(o::NID_X25519),
+                Some(o::NID_X25519),
+            );
+            // The client's `session_ticket` builder is suppressed by `SSL_OP_NO_TICKET`
+            // (`tls_construct_ctos_session_ticket`), so the ClientHello carries no extension and
+            // the server must not announce or issue one (`tls_construct_stoc_session_ticket`).
+            SSL_set_options(p.c, crate::ssl::ssl_ciph_table::SSL_OP_NO_TICKET);
+            let (client_ok, server_ok) = drive(&p);
+            let armed = (*p.s).ext_ticket_expected;
+            free_pair(p);
+            assert!(client_ok && server_ok);
+            assert_eq!(
+                armed, 0,
+                "a client with no ticket extension must not get one"
+            );
+        }
+    }
+
+    #[test]
+    fn tls12_no_common_group_reports_no_suitable_key_share() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            // The client offers only P-256 while the server accepts only X25519. The server's
+            // `tls12_choose_group` answers 0 and the ECDHE flight reports reason 101.
+            let p = make_pair(
+                c"ECDHE-RSA-AES128-GCM-SHA256",
+                TLS1_2_VERSION,
+                Some(o::NID_X9_62_prime256v1),
+                Some(o::NID_X25519),
+            );
+            let (_client_ok, server_ok) = drive(&p);
+            let reasons = error_reasons();
+            free_pair(p);
+            assert!(!server_ok, "a no-common-group handshake must not complete");
+            assert!(
+                reasons.contains(&101),
+                "expected SSL_R_NO_SUITABLE_KEY_SHARE (101), got {reasons:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn tls13_no_common_group_reports_no_suitable_key_share() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            // No intersection between the client's supported groups and the server's list.
+            let p = make_pair(
+                c"TLS_AES_128_GCM_SHA256",
+                TLS1_3_VERSION,
+                Some(o::NID_X25519),
+                Some(o::NID_X9_62_prime256v1),
+            );
+            let (_client_ok, server_ok) = drive(&p);
+            let reasons = error_reasons();
+            free_pair(p);
+            assert!(!server_ok, "a no-common-group handshake must not complete");
+            assert!(
+                reasons.contains(&101),
+                "expected SSL_R_NO_SUITABLE_KEY_SHARE (101), got {reasons:?}"
+            );
+        }
+    }
+
+    /// `sslscan` 2.1.5 reads `SSL_SESSION_get_compress_id(SSL_get_session(ssl))` after
+    /// `SSL_connect` answers 1. The client's handshake session must therefore exist at that
+    /// point, for both TLS1.3 and TLS1.2.
+    fn assert_session_after_handshake(cipher: &CStr, version: c_int) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(cipher, version, Some(o::NID_X25519), Some(o::NID_X25519));
+            let (client_ok, server_ok) = drive(&p);
+            let client_session = SSL_get_session(p.c);
+            let server_session = SSL_get_session(p.s);
+            let compress = if client_session.is_null() {
+                c_uint::MAX
+            } else {
+                SSL_SESSION_get_compress_id(client_session)
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "the {cipher:?} handshake must complete (client={client_ok}, server={server_ok})"
+            );
+            assert!(
+                !client_session.is_null(),
+                "SSL_get_session must answer the negotiated session after a completed handshake"
+            );
+            assert!(
+                !server_session.is_null(),
+                "the server's completed handshake must retain its session"
+            );
+            // `sslscan` reaches this accessor through the returned pointer; it must read the
+            // negotiated session rather than fault.
+            assert_eq!(compress, 0, "no compression is negotiated");
+        }
+    }
+
+    #[test]
+    fn ssl_get_session_after_tls13_handshake_is_non_null() {
+        assert_session_after_handshake(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION);
+    }
+
+    #[test]
+    fn ssl_get_session_after_tls12_handshake_is_non_null() {
+        assert_session_after_handshake(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION);
+    }
+
+    /// The `SSL_CIPHER *` names in `sk`, in list order.
+    ///
+    /// # Safety
+    /// `sk` is NULL or a live cipher stack.
+    unsafe fn cipher_names(sk: *mut crate::runtime::stack::OpenSslStack) -> Vec<String> {
+        if sk.is_null() {
+            return Vec::new();
+        }
+        // SAFETY: `sk` is live per the caller's contract.
+        let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(sk) };
+        let mut out = Vec::new();
+        for i in 0..n {
+            // SAFETY: `i` is in range for the stack.
+            let c = unsafe { crate::runtime::stack::OPENSSL_sk_value(sk, i) }
+                as *const crate::ssl::ssl_ciph_table::SslCipher;
+            if c.is_null() {
+                continue;
+            }
+            // SAFETY: `c` is a process-lifetime table row; its name is NUL-terminated.
+            let p = unsafe { SSL_CIPHER_get_name(c) };
+            if !p.is_null() {
+                // SAFETY: `p` is NUL-terminated.
+                out.push(unsafe { CStr::from_ptr(p) }.to_string_lossy().into_owned());
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn cipher_list_all_selects_tls12_and_tls13_suites_and_handshakes() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            // The context entry point: `"ALL"` must select the TLS1.2 ciphers and the context's
+            // TLS1.3 suites, exactly as the authority's `ssl_create_cipher_list` does.
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(SSL_CTX_set_cipher_list(ctx, c"ALL".as_ptr()), 1);
+            let names = cipher_names(SSL_CTX_get_ciphers(ctx));
+            assert!(
+                names.iter().any(|n| n == "ECDHE-RSA-AES128-GCM-SHA256"),
+                "ALL must select the TLS1.2 suites: {names:?}"
+            );
+            assert!(
+                names.iter().any(|n| n == "TLS_AES_128_GCM_SHA256"),
+                "ALL must include the TLS1.3 suites: {names:?}"
+            );
+            SSL_CTX_free(ctx);
+
+            // The connection entry point: jimtcl calls `SSL_set_cipher_list(ssl, "ALL")` on a
+            // fresh `SSL_new` connection before the handshake. A NULL connection
+            // `tls13_ciphersuites` used to drop every TLS1.3 suite here, so the server answered
+            // `no shared cipher` for a TLS1.3 ClientHello.
+            let p = make_pair(c"ALL", TLS1_3_VERSION, None, None);
+            assert_eq!(SSL_set_cipher_list(p.c, c"ALL".as_ptr()), 1);
+            assert_eq!(SSL_set_cipher_list(p.s, c"ALL".as_ptr()), 1);
+            let names = cipher_names(SSL_get_ciphers(p.s));
+            assert!(
+                names.iter().any(|n| n == "TLS_AES_128_GCM_SHA256"),
+                "the connection list must keep the TLS1.3 suites: {names:?}"
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let cipher = current_cipher(p.s);
+            let reasons = if server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "TLS1.3 handshake after SSL_set_cipher_list(\"ALL\") failed \
+                 (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert!(
+                cipher.starts_with("TLS_"),
+                "a TLS1.3 suite must be negotiated, got {cipher}"
+            );
+        }
+    }
+
+    #[test]
+    fn cipher_list_default_and_explicit_suite_select_expected_suites() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the context is created and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(SSL_CTX_set_cipher_list(ctx, c"DEFAULT".as_ptr()), 1);
+            let names = cipher_names(SSL_CTX_get_ciphers(ctx));
+            assert!(
+                names.iter().any(|n| n == "ECDHE-RSA-AES128-GCM-SHA256"),
+                "DEFAULT must include the default TLS1.2 suites: {names:?}"
+            );
+            assert!(
+                names.iter().any(|n| n == "TLS_AES_128_GCM_SHA256"),
+                "DEFAULT must keep the TLS1.3 suites: {names:?}"
+            );
+
+            assert_eq!(
+                SSL_CTX_set_cipher_list(ctx, c"ECDHE-RSA-AES128-GCM-SHA256".as_ptr()),
+                1
+            );
+            let sk = SSL_CTX_get_ciphers(ctx);
+            let names = cipher_names(sk);
+            assert!(
+                names.iter().any(|n| n == "ECDHE-RSA-AES128-GCM-SHA256"),
+                "the named suite must be selected: {names:?}"
+            );
+            assert!(
+                names.iter().any(|n| n == "TLS_AES_128_GCM_SHA256"),
+                "the TLS1.3 suites stay appended: {names:?}"
+            );
+            assert_eq!(
+                crate::ssl::ssl_ciph::cipher_list_tls12_num(sk),
+                1,
+                "exactly the named TLS1.2 suite: {names:?}"
+            );
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn cipher_list_selecting_no_tls12_suite_returns_zero() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            // `!aNULL` kills every anonymous suite and activates nothing; an unknown name matches
+            // nothing. The authority raises `SSL_R_NO_CIPHER_MATCH` and returns 0 in both cases.
+            assert_eq!(SSL_CTX_set_cipher_list(ctx, c"!aNULL".as_ptr()), 0);
+            assert_eq!(SSL_CTX_set_cipher_list(ctx, c"NOT-A-CIPHER".as_ptr()), 0);
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            assert_eq!(SSL_set_cipher_list(s, c"!aNULL".as_ptr()), 0);
+            assert_eq!(SSL_set_cipher_list(s, c"NOT-A-CIPHER".as_ptr()), 0);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn set_tmp_ecdh_is_a_no_op_and_keeps_the_default_group_list() {
+        use crate::ec::key::{EC_KEY_free, EC_KEY_new_by_curve_name};
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the context and key are this frame's own objects.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let key = EC_KEY_new_by_curve_name(o::NID_X9_62_prime256v1);
+            assert!(!key.is_null());
+            assert_eq!((*ctx).supportedgroups_len, 0);
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    /* SSL_CTRL_SET_TMP_ECDH */ 4,
+                    0,
+                    key.cast::<c_void>(),
+                ),
+                1,
+                "the documented success value"
+            );
+            // `tls1_get_supported_groups` still answers the default list.
+            assert_eq!((*ctx).supportedgroups_len, 0);
+            EC_KEY_free(key);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    // --- OCSP status callback (`SSL_CTX_set_tlsext_status_cb`) -----------------------------
+
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    static STATUS_CB_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static STATUS_CB_ARG: AtomicUsize = AtomicUsize::new(0);
+    static STATUS_CB_RESP: [u8; 4] = [0x30, 0x02, 0x0a, 0x00];
+
+    /// `int (*)(SSL *, void *)` — records the argument and answers `SSL_TLSEXT_ERR_NOACK`.
+    unsafe extern "C" fn status_noack_cb(_ssl: *mut Ssl, arg: *mut c_void) -> c_int {
+        STATUS_CB_CALLS.fetch_add(1, Ordering::SeqCst);
+        STATUS_CB_ARG.store(arg as usize, Ordering::SeqCst);
+        3 // SSL_TLSEXT_ERR_NOACK
+    }
+
+    /// Supplies a (minimal, non-empty) response through the connection ctrl.
+    unsafe extern "C" fn status_respond_cb(ssl: *mut Ssl, arg: *mut c_void) -> c_int {
+        STATUS_CB_CALLS.fetch_add(1, Ordering::SeqCst);
+        STATUS_CB_ARG.store(arg as usize, Ordering::SeqCst);
+        // SAFETY: `ssl` is the live connection the callback received; `STATUS_CB_RESP` is
+        // readable for its length.
+        unsafe {
+            assert_eq!(
+                SSL_ctrl(
+                    ssl,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP */ 71,
+                    STATUS_CB_RESP.len() as c_long,
+                    STATUS_CB_RESP.as_ptr() as *mut c_void,
+                ),
+                1
+            );
+        }
+        0 // SSL_TLSEXT_ERR_OK
+    }
+
+    fn void_cb(
+        cb: unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int,
+    ) -> Option<unsafe extern "C" fn()> {
+        // SAFETY: a `void (*)(void)` and this callback are both pointer-sized; only the pointer
+        // bits are stored and compared.
+        Some(unsafe {
+            core::mem::transmute::<
+                unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int,
+                unsafe extern "C" fn(),
+            >(cb)
+        })
+    }
+
+    #[test]
+    fn ssl_ctx_set_tlsext_status_cb_returns_one() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the context is this frame's own object.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_callback_ctrl(
+                    ctx,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB */ 63,
+                    void_cb(status_noack_cb),
+                ),
+                1,
+                "SSL_CTX_set_tlsext_status_cb's macro must observe 1"
+            );
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn tlsext_status_cb_and_arg_round_trip() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the context is this frame's own object; the out-slots are live locals.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_callback_ctrl(
+                    ctx,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB */ 63,
+                    void_cb(status_noack_cb),
+                ),
+                1
+            );
+            let arg = 0x5a5a_usize as *mut c_void;
+            assert_eq!(
+                SSL_CTX_ctrl(ctx, /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG */ 64, 0, arg),
+                1
+            );
+            let mut got_cb: Option<unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int> = None;
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    /* SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB */ 128,
+                    0,
+                    (&mut got_cb
+                        as *mut Option<unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int>)
+                        .cast(),
+                ),
+                1
+            );
+            assert_eq!(
+                got_cb.map(|f| f as usize),
+                Some(status_noack_cb as *const () as usize)
+            );
+            let mut got_arg: *mut c_void = core::ptr::null_mut();
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    /* SSL_CTRL_GET_TLSEXT_STATUS_REQ_CB_ARG */ 129,
+                    0,
+                    (&mut got_arg as *mut *mut c_void).cast(),
+                ),
+                1
+            );
+            assert_eq!(got_arg, arg);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    fn assert_status_cb_invoked(cipher: &CStr, version: c_int) {
+        let _g = crate::test_support::lock_global_state();
+        STATUS_CB_CALLS.store(0, Ordering::SeqCst);
+        STATUS_CB_ARG.store(0, Ordering::SeqCst);
+        let arg = 0x1234_usize as *mut c_void;
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(cipher, version, None, None);
+            assert_eq!(
+                SSL_CTX_callback_ctrl(
+                    p.sctx,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB */ 63,
+                    void_cb(status_noack_cb),
+                ),
+                1
+            );
+            assert_eq!(
+                SSL_CTX_ctrl(p.sctx, /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG */ 64, 0, arg),
+                1
+            );
+            // The client asks for OCSP status (`SSL_set_tlsext_status_type`).
+            assert_eq!(
+                SSL_ctrl(
+                    p.c,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE */ 65,
+                    1,
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = error_reasons();
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "handshake failed (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert_eq!(
+                STATUS_CB_CALLS.load(Ordering::SeqCst),
+                1,
+                "the server's status callback must be invoked exactly once"
+            );
+            assert_eq!(STATUS_CB_ARG.load(Ordering::SeqCst), arg as usize);
+        }
+    }
+
+    #[test]
+    fn tlsext_status_cb_invoked_tls12() {
+        assert_status_cb_invoked(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION);
+    }
+
+    #[test]
+    fn tlsext_status_cb_invoked_tls13() {
+        assert_status_cb_invoked(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION);
+    }
+
+    #[test]
+    fn tlsext_status_response_included_tls12() {
+        let _g = crate::test_support::lock_global_state();
+        STATUS_CB_CALLS.store(0, Ordering::SeqCst);
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION, None, None);
+            assert_eq!(
+                SSL_CTX_callback_ctrl(
+                    p.sctx,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB */ 63,
+                    void_cb(status_respond_cb),
+                ),
+                1
+            );
+            assert_eq!(
+                SSL_ctrl(
+                    p.c,
+                    /* SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE */ 65,
+                    1,
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            let (client_ok, server_ok) = drive(&p);
+            let reasons = error_reasons();
+            assert!(
+                client_ok && server_ok,
+                "handshake failed (client={client_ok} server={server_ok}, reasons={reasons:?})"
+            );
+            assert_eq!(STATUS_CB_CALLS.load(Ordering::SeqCst), 1);
+            let mut got: *mut u8 = core::ptr::null_mut();
+            let len = SSL_ctrl(
+                p.c,
+                /* SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP */ 70,
+                0,
+                (&mut got as *mut *mut u8).cast(),
+            );
+            assert_eq!(len, STATUS_CB_RESP.len() as c_long);
+            assert!(!got.is_null());
+            assert_eq!(
+                core::slice::from_raw_parts(got, len as usize),
+                &STATUS_CB_RESP
+            );
+            free_pair(p);
+        }
+    }
+
+    // --- `SSL_peek` ------------------------------------------------------------------------
+
+    /// `SSL_ERROR_WANT_READ` (`ssl.h`), the class `SSL_get_error` answers for a retryable read.
+    const SSL_ERROR_WANT_READ: c_int = 2;
+
+    /// Complete a handshake, send `payload` from the client and assert that a peek returns it
+    /// without consuming it, that repeated peeks are identical, that a zero-length peek answers 0
+    /// and that the following read returns exactly the peeked bytes.
+    fn assert_peek_matches_read(cipher: &CStr, version: c_int) {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(cipher, version, None, None);
+            let (client_ok, server_ok) = drive(&p);
+            assert!(
+                client_ok && server_ok,
+                "the {cipher:?} handshake must complete (client={client_ok}, server={server_ok})"
+            );
+
+            let payload = b"peek-returns-this";
+            let w = SSL_write(p.c, payload.as_ptr().cast(), payload.len() as c_int);
+            assert_eq!(w, payload.len() as c_int, "the client write must complete");
+            drain(p.c_w, p.s_r);
+
+            let mut buf = [0u8; 64];
+            // A peek shorter than the record returns that prefix and consumes nothing.
+            let n = SSL_peek(p.s, buf.as_mut_ptr().cast(), 4);
+            assert_eq!(n, 4, "a short peek returns the requested prefix");
+            assert_eq!(&buf[..4], &payload[..4]);
+
+            // A second, larger peek starts at the record's first byte again.
+            let n = SSL_peek(p.s, buf.as_mut_ptr().cast(), buf.len() as c_int);
+            assert_eq!(n, payload.len() as c_int, "peek returns the whole record");
+            assert_eq!(&buf[..payload.len()], payload);
+            assert_eq!(
+                SSL_pending(p.s),
+                payload.len() as c_int,
+                "a peek leaves the plaintext pending"
+            );
+
+            // A zero-length peek answers 0 and still consumes nothing.
+            assert_eq!(
+                SSL_peek(p.s, buf.as_mut_ptr().cast(), 0),
+                0,
+                "a zero-length peek answers 0"
+            );
+
+            // The following read returns exactly the bytes the peek reported.
+            let r = SSL_read(p.s, buf.as_mut_ptr().cast(), buf.len() as c_int);
+            assert_eq!(
+                r,
+                payload.len() as c_int,
+                "the read after a peek sees the data"
+            );
+            assert_eq!(&buf[..payload.len()], payload);
+            assert_eq!(SSL_pending(p.s), 0, "the read consumes the record");
+
+            free_pair(p);
+        }
+    }
+
+    #[test]
+    fn peek_matches_read_tls12() {
+        assert_peek_matches_read(c"ECDHE-RSA-AES128-GCM-SHA256", TLS1_2_VERSION);
+    }
+
+    #[test]
+    fn peek_matches_read_tls13() {
+        assert_peek_matches_read(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION);
+    }
+
+    /// A peek before the handshake finishes must drive the handshake and report the blocked
+    /// transport as `WANT_READ`, not `SYSCALL` (`ssl3_read_bytes`, `rec_layer_s3.c:673-680`).
+    #[test]
+    fn peek_unfinished_handshake_reports_want_read() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released by this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let ssl = SSL_new(ctx);
+            assert!(!ssl.is_null());
+            SSL_set_connect_state(ssl);
+
+            let mut b1: *mut Bio = ptr::null_mut();
+            let mut b2: *mut Bio = ptr::null_mut();
+            assert_eq!(BIO_new_bio_pair(&mut b1, 0, &mut b2, 0), 1);
+            assert!(!b1.is_null() && !b2.is_null());
+            SSL_set_bio(ssl, b1, b1);
+
+            let mut buf = [0u8; 16];
+            let ret = SSL_peek(ssl, buf.as_mut_ptr().cast(), buf.len() as c_int);
+            assert!(ret <= 0, "an unfinished handshake must not yield data");
+            assert_eq!(
+                SSL_get_error(ssl, ret),
+                SSL_ERROR_WANT_READ,
+                "SSL_peek must drive the handshake exactly as SSL_read does"
+            );
+
+            SSL_free(ssl);
+            BIO_free(b2);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// A peek on an empty, non-blocking transport after the handshake reports `WANT_READ`.
+    #[test]
+    fn peek_with_no_data_reports_want_read() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION, None, None);
+            let (client_ok, server_ok) = drive(&p);
+            assert!(client_ok && server_ok, "the TLS1.3 handshake must complete");
+
+            // Replace the server's drained memory BIO with an empty non-blocking pair. The old
+            // BIOs are released by `SSL_set_bio`; `free_pair` only releases the connections and
+            // contexts, so the stored pointers are not touched again.
+            let mut b1: *mut Bio = ptr::null_mut();
+            let mut b2: *mut Bio = ptr::null_mut();
+            assert_eq!(BIO_new_bio_pair(&mut b1, 0, &mut b2, 0), 1);
+            assert!(!b1.is_null() && !b2.is_null());
+            SSL_set_bio(p.s, b1, b1);
+
+            let mut buf = [0u8; 16];
+            let ret = SSL_peek(p.s, buf.as_mut_ptr().cast(), buf.len() as c_int);
+            assert!(ret <= 0, "an empty transport must not yield data");
+            assert_eq!(
+                SSL_get_error(p.s, ret),
+                SSL_ERROR_WANT_READ,
+                "an empty non-blocking transport must report WANT_READ"
+            );
+
+            free_pair(p);
+            BIO_free(b2);
+        }
+    }
+
+    /// The server handshake plus one application write must fit radsecproxy's 32 KiB thread stack
+    /// (`THREAD_STACK_SIZE 32768`). Before the record scratch and handshake framing buffers were
+    /// moved to the allocator seam, `ssl3_write_one_record` alone took a ~17 KiB frame, so an
+    /// `SSL_accept` inside such a thread crossed the guard page and SIGSEGVed.
+    ///
+    /// Only the server side runs on the small stack: that is radsecproxy's shape (one
+    /// `SSL_accept`/`SSL_write` thread). The client is driven by the test thread, which hands the
+    /// server a token per step so the two never touch the memory BIOs concurrently. A regression
+    /// faults the test process instead of reporting a clean failure.
+    #[test]
+    fn tls13_handshake_and_write_fit_a_32_kib_thread_stack() {
+        use std::sync::mpsc::channel;
+
+        const THREAD_STACK_SIZE: usize = 32 * 1024;
+        enum Cmd {
+            Handshake,
+            Write,
+            Stop,
+        }
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created here; the worker is handed the server's addresses, and the
+        // two sides rendezvous on the channels so neither touches a shared BIO concurrently. The
+        // pair is released on this frame after the worker has stopped.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"TLS_AES_128_GCM_SHA256", TLS1_3_VERSION, None, None);
+            let (s, s_w) = (p.s as usize, p.s_w as usize);
+            let c_r = p.c_r as usize;
+            let (cmd_tx, cmd_rx) = channel::<Cmd>();
+            let (res_tx, res_rx) = channel::<isize>();
+            let worker = std::thread::Builder::new()
+                .stack_size(THREAD_STACK_SIZE)
+                .spawn(move || {
+                    // SAFETY: the addresses name the live server side of the pair this frame
+                    // created; this thread is its only user while it runs.
+                    let s = s as *mut Ssl;
+                    let s_w = s_w as *mut Bio;
+                    let c_r = c_r as *mut Bio;
+                    while let Ok(cmd) = cmd_rx.recv() {
+                        let r = match cmd {
+                            Cmd::Handshake => SSL_do_handshake(s),
+                            Cmd::Write => {
+                                let data = b"radsecproxy-sized application record";
+                                SSL_write(s, data.as_ptr().cast(), data.len() as c_int)
+                            }
+                            Cmd::Stop => break,
+                        };
+                        drain(s_w, c_r);
+                        if res_tx.send(r as isize).is_err() {
+                            break;
+                        }
+                    }
+                })
+                .expect("the 32 KiB worker thread must spawn");
+
+            let mut client_ok = false;
+            let mut server_ok = false;
+            for _ in 0..128 {
+                let cr = SSL_do_handshake(p.c);
+                if cr == 1 {
+                    client_ok = true;
+                }
+                drain(p.c_w, p.s_r);
+                cmd_tx.send(Cmd::Handshake).expect("server step channel");
+                if res_rx.recv().expect("server step reply") == 1 {
+                    server_ok = true;
+                }
+                if client_ok && server_ok {
+                    break;
+                }
+            }
+            assert!(client_ok && server_ok, "the TLS1.3 handshake must complete");
+
+            let data = b"radsecproxy-sized application record";
+            cmd_tx.send(Cmd::Write).expect("write channel");
+            let written = res_rx.recv().expect("write reply");
+            assert_eq!(
+                written,
+                data.len() as isize,
+                "one application record must be written"
+            );
+            let mut got = [0u8; 64];
+            let read = SSL_read(p.c, got.as_mut_ptr().cast(), got.len() as c_int);
+            assert_eq!(read, data.len() as c_int, "the client must read the record");
+            assert_eq!(&got[..read as usize], data);
+
+            cmd_tx.send(Cmd::Stop).expect("stop channel");
+            worker.join().expect("the 32 KiB worker must not fault");
+            free_pair(p);
+        }
     }
 }

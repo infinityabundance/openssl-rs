@@ -124,6 +124,11 @@ import downstream_recipe_campaign as campaign  # noqa: E402
 # importing it here adds no execution.
 import downstream_close_batch as close_batch  # noqa: E402
 
+# The declarative template layer: its pristine recipes and its pkg-config shim are part of the
+# shared catalogue, so a templated family is measured by exactly the same build/link path as a
+# bespoke one.  The module executes nothing at import time (it reads one small JSON file).
+import downstream_templates as templates  # noqa: E402
+
 # The stratum's four non-claims, imported from 24.4 so the atlas and the freeze cannot drift about
 # what the model never claims.
 from downstream_freeze import NON_CLAIMS as STRATUM_NON_CLAIMS  # noqa: E402
@@ -157,6 +162,7 @@ RANK = downstream_schemas.EXECUTION_LEVEL_RANK
 STEP_TIMEOUT = census.STEP_TIMEOUT
 FETCH_TIMEOUT = census.FETCH_TIMEOUT
 MAKE_JOBS = census.MAKE_JOBS
+MAKE_JOB_COUNT = int(MAKE_JOBS.lstrip("-j") or "1")
 
 # The frozen build/link-intent rule, recorded verbatim in the artefact and re-derived by the court.
 RULE: dict = {
@@ -260,8 +266,7 @@ _RECIPE_OVERRIDES: dict[str, dict] = {
                  "measured with the identical recipe)"),
     },
     "libssh": {
-        "note": ("libssh 0.10.6 ships only CMakeLists.txt: still blocked in this venue, which "
-                 "admits no cmake; 24.17 recorded it still-blocked rather than faking a build"),
+        "note": "superseded by the b13 CMake override (see _LATE_RECIPE_OVERRIDES)",
     },
     "lighttpd": {
         "note": ("lighttpd 1.4.76 ships no generated ./configure (a source tree with "
@@ -361,6 +366,1470 @@ _EXTRA_SPECS: tuple[dict, ...] = (
     },
 )
 
+# The Phase-25 L7 expansion batch: five library families that were previously blocked only because
+# the minimal venue lacked cmake/meson and their non-OpenSSL dependency headers. Each is pinned by
+# its released archive digest and built against the subject prefix. The recipes carry no
+# candidate-specific flag: `{prefix}` is the only substitution, exactly as for every earlier batch.
+_L7_EXPANSION_SPECS: tuple[dict, ...] = (
+    {
+        "family": "jwt", "version": "2.1.3",
+        "url": "https://github.com/benmcollins/libjwt/archive/refs/tags/v2.1.3.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "ea13f42713edd113e65c05f9601ba25383f89b34a644b64f30ee0ecbf282dc83",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTS=OFF",
+                      "-DCMAKE_C_FLAGS=-DHAVE_OPENSSL",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}"],
+        "make": [], "artifact": "b/libjwt/libjwt.so*", "launch": None,
+        "note": ("libjwt 2.1.3 (family jwt) built with CMake against the subject prefix; "
+                 "-DHAVE_OPENSSL is required because the CMake build does not run "
+                 "configure.ac's AC_DEFINE, and jansson comes from the venue's pkg-config"),
+    },
+    {
+        "family": "libjose", "version": "11",
+        "url": "https://github.com/latchset/jose/releases/download/v11/jose-11.tar.xz",
+        "archive": "tar.xz", "build_system": "meson",
+        "sha256": "e272afe7717e22790c383f3164480627a567c714ccb80c1ee96f62c9929d8225",
+        "configure": ["--buildtype=release", "-Dwerror=false"],
+        "make": [], "artifact": "b/lib/libjose.so.0*", "launch": None,
+        "note": ("jose 11 (family libjose) built with meson/ninja against the subject prefix; "
+                 "jansson and zlib come from the venue, libcrypto from the subject"),
+    },
+    {
+        "family": "libzip", "version": "1.11.1",
+        "url": "https://libzip.org/download/libzip-1.11.1.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "c0e6fa52a62ba11efd30262290dc6970947aef32e0cc294ee50e9005ceac092a",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_OPENSSL=ON",
+                      "-DENABLE_GNUTLS=OFF", "-DENABLE_MBEDTLS=OFF",
+                      "-DENABLE_COMMONCRYPTO=OFF", "-DENABLE_ZSTD=OFF",
+                      "-DBUILD_TOOLS=OFF", "-DBUILD_REGRESS=OFF",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_OSSFUZZ=OFF", "-DBUILD_DOC=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}"],
+        "make": [], "artifact": "b/lib/libzip.so.5*", "launch": None,
+        "note": ("libzip 1.11.1 built with CMake; AES-256 support uses the subject libcrypto "
+                 "(the zstd backend is disabled because the venue carries no zstd headers)"),
+    },
+    {
+        "family": "apr-util", "version": "1.6.3",
+        "url": "https://archive.apache.org/dist/apr/apr-util-1.6.3.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "2b74d8932703826862ca305b094eef2983c27b39d5c9414442e9976a9acf1983",
+        "configure": ["--with-apr=/usr/bin/apr-1-config", "--with-crypto",
+                      "--with-openssl={prefix}", "--disable-util-dso"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libaprutil-1.so*", "launch": None,
+        "note": ("apr-util 1.6.3 with --with-crypto --disable-util-dso: the OpenSSL crypto "
+                 "driver is linked into libaprutil-1 and the library carries a libcrypto "
+                 "DT_NEEDED; APR comes from the venue's apr-1-config"),
+    },
+    {
+        "family": "fido2", "version": "1.15.0",
+        "url": "https://github.com/Yubico/libfido2/archive/refs/tags/1.15.0.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "32e3e431cfe29b45f497300fdb7076971cb77fc584fcfa80084d823a6ed94fbb",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DBUILD_TOOLS=OFF", "-DBUILD_MANPAGES=OFF",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTS=OFF", "-DNFC_LINUX=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/src/libfido2.so.1*", "launch": None,
+        # libfido2's Linux CMakeLists requires libudev unconditionally (even with NFC off). The
+        # venue provides libudev.so.1 but not libudev-dev, so the harness acquires the matching
+        # bookworm -dev package by pinned digest and extracts only its header/.pc into the build
+        # scratch. This is a venue dependency, not part of the subject or the family source.
+        "aux_sources": [
+            {
+                "url": ("http://deb.debian.org/debian/pool/main/s/systemd/"
+                        "libudev-dev_252.39-1~deb12u2_amd64.deb"),
+                "sha256": "b8795a05b96799cb25ed3677eef8e8b1f1facdf07ad4527e06ef8f82ca164fbd",
+                "archive": "deb", "extract": ["dpkg-deb", "-x"],
+                "include_dirs": ["usr/include"],
+                "library_dirs": ["usr/lib/x86_64-linux-gnu"],
+                "pkgconfig_dirs": ["usr/lib/x86_64-linux-gnu/pkgconfig"],
+                "links": {"usr/lib/x86_64-linux-gnu/libudev.so.1":
+                          "/usr/lib/x86_64-linux-gnu/libudev.so.1"},
+                "note": ("matching bookworm libudev-dev 252.39-1~deb12u2; libudev.so.1 "
+                         "itself is the venue's already-installed runtime library"),
+            },
+        ],
+        "note": ("libfido2 1.15.0 built with CMake against the subject prefix (ES256 uses the "
+                 "subject libcrypto); libcbor comes from the venue and libudev-dev from the "
+                 "pinned auxiliary package above"),
+    },
+)
+
+# The Phase-25 L7 server batch: three TLS servers/terminators and an FTPS server that the venue's
+# minimal image cannot build alone, each pinned by its released archive digest. Every non-OpenSSL
+# dependency is a pinned bookworm `.deb` acquired through the same `aux_sources` seam fido2 uses
+# (headers/dev symlinks/`.pc`/`-config` scripts), so no distribution OpenSSL can be pulled in and
+# the subject prefix remains the only OpenSSL on every link line.
+_AUX_MULTIARCH = "usr/lib/x86_64-linux-gnu"
+_AUX_MULTIARCH_PC = "usr/lib/x86_64-linux-gnu/pkgconfig"
+
+
+def _aux_deb(pool: str, filename: str, sha256: str, *, include_dirs: tuple[str, ...] = (),
+             library_dirs: tuple[str, ...] = (), pkgconfig_dirs: tuple[str, ...] = (),
+             bin_dirs: tuple[str, ...] = (),
+             links: dict[str, str] | None = None) -> dict:
+    """One pinned bookworm dependency package, extracted under the family scratch."""
+    spec: dict = {
+        "url": f"http://deb.debian.org/debian/pool/main/{pool}/{filename}",
+        "sha256": sha256, "archive": "deb", "extract": ["dpkg-deb", "-x"],
+        "note": f"pinned bookworm {filename}",
+    }
+    for key, value in (("include_dirs", include_dirs), ("library_dirs", library_dirs),
+                       ("pkgconfig_dirs", pkgconfig_dirs), ("bin_dirs", bin_dirs),
+                       ("links", links)):
+        if value:
+            spec[key] = dict(value) if key == "links" else list(value)
+    return spec
+
+
+# memcached 1.6.32 links libevent; the image has neither its headers nor its runtime library.
+_LIBEVENT_AUX: tuple[dict, ...] = (
+    _aux_deb("libe/libevent", "libevent-2.1-7_2.1.12-stable-8_amd64.deb",
+             "ca8858a7095ade7776c9f73437812423a45ccd90de2079e8c34830d291df290f"),
+    _aux_deb("libe/libevent", "libevent-dev_2.1.12-stable-8_amd64.deb",
+             "ed7f550d6cc03f3cf7dfa80d739e13350d8a2cdb25f9dfcbf11fbe66cd1d4b89",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# hitch 1.8.0 links libev; neither ev.h nor libev.so.4 is in the image.
+_LIBEV_AUX: tuple[dict, ...] = (
+    _aux_deb("libe/libev", "libev4_4.33-1_amd64.deb",
+             "1b35aebfabf4f1dba891c9cc0b7352e8402dac4efef1e34a41359ce5bd68aacf"),
+    _aux_deb("libe/libev", "libev-dev_4.33-1_amd64.deb",
+             "d317551ed50e70e3c98141b7a215b31c8c334b7a3a610d3337d0dcd540bad0a1",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# icecast 2.4.4 requires libxml2, libxslt and Ogg Vorbis. The dev packages are extracted with
+# their matching runtime libraries (the image carries libxml2 but not libxslt/libogg/libvorbis),
+# and libicu-dev supplies the ICU headers Debian's libxml2 is built against. libxslt's
+# `xsltconfig.h` lives in the multiarch include directory, named below.
+_ICECAST_AUX: tuple[dict, ...] = (
+    _aux_deb("libo/libogg", "libogg0_1.3.5-3_amd64.deb",
+             "f67acb0477aed0354f411172e37af338f3ac6bd4f3766134a2cf5539884b5a28"),
+    _aux_deb("libo/libogg", "libogg-dev_1.3.5-3_amd64.deb",
+             "ece2ef4d087d27b77b6c1a240efdb8b32dc2d19f69f7ce7fbb184c83a132d49c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libv/libvorbis", "libvorbis0a_1.3.7-1_amd64.deb",
+             "01c14f9d1109650077a4c5c337c285476a6932d4d448f5a190c2b845724dbf21"),
+    _aux_deb("libv/libvorbis", "libvorbisenc2_1.3.7-1_amd64.deb",
+             "75dd4d6f904c7db82f5112e60d8efea9e81dfedf94e970c5da7af2b3d81643c0"),
+    _aux_deb("libv/libvorbis", "libvorbis-dev_1.3.7-1_amd64.deb",
+             "2be095b51700abae4ad89b81560bfa65240745275e0ef6474ab1de857cfeea92",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libx/libxml2", "libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "4460e39dda10a815881374217cde08474747cfa018358cd8612c14b390eff53b"),
+    _aux_deb("libx/libxml2", "libxml2-dev_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "e8ceacf656b1720e7a310e1d159439a356bfcb9f5fb0325907f26aa8590e5f70",
+             include_dirs=("usr/include", "usr/include/libxml2"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libx/libxslt", "libxslt1.1_1.1.35-1+deb12u4_amd64.deb",
+             "5bf795dc6374f744906d39a786024d98b2cb6b885c7776f5dc64eb4092b550a6"),
+    _aux_deb("libx/libxslt", "libxslt1-dev_1.1.35-1+deb12u4_amd64.deb",
+             "f7f5686127331d97a65e2abac1953e32b1ed8eb774cdf1749a849090b2f75ccb",
+             include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
+             bin_dirs=("usr/bin",)),
+    _aux_deb("i/icu", "libicu-dev_72.1-3+deb12u1_amd64.deb",
+             "08bd4e3f4bd4fc725cf25e739edf0e7df5ac1826bdac9a7d990eea8f93b2d7a0",
+             include_dirs=("usr/include",)),
+)
+
+# radsecproxy 1.9.1 and w3m both need a non-OpenSSL library the venue ships only as a runtime
+# soname. Each is acquired through the pinned `aux_sources` seam above; nothing in either package
+# is OpenSSL, so the subject prefix stays the only OpenSSL on the link line.
+_NETTLE_AUX: tuple[dict, ...] = (
+    _aux_deb("n/nettle", "libnettle8_3.8.1-2_amd64.deb",
+             "45922e6e289ffd92f0f92d2bb9159e84236ff202d552a461bf10e5335b3f0261",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("n/nettle", "nettle-dev_3.8.1-2_amd64.deb",
+             "aa8e4331a974f00db23a14389c67dfe66bc359b09b6c2dbfe555230942feb6be",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_W3M_AUX: tuple[dict, ...] = (
+    _aux_deb("libg/libgc", "libgc-dev_8.2.2-3_amd64.deb",
+             "a7b8a113d5a0152959af593d681282ef4a3177fae826096f530a1d3cf00cdaa9",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# The Phase-25 L7 client/proxy batch: a RadSec proxy, an IRC bouncer, a mail client and a text
+# browser. Each is a pristine released archive pinned by digest and built against the subject
+# prefix; the two that need a non-OpenSSL runtime library acquire it through `aux_sources`.
+_L7_CLIENT_SPECS: tuple[dict, ...] = (
+    {
+        "family": "radsecproxy", "version": "1.10.1",
+        "url": ("https://github.com/radsecproxy/radsecproxy/releases/download/1.10.1/"
+                "radsecproxy-1.10.1.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "a8fd5ca1df5e00ce34c9170a085d311b1da155a8e006f0cce46f6e95caa6af7b",
+        "configure": ["--with-openssl={prefix}"], "make": [MAKE_JOBS],
+        "artifact": "radsecproxy", "launch": ["-v"],
+        "aux_sources": list(_NETTLE_AUX),
+        "note": ("radsecproxy 1.10.1 with its TLS (RadSec) transport linked against the subject "
+                 "libssl; nettle is the pinned bookworm package above (the F-Ticks MAC hash), "
+                 "not an OpenSSL dependency"),
+    },
+    {
+        "family": "znc", "version": "1.10.3",
+        "url": "https://znc.in/releases/znc-1.10.3.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "68f3f6641b480c041010c5596e1234043e05c9137eda06233845017603095f5b",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DWANT_OPENSSL=ON",
+                      "-DWANT_PYTHON=OFF", "-DWANT_PERL=OFF", "-DWANT_ICU=OFF",
+                      "-DWANT_CYRUS=OFF", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/src/znc", "launch": ["--version"],
+        "note": ("ZNC 1.10.3's released tarball (which bundles the submodules its CMake build "
+                 "requires) built with its SSL listener against the subject libssl"),
+    },
+    {
+        "family": "s-nail", "version": "14.9.25",
+        "url": "https://ftp.sdaoden.eu/s-nail-14.9.25.tar.xz",
+        "archive": "tar.xz", "build_system": "make",
+        "sha256": "20ff055be9829b69d46ebc400dfe516a40d287d7ce810c74355d6bdc1a28d8a9",
+        "configure": None,
+        # s-nail has no configure: `make all` runs its own mk/make-config.sh probe, and
+        # `CONFIG=MAXIMAL` selects the documented maximal feature set (which includes TLS).
+        "make": [MAKE_JOBS, "all", "CONFIG=MAXIMAL",
+                 "EXTRA_CFLAGS=-I{prefix}/include",
+                 "EXTRA_LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": ".obj/s-nail", "launch": ["-V"],
+        "note": ("s-nail 14.9.25 built by its own make with CONFIG=MAXIMAL; the TLS probe "
+                 "compiles and links the subject libssl through EXTRA_CFLAGS/EXTRA_LDFLAGS"),
+    },
+    {
+        "family": "w3m", "version": "0.5.3+git20230121",
+        "url": ("http://deb.debian.org/debian/pool/main/w/w3m/"
+                "w3m_0.5.3+git20230121.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "974d1095a47f1976150a792fe9c5a44cc821c02b6bdd714a37a098386250e03a",
+        "configure": ["--with-ssl={prefix}", "--disable-nls", "--enable-image=no"],
+        "make": [MAKE_JOBS], "artifact": "w3m", "launch": ["-version"],
+        "aux_sources": list(_W3M_AUX),
+        "env_extra": {"SSL_CFLAGS": "-I{prefix}/include",
+                      "SSL_LIBS": "-L{prefix}/lib -lssl -lcrypto"},
+        "note": ("w3m's Debian-maintained pristine snapshot of 0.5.3 (which carries the glibc "
+                 "`struct file_handle` fix the 2016 release predates) against the subject libssl; "
+                 "libgc and ncurses headers come from the pinned packages above"),
+    },
+)
+
+_L7_SERVER_SPECS: tuple[dict, ...] = (
+    {
+        "family": "memcached", "version": "1.6.32",
+        "url": "https://memcached.org/files/memcached-1.6.32.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "4ab234219865191e8d1ba57a2f9167d8b573248fa4ff00b4d8296be13d24a82c",
+        "configure": ["--enable-tls"], "make": [MAKE_JOBS],
+        "artifact": "memcached", "launch": ["-h"],
+        "aux_sources": list(_LIBEVENT_AUX),
+        "note": ("memcached 1.6.32 with --enable-tls against the subject prefix; libevent comes "
+                 "from the pinned bookworm packages above (headers, libevent.so and the runtime "
+                 "libevent-2.1.so.7 the configure version probe executes)"),
+    },
+    {
+        "family": "icecast", "version": "2.4.4",
+        "url": "https://downloads.xiph.org/releases/icecast/icecast-2.4.4.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "49b5979f9f614140b6a38046154203ee28218d8fc549888596a683ad604e4d44",
+        "configure": ["--with-openssl={prefix}", "--without-curl", "--without-speex",
+                      "--without-theora", "--disable-yp"],
+        "make": [MAKE_JOBS], "artifact": "src/icecast", "launch": ["-v"],
+        "aux_sources": list(_ICECAST_AUX),
+        "note": ("icecast 2.4.4's own configure links the subject libssl (--with-openssl); the "
+                 "XML/XSLT/Vorbis dependencies are the pinned bookworm packages above, and the "
+                 "optional curl/speex/theora/YP paths are disabled so the recipe needs no more"),
+    },
+    {
+        "family": "proftpd", "version": "1.3.8b",
+        "url": "https://github.com/proftpd/proftpd/archive/refs/tags/v1.3.8b.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "183ab7c6107de271a2959ff268f55c9b6c76b2cf0029e6584fccc019686601e0",
+        "configure": ["--enable-openssl", "--with-modules=mod_tls", "--disable-auth-pam"],
+        "make": [MAKE_JOBS], "artifact": "proftpd", "launch": ["-v"],
+        "note": ("proftpd 1.3.8b with --enable-openssl and mod_tls linked statically into the "
+                 "server binary; --disable-auth-pam keeps the build independent of PAM headers"),
+    },
+    {
+        "family": "mini-httpd", "version": "1.30",
+        "url": "http://www.acme.com/software/mini_httpd/mini_httpd-1.30.tar.gz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "9c4481802af8dde2e164062185c279e9274525c3af93d014fdc0b80cf30bca6e",
+        "configure": None,
+        "make": [MAKE_JOBS, "SSL_TREE={prefix}", "SSL_DEFS=-DUSE_SSL",
+                 "SSL_INC=-I{prefix}/include",
+                 "SSL_LIBS=-L{prefix}/lib -lssl -lcrypto",
+                 # The release predates glibc's <sys/types.h> int64_t declaration; its own
+                 # HAVE_INT64T guard is the upstream switch for that, not a source patch.
+                 "CFLAGS=-O -DUSE_SSL -I{prefix}/include -ansi -pedantic -U__STRICT_ANSI__ "
+                 "-DHAVE_INT64T -Wall"],
+        "artifact": "mini_httpd", "launch": ["-h"],
+        "note": ("mini_httpd 1.30 built by its own Makefile with the SSL_* definitions pointed at "
+                 "the subject prefix; -DHAVE_INT64T selects the upstream int64_t branch instead of "
+                 "its pre-C99 typedef"),
+    },
+    {
+        "family": "hitch", "version": "1.8.0",
+        "url": "https://hitch-tls.org/source/hitch-1.8.0.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "dfc99484bc7ffea27a3169e84d6c217988eda47b208ab2e5524dc2a5dd158f4e",
+        "configure": ["--disable-documentation"], "make": [MAKE_JOBS],
+        "artifact": "src/hitch", "launch": ["--version"],
+        "aux_sources": list(_LIBEV_AUX),
+        "note": ("hitch 1.8.0 from its published dist tarball (which ships the generated "
+                 "configure) against the subject libssl; libev comes from the pinned bookworm "
+                 "packages above"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b4): the client/server utilities the campaign's
+# expansion image can build once their non-OpenSSL dependencies are pinned. Each is
+# a pristine released archive built against the subject prefix; `aux_sources` carries
+# only dependencies the image does not ship, never an OpenSSL.
+_PCRE2_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935"),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,), bin_dirs=("usr/bin",)),
+)
+
+# u-boot's mkimage shells out to `dtc` to compile its FIT source; the image has no
+# device-tree compiler, so the pinned bookworm package is extracted beside it (dtc
+# itself needs the pinned libyaml runtime).
+_DTC_AUX: tuple[dict, ...] = (
+    _aux_deb("liby/libyaml", "libyaml-0-2_0.2.5-1_amd64.deb",
+             "207b539919a47c85bcf738677f0ccf5bbac9844f2d3f158696f518be4c4ba6c4",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("d/device-tree-compiler", "device-tree-compiler_1.6.1-4+b1_amd64.deb",
+             "f56fbb1e1da6545619dd2a17b7a85b2c4c674bd276d1b844e01a8b9901dd349d",
+             bin_dirs=("usr/bin",)),
+)
+
+# opendkim needs strlcpy/strlcat (libbsd). Debian's libbsd.so is a linker script
+# that names an absolute /usr path and `-lmd`; the extracted development symlink is
+# therefore replaced with a plain symlink to the package's own ELF, and libmd's
+# headers/runtime are pinned alongside it.
+_LIBBSD_AUX: tuple[dict, ...] = (
+    _aux_deb("libm/libmd", "libmd0_1.1.0-2+b1_amd64.deb",
+             "7244ec3839b61fac0c1884fe08aaa040f26e8f1f35f1f5d3482eacefd30d1b44",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libm/libmd", "libmd-dev_1.1.0-2+b1_amd64.deb",
+             "94904db4c531e3a7ec42a1ad0be8a2a9a2b6d2ac8c4e3b1c1d24853ea0be49c8",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libb/libbsd", "libbsd0_0.11.7-2_amd64.deb",
+             "bb31cc8b40f962a85b2cec970f7f79cc704a1ae4bad24257a822055404b2c60b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    {
+        "url": ("http://deb.debian.org/debian/pool/main/libb/libbsd/"
+                "libbsd-dev_0.11.7-2_amd64.deb"),
+        "sha256": "788ec28ca78eab1ba14d2e1a50727efb7276c6b034163dca40931d8ab3d94aab",
+        "archive": "deb", "extract": ["dpkg-deb", "-x"],
+        "include_dirs": ["usr/include"],
+        "library_dirs": [_AUX_MULTIARCH],
+        "pkgconfig_dirs": [_AUX_MULTIARCH_PC],
+        "links": {"usr/lib/x86_64-linux-gnu/libbsd.so": "libbsd.so.0.11.7"},
+        "note": ("pinned bookworm libbsd-dev; its ld script is replaced with a symlink "
+                 "to the package's own ELF so the extracted paths are self-contained"),
+    },
+)
+
+# The u-boot host-tools configuration is generated, not patched: U-Boot's own
+# `make tools-only` reads include/config/auto.conf and include/generated/autoconf.h,
+# which its Kconfig build normally generates with bison/flex (absent here). The
+# pre-build step writes exactly the host-tool switches this recipe asks make for.
+_UBOOT_CONFIG = (
+    "mkdir -p include/config include/generated && "
+    ": > include/config/auto.conf.cmd && "
+    "printf 'CONFIG_TOOLS_LIBCRYPTO=y\\nCONFIG_TOOLS_FIT_SIGNATURE=y\\n"
+    "CONFIG_TOOLS_FIT_SIGNATURE_MAX_SIZE=0xffffffff\\nCONFIG_TOOLS_FIT_CIPHER=y\\n"
+    "CONFIG_TOOLS_FIT_RSASSA_PSS=y\\nCONFIG_TOOLS_SHA256=y\\nCONFIG_TOOLS_SHA1=y\\n"
+    "CONFIG_MKIMAGE_DTC_PATH=dtc\\n' > include/config/auto.conf && "
+    "printf '#define CONFIG_TOOLS_LIBCRYPTO 1\\n#define CONFIG_TOOLS_FIT_SIGNATURE 1\\n"
+    "#define CONFIG_TOOLS_FIT_SIGNATURE_MAX_SIZE 0xffffffff\\n"
+    "#define CONFIG_TOOLS_FIT_CIPHER 1\\n#define CONFIG_TOOLS_FIT_RSASSA_PSS 1\\n"
+    "#define CONFIG_TOOLS_SHA256 1\\n#define CONFIG_TOOLS_SHA1 1\\n' "
+    "> include/generated/autoconf.h && touch include/config/auto.conf"
+)
+
+_L7_UTILITY_SPECS: tuple[dict, ...] = (
+    {
+        "family": "axel", "version": "2.17.14",
+        "url": ("https://github.com/axel-download-accelerator/axel/releases/download/"
+                "v2.17.14/axel-2.17.14.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "575f73f640ee836a95d27b54aeed216c45bc1e914cad92da6f00b907d1c94925",
+        "configure": ["--with-ssl=openssl"], "make": [MAKE_JOBS],
+        "artifact": "axel", "launch": ["--version"],
+        "note": ("axel 2.17.14 with --with-ssl=openssl: the build environment's CPPFLAGS/"
+                 "LDFLAGS/PKG_CONFIG_PATH point at the subject prefix, so its TLS downloader "
+                 "links the subject libssl/libcrypto"),
+    },
+    {
+        "family": "apache2-utils", "version": "2.4.63",
+        "url": "http://archive.apache.org/dist/httpd/httpd-2.4.63.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "88fc236ab99b2864b248de7d49a008ec2afd7551e64dce8b95f58f32f94c46ab",
+        "configure": ["--with-apr=/usr/bin/apr-1-config",
+                      "--with-apr-util=/usr/bin/apu-1-config",
+                      "--with-ssl={prefix}", "--enable-ssl",
+                      "--disable-dav", "--disable-cgi", "--disable-negotiation",
+                      "--disable-actions", "--disable-userdir", "--disable-autoindex",
+                      "--disable-status", "--disable-asis", "--disable-imagemap",
+                      "--disable-env", "--disable-mime-magic"],
+        "make": [MAKE_JOBS, "-C", "support", "ab"],
+        "artifact": "support/ab", "launch": ["-V"],
+        "aux_sources": list(_PCRE2_AUX),
+        "note": ("apache2-utils' `ab` from httpd 2.4.63: configure links it with --with-ssl"
+                 " against the subject prefix (ab_LIBS = -lssl -lcrypto), and only support/ab "
+                 "is built; PCRE2 comes from the pinned bookworm packages"),
+    },
+    {
+        "family": "osslsigncode", "version": "2.9",
+        "url": "https://github.com/mtrojnar/osslsigncode/archive/refs/tags/2.9.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "3fe5488e442ad99f91410efeb7b029275366b5df9aa02371dcc89a8f8569ff55",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include"],
+        "make": [], "artifact": "b/osslsigncode", "launch": ["--version"],
+        "note": ("osslsigncode 2.9 (the tag archive; upstream publishes only binaries as "
+                 "release assets) built with CMake against the subject prefix"),
+    },
+    {
+        "family": "u-boot-tools", "version": "2025.01",
+        "url": "https://ftp.denx.de/pub/u-boot/u-boot-2025.01.tar.bz2",
+        "archive": "tar.bz2", "build_system": "make",
+        "sha256": "cdef7d507c93f1bbd9f015ea9bc21fa074268481405501945abc6f854d5b686f",
+        "configure": None,
+        "pre_build": [["sh", "-c", _UBOOT_CONFIG]],
+        "make": [MAKE_JOBS, "tools-only", "NO_SDL=1",
+                 "HOSTCFLAGS=-I{prefix}/include",
+                 "HOSTLDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "tools/mkimage", "launch": ["-V"],
+        "aux_sources": list(_DTC_AUX),
+        "note": ("u-boot 2025.01's host tools (mkimage, fit_check_sign) built by tools-only "
+                 "with CONFIG_TOOLS_LIBCRYPTO and FIT signing enabled through the generated "
+                 "host-tools config; dtc is the pinned bookworm package"),
+    },
+    {
+        "family": "sslsplit", "version": "0.5.5",
+        "url": "https://mirror.roe.ch/rel/sslsplit/sslsplit-0.5.5.tar.bz2",
+        "archive": "tar.bz2", "build_system": "make",
+        "sha256": "ba0473fd01428439e0cf22fae80fdd26d08a0bcf85e17c82177cb0810b700faf",
+        "configure": None,
+        "make": [MAKE_JOBS, "FEATURES=-DWITHOUT_MIRROR"],
+        # sslsplit 0.5.5 calls ERR_GET_FUNC, removed in OpenSSL 3.0 (OpenSSL 3 keeps no
+        # function code at all); the define reproduces the 3.x value, and sslsplit uses it
+        # only in a diagnostic message. This is a build-environment compatibility switch,
+        # not a source patch. WITHOUT_MIRROR drops the pcap mirror (a transparency feature),
+        # leaving the TLS interception path this workload drives intact.
+        "env_extra": {"CFLAGS": "-DERR_GET_FUNC\\(x\\)=0"},
+        "artifact": "sslsplit", "launch": ["-V"],
+        "aux_sources": list(_LIBEVENT_AUX),
+        "note": ("SSLsplit 0.5.5 built against the subject prefix (OpenSSL 3.0 removed "
+                 "ERR_GET_FUNC; the recipe supplies its meaning for 3.x as a compile-time "
+                 "compatibility switch) with libevent from the pinned packages"),
+    },
+    {
+        "family": "opendkim", "version": "2.10.3",
+        "url": ("https://sourceforge.net/projects/opendkim/files/"
+                "opendkim-2.10.3.tar.gz/download"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "43a0ba57bf942095fe159d0748d8933c6b1dd1117caf0273fa9a0003215e681b",
+        "configure": ["--with-openssl={prefix}", "--disable-filter",
+                      "--disable-live-testing", "--without-db"],
+        "make": [MAKE_JOBS],
+        # opendkim's configure probes SSL_library_init as a symbol; it is a macro in
+        # OpenSSL 3, so the cached answer keeps the shared build path the project itself
+        # documents for a shared libssl.
+        "env_extra": {"ac_cv_search_SSL_library_init": "-lssl"},
+        "artifact": "libopendkim/.libs/libopendkim.so*", "launch": None,
+        "aux_sources": list(_LIBBSD_AUX),
+        "note": ("opendkim 2.10.3's libopendkim built against the subject libcrypto; the "
+                 "filter (and its milter dependency) is disabled, libbsd supplies "
+                 "strlcpy/strlcat from the pinned packages"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b5): six larger consumers whose OpenSSL paths are service
+# detection, a TLS VPN handshake, a TLS control channel, a TLS voice-control listener, XMPP-over-TLS
+# and an image digest. Each is a pristine released archive pinned by digest; the non-OpenSSL
+# dependencies are pinned bookworm packages acquired through the same `aux_sources` seam, so the
+# subject prefix remains the only OpenSSL on every link line.
+_QT_MULTIARCH = "usr/lib/x86_64-linux-gnu"
+_QT_MULTIARCH_PC = "usr/lib/x86_64-linux-gnu/pkgconfig"
+_QT_LIB = "lib/x86_64-linux-gnu"
+
+
+# nmap 7.95 links libcrypto (its service detection) but bundles liblua; libpcap and PCRE2 are the
+# pinned bookworm packages the source archive does not carry.
+_NMAP_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+    _aux_deb("libp/libpcap", "libpcap0.8_1.10.3-1_amd64.deb",
+             "856014904c4d7ec9a9ba864c546d91c059b9bf00c7c89eda6fd0a16045f8faac",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("libp/libpcap", "libpcap-dev_1.10.3-1_amd64.deb",
+             "ecce257d786f1734d78cbf8bd41a56b3b86626163e6027904bec31137e78e18c",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+)
+
+# fastd 22 is built by meson and links libcrypto for its ec25519/FHMQVC methods; libuecc, libsodium,
+# json-c and bison are the pinned packages its meson build requires.
+_FASTD_AUX: tuple[dict, ...] = (
+    _aux_deb("libu/libuecc", "libuecc0_7-5_amd64.deb",
+             "544fd60d98b79738db938f0f5a86ae5dff0e3a50e8d1441d2ef221b54ee2afa3",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("libu/libuecc", "libuecc-dev_7-5_amd64.deb",
+             "0b9834577a8bc0e15b1b10a2fa768b4315ff3a4c94b6e98d80821c968d245835",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+    _aux_deb("libs/libsodium", "libsodium23_1.0.18-1+deb12u1_amd64.deb",
+             "bceae6943d6e11fb53ec3f81d9630ec9ed03e51f89364902b05ebe402ae946ec",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("libs/libsodium", "libsodium-dev_1.0.18-1+deb12u1_amd64.deb",
+             "96c76e95027592650b20987ceef189aa70c614dff3e6ec13c09b786149145700",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+    _aux_deb("j/json-c", "libjson-c5_0.16-2_amd64.deb",
+             "d0e1ed8637d1c26b9720f6057d6355f18378bba5cc2553e459d1632783c00d70",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("j/json-c", "libjson-c-dev_0.16-2_amd64.deb",
+             "b91a921675bde7c777930f9f77e49010a754d787219104464ea0fce04a887337",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("b/bison", "bison_3.8.2+dfsg-1+b1_amd64.deb",
+             "a414afd7519c53bfa33415ba5b951bc8b4906877004c49723ffda50a6033c3e8",
+             bin_dirs=("usr/bin",)),
+)
+
+# kea 2.6.3 links libcrypto through libkea-cryptolink (its DDNS digests) and libssl through its
+# HTTPS control channel; boost headers/system/thread and log4cplus are its non-OpenSSL build
+# dependencies.
+_KEA_AUX: tuple[dict, ...] = (
+    _aux_deb("b/boost1.74", "libboost1.74-dev_1.74.0+ds1-21_amd64.deb",
+             "ba14fe04d7f138f874bd3ab3a20c4fd1e9f654e271449b8f3e48d20f942dbb93",
+             include_dirs=("usr/include",)),
+    _aux_deb("b/boost1.74", "libboost-filesystem1.74.0_1.74.0+ds1-21_amd64.deb",
+             "3e80caec26a4ee663dc2e4fdaf10b0f03308284f7e44248290b8dd18de4ca237",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("b/boost1.74", "libboost-filesystem1.74-dev_1.74.0+ds1-21_amd64.deb",
+             "b2eef87fefd1533ee91cee61c56c022a2453c85e7f1819d0338ba433a74dade4",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("b/boost1.74", "libboost-system1.74.0_1.74.0+ds1-21_amd64.deb",
+             "39afb5f0caec23a152e2e04409e4336a6e33abda453e8a8f661a4a5405fdc4bd",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("b/boost1.74", "libboost-system1.74-dev_1.74.0+ds1-21_amd64.deb",
+             "d32a82618c48f9a8570c3f9b0213643be98f91cc4882dd6b0a06be78c75a1428",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("b/boost1.74", "libboost-thread1.74.0_1.74.0+ds1-21_amd64.deb",
+             "6fc1f2997cdb0ea76d786a10591ea00559ef663055675f574e406ff2b3bd8912",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("b/boost1.74", "libboost-thread1.74-dev_1.74.0+ds1-21_amd64.deb",
+             "7c09f213253419bb32eaa28ffe00be24181e182fb98379710bf3c05b3767fb51",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("l/log4cplus", "liblog4cplus-2.0.5_2.0.8-1_amd64.deb",
+             "f33a6fa06ceac7bbc159820b565687a7cf1c56c9861ed66e63b9d7ef10b527d9",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("l/log4cplus", "liblog4cplus-dev_2.0.8-1_amd64.deb",
+             "e79899b8d4007ac2f8be76c5cb7a167bcd9071bb97746340e4846fdfccd8df7a",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+)
+
+# mumble-server 1.5.735 is Qt5/protobuf/boost plus libcap; all are pinned bookworm packages. Qt's
+# Debian CMake configs expect the multiarch qmake/mkspecs paths, so those two links restore the
+# layout the pinned config files name. libdbus-1-3 ships its ELF under /lib, and the dev symlink is
+# rewritten to that package's own soname (the distribution symlink names an absolute /lib path).
+_MUMBLE_AUX: tuple[dict, ...] = (
+    _aux_deb("b/boost1.74", "libboost1.74-dev_1.74.0+ds1-21_amd64.deb",
+             "ba14fe04d7f138f874bd3ab3a20c4fd1e9f654e271449b8f3e48d20f942dbb93",
+             include_dirs=("usr/include",)),
+    _aux_deb("b/boost1.74", "libboost-filesystem1.74.0_1.74.0+ds1-21_amd64.deb",
+             "3e80caec26a4ee663dc2e4fdaf10b0f03308284f7e44248290b8dd18de4ca237",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("b/boost1.74", "libboost-filesystem1.74-dev_1.74.0+ds1-21_amd64.deb",
+             "b2eef87fefd1533ee91cee61c56c022a2453c85e7f1819d0338ba433a74dade4",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("q/qtbase-opensource-src",
+             "qtbase5-dev_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "2b50de948dd43dce43dcd58033ef3bfc4a549b33fc9f9a3818e35a26f979802b",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH, _QT_LIB),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,), bin_dirs=("usr/lib/qt5/bin", "usr/bin")),
+    _aux_deb("q/qtbase-opensource-src",
+             "qtbase5-dev-tools_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "0d21759a287142eda6c1ec76d0a0be34e64c7f8a67c1dc190f9b0b95f8b58d8a",
+             bin_dirs=("usr/lib/qt5/bin",)),
+    _aux_deb("q/qtbase-opensource-src", "qt5-qmake_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "6307baf17e4c1027592c5e5ade4de8cafee2fb1698078c1ac3bfba8f1b07e252",
+             bin_dirs=("usr/lib/qt5/bin",)),
+    _aux_deb("q/qtbase-opensource-src",
+             "qt5-qmake-bin_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "f52d1f0ecd08065b922dd4af71696616b62ef3c1fa8bbe01f085c123da74aadb",
+             bin_dirs=("usr/lib/qt5/bin",)),
+    _aux_deb("q/qtbase-opensource-src",
+             "libqt5core5a_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "47e82f69aa0724f33d0873294d66664ef13fe09c0bffb0a1d84f2ad3e2dab58e",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("q/qtbase-opensource-src",
+             "libqt5network5_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "6a27a617c0aca0bd9f49237594a7939910e78aaa223611ffd8e25fdc56a319a8",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("q/qtbase-opensource-src",
+             "libqt5sql5_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "ba3011af5b6bf58786af82e37cad9a513098f40aa96eb7c0bac5fa490935c7aa",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("q/qtbase-opensource-src",
+             "libqt5xml5_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "b6860f228ba3f5144cfe7d252a92a7d0c3d52e8f265475e8873858f77c3cf014",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("q/qtbase-opensource-src",
+             "libqt5dbus5_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "1e3499746c85ed916c3374e273a2bc71274d42406360f865cbf92cfd714314f6",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("q/qtbase-opensource-src",
+             "libqt5sql5-sqlite_5.15.8+dfsg-11+deb12u3_amd64.deb",
+             "965f13a4fb32e3b03475f36905418ae38c5bebcfe1bf23b5fb89d585fbec5a7e",
+             library_dirs=(_QT_MULTIARCH,)),
+    {
+        "url": "https://deb.debian.org/debian/pool/main/q/qtbase-opensource-src/"
+               "qtbase5-dev_5.15.8+dfsg-11+deb12u3_amd64.deb",
+        "sha256": "2b50de948dd43dce43dcd58033ef3bfc4a549b33fc9f9a3818e35a26f979802b",
+        "archive": "deb", "extract": ["dpkg-deb", "-x"],
+        "links": {
+            f"{_QT_MULTIARCH}/qt5/bin/qmake": "../../../qt5/bin/qmake",
+        },
+        "note": ("the pinned qtbase5-dev payload again, only to restore the multiarch qmake path "
+                 "Debian's Qt5 CMake configs name (qt5-qmake already installs mkspecs under the "
+                 "multiarch tree)"),
+    },
+    _aux_deb("p/protobuf", "libprotobuf32_3.21.12-3+deb12u1_amd64.deb",
+             "e9e4e8cf0d2c48e2e3c17308e2093b3856f470b77e0022b7d906fb1b3551f213",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("p/protobuf", "libprotobuf-lite32_3.21.12-3+deb12u1_amd64.deb",
+             "441812aa574e1baa4435a9b62c34a39e0fc4177994ccfb35fab5a03ef6ef1e8d",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("p/protobuf", "libprotoc32_3.21.12-3+deb12u1_amd64.deb",
+             "27770048715fdebe3dab2f6603ca6667ac72ab474989226d2f70153522286adf",
+             library_dirs=(_QT_MULTIARCH,), bin_dirs=("usr/bin",)),
+    _aux_deb("p/protobuf", "libprotobuf-dev_3.21.12-3+deb12u1_amd64.deb",
+             "2f045f82e4ae0bdfce7f18f1f36613b9cd8c570024b8de68668bc255c32a2d88",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("p/protobuf", "protobuf-compiler_3.21.12-3+deb12u1_amd64.deb",
+             "698e96f08152490ee576ead6a9116e1239514de66473305473f67ce2b5408e23",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("d/double-conversion", "libdouble-conversion3_3.2.1-1_amd64.deb",
+             "802b880ed900e4a8d54bab77b7551a7f3408b04891c3e5650fdc2368cc1fbc0a",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("i/icu", "libicu72_72.1-3+deb12u1_amd64.deb",
+             "f7f6f99c6d7b025914df2447fc93e11d22c44c0c8bdd8b6f36691c9e7ddcef88",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-16-0_10.42-1_amd64.deb",
+             "53892097cf102ecd8f133ccd3f1f6be6f288c6ffeeeacf6ce081dfee15292675",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("libz/libzstd", "libzstd1_1.5.4+dfsg2-5_amd64.deb",
+             "6315b5ac38b724a710fb96bf1042019398cb656718b1522279a5185ed39318fa",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("libb/libb2", "libb2-1_0.98.1-1.1_amd64.deb",
+             "322be801ee9051f34cc4f09512222bac1f0918e32da3a2bd12eddc51cd2df653",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("g/glib2.0", "libglib2.0-0_2.74.6-2+deb12u9_amd64.deb",
+             "7ff85197685d89e150e342b29a59aab1beee400050ba7da73de81cd999ffee5a",
+             library_dirs=(_QT_MULTIARCH, _QT_LIB)),
+    _aux_deb("libf/libffi", "libffi8_3.4.4-1_amd64.deb",
+             "6d9f6c25c30efccce6d4bceaa48ea86c329a3432abb360a141f76ac223a4c34a",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("u/util-linux", "libmount1_2.38.1-5+deb12u3_amd64.deb",
+             "f46e2d6b006951825adde9757790b6609d7c66c7700f9b68f3db913eaac323c3",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("u/util-linux", "libblkid1_2.38.1-5+deb12u3_amd64.deb",
+             "5a083377f29191cafcdf0f91ec124349b4a7895b531556633a136e43c6d53943",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("libs/libselinux", "libselinux1_3.4-1+b6_amd64.deb",
+             "2b07f5287b9105f40158b56e4d70cc1652dac56a408f3507b4ab3d061eed425f",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("d/dbus", "libdbus-1-3_1.14.10-1~deb12u1_amd64.deb",
+             "18ee0ce5fab9f7b671e87da1e9fa18660e36e04a3402f24bdb8635e0ba1d35f6",
+             library_dirs=(_QT_MULTIARCH, _QT_LIB)),
+    {
+        "url": "https://deb.debian.org/debian/pool/main/d/dbus/"
+               "libdbus-1-dev_1.14.10-1~deb12u1_amd64.deb",
+        "sha256": "967a42e91eaa7d1885721b374a28cb0d30a0e63daaccf5e3594180bec6072c76",
+        "archive": "deb", "extract": ["dpkg-deb", "-x"],
+        "include_dirs": ["usr/include"],
+        "library_dirs": [_QT_MULTIARCH],
+        "pkgconfig_dirs": [_QT_MULTIARCH_PC],
+        "links": {f"{_QT_MULTIARCH}/libdbus-1.so": "libdbus-1.so.3.32.4"},
+        "note": ("pinned bookworm libdbus-1-dev; its `libdbus-1.so` is rewritten to the package's "
+                 "own soname (the distribution symlink names an absolute /lib path)"),
+    },
+    _aux_deb("libc/libcap2", "libcap2_2.66-4+deb12u3+b1_amd64.deb",
+             "8d684c673e7483802a5c447834b0df6fce006eb3a7109e1be412f5ad425bb24f",
+             library_dirs=(_QT_MULTIARCH, _QT_LIB)),
+    _aux_deb("libc/libcap2", "libcap-dev_2.66-4+deb12u3+b1_amd64.deb",
+             "897ee64c93b04c4c8eb46551df2277673c1ab95584c765d8d07e3528a6a1c689",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,)),
+)
+
+# partclone's torrent_info path is its libcrypto consumer (SHA1); uuid is its one hard build
+# dependency. The GitHub tag archive carries no generated `configure`, so the recipe runs
+# `autoreconf` with the pinned bookworm autotools (a build step, never a source edit).
+_PARTCLONE_AUX: tuple[dict, ...] = (
+    _aux_deb("u/util-linux", "uuid-dev_2.38.1-5+deb12u3_amd64.deb",
+             "d66c5719adc05b6f5cbac926e093846c865f0b1a2095e6d781df8a7ce1f34cbf",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH, _QT_LIB),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+    _aux_deb("e/e2fsprogs", "libext2fs2_1.47.0-2+b2_amd64.deb",
+             "dff731f2318df99da4b8bf5f330f415f95b94c609bac29e7b2edba0a38f22a98",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("e/e2fsprogs", "libext2fs-dev_1.47.0-2+b2_amd64.deb",
+             "7b4588f466f93ceb7bcd4df8b1875a84fe46d02af7fb102a3019791ee2ab08c9",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+    _aux_deb("e/e2fsprogs", "libcom-err2_1.47.0-2+b2_amd64.deb",
+             "a2bac7015e78fbc0c504df3e441f3a22292f1d2d77f9ccda760057f3690e22f2",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("e/e2fsprogs", "comerr-dev_2.1-1.47.0-2+b2_amd64.deb",
+             "e72521fd1b8af99ad99e83af7d87926a4c4d7e8238e61846761f7818220a48a2",
+             include_dirs=("usr/include",)),
+    _aux_deb("e/e2fsprogs", "libss2_1.47.0-2+b2_amd64.deb",
+             "24115749c09b4e259acff1f799faccd1748ff322bd638b09d820729cb3b24579",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gettext", "gettext_0.21-12_amd64.deb",
+             "8c1f9d43575373ce311f51d00a13afbb4888d63aa559a93a3472f5d77513b60c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gettext", "autopoint_0.21-12_all.deb",
+             "9864777e777f1f641858e27396bf7dd53c9b38197b7ac47388995ec60bb9789f",
+             bin_dirs=("usr/bin",
+             )),
+)
+
+# prosody 0.12.4 is Lua; its OpenSSL consumer is LuaSec, built here from source against the subject
+# prefix together with its bundled LuaSocket support, and the admitted program is a small harness
+# that embeds the Lua 5.4 interpreter and runs prosody's own `prosody`/`prosodyctl` entry scripts.
+_PROSODY_AUX: tuple[dict, ...] = (
+    _aux_deb("l/lua5.4", "liblua5.4-0_5.4.4-3+deb12u1_amd64.deb",
+             "b042e78d02dd8457cf7de253ae89992e50050f450d9bec66843ffb1a14ab23c7",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("l/lua5.4", "liblua5.4-dev_5.4.4-3+deb12u1_amd64.deb",
+             "f02e06d3598de40a1df51ea4144668a1c6acb8813d4647a6d89cca0d256179d3",
+             include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+             library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+    _aux_deb("l/lua5.4", "lua5.4_5.4.4-3+deb12u1_amd64.deb",
+             "8a7221aa9614911f1236cbb1ba85401bb06f9ac66b51e5f98f31fbdeeca99fa7",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("l/lua-expat", "lua-expat_1.5.1-3_amd64.deb",
+             "236310b4aab2d063f3b355fd9e18f2d956137f16560c0e546c484212907eaa82",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("l/luasocket", "lua-socket_3.1.0-1+b1_amd64.deb",
+             "63217faf1d497a61e23f8b7a128a494a8db593f4965ead1411429d1a1e46d9dd",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("l/lua-filesystem", "lua-filesystem_1.8.0-3_amd64.deb",
+             "679309dc0d8fe34bd4fc7a15b742d7ebb3a26ac3ca2d3527026cda3bc7480fc3",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("i/icu", "libicu72_72.1-3+deb12u1_amd64.deb",
+             "f7f6f99c6d7b025914df2447fc93e11d22c44c0c8bdd8b6f36691c9e7ddcef88",
+             library_dirs=(_QT_MULTIARCH,)),
+    _aux_deb("i/icu", "libicu-dev_72.1-3+deb12u1_amd64.deb",
+             "08bd4e3f4bd4fc725cf25e739edf0e7df5ac1826bdac9a7d990eea8f93b2d7a0",
+             include_dirs=("usr/include",), library_dirs=(_QT_MULTIARCH,),
+             pkgconfig_dirs=(_QT_MULTIARCH_PC,)),
+    {
+        "url": ("https://github.com/lunarmodules/luasec/archive/refs/tags/v1.3.1.tar.gz"),
+        "sha256": "6fb919633a3304a262189f62a369adc4b36bc7113da37af093b069cf1c8d785e",
+        "archive": "tar.gz", "extract": ["sh", "-c", "tar xf \"$1\" -C \"$2\"", "sh"],
+        "note": ("LuaSec 1.3.1 (the family's OpenSSL consumer); built by the recipe's pre-build "
+                 "step against the subject prefix, with its bundled LuaSocket support"),
+    },
+)
+
+_L7_EXPAND2_SPECS: tuple[dict, ...] = (
+    {
+        "family": "nmap", "version": "7.95",
+        "url": "https://nmap.org/dist/nmap-7.95.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
+        "configure": ["--with-openssl={prefix}", "--with-liblua=included",
+                      "--without-libssh2", "--without-zenmap", "--without-ndiff",
+                      "--without-nping", "--without-ncat"],
+        "make": [MAKE_JOBS], "artifact": "nmap", "launch": ["--version"],
+        "aux_sources": list(_NMAP_AUX),
+        "note": ("nmap 7.95 with its service detection and NSE ssl-cert path linked against the "
+                 "subject OpenSSL; liblua is nmap's bundled copy, and libpcap/PCRE2 are the pinned "
+                 "bookworm packages"),
+    },
+    {
+        "family": "fastd", "version": "22",
+        "url": "https://github.com/neocturne/fastd/releases/download/v22/fastd-22.tar.xz",
+        "archive": "tar.xz", "build_system": "meson",
+        "sha256": "19750b88705d66811b7c21b672537909c19ae6b21350688cbd1a3a54d08a8951",
+        "configure": ["--buildtype=release", "--prefix=/usr", "-Dcapabilities=disabled",
+                      "-Doffload_l2tp=disabled", "-Dsystemd=disabled"],
+        "make": [], "artifact": "b/src/fastd", "launch": ["--version"],
+        "aux_sources": list(_FASTD_AUX),
+        "env_extra": {"BISON_PKGDATADIR": "{aux}/usr/share/bison",
+                      "M4": "{aux}/usr/bin/m4"},
+        "note": ("fastd 22 built by meson against the subject libcrypto (its ec25519/FHMQVC "
+                 "methods); libuecc, libsodium, json-c and bison are the pinned packages"),
+    },
+    {
+        "family": "kea", "version": "2.6.3",
+        "url": "https://downloads.isc.org/isc/kea/2.6.3/kea-2.6.3.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "00241a5955ffd3d215a2c098c4527f9d7f4b203188b276f9a36250dd3d9dd612",
+        "configure": ["--with-openssl={prefix}", "--with-log4cplus", "--disable-mysql",
+                      "--disable-pgsql", "--localstatedir={root}/.l7-state",
+                      "--sysconfdir={root}/.l7-state/etc"],
+        "make": [MAKE_JOBS], "artifact": "src/bin/agent/.libs/kea-ctrl-agent",
+        "launch": ["-v"],
+        "aux_sources": list(_KEA_AUX),
+        "note": ("Kea 2.6.3's ctrl-agent with its HTTPS control channel linked against the subject "
+                 "libssl; boost and log4cplus are the pinned packages, and the runtime state "
+                 "directory is generated under the build tree"),
+    },
+    {
+        "family": "mumble-server", "version": "1.5.735",
+        "url": ("https://github.com/mumble-voip/mumble/releases/download/v1.5.735/"
+                "mumble-1.5.735.tar.gz"),
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "db8990079f556a877218d471bcf2c24eb5e4520b652f3c20793d0aadedaae6ae",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_NUMBER=735",
+                      "-Dclient=OFF", "-Dserver=ON", "-Dice=OFF", "-Dzeroconf=OFF",
+                      "-Dtests=OFF", "-Dplugins=OFF", "-Doverlay=OFF",
+                      "-Dwarnings-as-errors=OFF",
+                      "-DCMAKE_PREFIX_PATH={aux}/usr",
+                      "-DCMAKE_LIBRARY_PATH={aux}/usr/lib/x86_64-linux-gnu:{aux}/lib/x86_64-linux-gnu",
+                      "-DProtobuf_PROTOC_EXECUTABLE={aux}/usr/bin/protoc",
+                      "-DProtobuf_INCLUDE_DIR={aux}/usr/include",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_CXX_STANDARD_LIBRARIES=-ldbus-1 -lpcre2-16"],
+        "make": [], "artifact": "b/mumble-server", "launch": ["--version"],
+        "aux_sources": list(_MUMBLE_AUX),
+        "note": ("mumble-server 1.5.735's TLS listener linked against the subject libssl; Qt5, "
+                 "protobuf, boost and libcap are the pinned bookworm packages"),
+    },
+    {
+        "family": "prosody", "version": "0.12.4",
+        "url": "https://prosody.im/downloads/source/prosody-0.12.4.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "47d712273c2f29558c412f6cdaec073260bbc26b7dda243db580330183d65856",
+        "configure": ["--lua-version=5.4",
+                      "--with-lua-include={aux}/usr/include/lua5.4",
+                      "--with-lua-lib={aux}/usr/lib/x86_64-linux-gnu",
+                      "--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS],
+        "artifact": ".l7-prosody-harness", "launch": ["--version"],
+        "aux_sources": list(_PROSODY_AUX),
+        "env_extra": {
+            "LIBRARY_PATH": ("{prefix}/lib:{aux}/usr/lib/x86_64-linux-gnu:"
+                             "{aux}/lib/x86_64-linux-gnu"),
+        },
+        "pre_build": [["sh", "-c", (
+            "set -e; "
+            "cd {aux}/luasec-1.3.1 && make linux EXTRA=luasocket DEFS=-DWITH_LUASOCKET "
+            "INC_PATH='-I{prefix}/include -I{aux}/usr/include/lua5.4 "
+            "-I{aux}/usr/include/x86_64-linux-gnu' "
+            "LIB_PATH='-L{prefix}/lib -Wl,-rpath,{prefix}/lib' && "
+            "make install DESTDIR={root}/.l7-lua LUAPATH=/share/lua/5.4 LUACPATH=/lib/lua/5.4 && "
+            "mkdir -p {root}/.l7-lua/lib/lua/5.4/ssl && "
+            "cp {root}/.l7-lua/lib/lua/5.4/ssl.so {root}/.l7-lua/lib/lua/5.4/ssl/core.so && "
+            "cc -O2 -o {root}/.l7-prosody-harness {repo}/forensics/tools/l7_prosody.c "
+            "-I{prefix}/include -I{aux}/usr/include/lua5.4 "
+            "-I{aux}/usr/include/x86_64-linux-gnu "
+            "-L{aux}/usr/lib/x86_64-linux-gnu -L{prefix}/lib "
+            "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu -Wl,-rpath,{prefix}/lib "
+            "-llua5.4 -lssl -lcrypto"
+        )]],
+        "note": ("Prosody 0.12.4 with LuaSec 1.3.1 built against the subject libssl; the admitted "
+                 "program is the recipe's Lua-embedding harness, and the XMPP listener is "
+                 "prosody's own entry script run by it"),
+    },
+    {
+        "family": "partclone", "version": "0.3.27",
+        "url": ("https://github.com/Thomas-Tsai/partclone/archive/refs/tags/0.3.27.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "933e81dceb9c05bd2cb6027ef115a4422eb35b2bc05ed9a5fd42f637dfba5c17",
+        "configure": ["--enable-extfs", "--disable-ntfs", "--disable-xfs",
+                      "--disable-reiserfs", "--disable-reiser4", "--disable-hfsp",
+                      "--disable-apfs", "--disable-fat", "--disable-exfat",
+                      "--disable-f2fs", "--disable-nilfs2", "--disable-ufs",
+                      "--disable-vmfs", "--disable-jfs", "--disable-btrfs",
+                      "--disable-minix", "--disable-ncursesw", "--disable-fuse"],
+        "make": [MAKE_JOBS], "artifact": "src/partclone.extfs", "launch": ["--version"],
+        "aux_sources": list(_PARTCLONE_AUX),
+        "pre_build": [["sh", "-c", (
+            "set -e; "
+            "W={root}/.autotools; mkdir -p $W; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+            "--system-acdir={aux}/usr/share/aclocal-1.16 "
+            "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+            "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+            "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+            "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+            "{aux}/usr/share/autoconf/autom4te.cfg; "
+            "autoreconf -fi"
+        )]],
+        "env_extra": {
+            "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+            "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+            "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal:{aux}/usr/share/libtool/m4",
+            "ACLOCAL": "{root}/.autotools/aclocal",
+            "AUTOMAKE": "{root}/.autotools/automake",
+            "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+            "AUTOPOINT": "true",
+            "AUTOCONF": "{aux}/usr/bin/autoconf",
+            "AUTOHEADER": "{aux}/usr/bin/autoheader",
+            "AUTOM4TE": "{aux}/usr/bin/autom4te",
+            "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+            "AC_MACRODIR": "{aux}/usr/share/autoconf",
+            "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+            "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+            "M4": "{aux}/usr/bin/m4",
+        },
+        "note": ("partclone 0.3.27's partclone.extfs with its torrent_info SHA-1 path linked "
+                 "against the subject libcrypto; libext2fs, uuid-dev and the autotools are the "
+                 "pinned packages (the tag archive carries no generated configure)"),
+    },
+)
+
+
+# The Phase-25 L7 expansion batch (b6): two TLS servers (exim, nsd) and three OpenSSL consumers
+# whose build needs a non-subject dependency the venue does not ship as a development package
+# (net-snmp, eggdrop, irssi); openssh-server reuses the openssh release and exercises the server
+# direction. Every package is a pinned bookworm build; the subject prefix remains the only OpenSSL.
+#
+# exim 4.100.1 requires PCRE2 and, on Linux, the Berkeley DB hints database (OS/Makefile-Linux
+# sets USE_DB=yes), so both headers are acquired; the recipe keeps the release tarball's own
+# OS/Makefile-Linux defaults and only writes Local/Makefile (a generated build input).
+_L7_EXIM_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("d/db5.3", "libdb5.3_5.3.28+dfsg2-1_amd64.deb",
+             "7dc5127b8dd0da80e992ba594954c005ae4359d839a24eb65d0d8129b5235c84",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("d/db5.3", "libdb5.3-dev_5.3.28+dfsg2-1_amd64.deb",
+             "f792f095deecb4f990f695e0d33f75f70b92491eab649adf91ea8574885d157c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# eggdrop 1.9.5 embeds Tcl; the image carries neither tcl.h nor libtcl8.6. `TCLSH=...` is avoided:
+# the release's `make config` finds `tclsh8.6` on PATH, which the recipe exposes from the pinned
+# tcl8.6 package.
+_L7_EGGDROP_AUX: tuple[dict, ...] = (
+    _aux_deb("t/tcl8.6", "libtcl8.6_8.6.13+dfsg-2_amd64.deb",
+             "976c4235b816635e1756016f3adbabb634e8b97a9f6b97cf901be099e4fd2487",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("t/tcl8.6", "tcl8.6-dev_8.6.13+dfsg-2_amd64.deb",
+             "e37b3f8888003ca9a34b85452885662bb9885b17f70cf7dfe4ec821a48328509",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# irssi 1.4.5 needs GLib (headers and .pc) and ncurses headers. The image carries the GLib runtime
+# library but not its development symlink, so the pinned dev package's `libglib-2.0.so` is repointed
+# at the already-installed runtime (same 2.74.6 build); libpcre2-dev supplies the `libpcre2-8`
+# pkg-config module glib-2.0.pc requires.
+_L7_IRSSI_AUX: tuple[dict, ...] = (
+    _aux_deb("g/glib2.0", "libglib2.0-dev_2.74.6-2+deb12u9_amd64.deb",
+             "217766f170553e14884f7d67c0636b833da43c1e4a65dfe41268ba1292001ccd",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
+             links={"usr/lib/x86_64-linux-gnu/libglib-2.0.so":
+                    "/lib/x86_64-linux-gnu/libglib-2.0.so.0"}),
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# exim 4.100.1's own release `make` (no configure script): Local/Makefile is a generated build
+# input, written from the pristine src/EDITME with the subject prefix and the pinned PCRE2/DB.
+_L7_EXIM_LOCAL_MAKEFILE = (
+    "set -e; mkdir -p Local; cp src/EDITME Local/Makefile; "
+    "sed -i "
+    "-e 's|^BIN_DIRECTORY=.*|BIN_DIRECTORY={root}/.l7-install/bin|' "
+    "-e 's|^CONFIGURE_FILE=.*|CONFIGURE_FILE={root}/.l7-install/etc/exim.conf|' "
+    "-e 's|^SPOOL_DIRECTORY=.*|SPOOL_DIRECTORY={root}/.l7-state/spool|' "
+    "-e 's|^# USE_OPENSSL=yes|USE_OPENSSL=yes|' "
+    "-e 's|^PCRE2_CONFIG=yes|PCRE2_CONFIG=|' "
+    "-e 's|^# PCRE_LIBS=.*|PCRE_LIBS=-L{aux}/usr/lib/x86_64-linux-gnu -lpcre2-8|' "
+    "-e 's|^EXIM_USER=$|EXIM_USER=nobody|' "
+    "Local/Makefile; "
+    "printf '%s\\n' "
+    "'INCLUDE=-I{prefix}/include -I{aux}/usr/include' "
+    "'TLS_LIBS=-L{prefix}/lib -lssl -lcrypto' "
+    "'EXIM_GROUP=nogroup' "
+    "'LOG_FILE_PATH={root}/.l7-state/log/%slog' "
+    "'LFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+    "-L{aux}/usr/lib/x86_64-linux-gnu -Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu' "
+    ">> Local/Makefile"
+)
+
+# The Phase-25 L7 expansion batch (b7): tcpdump, slrn, epic5, bannergrab, httperf and makepasswd.
+# The four small utilities are direct libcrypto/libssl consumers; tcpdump's capture needs libpcap
+# (with the dbus runtime its Debian build depends on), slrn/epic5 need a terminal library, and
+# httperf's upstream repository is autotools-only at the pinned commit.  Every non-OpenSSL
+# dependency is a pinned bookworm package acquired through the same `aux_sources` seam.
+_L7_TCPDUMP_AUX: tuple[dict, ...] = (
+    _aux_deb("libp/libpcap", "libpcap0.8_1.10.3-1_amd64.deb",
+             "856014904c4d7ec9a9ba864c546d91c059b9bf00c7c89eda6fd0a16045f8faac",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libp/libpcap", "libpcap0.8-dev_1.10.3-1_amd64.deb",
+             "5f66e87262e42cc42a77d6acdb41098e4ff3e6db3bdba1b73189dea5a3afb88c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             bin_dirs=("usr/bin",)),
+    _aux_deb("d/dbus", "libdbus-1-3_1.14.10-1~deb12u1_amd64.deb",
+             "18ee0ce5fab9f7b671e87da1e9fa18660e36e04a3402f24bdb8635e0ba1d35f6",
+             library_dirs=("lib/x86_64-linux-gnu",)),
+)
+
+_L7_SLRN_AUX: tuple[dict, ...] = (
+    _aux_deb("s/slang2", "libslang2_2.3.3-3_amd64.deb",
+             "5b3cecc829ef229125b340ccd2ca45ced75d24e9aa191912105016b1af94413f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("s/slang2", "libslang2-dev_2.3.3-3_amd64.deb",
+             "2ad29ca0fe5adacff4d7174c5d20a104fc8e0470723e6f7dda2c5cf049bd6631",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_L7_EPIC5_AUX: tuple[dict, ...] = (
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# httperf's pinned upstream commit has no generated `configure`; the recipe bootstraps it with the
+# same pinned bookworm autotools the partclone recipe uses, rewriting each tool's compiled-in
+# `/usr/share` prefix under the extracted auxiliary root exactly once.
+_L7_HTTPERF_AUX: tuple[dict, ...] = (
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gettext", "gettext_0.21-12_amd64.deb",
+             "8c1f9d43575373ce311f51d00a13afbb4888d63aa559a93a3472f5d77513b60c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gettext", "autopoint_0.21-12_all.deb",
+             "9864777e777f1f641858e27396bf7dd53c9b38197b7ac47388995ec60bb9789f",
+             bin_dirs=("usr/bin",)),
+)
+
+_L7_HTTPERF_BOOTSTRAP = (
+    "set -e; W={root}/.autotools; mkdir -p $W; "
+    "sed -i 's#/usr/share#{aux}/usr/share#g' {aux}/usr/bin/libtoolize; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/share/autoconf/autom4te.cfg; "
+    "sed -i 's#/usr/share/automake-1.16#{aux}/usr/share/automake-1.16#g' "
+    "{aux}/usr/bin/aclocal-1.16 {aux}/usr/bin/automake-1.16; "
+    "sed -i 's#/usr/share/aclocal#{aux}/usr/share/aclocal#g' {aux}/usr/bin/aclocal-1.16; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/bin/autoconf {aux}/usr/bin/autoheader; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+    "--system-acdir={aux}/usr/share/aclocal-1.16 "
+    "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+    "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+    "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+    "autoreconf -fi"
+)
+
+_L7_EXPAND4_SPECS: tuple[dict, ...] = (
+    {
+        "family": "tcpdump", "version": "4.99.6",
+        "url": "https://www.tcpdump.org/release/tcpdump-4.99.6.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "5839921a0f67d7d8fa3dacd9cd41e44c89ccb867e8a6db216d62628c7fd14b09",
+        "configure": ["--prefix={root}/.l7-install", "--with-crypto={prefix}",
+                      "--disable-local-libpcap"],
+        "make": [MAKE_JOBS], "artifact": "tcpdump", "launch": ["--version"],
+        "aux_sources": list(_L7_TCPDUMP_AUX),
+        "ldflags_extra": ("-Wl,-rpath-link,{aux}/usr/lib/x86_64-linux-gnu "
+                          "-Wl,-rpath-link,{aux}/lib/x86_64-linux-gnu"),
+        "env_extra": {"PATH": "{aux}/usr/bin:" + os.environ.get("PATH", ""),
+                      "LIBCRYPTO_CFLAGS": "-I{prefix}/include",
+                      "LIBCRYPTO_LIBS": "-L{prefix}/lib -lcrypto"},
+        "pre_build": [["sh", "-c", (
+            "set -e; "
+            "sed -i 's|^prefix=\"/usr\"|prefix=\"{aux}/usr\"|' "
+            "{aux}/usr/bin/pcap-config"
+        )]],
+        "note": ("tcpdump 4.99.6 with its libcrypto link and the pristine libpcap 1.10.3 build "
+                 "(plus the dbus runtime Debian's libpcap needs); the L7 workload captures a local "
+                 "TLS handshake and reads the handshake record bytes back"),
+    },
+    {
+        "family": "slrn", "version": "1.0.3a",
+        "url": "https://jedsoft.org/releases/slrn/slrn-1.0.3a.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "3ba8a4d549201640f2b82d53fb1bec1250f908052a7983f0061c983c634c2dac",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}", "--with-slrnpull",
+                      "--with-slanglib={aux}/usr/lib/x86_64-linux-gnu",
+                      "--with-slanginc={aux}/usr/include"],
+        "make": [MAKE_JOBS], "artifact": "src/objs/slrn", "launch": ["--version"],
+        "aux_sources": list(_L7_SLRN_AUX),
+        "note": ("slrn 1.0.3a and its slrnpull offline NNTP client built with --with-ssl against "
+                 "the subject libssl; slang and ncurses headers are the pinned packages"),
+    },
+    {
+        "family": "epic5", "version": "3.0.3",
+        "url": "https://ftp.epicsol.org/pub/epic/EPIC5-PRODUCTION/epic5-3.0.3.tar.xz",
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "63a411215c14040b65b5d728aff10f7523d55e170f6298fb01e1cf958d79d326",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}",
+                      "--without-libarchive", "--without-perl", "--with-ipv6"],
+        "make": [MAKE_JOBS], "artifact": "source/epic5", "launch": ["-v"],
+        "aux_sources": list(_L7_EPIC5_AUX),
+        "env_extra": {"CFLAGS": "-I{aux}/usr/include"},
+        "note": ("epic5 3.0.3's IRC-over-TLS client (type=irc-ssl) linked against the subject "
+                 "libssl; ncurses is the pinned package and libarchive/perl are disabled"),
+    },
+    {
+        "family": "bannergrab", "version": "3.5",
+        "url": "https://downloads.sourceforge.net/bannergrab/bannergrab-3.5.tgz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "f9995bc1f750234b08034d4bc8c214ec505690a8d939eeda176da46328a7638d",
+        "configure": [],
+        "make": ["CFLAGS=-I{prefix}/include -lcrypto -lssl",
+                 "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "bannergrab", "launch": ["--version"],
+        "note": ("bannergrab 3.5's TLS banner path linked against the subject libssl/libcrypto; "
+                 "its Makefile is used verbatim with only the prefix flags supplied"),
+    },
+    {
+        "family": "httperf", "version": "0.9.0+git.de8cd6ad",
+        "url": ("https://codeload.github.com/httperf/httperf/tar.gz/"
+                "de8cd6ad8a79779a0cb74a4aa2175afa9e24df57"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "ba1c68b8eed4fcdae72e932c8810faf76bde77c50c5791b3a3d88d0f4f7e69b2",
+        "configure": ["--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS], "artifact": "src/httperf", "launch": ["--version"],
+        "aux_sources": list(_L7_HTTPERF_AUX),
+        "pre_build": [["sh", "-c", _L7_HTTPERF_BOOTSTRAP]],
+        "env_extra": {
+            "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+            "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+            "ACLOCAL_PATH": ("/usr/share/aclocal:{aux}/usr/share/aclocal:"
+                             "{aux}/usr/share/libtool/m4"),
+            "AUTOMAKE": "{root}/.autotools/automake",
+            "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+            "AUTOCONF": "{aux}/usr/bin/autoconf",
+            "AUTOHEADER": "{aux}/usr/bin/autoheader",
+            "AUTOM4TE": "{aux}/usr/bin/autom4te",
+            "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+            "AC_MACRODIR": "{aux}/usr/share/autoconf",
+            "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+            "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+            "M4": "{aux}/usr/bin/m4",
+        },
+        "note": ("httperf at upstream commit de8cd6ad (the OpenSSL-3 SSL_CIPHER accessors); its "
+                 "repository carries no generated configure, so the pinned autotools bootstrap it"),
+    },
+    {
+        "family": "makepasswd", "version": "0.5.4",
+        "url": ("https://codeload.github.com/khorben/makepasswd/tar.gz/"
+                "refs/tags/makepasswd_0-5-4"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "7c68f42f810144c4380c795106a38cbb3cea20816b8903cdbc822cae99996e75",
+        "configure": [],
+        "make": ["CFLAGSF=-I{prefix}/include",
+                 "LDFLAGSF=-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lcrypto"],
+        "artifact": "src/makepasswd", "launch": ["--help"],
+        "note": ("makepasswd 0.5.4's OpenSSL MD5 digest path (`-e md5`); the release Makefile is "
+                 "used verbatim with the prefix's pkg-config replacement variables supplied"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b8): two WPA KDF tools, the aircrack-ng cracking path, NRPE
+# over TLS and mktorrent's SHA-1 piece hashing.  cowpatty needs libpcap only for its capture
+# tool, but its Makefile links it for genpmk too, so the pinned libpcap/dbus aux is used;
+# aircrack-ng is autotools-only at this pin and reuses the same autotools bootstrap as httperf;
+# NRPE's configure would otherwise invoke the authority's `openssl dhparam`, so DH logic is
+# disabled (`--with-need-dh=no`) and the TLS path uses ECDHE.
+_L7_EXPAND5_SPECS: tuple[dict, ...] = (
+    {
+        "family": "cowpatty", "version": "4.8",
+        "url": ("https://deb.debian.org/debian/pool/main/c/cowpatty/"
+                "cowpatty_4.8.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "b9f8b724d06d3074c5bf804ed8e64b5dc846aaa6d81b31586b16558930511164",
+        "configure": [],
+        "make": ["CC=cc",
+                 "CFLAGS=-pipe -Wall -DOPENSSL -O2 -I{prefix}/include -I{aux}/usr/include",
+                 "LDLIBS=-L{prefix}/lib -L{aux}/usr/lib/x86_64-linux-gnu "
+                 "-Wl,-rpath,{prefix}/lib -Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu "
+                 "-Wl,-rpath,{aux}/lib/x86_64-linux-gnu -lcrypto -lpcap"],
+        "artifact": "genpmk", "launch": ["-V"],
+        "aux_sources": list(_L7_TCPDUMP_AUX),
+        "note": ("cowpatty 4.8's genpmk built against the subject libcrypto; its WPA PMK "
+                 "path uses OpenSSL SHA-1 through PBKDF2-HMAC-SHA1, and libpcap is the pinned "
+                 "package its shared utils link needs"),
+    },
+    {
+        "family": "hcxtools", "version": "6.2.7",
+        "url": ("https://deb.debian.org/debian/pool/main/h/hcxtools/"
+                "hcxtools_6.2.7.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "c9d69b5ddcf61c3deff687fad6c17197970cc75c5dbc7706b31c138bf0c784e1",
+        "configure": [],
+        "make": ["hcxpmktool", "CC=cc",
+                 "OPENSSL_LIBS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lcrypto",
+                 "OPENSSL_CFLAGS=-I{prefix}/include"],
+        "artifact": "hcxpmktool", "launch": ["--version"],
+        "note": ("hcxtools 6.2.7's hcxpmktool built against the subject libcrypto; its PMK "
+                 "derivation uses OpenSSL EVP PBKDF2-HMAC-SHA1, and the prefix ships no "
+                 "openssl.pc so OPENSSL_LIBS/OPENSSL_CFLAGS are supplied directly"),
+    },
+    {
+        "family": "aircrack-ng", "version": "1.7",
+        "url": ("https://deb.debian.org/debian/pool/main/a/aircrack-ng/"
+                "aircrack-ng_1.7.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "05a704e3c8f7792a17315080a21214a4448fd2452c1b0dd5226a3a55f90b58c3",
+        "configure": ["--prefix={root}/.l7-install",
+                      "--with-libpcap-include={aux}/usr/include",
+                      "--with-libpcap-lib={aux}/usr/lib/x86_64-linux-gnu"],
+        "make": [MAKE_JOBS, "install"],
+        "artifact": ".libs/aircrack-ng", "launch": ["--help"],
+        "aux_sources": list(_L7_HTTPERF_AUX) + list(_L7_TCPDUMP_AUX),
+        "pre_build": [["sh", "-c", _L7_HTTPERF_BOOTSTRAP]],
+        "env_extra": {
+            "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+            "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+            "ACLOCAL_PATH": ("/usr/share/aclocal:{aux}/usr/share/aclocal:"
+                             "{aux}/usr/share/libtool/m4"),
+            "AUTOMAKE": "{root}/.autotools/automake",
+            "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+            "AUTOCONF": "{aux}/usr/bin/autoconf",
+            "AUTOHEADER": "{aux}/usr/bin/autoheader",
+            "AUTOM4TE": "{aux}/usr/bin/autom4te",
+            "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+            "AC_MACRODIR": "{aux}/usr/share/autoconf",
+            "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+            "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+            "M4": "{aux}/usr/bin/m4",
+        },
+        "note": ("aircrack-ng 1.7's WPA key-cracking path linked against the subject "
+                 "libcrypto; the pinned release is autotools-only, so the httperf bootstrap "
+                 "regenerates configure, and libpcap is the pinned package its capture tools "
+                 "link"),
+    },
+    {
+        "family": "nrpe", "version": "4.1.0",
+        "url": ("https://deb.debian.org/debian/pool/main/n/nagios-nrpe/"
+                "nagios-nrpe_4.1.0.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "500c1845ddbb57e1df8098d107c860498dbad1ea9e4a42c2d59e8d0c19a87259",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}",
+                      "--with-ssl-inc={prefix}", "--with-ssl-lib={prefix}/lib",
+                      "--with-need-dh=no", "--with-nrpe-user=nobody",
+                      "--with-nrpe-group=nogroup",
+                      "--with-piddir={root}/.l7-install/var",
+                      "--with-logdir={root}/.l7-install/var"],
+        "make": ["all", MAKE_JOBS],
+        "artifact": "src/nrpe", "launch": ["-V"],
+        "note": ("NRPE 4.1.0's daemon and check_nrpe plugin linked against the subject "
+                 "libssl; --with-need-dh=no avoids configure's `openssl dhparam` invocation "
+                 "(the authority-applicable TLS path is ECDHE), and the daemon runs as nobody"),
+    },
+    {
+        "family": "mktorrent", "version": "1.1",
+        "url": ("https://deb.debian.org/debian/pool/main/m/mktorrent/"
+                "mktorrent_1.1.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "d0f47500192605d01b5a2569c605e51ed319f557d24cfcbcb23a26d51d6138c9",
+        "configure": [],
+        "make": ["USE_OPENSSL=1", "CC=cc",
+                 "CFLAGS=-O2 -Wall -I{prefix}/include",
+                 "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib",
+                 "LDLIBS=-lcrypto"],
+        "artifact": "mktorrent", "launch": ["-h"],
+        "note": ("mktorrent 1.1 built with USE_OPENSSL=1 so every piece hash is OpenSSL "
+                 "SHA-1; the workload asserts the exact info hash and its change for a "
+                 "modified file"),
+    },
+)
+
+_L7_EXPAND3_SPECS: tuple[dict, ...] = (
+    {
+        "family": "exim", "version": "4.100.1",
+        "url": "https://ftp.exim.org/pub/exim/exim4/exim-4.100.1.tar.xz",
+        "archive": "tar.xz", "build_system": "make",
+        "sha256": "e9fb41f6724a5b136d64c9d19dbc5f26494af879a3e7e3190f91639eaa79fa0d",
+        "configure": [], "make": [MAKE_JOBS],
+        "artifact": "build-Linux-x86_64/exim", "launch": ["--version"],
+        "aux_sources": list(_L7_EXIM_AUX),
+        "pre_build": [["sh", "-c", _L7_EXIM_LOCAL_MAKEFILE]],
+        "note": ("Exim 4.100.1 built from the pristine release with USE_OPENSSL=yes; the SMTP "
+                 "daemon's STARTTLS path links the subject libssl, and PCRE2/Berkeley DB are the "
+                 "pinned packages its mandatory regex and hints-database paths need"),
+    },
+    {
+        "family": "nsd", "version": "4.10.1",
+        "url": "https://www.nlnetlabs.nl/downloads/nsd/nsd-4.10.1.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c0190f923f0095995f2e6331dacd92c6e1f4d578b880d61690602b43a5acfd84",
+        "configure": ["--with-ssl={prefix}", "--with-libevent={aux}/usr",
+                      "--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS], "artifact": "nsd", "launch": ["-v"],
+        "aux_sources": list(_LIBEVENT_AUX),
+        "note": ("NSD 4.10.1's DNS-over-TLS listener (tls-service-key/tls-service-pem) linked "
+                 "against the subject libssl; libevent is the pinned bookworm package"),
+    },
+    {
+        "family": "net-snmp", "version": "5.9.4",
+        "url": ("https://downloads.sourceforge.net/project/net-snmp/net-snmp/5.9.4/"
+                "net-snmp-5.9.4.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "8b4de01391e74e3c7014beb43961a2d6d6fa03acc34280b9585f4930745b0544",
+        "configure": ["--with-openssl={prefix}", "--with-defaults", "--disable-shared",
+                      "--without-pcre", "--disable-embedded-perl", "--without-perl-modules",
+                      "--without-python-modules",
+                      "--with-persistent-directory={root}/.l7-state",
+                      "--with-logfile={root}/.l7-state/snmpd.log",
+                      "--with-sys-contact=nobody@l7.test", "--with-sys-location=l7",
+                      "--with-default-snmp-version=3"],
+        "make": [MAKE_JOBS], "artifact": "agent/snmpd", "launch": ["-v"],
+        "env_extra": {"OPENSSL_CFLAGS": "-I{prefix}/include",
+                      "OPENSSL_LIBS": "-L{prefix}/lib -lssl -lcrypto"},
+        "note": ("net-snmp 5.9.4's agent and snmpget with the USM authentication path built on "
+                 "the subject libcrypto (SHA-1 HMAC); the prefix ships no openssl.pc, so the "
+                 "recipe supplies OPENSSL_CFLAGS/OPENSSL_LIBS as the admitted workaround"),
+    },
+    {
+        "family": "eggdrop", "version": "1.9.5",
+        "url": ("https://github.com/eggheads/eggdrop/releases/download/v1.9.5/"
+                "eggdrop-1.9.5.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "e26918ea8a64d9857579c5b60c661a337f20773edd83086b356525beb581736a",
+        "configure": ["--with-tclinc={aux}/usr/include/tcl8.6/tcl.h",
+                      "--with-tcllib={aux}/usr/lib/x86_64-linux-gnu/libtcl8.6.so",
+                      "--with-sslinc={prefix}/include", "--with-ssllib={prefix}/lib"],
+        "make": ["config", "all"], "artifact": "eggdrop", "launch": ["-v"],
+        "aux_sources": list(_L7_EGGDROP_AUX),
+        "env_extra": {"PATH": "{aux}/usr/bin:" + os.environ.get("PATH", "")},
+        "note": ("eggdrop 1.9.5's IRC-over-TLS client links the subject libssl; Tcl is the "
+                 "pinned package, and `make config` (the release's module selection) is part of "
+                 "the recipe's single make invocation"),
+    },
+    {
+        "family": "irssi", "version": "1.4.5",
+        "url": "https://github.com/irssi/irssi/releases/download/1.4.5/irssi-1.4.5.tar.xz",
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "72a951cb0ad622785a8962801f005a3a412736c7e7e3ce152f176287c52fe062",
+        "configure": ["--with-perl=no", "--with-proxy", "--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS], "artifact": "src/fe-text/irssi", "launch": ["--version"],
+        "aux_sources": list(_L7_IRSSI_AUX),
+        "env_extra": {"OPENSSL_CFLAGS": "-I{prefix}/include",
+                      "OPENSSL_LIBS": "-L{prefix}/lib -lssl -lcrypto"},
+        "note": ("irssi 1.4.5's IRC-over-TLS client links the subject libssl; GLib (with its "
+                 "pcre2 dependency) and ncurses headers are the pinned packages"),
+    },
+    {
+        "family": "openssh-server", "version": "9.9p1",
+        "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "configure": ["--with-ssl-dir={prefix}", "--without-openssl-header-check",
+                      "--without-pam", "--without-selinux", "--without-libedit",
+                      "--without-ldns", "--without-kerberos5",
+                      "--with-privsep-user=nobody", "--with-privsep-path={root}/.l7-privsep",
+                      "--silent"],
+        "make": [MAKE_JOBS, "ssh", "sshd", "sshd-session", "ssh-keygen"],
+        "artifact": "sshd", "launch": ["-V"],
+        "note": ("OpenSSH 9.9p1's sshd (the server direction of the same release the client-only "
+                 "openssh family builds) linked against the subject libcrypto; the privsep user "
+                 "is the venue's nobody, and sshd-session is the split helper 9.9 requires"),
+    },
+)
+
+
 # The Phase-17 downstream harnesses' pinned releases, added to widen the direct-consumer set. nginx
 # 1.26.3 is the TLS-server slice (its own `configure`, so it is treated like autotools).
 _PHASE17_PINS: dict[str, str] = {
@@ -418,8 +1887,817 @@ def _build_catalogue() -> tuple[dict, ...]:
     # single source of truth in `close_batch.admitted_recipe_specs()`.
     for spec in close_batch.admitted_recipe_specs():
         recipes.append(dict(spec))
+    # The Phase-25 L7 expansion batch (cmake/meson/autotools families that the expansion venue
+    # admits). Each recipe is pristine and carries its own pinned archive digest.
+    for spec in _L7_EXPANSION_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 server batch: memcached, icecast, proftpd, mini-httpd and hitch. Each is a
+    # pristine released archive built against the subject prefix, with any non-OpenSSL dependency
+    # acquired through the pinned `aux_sources` seam.
+    # The Phase-25 L7 client/proxy batch: radsecproxy, znc, s-nail and w3m. Pristine released
+    # archives built against the subject prefix, with any non-OpenSSL dependency acquired through
+    # the pinned `aux_sources` seam.
+    for spec in _L7_CLIENT_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    for spec in _L7_SERVER_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 utility batch: axel, ab (apache2-utils), osslsigncode,
+    # u-boot-tools, sslsplit and opendkim. Pristine released archives built against
+    # the subject prefix, with any non-OpenSSL dependency pinned through aux_sources.
+    for spec in _L7_UTILITY_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b5): nmap, fastd, kea, mumble-server, prosody and
+    # partclone. Same pristine-source/aux seam; `{root}`, `{aux}` and `{repo}` are substituted
+    # alongside `{prefix}` for the recipes whose build or runtime state lives in the tree.
+    for spec in _L7_EXPAND2_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b6): exim, nsd, net-snmp, eggdrop, irssi and
+    # openssh-server. Same pristine-source/aux seam; `{root}` is the extracted tree the build
+    # writes its generated inputs and runtime state into.
+    for spec in _L7_EXPAND3_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b7): tcpdump, slrn, epic5, bannergrab, httperf and
+    # makepasswd.  Same pristine-source/aux seam; httperf's autotools bootstrap is a generated
+    # build input, and tcpdump's libpcap-config is repointed under the extracted aux root.
+    for spec in _L7_EXPAND4_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b8): cowpatty, hcxtools, aircrack-ng, nrpe and
+    # mktorrent.  Same pristine-source/aux seam; aircrack-ng regenerates its configure with the
+    # pinned autotools, and NRPE disables its dhparam-generating configure step.
+    for spec in _L7_EXPAND5_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b9): six LIBRARY-only families. Each is a pristine
+    # released archive built against the subject prefix with the expansion venue's toolchain;
+    # none ships an executable, so the runtime atlas' harnesses are their admitted consumers.
+    for spec in _L7_EXPAND6_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b10): six more LIBRARY-only consumers, built from their
+    # pristine Debian source archives against the subject prefix. lua-luaossl and lua-sec are Lua
+    # modules whose admitted program is a small Lua harness; getdns, libu2f-server, duo_unix and
+    # dcap-tunnel-ssl are C libraries/plugins driven by the runtime harnesses.
+    for spec in _L7_EXPAND7_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b11): three more consumers whose pristine Debian source
+    # builds against the subject prefix. gensio's ssl gensio, jimtcl's aio SSL extension and
+    # sofia-sip's tport TLS transport are the OpenSSL paths; each harness is admitted in the
+    # runtime atlas.
+    for spec in _L7_EXPAND8_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b12): libtpms, libre, arm-trusted-firmware-tools,
+    # libnetconf2 and liboauth2. Same pristine-source/aux seam; libnetconf2's libssh/libyang
+    # and liboauth2's cjose/libcurl are pinned bookworm packages, never a distribution OpenSSL.
+    for spec in _L7_EXPAND9_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b13): elinks, lynx, lftp and swtpm. The two text browsers
+    # and lftp are uppercase HTTPS consumers driven by the local fixture; swtpm's TPM2 command
+    # interface is driven over its own socket. Lynx/lftp take the pinned ncurses/readline
+    # development packages through the auxiliary seam because the venue ships neither header.
+    for spec in _L7_EXPAND10_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The declarative template cohort.  Each entry is a small config row (URL + SHA-256 +
+    # build-system fields + a bucket workload) rather than a bespoke recipe; the same pristine
+    # acquire/configure/make path is used, and `{prefix}` is still the only substitution.
+    for spec in templates.recipe_specs():
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # Two recipes the earlier venue recorded as blocked are buildable in the expansion image:
+    # libssh ships only CMakeLists.txt (cmake is present), and lighttpd ships configure.ac (the
+    # pinned autotools shim regenerates its configure). The subject prefix is still the only
+    # OpenSSL; the late overrides replace the stale "still blocked" notes and build systems.
+    for rec in recipes:
+        late = _LATE_RECIPE_OVERRIDES.get(rec["family"])
+        if late:
+            rec.update(late)
     return tuple(recipes)
 
+
+
+# The Phase-25 L7 expansion batch (b9): six LIBRARY-only families whose build systems the
+# expansion venue admits (CMake, autotools and meson). Each archive is pinned by digest; the
+# subject prefix is the only OpenSSL and `{prefix}` the only substitution.
+_L7_EXPAND6_SPECS: tuple[dict, ...] = (
+    {
+        "family": "libwebsockets", "version": "4.3.3",
+        "url": "https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "6fd33527b410a37ebc91bb64ca51bdabab12b076bc99d153d7c5dd405e4bdf90",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DLWS_WITH_SSL=ON",
+                      "-DLWS_WITHOUT_TESTAPPS=ON", "-DLWS_WITH_MINIMAL_EXAMPLES=OFF",
+                      "-DLWS_WITH_STATIC=OFF", "-DLWS_WITH_SHARED=ON",
+                      "-DLWS_WITH_LIBUV=OFF", "-DLWS_WITH_PLUGINS=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/lib/libwebsockets.so*", "launch": None,
+        "note": ("libwebsockets 4.3.3 built with CMake against the subject prefix; its TLS "
+                 "client and server paths use the subject libssl (the test apps are disabled "
+                 "because the workload is the harness)"),
+    },
+    {
+        "family": "libstrophe", "version": "0.13.1",
+        "url": ("https://github.com/strophe/libstrophe/releases/download/0.13.1/"
+                "libstrophe-0.13.1.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "a1319f2bbd8e2669359e6a74afa416fa4d52c103b82d89d1e5f56bda3f80cefa",
+        "configure": ["--prefix={root}/.l7-install", "--disable-static", "--enable-shared"],
+        "make": [MAKE_JOBS], "artifact": ".libs/libstrophe.so*", "launch": None,
+        "env_extra": {"openssl_CFLAGS": "-I{prefix}/include",
+                      "openssl_LIBS": ("-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                                       "-lssl -lcrypto")},
+        "note": ("libstrophe 0.13.1 built with its shipped configure; the prefix ships no "
+                 "openssl.pc, so PKG_CHECK_MODULES is satisfied through the module's "
+                 "openssl_CFLAGS/openssl_LIBS override and the TLS backend is the subject "
+                 "libssl (expat is the venue's XML parser)"),
+    },
+    {
+        "family": "libcoap", "version": "4.3.5",
+        "url": "https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "a417ed26ec6c95c041b42353b5b6fad1602e2bf42a6e26c09863450e227b7b5f",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DENABLE_DTLS=ON", "-DDTLS_BACKEND=openssl", "-DENABLE_OSCORE=OFF",
+                      "-DENABLE_TESTS=OFF", "-DENABLE_EXAMPLES=OFF", "-DENABLE_DOCS=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libcoap-3.so*", "launch": None,
+        "note": ("libcoap 4.3.5 built with CMake, DTLS/TLS on the OpenSSL backend so CoAP over "
+                 "TLS uses the subject libssl; tests, examples and documentation are disabled"),
+    },
+    {
+        "family": "libesmtp", "version": "1.1.0",
+        "url": "https://github.com/libesmtp/libesmtp/archive/refs/tags/v1.1.0.tar.gz",
+        "archive": "tar.gz", "build_system": "meson",
+        "sha256": "32bc3614ca12d21c7d933f32d43410e8744b6f91fdca7732da9877a385e4e6c3",
+        "configure": ["--buildtype=release", "-Dwerror=false", "-Dlwres=disabled",
+                      "-Dxdg=false", "-Dpthreads=enabled", "-Dtls=enabled"],
+        "make": [], "artifact": "b/libesmtp.so*", "launch": None,
+        # libesmtp's meson build takes its TLS dependency from `dependency('openssl')`, and the
+        # subject prefix ships libssl.pc/libcrypto.pc but no openssl.pc. The shim is a build
+        # input under the extracted tree, not a source edit; the same file is written for both
+        # subjects and points only at that subject's prefix.
+        "pre_build": [["sh", "-c",
+                       "mkdir -p {root}/.l7-pc && printf 'Name: OpenSSL\n"
+                       "Description: subject OpenSSL prefix\nVersion: 3.0.0\n"
+                       "Libs: -L{prefix}/lib -Wl,-rpath,{prefix}/lib -lssl -lcrypto\n"
+                       "Cflags: -I{prefix}/include\n' > {root}/.l7-pc/openssl.pc"]],
+        "env_extra": {"PKG_CONFIG_PATH": "{prefix}/lib/pkgconfig:{root}/.l7-pc"},
+        "note": ("libesmtp 1.1.0 built with meson/ninja; its STARTTLS path links the subject "
+                 "libssl through a prefix shim openssl.pc (the prefix ships no openssl.pc)"),
+    },
+    {
+        "family": "minizip-ng", "version": "4.0.10",
+        "url": "https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.0.10.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "c362e35ee973fa7be58cc5e38a4a6c23cc8f7e652555daf4f115a9eb2d3a6be7",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DMZ_OPENSSL=ON", "-DMZ_ZLIB=ON", "-DMZ_BZIP2=ON", "-DMZ_LZMA=ON",
+                      "-DMZ_ZSTD=OFF", "-DMZ_PKCRYPT=ON", "-DMZ_WZAES=ON", "-DMZ_COMPAT=ON",
+                      "-DMZ_BUILD_TESTS=OFF", "-DMZ_BUILD_UNIT_TESTS=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libminizip.so*", "launch": None,
+        "note": ("minizip-ng 4.0.10 built with CMake; WinZip AES encryption uses the subject "
+                 "libcrypto (zstd is disabled because the venue carries no zstd headers)"),
+    },
+    {
+        "family": "libtins", "version": "4.5",
+        "url": "https://github.com/mfontanini/libtins/archive/refs/tags/v4.5.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "6ff5fe1ada10daef8538743dccb9c9b3e19d05d028ffdc24838e62ff3fc55841",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DLIBTINS_ENABLE_PCAP=OFF",
+                      "-DLIBTINS_ENABLE_WPA2=ON", "-DLIBTINS_ENABLE_DOT11=ON",
+                      "-DLIBTINS_ENABLE_CXX11=ON", "-DLIBTINS_BUILD_EXAMPLES=OFF",
+                      "-DLIBTINS_BUILD_TESTS=OFF", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/lib/libtins.so*", "launch": None,
+        "note": ("libtins 4.5 with its WPA2 decryption path enabled; the PMK derivation uses "
+                 "the subject libcrypto's PBKDF2/HMAC (libpcap capture is disabled: the "
+                 "workload needs no capture device)"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b10): six library-only consumers. Each archive is the
+# pristine Debian upstream source, pinned by digest; the subject prefix is the only OpenSSL.
+_LUA54_AUX: tuple[dict, ...] = (
+    _aux_deb("l/lua5.4", "liblua5.4-0_5.4.4-3+deb12u1_amd64.deb",
+             "b042e78d02dd8457cf7de253ae89992e50050f450d9bec66843ffb1a14ab23c7",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("l/lua5.4", "liblua5.4-dev_5.4.4-3+deb12u1_amd64.deb",
+             "f02e06d3598de40a1df51ea4144668a1c6acb8813d4647a6d89cca0d256179d3",
+             include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_LUA_SOCKET_AUX: tuple[dict, ...] = (
+    _aux_deb("l/luasocket", "lua-socket_3.1.0-1+b1_amd64.deb",
+             "63217faf1d497a61e23f8b7a128a494a8db593f4965ead1411429d1a1e46d9dd",
+             library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_LIBU2F_AUX: tuple[dict, ...] = (
+    _aux_deb("j/json-c", "libjson-c5_0.16-2_amd64.deb",
+             "d0e1ed8637d1c26b9720f6057d6355f18378bba5cc2553e459d1632783c00d70",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("j/json-c", "libjson-c-dev_0.16-2_amd64.deb",
+             "b91a921675bde7c777930f9f77e49010a754d787219104464ea0fce04a887337",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("h/help2man", "help2man_1.49.3_amd64.deb",
+             "9b17251751ee4e813df789ba39c25841b9e26bf44206fd53ce4d34bc2d761eed",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gengetopt", "gengetopt_2.23+dfsg1-1_amd64.deb",
+             "b6cc627f20a806625603fa9f97071b4b7da662338e1f22829ffc92867e36695a",
+             bin_dirs=("usr/bin",)),
+)
+
+_DCAP_AUTOTOOLS: tuple[dict, ...] = (
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libltdl-dev_2.4.7-7~deb12u1_amd64.deb",
+             "60ad26b3007d4304a1141649d4e764a27735ff4f1835a62c845d51bd734932b0",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("g/gettext", "gettext_0.21-12_amd64.deb",
+             "8c1f9d43575373ce311f51d00a13afbb4888d63aa559a93a3472f5d77513b60c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gettext", "autopoint_0.21-12_all.deb",
+             "9864777e777f1f641858e27396bf7dd53c9b38197b7ac47388995ec60bb9789f",
+             bin_dirs=("usr/bin",)),
+)
+
+_L7_EXPAND7_SPECS: tuple[dict, ...] = (
+    {
+        "family": "getdns", "version": "1.7.3",
+        "url": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_SHARED=ON",
+                      "-DENABLE_STATIC=OFF", "-DBUILD_TESTING=OFF",
+                      "-DENABLE_STUB_ONLY=ON", "-DUSE_LIBIDN2=OFF",
+                      "-DBUILD_LIBEV=OFF", "-DBUILD_LIBEVENT2=OFF", "-DBUILD_LIBUV=OFF",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_GETDNS_QUERY=OFF",
+                      "-DBUILD_GETDNS_SERVER_MON=OFF", "-DBUILD_STUBBY=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libgetdns.so*", "launch": None,
+        "note": ("getdns 1.7.3 with the stub-only resolver and the poll event loop; its DoT client "
+                 "uses the subject libssl, and the test apps are disabled because the workload is "
+                 "the harness"),
+    },
+    {
+        "family": "libu2f-server", "version": "1.1.0",
+        "url": ("https://deb.debian.org/debian/pool/main/libu/libu2f-server/"
+                "libu2f-server_1.1.0.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+        "configure": ["--prefix={root}/.l7-install", "--disable-static", "--enable-shared",
+                      "--disable-tests"],
+        "make": ["-j4", "-C", "u2f-server", "CFLAGS=-O2 -DFALSE=0 -DTRUE=1"],
+        "artifact": "u2f-server/.libs/libu2f-server.so*", "launch": None,
+        "aux_sources": list(_LIBU2F_AUX),
+        "note": ("libu2f-server 1.1.0 with its P-256/ES256 verification path linked to the subject "
+                 "libcrypto; json-c is the pinned parser and the two command-line helpers satisfy "
+                 "its configure-time checks"),
+    },
+    {
+        "family": "lua-luaossl", "version": "20220711",
+        "url": ("https://deb.debian.org/debian/pool/main/l/lua-luaossl/"
+                "lua-luaossl_20220711.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+        "make": ["-f", "GNUmakefile", "all", "install5.4", "LUA_APIS=5.4",
+                 "prefix={root}/.l7-install",
+                 "LUA54_CPPFLAGS=-I{aux}/usr/include/lua5.4 "
+                 "-I{aux}/usr/include/x86_64-linux-gnu",
+                 "LUAC54=true", "CPPFLAGS=-I{prefix}/include",
+                 "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "src/5.4/openssl.so", "launch": None,
+        "aux_sources": list(_LUA54_AUX),
+        "note": ("lua-luaossl 20220711 built for Lua 5.4 against the subject libssl/libcrypto; the "
+                 "admitted workload is the Lua digest/HMAC harness"),
+    },
+    {
+        "family": "lua-sec", "version": "1.3.2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+        "make": ["linux", "EXTRA=luasocket", "DEFS=-DWITH_LUASOCKET",
+                 "INC_PATH=-I{aux}/usr/include/lua5.4 "
+                 "-I{aux}/usr/include/x86_64-linux-gnu -I{prefix}/include",
+                 "LIB_PATH=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "src/ssl.so", "launch": None,
+        "aux_sources": list(_LUA54_AUX) + list(_LUA_SOCKET_AUX),
+        "note": ("LuaSec 1.3.2 built for Lua 5.4 against the subject libssl, with its bundled "
+                 "LuaSocket support; the admitted workload is the Lua TLS client harness"),
+    },
+    {
+        "family": "duo_unix", "version": "1.11.3",
+        "url": "https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--with-pam=no"],
+        "make": ["-j4"], "artifact": "login_duo/login_duo", "launch": None,
+        "note": ("duo_unix 1.11.3's libduo HMAC-SHA1 request signing against the subject libcrypto; "
+                 "login_duo is the linked executable, and PAM is disabled because the workload "
+                 "drives libduo directly"),
+    },
+    {
+        "family": "dcap-tunnel-ssl", "version": "2.47.14",
+        "url": "https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+        "configure": ["--prefix={root}/.l7-install"],
+        "make": ["-j4", "-C", "plugins/ssl"],
+        "artifact": "plugins/ssl/.libs/libsslTunnel.so", "launch": None,
+        "aux_sources": list(_DCAP_AUTOTOOLS),
+        "pre_build": [["sh", "-c", (
+            "set -e; "
+            "W={root}/.autotools; mkdir -p $W; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+            "--system-acdir={aux}/usr/share/aclocal-1.16 "
+            "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+            "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+            "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+            "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+            "{aux}/usr/share/autoconf/autom4te.cfg; "
+            "mkdir -p {aux}/usr/share/libtool/m4; "
+            "cp {aux}/usr/share/aclocal/libtool.m4 {aux}/usr/share/aclocal/lt*.m4 "
+            "{aux}/usr/share/libtool/m4/; "
+            "touch NEWS; "
+            "autoreconf -fi"
+        )]],
+        "env_extra": {
+            "_lt_pkgdatadir": "{aux}/usr/share/libtool",
+            "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+            "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+            "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal:"
+                            "{aux}/usr/share/libtool/m4",
+            "ACLOCAL": "{root}/.autotools/aclocal",
+            "AUTOMAKE": "{root}/.autotools/automake",
+            "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+            "AUTOPOINT": "true",
+            "AUTOCONF": "{aux}/usr/bin/autoconf",
+            "AUTOHEADER": "{aux}/usr/bin/autoheader",
+            "AUTOM4TE": "{aux}/usr/bin/autom4te",
+            "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+            "AC_MACRODIR": "{aux}/usr/share/autoconf",
+            "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+            "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+            "M4": "{aux}/usr/bin/m4",
+        },
+        "note": ("dcap-tunnel-ssl 2.47.14's libsslTunnel plugin, the family's actual OpenSSL "
+                 "consumer, built against the subject libssl; the source has no generated "
+                 "configure, so the pinned bookworm autotools bootstrap it as a build input"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b11): three consumers whose pristine Debian source builds
+# against the subject prefix. gensio's ssl gensio, jimtcl's aio SSL extension and sofia-sip's
+# tport TLS transport are the OpenSSL paths driven by the runtime harnesses.
+_L7_EXPAND8_SPECS: tuple[dict, ...] = (
+    {
+        "family": "gensio", "version": "2.8.6",
+        "url": "https://deb.debian.org/debian/pool/main/g/gensio/gensio_2.8.6.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "3220816c23f34a4ccaea91eb8859c56233bcd8b2379b5f0e2b7c50074aa03cfb",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--with-ssl=yes", "--with-tcl=no", "--with-python=no",
+                      "--with-swig=no"],
+        "make": ["-j4"], "artifact": "lib/.libs/libgensio.so*", "launch": None,
+        "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("gensio 2.8.6's ssl gensio (lib/gensio_ssl.c) built against the subject "
+                 "libssl; the admitted workload is the loopback TLS request/response harness"),
+    },
+    {
+        "family": "jimtcl", "version": "0.81+dfsg0",
+        "url": ("https://deb.debian.org/debian/pool/main/j/jimtcl/"
+                "jimtcl_0.81+dfsg0.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "ab7eb3680ba0d16f4a9eb1e05b7fcbb7d23438e25185462c55cd032a1954a985",
+        "configure": ["--prefix={root}/.l7-install", "--ssl", "--shared"],
+        "make": ["-j4"], "artifact": "libjim.so*", "launch": None,
+        "env_extra": {"PKG_CONFIG_PATH": "{prefix}/lib/pkgconfig"},
+        "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("jimtcl 0.81 with the aio extension's OpenSSL SSL support (jim-aio.c) built "
+                 "against the subject libssl; the admitted workload is the TLS server harness"),
+    },
+    {
+        "family": "sofia-sip", "version": "1.12.11+20110422.1",
+        "url": ("https://deb.debian.org/debian/pool/main/s/sofia-sip/"
+                "sofia-sip_1.12.11+20110422.1.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "bfa615962e55688db441ae0c17d77a0831f4f50ee5ca45b0c75c7ebaf7eb95ab",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}"],
+        "make": ["-j4"], "artifact": "libsofia-sip-ua/.libs/libsofia-sip-ua.so*",
+        "launch": None, "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("sofia-sip 1.12.11's tport TLS transport (libsofia-sip-ua/tport/tport_tls.c) "
+                 "built against the subject libssl; the admitted workload is the SIP-over-TLS "
+                 "tport harness"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b12): five more pristine-source consumers. libtpms 0.9.2 and
+# liboauth2 1.4.5.4 need a generated `configure`; the same pinned autotools packages dcap-tunnel-ssl
+# already uses provide it. libnetconf2 links libssh/libyang and liboauth2 links cjose/libcurl from
+# pinned bookworm packages extracted through `aux_sources`; none of them provides an OpenSSL.
+_LIBSSH_AUX: tuple[dict, ...] = (
+    _aux_deb("libs/libssh", "libssh-4_0.10.6-0+deb12u2_amd64.deb",
+             "2158d90ac21364655fe0372b23341fa3f871146bf3525f7dffef6dfa8f28448a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libs/libssh", "libssh-dev_0.10.6-0+deb12u2_amd64.deb",
+             "c5dff9b2b855677e6451e35ab6f7e9a467c4c36a3d76c30526f9f66b0f978df7",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_LIBYANG_AUX: tuple[dict, ...] = (
+    _aux_deb("liby/libyang2", "libyang2_2.1.30-2_amd64.deb",
+             "a2d950fa7729dedad0d7bc581b67a185180bec49d03b38cf1917f3869b8bc618",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("liby/libyang2", "libyang2-dev_2.1.30-2_amd64.deb",
+             "419f94a3b360b71987e3810e09553b36a6e1e4d583cd2cd2132ccf41911544c0",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    # libyang's public headers include <pcre2.h>; the runtime library is the venue's.
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_CJOSE_AUX: tuple[dict, ...] = (
+    _aux_deb("c/cjose", "libcjose0_0.6.2.1-1+deb12u1_amd64.deb",
+             "f62f0a16704103dfcff1b6b9423839655bb5f1f7a84dd90e14f00cebf483107b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("c/cjose", "libcjose-dev_0.6.2.1-1+deb12u1_amd64.deb",
+             "97ffc1c18565f835b47914e904f261c0aee849a5c356dad8f60f5cc5fd792de7",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# liboauth2 1.4.5.4's configure requires a libcurl development entry point; the venue carries the
+# runtime library but no headers or `.pc`.
+_LIBCURL_AUX: tuple[dict, ...] = (
+    _aux_deb("c/curl", "libcurl4_7.88.1-10+deb12u15_amd64.deb",
+             "3042904de01f9c4fbdcf1452b8f81abedcf2b015f9b9deba109063322b5bd68b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("c/curl", "libcurl4-openssl-dev_7.88.1-10+deb12u15_amd64.deb",
+             "dbd69b15ecb49331f53fbc3483b0508997e2fab551e48c53951391f254b73890",
+             include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+# The dcap-tunnel-ssl autotools shim, reused verbatim: the pinned aclocal/automake wrappers keep
+# the extracted macros and libtool files off the venue's missing autotools installation.
+_AUTORECONF_PRE_BUILD = [["sh", "-c", (
+    "set -e; "
+    "W={root}/.l7-autotools; mkdir -p $W; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+    "--system-acdir={aux}/usr/share/aclocal-1.16 -I {aux}/usr/share/aclocal "
+    "-I /usr/share/aclocal --automake-acdir={aux}/usr/share/aclocal-1.16 "
+    "\"$@\"\\n' > $W/aclocal; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+    "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+    "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/share/autoconf/autom4te.cfg; "
+    "mkdir -p {aux}/usr/share/libtool/m4; "
+    "cp {aux}/usr/share/aclocal/libtool.m4 {aux}/usr/share/aclocal/lt*.m4 "
+    "{aux}/usr/share/libtool/m4/; "
+    "touch NEWS; "
+    "autoreconf -fi"
+)]]
+
+_AUTORECONF_ENV = {
+    "_lt_pkgdatadir": "{aux}/usr/share/libtool",
+    "M4": "{aux}/usr/bin/m4",
+    "AUTOM4TE": "{aux}/usr/bin/autom4te",
+    "AUTOCONF": "{aux}/usr/bin/autoconf",
+    "AUTOHEADER": "{aux}/usr/bin/autoheader",
+    "ACLOCAL": "{root}/.l7-autotools/aclocal",
+    "AUTOMAKE": "{root}/.l7-autotools/automake",
+    "LIBTOOLIZE": "{root}/.l7-autotools/libtoolize",
+    "AC_MACRODIR": "{aux}/usr/share/autoconf",
+    "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+    "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+    "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+    "PATH": "{root}/.l7-autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+    "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+}
+
+_L7_EXPAND9_SPECS: tuple[dict, ...] = (
+    {
+        "family": "libtpms", "version": "0.9.2",
+        "url": ("https://deb.debian.org/debian/pool/main/libt/libtpms/"
+                "libtpms_0.9.2.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "460047f880c5a17dfb8f5c92668fd2f0c508279d4cc3de0a779c21a09f966766",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl", "--with-tpm2"],
+        "make": ["-j4"], "artifact": "src/.libs/libtpms.so*", "launch": None,
+        "aux_sources": list(_DCAP_AUTOTOOLS),
+        "pre_build": _AUTORECONF_PRE_BUILD, "env_extra": dict(_AUTORECONF_ENV),
+        "note": ("libtpms 0.9.2 with TPM2 and the OpenSSL crypto library; the admitted workload "
+                 "drives TPM2_Startup/GetCapability/GetRandom through TPMLIB_Process"),
+    },
+    {
+        "family": "libre", "version": "1.1.0",
+        "url": "https://deb.debian.org/debian/pool/main/libr/libre/libre_1.1.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "82afc903a6b1e436b357f05eb11560ec681712291dd9c83c408465c895f28b5d",
+        "make": ["-j4", "SYSROOT_ALT={prefix}", "PREFIX={root}/.l7-install"],
+        "artifact": "libre.so*", "launch": None,
+        "note": ("libre 1.1.0's tls/tcp backend (src/tls/openssl) with USE_OPENSSL from the "
+                 "subject prefix; the admitted workload is a loopback TLS session + wrong-CA "
+                 "reject"),
+    },
+    {
+        "family": "arm-trusted-firmware-tools", "version": "2.8.0+dfsg",
+        "url": ("https://deb.debian.org/debian/pool/main/a/arm-trusted-firmware/"
+                "arm-trusted-firmware_2.8.0+dfsg.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "make", "configure": None,
+        "sha256": "a4ecc35e0b893fe8682c075fc1bdb858de87e4cb18fbed9a1597e2c9f6d320de",
+        "pre_build": [["make", "-C", "tools/cert_create", "OPENSSL_DIR={prefix}"]],
+        "make": ["-C", "tools/fiptool", "OPENSSL_DIR={prefix}"],
+        "artifact": "tools/fiptool/fiptool", "launch": None,
+        "note": ("TF-A 2.8.0's cert_create and fiptool built against the subject libcrypto; the "
+                 "admitted workload signs a certificate chain, verifies it, and rejects a "
+                 "tampered certificate and a tampered FIP"),
+    },
+    {
+        "family": "libnetconf2", "version": "2.0.24",
+        "url": ("https://deb.debian.org/debian/pool/main/libn/libnetconf2/"
+                "libnetconf2_2.0.24.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "78ffa0bd85823abd321a1dbb09c1ead36612f2a12049638a14bb081567f86ade",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_TESTS=OFF",
+                      "-DENABLE_SSH=ON", "-DENABLE_TLS=ON", "-DENABLE_COVERAGE=OFF",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_INCLUDE_PATH={aux}/usr/include",
+                      "-DCMAKE_LIBRARY_PATH={aux}/usr/lib/x86_64-linux-gnu",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include"],
+        "make": [], "artifact": "b/libnetconf2.so*", "launch": None,
+        "aux_sources": list(_LIBSSH_AUX) + list(_LIBYANG_AUX),
+        "note": ("libnetconf2 2.0.24 with SSH and TLS enabled: its TLS session client uses the "
+                 "subject libssl, while libssh 0.10.6 and libyang 2.1.30 are the pinned "
+                 "bookworm dependencies (neither provides an OpenSSL on the link line)"),
+    },
+    {
+        "family": "liboauth2", "version": "1.4.5.4",
+        "url": ("https://deb.debian.org/debian/pool/main/libo/liboauth2/"
+                "liboauth2_1.4.5.4.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "a7ab1fee6d9c88501e22ca73e28365aaaac298c811b01beacb3bf7e1cddbe9e5",
+        "configure": ["--prefix={root}/.l7-install", "--with-apache=no",
+                      "--with-memcache=no", "--with-redis=no"],
+        "make": ["-j4"], "artifact": ".libs/liboauth2.so*", "launch": None,
+        "aux_sources": (list(_DCAP_AUTOTOOLS) + list(_CJOSE_AUX) + list(_LIBCURL_AUX)),
+        "pre_build": _AUTORECONF_PRE_BUILD, "env_extra": dict(_AUTORECONF_ENV),
+        "note": ("liboauth2 1.4.5.4's JOSE path: cjose 0.6.2.1 performs JWS/JWE with the subject "
+                 "libcrypto while liboauth2 hashes with the subject EVP interface; libcurl is "
+                 "the pinned development entry point its configure requires"),
+    },
+)
+
+# Pinned ncurses/readline development packages for the text browsers and lftp. The venue ships
+# neither header, and both are pure terminal libraries (they provide no OpenSSL).
+_NCURSES_AUX: tuple[dict, ...] = (
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("n/ncurses", "libtinfo-dev_6.4-4_amd64.deb",
+             "e1935c2006661f1cda0bfd35f12ea30f9d64a110f30a074d512efe6c9466bf86",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_READLINE_AUX: tuple[dict, ...] = (
+    _aux_deb("r/readline", "libreadline-dev_8.2-1.3_amd64.deb",
+             "23b2f03bc073dcd3ac4638675ddccbda2e8d7348bb83dd648c55dfb8077e8672",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# swtpm's non-OpenSSL dependency closure: glib/gobject/gio (json-glib) and the pinned libtpms the
+# TPM2 backend calls. None of them provides libssl/libcrypto; libtpms0 is itself a consumer and
+# resolves to the subject libcrypto at run time.
+_SWTPM_AUX: tuple[dict, ...] = (
+    _aux_deb("g/glib2.0", "libglib2.0-dev_2.74.6-2+deb12u9_amd64.deb",
+             "217766f170553e14884f7d67c0636b833da43c1e4a65dfe41268ba1292001ccd",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("g/glib2.0", "libglib2.0-0_2.74.6-2+deb12u9_amd64.deb",
+             "7ff85197685d89e150e342b29a59aab1beee400050ba7da73de81cd999ffee5a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libf/libffi", "libffi-dev_3.4.4-1_amd64.deb",
+             "89fb890aee5148f4d308a46cd8980a54fd44135f068f05b38a6ad06800bf6df3",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libf/libffi", "libffi8_3.4.4-1_amd64.deb",
+             "6d9f6c25c30efccce6d4bceaa48ea86c329a3432abb360a141f76ac223a4c34a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("j/json-glib", "libjson-glib-dev_1.6.6-1_amd64.deb",
+             "7af7f57f8b4e12f03a4ef3dc2a631d3c32f5d7bc26ac4319a7f813207f9339d6",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("j/json-glib", "libjson-glib-1.0-0_1.6.6-1_amd64.deb",
+             "b8d407ece57b0dc2e6d2895625a2485b1eb49294b8db0fdb780fb8211fe9e635",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libt/libtpms", "libtpms-dev_0.9.2-3.2_amd64.deb",
+             "c605656a04aa0fad233866a5e9cdfe50b25ccb3accf65cc808fa3c7ec210d8af",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libt/libtpms", "libtpms0_0.9.2-3.2_amd64.deb",
+             "6748109482aeabfa564b33ddd158aab8e26dabf5943389b372d9dd6c7d5564d4",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libt/libtasn1-6", "libtasn1-6-dev_4.19.0-2+deb12u1_amd64.deb",
+             "7fec7d9df23aa7de25a36c5752cefd8d1e45fbfa0889150de9384281a4329bf7",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libt/libtasn1-6", "libtasn1-6_4.19.0-2+deb12u1_amd64.deb",
+             "2c27c613b69be248d09432839ea3d3382f6ee27fabaa65987aa2d884cd00afda",
+             library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# swtpm's configure requires the test tools expect/gawk/socat/netstat and gio-2.0's private
+# Requires name mount/libselinux. None is part of the runtime path; the shims only satisfy
+# configure's probes, and the two stub .pc files carry no libraries. gawk maps to the venue's
+# /usr/bin/awk because setup generates its Makefiles with it.
+_SWTPM_PRE_BUILD = [
+    ["sh", "-c", (
+        "set -e; "
+        "mkdir -p m4 {root}/.l7-bin {root}/.l7-pc; "
+        "printf '#!/bin/sh\\nexec /usr/bin/awk \"$@\"\\n' > {root}/.l7-bin/gawk; "
+        "for t in netstat expect socat; do "
+        "printf '#!/bin/sh\\nexit 0\\n' > {root}/.l7-bin/$t; done; "
+        "chmod +x {root}/.l7-bin/*; "
+        "printf 'prefix=/nonexistent\\nName: mount\\nDescription: mount\\nVersion: 2.38\\n"
+        "Libs:\\nCflags:\\n' > {root}/.l7-pc/mount.pc; "
+        "printf 'prefix=/nonexistent\\nName: libselinux\\nDescription: libselinux\\n"
+        "Version: 3.4\\nLibs:\\nCflags:\\n' > {root}/.l7-pc/libselinux.pc"
+    )],
+    *_AUTORECONF_PRE_BUILD,
+]
+
+_SWTPM_ENV: dict[str, str] = dict(_AUTORECONF_ENV)
+_SWTPM_ENV["PATH"] = ("{root}/.l7-autotools:{root}/.l7-bin:{aux}/usr/bin:"
+                      + os.environ.get("PATH", ""))
+_SWTPM_ENV["PKG_CONFIG_PATH"] = ("{root}/.l7-pc:{aux}/usr/lib/x86_64-linux-gnu/pkgconfig:"
+                                 "{prefix}/lib/pkgconfig")
+
+# The Phase-25 L7 expansion batch (b13).
+_L7_EXPAND10_SPECS: tuple[dict, ...] = (
+    {
+        "family": "elinks", "version": "0.16.1",
+        "url": ("https://github.com/rkd77/elinks/releases/download/v0.16.1/"
+                "elinks-0.16.1.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--without-gnutls", "--without-zlib", "--without-bzlib",
+                      "--without-lzma", "--without-gpm", "--without-libev",
+                      "--disable-nls"],
+        "make": ["-j4"], "artifact": "src/elinks", "launch": ["-version"],
+        "note": ("ELinks 0.16.1's HTTPS client path (src/network/ssl) linked against the subject "
+                 "libssl; the admitted workload dumps a local HTTPS page and rejects an unrelated "
+                 "CA"),
+    },
+    {
+        "family": "lynx", "version": "2.9.2",
+        "url": ("https://deb.debian.org/debian/pool/main/l/lynx/"
+                "lynx_2.9.2.orig.tar.bz2"),
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}",
+                      "--with-screen=ncursesw", "--with-curses-dir={aux}/usr",
+                      "--disable-nls", "--without-bzlib", "--without-zlib"],
+        "make": ["-j4"], "artifact": "src/lynx", "launch": ["-version"],
+        "aux_sources": list(_NCURSES_AUX),
+        "ldflags_extra": ("-Wl,-rpath,{prefix}/lib "
+                          "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"),
+        "note": ("Lynx 2.9.2's HTTPS client (src/HTSSL.c) linked against the subject libssl; "
+                 "ncursesw is the pinned terminal library and the admitted workload is a "
+                 "`-dump` of a local HTTPS page"),
+    },
+    {
+        "family": "lftp", "version": "4.9.3",
+        "url": ("https://deb.debian.org/debian/pool/main/l/lftp/"
+                "lftp_4.9.3.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--without-gnutls", "--without-expat", "--with-readline={aux}/usr"],
+        "make": ["-j4"], "artifact": "src/lftp", "launch": ["--version"],
+        "aux_sources": list(_NCURSES_AUX) + list(_READLINE_AUX),
+        "ldflags_extra": ("-Wl,-rpath,{prefix}/lib "
+                          "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"),
+        "note": ("lftp 4.9.3 with --with-openssl (src/lftp_ssl.cc): the admitted workload gets a "
+                 "file over a verified local HTTPS session and rejects an unrelated CA; "
+                 "readline/ncurses are the pinned terminal libraries"),
+    },
+    {
+        "family": "swtpm", "version": "0.7.1",
+        "url": "https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl", "--without-cuse",
+                      "--without-selinux", "--without-seccomp", "--without-gnutls"],
+        "make": ["-j4"], "artifact": "src/swtpm/.libs/libswtpm_libtpms.so*",
+        "launch": ["--version"],
+        "aux_sources": (list(_SWTPM_AUX) + list(_DCAP_AUTOTOOLS)),
+        "pre_build": _SWTPM_PRE_BUILD, "env_extra": dict(_SWTPM_ENV),
+        "ldflags_extra": ("-Wl,-rpath,{prefix}/lib "
+                          "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"),
+        "note": ("swtpm 0.7.1's TPM2 socket front end linked against the subject libcrypto; "
+                 "libtpms, glib and json-glib are pinned bookworm packages and the admitted "
+                 "workload drives TPM2_Startup/GetRandom over swtpm's TCP data channel"),
+    },
+    {
+        "family": "httping", "version": "2.5",
+        "url": "https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+        "configure": None, "make": ["SSL=yes", "httping"], "artifact": "httping",
+        "launch": ["-V"],
+        "env_extra": {"CFLAGS": "-I{prefix}/include"},
+        "ldflags_extra": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib",
+        "note": ("httping 2.5 built with SSL=yes (its configure probe cannot see the prefix on "
+                 "its own); the admitted workload pings a local HTTPS page and a plain-TCP "
+                 "listener must fail the TLS handshake"),
+    },
+)
+
+_LATE_RECIPE_OVERRIDES: dict[str, dict] = {
+    "libssh": {
+        "build_system": "cmake",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DWITH_GSSAPI=OFF", "-DWITH_ZLIB=ON", "-DWITH_PCAP=OFF",
+                      "-DWITH_SERVER=OFF", "-DBUILD_EXAMPLES=OFF", "-DUNIT_TESTING=OFF"],
+        "make": [], "artifact": "b/lib/libssh.so*", "launch": None,
+        "note": ("libssh 0.10.6 built by CMake against the subject libssl/libcrypto; the admitted "
+                 "workload imports a pinned RSA private key and checks its exported public blob"),
+    },
+}
 
 RECIPES: tuple[dict, ...] = _build_catalogue()
 _RECIPE_BY_FAMILY: dict[str, dict] = {r["family"]: r for r in RECIPES}
@@ -553,6 +2831,73 @@ def _no_recipe_row(fam: dict, subject: str, limits: dict) -> dict:
         limits=limits, prefix=Path("/"))
 
 
+def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
+    """Acquire and extract a recipe's pinned auxiliary dependency packages.
+
+    A recipe may name `aux_sources` (a non-subject dependency the venue does not ship as a
+    development package). Each is fetched by URL, refused unless its bytes match the authored
+    SHA-256, extracted under the family's scratch directory, and exposed to the build through
+    include/library/pkg-config paths. The subject OpenSSL is still the only OpenSSL: nothing here
+    provides or replaces libssl/libcrypto.
+    """
+    specs = recipe.get("aux_sources") or []
+    if not specs:
+        return {}, None
+    aux_root = work / "aux"
+    include_dirs: list[str] = []
+    library_dirs: list[str] = []
+    pkgconfig_dirs: list[str] = []
+    bin_dirs: list[str] = []
+    rewritten_pc: set[str] = set()
+    for spec in specs:
+        aux_root.mkdir(parents=True, exist_ok=True)
+        name = str(spec["url"]).rsplit("/", 1)[-1]
+        archive = aux_root / name
+        fetch = census._fetch(str(spec["url"]), archive)
+        if not fetch["ok"] or not archive.is_file():
+            return {}, (f"fetching the auxiliary package {name} failed: "
+                        f"{census._error_line(fetch)}")
+        observed = sha256_file(archive)
+        if observed != spec["sha256"]:
+            return {}, (f"the auxiliary package {name} digest {observed} does not match the "
+                        f"pinned {spec['sha256']}")
+        root = aux_root / "root"
+        extract = census._run([*(spec.get("extract") or ["tar", "xf"]), str(archive),
+                               str(root)], timeout=STEP_TIMEOUT)
+        if not extract["ok"]:
+            return {}, (f"extracting the auxiliary package {name} failed: "
+                        f"{census._error_line(extract)}")
+        include_dirs += [str(root / d) for d in spec.get("include_dirs") or []]
+        library_dirs += [str(root / d) for d in spec.get("library_dirs") or []]
+        bin_dirs += [str(root / d) for d in spec.get("bin_dirs") or []]
+        for rel_dir in spec.get("pkgconfig_dirs") or []:
+            pc_dir = root / rel_dir
+            # The package's .pc names /usr as its prefix; move it under the extracted root so the
+            # compiler and linker see exactly the pinned header and development symlink.
+            for pc in sorted(pc_dir.glob("*.pc")):
+                # One shared package directory can be named by several specs (the same
+                # `usr/lib/<arch>/pkgconfig`); each .pc must be rewritten exactly once or the
+                # second substitution would prefix the already-rewritten prefix again.
+                if str(pc) in rewritten_pc:
+                    continue
+                rewritten_pc.add(str(pc))
+                pc.write_text(pc.read_text(encoding="utf-8").replace("/usr", f"{root}/usr"),
+                              encoding="utf-8")
+            pkgconfig_dirs.append(str(pc_dir))
+        for link, target in (spec.get("links") or {}).items():
+            link_path = root / link
+            link_path.parent.mkdir(parents=True, exist_ok=True)
+            if link_path.is_symlink() or link_path.is_file():
+                link_path.unlink()
+            elif link_path.is_dir():
+                # A package may already place a directory at the path a link must replace (the
+                # multiarch Qt mkspecs); the pinned link is the complete replacement.
+                shutil.rmtree(link_path)
+            link_path.symlink_to(str(target))
+    return {"include_dirs": include_dirs, "library_dirs": library_dirs,
+            "pkgconfig_dirs": pkgconfig_dirs, "bin_dirs": bin_dirs}, None
+
+
 def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, subject: str,
                      prefix: Path, defined: set[str], authority_prefix: Path, limits: dict) -> dict:
     """Build one family's pristine source against one subject and return its run row."""
@@ -590,21 +2935,87 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
                PKG_CONFIG_PATH=f"{prefix}/lib/pkgconfig",
                CPPFLAGS=f"-I{prefix}/include",
                LDFLAGS=f"-L{prefix}/lib")
+    # A recipe may name pinned auxiliary dependency packages the venue does not ship as
+    # development headers (fido2's libudev-dev). They are acquired by digest and added to the
+    # build environment; the subject prefix remains the only OpenSSL.
+    # A template recipe may name a ``pkgconfig_shim``: several upstream configure scripts probe
+    # with `pkg-config libssl`, while the candidate drop-in install ships no openssl.pc.  The shim
+    # is a generated build input (never a source patch) and is written identically for both
+    # subjects, so the identical-build-intent rule is preserved.
+    if recipe.get("pkgconfig_shim"):
+        shim = templates.write_pkgconfig_shim(work, prefix)
+        env["PKG_CONFIG_PATH"] = os.pathsep.join([str(shim), env["PKG_CONFIG_PATH"]])
+
+    aux, aux_err = _prepare_aux(recipe, work)
+    if aux_err:
+        return _subject_row(
+            fam, recipe, subject, level=L1, outcome="failed", residual="unavailable",
+            failure_class="acquire-failure", reason=aux_err,
+            specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
+            evidence=[f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
+                      f"source:{recipe['url']}#{archive_sha}"],
+            steps=steps, canvas=None, limits=limits, prefix=prefix,
+            source_root_hash=root_hash)
+    if aux.get("include_dirs"):
+        env["CPPFLAGS"] += "".join(f" -I{d}" for d in aux["include_dirs"])
+    if aux.get("library_dirs"):
+        env["LDFLAGS"] += "".join(f" -L{d}" for d in aux["library_dirs"])
+    if aux.get("pkgconfig_dirs"):
+        env["PKG_CONFIG_PATH"] = os.pathsep.join(
+            [*aux["pkgconfig_dirs"], env["PKG_CONFIG_PATH"]])
+    # A package whose `configure` probes a dependency by *running* a linked program (memcached's
+    # libevent version check) needs that dependency loadable at probe time, and a package whose
+    # build invokes a dependency's own `-config` script (icecast's xslt-config) needs it on PATH.
+    if aux.get("library_dirs"):
+        env["LD_LIBRARY_PATH"] = os.pathsep.join(
+            [*aux["library_dirs"], str(prefix / "lib"),
+             env.get("LD_LIBRARY_PATH", "")]).rstrip(os.pathsep)
+    if aux.get("bin_dirs"):
+        env["PATH"] = os.pathsep.join([*aux["bin_dirs"], env.get("PATH", "")])
     # A recipe may extend the link environment (24.17's isync override adds -Wl,-rpath-link so the
     # subject lib dir resolves libssl's transitive libcrypto dependency). Substituted identically for
     # both subjects, so the identical-build-intent rule holds.
     if recipe.get("ldflags_extra"):
-        env["LDFLAGS"] = env["LDFLAGS"] + " " + str(recipe["ldflags_extra"]).format(prefix=prefix)
+        env["LDFLAGS"] = env["LDFLAGS"] + " " + str(recipe["ldflags_extra"]).format(
+            prefix=prefix, root=root, aux=work / "aux" / "root", repo=REPO_ROOT)
     # A recipe may extend the environment with prefix-derived variables (24.18's admitted recipes
     # carry the consumer's own `OPENSSL_CFLAGS`/`OPENSSL_LIBS` override, because the candidate install
     # ships no `openssl.pc` while the authority does). Substituted identically for both subjects, so
     # the identical-build-intent rule holds.
     for key, val in (recipe.get("env_extra") or {}).items():
-        env[str(key)] = str(val).format(prefix=prefix)
+        env[str(key)] = str(val).format(prefix=prefix, root=root,
+                                        aux=work / "aux" / "root", repo=REPO_ROOT)
 
     level = L1
-    if recipe["build_system"] in ("autotools", "configure"):
-        argv = ["./configure"] + [a.format(prefix=prefix) for a in recipe["configure"]]
+    build_system = str(recipe["build_system"])
+    build_dir = str(recipe.get("build_dir") or "b")
+
+    # A recipe may need generated build inputs before its own configure/make runs
+    # (u-boot-tools seeds the host-tools Kconfig files its bison/flex-free build
+    # cannot generate here). These are build outputs, never source edits, and the
+    # same argv is run for both subjects.
+    for step in recipe.get("pre_build") or []:
+        body = {"prefix": prefix, "root": root, "aux": work / "aux" / "root",
+                "repo": REPO_ROOT}
+        argv = [str(a).format(**body) for a in step]
+        pre = stage("pre-build", census._run(argv, cwd=root, env=env))
+        if not pre["ok"]:
+            return _subject_row(
+                fam, recipe, subject, level=L1, outcome="failed", residual="unbuildable",
+                failure_class="configure-failure",
+                reason=f"the pre-build step failed: {census._error_line(pre)}",
+                specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
+                evidence=[f"family:{fam.get('family_id')}",
+                          f"recipe:{recipe['recipe_id']}",
+                          f"source:{recipe['url']}#{archive_sha}"],
+                steps=steps, canvas=None, limits=limits, prefix=prefix,
+                source_root_hash=root_hash)
+
+    if build_system in ("autotools", "configure"):
+        argv = ["./configure"] + [a.format(prefix=prefix, root=root,
+                                           aux=work / "aux" / "root",
+                                           repo=REPO_ROOT)
+                                  for a in recipe["configure"]]
         conf = stage("configure", census._run(argv, cwd=root, env=env))
         if not conf["ok"]:
             return _subject_row(
@@ -617,8 +3028,57 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
                 steps=steps, canvas=None, limits=limits, prefix=prefix,
                 source_root_hash=root_hash)
         level = L2
+    elif build_system == "cmake":
+        argv = (["cmake", "-S", ".", "-B", build_dir]
+                + [a.format(prefix=prefix, root=root, aux=work / "aux" / "root",
+                            repo=REPO_ROOT)
+                   for a in recipe.get("configure") or []])
+        # An auxiliary package exposes a development symlink under the extracted root; CMake's
+        # pkg-config module emits `-ludev` but not the producing `-L`, so the shared-link flags
+        # must name it explicitly (the recipe's own flags remain the defaults for subprocesses).
+        if aux.get("library_dirs"):
+            link_flags = (f"-L{prefix}/lib -Wl,-rpath,{prefix}/lib"
+                          + "".join(f" -L{d}" for d in aux["library_dirs"]))
+            argv.append(f"-DCMAKE_SHARED_LINKER_FLAGS={link_flags}")
+        conf = stage("configure", census._run(argv, cwd=root, env=env))
+        if not conf["ok"]:
+            return _subject_row(
+                fam, recipe, subject, level=L1, outcome="failed", residual="unbuildable",
+                failure_class="configure-failure",
+                reason=f"cmake configure failed: {census._error_line(conf)}",
+                specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
+                evidence=[f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
+                          f"source:{recipe['url']}#{archive_sha}"],
+                steps=steps, canvas=None, limits=limits, prefix=prefix,
+                source_root_hash=root_hash)
+        level = L2
+    elif build_system == "meson":
+        argv = (["meson", "setup", build_dir]
+                + [a.format(prefix=prefix, root=root, aux=work / "aux" / "root",
+                            repo=REPO_ROOT)
+                   for a in recipe.get("configure") or []])
+        conf = stage("configure", census._run(argv, cwd=root, env=env))
+        if not conf["ok"]:
+            return _subject_row(
+                fam, recipe, subject, level=L1, outcome="failed", residual="unbuildable",
+                failure_class="configure-failure",
+                reason=f"meson setup failed: {census._error_line(conf)}",
+                specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
+                evidence=[f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
+                          f"source:{recipe['url']}#{archive_sha}"],
+                steps=steps, canvas=None, limits=limits, prefix=prefix,
+                source_root_hash=root_hash)
+        level = L2
+    # Any other recipe is the established plain-`make` form: no configure step, the recipe's
+    # own make argv runs directly in the extracted tree.
 
-    make_argv = ["make"] + [a.format(prefix=prefix) for a in recipe["make"]]
+    if build_system == "cmake":
+        make_argv = ["cmake", "--build", build_dir, "--parallel", str(MAKE_JOB_COUNT)]
+    elif build_system == "meson":
+        make_argv = ["ninja", "-C", build_dir]
+    else:
+        make_argv = ["make"] + [a.format(prefix=prefix, root=root, aux=work / "aux" / "root",
+                                         repo=REPO_ROOT) for a in recipe["make"]]
     build = stage("make", census._run(make_argv, cwd=root, env=env))
     if not build["ok"]:
         return _subject_row(
@@ -819,8 +3279,18 @@ def candidate_identity() -> dict:
     return ident
 
 
-def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str) -> dict:
-    """Measure the whole P1000 under both subjects and return the atlas `body`."""
+def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
+                 *, only: set[str] | None = None,
+                 reuse: dict | None = None,
+                 allow_superseded: bool = False) -> dict:
+    """Measure the whole P1000 under both subjects and return the atlas `body`.
+
+    `only`/`reuse` are the evidence-reuse seam: with a committed atlas whose candidate identity
+    is byte-identical to the current candidate install, the unchanged families keep their
+    previously measured rows and only `only` is rebuilt.  `allow_superseded` is the explicit
+    escape hatch for a candidate rebuild (it never claims a match): the reused rows remain bound
+    to the committed identity, which is recorded in `evidence_reuse.superseded_identity`.
+    """
     auth_prefix = resolve_authority(authority_id).prefix
     if not (CANDIDATE_PREFIX / "lib" / "libssl.so.3").is_file():
         raise SystemExit(f"[downstream-build-link] the candidate install prefix "
@@ -833,6 +3303,28 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str) -> d
     rows: list[dict] = []
     specimens: list[dict] = []
     variants: list[dict] = []
+    reuse_runs: dict[tuple[str, str], dict] = {}
+    reuse_specimens: dict[str, dict] = {}
+    reuse_variants: dict[str, dict] = {}
+    reused_families: list[str] = []
+    superseded: dict[str, dict] = {}
+    committed_identity: dict = {}
+    if reuse:
+        current = candidate_identity()
+        committed = reuse.get("candidate_identity") or {}
+        committed_identity = copy.deepcopy(committed)
+        for field in ("libssl_so_3_sha256", "libcrypto_so_3_sha256", "install_prefix"):
+            if str(current.get(field)) != str(committed.get(field)):
+                if not allow_superseded:
+                    raise SystemExit(
+                        f"[downstream-build-link] --reuse-committed refuses the committed atlas: "
+                        f"its candidate_identity.{field} is not the current candidate install")
+                superseded[field] = {"committed": str(committed.get(field)),
+                                     "current": str(current.get(field))}
+        for r in reuse.get("runs") or []:
+            reuse_runs[(str(r.get("family_id")), str(r.get("subject")))] = r
+        reuse_specimens = {str(s.get("specimen_id")): s for s in reuse.get("specimens") or []}
+        reuse_variants = {str(v.get("variant_id")): v for v in reuse.get("variants") or []}
     for entry in p1000:
         name = str(entry.get("canonical_name"))
         fam = {
@@ -846,6 +3338,28 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str) -> d
         if recipe is None:
             rows.append(_no_recipe_row(fam, "authority", limits))
             rows.append(_no_recipe_row(fam, "candidate", limits))
+            continue
+        if (only is not None and name not in only
+                and (str(entry.get("family_id")), "authority") in reuse_runs
+                and (str(entry.get("family_id")), "candidate") in reuse_runs
+                and reuse_runs[(str(entry.get("family_id")), "authority")].get("recipe_id")
+                == recipe["recipe_id"]
+                and reuse_runs[(str(entry.get("family_id")), "candidate")].get("recipe_id")
+                == recipe["recipe_id"]):
+            rows.append(copy.deepcopy(reuse_runs[(str(entry.get("family_id")), "authority")]))
+            rows.append(copy.deepcopy(reuse_runs[(str(entry.get("family_id")), "candidate")]))
+            if superseded:
+                # Durable provenance: the marker survives into the next atlas so a subsequent
+                # incremental run cannot silently relabel these rows as current-candidate evidence.
+                for row in rows[-2:]:
+                    row["reused_from_candidate_identity"] = committed_identity
+            spec = reuse_specimens.get(f"specimen:{name}:{recipe['version']}")
+            var = reuse_variants.get(f"variant:{name}:{recipe['version']}:pristine")
+            if spec:
+                specimens.append(copy.deepcopy(spec))
+            if var:
+                variants.append(copy.deepcopy(var))
+            reused_families.append(name)
             continue
         fam_rows, specimen, variant = measure_family(
             fam, recipe, auth_prefix, CANDIDATE_PREFIX, auth_defined, cand_defined, limits)
@@ -865,6 +3379,12 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str) -> d
     variants.sort(key=lambda v: str(v["variant_id"]))
 
     counts = _counts(p1000, rows)
+    current_identity = candidate_identity()
+    carried = {}
+    for r in rows:
+        marker = r.get("reused_from_candidate_identity")
+        if marker and marker != current_identity:
+            carried[tuple(sorted(marker.items()))] = marker
     body = {
         "rule": RULE,
         "authority": authority_id,
@@ -884,6 +3404,14 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str) -> d
         "counts": counts,
         "resource_limits": limits,
         "non_claims": NON_CLAIMS,
+        "evidence_reuse": ({
+            "mode": ("committed-rows-carried-forward"
+                     if (superseded or carried) else "committed-rows"),
+            "families_reused": len(reused_families),
+            "reused_families": sorted(reused_families),
+            "candidate_identity_match": not (superseded or carried),
+            "superseded_identity": superseded or (list(carried.values()) or None),
+        } if reuse else None),
     }
     return body
 
@@ -1250,7 +3778,8 @@ def _load_freeze() -> tuple[dict, dict]:
     return freeze_doc, families_body
 
 
-def cmd_measure(authority_id: str) -> int:
+def cmd_measure(authority_id: str, only: set[str] | None = None,
+                reuse: dict | None = None, allow_superseded: bool = False) -> int:
     freeze_doc, families_body = _load_freeze()
     freeze_body = freeze_doc["body"]
     if len(freeze_body.get("p1000") or []) != 1000:
@@ -1261,7 +3790,8 @@ def cmd_measure(authority_id: str) -> int:
     print(f"[downstream-build-link] building the P1000 recipes against both subjects "
           f"(authority {authority_id} + candidate {rel(CANDIDATE_PREFIX)})")
     started = time.monotonic()
-    body = derive_atlas(families_body, freeze_body, authority_id)
+    body = derive_atlas(families_body, freeze_body, authority_id, only=only, reuse=reuse,
+                        allow_superseded=allow_superseded)
     census._cleanup(SCRATCH)
     findings = build_link_findings(families_body, freeze_body, body)
     control = build_link_sensitivity_control(families_body, freeze_body, body)
@@ -1377,6 +3907,13 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
     ap.add_argument("--measure", action="store_true",
                     help="run the real builds and write the atlas (in-container)")
+    ap.add_argument("--only", default="",
+                    help="comma-separated families to rebuild; the rest are reused")
+    ap.add_argument("--reuse-committed", action="store_true",
+                    help="reuse unchanged families' rows from the committed atlas")
+    ap.add_argument("--reuse-previous-candidate", action="store_true",
+                    help=("with --reuse-committed, allow rows bound to a different (previous) "
+                          "candidate install and record the mismatch explicitly"))
     ap.add_argument("--check", action="store_true",
                     help="validate the committed atlas without rebuilding (in-container)")
     ap.add_argument("--self-test", action="store_true",
@@ -1391,7 +3928,10 @@ def main(argv: list[str]) -> int:
         return self_test()
     if args.check:
         return cmd_check(args.authority)
-    return cmd_measure(args.authority)
+    only = {s.strip() for s in str(args.only).split(",") if s.strip()} or None
+    reuse = _load_atlas() if args.reuse_committed and OUT.is_file() else None
+    return cmd_measure(args.authority, only=only, reuse=reuse,
+                       allow_superseded=bool(args.reuse_previous_candidate))
 
 
 if __name__ == "__main__":

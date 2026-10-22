@@ -8405,7 +8405,9 @@ family can be called `SAFE_COMPATIBLE` it still needs a full census
 regeneration/re-binding at a SEAL point, SEAL dependency-closure evidence,
 independent review of these receipts, and the downstream consumer courts
 (deepened L7 evidence for curl, haproxy, isync, monit, nginx, openssh,
-pure-ftpd and redis, plus the 25 L4-only families).
+pure-ftpd and redis, plus the 25 L4-only families). *(Superseded 2026-10-20 by
+the L7 campaign: `runtime-functional-atlas.json` now records the whole 33-family
+cohort at `L7-functional`.)*
 
 ## CENSUS DELTA — 877-file reconciliation (2026-10-20)
 
