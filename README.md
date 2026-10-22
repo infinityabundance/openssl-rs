@@ -35,7 +35,7 @@ Source identity: crate version `0.0.31`; `libcrypto.so.3` sha256 `857b72cc760ba2
 |---|---|---|
 | **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`) |
 | **Downstream drop-in, 1000-family corpus** | **145 / 1000 at `L7-functional`**; candidate 145 = authority 145; **0 failed**; 146 loaded; 854 not attempted | same atlas, `body.counts.by_subject` |
-| **Library test suite** | **1,747 passing, 0 failing, 42 ignored** | `atlas-refresh/publish-0.0.30.json` |
+| **Library test suite** | **1,962 passing, 0 failing, 44 ignored** at `3ee81389e` — a **floor**, not the current count: later commits add tests without a further full run | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **5 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
 | **Memory safety: boundaries** | 5 scoped boundary discharges (B23, B25, B27, B28, B29); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: file census** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |

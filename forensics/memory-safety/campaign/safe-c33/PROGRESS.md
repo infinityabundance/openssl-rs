@@ -58,10 +58,9 @@ generator is measurement-only and claims no discharge.
   **3 `BOUNDARY_COVERED` production helpers** at existing shared boundaries.
   Combined partition: **92 + 18 + 761 + 6 = 877**, **0 unaccounted**. The delta
   does not re-pin the census and does not invalidate the audit records.
-- **Tests and courts:** library **1747 passed / 0 failed / 42 ignored**
-  (reported in commit `a8676158f`, the SSL_new TLS1.3-suite fix; the last
-  receipt-bound full run before it was **1711 passed / 0 failed / 42 ignored**
-  in `atlas-refresh/boundary-sweep-B44.json`). The ignored set is probes run
+- **Tests and courts:** library **1962 passed / 0 failed / 44 ignored** at the
+  last full run (`3ee81389e`); later commits add tests without a further full
+  run, so this is a floor. The ignored set is probes run
   separately by design. Phase 8 is **18/18 pass**
   with two accepted and witnessed divergences: `RT-CIPHER` `defltwrap.pad21`
   (D561) and `RT-RSA` `rsa.obj_upref.zero_ref_after` (D562).
@@ -128,7 +127,7 @@ remaining work is per-site obligation evidence, not mechanical conversion.
 
 Local gate for every batch (court container, 8 GB cap):
 `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test --lib` (must pass; the current baseline is **1747 passed / 0 failed
+`cargo test --lib` (must pass; the current floor is **1962 passed / 0 failed
 / 42 ignored** as reported in commit `a8676158f`; the last receipt-bound run is
 **1711 / 0 / 42** in `atlas-refresh/boundary-sweep-B44.json`. The ignored set is
  the probes that are run separately by design). Do not accept unexplained test
