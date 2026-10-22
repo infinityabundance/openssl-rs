@@ -70,8 +70,8 @@
         "family": "mosquitto",
         "linkage_proven": true,
         "recipe_id": "recipe:mosquitto:2.0.20",
-        "sha256": "ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8",
-        "url": "https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz",
+        "sha256": "851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a",
+        "url": "https://github.com/eclipse-mosquitto/mosquitto/archive/refs/tags/v2.0.20.tar.gz",
         "version": "2.0.20"
       },
       {
@@ -268,8 +268,8 @@
         "family": "mosquitto",
         "outcome": "admitted",
         "reason": null,
-        "sha256": "ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8",
-        "tarball_url": "https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz",
+        "sha256": "851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a",
+        "tarball_url": "https://github.com/eclipse-mosquitto/mosquitto/archive/refs/tags/v2.0.20.tar.gz",
         "version": "2.0.20"
       },
       {
@@ -1218,7 +1218,7 @@
       "priority_rule": "the recipe-less counted families in the frozen 24.16 recipe-queue order -- source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending -- preferring well-known direct OpenSSL consumers with stable upstream release tarballs. It is a **heuristic** ranking over frozen breadth signals, never a measurement of buildability"
     }
   },
-  "body_hash": "13473584c3430537a8234e0f6f99035812bb20431e3d001347d523a03c313e5e",
+  "body_hash": "741e1d16ded11c7211a3b1666cc7fac889a6dbaf0d1d5745db983857ec9d7bd5",
   "generator": "forensics/tools/downstream_recipe_campaign.py",
   "inputs": [
     {
@@ -1254,7 +1254,7 @@
     {
       "name": "downstream-recipe-campaign",
       "path": "forensics/tools/downstream_recipe_campaign.py",
-      "sha256": "04e703a940a75ae4e68ca4b6477fffd112d3e1cbbf50e1441ca34ff6ad8bc297"
+      "sha256": "26996b62ab05836eac341a5ed5d021ca063116c70b99b5c2b806fd8f8618c5bf"
     },
     {
       "name": "downstream-blockers",

@@ -35,7 +35,7 @@
         "linkage_proven": true,
         "recipe_id": "recipe:rsync:3.3.0",
         "sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
-        "url": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "url": "https://snapshot.debian.org/archive/debian/20240412T023350Z/pool/main/r/rsync/rsync_3.3.0.orig.tar.gz",
         "version": "3.3.0"
       },
       {
@@ -45,10 +45,10 @@
         "candidate_level": "L4-linked",
         "family": "squid",
         "linkage_proven": true,
-        "recipe_id": "recipe:squid:6.12",
-        "sha256": "20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
-        "url": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
-        "version": "6.12"
+        "recipe_id": "recipe:squid:6.13",
+        "sha256": "9b33de09d733b5933f6c2b54ebe0be51a9fa4751f183f3aead90b3c5d930aa72",
+        "url": "https://github.com/squid-cache/squid/releases/download/SQUID_6_13/squid-6.13.tar.gz",
+        "version": "6.13"
       },
       {
         "artifact": "ssmtp",
@@ -1003,7 +1003,7 @@
         },
         "reason": null,
         "sha256": "7399e9a6708c32d678a72a63219e96f23be0be2336e50fd1348498d07041df90",
-        "tarball_url": "https://download.samba.org/pub/rsync/src/rsync-3.3.0.tar.gz",
+        "tarball_url": "https://snapshot.debian.org/archive/debian/20240412T023350Z/pool/main/r/rsync/rsync_3.3.0.orig.tar.gz",
         "version": "3.3.0"
       },
       {
@@ -1082,9 +1082,9 @@
           "candidate": "L4-linked"
         },
         "reason": null,
-        "sha256": "20d6c79214f75b5f889952ed79e1ab8b8c3f909b079671d77bb558a6f0b28625",
-        "tarball_url": "http://www.squid-cache.org/Versions/v6/squid-6.12.tar.gz",
-        "version": "6.12"
+        "sha256": "9b33de09d733b5933f6c2b54ebe0be51a9fa4751f183f3aead90b3c5d930aa72",
+        "tarball_url": "https://github.com/squid-cache/squid/releases/download/SQUID_6_13/squid-6.13.tar.gz",
+        "version": "6.13"
       },
       {
         "admitted": true,
@@ -1509,13 +1509,13 @@
       "priority_rule": "the 24.18 linkage misses, the 24.18 fetch-failures, and the next recipe-less counted families in the frozen 24.16 recipe-queue order -- source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending -- that ship a stable upstream C release tarball. It is a **heuristic** ranking over frozen breadth signals, never a measurement of buildability"
     }
   },
-  "body_hash": "f731b4ee5b9fa1e52fe5cab6bef3a1d440b2cc26980c7a3df18abc99a51c96b3",
+  "body_hash": "06b341d588f3bc24e42c35b6247bd21e8b6cd09c6114ef54ef0ae1cbb1f2552f",
   "generator": "forensics/tools/downstream_close_batch.py",
   "inputs": [
     {
       "name": "close-batch-attempts",
       "path": "forensics/downstream/close-batch-attempts.json",
-      "sha256": "85bea14c4445c93fe8f2785ff32047ef06fa432ffbb679bef70a5f5e23be2af5"
+      "sha256": "180c535fed4d9fe370ac983d719154c45799269db2cf66ad24417af8a4ed0f98"
     },
     {
       "name": "close-batch-baseline",
