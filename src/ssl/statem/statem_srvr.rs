@@ -1200,6 +1200,136 @@ fn write_cert_verify_body(out: &mut [u8], scheme: [u8; 2], signature: &[u8]) -> 
     Some(w.written())
 }
 
+/// The TLS1.2 `CertificateRequest` body (`tls_construct_certificate_request`,
+/// `statem_srvr.c:3023-3094`): `certificate_types<1..2^8-1> ||`
+/// `supported_signature_algorithms<0..2^16-1> || certificate_authorities<0..2^16-1>`.
+///
+/// The signature-algorithm vector is present only when `sigalgs` is `Some`, so a caller
+/// that does not advertise schemes writes the authority's shorter shape. Both lengths are
+/// derived from the supplied slices and the whole extent is checked before the first byte,
+/// so a refused call leaves `out` untouched.
+fn write_tls12_certificate_request_body(
+    out: &mut [u8],
+    certificate_types: &[u8],
+    sigalgs: Option<&[u8]>,
+) -> Option<usize> {
+    let types_len = u8::try_from(certificate_types.len()).ok()?;
+    let mut extent = 1usize.checked_add(certificate_types.len())?;
+    if let Some(sigalgs) = sigalgs {
+        u16::try_from(sigalgs.len()).ok()?;
+        extent = extent.checked_add(2)?.checked_add(sigalgs.len())?;
+    }
+    // `certificate_authorities<0..2^16-1>` is always the empty vector in this reduction.
+    extent = extent.checked_add(2)?;
+    let mut w = BytesWriter::new(out);
+    if !w.has_room(extent) {
+        return None;
+    }
+    if !(w.put_u8(types_len) && w.put_bytes(certificate_types)) {
+        return None;
+    }
+    if let Some(sigalgs) = sigalgs {
+        // Lengths above 65535 were refused above, so this conversion cannot fail.
+        let Ok(len) = u16::try_from(sigalgs.len()) else {
+            return None;
+        };
+        if !(w.put_u16(len) && w.put_bytes(sigalgs)) {
+            return None;
+        }
+    }
+    if !w.put_u16(0) {
+        return None;
+    }
+    Some(w.written())
+}
+
+/// The `ServerECDHParams` of a TLS1.2 `ServerKeyExchange` (`tls12_construct_ske`):
+/// `curve_type(1) = named_curve || namedcurve(2) || public<1..2^8-1>`.
+///
+/// The point length is the slice length, refused when it cannot be expressed in one byte
+/// rather than truncated. The full extent is checked before writing, so a short buffer or
+/// an unrepresentable point leaves `out` untouched.
+fn write_tls12_ecdh_params(out: &mut [u8], group: u16, point: &[u8]) -> Option<usize> {
+    // `named_curve` — `tls1.h` (`curve_type`).
+    const NAMED_CURVE: u8 = 3;
+    let point_len = u8::try_from(point.len()).ok()?;
+    let extent = point.len().checked_add(4)?;
+    let mut w = BytesWriter::new(out);
+    if !w.has_room(extent) {
+        return None;
+    }
+    if !(w.put_u8(NAMED_CURVE) && w.put_u16(group) && w.put_u8(point_len) && w.put_bytes(point)) {
+        return None;
+    }
+    Some(w.written())
+}
+
+/// The signed data of a TLS1.2 `ServerKeyExchange` over ECDHE:
+/// `client_random(32) || server_random(32) || ServerECDHParams`
+/// (`tls12_construct_ske`, `statem_srvr.c:2828-2860`). The fixed-size randoms make the
+/// prefix extent type-checked; the whole sum still uses checked arithmetic.
+fn write_tls12_ske_signature_input(
+    out: &mut [u8],
+    client_random: &[u8; 32],
+    server_random: &[u8; 32],
+    params: &[u8],
+) -> Option<usize> {
+    let extent = client_random
+        .len()
+        .checked_add(server_random.len())?
+        .checked_add(params.len())?;
+    let mut w = BytesWriter::new(out);
+    if !w.has_room(extent) {
+        return None;
+    }
+    if !(w.put_bytes(client_random) && w.put_bytes(server_random) && w.put_bytes(params)) {
+        return None;
+    }
+    Some(w.written())
+}
+
+/// The framed TLS1.2 `ServerKeyExchange` body:
+/// `ServerECDHParams || SignatureAndHashAlgorithm(2) || signature<0..2^16-1>`.
+fn write_tls12_ske_body(
+    out: &mut [u8],
+    params: &[u8],
+    sigalg: u16,
+    signature: &[u8],
+) -> Option<usize> {
+    let extent = params.len().checked_add(4)?.checked_add(signature.len())?;
+    let mut w = BytesWriter::new(out);
+    if !w.has_room(extent) {
+        return None;
+    }
+    if !(w.put_bytes(params) && w.put_u16(sigalg) && w.put_u16_len_prefixed(signature)) {
+        return None;
+    }
+    Some(w.written())
+}
+
+/// The TLS1.2 `NewSessionTicket` body (`create_ticket_prequel`,
+/// `statem_srvr.c:4085-4108`): `ticket_lifetime_hint(4) || ticket<0..2^16-1>`.
+fn write_tls12_new_session_ticket_body(
+    out: &mut [u8],
+    lifetime_hint: u32,
+    ticket: &[u8],
+) -> Option<usize> {
+    let ticket_len = u16::try_from(ticket.len()).ok()?;
+    let extent = 4usize.checked_add(2)?.checked_add(ticket.len())?;
+    let mut w = BytesWriter::new(out);
+    if !w.has_room(extent) {
+        return None;
+    }
+    if !(w.put_bytes(&lifetime_hint.to_be_bytes()) && w.put_u16(ticket_len) && w.put_bytes(ticket))
+    {
+        return None;
+    }
+    Some(w.written())
+}
+
+/// The TLS1.2 `ServerHelloDone` body: empty (`tls_construct_server_hello_done`).
+const TLS12_SERVER_HELLO_DONE_BODY: &[u8] = &[];
+
 /// `SSL3_MT_SERVER_HELLO` — `ssl3.h`.
 const SSL3_MT_SERVER_HELLO: u8 = 2;
 /// `SSL3_MT_CLIENT_HELLO` — `ssl3.h`.
@@ -3477,47 +3607,49 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
         }
         (*s).pkey = pkey.into_raw().cast();
     }
-    let mut params_buf = [0u8; 160];
-    params_buf[0] = 3; // named_curve
-    params_buf[1] = (group >> 8) as u8;
-    params_buf[2] = group as u8;
-    params_buf[3] = publen as u8;
-    // SAFETY: `pub_` is `publen` readable bytes; `params_buf` has room (a P-521 uncompressed
-    // point is 133 bytes).
-    unsafe {
-        core::ptr::copy_nonoverlapping(pub_.as_ptr(), params_buf.as_mut_ptr().add(4), publen)
+    // SAFETY: `pub_` is the `get1` block, readable for `publen` bytes until this frame's drop.
+    let point = unsafe { core::slice::from_raw_parts(pub_.as_ptr(), publen) };
+    // `named_curve(1) || group(2) || point<1..2^8-1>`.
+    let mut params_buf = [0u8; 4 + 255];
+    let Some(params_len) = write_tls12_ecdh_params(&mut params_buf, group, point) else {
+        return 0;
     };
-    let params_len = 4 + publen;
-    let mut tbs = [0u8; 32 + 32 + 192];
-    // SAFETY: `s` is live; both randoms are 32-byte arrays; `tbs` has room.
-    unsafe {
-        core::ptr::copy_nonoverlapping((*s).client_random.as_ptr(), tbs.as_mut_ptr(), 32);
-        core::ptr::copy_nonoverlapping((*s).server_random.as_ptr(), tbs.as_mut_ptr().add(32), 32);
-    }
-    tbs[64..64 + params_len].copy_from_slice(&params_buf[..params_len]);
+    // The signature covers `client_random || server_random || ServerECDHParams`.
+    let mut tbs = [0u8; 32 + 32 + 4 + 255];
+    // SAFETY: `s` is live.
+    let (client_random, server_random) = unsafe { (&(*s).client_random, &(*s).server_random) };
+    let Some(tbs_len) = write_tls12_ske_signature_input(
+        &mut tbs,
+        client_random,
+        server_random,
+        &params_buf[..params_len],
+    ) else {
+        return 0;
+    };
     // The signature and framed body are heap-allocated so this pre-Finished flight does not place
     // ~3 KiB of arrays on the accept thread's stack.
     let mut sig = vec![0u8; 1024];
     // SAFETY: `s` is live; `tbs`/`sig` are writable locals.
-    let sigalg_len = unsafe { tls12_sign(s, &tbs[..64 + params_len], &mut sig) };
+    let sigalg_len = unsafe { tls12_sign(s, &tbs[..tbs_len], &mut sig) };
     // The `get1` block's single release is this drop, at the authority's own release point.
     drop(pub_);
     let Some((sigalg, siglen)) = sigalg_len else {
         return 0;
     };
-    let mut body = vec![0u8; 2048];
-    body[..params_len].copy_from_slice(&params_buf[..params_len]);
-    let mut p = params_len;
-    body[p] = (sigalg >> 8) as u8;
-    body[p + 1] = sigalg as u8;
-    p += 2;
-    body[p] = (siglen >> 8) as u8;
-    body[p + 1] = siglen as u8;
-    p += 2;
-    body[p..p + siglen].copy_from_slice(&sig[..siglen]);
-    p += siglen;
-    // SAFETY: `s` is live; `body` is `p` initialised bytes.
-    unsafe { write_handshake_message(s, SSL3_MT_SERVER_KEY_EXCHANGE as u8, body.as_ptr(), p) }
+    let Some(body_len) = params_len
+        .checked_add(4)
+        .and_then(|n| n.checked_add(siglen))
+    else {
+        return 0;
+    };
+    let mut body = vec![0u8; body_len];
+    let Some(written) =
+        write_tls12_ske_body(&mut body, &params_buf[..params_len], sigalg, &sig[..siglen])
+    else {
+        return 0;
+    };
+    // SAFETY: `s` is live; `body` is `written` initialised bytes.
+    unsafe { write_handshake_message(s, SSL3_MT_SERVER_KEY_EXCHANGE as u8, body.as_ptr(), written) }
 }
 
 /// `tls_construct_certificate_request` (`statem_srvr.c`) for the TLS1.2 shape:
@@ -3528,24 +3660,16 @@ unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
 unsafe fn tls12_construct_certificate_request(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc::write_handshake_message;
     const SIGALGS: [u8; 8] = [0x04, 0x01, 0x04, 0x03, 0x05, 0x01, 0x06, 0x01];
+    // `certificate_types`: `rsa_sign(1) || ecdsa_sign(64)`.
+    const CERT_TYPES: [u8; 2] = [1, 64];
     let mut body = [0u8; 64];
-    let mut p = 0usize;
-    body[p] = 2;
-    p += 1;
-    body[p] = 1; // rsa_sign
-    p += 1;
-    body[p] = 64; // ecdsa_sign
-    p += 1;
-    body[p] = 0;
-    body[p + 1] = SIGALGS.len() as u8;
-    p += 2;
-    body[p..p + SIGALGS.len()].copy_from_slice(&SIGALGS);
-    p += SIGALGS.len();
-    body[p] = 0;
-    body[p + 1] = 0;
-    p += 2;
-    // SAFETY: `s` is live; `body` is `p` initialised bytes.
-    unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE_REQUEST as u8, body.as_ptr(), p) }
+    let Some(written) =
+        write_tls12_certificate_request_body(&mut body, &CERT_TYPES, Some(&SIGALGS))
+    else {
+        return 0;
+    };
+    // SAFETY: `s` is live; `body` is `written` initialised bytes.
+    unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE_REQUEST as u8, body.as_ptr(), written) }
 }
 
 /// `SSL3_MT_NEWSESSION_TICKET` — `ssl3.h` (4).
@@ -3590,10 +3714,9 @@ unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         }
     };
     let mut body = [0u8; 4 + 2 + TLS12_TICKET_LEN];
-    body[0..4].copy_from_slice(&hint.to_be_bytes());
-    body[4] = (TLS12_TICKET_LEN >> 8) as u8;
-    body[5] = TLS12_TICKET_LEN as u8;
-    body[6..6 + TLS12_TICKET_LEN].copy_from_slice(&ticket);
+    let Some(written) = write_tls12_new_session_ticket_body(&mut body, hint, &ticket) else {
+        return 0;
+    };
 
     // Record the ticket on the session and set the client-mirrored resume id (`SHA256(ticket)`).
     // SAFETY: `sess` is live.
@@ -3604,7 +3727,9 @@ unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         if tp.is_null() {
             return 0;
         }
-        core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, TLS12_TICKET_LEN);
+        // SAFETY: `tp` is a fresh, non-NULL block of `TLS12_TICKET_LEN` bytes; the copy is
+        // exactly its extent.
+        core::slice::from_raw_parts_mut(tp, TLS12_TICKET_LEN).copy_from_slice(&ticket);
         // `tp` is this call's fresh block of `TLS12_TICKET_LEN` bytes; the member is empty.
         (*sess).ext_tick_slot().store(tp, TLS12_TICKET_LEN);
         (*sess).ext_tick_lifetime_hint = hint as core::ffi::c_ulong;
@@ -3612,10 +3737,28 @@ unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         let mut digest = [0u8; 32];
         crate::digest::sha2::SHA256(ticket.as_ptr(), TLS12_TICKET_LEN, digest.as_mut_ptr());
         (*sess).session_id_length = 32;
-        core::ptr::copy_nonoverlapping(digest.as_ptr(), (*sess).session_id.as_mut_ptr(), 32);
+        (*sess).session_id.copy_from_slice(&digest);
     }
-    // SAFETY: `s` is live; `body` is fully initialised.
-    unsafe { write_handshake_message(s, SSL3_MT_NEWSESSION_TICKET, body.as_ptr(), body.len()) }
+    // SAFETY: `s` is live; `body` is `written` initialised bytes.
+    unsafe { write_handshake_message(s, SSL3_MT_NEWSESSION_TICKET, body.as_ptr(), written) }
+}
+
+/// `tls_construct_server_hello_done` (`statem_srvr.c:3096-3108`): an empty handshake body.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls12_construct_server_hello_done(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc::write_handshake_message;
+    // SAFETY: `s` is live; `TLS12_SERVER_HELLO_DONE_BODY` is a `'static` empty slice, so the
+    // zero length is the only byte count read.
+    unsafe {
+        write_handshake_message(
+            s,
+            SSL3_MT_SERVER_HELLO_DONE as u8,
+            TLS12_SERVER_HELLO_DONE_BODY.as_ptr(),
+            TLS12_SERVER_HELLO_DONE_BODY.len(),
+        )
+    }
 }
 
 /// `TLSEXT_KEYNAME_LENGTH` — `ssl_local.h:699`.
@@ -4405,9 +4548,7 @@ unsafe fn tls12_server_drive(s: *mut Ssl) -> c_int {
                     (*s).hand_state = TLS_ST_SW_SRVR_DONE;
                 }
                 TLS_ST_SW_SRVR_DONE => {
-                    if write_handshake_message(s, SSL3_MT_SERVER_HELLO_DONE as u8, ptr::null(), 0)
-                        <= 0
-                    {
+                    if tls12_construct_server_hello_done(s) <= 0 {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
@@ -5379,6 +5520,227 @@ mod certificate_body_tests {
         assert_eq!(w.written(), 0);
         assert!(w.put_u24(0x00ff_ffff));
         assert_eq!(&out[..3], &[0xff, 0xff, 0xff]);
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// TLS1.2 server-flight framing: CertificateRequest / ServerKeyExchange / ServerHelloDone /
+// NewSessionTicket body construction
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod tls12_flight_body_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::{
+        tls12_construct_server_hello_done, write_tls12_certificate_request_body,
+        write_tls12_ecdh_params, write_tls12_new_session_ticket_body, write_tls12_ske_body,
+        write_tls12_ske_signature_input, TLS12_SERVER_HELLO_DONE_BODY,
+    };
+
+    const SIGALGS: [u8; 8] = [0x04, 0x01, 0x04, 0x03, 0x05, 0x01, 0x06, 0x01];
+
+    /// `certificate_types || supported_signature_algorithms || certificate_authorities<0>`.
+    #[test]
+    fn certificate_request_with_signature_algorithms_is_byte_exact() {
+        let mut out = [0u8; 32];
+        let n = write_tls12_certificate_request_body(&mut out, &[1, 64], Some(&SIGALGS)).unwrap();
+        assert_eq!(n, 15);
+        assert_eq!(
+            &out[..n],
+            &[
+                0x02, 0x01, 0x40, // certificate_types<2>: rsa_sign, ecdsa_sign
+                0x00, 0x08, // supported_signature_algorithms length
+                0x04, 0x01, 0x04, 0x03, 0x05, 0x01, 0x06,
+                0x01, // rsa_pss, ecdsa, ed25519, ...
+                0x00, 0x00, // certificate_authorities<0>
+            ]
+        );
+    }
+
+    /// Without a scheme list the extension is omitted, leaving the shorter authority shape.
+    #[test]
+    fn certificate_request_without_signature_algorithms_is_byte_exact() {
+        let mut out = [0u8; 8];
+        let n = write_tls12_certificate_request_body(&mut out, &[1, 64], None).unwrap();
+        assert_eq!(n, 5);
+        assert_eq!(&out[..n], &[0x02, 0x01, 0x40, 0x00, 0x00]);
+    }
+
+    /// A certificate-type list longer than the one-byte wire length is malformed input and is
+    /// refused rather than truncated; the buffer is untouched.
+    #[test]
+    fn over_long_certificate_type_list_is_refused() {
+        let types = [1u8; 256];
+        let mut out = [0xa5u8; 400];
+        let before = out;
+        assert!(write_tls12_certificate_request_body(&mut out, &types, None).is_none());
+        assert_eq!(out, before);
+    }
+
+    /// `named_curve || group || point<len>` for the two mandatory ECDHE groups.
+    #[test]
+    fn ecdh_params_for_x25519_and_p256_are_byte_exact() {
+        let x25519_point = [0x09u8; 32];
+        let mut out = [0u8; 64];
+        let n = write_tls12_ecdh_params(&mut out, 0x001d, &x25519_point).unwrap();
+        assert_eq!(n, 36);
+        let mut expected = vec![0x03, 0x00, 0x1d, 0x20];
+        expected.extend_from_slice(&x25519_point);
+        assert_eq!(&out[..n], &expected[..]);
+
+        let mut p256_point = [0u8; 65];
+        p256_point[0] = 0x04;
+        for (i, b) in p256_point[1..].iter_mut().enumerate() {
+            *b = i as u8;
+        }
+        let mut out = [0u8; 96];
+        let n = write_tls12_ecdh_params(&mut out, 0x0017, &p256_point).unwrap();
+        assert_eq!(n, 69);
+        let mut expected = vec![0x03, 0x00, 0x17, 0x41];
+        expected.extend_from_slice(&p256_point);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    /// The signed input is exactly `client_random || server_random || ServerECDHParams`.
+    #[test]
+    fn ske_signature_input_is_byte_exact() {
+        let client_random = [0x11u8; 32];
+        let server_random = [0x22u8; 32];
+        let params = [0x03u8, 0x00, 0x1d, 0x02, 0xaa, 0xbb];
+        let mut out = [0u8; 128];
+        let n = write_tls12_ske_signature_input(&mut out, &client_random, &server_random, &params)
+            .unwrap();
+        assert_eq!(n, 70);
+        let mut expected = Vec::new();
+        expected.extend_from_slice(&client_random);
+        expected.extend_from_slice(&server_random);
+        expected.extend_from_slice(&params);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    /// `ServerECDHParams || sigalg(2) || signature<len(2)>`.
+    #[test]
+    fn ske_body_is_byte_exact() {
+        let params = [0x03u8, 0x00, 0x1d, 0x20];
+        let signature = [0xde, 0xad, 0xbe, 0xef];
+        let mut out = [0u8; 64];
+        let n = write_tls12_ske_body(&mut out, &params, 0x0401, &signature).unwrap();
+        assert_eq!(n, 12);
+        assert_eq!(
+            &out[..n],
+            &[
+                0x03, 0x00, 0x1d, 0x20, // ServerECDHParams
+                0x04, 0x01, // rsa_pkcs1_sha256
+                0x00, 0x04, // signature length
+                0xde, 0xad, 0xbe, 0xef,
+            ]
+        );
+    }
+
+    /// `ticket_lifetime_hint(4) || ticket<len(2)>`, with and without a hint.
+    #[test]
+    fn new_session_ticket_body_with_and_without_hint_is_byte_exact() {
+        let ticket = [0x5au8; 8];
+        let mut out = [0u8; 32];
+        let n = write_tls12_new_session_ticket_body(&mut out, 0, &ticket).unwrap();
+        assert_eq!(n, 14);
+        let mut expected = vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x08];
+        expected.extend_from_slice(&ticket);
+        assert_eq!(&out[..n], &expected[..]);
+
+        let mut out = [0u8; 32];
+        let n = write_tls12_new_session_ticket_body(&mut out, 0x0000_0abc, &ticket).unwrap();
+        assert_eq!(n, 14);
+        let mut expected = vec![0x00, 0x00, 0x0a, 0xbc, 0x00, 0x08];
+        expected.extend_from_slice(&ticket);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    /// Every builder refuses a block one byte short of its exact message, leaving the buffer
+    /// byte-for-byte unchanged; the exact size succeeds. `ServerHelloDone` has a zero-length body,
+    /// so its empty slice is accepted by any block, including an empty one.
+    #[test]
+    fn each_builder_refuses_a_short_buffer_transactionally() {
+        const SENTINEL: u8 = 0xa5;
+
+        let mut out = [SENTINEL; 14];
+        let before = out;
+        assert!(write_tls12_certificate_request_body(&mut out, &[1, 64], Some(&SIGALGS)).is_none());
+        assert_eq!(out, before);
+
+        let point = [0x09u8; 32];
+        let mut out = [SENTINEL; 35];
+        let before = out;
+        assert!(write_tls12_ecdh_params(&mut out, 0x001d, &point).is_none());
+        assert_eq!(out, before);
+
+        let mut out = [SENTINEL; 69];
+        let before = out;
+        assert!(write_tls12_ske_signature_input(&mut out, &[1; 32], &[2; 32], &point).is_none());
+        assert_eq!(out, before);
+
+        let mut out = [SENTINEL; 11];
+        let before = out;
+        assert!(write_tls12_ske_body(&mut out, &point[..4], 0x0401, &[0xde; 4]).is_none());
+        assert_eq!(out, before);
+
+        let mut out = [SENTINEL; 13];
+        let before = out;
+        assert!(write_tls12_new_session_ticket_body(&mut out, 0, &[0x5a; 8]).is_none());
+        assert_eq!(out, before);
+
+        assert!(TLS12_SERVER_HELLO_DONE_BODY.is_empty());
+        let mut empty: [u8; 0] = [];
+        assert!(write_tls12_ske_body(&mut empty, &[], 0, &[]).is_none());
+    }
+
+    /// A point longer than the one-byte wire length is refused rather than truncated.
+    #[test]
+    fn over_long_ecdh_point_is_refused() {
+        let point = [0x04u8; 256];
+        let mut out = [0xa5u8; 400];
+        let before = out;
+        assert!(write_tls12_ecdh_params(&mut out, 0x001d, &point).is_none());
+        assert_eq!(out, before);
+    }
+
+    /// `ServerHelloDone` is `type(14) || length(0)` with an empty body; the record writer frames
+    /// it as one four-byte handshake message.
+    #[test]
+    fn server_hello_done_writes_an_empty_body() {
+        use crate::runtime::bio::bss_mem::BIO_s_mem;
+        use crate::runtime::bio::{BIO_ctrl_pending, BIO_new, BIO_read};
+        use crate::ssl::methods::TLS_method;
+        use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new};
+
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created, used and released by this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            let bio = BIO_new(BIO_s_mem());
+            assert!(!bio.is_null());
+            (*s).wbio = bio; // ownership transferred; `SSL_free` releases it
+            assert_eq!(tls12_construct_server_hello_done(s), 1);
+
+            let n = BIO_ctrl_pending(bio);
+            let mut out = vec![0u8; n];
+            let r = BIO_read(bio, out.as_mut_ptr().cast(), n as core::ffi::c_int);
+            assert_eq!(r, n as core::ffi::c_int);
+            assert_eq!(
+                out.len(),
+                9,
+                "one empty handshake message: 5-byte record + 4"
+            );
+            assert_eq!(out[0], 22, "SSL3_RT_HANDSHAKE");
+            assert_eq!(u16::from_be_bytes([out[3], out[4]]), 4, "record payload");
+            assert_eq!(&out[5..9], &[14, 0, 0, 0]);
+
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
     }
 }
 
