@@ -633,20 +633,26 @@ pub(crate) unsafe fn tls13_hash_len(s: *const Ssl) -> usize {
 /// # Safety
 /// `s` is live; `data` readable for `len`.
 pub(crate) unsafe fn transcript_update(s: *mut Ssl, data: *const u8, len: usize) -> c_int {
-    // SAFETY: `s` is live.
+    // SAFETY: `s` is live; `data` is readable for `len` (a NULL pointer is only permitted when
+    // `len == 0`, which selects the empty slice).
     unsafe {
+        let data: &[u8] = if len == 0 {
+            &[]
+        } else {
+            core::slice::from_raw_parts(data, len)
+        };
         if (*s).hs_md_ctx.is_null() {
-            let Some(end) = (*s).hs_buf_len.checked_add(len) else {
+            let Some(end) = (*s).hs_buf_len.checked_add(data.len()) else {
                 return 0;
             };
-            if end > TLS13_HS_BUF_LEN {
+            let Some(dst) = (*s).hs_buf.get_mut((*s).hs_buf_len..end) else {
                 return 0;
-            }
-            ptr::copy_nonoverlapping(data, (*s).hs_buf.as_mut_ptr().add((*s).hs_buf_len), len);
+            };
+            dst.copy_from_slice(data);
             (*s).hs_buf_len = end;
             return 1;
         }
-        EVP_DigestUpdate((*s).hs_md_ctx.cast(), data.cast(), len)
+        EVP_DigestUpdate((*s).hs_md_ctx.cast(), data.as_ptr().cast(), data.len())
     }
 }
 
@@ -674,11 +680,16 @@ pub(crate) unsafe fn tls13_init_transcript(s: *mut Ssl, md_kind: c_int) -> c_int
             EVP_MD_CTX_free(ctx);
             return 0;
         }
-        if (*s).hs_buf_len != 0
-            && EVP_DigestUpdate(ctx.cast(), (*s).hs_buf.as_ptr().cast(), (*s).hs_buf_len) <= 0
-        {
-            EVP_MD_CTX_free(ctx);
-            return 0;
+        if (*s).hs_buf_len != 0 {
+            // The buffered prefix is a checked slice of the fixed transcript buffer.
+            let Some(buffered) = (*s).hs_buf.get(..(*s).hs_buf_len) else {
+                EVP_MD_CTX_free(ctx);
+                return 0;
+            };
+            if EVP_DigestUpdate(ctx.cast(), buffered.as_ptr().cast(), buffered.len()) <= 0 {
+                EVP_MD_CTX_free(ctx);
+                return 0;
+            }
         }
         (*s).hs_md_ctx = ctx.cast();
         (*s).hs_buf_len = 0;
@@ -737,11 +748,16 @@ pub(crate) unsafe fn tls13_restore_handshake_digest_for_pha(s: *mut Ssl) -> c_in
 /// # Safety
 /// `s` is live; `out` writable for the md size; `out_len` NULL or writable.
 pub(crate) unsafe fn transcript_hash(s: *mut Ssl, out: *mut u8, out_len: *mut usize) -> c_int {
-    // SAFETY: `s` is live.
+    // SAFETY: `s` is live; `out` is writable for the digest size carried by the connection.
     unsafe {
         if (*s).hs_md_ctx.is_null() {
             return 0;
         }
+        let hash_len = (*s).hs_md_len;
+        if hash_len == 0 || hash_len > HASH_MAX || out.is_null() {
+            return 0;
+        }
+        let out = core::slice::from_raw_parts_mut(out, hash_len);
         let tmp = EVP_MD_CTX_new();
         if tmp.is_null() {
             return 0;
@@ -751,13 +767,13 @@ pub(crate) unsafe fn transcript_hash(s: *mut Ssl, out: *mut u8, out_len: *mut us
             return 0;
         }
         let mut l: c_uint = 0;
-        let r = EVP_DigestFinal_ex(tmp.cast(), out.cast(), &mut l);
+        let r = EVP_DigestFinal_ex(tmp.cast(), out.as_mut_ptr(), &mut l);
         EVP_MD_CTX_free(tmp);
-        if r <= 0 {
+        if r <= 0 || l as usize != out.len() {
             return 0;
         }
         if !out_len.is_null() {
-            *out_len = l as usize;
+            *out_len = out.len();
         }
     }
     1
@@ -1346,15 +1362,19 @@ pub(crate) unsafe fn tls13_derive_shared(
 // --- record protection ---------------------------------------------------------------------
 
 /// `EVP_CTRL_AEAD_SET_IVLEN`/nonce derivation: `nonce = iv XOR seq` over the trailing 8 bytes
-/// (`tls13_meth.c`, `tls13_enc`).
-fn make_nonce(iv: &[u8; 16], iv_len: usize, seq: u64) -> [u8; 16] {
+/// (`tls13_meth.c`, `tls13_enc`). Returns `None` for an IV length outside 8..=16 rather than
+/// indexing with an unchecked offset.
+fn make_nonce(iv: &[u8; 16], iv_len: usize, seq: u64) -> Option<[u8; 16]> {
+    if !(8..=16).contains(&iv_len) {
+        return None;
+    }
     let mut nonce = [0u8; 16];
     nonce[..iv_len].copy_from_slice(&iv[..iv_len]);
-    let s = seq.to_be_bytes();
-    for (i, b) in s.iter().enumerate() {
-        nonce[iv_len - 8 + i] ^= *b;
+    let tail = nonce.get_mut(iv_len - 8..iv_len)?;
+    for (n, s) in tail.iter_mut().zip(seq.to_be_bytes()) {
+        *n ^= s;
     }
-    nonce
+    Some(nonce)
 }
 
 /// `tls13_enc` (`ssl/record/methods/tls13_meth.c`): seal `plain || content_type` under the write
@@ -1370,15 +1390,15 @@ pub(crate) unsafe fn tls13_encrypt_record(
     len: usize,
     out: *mut u8,
 ) -> isize {
-    // SAFETY: `s` is live.
+    // SAFETY: `s` is live; `plain` is readable for `len`; `out` is writable for
+    // `5 + rec_len`, which is checked before any slice is formed.
     unsafe {
         let tag_len = (*s).cipher_tag_len;
         let iv_len = (*s).cipher_iv_len;
         let key_len = (*s).cipher_key_len;
-        if !(8..=16).contains(&iv_len) {
+        let Some(nonce) = make_nonce(&(*s).enc_iv, iv_len, (*s).enc_seq) else {
             return -1;
-        }
-        let nonce = make_nonce(&(*s).enc_iv, iv_len, (*s).enc_seq);
+        };
         // The inner plaintext is `plain || content_type` in a fixed scratch block, and the
         // record length is a two-byte field; both are refusals rather than overflows.
         let inner_len = match len.checked_add(1) {
@@ -1389,26 +1409,36 @@ pub(crate) unsafe fn tls13_encrypt_record(
             Some(n) if n <= u16::MAX as usize => n,
             _ => return -1,
         };
-        // Header: `type || version || length`, the AEAD AAD (`tls13_enc`). The outer record version
-        // is TLS 1.2 (`0x0303`), never TLS 1.3 (`rec_layer_s3.c:395-405`, RFC 8446 §5.1).
-        let mut hdr = [0u8; 5];
-        hdr[0] = SSL3_RT_APPLICATION_DATA;
-        hdr[1] = (TLS1_2_VERSION >> 8) as u8;
-        hdr[2] = TLS1_2_VERSION as u8;
-        hdr[3] = (rec_len >> 8) as u8;
-        hdr[4] = rec_len as u8;
-        ptr::copy_nonoverlapping(hdr.as_ptr(), out, 5);
-        // Inner plaintext: content then the real content type. The block is heap-allocated through
-        // the crate's allocator seam: a record-sized stack array would put a frame larger than
-        // radsecproxy's whole 32 KiB accept thread on every handshake/application write.
-        let Some(inner_block) = OwnedBuf::new(TLS13_HS_BUF_LEN + 1, SeamFile::NULL, 0) else {
+        let Some(out_len) = 5usize.checked_add(rec_len) else {
             return -1;
         };
-        let inner = inner_block.as_ptr();
-        // SAFETY: `inner` is writable for `TLS13_HS_BUF_LEN + 1` bytes (`inner_len` was checked
-        // against that bound above); `plain` is `len` readable.
-        ptr::copy_nonoverlapping(plain, inner, len);
-        *inner.add(len) = content_type;
+        let out = core::slice::from_raw_parts_mut(out, out_len);
+        let plain: &[u8] = if len == 0 {
+            &[]
+        } else {
+            core::slice::from_raw_parts(plain, len)
+        };
+        // Header: `type || version || length`, the AEAD AAD (`tls13_enc`). The outer record version
+        // is TLS 1.2 (`0x0303`), never TLS 1.3 (`rec_layer_s3.c:395-405`, RFC 8446 §5.1).
+        let hdr = [
+            SSL3_RT_APPLICATION_DATA,
+            (TLS1_2_VERSION >> 8) as u8,
+            TLS1_2_VERSION as u8,
+            (rec_len >> 8) as u8,
+            rec_len as u8,
+        ];
+        out[..hdr.len()].copy_from_slice(&hdr);
+        // Inner plaintext: content then the real content type. The block is heap-allocated through
+        // the crate's allocator seam: a record-sized stack array would put a frame larger than
+        // radsecproxy's whole 32 KiB accept thread on every handshake/application write. It is a
+        // cleansed block, so the plaintext is released through `OPENSSL_clear_free` on every path.
+        let Some(inner_block) = OwnedBuf::new_cleansed(inner_len, SeamFile::NULL, 0) else {
+            return -1;
+        };
+        // SAFETY: the block is allocated for `inner_len` bytes and fully initialised below.
+        let inner = core::slice::from_raw_parts_mut(inner_block.as_ptr(), inner_len);
+        inner[..len].copy_from_slice(plain);
+        inner[len] = content_type;
 
         // SAFETY: no preconditions.
         let ctx = EVP_CIPHER_CTX_new();
@@ -1439,26 +1469,52 @@ pub(crate) unsafe fn tls13_encrypt_record(
             ) == 1
         {
             let mut l: c_int = 0;
-            let aad = EVP_EncryptUpdate(ctx, ptr::null_mut(), &mut l, hdr.as_ptr(), 5);
-            let body = if aad == 1 {
-                EVP_EncryptUpdate(ctx, out.add(5), &mut l, inner, inner_len as c_int)
-            } else {
-                0
-            };
-            let mut outl = l as usize;
-            let mut fl: c_int = 0;
-            let fin = if body == 1 {
-                EVP_EncryptFinal_ex(ctx, out.add(5 + outl), &mut fl)
-            } else {
-                0
-            };
-            outl += fl as usize;
-            let tag = EVP_CIPHER_CTX_ctrl(
+            let aad = EVP_EncryptUpdate(
                 ctx,
-                EVP_CTRL_AEAD_GET_TAG,
-                tag_len as c_int,
-                out.add(5 + outl).cast(),
+                ptr::null_mut(),
+                &mut l,
+                hdr.as_ptr(),
+                hdr.len() as c_int,
             );
+            let body = if aad == 1 {
+                EVP_EncryptUpdate(
+                    ctx,
+                    out[5..5 + inner_len].as_mut_ptr(),
+                    &mut l,
+                    inner.as_ptr(),
+                    inner_len as c_int,
+                )
+            } else {
+                0
+            };
+            // `EVP_EncryptUpdate` reports a non-negative byte count; a count past the
+            // buffer is refused instead of being used as an offset.
+            let mut outl = match usize::try_from(l) {
+                Ok(n) if n <= inner_len => n,
+                _ => usize::MAX,
+            };
+            let mut fl: c_int = 0;
+            let fin = if body == 1 && outl <= inner_len {
+                EVP_EncryptFinal_ex(ctx, out[5 + outl..].as_mut_ptr(), &mut fl)
+            } else {
+                0
+            };
+            if fin == 1 && fl > 0 {
+                outl = outl.saturating_add(fl as usize);
+            }
+            let tag = if body == 1 && fin == 1 && outl <= inner_len {
+                match out.get_mut(5 + outl..5 + outl + tag_len) {
+                    Some(slot) => EVP_CIPHER_CTX_ctrl(
+                        ctx,
+                        EVP_CTRL_AEAD_GET_TAG,
+                        tag_len as c_int,
+                        slot.as_mut_ptr().cast(),
+                    ),
+                    None => 0,
+                }
+            } else {
+                0
+            };
             if body == 1 && fin == 1 && tag == 1 {
                 (*s).enc_seq += 1;
                 ok = true;
@@ -1468,7 +1524,7 @@ pub(crate) unsafe fn tls13_encrypt_record(
         // SAFETY: `ctx` is this frame's.
         EVP_CIPHER_CTX_free(ctx);
         if ok {
-            (5 + rec_len) as isize
+            out_len as isize
         } else {
             -1
         }
@@ -1490,25 +1546,36 @@ pub(crate) unsafe fn tls13_decrypt_record(
     out_cap: usize,
     content_type: *mut u8,
 ) -> isize {
-    // SAFETY: `s` is live.
+    // SAFETY: `s` is live; `ct` is readable for `ct_len`; `out` is writable for `out_cap`;
+    // `content_type` is writable.
     unsafe {
         let tag_len = (*s).cipher_tag_len;
         let iv_len = (*s).cipher_iv_len;
-        if ct_len < tag_len || !(8..=16).contains(&iv_len) {
+        if ct_len < tag_len {
             return -1;
         }
-        let nonce = make_nonce(&(*s).dec_iv, iv_len, (*s).dec_seq);
+        let Some(nonce) = make_nonce(&(*s).dec_iv, iv_len, (*s).dec_seq) else {
+            return -1;
+        };
         let ct_body_len = ct_len - tag_len;
         if ct_body_len > TLS13_HS_BUF_LEN + 1 {
             return -1;
         }
+        let ct: &[u8] = if ct_len == 0 {
+            &[]
+        } else {
+            core::slice::from_raw_parts(ct, ct_len)
+        };
+        let (body_ct, tag) = ct.split_at(ct_body_len);
         // The plaintext block is heap-allocated through the crate's allocator seam; a record-sized
-        // stack array would overflow a small accept thread. Its single release is `Drop` on every
-        // return below.
-        let Some(plain_block) = OwnedBuf::new(TLS13_HS_BUF_LEN + 1, SeamFile::NULL, 0) else {
+        // stack array would overflow a small accept thread. It is a cleansed block, so the
+        // decrypted plaintext (and any partial output on tag failure) is wiped before release.
+        let plain_cap = ct_body_len.max(1);
+        let Some(plain_block) = OwnedBuf::new_cleansed(plain_cap, SeamFile::NULL, 0) else {
             return -1;
         };
-        let plain = plain_block.as_ptr();
+        // SAFETY: the block is allocated for `plain_cap >= ct_body_len` writable bytes.
+        let plain = core::slice::from_raw_parts_mut(plain_block.as_ptr(), plain_cap);
         // SAFETY: no preconditions.
         let ctx = EVP_CIPHER_CTX_new();
         if ctx.is_null() {
@@ -1539,27 +1606,50 @@ pub(crate) unsafe fn tls13_decrypt_record(
             ) == 1
         {
             let mut l: c_int = 0;
-            let aad = EVP_DecryptUpdate(ctx, ptr::null_mut(), &mut l, hdr.as_ptr(), 5);
-            let body = if aad == 1 {
-                EVP_DecryptUpdate(ctx, plain, &mut l, ct, ct_body_len as c_int)
-            } else {
-                0
-            };
-            outl = l as usize;
-            let tagset = EVP_CIPHER_CTX_ctrl(
+            let aad = EVP_DecryptUpdate(
                 ctx,
-                EVP_CTRL_AEAD_SET_TAG,
-                tag_len as c_int,
-                ct.add(ct_body_len).cast_mut().cast(),
+                ptr::null_mut(),
+                &mut l,
+                hdr.as_ptr(),
+                hdr.len() as c_int,
             );
-            let mut fl: c_int = 0;
-            let fin = if body == 1 && tagset == 1 {
-                EVP_DecryptFinal_ex(ctx, plain.add(outl), &mut fl)
+            let body = if aad == 1 {
+                EVP_DecryptUpdate(
+                    ctx,
+                    plain.as_mut_ptr(),
+                    &mut l,
+                    body_ct.as_ptr(),
+                    ct_body_len as c_int,
+                )
             } else {
                 0
             };
-            outl += fl as usize;
-            if body == 1 && fin == 1 {
+            // A reported length past the plaintext block is refused rather than used as an
+            // offset into it or into `out`.
+            outl = match usize::try_from(l) {
+                Ok(n) if n <= plain.len() => n,
+                _ => usize::MAX,
+            };
+            let tagset = if body == 1 && outl <= plain.len() {
+                EVP_CIPHER_CTX_ctrl(
+                    ctx,
+                    EVP_CTRL_AEAD_SET_TAG,
+                    tag_len as c_int,
+                    tag.as_ptr().cast_mut().cast(),
+                )
+            } else {
+                0
+            };
+            let mut fl: c_int = 0;
+            let fin = if body == 1 && tagset == 1 && outl <= plain.len() {
+                EVP_DecryptFinal_ex(ctx, plain[outl..].as_mut_ptr(), &mut fl)
+            } else {
+                0
+            };
+            if fin == 1 && fl > 0 {
+                outl = outl.saturating_add(fl as usize);
+            }
+            if body == 1 && fin == 1 && outl <= plain.len() {
                 ok = true;
             }
         }
@@ -1569,22 +1659,25 @@ pub(crate) unsafe fn tls13_decrypt_record(
             return -1;
         }
         // Strip the record padding and read the inner content type: the last non-zero byte.
-        let mut pos = outl;
-        // SAFETY: `plain` holds `outl` decrypted bytes (`EVP_DecryptUpdate`/`Final` wrote them).
-        while pos > 0 && *plain.add(pos - 1) == 0 {
+        // `pos` only ever moves within the `outl` initialised plaintext prefix.
+        let mut pos = outl.min(plain.len());
+        while pos > 0 && plain[pos - 1] == 0 {
             pos -= 1;
         }
         if pos == 0 {
             return -1;
         }
-        // SAFETY: `pos >= 1` and `plain` holds `outl >= pos` initialized bytes.
-        let inner_type = *plain.add(pos - 1);
+        let inner_type = plain[pos - 1];
         let content_len = pos - 1;
         if content_len > out_cap {
             return -1;
         }
-        // SAFETY: `content_len` readable plaintext bytes at `plain`; `out` is `out_cap` writable.
-        ptr::copy_nonoverlapping(plain, out, content_len);
+        let out: &mut [u8] = if out_cap == 0 {
+            &mut []
+        } else {
+            core::slice::from_raw_parts_mut(out, out_cap)
+        };
+        out[..content_len].copy_from_slice(&plain[..content_len]);
         *content_type = inner_type;
         (*s).dec_seq += 1;
         content_len as isize
@@ -1746,6 +1839,13 @@ pub(crate) unsafe fn tls13_process_finished(s: *mut Ssl, msg: &[u8], secret: *co
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::mem::CRYPTO_free;
+
+    fn hdr_of(rec: &[u8]) -> [u8; 5] {
+        let mut hdr = [0u8; 5];
+        hdr.copy_from_slice(&rec[..5]);
+        hdr
+    }
 
     fn hex(s: &str) -> Vec<u8> {
         assert!(
@@ -1915,5 +2015,269 @@ mod tests {
             "the SHA-256 transcript length is accepted"
         );
         assert_ne!(out, [0u8; 32], "the accepted expansion produced output");
+    }
+
+    /// One unsafe block owns the zeroed `Ssl`, its digest context and its single release; the
+    /// tests below see only slices and byte vectors.
+    fn transcript_sha256(before_init: &[u8], after_init: &[&[u8]]) -> Vec<Vec<u8>> {
+        let mut points = Vec::new();
+        // SAFETY: `s` is a live zeroed `Ssl` owned here; `hs_md_ctx` is created by
+        // `tls13_init_transcript` and released before the block; every data pointer is a slice.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null(), "a zeroed Ssl block must be allocatable");
+            if !before_init.is_empty() {
+                assert_eq!(
+                    transcript_update(s, before_init.as_ptr(), before_init.len()),
+                    1,
+                    "the pre-cipher transcript buffers"
+                );
+            }
+            assert_eq!(tls13_init_transcript(s, 0), 1, "SHA-256 transcript");
+            for chunk in after_init {
+                if !chunk.is_empty() {
+                    assert_eq!(transcript_update(s, chunk.as_ptr(), chunk.len()), 1);
+                }
+                let mut digest = [0u8; HASH_MAX];
+                let mut n = 0usize;
+                assert_eq!(
+                    transcript_hash(s, digest.as_mut_ptr(), &mut n),
+                    1,
+                    "the transcript hash is observable at each point"
+                );
+                assert_eq!(n, 32);
+                points.push(digest[..n].to_vec());
+            }
+            EVP_MD_CTX_free((*s).hs_md_ctx.cast());
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+        points
+    }
+
+    /// SHA-256 at two fixed points: the `"abc"` digest, then the digest of the standard
+    /// two-block message after appending its tail. The first point is produced from the
+    /// pre-cipher buffer replayed by `tls13_init_transcript`; the second takes the running
+    /// `EVP_DigestUpdate` path. Vectors: FIPS 180-4 / RFC 6234 §8.5 SHA-256 test vectors.
+    #[test]
+    fn transcript_sha256_matches_fips_vectors_at_two_points() {
+        let tail = b"dbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+        let points = transcript_sha256(b"abc", &[&[], tail]);
+        assert_eq!(
+            points[0],
+            hex("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+        );
+        assert_eq!(
+            points[1],
+            hex("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1")
+        );
+    }
+
+    /// Client application key/IV and the first application-data record of
+    /// `draft-ietf-tls-tls13-vectors-06` §3 (record sequence 0).
+    const APP_KEY: &str = "88b96ad686c84be55ace18a59cce5c87";
+    const APP_IV: &str = "b99dc58cd5ff5ab082fdad19";
+    const APP_RECORD: &str = concat!(
+        "17030300438c3497da00ae023e53c01b4324b665404c1b49e78fe2bf4d17f6348ae8340551e363a0cd05f2",
+        "179c4fef5ad689b5cae0bae94adc63632e571fb79aa91544c6394d28a1"
+    );
+
+    fn app_plaintext() -> Vec<u8> {
+        (0u8..=0x31).collect()
+    }
+
+    fn new_ssl_cipher(key: &[u8], iv: &[u8], seq: u64) -> *mut Ssl {
+        // SAFETY: the caller runs this inside its own unsafe block and releases the block.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (*s).tls13_cipher = crate::evp::e_aes::EVP_aes_128_gcm().cast_mut().cast();
+            (*s).cipher_key_len = key.len();
+            (*s).cipher_iv_len = iv.len();
+            (*s).cipher_tag_len = 16;
+            (&mut (*s).enc_key)[..key.len()].copy_from_slice(key);
+            (&mut (*s).enc_iv)[..iv.len()].copy_from_slice(iv);
+            (&mut (*s).dec_key)[..key.len()].copy_from_slice(key);
+            (&mut (*s).dec_iv)[..iv.len()].copy_from_slice(iv);
+            (*s).enc_seq = seq;
+            (*s).dec_seq = seq;
+            s
+        }
+    }
+
+    fn seal_record(key: &[u8], iv: &[u8], seq: u64, plain: &[u8], content_type: u8) -> Vec<u8> {
+        let mut rec = vec![0u8; 5 + plain.len() + 1 + 16];
+        // SAFETY: `s` is a live fixture; the plaintext and record buffers are this frame's and
+        // the record capacity is exactly the sealed extent.
+        unsafe {
+            let s = new_ssl_cipher(key, iv, seq);
+            let n = tls13_encrypt_record(
+                s,
+                content_type,
+                plain.as_ptr(),
+                plain.len(),
+                rec.as_mut_ptr(),
+            );
+            assert_eq!(
+                (*s).enc_seq,
+                seq + 1,
+                "a sealed record advances the sequence"
+            );
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+            assert!(n > 0, "seal succeeds");
+            rec.truncate(n as usize);
+        }
+        rec
+    }
+
+    struct Opened {
+        rc: isize,
+        out: Vec<u8>,
+        content_type: u8,
+        seq: u64,
+    }
+
+    fn open_record(
+        key: &[u8],
+        iv: &[u8],
+        seq: u64,
+        hdr: &[u8; 5],
+        body: &[u8],
+        out_cap: usize,
+    ) -> Opened {
+        let mut out = vec![0u8; out_cap + 1];
+        out[out_cap] = 0xAA;
+        let mut content_type = 0u8;
+        // SAFETY: `s` is a live fixture; `body` and `hdr` are slices; `out` is `out_cap + 1`
+        // bytes with the final byte as an overrun canary.
+        let (rc, seq_after) = unsafe {
+            let s = new_ssl_cipher(key, iv, seq);
+            let rc = tls13_decrypt_record(
+                s,
+                hdr,
+                body.as_ptr(),
+                body.len(),
+                out.as_mut_ptr(),
+                out_cap,
+                &mut content_type,
+            );
+            let seq_after = (*s).dec_seq;
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+            (rc, seq_after)
+        };
+        assert_eq!(out[out_cap], 0xAA, "no write past out_cap");
+        out.truncate(out_cap);
+        Opened {
+            rc,
+            out,
+            content_type,
+            seq: seq_after,
+        }
+    }
+
+    /// Exact seal vector: the draft's first client application-data record under the client
+    /// application key at sequence 0.
+    #[test]
+    fn seal_matches_tls13_test_vector_exactly() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        let expected = hex(APP_RECORD);
+        let rec = seal_record(&key, &iv, 0, &app_plaintext(), SSL3_RT_APPLICATION_DATA);
+        assert_eq!(rec, expected);
+        assert_eq!(&rec[..3], &[0x17, 0x03, 0x03]);
+        assert_eq!(&rec[3..5], &(rec.len() as u16 - 5).to_be_bytes());
+    }
+
+    /// Exact open vector: the same record returns the draft's 50-byte payload and type 23.
+    #[test]
+    fn open_matches_tls13_test_vector() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        let rec = hex(APP_RECORD);
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..], 16384);
+        assert_eq!(opened.rc, 50);
+        assert_eq!(&opened.out[..50], &app_plaintext()[..]);
+        assert_eq!(opened.content_type, SSL3_RT_APPLICATION_DATA);
+        assert_eq!(opened.seq, 1);
+    }
+
+    /// A flipped tag is the single record failure code `-1`; the sequence does not advance and
+    /// the caller's output buffer is untouched (the caller maps `-1` to `bad_record_mac`).
+    #[test]
+    fn open_rejects_a_flipped_tag_without_advancing_the_sequence() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        let mut rec = hex(APP_RECORD);
+        let last = rec.len() - 1;
+        rec[last] ^= 0x01;
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..], 16384);
+        assert_eq!(opened.rc, -1);
+        assert_eq!(opened.seq, 0);
+        assert!(
+            opened.out.iter().all(|b| *b == 0),
+            "no plaintext on failure"
+        );
+    }
+
+    /// Fewer bytes than the tag cannot name a tag; refused before any decryption.
+    #[test]
+    fn open_rejects_a_truncated_record() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        let rec = hex(APP_RECORD);
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..5 + 15], 16384);
+        assert_eq!(opened.rc, -1);
+        assert_eq!(opened.seq, 0);
+    }
+
+    /// The largest permitted inner plaintext round-trips at the 16 KiB buffer bound.
+    #[test]
+    fn seal_open_max_size_record_round_trips() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        let plain: Vec<u8> = (0..TLS13_HS_BUF_LEN).map(|i| (i % 251) as u8).collect();
+        let rec = seal_record(&key, &iv, 0, &plain, SSL3_RT_APPLICATION_DATA);
+        assert_eq!(rec.len(), 5 + TLS13_HS_BUF_LEN + 1 + 16);
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..], TLS13_HS_BUF_LEN);
+        assert_eq!(opened.rc, TLS13_HS_BUF_LEN as isize);
+        assert_eq!(opened.out, plain);
+        assert_eq!(opened.content_type, SSL3_RT_APPLICATION_DATA);
+        assert_eq!(opened.seq, 1);
+    }
+
+    /// Zero-length application data still seals `content_type` and opens to length 0.
+    #[test]
+    fn seal_open_zero_length_plaintext_round_trips() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        let rec = seal_record(&key, &iv, 0, &[], SSL3_RT_APPLICATION_DATA);
+        assert_eq!(rec.len(), 5 + 1 + 16);
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..], 0);
+        assert_eq!(opened.rc, 0);
+        assert!(opened.out.is_empty());
+        assert_eq!(opened.content_type, SSL3_RT_APPLICATION_DATA);
+        assert_eq!(opened.seq, 1);
+    }
+
+    /// A caller buffer shorter than the decrypted content is refused without writing or
+    /// advancing the sequence.
+    #[test]
+    fn open_rejects_a_too_small_output_buffer() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        let rec = hex(APP_RECORD);
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..], 1);
+        assert_eq!(opened.rc, -1);
+        assert_eq!(opened.seq, 0);
+        assert_eq!(
+            opened.out,
+            vec![0u8; 1],
+            "nothing copied into a short buffer"
+        );
     }
 }
