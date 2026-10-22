@@ -22,21 +22,14 @@ use core::ffi::{c_char, c_void};
 use crate::asn1::items::ASN1_INTEGER_it;
 use crate::asn1::layout::Asn1String;
 use crate::runtime::obj::{NID_crl_number, NID_delta_crl, NID_inhibit_any_policy};
-use crate::x509::v3_lib::{X509V3ExtI2s, X509V3ExtMethod};
+use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_utl::{i2s_ASN1_INTEGER, s2i_ASN1_INTEGER};
 
-/// `(X509V3_EXT_I2S)i2s_ASN1_INTEGER` — the cast every row's initialiser writes.
-const fn as_i2s(
-    f: unsafe extern "C" fn(*mut X509V3ExtMethod, *const Asn1String) -> *mut c_char,
-) -> X509V3ExtI2s {
-    // SAFETY: both function types take two pointer arguments and answer a pointer; the authority
-    // writes exactly this cast in the rows.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(*mut X509V3ExtMethod, *const Asn1String) -> *mut c_char,
-            unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char,
-        >(f)
-    })
+/// The `i2s` slot for `i2s_ASN1_INTEGER`.
+unsafe extern "C" fn int_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
+    // SAFETY: `meth` is the table's live row (read only); `value` is the `ASN1_INTEGER` in the
+    // slot.
+    unsafe { i2s_ASN1_INTEGER(meth.cast_mut(), value.cast::<Asn1String>()) }
 }
 
 /// `static void *s2i_asn1_int(X509V3_EXT_METHOD *meth, X509V3_CTX *ctx, const char *value)`
@@ -64,7 +57,7 @@ pub static ossl_v3_crl_num: X509V3ExtMethod = X509V3ExtMethod {
     ext_free: None,
     d2i: None,
     i2d: None,
-    i2s: as_i2s(i2s_ASN1_INTEGER),
+    i2s: Some(int_i2s),
     s2i: None,
     i2v: None,
     v2i: None,
@@ -83,7 +76,7 @@ pub static ossl_v3_delta_crl: X509V3ExtMethod = X509V3ExtMethod {
     ext_free: None,
     d2i: None,
     i2d: None,
-    i2s: as_i2s(i2s_ASN1_INTEGER),
+    i2s: Some(int_i2s),
     s2i: None,
     i2v: None,
     v2i: None,
@@ -103,7 +96,7 @@ pub static ossl_v3_inhibit_anyp: X509V3ExtMethod = X509V3ExtMethod {
     ext_free: None,
     d2i: None,
     i2d: None,
-    i2s: as_i2s(i2s_ASN1_INTEGER),
+    i2s: Some(int_i2s),
     s2i: Some(s2i_asn1_int),
     i2v: None,
     v2i: None,
