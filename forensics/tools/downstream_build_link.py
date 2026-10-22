@@ -1987,6 +1987,12 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 L7 onboarding batch (b14): nine bespoke-workload recipes plus one template
+    # row (hcxkeys).  Same pristine-source/aux seam and the same single `{prefix}` substitution.
+    for spec in _L7_ONBOARD_SPECS_B:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     # The declarative template cohort.  Each entry is a small config row (URL + SHA-256 +
     # build-system fields + a bucket workload) rather than a bespoke recipe; the same pristine
     # acquire/configure/make path is used, and `{prefix}` is still the only substitution.
@@ -2812,6 +2818,158 @@ _L7_ONBOARD_SPECS: tuple[dict, ...] = (
         "note": ("cyrus-sasl 2.1.28's DIGEST-MD5 plugin linked to the subject libcrypto; the "
                  "admitted client/server harness authenticates with DIGEST-MD5 and rejects a "
                  "wrong password"),
+    },
+)
+
+# The Phase-25 L7 onboarding batch (b14): ten further consumers, each built from a pristine
+# released archive against the subject prefix. `hcxkeys` is a declarative template row; the
+# others carry a bespoke workload because their observable is a protocol decision (DoT, TLS
+# echo, MQTT CONNACK, Icecast SOURCE, AMQP TLS open) or a file transform (PDF encryption, EFI
+# signature list). Non-OpenSSL dependencies are pinned bookworm packages through `aux_sources,
+# exactly as the earlier batches do, so the subject prefix remains the only OpenSSL.
+_L7_ONBOARD_SPECS_B: tuple[dict, ...] = (
+    {
+        "family": "nmap-ncat", "version": "7.95",
+        "url": "https://nmap.org/dist/nmap-7.95.tar.bz2",
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "e14ab530e47b5afd88f1c8a2bac7f89cd8fe6b478e22d255c5b9bddb7a1c5778",
+        "configure": ["--with-openssl={prefix}", "--without-zenmap", "--without-nping",
+                      "--without-nmap-update"],
+        "make": [MAKE_JOBS, "build-ncat"],
+        "artifact": "ncat/ncat", "launch": ["--version"],
+        "note": ("Ncat 7.95's TLS transport linked to the subject libssl; the admitted workload "
+                 "completes a verified TLS exchange carrying the payload and rejects an "
+                 "unrelated CA"),
+    },
+    {
+        "family": "unbound", "version": "1.22.0",
+        "url": "https://www.nlnetlabs.nl/downloads/unbound/unbound-1.22.0.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c5dd1bdef5d5685b2cedb749158dd152c52d44f65529a34ac15cd88d4b1b3d43",
+        "configure": ["--with-ssl={prefix}", "--with-libevent=no", "--disable-sha1",
+                      "--disable-ecdsa", "--disable-gost", "--without-pythonmodule",
+                      "--without-pyunbound", "--disable-dnstap"],
+        "make": [MAKE_JOBS], "artifact": "unbound", "launch": ["-V"],
+        "note": ("Unbound 1.22.0's DNS-over-TLS forwarder path linked to the subject libssl: a "
+                 "local TLS resolver serves a fixture zone and a forwarding resolver retrieves "
+                 "it over DoT, while a resolver trusting only an unrelated CA cannot"),
+    },
+    {
+        "family": "qpdf", "version": "11.9.1",
+        "url": "https://github.com/qpdf/qpdf/releases/download/v11.9.1/qpdf-11.9.1.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "2ba4d248f9567a27c146b9772ef5dc93bd9622317978455ffe91b259340d13d1",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DBUILD_DOC=OFF",
+                      "-DBUILD_STATIC_LIBS=OFF", "-DREQUIRE_CRYPTO_OPENSSL=ON",
+                      "-DDEFAULT_CRYPTO=openssl",
+                      "-DCMAKE_C_FLAGS=-I{aux}/usr/include -I{aux}/usr/include/x86_64-linux-gnu",
+                      "-DCMAKE_CXX_FLAGS=-I{aux}/usr/include "
+                      "-I{aux}/usr/include/x86_64-linux-gnu"],
+        "make": [], "artifact": "b/libqpdf/libqpdf.so*", "launch": ["--version"],
+        "aux_sources": [
+            _aux_deb("libj/libjpeg-turbo", "libjpeg62-turbo_2.1.5-2_amd64.deb",
+                     "95ec30140789a342add8f8371ed018924de51b539056522b66f207b25cba9cad",
+                     library_dirs=(_AUX_MULTIARCH,)),
+            _aux_deb("libj/libjpeg-turbo", "libjpeg62-turbo-dev_2.1.5-2_amd64.deb",
+                     "10485411f751c24472c43b28fe24ab6389fedb027d496bbc2c831496f750ab01",
+                     include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+                     library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+        ],
+        "note": ("qpdf 11.9.1's OpenSSL crypto provider (explicitly selected, REQUIRE_CRYPTO_OPENSSL) "
+                 "encrypts a PDF with AES-256, reports the R=6 encryption parameters, decrypts it "
+                 "with the right password and rejects the wrong one"),
+    },
+    {
+        "family": "nagios-plugins-smtp", "version": "2.4.0",
+        "url": "https://www.monitoring-plugins.org/download/monitoring-plugins-2.4.0.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "e5dfd4ad8fde0a40da50aab3aff6d9a27020b8f283e332bc4da6ef9914f4028c",
+        "configure": ["--with-openssl={prefix}", "--without-pgsql", "--without-mysql",
+                      "--without-ldap", "--without-dbi", "--without-radius",
+                      "--without-libcurl", "--without-ssh", "--without-snmp",
+                      "--without-nagios-xml", "--disable-nls"],
+        "make": [MAKE_JOBS], "artifact": "plugins/check_smtp", "launch": ["-V"],
+        "note": ("check_smtp 2.4.0's STARTTLS path linked to the subject libssl: a local SMTP "
+                 "peer negotiates STARTTLS and the check succeeds, while a peer that does not "
+                 "advertise STARTTLS is rejected"),
+    },
+    {
+        "family": "efitools", "version": "1.9.2",
+        "url": ("https://git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git/snapshot/"
+                "efitools-1.9.2.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "0f315b36e7d1ba74bfc97ab9f304f0a3072c47578bbe5e42594acae381f9acfe",
+        "configure": None,
+        "make": [MAKE_JOBS, "sign-efi-sig-list", "cert-to-efi-sig-list",
+                 "CC=gcc -L{prefix}/lib -Wl,-rpath,{prefix}/lib",
+                 "CFLAGS=-O2 -g -fpic -fshort-wchar -fno-strict-aliasing "
+                 "-fno-merge-constants -fno-stack-protector -ffreestanding -fno-stack-check "
+                 "-DGNU_EFI_USE_MS_ABI -DEFI_FUNCTION_WRAPPER -mno-red-zone "
+                 "-DCONFIG_x86_64 -fno-toplevel-reorder -I{aux}/usr/include -I{prefix}/include",
+                 "INCDIR=-I{root}/include/ -I{aux}/usr/include -I{aux}/usr/include/efi "
+                 "-I{aux}/usr/include/efi/x86_64 -I{aux}/usr/include/efi/protocol"],
+        "artifact": "sign-efi-sig-list", "launch": ["-h"],
+        "aux_sources": [
+            _aux_deb("g/gnu-efi", "gnu-efi_3.0.15-1_amd64.deb",
+                     "1e668cebcb94678b39a69e5c7b8f1d1eb51fd4eb251643491a8c249ae6fa0c36",
+                     include_dirs=("usr/include",)),
+        ],
+        "note": ("efitools' EFI signature-list path linked to the subject libcrypto: a certificate "
+                 "is encoded as an ESL and signed into an authenticated variable update, while a "
+                 "key that does not match the certificate is rejected"),
+    },
+    {
+        "family": "libpaho-mqtt", "version": "1.3.13",
+        "url": "https://github.com/eclipse-paho/paho.mqtt.c/archive/refs/tags/v1.3.13.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "47c77e95609812da82feee30db435c3b7c720d4fd3147d466ead126e657b6d9c",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DPAHO_BUILD_SHARED=TRUE",
+                      "-DPAHO_BUILD_STATIC=FALSE", "-DPAHO_BUILD_SAMPLES=FALSE",
+                      "-DPAHO_ENABLE_TESTING=FALSE", "-DPAHO_WITH_SSL=TRUE"],
+        "make": [], "artifact": "b/src/libpaho-mqtt3cs.so*", "launch": None,
+        "note": ("paho.mqtt.c's TLS client linked to the subject libssl; the admitted harness "
+                 "completes MQTT CONNECT/CONNACK over TLS and rejects an unrelated CA"),
+    },
+    {
+        "family": "nagios-plugins-ldap", "version": "2.4.0",
+        "url": "https://www.monitoring-plugins.org/download/monitoring-plugins-2.4.0.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "e5dfd4ad8fde0a40da50aab3aff6d9a27020b8f283e332bc4da6ef9914f4028c",
+        "configure": ["--with-openssl={prefix}", "--without-pgsql", "--without-mysql",
+                      "--without-dbi", "--without-radius", "--without-libcurl",
+                      "--without-ssh", "--without-snmp", "--without-nagios-xml",
+                      "--disable-nls"],
+        "make": [MAKE_JOBS], "artifact": "plugins/check_ldap", "launch": ["-V"],
+        "note": ("check_ldap 2.4.0's LDAPS path linked to the subject libssl: a local LDAP peer "
+                 "accepts the simple bind and search, while the wrong password is rejected"),
+    },
+    {
+        "family": "srtp", "version": "2.6.0",
+        "url": "https://github.com/cisco/libsrtp/archive/refs/tags/v2.6.0.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "bf641aa654861be10570bfc137d1441283822418e9757dc71ebb69a6cf84ea6b",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DENABLE_OPENSSL=ON",
+                      "-DLIBSRTP_TEST_APPS=OFF", "-DBUILD_SHARED_LIBS=ON"],
+        "make": [], "artifact": "b/libsrtp2.so*", "launch": None,
+        "note": ("libsrtp's OpenSSL crypto backend; the admitted harness protects an RTP packet "
+                 "with AES-CM-128/HMAC-SHA1, unprotects it, and rejects a session with the wrong "
+                 "key"),
+    },
+    {
+        "family": "rabbitmq-c", "version": "0.15.0",
+        "url": "https://github.com/alanxz/rabbitmq-c/archive/refs/tags/v0.15.0.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "7b652df52c0de4d19ca36c798ed81378cba7a03a0f0c5d498881ae2d79b241c2",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DBUILD_SHARED_LIBS=ON",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_TESTS=OFF", "-DBUILD_TOOLS=OFF",
+                      "-DENABLE_SSL_SUPPORT=ON"],
+        "make": [], "artifact": "b/librabbitmq/librabbitmq.so*", "launch": None,
+        "note": ("rabbitmq-c's SSL socket linked to the subject libssl; the admitted harness "
+                 "completes the TLS connection to a local peer and rejects an unrelated CA"),
     },
 )
 
