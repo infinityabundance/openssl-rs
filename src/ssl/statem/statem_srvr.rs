@@ -995,10 +995,14 @@ impl<'a> SliceCursor<'a> {
 
 /// A bounds-checked forward-only writer over a caller-supplied byte block.
 ///
-/// Every method answers `false` when the value does not fit; the position advances only on
-/// success. No method can write outside `out`, so the body writers built on it are safe
-/// functions: no argument can make them panic or write out of bounds. A too-small block is a
-/// clean `None` at the body-writer seam, which the callers turn into the existing failure return.
+/// Every method is transactional: it answers `false` when the value does not fit, and on
+/// failure the cursor and the underlying buffer are unchanged. Composite operations compute
+/// their full extent (prefix plus payload) with checked arithmetic and verify it against the
+/// remaining capacity before writing any byte, so they can never leave a length prefix behind
+/// whose payload was refused. No method can write outside `out`, so the body writers built on it
+/// are safe functions: no argument can make them panic or write out of bounds. A too-small block
+/// is a clean `None` at the body-writer seam, which the callers turn into the existing failure
+/// return.
 struct BytesWriter<'a> {
     out: &'a mut [u8],
     pos: usize,
@@ -1012,6 +1016,15 @@ impl<'a> BytesWriter<'a> {
     /// Bytes written so far; `pos` never exceeds `out.len()`.
     fn written(&self) -> usize {
         self.pos
+    }
+
+    /// Whether `additional` more bytes could be written, using checked arithmetic so an
+    /// overflowing extent is reported as "does not fit" rather than panicking.
+    fn has_room(&self, additional: usize) -> bool {
+        match self.pos.checked_add(additional) {
+            Some(end) => end <= self.out.len(),
+            None => false,
+        }
     }
 
     fn put_bytes(&mut self, bytes: &[u8]) -> bool {
@@ -1035,25 +1048,42 @@ impl<'a> BytesWriter<'a> {
     }
 
     /// `length(1) || bytes`, with the length derived from the slice and refused when it
-    /// cannot be expressed in one byte.
+    /// cannot be expressed in one byte. Transactional: a refused length or extent writes nothing.
     fn put_u8_len_prefixed(&mut self, bytes: &[u8]) -> bool {
         let Ok(len) = u8::try_from(bytes.len()) else {
             return false;
         };
+        let Some(extent) = bytes.len().checked_add(1) else {
+            return false;
+        };
+        if !self.has_room(extent) {
+            return false;
+        }
         self.put_u8(len) && self.put_bytes(bytes)
     }
 
-    /// `length(2) || bytes`, with the length derived from the slice.
+    /// `length(2) || bytes`, with the length derived from the slice. Transactional: a refused
+    /// length or extent writes nothing.
     fn put_u16_len_prefixed(&mut self, bytes: &[u8]) -> bool {
         let Ok(len) = u16::try_from(bytes.len()) else {
             return false;
         };
+        let Some(extent) = bytes.len().checked_add(2) else {
+            return false;
+        };
+        if !self.has_room(extent) {
+            return false;
+        }
         self.put_u16(len) && self.put_bytes(bytes)
     }
 
     /// `u24` big-endian, refused when the value cannot be expressed in three bytes.
+    /// Transactional: if all three bytes do not fit, none is written.
     fn put_u24(&mut self, value: usize) -> bool {
         if value > 0xFF_FFFF {
+            return false;
+        }
+        if !self.has_room(3) {
             return false;
         }
         self.put_u8((value >> 16) as u8)
@@ -5065,6 +5095,128 @@ mod server_hello_body_tests {
             crate::packet::WPACKET_cleanup(&mut pkt);
             crate::runtime::mem::CRYPTO_free(s.cast(), core::ptr::null(), 0);
         }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// BytesWriter transactional invariants
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod bytes_writer_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::BytesWriter;
+
+    const SENTINEL: u8 = 0xa5;
+
+    /// A too-small buffer is refused with the cursor and every byte of the buffer unchanged:
+    /// no length prefix is left behind for a payload that did not fit.
+    #[test]
+    fn composite_operations_are_transactional_when_one_byte_short() {
+        let payload = [0x11u8, 0x22, 0x33, 0x44];
+
+        let mut out = [SENTINEL; 4]; // needs 1 + 4 = 5
+        let before = out;
+        let mut w = BytesWriter::new(&mut out);
+        assert!(!w.put_u8_len_prefixed(&payload));
+        assert_eq!(w.written(), 0);
+        assert_eq!(out, before);
+
+        let mut out = [SENTINEL; 5]; // needs 2 + 4 = 6
+        let before = out;
+        let mut w = BytesWriter::new(&mut out);
+        assert!(!w.put_u16_len_prefixed(&payload));
+        assert_eq!(w.written(), 0);
+        assert_eq!(out, before);
+
+        let mut out = [SENTINEL; 2]; // needs 3
+        let before = out;
+        let mut w = BytesWriter::new(&mut out);
+        assert!(!w.put_u24(0x01_02_03));
+        assert_eq!(w.written(), 0);
+        assert_eq!(out, before);
+    }
+
+    /// Exactly the required extent succeeds and produces the exact wire bytes.
+    #[test]
+    fn composite_operations_succeed_with_exact_bytes_at_exact_size() {
+        let payload = [0x11u8, 0x22, 0x33, 0x44];
+
+        let mut out = [SENTINEL; 5];
+        let mut w = BytesWriter::new(&mut out);
+        assert!(w.put_u8_len_prefixed(&payload));
+        assert_eq!(w.written(), 5);
+        assert_eq!(out, [4, 0x11, 0x22, 0x33, 0x44]);
+
+        let mut out = [SENTINEL; 6];
+        let mut w = BytesWriter::new(&mut out);
+        assert!(w.put_u16_len_prefixed(&payload));
+        assert_eq!(w.written(), 6);
+        assert_eq!(out, [0x00, 0x04, 0x11, 0x22, 0x33, 0x44]);
+
+        let mut out = [SENTINEL; 3];
+        let mut w = BytesWriter::new(&mut out);
+        assert!(w.put_u24(0x01_02_03));
+        assert_eq!(w.written(), 3);
+        assert_eq!(out, [0x01, 0x02, 0x03]);
+    }
+
+    /// A payload longer than a one-byte length can express is refused before any write, even
+    /// though the destination buffer would be large enough.
+    #[test]
+    fn u8_length_prefix_refuses_a_payload_over_255_bytes() {
+        let payload = vec![0x5au8; 256];
+        let mut out = [SENTINEL; 300];
+        let before = out;
+        let mut w = BytesWriter::new(&mut out);
+        assert!(!w.put_u8_len_prefixed(&payload));
+        assert_eq!(w.written(), 0);
+        assert_eq!(out, before);
+    }
+
+    /// A u24 value above `0xFF_FFFF` is refused with nothing written and no cursor advance.
+    #[test]
+    fn u24_refuses_a_value_over_ffffff() {
+        let mut out = [SENTINEL; 3];
+        let before = out;
+        let mut w = BytesWriter::new(&mut out);
+        assert!(!w.put_u24(0x1_00_00_00));
+        assert_eq!(w.written(), 0);
+        assert_eq!(out, before);
+    }
+
+    /// An empty payload still writes its length prefix and advances by exactly the prefix size.
+    #[test]
+    fn zero_length_payloads_write_only_the_prefix() {
+        let mut out = [SENTINEL; 1];
+        let mut w = BytesWriter::new(&mut out);
+        assert!(w.put_u8_len_prefixed(&[]));
+        assert_eq!(w.written(), 1);
+        assert_eq!(out, [0x00]);
+
+        let mut out = [SENTINEL; 2];
+        let mut w = BytesWriter::new(&mut out);
+        assert!(w.put_u16_len_prefixed(&[]));
+        assert_eq!(w.written(), 2);
+        assert_eq!(out, [0x00, 0x00]);
+    }
+
+    /// The primitive operations are all-or-nothing as well.
+    #[test]
+    fn primitive_operations_are_transactional() {
+        let mut out = [SENTINEL; 1];
+        let before = out;
+        let mut w = BytesWriter::new(&mut out);
+        assert!(!w.put_u16(0x0102));
+        assert_eq!(w.written(), 0);
+        assert_eq!(out, before);
+
+        let mut out = [SENTINEL; 0];
+        let mut w = BytesWriter::new(&mut out);
+        assert!(!w.put_u8(1));
+        assert!(!w.put_bytes(&[1]));
+        assert_eq!(w.written(), 0);
+        assert_eq!(out, []);
     }
 }
 
