@@ -2467,6 +2467,48 @@ pub(crate) unsafe fn tls12_process_peer_certificate(
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
 }
 
+/// The `ServerECDHParams` prefix and the signature that follows it.
+///
+/// `params` is the exact signed extent (`curve_type || named_curve || point`); it stops before
+/// the signature algorithm, as `tls_process_ske_ecdhe` does when it hashes only the params.
+struct ServerEcdhParams<'a> {
+    params: &'a [u8],
+    group: u16,
+    point: &'a [u8],
+    sigalg: u16,
+    sig: &'a [u8],
+}
+
+/// `ServerECDHParams` framing: `curve_type(1) || named_curve(2) || point_len(1) || point ||
+/// sig_alg(2) || sig_len(2) || sig`.
+///
+/// Only the named-curve form (`curve_type == 3`) is reachable in this client; the explicit-prime
+/// `ServerDHParams` form is not implemented here, and the authority's length checks leave it
+/// unreachable, so it is refused rather than guessed at. Trailing bytes after the signature are
+/// ignored, exactly as the reduce does today.
+fn read_server_ecdh_params(body: &[u8]) -> Option<ServerEcdhParams<'_>> {
+    let mut cur = SliceCursor::new(body);
+    let params_start = cur.pos();
+    if cur.take_u8()? != 3 {
+        return None;
+    }
+    let group = cur.take_u16()?;
+    let ptlen = cur.take_u8()? as usize;
+    let point = cur.take(ptlen)?;
+    let params_end = cur.pos();
+    let params = body.get(params_start..params_end)?;
+    let sigalg = cur.take_u16()?;
+    let siglen = cur.take_u16()? as usize;
+    let sig = cur.take(siglen)?;
+    Some(ServerEcdhParams {
+        params,
+        group,
+        point,
+        sigalg,
+        sig,
+    })
+}
+
 /// `MSG_PROCESS_RETURN tls_process_key_exchange(...)` (`statem_clnt.c:1995`/`statem_lib.c:441`) for
 /// the ECDHE arm: verify the `ServerECDHParams` signature with the server certificate key and wrap
 /// the server's point into an `EVP_PKEY`.
@@ -2475,30 +2517,26 @@ pub(crate) unsafe fn tls12_process_peer_certificate(
 /// `s` is live; `msg` is the full ServerKeyExchange message.
 unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
     use crate::x509::x509_cmp::X509_get0_pubkey;
-    if msg.len() < 4 || msg[0] != SSL3_MT_SERVER_KEY_EXCHANGE as u8 {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_SERVER_KEY_EXCHANGE as u8) {
         return 0;
     }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
+    let Some(blen) = take_u24(&mut frame) else {
         return 0;
-    }
-    let body = &msg[4..4 + blen];
-    if body.len() < 5 || body[0] != 3 {
+    };
+    let Some(body) = frame.take(blen) else {
         return 0;
-    }
-    let group = ((body[1] as u16) << 8) | body[2] as u16;
-    let ptlen = body[3] as usize;
-    if 4 + ptlen + 4 > body.len() {
+    };
+    let Some(ServerEcdhParams {
+        params,
+        group,
+        point,
+        sigalg,
+        sig,
+    }) = read_server_ecdh_params(body)
+    else {
         return 0;
-    }
-    let params = &body[..4 + ptlen];
-    let point = &body[4..4 + ptlen];
-    let sigalg = ((body[4 + ptlen] as u16) << 8) | body[4 + ptlen + 1] as u16;
-    let siglen = ((body[4 + ptlen + 2] as usize) << 8) | body[4 + ptlen + 3] as usize;
-    if 4 + ptlen + 4 + siglen > body.len() {
-        return 0;
-    }
-    let sig = &body[4 + ptlen + 4..4 + ptlen + 4 + siglen];
+    };
     // SAFETY: `s` is live.
     let peer_cert = unsafe { (*s).peer_cert };
     if peer_cert.is_null() {
@@ -2584,6 +2622,22 @@ unsafe fn tls12_process_certificate_request(s: *mut Ssl, msg: &[u8]) -> c_int {
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
 }
 
+/// The TLS1.2 `CertificateVerify` body: `sig_alg(2) || sig_len(2) || sig`.
+struct CertVerifyLayout<'a> {
+    sigalg: u16,
+    sig: &'a [u8],
+}
+
+/// Parse the `CertificateVerify` signature algorithm, the u16 signature length and the exact
+/// signature extent. Trailing bytes after the signature are ignored, matching the reduce.
+fn read_cert_verify_layout(body: &[u8]) -> Option<CertVerifyLayout<'_>> {
+    let mut cur = SliceCursor::new(body);
+    let sigalg = cur.take_u16()?;
+    let siglen = cur.take_u16()? as usize;
+    let sig = cur.take(siglen)?;
+    Some(CertVerifyLayout { sigalg, sig })
+}
+
 /// `MSG_PROCESS_RETURN tls_process_cert_verify(...)` (`statem_lib.c:441-560`) for TLS1.2: the
 /// signature is over the handshake transcript hash, verified with the peer's certificate key.
 ///
@@ -2591,23 +2645,19 @@ unsafe fn tls12_process_certificate_request(s: *mut Ssl, msg: &[u8]) -> c_int {
 /// `s` is live; `msg` is the full CertificateVerify message.
 pub(crate) unsafe fn tls12_process_cert_verify(s: *mut Ssl, msg: &[u8], _is_server: bool) -> c_int {
     use crate::x509::x509_cmp::X509_get0_pubkey;
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+    let mut frame = SliceCursor::new(msg);
+    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE_VERIFY as u8) {
         return 0;
     }
-    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
-    if 4 + blen > msg.len() {
+    let Some(blen) = take_u24(&mut frame) else {
         return 0;
-    }
-    let body = &msg[4..4 + blen];
-    if body.len() < 4 {
+    };
+    let Some(body) = frame.take(blen) else {
         return 0;
-    }
-    let sigalg = ((body[0] as u16) << 8) | body[1] as u16;
-    let siglen = ((body[2] as usize) << 8) | body[3] as usize;
-    if 4 + siglen > body.len() {
+    };
+    let Some(CertVerifyLayout { sigalg, sig }) = read_cert_verify_layout(body) else {
         return 0;
-    }
-    let sig = &body[4..4 + siglen];
+    };
     // SAFETY: `s` is live.
     let peer_cert = unsafe { (*s).peer_cert };
     if peer_cert.is_null() {
@@ -2897,6 +2947,42 @@ unsafe fn status_callback_initial_flight(s: *mut Ssl) -> c_int {
 ///
 /// # Safety
 /// `s` is live.
+/// Why a TLS1.2 `CertificateStatus` body was refused. The framing failure is a decode error;
+/// a status type or response-length disagreement is a bad-status-response alert, matching the
+/// authority's split (`tls_process_cert_status`, `statem_clnt.c`).
+#[derive(Debug)]
+enum CertStatusReject {
+    Decode,
+    BadResponse,
+}
+
+/// Parse `CertificateStatus`: `status_type(1) || response_len(3) || response`.
+///
+/// Returns exactly the declared response extent, which must consume the whole body. A
+/// zero-length response is valid.
+fn read_cert_status_response(
+    body: &[u8],
+    expected_status_type: c_int,
+) -> Result<&[u8], CertStatusReject> {
+    let mut cur = SliceCursor::new(body);
+    let Some(status_type) = cur.take_u8() else {
+        return Err(CertStatusReject::Decode);
+    };
+    let Some(rlen) = take_u24(&mut cur) else {
+        return Err(CertStatusReject::Decode);
+    };
+    if status_type as c_int != expected_status_type {
+        return Err(CertStatusReject::BadResponse);
+    }
+    let Some(response) = cur.take(rlen) else {
+        return Err(CertStatusReject::BadResponse);
+    };
+    if cur.remaining() != 0 {
+        return Err(CertStatusReject::BadResponse);
+    }
+    Ok(response)
+}
+
 unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
     use crate::ssl::statem::statem_srvr::{
         tls12_construct_certificate, tls12_construct_finished, tls12_read_handshake,
@@ -2941,30 +3027,41 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                     }
                     // `tls_process_cert_status` (`statem_clnt.c`):
                     // `status_type(1) || response<3>`.
-                    let blen =
-                        ((buf[1] as usize) << 16) | ((buf[2] as usize) << 8) | buf[3] as usize;
-                    if 4 + blen > n || blen < 4 {
+                    let mut frame = SliceCursor::new(&buf[..n]);
+                    if frame.take_u8() != Some(SSL3_MT_CERTIFICATE_STATUS as u8) {
                         ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
                         return -1;
                     }
-                    let body = &buf[4..4 + blen];
-                    let rlen =
-                        ((body[1] as usize) << 16) | ((body[2] as usize) << 8) | body[3] as usize;
-                    if body[0] as c_int != (*s).ext_status_type || 4 + rlen != body.len() {
-                        ossl_statem_fatal(
-                            s,
-                            SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE,
-                            SSL_R_BAD_EXTENSION,
-                        );
+                    let Some(blen) = take_u24(&mut frame) else {
+                        ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
                         return -1;
-                    }
-                    // SAFETY: `s` is live; `body[4..]` names `rlen` readable bytes. The ctrl copies
-                    // them, so the transcript buffer may be reused afterwards.
+                    };
+                    let Some(body) = frame.take(blen) else {
+                        ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
+                        return -1;
+                    };
+                    let response = match read_cert_status_response(body, (*s).ext_status_type) {
+                        Ok(response) => response,
+                        Err(CertStatusReject::Decode) => {
+                            ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION);
+                            return -1;
+                        }
+                        Err(CertStatusReject::BadResponse) => {
+                            ossl_statem_fatal(
+                                s,
+                                SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE,
+                                SSL_R_BAD_EXTENSION,
+                            );
+                            return -1;
+                        }
+                    };
+                    // SAFETY: `s` is live; `response` names `response.len()` readable bytes. The
+                    // ctrl copies them, so the transcript buffer may be reused afterwards.
                     if crate::ssl::ssl_lib::SSL_ctrl(
                         s,
                         crate::ssl::ssl_lib::SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP,
-                        rlen as core::ffi::c_long,
-                        body[4..].as_ptr().cast_mut().cast(),
+                        response.len() as core::ffi::c_long,
+                        response.as_ptr().cast_mut().cast(),
                     ) != 1
                     {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
@@ -4597,6 +4694,258 @@ mod post_server_hello_parse {
                     break;
                 };
             }
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// TLS1.2 server flight: ServerKeyExchange, CertificateVerify, CertificateStatus framing
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod tls12_server_flight_parse {
+    #![allow(clippy::panic, clippy::expect_used)]
+
+    use super::{
+        read_cert_status_response, read_cert_verify_layout, read_server_ecdh_params,
+        CertStatusReject,
+    };
+
+    const CURVE_TYPE_NAMED: u8 = 3;
+    const GROUP_P256: u16 = 23;
+    const GROUP_X25519: u16 = 29;
+    const SIGALG_ECDSA_SHA256: u16 = 0x0403;
+
+    /// `ServerECDHParams || sig_alg || sig_len || sig`, with separately supplied declared
+    /// lengths so the malformed cases can disagree with the actual bytes.
+    fn ske_body(
+        curve_type: u8,
+        group: u16,
+        point: &[u8],
+        declared_ptlen: Option<u8>,
+        sigalg: u16,
+        sig: &[u8],
+        declared_siglen: Option<u16>,
+    ) -> Vec<u8> {
+        let mut body = vec![curve_type];
+        body.extend_from_slice(&group.to_be_bytes());
+        body.push(declared_ptlen.unwrap_or(point.len() as u8));
+        body.extend_from_slice(point);
+        body.extend_from_slice(&sigalg.to_be_bytes());
+        body.extend_from_slice(&declared_siglen.unwrap_or(sig.len() as u16).to_be_bytes());
+        body.extend_from_slice(sig);
+        body
+    }
+
+    fn p256_point() -> Vec<u8> {
+        let mut point = vec![0x04];
+        point.extend((0..64u8).map(|i| i.wrapping_mul(3)));
+        point
+    }
+
+    fn x25519_point() -> Vec<u8> {
+        (0..32u8).map(|i| 0x80 ^ i).collect()
+    }
+
+    #[test]
+    fn valid_p256_ske_reports_the_signed_params_extent() {
+        let point = p256_point();
+        let sig = [0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02];
+        let body = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_P256,
+            &point,
+            None,
+            SIGALG_ECDSA_SHA256,
+            &sig,
+            None,
+        );
+        let parsed = read_server_ecdh_params(&body).expect("a well-formed P-256 SKE parses");
+        assert_eq!(parsed.group, GROUP_P256);
+        assert_eq!(parsed.point, &point[..]);
+        assert_eq!(parsed.sigalg, SIGALG_ECDSA_SHA256);
+        assert_eq!(parsed.sig, &sig[..]);
+        // The signed extent is exactly `curve_type || named_curve || point_len || point`.
+        assert_eq!(parsed.params.len(), 4 + point.len());
+        assert_eq!(parsed.params, &body[..4 + point.len()]);
+    }
+
+    #[test]
+    fn valid_x25519_ske_parses() {
+        let point = x25519_point();
+        let sig = [0xaa; 64];
+        let body = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_X25519,
+            &point,
+            None,
+            SIGALG_ECDSA_SHA256,
+            &sig,
+            None,
+        );
+        let parsed = read_server_ecdh_params(&body).expect("a well-formed X25519 SKE parses");
+        assert_eq!(parsed.group, GROUP_X25519);
+        assert_eq!(parsed.point, &point[..]);
+        assert_eq!(parsed.params.len(), 4 + point.len());
+    }
+
+    #[test]
+    fn point_length_overrunning_the_body_is_refused() {
+        // Declares 200 point bytes but supplies four bytes followed by the signature fields.
+        let body = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_P256,
+            &[0x04, 0x01, 0x02, 0x03],
+            Some(200),
+            SIGALG_ECDSA_SHA256,
+            &[0u8; 8],
+            None,
+        );
+        assert!(
+            read_server_ecdh_params(&body).is_none(),
+            "a point length that overruns the params must be refused"
+        );
+    }
+
+    #[test]
+    fn non_named_curve_type_is_refused() {
+        let body = ske_body(1, GROUP_P256, &p256_point(), None, 0x0401, &[0u8; 8], None);
+        assert!(read_server_ecdh_params(&body).is_none());
+    }
+
+    #[test]
+    fn signature_length_overrunning_the_body_is_refused() {
+        let point = p256_point();
+        let body = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_P256,
+            &point,
+            None,
+            SIGALG_ECDSA_SHA256,
+            &[0x30, 0x02],
+            Some(0xffff),
+        );
+        assert!(read_server_ecdh_params(&body).is_none());
+    }
+
+    #[test]
+    fn valid_cert_verify_extent_is_exact() {
+        let sig = [0x30, 0x04, 0x02, 0x02, 0x11, 0x22];
+        let mut body = SIGALG_ECDSA_SHA256.to_be_bytes().to_vec();
+        body.extend_from_slice(&(sig.len() as u16).to_be_bytes());
+        body.extend_from_slice(&sig);
+        let parsed = read_cert_verify_layout(&body).expect("a complete CertificateVerify parses");
+        assert_eq!(parsed.sigalg, SIGALG_ECDSA_SHA256);
+        assert_eq!(parsed.sig, &sig[..]);
+    }
+
+    #[test]
+    fn truncated_cert_verify_signature_is_refused() {
+        let mut body = SIGALG_ECDSA_SHA256.to_be_bytes().to_vec();
+        body.extend_from_slice(&64u16.to_be_bytes());
+        body.extend_from_slice(&[0x30, 0x04]); // only two of the declared 64 bytes
+        assert!(read_cert_verify_layout(&body).is_none());
+
+        // A body shorter than the four-byte prefix is also refused, not split.
+        assert!(read_cert_verify_layout(&[0x04, 0x03, 0x00]).is_none());
+    }
+
+    #[test]
+    fn zero_length_cert_status_response_is_accepted() {
+        let body = [1u8, 0, 0, 0];
+        let response =
+            read_cert_status_response(&body, 1).expect("a zero length response is valid");
+        assert!(response.is_empty());
+    }
+
+    #[test]
+    fn cert_status_u24_overrun_is_a_bad_response() {
+        let body = [1u8, 0, 0, 10, 0xaa];
+        assert!(matches!(
+            read_cert_status_response(&body, 1),
+            Err(CertStatusReject::BadResponse)
+        ));
+    }
+
+    #[test]
+    fn cert_status_trailing_bytes_disagreeing_with_the_length_are_refused() {
+        let body = [1u8, 0, 0, 1, 0xaa, 0xbb];
+        assert!(matches!(
+            read_cert_status_response(&body, 1),
+            Err(CertStatusReject::BadResponse)
+        ));
+    }
+
+    #[test]
+    fn unsupported_status_type_is_a_bad_response() {
+        let body = [2u8, 0, 0, 0];
+        assert!(matches!(
+            read_cert_status_response(&body, 1),
+            Err(CertStatusReject::BadResponse)
+        ));
+    }
+
+    #[test]
+    fn cert_status_shorter_than_its_prefix_is_a_decode_error() {
+        assert!(matches!(
+            read_cert_status_response(&[1u8, 0, 0], 1),
+            Err(CertStatusReject::Decode)
+        ));
+        assert!(matches!(
+            read_cert_status_response(&[], 1),
+            Err(CertStatusReject::Decode)
+        ));
+    }
+
+    /// Deterministic seeded mutation of the three TLS1.2 server-flight parsers: every entry
+    /// point must answer `None`/`Err` rather than panic or read outside the frame.
+    #[test]
+    fn malformed_tls12_server_flight_loop_does_not_panic() {
+        let point = p256_point();
+        let good_ske = ske_body(
+            CURVE_TYPE_NAMED,
+            GROUP_P256,
+            &point,
+            None,
+            SIGALG_ECDSA_SHA256,
+            &[0x30; 16],
+            None,
+        );
+        let mut good_cv = SIGALG_ECDSA_SHA256.to_be_bytes().to_vec();
+        good_cv.extend_from_slice(&16u16.to_be_bytes());
+        good_cv.extend_from_slice(&[0x30; 16]);
+        let good_status = [1u8, 0, 0, 4, 0x01, 0x02, 0x03, 0x04];
+
+        let mut state = 0xA5A5_5A5A_1234_5678u64;
+        for _ in 0..512 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut ske = good_ske.clone();
+            let edits = 1 + (state as usize % 3);
+            for i in 0..edits {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                let at = (state as usize) % ske.len();
+                ske[at] ^= (state >> 32) as u8 | (i as u8 + 1);
+            }
+            let _ = read_server_ecdh_params(&ske);
+
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut cv = good_cv.clone();
+            let at = (state as usize) % cv.len();
+            cv[at] ^= ((state >> 32) as u8) | 1;
+            let _ = read_cert_verify_layout(&cv);
+
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let mut status = good_status.to_vec();
+            let at = (state as usize) % status.len();
+            status[at] ^= ((state >> 32) as u8) | 1;
+            let _ = read_cert_status_response(&status, 1);
         }
     }
 }
