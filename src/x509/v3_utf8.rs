@@ -150,31 +150,30 @@ const fn ext_utf8string(nid: c_int) -> X509V3ExtMethod {
         ext_free: None,
         d2i: None,
         i2d: None,
-        // SAFETY: both function types take two pointer arguments and answer a pointer; the
-        // authority writes exactly this cast in the macro.
-        i2s: Some(unsafe {
-            core::mem::transmute::<
-                unsafe extern "C" fn(*mut c_void, *mut Asn1String) -> *mut c_char,
-                unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char,
-            >(i2s_ASN1_UTF8STRING)
-        }),
-        // SAFETY: both function types take three pointer arguments and answer a pointer.
-        s2i: Some(unsafe {
-            core::mem::transmute::<
-                unsafe extern "C" fn(*mut c_void, *mut c_void, *const c_char) -> *mut Asn1String,
-                unsafe extern "C" fn(
-                    *const X509V3ExtMethod,
-                    *mut c_void,
-                    *const c_char,
-                ) -> *mut c_void,
-            >(s2i_ASN1_UTF8STRING)
-        }),
+        i2s: Some(utf8_i2s),
+        s2i: Some(utf8_s2i),
         i2v: None,
         v2i: None,
         i2r: None,
         r2i: None,
         usr_data: ptr::null_mut(),
     }
+}
+
+/// The `i2s` slot for `i2s_ASN1_UTF8STRING`.
+unsafe extern "C" fn utf8_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
+    // SAFETY: `meth` is the table's live row (read only); `value` is the UTF8 string in the slot.
+    unsafe { i2s_ASN1_UTF8STRING(meth.cast_mut().cast::<c_void>(), value.cast::<Asn1String>()) }
+}
+
+/// The `s2i` slot for `s2i_ASN1_UTF8STRING`.
+unsafe extern "C" fn utf8_s2i(
+    meth: *const X509V3ExtMethod,
+    ctx: *mut c_void,
+    value: *const c_char,
+) -> *mut c_void {
+    // SAFETY: as `utf8_i2s`; the answer is a fresh UTF8 string.
+    unsafe { s2i_ASN1_UTF8STRING(meth.cast_mut().cast::<c_void>(), ctx, value).cast::<c_void>() }
 }
 
 /// `const X509V3_EXT_METHOD ossl_v3_utf8_list[1]` — `crypto/x509/v3_utf8.c:24-26`.
