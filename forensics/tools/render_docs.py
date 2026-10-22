@@ -14,7 +14,7 @@ Evidence inputs (no others):
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/post-census-delta.json``
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-*.json``
 * ``Cargo.toml`` and ``atlas-refresh/publish-*.json``
-* ``git rev-parse --short HEAD`` (candidate identity)
+* ``body.candidate_identity`` (candidate library hashes / commit)
 
 Usage:
     render_docs.py --check   # exit 0 clean, 1 drift, 2 structural error
@@ -26,7 +26,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -70,20 +69,25 @@ def load_json(path: Path) -> dict:
         raise RenderError(f"invalid JSON in {path}: {exc}") from exc
 
 
-def git_head(root: Path) -> tuple[str, str]:
-    def rev(*args: str) -> str:
-        try:
-            out = subprocess.run(
-                ["git", "-C", str(root), *args],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-        except (OSError, subprocess.CalledProcessError) as exc:
-            raise RenderError(f"git {' '.join(args)} failed: {exc}") from exc
-        return out.stdout.strip()
-
-    return rev("rev-parse", "--short", "HEAD"), rev("rev-parse", "--abbrev-ref", "HEAD")
+def candidate_identity(atlas: dict) -> dict:
+    """Stable candidate identity from the atlas, not the working-tree HEAD."""
+    raw = atlas.get("body", {}).get("candidate_identity") or {}
+    commit = next(
+        (
+            str(raw[key])
+            for key in ("commit", "candidate_commit", "git_commit", "git_head")
+            if raw.get(key)
+        ),
+        None,
+    )
+    libs = []
+    for key, value in sorted(raw.items()):
+        if key.endswith("_sha256") and value:
+            name = key[: -len("_sha256")].replace("_so_", ".so.")
+            libs.append((name, str(value)))
+    if not commit and not libs:
+        raise RenderError("atlas body.candidate_identity records neither commit nor hashes")
+    return {"commit": commit, "libs": libs}
 
 
 def cargo_version(root: Path) -> str:
@@ -398,7 +402,7 @@ class Evidence:
         refresh = root / CAMPAIGN / "atlas-refresh"
         self.refresh = refresh
         self.sweeps = load_sweeps(refresh)
-        self.head, self.branch = git_head(root)
+        self.candidate = candidate_identity(self.atlas)
         self.version = cargo_version(root)
         self.families = family_names(self.atlas)
         self.partition = census_partition(self.census, self.delta)
@@ -435,6 +439,16 @@ class Evidence:
     def open_stop(self) -> list[dict]:
         return [d for d in self.stop_defects if not d["closed_by"]]
 
+    def identity_text(self) -> str:
+        bits = []
+        if self.candidate["commit"]:
+            bits.append(f"candidate commit `{self.candidate['commit']}`")
+        bits.append(f"crate version `{self.version}`")
+        bits.extend(
+            f"`{name}` sha256 `{digest}`" for name, digest in self.candidate["libs"]
+        )
+        return "; ".join(bits)
+
     # -- blocks ---------------------------------------------------------
     def achievements(self) -> str:
         corpus = self.corpus()
@@ -447,9 +461,9 @@ class Evidence:
         b = self.boundaries
         return "\n".join(
             [
-                f"Source identity: `{self.head}` on `{self.branch}`; crate version "
-                f"`{self.version}`. Derived by `forensics/tools/render_docs.py`; "
-                "`--check` fails if a block and its evidence disagree.",
+                f"Source identity: {self.identity_text()}. Derived by "
+                "`forensics/tools/render_docs.py`; `--check` fails if a block and "
+                "its evidence disagree.",
                 "",
                 "| Dimension | Result | Evidence |",
                 "|---|---|---|",
@@ -608,8 +622,8 @@ class Evidence:
             [
                 "| item | current value | source |",
                 "|---|---|---|",
-                f"| HEAD | `{self.head}` on `{self.branch}` | this checkout "
-                "(`git rev-parse --short HEAD`) |",
+                f"| candidate identity | {self.identity_text()} | "
+                f"`{ATLAS_S}` (`body.candidate_identity`); `Cargo.toml` |",
                 "| version / release | "
                 f"**{self.publish['version']}** published to crates.io "
                 f"({self.publish['date']}, checksum `{self.publish['checksum']}…`) | "

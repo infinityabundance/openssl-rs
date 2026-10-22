@@ -29,7 +29,7 @@ Measured at the source identity rendered below. Every row names its own
 machine-readable evidence; none of them is a claim of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: `1b0288a0c` on `integrate/safe-c33`; crate version `0.0.30`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: crate version `0.0.30`; `libcrypto.so.3` sha256 `891cf18bcd185bfc2cea87254a50775f9f9800558338674b99295cde93bc6f1b`; `libssl.so.3` sha256 `51fec2d3c9ac4568974a6f2f82520e9411525e4ec3a1093f9077c2807e4ae4aa`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
