@@ -68,6 +68,9 @@ pub mod a_utf8;
 // `ASN1_verify`. `ASN1_item_verify_ctx` is the single blocker 10.10 left on the Phase-7 row.
 pub mod a_verify;
 pub mod asn1_gen;
+// The checked slice-based DER cursor for trust-path code (`cursor.rs`); the pointer-walking
+// authority reader stays in `der.rs`.
+pub mod cursor;
 // Phase 12.9's `crypto/asn1/asn1_item_list.c` -- `ASN1_ITEM_lookup`/`ASN1_ITEM_get`
 // over the authority's generated 147-entry item list. Handed from Phase 5 (D80).
 pub(crate) mod asn1_item_list;
