@@ -3029,7 +3029,110 @@ _L7_ONBOARD_SPECS_B: tuple[dict, ...] = (
     },
 )
 
+# lighttpd 1.4.76's release tarball carries `configure.ac` but no generated `configure`, and
+# its TLS module is normally a dlopen'd `mod_openssl.so` (so the main executable imports no
+# OpenSSL symbol). The recipe bootstraps the tarball's own configure with the pinned bookworm
+# autotools, builds the static server (`LIGHTTPD_STATIC=yes`, the upstream-supported mode that
+# compiles mod_openssl into `src/lighttpd`), and takes PCRE2 from the same pinned-package seam.
+# The source tree stays pristine: the bootstrap writes generated build files only, exactly as
+# the partclone/httperf recipes do.
+_LIGHTTPD_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+)
+
+_LIGHTTPD_BOOTSTRAP = (
+    "set -e; mkdir -p m4; W={root}/.autotools; mkdir -p $W; "
+    "sed -i 's#/usr/share#{aux}/usr/share#g' {aux}/usr/bin/libtoolize; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/share/autoconf/autom4te.cfg; "
+    "sed -i 's#/usr/share/automake-1.16#{aux}/usr/share/automake-1.16#g' "
+    "{aux}/usr/bin/aclocal-1.16 {aux}/usr/bin/automake-1.16; "
+    "sed -i 's#/usr/share/aclocal#{aux}/usr/share/aclocal#g' {aux}/usr/bin/aclocal-1.16; "
+    "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+    "{aux}/usr/bin/autoconf {aux}/usr/bin/autoheader; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+    "--system-acdir={aux}/usr/share/aclocal-1.16 "
+    "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+    "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+    "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+    "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+    "autoreconf -fi; "
+    # Upstream's static-server mode requires src/plugin-static.h (INSTALL: "create "
+    # src/plugin-static.h with list of modules as PLUGIN_INIT(mod_foo)"). It is a generated
+    # build input, not a source edit: the list is exactly the modules src/Makefile.am compiles
+    # under `if LIGHTTPD_STATIC` for this configuration (the optional blocks stay disabled).
+    "printf '%s\\n' "
+    "'PLUGIN_INIT(mod_access)' 'PLUGIN_INIT(mod_accesslog)' 'PLUGIN_INIT(mod_ajp13)' "
+    "'PLUGIN_INIT(mod_alias)' 'PLUGIN_INIT(mod_auth)' "
+    "'PLUGIN_INIT(mod_authn_file)' 'PLUGIN_INIT(mod_cgi)' 'PLUGIN_INIT(mod_deflate)' "
+    "'PLUGIN_INIT(mod_dirlisting)' 'PLUGIN_INIT(mod_evhost)' 'PLUGIN_INIT(mod_expire)' "
+    "'PLUGIN_INIT(mod_extforward)' 'PLUGIN_INIT(mod_fastcgi)' 'PLUGIN_INIT(mod_indexfile)' "
+    "'PLUGIN_INIT(mod_openssl)' 'PLUGIN_INIT(mod_proxy)' 'PLUGIN_INIT(mod_redirect)' "
+    "'PLUGIN_INIT(mod_rewrite)' 'PLUGIN_INIT(mod_rrdtool)' 'PLUGIN_INIT(mod_scgi)' "
+    "'PLUGIN_INIT(mod_setenv)' 'PLUGIN_INIT(mod_simple_vhost)' 'PLUGIN_INIT(mod_sockproxy)' "
+    "'PLUGIN_INIT(mod_ssi)' 'PLUGIN_INIT(mod_staticfile)' 'PLUGIN_INIT(mod_status)' "
+    "'PLUGIN_INIT(mod_userdir)' 'PLUGIN_INIT(mod_vhostdb)' "
+    "'PLUGIN_INIT(mod_webdav)'"
+    " > src/plugin-static.h"
+)
+
+_LIGHTTPD_ENV = {
+    "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+    "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+    "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal:{aux}/usr/share/libtool/m4",
+    "ACLOCAL": "{root}/.autotools/aclocal",
+    "AUTOMAKE": "{root}/.autotools/automake",
+    "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+    "AUTOPOINT": "true",
+    "AUTOCONF": "{aux}/usr/bin/autoconf",
+    "AUTOHEADER": "{aux}/usr/bin/autoheader",
+    "AUTOM4TE": "{aux}/usr/bin/autom4te",
+    "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+    "AC_MACRODIR": "{aux}/usr/share/autoconf",
+    "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+    "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+    "M4": "{aux}/usr/bin/m4",
+    # Upstream's supported static-server mode: compiles every enabled module (including
+    # mod_openssl) into the executable, so the artifact itself names libssl/libcrypto.
+    "LIGHTTPD_STATIC": "yes",
+}
+
 _LATE_RECIPE_OVERRIDES: dict[str, dict] = {
+    "lighttpd": {
+        "build_system": "configure",
+        "configure": ["--with-openssl={prefix}", "--with-pcre2"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/lighttpd",
+        "aux_sources": list(_LIGHTTPD_AUX),
+        "pre_build": [["sh", "-c", _LIGHTTPD_BOOTSTRAP]],
+        "env_extra": dict(_LIGHTTPD_ENV),
+        "note": ("lighttpd 1.4.76 with its TLS module: the release tarball ships configure.ac "
+                 "only, so the recipe bootstraps it with the pinned bookworm autotools, takes "
+                 "PCRE2 from its pinned package, and builds the statically-linked server so "
+                 "mod_openssl is part of the measured executable. No source is edited."),
+    },
     "libssh": {
         "build_system": "cmake",
         "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DOPENSSL_ROOT_DIR={prefix}",
