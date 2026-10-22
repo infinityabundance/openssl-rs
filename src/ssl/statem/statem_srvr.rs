@@ -1050,6 +1050,124 @@ impl<'a> BytesWriter<'a> {
         };
         self.put_u16(len) && self.put_bytes(bytes)
     }
+
+    /// `u24` big-endian, refused when the value cannot be expressed in three bytes.
+    fn put_u24(&mut self, value: usize) -> bool {
+        if value > 0xFF_FFFF {
+            return false;
+        }
+        self.put_u8((value >> 16) as u8)
+            && self.put_u8((value >> 8) as u8)
+            && self.put_u8(value as u8)
+    }
+}
+
+/// The TLS1.3 `CertificateRequest` body: `context<0..2^8-1> || Extension extensions<0..2^16-1>`
+/// (`tls_construct_certificate_request`, `statem_srvr.c:3060-3094`). The only extension the
+/// reduced server emits is `signature_algorithms` (`TLSEXT_TYPE_signature_algorithms`); an
+/// empty `sigalgs` writes the empty extension vector, matching the authority's zero-length
+/// vector branch.
+fn write_certificate_request_body(
+    out: &mut [u8],
+    context: &[u8],
+    sigalgs: &[u16],
+) -> Option<usize> {
+    // `TLSEXT_TYPE_signature_algorithms` — `tls1.h` (13).
+    const TLSEXT_TYPE_SIG_ALGS: u16 = 13;
+    let mut w = BytesWriter::new(out);
+    if !w.put_u8_len_prefixed(context) {
+        return None;
+    }
+    if sigalgs.is_empty() {
+        if !w.put_u16(0) {
+            return None;
+        }
+        return Some(w.written());
+    }
+    let list_len = sigalgs.len().checked_mul(2)?;
+    // `extensions_len(2) || type(2) || ext_len(2) || list_len(2) || schemes`, where
+    // `ext_len` counts the inner two-byte list length as well.
+    let ext_len = list_len.checked_add(2)?;
+    let extensions_len = ext_len.checked_add(4)?;
+    if !(w.put_u16(u16::try_from(extensions_len).ok()?)
+        && w.put_u16(TLSEXT_TYPE_SIG_ALGS)
+        && w.put_u16(u16::try_from(ext_len).ok()?)
+        && w.put_u16(u16::try_from(list_len).ok()?))
+    {
+        return None;
+    }
+    for scheme in sigalgs {
+        if !w.put_u16(*scheme) {
+            return None;
+        }
+    }
+    Some(w.written())
+}
+
+/// The TLS1.3 `Certificate` body: `context<0..2^8-1> || certificate_list<0..2^24-1>`, with
+/// each `CertificateEntry` = `cert_data<1..2^24-1> || extensions<0..2^16-1>` (RFC 8446
+/// §4.4.2). The reduced server sends no per-entry extensions, so the extension block is the
+/// two-byte empty vector. Every length is derived from the supplied slices.
+fn write_tls13_certificate_body(out: &mut [u8], context: &[u8], ders: &[&[u8]]) -> Option<usize> {
+    let mut list_len = 0usize;
+    for der in ders {
+        if der.is_empty() || der.len() > 0xFF_FFFF {
+            return None;
+        }
+        list_len = list_len
+            .checked_add(3)?
+            .checked_add(der.len())?
+            .checked_add(2)?;
+    }
+    if list_len > 0xFF_FFFF {
+        return None;
+    }
+    let mut w = BytesWriter::new(out);
+    if !(w.put_u8_len_prefixed(context) && w.put_u24(list_len)) {
+        return None;
+    }
+    for der in ders {
+        if !(w.put_u24(der.len()) && w.put_bytes(der) && w.put_u16(0)) {
+            return None;
+        }
+    }
+    Some(w.written())
+}
+
+/// The TLS1.2 `Certificate` body: `certificate_list<0..2^24-1>` of
+/// `cert_data<1..2^24-1>` (`ssl3_output_cert_chain`, `ssl_lib.c`). An empty `ders` is the
+/// authority's empty chain: `00 00 00`.
+fn write_tls12_certificate_body(out: &mut [u8], ders: &[&[u8]]) -> Option<usize> {
+    let mut list_len = 0usize;
+    for der in ders {
+        if der.is_empty() || der.len() > 0xFF_FFFF {
+            return None;
+        }
+        list_len = list_len.checked_add(3)?.checked_add(der.len())?;
+    }
+    if list_len > 0xFF_FFFF {
+        return None;
+    }
+    let mut w = BytesWriter::new(out);
+    if !w.put_u24(list_len) {
+        return None;
+    }
+    for der in ders {
+        if !(w.put_u24(der.len()) && w.put_bytes(der)) {
+            return None;
+        }
+    }
+    Some(w.written())
+}
+
+/// The TLS1.3 `CertificateVerify` body: `scheme(2) || signature<0..2^16-1>`
+/// (`tls_construct_cert_verify`, `statem_lib.c:313-439`).
+fn write_cert_verify_body(out: &mut [u8], scheme: [u8; 2], signature: &[u8]) -> Option<usize> {
+    let mut w = BytesWriter::new(out);
+    if !(w.put_bytes(&scheme) && w.put_u16_len_prefixed(signature)) {
+        return None;
+    }
+    Some(w.written())
 }
 
 /// `SSL3_MT_SERVER_HELLO` — `ssl3.h`.
@@ -2152,47 +2270,19 @@ pub(crate) unsafe fn tls13_construct_certificate_request(s: *mut Ssl, context: &
         0x0809, 0x080a, 0x080b, 0x0804, 0x0805, 0x0806, 0x0401, 0x0501, 0x0601, 0x0303, 0x0301,
         0x0302, 0x0402, 0x0502, 0x0602,
     ];
-    // `TLSEXT_TYPE_signature_algorithms` — `tls1.h` (13).
-    const TLSEXT_TYPE_SIG_ALGS: u16 = 13;
-    if context.len() > 255 {
+    // `context<1> || extensions_len(2) || type(2) || ext_len(2) || list_len(2) || schemes`.
+    const BODY_MAX: usize = 1 + u8::MAX as usize + 2 + 4 + 2 + 2 * SIGALGS.len();
+    let mut msg = [0u8; BODY_MAX];
+    let Some(total) = write_certificate_request_body(&mut msg, context, &SIGALGS) else {
         return 0;
-    }
-    let mut ext = [0u8; 64];
-    ext[0] = (TLSEXT_TYPE_SIG_ALGS >> 8) as u8;
-    ext[1] = (TLSEXT_TYPE_SIG_ALGS & 0xff) as u8;
-    let list_len = SIGALGS.len() * 2;
-    let body_len = 2 + list_len;
-    ext[2] = (body_len >> 8) as u8;
-    ext[3] = (body_len & 0xff) as u8;
-    ext[4] = (list_len >> 8) as u8;
-    ext[5] = (list_len & 0xff) as u8;
-    let mut p = 6usize;
-    for a in SIGALGS {
-        ext[p] = (a >> 8) as u8;
-        ext[p + 1] = (a & 0xff) as u8;
-        p += 2;
-    }
-    let ext_total = p;
-    let ctx_len = context.len();
-    let total = 1 + ctx_len + 2 + ext_total;
-    let mut msg = [0u8; 256];
-    if total > msg.len() {
-        return 0;
-    }
-    msg[0] = ctx_len as u8;
-    msg[1..1 + ctx_len].copy_from_slice(context);
-    let mut q = 1 + ctx_len;
-    msg[q] = (ext_total >> 8) as u8;
-    msg[q + 1] = (ext_total & 0xff) as u8;
-    q += 2;
-    msg[q..q + ext_total].copy_from_slice(&ext[..ext_total]);
+    };
     // `s->certreqs_sent++; s->s3.tmp.cert_request = 1;` (`statem_srvr.c:3091-3092`).
     // SAFETY: `s` is live.
     unsafe {
         (*s).certreqs_sent += 1;
         (*s).s3_tmp_cert_request = 1;
     }
-    // SAFETY: `s` is live; `msg` is `total` initialised bytes.
+    // SAFETY: `s` is live; `msg[..total]` is initialised bytes produced by the writer.
     unsafe {
         crate::ssl::tls13_enc::write_handshake_message(
             s,
@@ -2304,45 +2394,36 @@ pub(crate) unsafe fn tls13_construct_certificate(s: *mut Ssl, context: &[u8]) ->
     }
     // SAFETY: `s` is live; `cert` is the connection's active certificate container.
     let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
-    let ctx_len = context.len();
-    // No certificate to send (`ssl3_output_cert_chain` with a NULL `cpk`): the TLS1.3
-    // `certificate_list` is empty (`statem_clnt.c:3869-3882`).
-    // SAFETY: `cpk` is non-NULL per the left operand; its `x509` slot is read.
-    if cpk.is_null() || unsafe { (*cpk).x509 }.is_null() {
-        let mut body = [0u8; 300];
-        body[0] = ctx_len as u8;
-        body[1..1 + ctx_len].copy_from_slice(context);
-        let q = 1 + ctx_len;
-        body[q] = 0;
-        body[q + 1] = 0;
-        body[q + 2] = 0;
-        // SAFETY: `s` is live; `body` is `q + 3` initialised bytes.
+    // SAFETY: `cpk` is NULL or a live certificate slot; its `x509` field is read.
+    let leaf = if cpk.is_null() {
+        ptr::null_mut()
+    } else {
+        // SAFETY: the `else` arm runs only when `cpk` is non-NULL and live.
+        unsafe { (*cpk).x509 }
+    };
+    if leaf.is_null() {
+        // No certificate to send (`ssl3_output_cert_chain` with a NULL `cpk`): the TLS1.3
+        // `certificate_list` is empty (`statem_clnt.c:3869-3882`).
+        let mut body = [0u8; 1 + u8::MAX as usize + 3];
+        let Some(n) = write_tls13_certificate_body(&mut body, context, &[]) else {
+            return 0;
+        };
+        // SAFETY: `s` is live; `body[..n]` is initialised by the writer.
         return unsafe {
-            crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body.as_ptr(), q + 3)
+            crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body.as_ptr(), n)
         };
     }
-    if cpk.is_null() {
-        return 0;
-    }
-    // SAFETY: `cpk` is a live slot; `x509` is the loaded leaf.
-    if unsafe { (*cpk).x509 }.is_null() {
-        return 0;
-    }
     // Size the DER first (the authority's `i2d_X509(x, NULL)` before
-    // `WPACKET_sub_allocate_bytes_u24`). `i2d_X509` with a non-NULL out-pointer writes
-    // the whole encoding and takes no capacity argument, so a fixed stack buffer would
-    // be overflowed by any certificate larger than it. Encoding into a block sized from
-    // this first pass is the authority's own ordering.
-    // SAFETY: `cpk.x509` is live; a NULL out-pointer asks only for the length.
-    let derlen = unsafe { i2d_X509((*cpk).x509, ptr::null_mut()) };
+    // `WPACKET_sub_allocate_bytes_u24`).
+    // SAFETY: `leaf` is live; a NULL out-pointer asks only for the length.
+    let derlen = unsafe { i2d_X509(leaf, ptr::null_mut()) };
     if derlen <= 0 {
         return 0;
     }
     let derlen = derlen as usize;
-    // `CertificateEntry` is `cert_data<1..2^24-1> || extensions<0..2^16-1>` (`ssl3.h`,
-    // RFC 8446 §4.4.2): the six-byte entry prefix plus the empty two-byte extension block.
+    // `context<1> || certificate_list_len(3) || cert_len(3) || DER || extensions(2)`.
     let Some(body_len) = 1usize
-        .checked_add(ctx_len)
+        .checked_add(context.len())
         .and_then(|n| n.checked_add(3))
         .and_then(|n| n.checked_add(3))
         .and_then(|n| n.checked_add(derlen))
@@ -2351,46 +2432,36 @@ pub(crate) unsafe fn tls13_construct_certificate(s: *mut Ssl, context: &[u8]) ->
         return 0;
     };
     // `write_handshake_message` frames `4 + body_len` bytes in a 17000-byte block; keep
-    // the allocation bounded by the same reduced boundary.
+    // the allocation bounded by the same reduced boundary before staging anything.
     if body_len > 17000 - 4 {
         return 0;
     }
-    // The body block, allocated through the crate's allocator seam; its single release
-    // is the handle's `Drop` on every refusal below.
-    let Some(body) = OwnedBuf::new(body_len, SeamFile::NULL, 0) else {
+    // Encode the DER into an exact-size staging block; its single release is the handle's
+    // `Drop` on every refusal below. Zeroed so the `&mut [u8]` below is a valid slice.
+    let Some(der_block) = OwnedBuf::new_zeroed(derlen, SeamFile::NULL, 0) else {
         return 0;
     };
-    // Every byte below is written before the block is read or released.
-    let body_ptr = body.as_ptr();
-    let clen = 3 + derlen + 2;
-    // SAFETY: `body_ptr` is writable for `body_len` bytes (checked above); `context` is
-    // readable for `ctx_len`; the DER slot has `derlen` writable bytes.
-    unsafe {
-        *body_ptr = ctx_len as u8; // opaque certificate_request_context<0..2^8-1>
-        core::ptr::copy_nonoverlapping(context.as_ptr(), body_ptr.add(1), ctx_len);
-        let mut p = 1 + ctx_len;
-        *body_ptr.add(p) = (clen >> 16) as u8;
-        *body_ptr.add(p + 1) = (clen >> 8) as u8;
-        *body_ptr.add(p + 2) = clen as u8;
-        p += 3;
-        *body_ptr.add(p) = (derlen >> 16) as u8;
-        *body_ptr.add(p + 1) = (derlen >> 8) as u8;
-        *body_ptr.add(p + 2) = derlen as u8;
-        p += 3;
-        // The authority encodes into the exact reservation it sized above; the slot holds
-        // a pointer with `derlen` writable bytes, so the whole encoding fits.
-        let mut out = body_ptr.add(p);
-        if i2d_X509((*cpk).x509, &mut out) != derlen as c_int {
-            return 0;
-        }
-        p += derlen;
-        // The per-certificate extension block is empty: `extensions<0..2^16-1>` = `00 00`.
-        *body_ptr.add(p) = 0;
-        *body_ptr.add(p + 1) = 0;
-        debug_assert_eq!(p + 2, body_len);
-
-        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body_ptr, body_len)
+    // SAFETY: `der_block` owns `derlen` initialised bytes and this frame holds the only
+    // reference for the borrow.
+    let der = unsafe { core::slice::from_raw_parts_mut(der_block.as_ptr(), derlen) };
+    // `der` has exactly `derlen` writable bytes (the length the preceding
+    // `i2d_X509(leaf, NULL)` reported for this same object).
+    let mut der_cursor = der.as_mut_ptr();
+    // SAFETY: `leaf` is live and `der_cursor` points at `derlen` writable bytes.
+    if unsafe { i2d_X509(leaf, &mut der_cursor) } != derlen as c_int {
+        return 0;
     }
+    let Some(body) = OwnedBuf::new_zeroed(body_len, SeamFile::NULL, 0) else {
+        return 0;
+    };
+    // SAFETY: `body` owns `body_len` initialised bytes; this frame holds the only reference.
+    let out = unsafe { core::slice::from_raw_parts_mut(body.as_ptr(), body_len) };
+    let Some(n) = write_tls13_certificate_body(out, context, &[&*der]) else {
+        return 0;
+    };
+    debug_assert_eq!(n, body_len);
+    // SAFETY: `s` is live; `out[..n]` is the framed body written above.
+    unsafe { crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, out.as_ptr(), n) }
 }
 
 /// `CON_FUNC_RETURN tls_construct_cert_verify(...)` — `statem_lib.c:313-439`, reduced to a real RSA
@@ -2491,11 +2562,19 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
             // The signature and its framed body are heap-allocated through the crate's allocator
             // seam; the two ~1 KiB arrays otherwise stack above the record encoder on every
             // post-ClientHello flight and help push a 32 KiB accept thread over its guard page.
-            if let Some(sig_block) = OwnedBuf::new(1024, SeamFile::NULL, 0) {
-                let sig = sig_block.as_ptr();
-                if EVP_DigestSign(mctx, sig, &mut siglen, tbs.as_ptr(), pos) > 0 {
-                    if let Some(body_block) = OwnedBuf::new(1030, SeamFile::NULL, 0) {
-                        let body = body_block.as_ptr();
+            if let Some(sig_block) = OwnedBuf::new_zeroed(1024, SeamFile::NULL, 0) {
+                // SAFETY (enclosing block): `sig_block` owns 1024 initialised bytes; this
+                // frame holds the only reference for the borrow.
+                let sig = core::slice::from_raw_parts_mut(sig_block.as_ptr(), 1024);
+                // SAFETY: `mctx` is live; the query above reported `siglen <= 1024`, so the
+                // slot's extent holds the signature the encoder is about to write.
+                if EVP_DigestSign(mctx, sig.as_mut_ptr(), &mut siglen, tbs.as_ptr(), pos) > 0
+                    && siglen <= 1024
+                {
+                    if let Some(body_block) = OwnedBuf::new_zeroed(1030, SeamFile::NULL, 0) {
+                        // SAFETY (enclosing block): `body_block` owns 1030 initialised
+                        // bytes; this frame holds the only reference for the borrow.
+                        let body = core::slice::from_raw_parts_mut(body_block.as_ptr(), 1030);
                         // `ecdsa_secp256r1_sha256` (0x0403) for an EC key, else
                         // `rsa_pss_rsae_sha256` (0x0804).
                         let sigalg: [u8; 2] = if is_ec {
@@ -2506,17 +2585,15 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
                             // §4.2.3).
                             [0x08, 0x04]
                         };
-                        *body = sigalg[0];
-                        *body.add(1) = sigalg[1];
-                        *body.add(2) = (siglen >> 8) as u8;
-                        *body.add(3) = siglen as u8;
-                        core::ptr::copy_nonoverlapping(sig, body.add(4), siglen);
-                        ok = crate::ssl::tls13_enc::write_handshake_message(
-                            s,
-                            SSL3_MT_CERT_VRFY,
-                            body,
-                            4 + siglen,
-                        ) > 0;
+                        if let Some(n) = write_cert_verify_body(body, sigalg, &sig[..siglen]) {
+                            // SAFETY: `s` is live; `body[..n]` is the framed body written above.
+                            ok = crate::ssl::tls13_enc::write_handshake_message(
+                                s,
+                                SSL3_MT_CERT_VRFY,
+                                body.as_ptr(),
+                                n,
+                            ) > 0;
+                        }
                     }
                 }
             }
@@ -3114,24 +3191,16 @@ pub(crate) unsafe fn tls12_construct_certificate(s: *mut Ssl) -> c_int {
         unsafe { crate::runtime::stack::OPENSSL_sk_num(chain) }
     };
 
-    // First pass: size every DER blob exactly (the authority's `i2d_X509(x, NULL)`
-    // before `WPACKET_sub_allocate_bytes_u24`). `i2d_X509` with a non-NULL out-pointer
-    // writes the whole encoding and takes no capacity argument, so a fixed stack buffer
-    // would be overflowed by a certificate larger than it.
-    let mut list_len = 0usize;
+    // First pass: collect the live certificates and size every DER blob exactly (the
+    // authority's `i2d_X509(x, NULL)` before `WPACKET_sub_allocate_bytes_u24`).
+    let mut entries: Vec<(*mut X509, usize)> = Vec::new();
     if !leaf.is_null() {
         // SAFETY: `leaf` is a live certificate; a NULL out-pointer asks only for the length.
         let dlen = unsafe { i2d_X509(leaf, ptr::null_mut()) };
         if dlen <= 0 {
             return 0;
         }
-        let Some(next) = list_len
-            .checked_add(3)
-            .and_then(|v| v.checked_add(dlen as usize))
-        else {
-            return 0;
-        };
-        list_len = next;
+        entries.push((leaf, dlen as usize));
     }
     for i in 0..n {
         // SAFETY: `i` is in range.
@@ -3144,10 +3213,11 @@ pub(crate) unsafe fn tls12_construct_certificate(s: *mut Ssl) -> c_int {
         if dlen <= 0 {
             return 0;
         }
-        let Some(next) = list_len
-            .checked_add(3)
-            .and_then(|v| v.checked_add(dlen as usize))
-        else {
+        entries.push((x, dlen as usize));
+    }
+    let mut list_len = 0usize;
+    for &(_, dlen) in &entries {
+        let Some(next) = list_len.checked_add(3).and_then(|v| v.checked_add(dlen)) else {
             return 0;
         };
         list_len = next;
@@ -3162,71 +3232,47 @@ pub(crate) unsafe fn tls12_construct_certificate(s: *mut Ssl) -> c_int {
     if body_len > 17000 - 4 {
         return 0;
     }
+    // Encode each DER into its exact-size staging block, then frame the list with the safe
+    // body writer. Each block's single release is its handle's `Drop`, including on the
+    // early returns below.
+    let mut staged: Vec<OwnedBuf> = Vec::with_capacity(entries.len());
+    for &(x, dlen) in &entries {
+        let Some(block) = OwnedBuf::new_zeroed(dlen, SeamFile::NULL, 0) else {
+            return 0;
+        };
+        // SAFETY: `block` owns `dlen` initialised bytes and this frame holds the only
+        // reference for the borrow.
+        let slot = unsafe { core::slice::from_raw_parts_mut(block.as_ptr(), dlen) };
+        // `slot` has exactly `dlen` writable bytes (the length the preceding
+        // `i2d_X509(x, NULL)` reported for this same object).
+        let mut cursor = slot.as_mut_ptr();
+        // SAFETY: `x` is live and `cursor` points at `dlen` writable bytes.
+        if unsafe { i2d_X509(x, &mut cursor) } != dlen as c_int {
+            return 0;
+        }
+        staged.push(block);
+    }
+    // SAFETY: every staged block is live for this frame and `dlen` bytes of it were written
+    // by `i2d_X509`; both vectors share the same order.
+    let ders: Vec<&[u8]> = staged
+        .iter()
+        .zip(entries.iter())
+        .map(|(block, &(_, dlen))| unsafe { core::slice::from_raw_parts(block.as_ptr(), dlen) })
+        .collect();
     // The body block, allocated through the crate's allocator seam; its single release is
-    // the handle's `Drop` on every refusal below. Every byte is written by the second pass.
-    let Some(body) = OwnedBuf::new(body_len, SeamFile::NULL, 0) else {
+    // the handle's `Drop` on every refusal below.
+    let Some(body) = OwnedBuf::new_zeroed(body_len, SeamFile::NULL, 0) else {
         return 0;
     };
-    let body_ptr = body.as_ptr();
-    let mut p = 3usize;
-    // Second pass: encode each certificate into its exact reservation.
-    if !leaf.is_null() {
-        // SAFETY: `leaf` is a live certificate.
-        let dlen = unsafe { i2d_X509(leaf, ptr::null_mut()) };
-        if dlen <= 0 {
-            return 0;
-        }
-        let dlen = dlen as usize;
-        // SAFETY: `body_ptr` is writable for `body_len` bytes; `p + 3 + dlen <= body_len`
-        // follows from the first pass and the `checked_add`s above.
-        unsafe {
-            *body_ptr.add(p) = (dlen >> 16) as u8;
-            *body_ptr.add(p + 1) = (dlen >> 8) as u8;
-            *body_ptr.add(p + 2) = dlen as u8;
-            p += 3;
-            let mut out = body_ptr.add(p);
-            if i2d_X509(leaf, &mut out) != dlen as c_int {
-                return 0;
-            }
-            p += dlen;
-        }
-    }
-    // The extra chain (`ssl3_output_cert_chain` appends `cpk->chain`).
-    for i in 0..n {
-        // SAFETY: `i` is in range.
-        let x = unsafe { crate::runtime::stack::OPENSSL_sk_value(chain, i) as *mut X509 };
-        if x.is_null() {
-            continue;
-        }
-        // SAFETY: `x` is a live certificate.
-        let dlen = unsafe { i2d_X509(x, ptr::null_mut()) };
-        if dlen <= 0 {
-            return 0;
-        }
-        let dlen = dlen as usize;
-        // SAFETY: `body_ptr` is writable for `body_len` bytes; the first pass reserved
-        // exactly `3 + dlen` for this entry.
-        unsafe {
-            *body_ptr.add(p) = (dlen >> 16) as u8;
-            *body_ptr.add(p + 1) = (dlen >> 8) as u8;
-            *body_ptr.add(p + 2) = dlen as u8;
-            p += 3;
-            let mut out = body_ptr.add(p);
-            if i2d_X509(x, &mut out) != dlen as c_int {
-                return 0;
-            }
-            p += dlen;
-        }
-    }
-    debug_assert_eq!(p - 3, list_len);
-    debug_assert_eq!(p, body_len);
-    // SAFETY: `body_ptr` is writable for `body_len` bytes; `body_start` is the list body.
-    unsafe {
-        *body_ptr = (list_len >> 16) as u8;
-        *body_ptr.add(1) = (list_len >> 8) as u8;
-        *body_ptr.add(2) = list_len as u8;
-        write_handshake_message(s, SSL3_MT_CERTIFICATE as u8, body_ptr, body_len)
-    }
+    // SAFETY: `body` owns `body_len` initialised bytes and this frame holds the only
+    // reference for the borrow.
+    let out = unsafe { core::slice::from_raw_parts_mut(body.as_ptr(), body_len) };
+    let Some(written) = write_tls12_certificate_body(out, &ders) else {
+        return 0;
+    };
+    debug_assert_eq!(written, body_len);
+    // SAFETY: `s` is live; `out[..written]` is the framed body produced above.
+    unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE as u8, out.as_ptr(), written) }
 }
 
 /// Generate the ephemeral key for one TLS1.2 ECDHE group.
@@ -5019,6 +5065,168 @@ mod server_hello_body_tests {
             crate::packet::WPACKET_cleanup(&mut pkt);
             crate::runtime::mem::CRYPTO_free(s.cast(), core::ptr::null(), 0);
         }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// CertificateRequest / Certificate / CertificateVerify body construction
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod certificate_body_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::{
+        write_cert_verify_body, write_certificate_request_body, write_tls12_certificate_body,
+        write_tls13_certificate_body, BytesWriter,
+    };
+
+    /// One TLS1.3 `CertificateEntry`: `u24(der_len) || DER || u16(0)`.
+    #[test]
+    fn tls13_certificate_with_one_cert_is_byte_exact() {
+        let der = [0x30, 0x03, 0x02, 0x01, 0x05];
+        let mut out = [0u8; 32];
+        let n = write_tls13_certificate_body(&mut out, &[], &[&der]).unwrap();
+
+        assert_eq!(n, 14);
+        assert_eq!(
+            &out[..n],
+            &[
+                0x00, // certificate_request_context<0>
+                0x00, 0x00, 0x0a, // certificate_list length = 3 + 5 + 2
+                0x00, 0x00, 0x05, // cert_data length
+                0x30, 0x03, 0x02, 0x01, 0x05, // DER
+                0x00, 0x00, // empty per-entry extensions
+            ]
+        );
+    }
+
+    /// Two entries and a non-empty request context: the list length sums both framed entries.
+    #[test]
+    fn tls13_certificate_with_two_certs_is_byte_exact() {
+        let first = [0x30, 0x01];
+        let second = [0x31, 0x02, 0x03];
+        let context = [0xaa, 0xbb];
+        let mut out = [0u8; 40];
+        let n = write_tls13_certificate_body(&mut out, &context, &[&first, &second]).unwrap();
+
+        assert_eq!(n, 21);
+        assert_eq!(
+            &out[..n],
+            &[
+                0x02, 0xaa, 0xbb, // certificate_request_context<2>
+                0x00, 0x00, 0x0f, // certificate_list length = 7 + 8
+                0x00, 0x00, 0x02, 0x30, 0x01, 0x00, 0x00, // first entry
+                0x00, 0x00, 0x03, 0x31, 0x02, 0x03, 0x00, 0x00, // second entry
+            ]
+        );
+    }
+
+    /// `context || extensions_len || signature_algorithms(type 13, list 0x0804, 0x0403)`.
+    #[test]
+    fn certificate_request_with_extensions_is_byte_exact() {
+        let mut out = [0u8; 32];
+        let n = write_certificate_request_body(&mut out, &[0x01, 0x02], &[0x0804, 0x0403]).unwrap();
+
+        assert_eq!(n, 15);
+        assert_eq!(
+            &out[..n],
+            &[
+                0x02, 0x01, 0x02, // certificate_request_context<2>
+                0x00, 0x0a, // extensions length
+                0x00, 0x0d, // signature_algorithms
+                0x00, 0x06, // extension body length
+                0x00, 0x04, // supported_signature_algorithms length
+                0x08, 0x04, 0x04, 0x03, // rsa_pss_rsae_sha256, ecdsa_secp256r1_sha256
+            ]
+        );
+    }
+
+    /// An empty scheme list writes the empty extension vector (`tls_construct_certificate_request`
+    /// with nothing to advertise).
+    #[test]
+    fn certificate_request_without_extensions_is_byte_exact() {
+        let mut out = [0xffu8; 4];
+        let n = write_certificate_request_body(&mut out, &[], &[]).unwrap();
+        assert_eq!(n, 3);
+        assert_eq!(&out[..n], &[0x00, 0x00, 0x00]);
+    }
+
+    /// `scheme(2) || signature<0..2^16-1>` over a fixed signature.
+    #[test]
+    fn certificate_verify_is_byte_exact() {
+        let signature = [0xde, 0xad, 0xbe, 0xef];
+        let mut out = [0u8; 16];
+        let n = write_cert_verify_body(&mut out, [0x04, 0x03], &signature).unwrap();
+
+        assert_eq!(n, 8);
+        assert_eq!(&out[..n], &[0x04, 0x03, 0x00, 0x04, 0xde, 0xad, 0xbe, 0xef]);
+    }
+
+    /// A TLS1.2 empty chain is the three-byte zero `certificate_list`.
+    #[test]
+    fn tls12_certificate_with_a_zero_length_chain_is_byte_exact() {
+        let mut out = [0xffu8; 3];
+        let n = write_tls12_certificate_body(&mut out, &[]).unwrap();
+        assert_eq!(n, 3);
+        assert_eq!(out, [0x00, 0x00, 0x00]);
+    }
+
+    /// Negative control: every body writer refuses a block one byte short of its exact
+    /// message instead of panicking or writing past it; the exact block is accepted.
+    #[test]
+    fn too_small_certificate_buffers_fail_cleanly() {
+        let der = [0x30, 0x03, 0x02, 0x01, 0x05];
+        let mut short_cert = [0u8; 13];
+        assert!(write_tls13_certificate_body(&mut short_cert, &[], &[&der]).is_none());
+        let mut exact_cert = [0u8; 14];
+        assert!(write_tls13_certificate_body(&mut exact_cert, &[], &[&der]).is_some());
+
+        let first = [0x30, 0x01];
+        let second = [0x31, 0x02, 0x03];
+        let mut short_two = [0u8; 20];
+        assert!(
+            write_tls13_certificate_body(&mut short_two, &[0xaa, 0xbb], &[&first, &second])
+                .is_none()
+        );
+
+        let mut short_request = [0u8; 14];
+        assert!(write_certificate_request_body(
+            &mut short_request,
+            &[0x01, 0x02],
+            &[0x0804, 0x0403]
+        )
+        .is_none());
+
+        let mut short_verify = [0u8; 7];
+        assert!(
+            write_cert_verify_body(&mut short_verify, [0x04, 0x03], &[0xde, 0xad, 0xbe, 0xef])
+                .is_none()
+        );
+
+        let mut short_tls12 = [0u8; 2];
+        assert!(write_tls12_certificate_body(&mut short_tls12, &[]).is_none());
+
+        let mut short_entries = [0u8; 7];
+        assert!(write_tls12_certificate_body(&mut short_entries, &[&der]).is_none());
+    }
+
+    /// A context that does not fit the one-byte wire length is refused instead of truncated.
+    #[test]
+    fn over_long_certificate_request_context_is_refused() {
+        let context = [0u8; 256];
+        let mut out = [0u8; 400];
+        assert!(write_certificate_request_body(&mut out, &context, &[]).is_none());
+    }
+
+    /// The `u24` primitive refuses a value it cannot express, rather than truncating it.
+    #[test]
+    fn u24_length_refuses_an_over_long_value() {
+        let mut out = [0u8; 8];
+        let mut w = BytesWriter::new(&mut out);
+        assert!(!w.put_u24(0x0100_0000));
+        assert_eq!(w.written(), 0);
+        assert!(w.put_u24(0x00ff_ffff));
+        assert_eq!(&out[..3], &[0xff, 0xff, 0xff]);
     }
 }
 
