@@ -1,0 +1,57 @@
+{
+  "receipt": "publish-0.0.30",
+  "date": "2026-10-22",
+  "crate": "openssl-rs",
+  "version": "0.0.30",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "branch": "main",
+    "commit": "bbcf6f112c7fc1b5d9d919c88912834bc3acb4c8",
+    "commit_subject": "Merge pull request #47 from infinityabundance/integrate/safe-c33",
+    "working_tree": "clean at publish time"
+  },
+  "packaging": {
+    "entries": 1010,
+    "uncompressed": "39.6MiB",
+    "compressed": "8.2MiB",
+    "compressed_bytes": 8634899,
+    "limit_bytes": 10000000,
+    "dry_run_exit": 0,
+    "allow_dirty_used": false
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs",
+    "max_version": "0.0.30",
+    "newest_version": "0.0.30",
+    "num_versions": 30,
+    "version_id": 3569659,
+    "checksum_prefix": "07eb9cb4",
+    "crate_size": 8634899,
+    "published_at": "2026-10-22T04:06:17Z"
+  },
+  "content_delta_since_0_0_29": [
+    "TLS1.2 ECDHE for x25519/x448/P-256/P-384/P-521 and static RSA",
+    "SSL_peek implemented without consuming input",
+    "OCSP status callback and status_request handling",
+    "application certificate-verify callback honoured",
+    "authority group-list grammar for set1_groups_list",
+    "SSL_read/SSL_write report WANT_READ during an unfinished handshake",
+    "process-global ERR allocator seam (fixes a cross-DSO invalid free)",
+    "NULL-safe SSL_SESSION accessors",
+    "TLS1.3 cipher-suite stack duplicated in SSL_new",
+    "heap record scratch replacing 17 KiB stack frames",
+    "pkg-config metadata (openssl.pc/libssl.pc/libcrypto.pc)"
+  ],
+  "evidence_at_this_identity": {
+    "library_tests": "1747 passed, 0 failed, 42 ignored",
+    "cohort_l7": "33/33",
+    "corpus_l7": "101 of 1000 candidate, 101 authority, 0 failed",
+    "safe_compatible_consumers": "0/33"
+  },
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "The published package carries source and tests, not the downstream L7 evidence.",
+    "No SEAL dependency-closure run backs this release; it is a checkpoint release."
+  ]
+}
