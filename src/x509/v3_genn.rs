@@ -34,7 +34,7 @@
 use core::ffi::{c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
-use crate::asn1::a_dup::ASN1_dup;
+use crate::asn1::a_dup::ASN1_dup_typed;
 use crate::asn1::a_type::{ASN1_TYPE_cmp, ASN1_TYPE_free};
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::fre::ASN1_item_free;
@@ -568,27 +568,12 @@ pub unsafe extern "C" fn i2d_GENERAL_NAMES(
 /// `a` is NULL or a live `GENERAL_NAME`. The answer is owned by the caller.
 #[no_mangle]
 pub unsafe extern "C" fn GENERAL_NAME_dup(a: *const GeneralName) -> *mut GeneralName {
-    // The authority casts `i2d_GENERAL_NAME`/`d2i_GENERAL_NAME` to the `void` spellings
-    // `ASN1_dup` takes; the same transmute is written here rather than a shim.
-    let i2d: I2dOfVoid =
-        // SAFETY: both signatures are `(const T *, unsigned char **) -> int`; `T` is a pointer
-        // type, so the call through the reinterpreted pointer is layout-compatible.
-        unsafe {
-            core::mem::transmute::<unsafe extern "C" fn(*const GeneralName, *mut *mut c_uchar) -> c_int, I2dOfVoid>(
-                i2d_GENERAL_NAME,
-            )
-        };
-    let d2i: D2iOfVoid =
-        // SAFETY: both signatures are `(T **, const unsigned char **, long) -> T *`; `T` is a
-        // pointer type, so the call through the reinterpreted pointer is layout-compatible.
-        unsafe {
-            core::mem::transmute::<
-                unsafe extern "C" fn(*mut *mut GeneralName, *mut *const c_uchar, c_long) -> *mut GeneralName,
-                D2iOfVoid,
-            >(d2i_GENERAL_NAME)
-        };
-    // SAFETY: `i2d`/`d2i` match each other and `a` is NULL or live per the contract.
-    unsafe { ASN1_dup(i2d, d2i, a.cast()) }.cast::<GeneralName>()
+    // The typed helper carries the callbacks' pointee type in its signature, so the authority's
+    // `void *` spelling -- and the function-pointer transmute that reaching it used to need -- is
+    // gone from this path.
+    // SAFETY: `i2d_GENERAL_NAME`/`d2i_GENERAL_NAME` are the matching pair for `GeneralName`, and
+    // `a` is NULL or live per the contract.
+    unsafe { ASN1_dup_typed(i2d_GENERAL_NAME, d2i_GENERAL_NAME, a) }
 }
 
 /// `int GENERAL_NAME_set1_X509_NAME(GENERAL_NAME **tgt, const X509_NAME *src)` —
@@ -779,6 +764,14 @@ pub unsafe extern "C" fn GENERAL_NAME_set0_value(
 ) {
     // SAFETY: `a` is live and the union is writable; every arm is one pointer.
     unsafe {
+        // The union is cleared **before** the selector is examined, so an unhandled selector can
+        // never leave a stale, still-readable arm in the slot. The authority's switch has no
+        // `default` and leaves `d` untouched there; clearing is a deliberate safety improvement,
+        // unobservable through `get0_value`/`as_ref`/`cmp`, which all refuse an unhandled selector
+        // either way (NULL / `None` / `-1`).
+        (*a).d = GeneralNameValue {
+            otherName: ptr::null_mut(),
+        };
         (*a).d = match type_ {
             GEN_X400 => GeneralNameValue {
                 x400Address: value.cast::<Asn1String>(),
@@ -801,9 +794,10 @@ pub unsafe extern "C" fn GENERAL_NAME_set0_value(
             GEN_RID => GeneralNameValue {
                 registeredID: value.cast::<Asn1Object>(),
             },
-            // An unknown selector writes nothing into the union (the authority's switch has no
-            // default, so `d` keeps its previous bytes), and still records the type.
-            _ => (*a).d,
+            // The cleared union is kept, and the type is still recorded as the authority does.
+            _ => GeneralNameValue {
+                otherName: ptr::null_mut(),
+            },
         };
         (*a).type_ = type_;
     }
@@ -980,6 +974,39 @@ mod tests {
             );
             GENERAL_NAME_free(a);
             GENERAL_NAME_free(b);
+        }
+    }
+
+    /// **CVE-2023-0286 mechanism probe.** After a set, the slot holds only the arm the selector
+    /// names; an unhandled selector normalises the slot to NULL. The authority instead leaves the
+    /// previous bytes in `d`, which is the controllable-pointer residue the confusion needs.
+    #[test]
+    fn a_set_name_never_leaves_a_stale_arm_behind() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: objects are freshly allocated; the string is transferred to the name on the
+        // first set and freed here after the normalisation detached it.
+        unsafe {
+            let n = GENERAL_NAME_new();
+            let s = ASN1_IA5STRING_new();
+            assert_eq!(ASN1_STRING_set(s, b"dns".as_ptr().cast(), 3), 1);
+            GENERAL_NAME_set0_value(n, GEN_DNS, s.cast::<c_void>());
+            assert!(matches!((*n).as_ref(), Some(GeneralNameRef::Ia5(_))));
+
+            // An unhandled selector records the type but must not preserve the old pointer.
+            GENERAL_NAME_set0_value(n, 99, core::ptr::null_mut());
+            assert_eq!((*n).type_, 99);
+            assert!((*n).as_ref().is_none(), "no arm is readable");
+            assert_eq!(
+                GENERAL_NAME_get0_value(n, core::ptr::null_mut()),
+                core::ptr::null_mut()
+            );
+            assert!(
+                (*n).d.ia5.is_null(),
+                "the cleared slot holds no controllable pointer"
+            );
+
+            crate::asn1::string::ASN1_STRING_free(s);
+            GENERAL_NAME_free(n);
         }
     }
 
