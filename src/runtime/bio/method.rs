@@ -84,10 +84,77 @@ unsafe impl CtxDestroy for BioMethod {
     }
 }
 
+/// The type-correct slot pairing for the two read/write callback families.
+///
+/// A legacy callback (`Option<BioWriteFn>`, `int (*)(BIO *, const char *, int)`) is only
+/// reachable through the modern dispatch slot (`int (*)(BIO *, const char *, size_t,
+/// size_t *)`). "Legacy slot populated implies the dispatch slot is the conversion shim" is
+/// therefore an invariant of the table, not a convention: it is installed and read here, as a
+/// pair, so no caller of these safe methods can create a mismatched signature/state pairing.
+/// The C setters remain `unsafe` only because they take a raw table pointer.
+impl BioMethod {
+    /// `BIO_meth_set_write`: store the legacy callback and install [`bwrite_conv`] in the
+    /// dispatch slot. The authority installs the shim even for a NULL callback
+    /// (`bio_meth.c:67-73`), so that is preserved exactly.
+    fn install_legacy_write(&mut self, f: Option<BioWriteFn>) {
+        self.bwrite_old = f;
+        self.bwrite = Some(bwrite_conv);
+    }
+
+    /// `BIO_meth_set_write_ex`: store the modern callback directly and clear the legacy slot.
+    fn install_modern_write(&mut self, f: Option<BioWriteExFn>) {
+        self.bwrite_old = None;
+        self.bwrite = f;
+    }
+
+    /// `BIO_meth_set_read`: the read-side counterpart of [`Self::install_legacy_write`].
+    fn install_legacy_read(&mut self, f: Option<BioReadFn>) {
+        self.bread_old = f;
+        self.bread = Some(bread_conv);
+    }
+
+    /// `BIO_meth_set_read_ex`: the read-side counterpart of [`Self::install_modern_write`].
+    fn install_modern_read(&mut self, f: Option<BioReadExFn>) {
+        self.bread_old = None;
+        self.bread = f;
+    }
+
+    /// The legacy write callback, which is NULL when only the modern setter was used.
+    fn legacy_write(&self) -> Option<BioWriteFn> {
+        self.bwrite_old
+    }
+
+    /// The write dispatch slot: non-NULL after either setter.
+    fn dispatch_write(&self) -> Option<BioWriteExFn> {
+        self.bwrite
+    }
+
+    /// The legacy read callback, which is NULL when only the modern setter was used.
+    fn legacy_read(&self) -> Option<BioReadFn> {
+        self.bread_old
+    }
+
+    /// The read dispatch slot: non-NULL after either setter.
+    fn dispatch_read(&self) -> Option<BioReadExFn> {
+        self.bread
+    }
+
+    /// Give a zeroed table its owning name and type in one step. The caller transfers the
+    /// `CRYPTO_strdup` name with this call; a table is never published half-initialised.
+    fn initialise(&mut self, type_: c_int, name: *const c_char) {
+        self.type_ = type_;
+        self.name = name;
+    }
+}
+
 /// The legacy write adapter the authority installs for `BIO_meth_set_write`.
 ///
+/// The callback is **copied out** of the table before it is invoked: it may re-enter the BIO
+/// API and mutate this table (AGENTS §21.3), so no borrow of the BIO or the table is held
+/// across the call.
+///
 /// # Safety
-/// `bio` must be a live BIO whose method has a non-NULL `bwrite_old`.
+/// `bio` must be a live BIO whose method table is live for the duration of the call.
 pub(crate) unsafe extern "C" fn bwrite_conv(
     bio: *mut Bio,
     data: *const c_char,
@@ -99,12 +166,11 @@ pub(crate) unsafe extern "C" fn bwrite_conv(
     } else {
         datal
     };
-    // SAFETY: the caller's contract is that a BIO dispatched through this shim
-    // has a legacy write installed.
-    let old = match unsafe { bio.as_ref() }.and_then(|b| unsafe { b.method.as_ref() }) {
-        Some(m) => m.bwrite_old,
-        None => None,
-    };
+    // SAFETY: `bio` is live and its table is live per the contract; both borrows end at this
+    // statement, so the callback below sees no outstanding reference.
+    let old = unsafe { bio.as_ref() }
+        .and_then(|b| unsafe { b.method() })
+        .and_then(BioMethod::legacy_write);
     let Some(old) = old else {
         return 0;
     };
@@ -126,8 +192,10 @@ pub(crate) unsafe extern "C" fn bwrite_conv(
 
 /// The legacy read adapter the authority installs for `BIO_meth_set_read`.
 ///
+/// As for [`bwrite_conv`], the callback is copied out before it runs and may re-enter this API.
+///
 /// # Safety
-/// `bio` must be a live BIO whose method has a non-NULL `bread_old`.
+/// `bio` must be a live BIO whose method table is live for the duration of the call.
 pub(crate) unsafe extern "C" fn bread_conv(
     bio: *mut Bio,
     data: *mut c_char,
@@ -139,11 +207,10 @@ pub(crate) unsafe extern "C" fn bread_conv(
     } else {
         datal
     };
-    // SAFETY: as for the write shim.
-    let old = match unsafe { bio.as_ref() }.and_then(|b| unsafe { b.method.as_ref() }) {
-        Some(m) => m.bread_old,
-        None => None,
-    };
+    // SAFETY: as for the write shim: both borrows end before the callback runs.
+    let old = unsafe { bio.as_ref() }
+        .and_then(|b| unsafe { b.method() })
+        .and_then(BioMethod::legacy_read);
     let Some(old) = old else {
         return 0;
     };
@@ -197,11 +264,9 @@ pub unsafe extern "C" fn BIO_meth_new(type_: c_int, name: *const c_char) -> *mut
         }
         let table_ptr = table.as_ptr();
         // SAFETY: `table_ptr` is the live zeroed table this call owns exclusively; `copied` is a
-        // fresh `CRYPTO_strdup` block whose ownership moves into the table.
-        unsafe {
-            (*table_ptr).name = copied;
-            (*table_ptr).type_ = type_;
-        }
+        // fresh `CRYPTO_strdup` block whose ownership moves into the table, and the safe method
+        // writes both fields before the table is published by `into_raw`.
+        unsafe { (*table_ptr).initialise(type_, copied) };
         table.into_raw()
     })
 }
@@ -234,8 +299,7 @@ pub unsafe extern "C" fn BIO_meth_set_write(biom: *mut BioMethod, f: Option<BioW
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
-        m.bwrite_old = f;
-        m.bwrite = Some(bwrite_conv);
+        m.install_legacy_write(f);
         1
     })
 }
@@ -256,8 +320,7 @@ pub unsafe extern "C" fn BIO_meth_set_write_ex(
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
-        m.bwrite_old = None;
-        m.bwrite = f;
+        m.install_modern_write(f);
         1
     })
 }
@@ -275,8 +338,7 @@ pub unsafe extern "C" fn BIO_meth_set_read(biom: *mut BioMethod, f: Option<BioRe
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
-        m.bread_old = f;
-        m.bread = Some(bread_conv);
+        m.install_legacy_read(f);
         1
     })
 }
@@ -297,8 +359,7 @@ pub unsafe extern "C" fn BIO_meth_set_read_ex(
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
-        m.bread_old = None;
-        m.bread = f;
+        m.install_modern_read(f);
         1
     })
 }
@@ -473,7 +534,11 @@ pub unsafe extern "C" fn BIO_meth_set_recvmmsg(
 pub unsafe extern "C" fn BIO_meth_get_write(biom: *const BioMethod) -> Option<BioWriteFn> {
     // SAFETY: `biom` is NULL or a live method table; the shared borrow is
     // confined to this expression.
-    guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bwrite_old))
+    guard_ffi(None, || {
+        // SAFETY: `biom` is NULL or a live method table; the shared borrow is confined to this
+        // expression.
+        unsafe { biom.as_ref() }.and_then(BioMethod::legacy_write)
+    })
 }
 
 /// `int (*BIO_meth_get_write_ex(const BIO_METHOD *biom))(BIO *, const char *, size_t, size_t *)`
@@ -485,7 +550,11 @@ pub unsafe extern "C" fn BIO_meth_get_write(biom: *const BioMethod) -> Option<Bi
 pub unsafe extern "C" fn BIO_meth_get_write_ex(biom: *const BioMethod) -> Option<BioWriteExFn> {
     // SAFETY: `biom` is NULL or a live method table; the shared borrow is
     // confined to this expression.
-    guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bwrite))
+    guard_ffi(None, || {
+        // SAFETY: `biom` is NULL or a live method table; the shared borrow is confined to this
+        // expression.
+        unsafe { biom.as_ref() }.and_then(BioMethod::dispatch_write)
+    })
 }
 
 /// `int (*BIO_meth_get_read(const BIO_METHOD *biom))(BIO *, char *, int)`
@@ -497,7 +566,11 @@ pub unsafe extern "C" fn BIO_meth_get_write_ex(biom: *const BioMethod) -> Option
 pub unsafe extern "C" fn BIO_meth_get_read(biom: *const BioMethod) -> Option<BioReadFn> {
     // SAFETY: `biom` is NULL or a live method table; the shared borrow is
     // confined to this expression.
-    guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bread_old))
+    guard_ffi(None, || {
+        // SAFETY: `biom` is NULL or a live method table; the shared borrow is confined to this
+        // expression.
+        unsafe { biom.as_ref() }.and_then(BioMethod::legacy_read)
+    })
 }
 
 /// `int (*BIO_meth_get_read_ex(const BIO_METHOD *biom))(BIO *, char *, size_t, size_t *)`
@@ -509,7 +582,11 @@ pub unsafe extern "C" fn BIO_meth_get_read(biom: *const BioMethod) -> Option<Bio
 pub unsafe extern "C" fn BIO_meth_get_read_ex(biom: *const BioMethod) -> Option<BioReadExFn> {
     // SAFETY: `biom` is NULL or a live method table; the shared borrow is
     // confined to this expression.
-    guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bread))
+    guard_ffi(None, || {
+        // SAFETY: `biom` is NULL or a live method table; the shared borrow is confined to this
+        // expression.
+        unsafe { biom.as_ref() }.and_then(BioMethod::dispatch_read)
+    })
 }
 
 /// `int (*BIO_meth_get_puts(const BIO_METHOD *biom))(BIO *, const char *)`
@@ -618,13 +695,21 @@ crate::runtime::bio::zero_state::zero_state_sweep!(BioMethod => zero_state_sweep
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
     use core::sync::atomic::{AtomicI32, Ordering};
 
     use super::*;
-    use crate::runtime::bio::Bio;
+    use crate::runtime::bio::{BIO_free, BIO_new, BIO_write, Bio};
 
     static SEEN_WRITE: AtomicI32 = AtomicI32::new(-1);
     static SEEN_READ: AtomicI32 = AtomicI32::new(-1);
+    static MODERN_SEEN: AtomicI32 = AtomicI32::new(-1);
+    static REPLACED_SEEN: AtomicI32 = AtomicI32::new(-1);
+    static SHARED_SEEN: AtomicI32 = AtomicI32::new(-1);
+    static DESTROYED: AtomicI32 = AtomicI32::new(0);
+    static DESTROY_TYPE: AtomicI32 = AtomicI32::new(-1);
+    static REENTERED: AtomicI32 = AtomicI32::new(0);
 
     unsafe extern "C" fn record_write(_b: *mut Bio, _data: *const c_char, len: c_int) -> c_int {
         SEEN_WRITE.store(len, Ordering::SeqCst);
@@ -633,6 +718,62 @@ mod tests {
 
     unsafe extern "C" fn record_read(_b: *mut Bio, _data: *mut c_char, len: c_int) -> c_int {
         SEEN_READ.store(len, Ordering::SeqCst);
+        len
+    }
+
+    unsafe extern "C" fn replaced_write(_b: *mut Bio, _data: *const c_char, len: c_int) -> c_int {
+        REPLACED_SEEN.store(len, Ordering::SeqCst);
+        len
+    }
+
+    unsafe extern "C" fn shared_write(_b: *mut Bio, _data: *const c_char, len: c_int) -> c_int {
+        SHARED_SEEN.store(len, Ordering::SeqCst);
+        len
+    }
+
+    unsafe extern "C" fn modern_write(
+        _b: *mut Bio,
+        _data: *const c_char,
+        len: usize,
+        written: *mut usize,
+    ) -> c_int {
+        MODERN_SEEN.store(len as c_int, Ordering::SeqCst);
+        if !written.is_null() {
+            // SAFETY: `written` is the caller's non-NULL out-parameter.
+            unsafe { *written = len };
+        }
+        1
+    }
+
+    /// Records that it ran while the table was still live, and which table it was.
+    unsafe extern "C" fn destroy_record(b: *mut Bio) -> c_int {
+        // SAFETY: the destroy contract hands a live BIO whose method table is still live.
+        unsafe {
+            let m = (*b).method;
+            assert!(
+                !m.is_null(),
+                "a BIO with a method must keep it until destroy"
+            );
+            DESTROY_TYPE.store((*m).type_, Ordering::SeqCst);
+        }
+        DESTROYED.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    unsafe extern "C" fn puts_noop(_b: *mut Bio, _s: *const c_char) -> c_int {
+        1
+    }
+
+    /// Re-enters the table API from inside a dispatch callback, mutating the table while the
+    /// adapter is on the stack. Legal because the adapter copies the callback out first.
+    unsafe extern "C" fn reentrant_write(b: *mut Bio, _data: *const c_char, len: c_int) -> c_int {
+        // SAFETY: the callback receives a live BIO and a live method table.
+        unsafe {
+            let m = (*b).method;
+            assert!(BIO_meth_get_write_ex(m).is_some());
+            assert_eq!(BIO_meth_set_puts(m.cast_mut(), Some(puts_noop)), 1);
+        }
+        REENTERED.fetch_add(1, Ordering::SeqCst);
         len
     }
 
@@ -678,5 +819,145 @@ mod tests {
         assert_eq!(ret, 1);
         assert_eq!(SEEN_READ.load(Ordering::SeqCst), c_int::MAX);
         assert_eq!(readbytes, c_int::MAX as usize);
+    }
+
+    #[test]
+    fn legacy_method_installs_the_conversion_shim() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the table is created and released in this frame.
+        unsafe {
+            let table = BIO_meth_new(0x1234, c"legacy".as_ptr());
+            assert!(!table.is_null());
+            assert_eq!(BIO_meth_set_write(table, Some(record_write)), 1);
+            assert_eq!(BIO_meth_set_read(table, Some(record_read)), 1);
+            // The legacy pointer is what was installed; the dispatch slot is the shim.
+            assert!(BIO_meth_get_write(table).is_some());
+            assert_eq!(
+                BIO_meth_get_write_ex(table).map(|f| f as usize),
+                Some(bwrite_conv as *const () as usize)
+            );
+            assert!(BIO_meth_get_read(table).is_some());
+            assert_eq!(
+                BIO_meth_get_read_ex(table).map(|f| f as usize),
+                Some(bread_conv as *const () as usize)
+            );
+            // A modern setter clears the legacy slot and stores the callback directly.
+            assert_eq!(BIO_meth_set_write_ex(table, Some(modern_write)), 1);
+            assert!(BIO_meth_get_write(table).is_none());
+            assert_eq!(
+                BIO_meth_get_write_ex(table).map(|f| f as usize),
+                Some(modern_write as *const () as usize)
+            );
+            BIO_meth_free(table);
+        }
+    }
+
+    #[test]
+    fn a_modern_method_round_trips_through_its_dispatch_slot() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the table is created and released in this frame; `bio` is stack-owned.
+        unsafe {
+            let table = BIO_meth_new(0, c"modern".as_ptr());
+            assert!(!table.is_null());
+            assert_eq!(BIO_meth_set_write_ex(table, Some(modern_write)), 1);
+            let mut bio: Bio = core::mem::zeroed();
+            bio.method = table;
+            let Some(slot) = (*table).dispatch_write() else {
+                panic!("the modern setter must populate the dispatch slot");
+            };
+            let mut written = 0usize;
+            let ret = slot(&mut bio, b"abcd".as_ptr().cast(), 4, &mut written);
+            assert_eq!(ret, 1);
+            assert_eq!(written, 4);
+            assert_eq!(MODERN_SEEN.load(Ordering::SeqCst), 4);
+            BIO_meth_free(table);
+        }
+    }
+
+    #[test]
+    fn replacing_a_callback_on_a_live_bio_takes_effect() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let table = BIO_meth_new(0, c"replace".as_ptr());
+            assert!(!table.is_null());
+            assert_eq!(BIO_meth_set_write(table, Some(record_write)), 1);
+            let bio = BIO_new(table);
+            assert!(!bio.is_null());
+            assert_eq!(BIO_write(bio, b"a".as_ptr().cast(), 1), 1);
+            assert_eq!(SEEN_WRITE.load(Ordering::SeqCst), 1);
+            // The table outlives the BIO, so replacing the slot is legal and the next dispatch
+            // must observe the new callback.
+            assert_eq!(BIO_meth_set_write(table, Some(replaced_write)), 1);
+            assert_eq!(BIO_write(bio, b"abc".as_ptr().cast(), 3), 3);
+            assert_eq!(REPLACED_SEEN.load(Ordering::SeqCst), 3);
+            BIO_free(bio);
+            BIO_meth_free(table);
+        }
+    }
+
+    #[test]
+    fn two_bios_sharing_one_table_both_dispatch() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let table = BIO_meth_new(0, c"shared".as_ptr());
+            assert!(!table.is_null());
+            assert_eq!(BIO_meth_set_write(table, Some(shared_write)), 1);
+            let first = BIO_new(table);
+            let second = BIO_new(table);
+            assert!(!first.is_null() && !second.is_null());
+            assert_eq!(BIO_write(first, b"x".as_ptr().cast(), 1), 1);
+            assert_eq!(SHARED_SEEN.load(Ordering::SeqCst), 1);
+            assert_eq!(BIO_write(second, b"xyz".as_ptr().cast(), 3), 3);
+            assert_eq!(SHARED_SEEN.load(Ordering::SeqCst), 3);
+            BIO_free(first);
+            BIO_free(second);
+            BIO_meth_free(table);
+        }
+    }
+
+    #[test]
+    fn a_destroyed_bio_runs_destroy_while_the_table_is_still_live() {
+        let _g = crate::test_support::lock_global_state();
+        DESTROYED.store(0, Ordering::SeqCst);
+        DESTROY_TYPE.store(-1, Ordering::SeqCst);
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let table = BIO_meth_new(0x1234, c"owned".as_ptr());
+            assert!(!table.is_null());
+            assert_eq!(BIO_meth_set_destroy(table, Some(destroy_record)), 1);
+            let bio = BIO_new(table);
+            assert!(!bio.is_null());
+            // The BIO is torn down first: `destroy` must observe a live table.
+            BIO_free(bio);
+            assert_eq!(DESTROYED.load(Ordering::SeqCst), 1);
+            assert_eq!(DESTROY_TYPE.load(Ordering::SeqCst), 0x1234);
+            // Releasing the table afterwards calls into nothing: no BIO references it.
+            BIO_meth_free(table);
+            assert_eq!(DESTROYED.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[test]
+    fn a_reentrant_callback_needs_no_outstanding_borrow() {
+        let _g = crate::test_support::lock_global_state();
+        REENTERED.store(0, Ordering::SeqCst);
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let table = BIO_meth_new(0, c"reentrant".as_ptr());
+            assert!(!table.is_null());
+            assert_eq!(BIO_meth_set_write(table, Some(reentrant_write)), 1);
+            let bio = BIO_new(table);
+            assert!(!bio.is_null());
+            assert_eq!(BIO_write(bio, b"ab".as_ptr().cast(), 2), 2);
+            assert_eq!(REENTERED.load(Ordering::SeqCst), 1);
+            assert!(
+                (*table).bputs.is_some(),
+                "the re-entrant mutation took effect after the adapter's borrow ended"
+            );
+            BIO_free(bio);
+            BIO_meth_free(table);
+        }
     }
 }
