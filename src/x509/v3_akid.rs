@@ -56,9 +56,7 @@ use crate::x509::v3_akeya::{
 };
 use crate::x509::v3_conf::{X509V3Ctx, X509V3_CTX_TEST};
 use crate::x509::v3_genn::{GENERAL_NAME_free, GENERAL_NAME_new, GeneralName, GEN_DIRNAME};
-use crate::x509::v3_lib::{
-    X509V3ExtI2v, X509V3ExtMethod, X509V3ExtV2i, X509V3_EXT_d2i, X509V3_EXT_MULTILINE,
-};
+use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_d2i, X509V3_EXT_MULTILINE};
 use crate::x509::v3_san::i2v_GENERAL_NAMES;
 use crate::x509::v3_skid::{i2s_ASN1_OCTET_STRING, ossl_x509_pubkey_hash};
 use crate::x509::v3_utl::{X509V3_add_value, X509V3_conf_free};
@@ -179,56 +177,27 @@ unsafe extern "C" fn conf_value_free_thunk(p: *mut c_void) {
 // Ownership of the `i2s_ASN1_OCTET_STRING` strings the `i2v` callback allocates
 // ---------------------------------------------------------------------------------------------
 
-/// `(X509V3_EXT_I2V)i2v_AUTHORITY_KEYID` — the cast the row's initialiser writes.
-const fn as_i2v(
-    f: unsafe extern "C" fn(
-        *mut X509V3ExtMethod,
-        *mut AuthorityKeyid,
-        *mut OpenSslStack,
-    ) -> *mut OpenSslStack,
-) -> X509V3ExtI2v {
-    // SAFETY: both function types take three pointer arguments and answer a pointer; the authority
-    // writes exactly this cast in the row.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(
-                *mut X509V3ExtMethod,
-                *mut AuthorityKeyid,
-                *mut OpenSslStack,
-            ) -> *mut OpenSslStack,
-            unsafe extern "C" fn(
-                *const X509V3ExtMethod,
-                *mut c_void,
-                *mut OpenSslStack,
-            ) -> *mut OpenSslStack,
-        >(f)
-    })
+/// The `i2v` slot for `i2v_AUTHORITY_KEYID`: the slot passes `*const X509V3ExtMethod` and
+/// `*mut c_void`; the implementation takes `*mut` and a typed value pointer.
+unsafe extern "C" fn akid_i2v(
+    meth: *const X509V3ExtMethod,
+    value: *mut c_void,
+    out: *mut OpenSslStack,
+) -> *mut OpenSslStack {
+    // SAFETY: `meth` is the table's live row (the implementation only reads it), and `value` is the
+    // `AuthorityKeyid` the caller stored in the slot.
+    unsafe { i2v_AUTHORITY_KEYID(meth.cast_mut(), value.cast::<AuthorityKeyid>(), out) }
 }
 
-/// `(X509V3_EXT_V2I)v2i_AUTHORITY_KEYID` — the cast the row's initialiser writes.
-const fn as_v2i(
-    f: unsafe extern "C" fn(
-        *mut X509V3ExtMethod,
-        *mut X509V3Ctx,
-        *mut OpenSslStack,
-    ) -> *mut AuthorityKeyid,
-) -> X509V3ExtV2i {
-    // SAFETY: both function types take three pointer arguments and answer a pointer; the authority
-    // writes exactly this cast in the row.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(
-                *mut X509V3ExtMethod,
-                *mut X509V3Ctx,
-                *mut OpenSslStack,
-            ) -> *mut AuthorityKeyid,
-            unsafe extern "C" fn(
-                *const X509V3ExtMethod,
-                *mut c_void,
-                *mut OpenSslStack,
-            ) -> *mut c_void,
-        >(f)
-    })
+/// The `v2i` slot for `v2i_AUTHORITY_KEYID`.
+unsafe extern "C" fn akid_v2i(
+    meth: *const X509V3ExtMethod,
+    ctx: *mut c_void,
+    out: *mut OpenSslStack,
+) -> *mut c_void {
+    // SAFETY: as `akid_i2v`; `ctx` is the `X509V3_CTX` the machinery passes under its `void *`
+    // spelling, and the answer is a freshly built `AuthorityKeyid`.
+    unsafe { v2i_AUTHORITY_KEYID(meth.cast_mut(), ctx.cast::<X509V3Ctx>(), out).cast::<c_void>() }
 }
 
 /// `const X509V3_EXT_METHOD ossl_v3_akey_id` — `crypto/x509/v3_akid.c:27-36`.
@@ -245,8 +214,8 @@ pub static ossl_v3_akey_id: X509V3ExtMethod = X509V3ExtMethod {
     i2d: None,
     i2s: None,
     s2i: None,
-    i2v: as_i2v(i2v_AUTHORITY_KEYID),
-    v2i: as_v2i(v2i_AUTHORITY_KEYID),
+    i2v: Some(akid_i2v),
+    v2i: Some(akid_v2i),
     i2r: None,
     r2i: None,
     usr_data: core::ptr::null_mut(),

@@ -24,7 +24,7 @@ use crate::asn1::layout::{Asn1String, BitStringBitname};
 use crate::asn1::prim::ASN1_ENUMERATED_get;
 use crate::runtime::mem::CRYPTO_strdup;
 use crate::runtime::obj::NID_crl_reason;
-use crate::x509::v3_lib::{X509V3ExtI2s, X509V3ExtMethod};
+use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_utl::i2s_ASN1_ENUMERATED;
 
 /// `OPENSSL_FILE` for this unit's `OPENSSL_strdup` expansion — `crypto/x509/v3_enum.c`.
@@ -116,17 +116,11 @@ static CRL_REASONS: [BitStringBitname; 11] = [
     },
 ];
 
-/// `(X509V3_EXT_I2S)i2s_ASN1_ENUMERATED_TABLE` — the cast the row's initialiser writes.
-const fn as_i2s(
-    f: unsafe extern "C" fn(*mut X509V3ExtMethod, *const Asn1String) -> *mut c_char,
-) -> X509V3ExtI2s {
-    // SAFETY: both function types take two pointer arguments and answer a pointer.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(*mut X509V3ExtMethod, *const Asn1String) -> *mut c_char,
-            unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char,
-        >(f)
-    })
+/// The `i2s` slot for `i2s_ASN1_ENUMERATED_TABLE`.
+unsafe extern "C" fn enum_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
+    // SAFETY: `meth` is the table's live row (read only); `value` is the `ASN1_ENUMERATED` in the
+    // slot.
+    unsafe { i2s_ASN1_ENUMERATED_TABLE(meth.cast_mut(), value.cast::<Asn1String>()) }
 }
 
 /// `char *i2s_ASN1_ENUMERATED_TABLE(X509V3_EXT_METHOD *method, const ASN1_ENUMERATED *e)`
@@ -181,7 +175,7 @@ pub static ossl_v3_crl_reason: X509V3ExtMethod = X509V3ExtMethod {
     ext_free: None,
     d2i: None,
     i2d: None,
-    i2s: as_i2s(i2s_ASN1_ENUMERATED_TABLE),
+    i2s: Some(enum_i2s),
     s2i: None,
     i2v: None,
     v2i: None,

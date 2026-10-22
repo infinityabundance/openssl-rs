@@ -73,7 +73,7 @@ use crate::x509::v3_genn::{
     OTHERNAME_new, GEN_DIRNAME, GEN_DNS, GEN_EDIPARTY, GEN_EMAIL, GEN_IPADD, GEN_OTHERNAME,
     GEN_RID, GEN_URI, GEN_X400,
 };
-use crate::x509::v3_lib::{X509V3ExtI2v, X509V3ExtMethod, X509V3ExtV2i, X509V3_EXT_d2i};
+use crate::x509::v3_lib::{X509V3ExtMethod, X509V3ExtV2i, X509V3_EXT_d2i};
 use crate::x509::v3_utl::{
     a2i_IPADDRESS, a2i_IPADDRESS_NC, ossl_ipaddr_to_asc, ossl_v3_name_cmp,
     x509v3_add_len_value_uchar, X509V3_NAME_from_section, X509V3_add_value,
@@ -1139,56 +1139,35 @@ pub unsafe extern "C" fn v2i_GENERAL_NAMES(
     gens
 }
 
-/// `(X509V3_EXT_I2V)i2v_GENERAL_NAMES` — the cast the `ossl_v3_alt` initialiser writes.
-const fn as_i2v(
-    f: unsafe extern "C" fn(
-        *mut X509V3ExtMethod,
-        *mut OpenSslStack,
-        *mut OpenSslStack,
-    ) -> *mut OpenSslStack,
-) -> X509V3ExtI2v {
-    // SAFETY: both function types take three pointer arguments and answer a pointer; the authority
-    // writes exactly this cast in the row.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(
-                *mut X509V3ExtMethod,
-                *mut OpenSslStack,
-                *mut OpenSslStack,
-            ) -> *mut OpenSslStack,
-            unsafe extern "C" fn(
-                *const X509V3ExtMethod,
-                *mut c_void,
-                *mut OpenSslStack,
-            ) -> *mut OpenSslStack,
-        >(f)
-    })
+/// The `i2v` slot for `i2v_GENERAL_NAMES`.
+unsafe extern "C" fn san_i2v(
+    meth: *const X509V3ExtMethod,
+    value: *mut c_void,
+    out: *mut OpenSslStack,
+) -> *mut OpenSslStack {
+    // SAFETY: `meth` is the table's live row (read only); `value` is the GENERAL_NAMES stack the
+    // slot holds.
+    unsafe { i2v_GENERAL_NAMES(meth.cast_mut(), value.cast::<OpenSslStack>(), out) }
 }
 
-/// `(X509V3_EXT_V2I)v2i_*` — the cast the `ossl_v3_alt` initialiser writes.
-const fn as_v2i(
-    f: unsafe extern "C" fn(
-        *mut X509V3ExtMethod,
-        *mut X509V3Ctx,
-        *mut OpenSslStack,
-    ) -> *mut OpenSslStack,
-) -> X509V3ExtV2i {
-    // SAFETY: both function types take three pointer arguments and answer a pointer; the authority
-    // writes exactly this cast in the row.
-    Some(unsafe {
-        core::mem::transmute::<
-            unsafe extern "C" fn(
-                *mut X509V3ExtMethod,
-                *mut X509V3Ctx,
-                *mut OpenSslStack,
-            ) -> *mut OpenSslStack,
-            unsafe extern "C" fn(
-                *const X509V3ExtMethod,
-                *mut c_void,
-                *mut OpenSslStack,
-            ) -> *mut c_void,
-        >(f)
-    })
+/// The `v2i` slots for the `ossl_v3_alt` rows (`v2i_subject_alt`, `v2i_issuer_alt`).
+unsafe extern "C" fn san_v2i(
+    meth: *const X509V3ExtMethod,
+    ctx: *mut c_void,
+    out: *mut OpenSslStack,
+) -> *mut c_void {
+    // SAFETY: as `san_i2v`; `ctx` is the `X509V3_CTX` under the slot's `void *` spelling.
+    unsafe { v2i_subject_alt(meth.cast_mut(), ctx.cast::<X509V3Ctx>(), out).cast::<c_void>() }
+}
+
+/// The `v2i` slot for the issuer-alt arm.
+unsafe extern "C" fn san_v2i_issuer(
+    meth: *const X509V3ExtMethod,
+    ctx: *mut c_void,
+    out: *mut OpenSslStack,
+) -> *mut c_void {
+    // SAFETY: as `san_v2i`, with the issuer arm's constructor.
+    unsafe { v2i_issuer_alt(meth.cast_mut(), ctx.cast::<X509V3Ctx>(), out).cast::<c_void>() }
 }
 
 /// One `ossl_v3_alt` row, all three identical except for `ext_nid` and `v2i`.
@@ -1203,7 +1182,7 @@ const fn alt_row(ext_nid: c_int, v2i: X509V3ExtV2i) -> X509V3ExtMethod {
         i2d: None,
         i2s: None,
         s2i: None,
-        i2v: as_i2v(i2v_GENERAL_NAMES),
+        i2v: Some(san_i2v),
         v2i,
         i2r: None,
         r2i: None,
@@ -1218,8 +1197,8 @@ const fn alt_row(ext_nid: c_int, v2i: X509V3ExtV2i) -> X509V3ExtMethod {
 /// (`i2v_GENERAL_NAMES`, no `v2i`). Every row names `GENERAL_NAMES_it`; every other slot is the
 /// authority's zero, and no row has a hole.
 pub static ossl_v3_alt: [X509V3ExtMethod; 3] = [
-    alt_row(NID_subject_alt_name, as_v2i(v2i_subject_alt)),
-    alt_row(NID_issuer_alt_name, as_v2i(v2i_issuer_alt)),
+    alt_row(NID_subject_alt_name, Some(san_v2i)),
+    alt_row(NID_issuer_alt_name, Some(san_v2i_issuer)),
     alt_row(NID_certificate_issuer, None),
 ];
 
