@@ -3175,6 +3175,29 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
         limits=limits, prefix=prefix, source_root_hash=root_hash)
 
 
+def _acquisition_failure_rows(fam: dict, recipe: dict, reason: str, limits: dict,
+                              prefix: Path) -> list[dict]:
+    """Both subject rows for a family whose pristine source could not be acquired or opened.
+
+    The reason names the source host and URL, so an unreachable upstream is diagnosable from the
+    atlas alone. Level `L0`/`not_attempted`/`acquire-failure` is the honest classification: no
+    build was attempted because there was no source tree to build.
+    """
+    name = str(fam.get("canonical_name"))
+    return [
+        _subject_row(
+            fam, recipe, subject, level=L0, outcome="not_attempted", residual="unavailable",
+            failure_class="acquire-failure", reason=reason,
+            specimen_id=f"specimen:{name}:{recipe['version']}",
+            variant_id=f"variant:{name}:{recipe['version']}:pristine",
+            source_sha256=None,
+            evidence=[f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
+                      f"source:{recipe['url']}"],
+            steps=None, canvas=None, limits=limits, prefix=prefix)
+        for subject in ("authority", "candidate")
+    ]
+
+
 def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path,
                    auth_defined: set[str], cand_defined: set[str],
                    limits: dict) -> tuple[list[dict], dict | None, dict | None]:
@@ -3186,7 +3209,12 @@ def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path
     work.mkdir(parents=True, exist_ok=True)
 
     archive = work / f"source.{recipe['archive']}"
-    fetch = census._fetch(recipe["url"], archive)
+    try:
+        fetch = census._fetch(recipe["url"], archive)
+    except Exception as exc:  # noqa: BLE001 - an unreachable host must not abort the court
+        fetch = {"ok": False, "rc": None,
+                 "error": f"{type(exc).__name__}: {exc}",
+                 "url": recipe["url"]}
     if not fetch["ok"] or not archive.is_file():
         # No source: both subjects are honestly `not_attempted`/acquire-failure. The specimen is
         # still recorded with the recipe's pinned digest -- the intended released tarball.
@@ -3194,7 +3222,8 @@ def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path
             _subject_row(
                 fam, recipe, subject, level=L0, outcome="not_attempted", residual="unavailable",
                 failure_class="acquire-failure",
-                reason=f"fetching the pristine source failed: {census._error_line(fetch)}",
+                reason=(f"fetching the pristine source from {recipe['url']} failed: "
+                        f"{census._error_line(fetch)}"),
                 specimen_id=f"specimen:{name}:{recipe['version']}",
                 variant_id=f"variant:{name}:{recipe['version']}:pristine",
                 source_sha256=None,
@@ -3214,8 +3243,9 @@ def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path
             _subject_row(
                 fam, recipe, subject, level=L1, outcome="failed", residual="unavailable",
                 failure_class="acquire-failure",
-                reason=(f"the fetched {name} {recipe['version']} archive digest {observed} does "
-                        f"not match the pinned {recipe['sha256']}"),
+                reason=(f"the fetched {name} {recipe['version']} archive from {recipe['url']} "
+                        f"has digest {observed}, which does not match the pinned "
+                        f"{recipe['sha256']}"),
                 specimen_id=f"specimen:{name}:{recipe['version']}",
                 variant_id=f"variant:{name}:{recipe['version']}:pristine",
                 source_sha256=observed,
@@ -3226,11 +3256,19 @@ def measure_family(fam: dict, recipe: dict, auth_prefix: Path, cand_prefix: Path
         ]
         return rows, _specimen(fam, recipe, observed), _variant(fam, recipe)
 
-    rows = []
-    for subject, prefix, defined in (("authority", auth_prefix, auth_defined),
-                                     ("candidate", cand_prefix, cand_defined)):
-        rows.append(_measure_subject(fam, recipe, observed, archive, subject, prefix, defined,
-                                     auth_prefix, limits))
+    try:
+        rows = []
+        for subject, prefix, defined in (("authority", auth_prefix, auth_defined),
+                                         ("candidate", cand_prefix, cand_defined)):
+            rows.append(_measure_subject(fam, recipe, observed, archive, subject, prefix, defined,
+                                         auth_prefix, limits))
+    except Exception as exc:  # noqa: BLE001 - acquisition failure is a measured outcome
+        # Unpacking, extraction or environment preparation raised: the family is an acquire
+        # failure naming its source host, and the caller continues with the next family.
+        reason = (f"acquiring or preparing the pristine source from {recipe['url']} failed: "
+                  f"{type(exc).__name__}: {exc}")
+        return (_acquisition_failure_rows(fam, recipe, reason, limits, auth_prefix),
+                _specimen(fam, recipe, observed), _variant(fam, recipe))
     root_hash = next((r.get("source_root_hash") for r in rows if r.get("source_root_hash")),
                      None)
     return rows, _specimen(fam, recipe, observed, root_hash), _variant(fam, recipe)
@@ -3361,8 +3399,21 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
                 variants.append(copy.deepcopy(var))
             reused_families.append(name)
             continue
-        fam_rows, specimen, variant = measure_family(
-            fam, recipe, auth_prefix, CANDIDATE_PREFIX, auth_defined, cand_defined, limits)
+        try:
+            fam_rows, specimen, variant = measure_family(
+                fam, recipe, auth_prefix, CANDIDATE_PREFIX, auth_defined, cand_defined, limits)
+        except Exception as exc:  # noqa: BLE001 - a family failure must not abort the court
+            # A failed acquisition or a missing/undecodable source tree is a measured outcome for
+            # this family, not a reason to abandon the remaining 999. Both subjects are recorded
+            # as `acquire-failure` naming the source host and URL, and the court continues.
+            reason = (f"acquiring or building {recipe['url']} failed before a pristine source "
+                      f"tree existed: {type(exc).__name__}: {exc}")
+            rows.extend(_acquisition_failure_rows(fam, recipe, reason, limits, auth_prefix))
+            specimens.append(_specimen(fam, recipe))
+            variants.append(_variant(fam, recipe))
+            print(f"  [p1000 {entry.get('p1000_rank'):>4}] {name:<12} acquire-failure "
+                  f"{reason[:70]}"[:150], flush=True)
+            continue
         rows.extend(fam_rows)
         if specimen:
             specimens.append(specimen)
@@ -3867,7 +3918,29 @@ def self_test() -> int:
         if not r.get("sha256"):
             failures.append(f"the recipe for {r['family']!r} pins no archive SHA-256")
 
-    # 3. The pure functions behave over the committed evidence.
+    # 3. Acquisition failure is a measured outcome, not a court abort: a missing source tree is
+    #    `None` (never a raised `FileNotFoundError`) and the failure rows name the source host while
+    #    accounting for both subjects under the closed vocabulary.
+    if census._single_source_root(Path("/nonexistent-acquire-self-test/src")) is not None:
+        failures.append("a missing source tree did not report `None`")
+    recipe = {"family": "__selftest__", "version": "0", "recipe_id": "selftest",
+              "url": "https://unreachable.invalid/__selftest__.tar.gz", "archive": "tar.gz"}
+    fam = {"family_id": "__selftest__", "canonical_name": "__selftest__",
+           "openssl_linkage": "direct", "directness_class": "direct", "_rank": 0}
+    acquire_rows = _acquisition_failure_rows(
+        fam, recipe, "fetching the pristine source from https://unreachable.invalid/ failed",
+        {"memory_max": "?", "pids_max": "?"}, Path("/p"))
+    if {r["subject"] for r in acquire_rows} != {"authority", "candidate"}:
+        failures.append("an acquisition failure does not account for both subjects")
+    for r in acquire_rows:
+        if r.get("failure_class") != "acquire-failure" or "unreachable.invalid" not in str(
+                r.get("reason")):
+            failures.append("an acquisition failure neither names its class nor its source host")
+        problems = downstream_schemas.validate_run(r)
+        if problems:
+            failures.append(f"an acquisition failure row is schema-invalid: {problems[:2]}")
+
+    # 4. The pure functions behave over the committed evidence.
     if not FAMILY_FREEZE.is_file():
         failures.append(f"{rel(FAMILY_FREEZE)} is absent")
     else:
@@ -3893,8 +3966,9 @@ def self_test() -> int:
             print(f"  {f}")
         return 1
     print("[downstream-build-link] self-test ok: the guard refuses a host invocation of this tool "
-          "(marker and flag both named), the committed P1000 build/link atlas reproduces with zero "
-          "findings, and every seeded mutation (candidate linkage resolving the authority, a "
+          "(marker and flag both named), a missing source tree is an `acquire-failure` naming its "
+          "host rather than a raised exception, the committed P1000 build/link atlas reproduces "
+          "with zero findings, and every seeded mutation (candidate linkage resolving the authority, a "
           "recipe-backed family missing its authority row, a positive candidate-specific patch "
           "count, a non-measured row with no residual class, candidate linkage resolving a "
           "system library, and a candidate row that built a different pristine source tree) is "
