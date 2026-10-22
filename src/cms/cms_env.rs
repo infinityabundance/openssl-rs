@@ -2037,6 +2037,28 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
     }
     ukeylen += outlen;
 
+    // The unwrap primitive reports what it wrote; the block was sized from the queried
+    // unwrapped-key length. A report larger than the block would make the later
+    // `OPENSSL_clear_free((*ec).key, (*ec).keylen)` cleanse past the allocation, so the reported
+    // length is checked against the capacity here instead of being trusted (CVE-2026-63072's
+    // second edge; §17).
+    if ukeylen < 0 || ukeylen as usize > ukey_alloc_len {
+        // SAFETY: the site is a compile-time constant.
+        unsafe {
+            raise_cms(
+                1010,
+                c"cms_RecipientInfo_kekri_decrypt",
+                crate::runtime::err::err_reasons::CMS_R_UNWRAP_ERROR,
+            )
+        };
+        // SAFETY: `cipher` is owned here; `ukey` clears and releases its own block on drop.
+        unsafe {
+            EVP_CIPHER_free(cipher);
+            crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
+        }
+        return r;
+    }
+
     // SAFETY: `ec` is live; ownership of the block transfers to `ec.key`.
     unsafe {
         super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
@@ -3186,5 +3208,124 @@ mod tests {
         let owned = unsafe { adopt_decrypted_key(raw, 20) };
         drop(owned);
         crate::ssl::adv_alloc::assert_not_cleansed();
+    }
+
+    // -------------------------------------------------------------------------------------
+    // CVE-2025-15467 and CVE-2026-63072: the two CMS mechanisms, side by side
+    // -------------------------------------------------------------------------------------
+
+    /// **CVE-2026-63072.** `cms_RecipientInfo_kekri_decrypt` sizes the unwrap buffer from the
+    /// queried unwrapped-key length: `encrypted_key.length - 8` (`cms_env.c:995`, transcribed at
+    /// the allocation four hundred lines above). The AES-WRAP-PAD primitive is then given
+    /// `encrypted_key.length` as its input length. The authority's failure paths cleanse
+    /// `inlen` bytes -- eight past the buffer CMS allocated.
+    ///
+    /// The probe reproduces the CMS allocation exactly (capacity `inlen - 8`, with eight guard
+    /// bytes beyond it that no caller declared) and forces the failure path by supplying an
+    /// AIV that cannot match. It asserts the guard bytes survive; before the fix the primitive
+    /// zeroed them.
+    #[test]
+    fn cve_2026_63072_wrap_pad_cleanse_stops_at_the_queried_extent() {
+        // A deterministic stand-in for AES: the failure path under test is reached by the AIV
+        // comparison, not by the block's output.
+        unsafe extern "C" fn zero_block(_in: *const u8, out: *mut u8, _key: *const c_void) {
+            // SAFETY: the primitive's block contract: a sixteen-byte destination.
+            unsafe { ptr::write_bytes(out, 0, 16) };
+        }
+
+        let inlen = 24usize; // a sixteen-byte key wrapped with padding
+        let queried = inlen - 8; // what CMS allocates and declares writable
+        let mut backing = vec![0xAAu8; inlen]; // eight guard bytes past `queried`
+        let wrapped = [0x5Au8; 24];
+
+        // SAFETY: `backing` is a live allocation of `inlen` bytes, of which `queried` are the
+        // caller's declared extent; `wrapped` is readable for `inlen`.
+        let rv = unsafe {
+            crate::modes::wrap::CRYPTO_128_unwrap_pad(
+                ptr::null_mut(),
+                ptr::null(),
+                backing.as_mut_ptr(),
+                wrapped.as_ptr(),
+                inlen,
+                zero_block,
+            )
+        };
+        assert_eq!(rv, 0, "the corrupted AIV must be refused");
+        assert_eq!(
+            &backing[queried..],
+            &[0xAAu8; 8],
+            "the failure cleanse must stop at the extent CMS declared"
+        );
+    }
+
+    /// **CVE-2025-15467.** The AES-GCM AIV parameter set is
+    /// `SEQUENCE { nonce OCTET STRING, icvLen INTEGER }`. On the decode path
+    /// `ossl_cms_EncryptedContent_init_bio` parses it into `EvpCipherAeadAsn1Params` -- this
+    /// frame's sixteen-byte `iv` -- and then hands that buffer to `EVP_CipherInit_ex`. The probe
+    /// drives the same parser with a crafted nonce longer than the destination and with sentinel
+    /// bytes in the destination, and asserts the parameter set is refused and the buffer
+    /// untouched.
+    #[test]
+    fn cve_2025_15467_oversized_aead_iv_is_refused_at_the_parameter_boundary() {
+        /// `SEQUENCE { OCTET STRING nonce, INTEGER 12 }`, DER-encoded.
+        fn aiv_der(nonce_len: usize) -> Vec<u8> {
+            let body = 2 + nonce_len + 3;
+            let mut d = vec![0x30u8, body as u8, 0x04, nonce_len as u8];
+            d.extend((0..nonce_len).map(|i| (i as u8) | 0x40));
+            d.extend([0x02u8, 0x01, 0x0c]);
+            d
+        }
+
+        // SAFETY: every pointer is a live local; the context is freed on every path below.
+        unsafe {
+            let cipher = crate::evp::e_aes::EVP_aes_128_gcm();
+            let ctx = crate::evp::cipher_ctx::EVP_CIPHER_CTX_new();
+            assert!(!ctx.is_null());
+            assert!(
+                crate::evp::cipher_ctx::EVP_CipherInit_ex(
+                    ctx,
+                    cipher,
+                    ptr::null_mut(),
+                    ptr::null(),
+                    ptr::null(),
+                    0
+                ) > 0
+            );
+
+            for (nonce_len, expected) in [(12usize, 12), (17, -1), (32, -1), (64, -1)] {
+                let d = aiv_der(nonce_len);
+                let mut p = d.as_ptr();
+                let ty = crate::asn1::a_type::d2i_ASN1_TYPE(
+                    ptr::null_mut(),
+                    &mut p,
+                    d.len() as core::ffi::c_long,
+                );
+                assert!(!ty.is_null(), "the crafted parameters must decode");
+                let mut params = crate::evp::cipher_ctx::EvpCipherAeadAsn1Params {
+                    tag_len: 0,
+                    iv: [0xA5u8; 16],
+                    iv_len: 0,
+                };
+                let rc = crate::evp::cipher_ctx::evp_cipher_asn1_to_param_ex(ctx, ty, &mut params);
+                assert_eq!(rc, expected, "nonce length {nonce_len}");
+                if expected > 0 {
+                    assert_eq!(params.iv_len as usize, nonce_len);
+                    assert_eq!(
+                        &params.iv[..nonce_len],
+                        &aiv_der(nonce_len)[4..4 + nonce_len]
+                    );
+                    assert_eq!(&params.iv[nonce_len..], &[0xA5u8; 16][nonce_len..]);
+                } else {
+                    assert_eq!(
+                        params.iv, [0xA5u8; 16],
+                        "a refused parameter set must leave the destination untouched"
+                    );
+                    assert_eq!(params.iv_len, 0);
+                }
+                crate::asn1::a_type::ASN1_TYPE_free(ty);
+            }
+
+            crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
+        }
     }
 }

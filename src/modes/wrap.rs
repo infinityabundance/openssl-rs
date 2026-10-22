@@ -242,10 +242,17 @@ pub unsafe extern "C" fn CRYPTO_128_wrap_pad(
 /// const unsigned char *in, size_t inlen, block128_f block)` —
 /// `crypto/modes/wrap128.c:249-327`, RFC 5649 §4.2.
 ///
+/// **The cleanse extent is `inlen - 8`, not `inlen`.** The authority cleanses `inlen` on every
+/// failure path, but the only bytes this function can have written are `inlen - 8` (the padded
+/// plaintext); the eight-byte difference is exactly the gap by which CMS's key-unwrap buffer is
+/// under-sized. This is CVE-2026-63072's mechanism and is not reproduced (§17). Every other
+/// observable is the authority's: the input-length refusals, the returned length and the error
+/// queue are unchanged.
+///
 /// # Safety
-/// `out` writable for `inlen` (the authority cleanses that much on every failure), `in`
-/// readable for `inlen`, `icv` NULL or readable for four, and `block` as its own contract
-/// requires.
+/// `out` is writable for **`inlen - 8`** bytes (the extent this function may write and therefore
+/// cleanse), `in` is readable for `inlen`, `icv` is NULL or readable for four, and `block` is as
+/// its own contract requires.
 #[no_mangle]
 pub unsafe extern "C" fn CRYPTO_128_unwrap_pad(
     key: *mut c_void,
@@ -267,6 +274,16 @@ pub unsafe extern "C" fn CRYPTO_128_unwrap_pad(
         let n = inlen / 8 - 1;
         let mut aiv = [0u8; 8];
         let padded_len;
+        // The authority cleanses `inlen` on each failure below; only `padded_len` bytes can have
+        // been written, so that is the extent cleansed here. `padded_len <= inlen - 8` on every
+        // path (`8` for the sixteen-byte special case, `inlen - 8` otherwise), which is exactly
+        // the buffer CMS allocates from the queried unwrapped-key size (`cms_env.c:995`).
+        macro_rules! reject {
+            () => {{
+                OPENSSL_cleanse(out.cast(), padded_len);
+                0
+            }};
+        }
 
         if inlen == 16 {
             // §4.2 step 1's special case: AIV | P0 = DEC(K, C0 | C1).
@@ -280,8 +297,7 @@ pub unsafe extern "C" fn CRYPTO_128_unwrap_pad(
             padded_len = inlen - 8;
             let ret = unwrap_raw(key, aiv.as_mut_ptr(), out, input, inlen, block);
             if padded_len != ret {
-                OPENSSL_cleanse(out.cast(), inlen);
-                return 0;
+                return reject!();
             }
         }
 
@@ -291,8 +307,7 @@ pub unsafe extern "C" fn CRYPTO_128_unwrap_pad(
             icv
         };
         if CRYPTO_memcmp(aiv.as_ptr().cast(), expected.cast(), 4) != 0 {
-            OPENSSL_cleanse(out.cast(), inlen);
-            return 0;
+            return reject!();
         }
 
         let ptext_len = ((aiv[4] as usize) << 24)
@@ -300,8 +315,7 @@ pub unsafe extern "C" fn CRYPTO_128_unwrap_pad(
             | ((aiv[6] as usize) << 8)
             | (aiv[7] as usize);
         if 8 * (n - 1) >= ptext_len || ptext_len > 8 * n {
-            OPENSSL_cleanse(out.cast(), inlen);
-            return 0;
+            return reject!();
         }
 
         let padding_len = padded_len - ptext_len;
@@ -312,8 +326,7 @@ pub unsafe extern "C" fn CRYPTO_128_unwrap_pad(
             padding_len,
         ) != 0
         {
-            OPENSSL_cleanse(out.cast(), inlen);
-            return 0;
+            return reject!();
         }
 
         ptext_len

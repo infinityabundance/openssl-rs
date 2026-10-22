@@ -285,6 +285,33 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
             }
             piv = aparams.iv.as_mut_ptr();
 
+            // The IV the parameter set carried was parsed into `aparams.iv`, this frame's
+            // sixteen-byte stack buffer, and the buffer is what `EVP_CipherInit_ex` below hands
+            // to the provider. Bound both the parsed length and the cipher's advertised IV length
+            // by that destination, so neither a crafted parameter set nor a provider can make a
+            // read or copy exceed it. This is CVE-2025-15467's mechanism made inexpressible at
+            // the boundary rather than trusted from the parser (§17).
+            // SAFETY: `ctx` is live.
+            let cipher_ivlen = unsafe { EVP_CIPHER_CTX_get_iv_length(ctx) };
+            if aparams.iv_len as usize > aparams.iv.len()
+                || !iv_length_fits_authority_buffer(cipher_ivlen)
+            {
+                // SAFETY: the site is a compile-time constant.
+                unsafe {
+                    raise_cms(
+                        103,
+                        c"ossl_cms_EncryptedContent_init_bio",
+                        crate::runtime::err::err_reasons::CMS_R_CIPHER_PARAMETER_INITIALISATION_ERROR,
+                    )
+                };
+                // SAFETY: the context and cipher are live.
+                unsafe {
+                    EVP_CIPHER_free(fetched_ciph);
+                    BIO_free(b);
+                }
+                return ptr::null_mut();
+            }
+
             // SAFETY: `ec` is live.
             let taglen = unsafe { (*ec).taglen };
             // SAFETY: `ec` is live.
@@ -434,8 +461,15 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
             }
             // SAFETY: `cipher` is live.
             if unsafe { EVP_CIPHER_get_flags(cipher) } & EVP_CIPH_FLAG_AEAD_CIPHER != 0 {
-                // SAFETY: `piv` is readable for `ivlen`.
-                unsafe { ptr::copy_nonoverlapping(piv, aparams.iv.as_mut_ptr(), ivlen as usize) };
+                // `ivlen` was bounded by `iv_length_fits_authority_buffer` above, so the
+                // destination prefix exists; the copy is a slice-to-slice assignment rather than
+                // a raw store whose extent the caller could get wrong.
+                let Some(dst) = aparams.iv.get_mut(..ivlen as usize) else {
+                    break 'body;
+                };
+                // SAFETY: `piv` is readable for `ivlen` bytes -- the sixteen-byte local `iv` on
+                // this arm, whose random fill above is bounded by the same guard.
+                dst.copy_from_slice(unsafe { core::slice::from_raw_parts(piv, ivlen as usize) });
                 aparams.iv_len = ivlen as u32;
                 // SAFETY: `ctx` is live.
                 aparams.tag_len = unsafe { EVP_CIPHER_CTX_get_tag_length(ctx) } as u32;
