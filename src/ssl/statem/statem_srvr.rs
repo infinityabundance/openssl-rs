@@ -993,6 +993,65 @@ impl<'a> SliceCursor<'a> {
     }
 }
 
+/// A bounds-checked forward-only writer over a caller-supplied byte block.
+///
+/// Every method answers `false` when the value does not fit; the position advances only on
+/// success. No method can write outside `out`, so the body writers built on it are safe
+/// functions: no argument can make them panic or write out of bounds. A too-small block is a
+/// clean `None` at the body-writer seam, which the callers turn into the existing failure return.
+struct BytesWriter<'a> {
+    out: &'a mut [u8],
+    pos: usize,
+}
+
+impl<'a> BytesWriter<'a> {
+    fn new(out: &'a mut [u8]) -> Self {
+        Self { out, pos: 0 }
+    }
+
+    /// Bytes written so far; `pos` never exceeds `out.len()`.
+    fn written(&self) -> usize {
+        self.pos
+    }
+
+    fn put_bytes(&mut self, bytes: &[u8]) -> bool {
+        let Some(end) = self.pos.checked_add(bytes.len()) else {
+            return false;
+        };
+        let Some(dst) = self.out.get_mut(self.pos..end) else {
+            return false;
+        };
+        dst.copy_from_slice(bytes);
+        self.pos = end;
+        true
+    }
+
+    fn put_u8(&mut self, value: u8) -> bool {
+        self.put_bytes(&[value])
+    }
+
+    fn put_u16(&mut self, value: u16) -> bool {
+        self.put_bytes(&value.to_be_bytes())
+    }
+
+    /// `length(1) || bytes`, with the length derived from the slice and refused when it
+    /// cannot be expressed in one byte.
+    fn put_u8_len_prefixed(&mut self, bytes: &[u8]) -> bool {
+        let Ok(len) = u8::try_from(bytes.len()) else {
+            return false;
+        };
+        self.put_u8(len) && self.put_bytes(bytes)
+    }
+
+    /// `length(2) || bytes`, with the length derived from the slice.
+    fn put_u16_len_prefixed(&mut self, bytes: &[u8]) -> bool {
+        let Ok(len) = u16::try_from(bytes.len()) else {
+            return false;
+        };
+        self.put_u16(len) && self.put_bytes(bytes)
+    }
+}
+
 /// `SSL3_MT_SERVER_HELLO` — `ssl3.h`.
 const SSL3_MT_SERVER_HELLO: u8 = 2;
 /// `SSL3_MT_CLIENT_HELLO` — `ssl3.h`.
@@ -1869,38 +1928,90 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     1
 }
 
+/// Write a Rust slice into a live packet. The slice carries its own length, so the remaining
+/// obligation is only that `pkt` is live.
+///
+/// # Safety
+/// `pkt` must be live.
+unsafe fn wpacket_put_slice(pkt: *mut Wpacket, bytes: &[u8]) -> c_int {
+    // SAFETY: `pkt` is live per the contract; `bytes` is readable for `bytes.len()`.
+    unsafe { crate::packet::WPACKET_memcpy(pkt, bytes.as_ptr().cast(), bytes.len()) }
+}
+
+/// Upper bound of the fixed ServerHello prelude: `legacy_version(2) || random(32) ||
+/// legacy_session_id_echo(1 + 255) || cipher_suite(2) || legacy_compression_method(1)`.
+const SERVER_HELLO_PREFIX_MAX: usize = 2 + 32 + 1 + u8::MAX as usize + 2 + 1;
+
+/// The fixed prelude of a ServerHello, before the extension block:
+/// `legacy_version || random || legacy_session_id_echo || cipher_suite ||
+/// legacy_compression_method` (RFC 8446 §4.1.3; `tls_construct_server_hello`,
+/// `statem_srvr.c:2599-2660`).
+///
+/// `session_id` is echoed as a whole slice: the length byte is derived from the slice, so a
+/// longer id produces a longer echo rather than an out-of-bounds read. The connection's own
+/// buffer bounds the production argument.
+fn write_server_hello_prefix(
+    out: &mut [u8],
+    version: u16,
+    random: &[u8; 32],
+    session_id: &[u8],
+    cipher_id: u16,
+) -> Option<usize> {
+    let mut w = BytesWriter::new(out);
+    if !(w.put_u16(version)
+        && w.put_bytes(random)
+        && w.put_u8_len_prefixed(session_id)
+        && w.put_u16(cipher_id)
+        && w.put_u8(0))
+    {
+        return None;
+    }
+    Some(w.written())
+}
+
 /// `CON_FUNC_RETURN tls_construct_server_hello(SSL_CONNECTION *s, WPACKET *pkt)` —
-/// `statem_srvr.c:2590-2699`, reduced at the key schedule.
+/// `statem_srvr.c:2590-2699`, reduced at the key schedule. This is the TLS1.3 ServerHello
+/// writer ([`write_server_hello`]); the fixed prelude is built by the safe
+/// [`write_server_hello_prefix`] and the extension block by the extension framework, in the
+/// authority's order.
 ///
 /// # Safety
 /// `s` must be a live connection; `pkt` a live packet.
 unsafe fn tls_construct_server_hello(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
-    use crate::packet::{WPACKET_memcpy, WPACKET_put_bytes_u16, WPACKET_put_bytes_u8};
-
-    // SAFETY: `s`/`pkt` are live.
-    unsafe {
-        let cipher = (*s).pending_cipher;
-        if cipher.is_null() {
-            return 0;
-        }
-        if WPACKET_put_bytes_u16(pkt, TLS1_2_VERSION as u16) == 0
-            || WPACKET_memcpy(pkt, (*s).server_random.as_ptr().cast(), 32) == 0
-            || crate::packet::WPACKET_start_sub_packet_len__(pkt, 1) == 0
-            || ((*s).tmp_session_id_len != 0
-                && WPACKET_memcpy(
-                    pkt,
-                    (*s).tmp_session_id.as_ptr().cast(),
-                    (*s).tmp_session_id_len,
-                ) == 0)
-            || crate::packet::WPACKET_close(pkt) == 0
-            || WPACKET_put_bytes_u16(pkt, (*cipher).id as u16) == 0
-            || WPACKET_put_bytes_u8(pkt, 0) == 0
-            || crate::ssl::statem::extensions_srvr::tls_construct_extensions(s, pkt) == 0
-        {
-            return 0;
-        }
+    // SAFETY: `s` is live; `pending_cipher` is NULL or a live table row, `tmp_session_id` is a
+    // 32-byte member paired with its length, and `server_random` is a 32-byte member. A length
+    // outside the array is an internal invariant violation, refused rather than read past it.
+    let (cipher, session_id, random) = unsafe {
+        (
+            (*s).pending_cipher,
+            (*s).tmp_session_id.get(..(*s).tmp_session_id_len),
+            &(*s).server_random,
+        )
+    };
+    let Some(session_id) = session_id else {
+        return 0;
+    };
+    if cipher.is_null() {
+        return 0;
     }
-    1
+    // SAFETY: `cipher` is a live table row.
+    let cipher_id = unsafe { (*cipher).id as u16 };
+    let mut prefix = [0u8; SERVER_HELLO_PREFIX_MAX];
+    let Some(prefix_len) = write_server_hello_prefix(
+        &mut prefix,
+        TLS1_2_VERSION as u16,
+        random,
+        session_id,
+        cipher_id,
+    ) else {
+        return 0;
+    };
+    // SAFETY: `pkt` is live; `prefix[..prefix_len]` is initialised by the writer.
+    if unsafe { wpacket_put_slice(pkt, &prefix[..prefix_len]) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s`/`pkt` are live.
+    unsafe { crate::ssl::statem::extensions_srvr::tls_construct_extensions(s, pkt) }
 }
 
 /// Write the server's first flight: build the ServerHello into `buf`, frame it as one plaintext
@@ -1964,6 +2075,36 @@ const SSL3_MT_FIN: u8 = 20;
 /// `MSG_FLOW_READING` — `ssl/statem/statem.h`.
 const MSG_FLOW_READING_13: c_int = 2;
 
+/// The `EncryptedExtensions` body: an `Extension extensions<0..2^16-1>` vector carrying only the
+/// negotiated ALPN (`tls_construct_stoc_alpn`, `extensions_srvr.c:1835-1854`), whose body is
+/// `ProtocolNameList<2..2^16-1>` = `list_len(2) || proto_len(1) || proto`.
+///
+/// An absent, empty or over-long protocol emits no extension, matching the previous
+/// `sel_len > 0 && sel_len <= 255` guard.
+fn write_encrypted_extensions_body(out: &mut [u8], alpn: Option<&[u8]>) -> Option<usize> {
+    let alpn = alpn.filter(|proto| !proto.is_empty() && proto.len() <= u8::MAX as usize);
+    let ext_len = match alpn {
+        // `type(2) || ext_len(2) || list_len(2) || proto_len(1) || proto`
+        Some(proto) => 7 + proto.len(),
+        None => 0,
+    };
+    let mut w = BytesWriter::new(out);
+    if !w.put_u16(u16::try_from(ext_len).ok()?) {
+        return None;
+    }
+    if let Some(proto) = alpn {
+        let list_len = 1 + proto.len();
+        if !(w.put_u16(TLSEXT_TYPE_ALPN)
+            && w.put_u16(u16::try_from(2 + list_len).ok()?)
+            && w.put_u16(u16::try_from(list_len).ok()?)
+            && w.put_u8_len_prefixed(proto))
+        {
+            return None;
+        }
+    }
+    Some(w.written())
+}
+
 /// `CON_FUNC_RETURN tls_construct_encrypted_extensions(...)` — `statem_srvr.c:4591-4601`.
 ///
 /// The `EncryptedExtensions` body is an `Extension extensions<0..2^16-1>` vector. The reduced flight
@@ -1973,37 +2114,24 @@ const MSG_FLOW_READING_13: c_int = 2;
 /// # Safety
 /// `s` is live.
 unsafe fn tls13_construct_encrypted_extensions(s: *mut Ssl) -> c_int {
-    // SAFETY: `s` is live; the selected protocol is owned by the connection.
-    let (selected, sel_len) = unsafe { (*s).s3_alpn_selected() };
-    // The `Extension extensions<0..2^16-1>` block, then a two-byte length prefix in `body`.
-    let mut ext = [0u8; 512];
-    let mut ext_len = 0usize;
-    if !selected.is_null() && sel_len > 0 && sel_len <= 255 {
-        // `tls_construct_stoc_alpn`: the extension body is
-        // `ProtocolNameList<2..2^16-1>` = `list_len(2) || proto_len(1) || proto`.
-        let list_len = 1 + sel_len;
-        let elen = 2 + list_len;
-        let hdr: [u8; 6] = [
-            (TLSEXT_TYPE_ALPN >> 8) as u8,
-            (TLSEXT_TYPE_ALPN & 0xff) as u8,
-            (elen >> 8) as u8,
-            (elen & 0xff) as u8,
-            (list_len >> 8) as u8,
-            (list_len & 0xff) as u8,
-        ];
-        ext[..6].copy_from_slice(&hdr);
-        ext[6] = sel_len as u8;
-        // SAFETY: `selected` names `sel_len` readable bytes; `ext` has room for them.
-        unsafe { core::ptr::copy_nonoverlapping(selected, ext.as_mut_ptr().add(7), sel_len) };
-        ext_len = 7 + sel_len;
-    }
-    let mut body = [0u8; 514];
-    body[0] = (ext_len >> 8) as u8;
-    body[1] = (ext_len & 0xff) as u8;
-    body[2..2 + ext_len].copy_from_slice(&ext[..ext_len]);
-    // SAFETY: `s` is live; `body` holds `2 + ext_len` initialised bytes.
+    // SAFETY: `s` is live; its member buffer pairs `selected` with `sel_len`, so a non-NULL
+    // pointer names `sel_len` readable bytes for this frame's borrow. The writer below is safe
+    // and derives every wire length itself.
+    let alpn: Option<&[u8]> = unsafe {
+        let (selected, sel_len) = (*s).s3_alpn_selected();
+        if selected.is_null() || sel_len == 0 {
+            None
+        } else {
+            Some(core::slice::from_raw_parts(selected, sel_len))
+        }
+    };
+    let mut body = [0u8; 2 + 7 + u8::MAX as usize];
+    let Some(body_len) = write_encrypted_extensions_body(&mut body, alpn) else {
+        return 0;
+    };
+    // SAFETY: `s` is live; `body[..body_len]` is initialised by the writer.
     unsafe {
-        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_EE, body.as_ptr(), 2 + ext_len)
+        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_EE, body.as_ptr(), body_len)
     }
 }
 
@@ -2854,6 +2982,49 @@ pub(crate) unsafe fn tls12_verify(
     ok
 }
 
+/// The TLS1.2 `ServerHello` body: `version || random || session_id(1 + n) || cipher_suite ||
+/// compression_method || extensions<2>`. The extension block is `renegotiation_info` (RFC 5746,
+/// always, once the client offered it), then `session_ticket` (empty) when a ticket follows
+/// (`tls_construct_stoc_session_ticket`, `extensions_srvr.c:1740`), then the TLS1.2
+/// `status_request` acknowledgement (`tls_construct_stoc_status_request`,
+/// `extensions_srvr.c:1759-1798`).
+fn write_tls12_server_hello_body(
+    out: &mut [u8],
+    version: u16,
+    random: &[u8; 32],
+    session_id: &[u8],
+    cipher_id: u16,
+    send_ticket: bool,
+    send_status: bool,
+) -> Option<usize> {
+    let mut ext_buf = [0u8; 32];
+    let mut ew = BytesWriter::new(&mut ext_buf);
+    // `renegotiation_info` with an empty `renegotiated_connection`.
+    let mut ok = ew.put_bytes(&[0xff, 0x01, 0x00, 0x01, 0x00]);
+    if ok && send_ticket {
+        ok = ew.put_bytes(&[0x00, 0x23, 0x00, 0x00]);
+    }
+    if ok && send_status {
+        ok = ew.put_bytes(&[0x00, 0x05, 0x00, 0x00]);
+    }
+    if !ok {
+        return None;
+    }
+    let ext_len = ew.written();
+    let ext = ext_buf.get(..ext_len)?;
+    let mut w = BytesWriter::new(out);
+    if !(w.put_u16(version)
+        && w.put_bytes(random)
+        && w.put_u8_len_prefixed(session_id)
+        && w.put_u16(cipher_id)
+        && w.put_u8(0)
+        && w.put_u16_len_prefixed(ext))
+    {
+        return None;
+    }
+    Some(w.written())
+}
+
 /// `tls_construct_server_hello` (`statem_srvr.c:2590-2699`) for TLS1.2.
 ///
 /// # Safety
@@ -2867,6 +3038,15 @@ unsafe fn tls12_construct_server_hello(s: *mut Ssl) -> c_int {
     }
     // SAFETY: `cipher` is a live table row.
     let id = unsafe { (*cipher).id as u16 };
+    // SAFETY: `s` is live; `server_random` is a 32-byte member, `ext_status_expected` is a flag,
+    // and `tls_use_ticket` accepts a live connection.
+    let (random, send_status, send_ticket) = unsafe {
+        (
+            &(*s).server_random,
+            (*s).ext_status_expected != 0,
+            (*s).ext_ticket_expected != 0 && crate::ssl::t1_lib::tls_use_ticket(s),
+        )
+    };
     // `tls_construct_server_hello` echoes `s->session->session_id`: the resumed id on a hit, or
     // the freshly generated id (empty for an RFC5077 stateless ticket) otherwise.
     let mut sid = [0u8; crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH];
@@ -2889,66 +3069,19 @@ unsafe fn tls12_construct_server_hello(s: *mut Ssl) -> c_int {
         (*s).tmp_session_id_len = sid_len;
     }
     let mut body = [0u8; 96];
-    let mut p = 0usize;
-    body[p] = 0x03;
-    body[p + 1] = 0x03;
-    p += 2;
-    // SAFETY: `s` is live; `server_random` is a 32-byte array; `body` has room.
-    unsafe {
-        core::ptr::copy_nonoverlapping((*s).server_random.as_ptr(), body.as_mut_ptr().add(p), 32)
+    let Some(body_len) = write_tls12_server_hello_body(
+        &mut body,
+        TLS1_2_VERSION as u16,
+        random,
+        &sid[..sid_len],
+        id,
+        send_ticket,
+        send_status,
+    ) else {
+        return 0;
     };
-    p += 32;
-    body[p] = sid_len as u8;
-    p += 1;
-    if sid_len > 0 {
-        body[p..p + sid_len].copy_from_slice(&sid[..sid_len]);
-        p += sid_len;
-    }
-    body[p] = (id >> 8) as u8;
-    body[p + 1] = id as u8;
-    p += 2;
-    body[p] = 0;
-    p += 1;
-    // Extensions: `renegotiation_info` with an empty `renegotiated_connection`, which RFC 5746
-    // requires once a client offers it; then `session_ticket` (empty) when a ticket follows
-    // (`tls_construct_stoc_session_ticket`, `extensions_srvr.c:1740`).
-    let ext_len_pos = p;
-    p += 2; // the extension block's two-byte length, backfilled below
-    body[p] = 0xff;
-    body[p + 1] = 0x01;
-    p += 2;
-    body[p] = 0;
-    body[p + 1] = 1;
-    p += 2;
-    body[p] = 0;
-    p += 1;
-    // SAFETY: `s` is live.
-    if unsafe { (*s).ext_ticket_expected } != 0 && unsafe { crate::ssl::t1_lib::tls_use_ticket(s) }
-    {
-        body[p] = 0;
-        body[p + 1] = 35;
-        p += 2;
-        body[p] = 0;
-        body[p + 1] = 0;
-        p += 2;
-    }
-    // `tls_construct_stoc_status_request` (`extensions_srvr.c:1759-1798`): in TLS1.2 the
-    // acknowledgement is an empty `status_request` extension, with the status itself in the
-    // following `CertificateStatus` message.
-    // SAFETY: `s` is live.
-    if unsafe { (*s).ext_status_expected } != 0 {
-        body[p] = 0;
-        body[p + 1] = 5;
-        p += 2;
-        body[p] = 0;
-        body[p + 1] = 0;
-        p += 2;
-    }
-    let ext_len = p - (ext_len_pos + 2);
-    body[ext_len_pos] = (ext_len >> 8) as u8;
-    body[ext_len_pos + 1] = ext_len as u8;
-    // SAFETY: `s` is live; `body` is `p` initialised bytes.
-    unsafe { write_handshake_message(s, SSL3_MT_SERVER_HELLO, body.as_ptr(), p) }
+    // SAFETY: `s` is live; `body[..body_len]` is initialised by the writer.
+    unsafe { write_handshake_message(s, SSL3_MT_SERVER_HELLO, body.as_ptr(), body_len) }
 }
 
 /// `tls_construct_server_certificate` (`statem_srvr.c:4019-4055`) for the TLS1.2
@@ -4695,6 +4828,197 @@ mod cert_status_body_tests {
         let resp = vec![0u8; 0x0100_0000];
         let mut out = [0u8; 0];
         assert!(!write_cert_status_body(&mut out, 1, &resp));
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// ServerHello prelude / EncryptedExtensions body construction
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod server_hello_body_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::{
+        write_encrypted_extensions_body, write_server_hello_prefix, write_tls12_server_hello_body,
+    };
+
+    fn fixed_random() -> [u8; 32] {
+        core::array::from_fn(|i| i as u8)
+    }
+
+    /// Byte-exact TLS1.3 ServerHello prelude for a fixed transcript, including a legacy
+    /// session id longer than 32 bytes: the echo length and payload are taken from the slice,
+    /// so the writer neither truncates nor reads past it.
+    #[test]
+    fn tls13_server_hello_prefix_is_byte_exact() {
+        let random = fixed_random();
+        let sid: Vec<u8> = (0..40u8).map(|i| 0xc0 + i).collect();
+        let mut out = [0u8; 96];
+        let n = write_server_hello_prefix(&mut out, 0x0303, &random, &sid, 0x1301).unwrap();
+
+        let mut expected = vec![0x03, 0x03];
+        expected.extend_from_slice(&random);
+        expected.push(40);
+        expected.extend_from_slice(&sid);
+        expected.extend_from_slice(&[0x13, 0x01, 0x00]);
+
+        assert_eq!(n, 78);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    #[test]
+    fn tls13_server_hello_prefix_encodes_an_empty_session_id() {
+        let random = [0x5au8; 32];
+        let mut out = [0u8; 64];
+        let n = write_server_hello_prefix(&mut out, 0x0303, &random, &[], 0x1302).unwrap();
+
+        let mut expected = vec![0x03, 0x03];
+        expected.extend_from_slice(&random);
+        expected.extend_from_slice(&[0x00, 0x13, 0x02, 0x00]);
+
+        assert_eq!(n, 38);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    /// Byte-exact TLS1.2 ServerHello body with the full extension block.
+    #[test]
+    fn tls12_server_hello_body_is_byte_exact() {
+        let random = fixed_random();
+        let sid = [0xde, 0xad, 0xbe, 0xef];
+        let mut out = [0u8; 96];
+        let n = write_tls12_server_hello_body(&mut out, 0x0303, &random, &sid, 0xc02f, true, true)
+            .unwrap();
+
+        let mut expected = vec![0x03, 0x03];
+        expected.extend_from_slice(&random);
+        expected.extend_from_slice(&[0x04]);
+        expected.extend_from_slice(&sid);
+        expected.extend_from_slice(&[0xc0, 0x2f, 0x00]);
+        expected.extend_from_slice(&[0x00, 0x0d]);
+        expected.extend_from_slice(&[0xff, 0x01, 0x00, 0x01, 0x00]);
+        expected.extend_from_slice(&[0x00, 0x23, 0x00, 0x00]);
+        expected.extend_from_slice(&[0x00, 0x05, 0x00, 0x00]);
+
+        assert_eq!(n, 57);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    #[test]
+    fn tls12_server_hello_body_minimal_extension_block_is_byte_exact() {
+        let random = [0u8; 32];
+        let mut out = [0u8; 96];
+        let n = write_tls12_server_hello_body(&mut out, 0x0303, &random, &[], 0x009c, false, false)
+            .unwrap();
+
+        let mut expected = vec![0x03, 0x03];
+        expected.extend_from_slice(&random);
+        expected.extend_from_slice(&[0x00, 0x00, 0x9c, 0x00]);
+        expected.extend_from_slice(&[0x00, 0x05]);
+        expected.extend_from_slice(&[0xff, 0x01, 0x00, 0x01, 0x00]);
+
+        assert_eq!(n, 45);
+        assert_eq!(&out[..n], &expected[..]);
+    }
+
+    /// Byte-exact EncryptedExtensions with the negotiated ALPN protocol `h2`.
+    #[test]
+    fn encrypted_extensions_is_byte_exact() {
+        let mut out = [0u8; 32];
+        let n = write_encrypted_extensions_body(&mut out, Some(b"h2")).unwrap();
+        assert_eq!(n, 11);
+        assert_eq!(
+            &out[..n],
+            &[0x00, 0x09, 0x00, 0x10, 0x00, 0x05, 0x00, 0x03, 0x02, b'h', b'2']
+        );
+    }
+
+    #[test]
+    fn encrypted_extensions_with_an_empty_extension_set_is_two_zero_bytes() {
+        let mut out = [0xffu8; 4];
+        let n = write_encrypted_extensions_body(&mut out, None).unwrap();
+        assert_eq!(n, 2);
+        assert_eq!(&out[..n], &[0x00, 0x00]);
+
+        // An empty and an over-long protocol are both omitted, as before.
+        let n = write_encrypted_extensions_body(&mut out, Some(&[])).unwrap();
+        assert_eq!(&out[..n], &[0x00, 0x00]);
+        let over_long = vec![0x61u8; 256];
+        let n = write_encrypted_extensions_body(&mut out, Some(&over_long)).unwrap();
+        assert_eq!(&out[..n], &[0x00, 0x00]);
+    }
+
+    /// Negative control: a deliberately too-small block is refused by every body writer instead
+    /// of panicking or writing past it.
+    #[test]
+    fn too_small_writer_buffers_fail_cleanly() {
+        let random = fixed_random();
+        let sid: Vec<u8> = (0..40u8).map(|i| 0xc0 + i).collect();
+
+        let mut short_prefix = [0u8; 77];
+        assert!(
+            write_server_hello_prefix(&mut short_prefix, 0x0303, &random, &sid, 0x1301).is_none()
+        );
+        let mut exact_prefix = [0u8; 78];
+        assert!(
+            write_server_hello_prefix(&mut exact_prefix, 0x0303, &random, &sid, 0x1301).is_some()
+        );
+
+        let mut short_tls12 = [0u8; 54];
+        assert!(write_tls12_server_hello_body(
+            &mut short_tls12,
+            0x0303,
+            &random,
+            &[0xde, 0xad],
+            0xc02f,
+            true,
+            true,
+        )
+        .is_none());
+
+        let mut short_ee = [0u8; 10];
+        assert!(write_encrypted_extensions_body(&mut short_ee, Some(b"h2")).is_none());
+        let mut empty_ee = [0u8; 0];
+        assert!(write_encrypted_extensions_body(&mut empty_ee, None).is_none());
+    }
+
+    /// Negative control: a one-byte length cannot express a 256-byte session id, so the writer
+    /// refuses rather than truncating the length.
+    #[test]
+    fn over_long_session_id_is_refused_by_the_one_byte_length() {
+        let random = fixed_random();
+        let sid = vec![0u8; 256];
+        let mut out = [0u8; 400];
+        assert!(write_server_hello_prefix(&mut out, 0x0303, &random, &sid, 0x1301).is_none());
+    }
+
+    /// The production ServerHello writer refuses a recorded session-id length outside the
+    /// member array before deriving any slice from it.
+    #[test]
+    fn server_hello_refuses_an_out_of_range_session_id_length() {
+        use super::tls_construct_server_hello;
+
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the connection block is this frame's allocation, its fields are set before the
+        // writer reads them, and both the packet and the block are released here.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null());
+            (*s).pending_cipher = crate::ssl::ssl_ciph::ssl3_get_cipher_by_id(
+                crate::ssl::ssl_ciph_table::SSL3_CK_CIPHERSUITE_FLAG as u32 | 0x1301,
+            );
+            assert!(!(*s).pending_cipher.is_null());
+            (*s).tmp_session_id_len = crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH + 1;
+
+            let mut buf = [0u8; 128];
+            let mut pkt: crate::packet::Wpacket = core::mem::zeroed();
+            assert_eq!(
+                crate::packet::WPACKET_init_static_len(&mut pkt, buf.as_mut_ptr(), buf.len(), 0),
+                1
+            );
+            assert_eq!(tls_construct_server_hello(s, &mut pkt), 0);
+            crate::packet::WPACKET_cleanup(&mut pkt);
+            crate::runtime::mem::CRYPTO_free(s.cast(), core::ptr::null(), 0);
+        }
     }
 }
 
