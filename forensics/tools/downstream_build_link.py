@@ -261,8 +261,7 @@ _RECIPE_OVERRIDES: dict[str, dict] = {
                  "measured with the identical recipe)"),
     },
     "libssh": {
-        "note": ("libssh 0.10.6 ships only CMakeLists.txt: still blocked in this venue, which "
-                 "admits no cmake; 24.17 recorded it still-blocked rather than faking a build"),
+        "note": "superseded by the b13 CMake override (see _LATE_RECIPE_OVERRIDES)",
     },
     "lighttpd": {
         "note": ("lighttpd 1.4.76 ships no generated ./configure (a source tree with "
@@ -1968,6 +1967,22 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b13): elinks, lynx, lftp and swtpm. The two text browsers
+    # and lftp are uppercase HTTPS consumers driven by the local fixture; swtpm's TPM2 command
+    # interface is driven over its own socket. Lynx/lftp take the pinned ncurses/readline
+    # development packages through the auxiliary seam because the venue ships neither header.
+    for spec in _L7_EXPAND10_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # Two recipes the earlier venue recorded as blocked are buildable in the expansion image:
+    # libssh ships only CMakeLists.txt (cmake is present), and lighttpd ships configure.ac (the
+    # pinned autotools shim regenerates its configure). The subject prefix is still the only
+    # OpenSSL; the late overrides replace the stale "still blocked" notes and build systems.
+    for rec in recipes:
+        late = _LATE_RECIPE_OVERRIDES.get(rec["family"])
+        if late:
+            rec.update(late)
     return tuple(recipes)
 
 
@@ -2484,6 +2499,193 @@ _L7_EXPAND9_SPECS: tuple[dict, ...] = (
                  "the pinned development entry point its configure requires"),
     },
 )
+
+# Pinned ncurses/readline development packages for the text browsers and lftp. The venue ships
+# neither header, and both are pure terminal libraries (they provide no OpenSSL).
+_NCURSES_AUX: tuple[dict, ...] = (
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("n/ncurses", "libtinfo-dev_6.4-4_amd64.deb",
+             "e1935c2006661f1cda0bfd35f12ea30f9d64a110f30a074d512efe6c9466bf86",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_READLINE_AUX: tuple[dict, ...] = (
+    _aux_deb("r/readline", "libreadline-dev_8.2-1.3_amd64.deb",
+             "23b2f03bc073dcd3ac4638675ddccbda2e8d7348bb83dd648c55dfb8077e8672",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# swtpm's non-OpenSSL dependency closure: glib/gobject/gio (json-glib) and the pinned libtpms the
+# TPM2 backend calls. None of them provides libssl/libcrypto; libtpms0 is itself a consumer and
+# resolves to the subject libcrypto at run time.
+_SWTPM_AUX: tuple[dict, ...] = (
+    _aux_deb("g/glib2.0", "libglib2.0-dev_2.74.6-2+deb12u9_amd64.deb",
+             "217766f170553e14884f7d67c0636b833da43c1e4a65dfe41268ba1292001ccd",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("g/glib2.0", "libglib2.0-0_2.74.6-2+deb12u9_amd64.deb",
+             "7ff85197685d89e150e342b29a59aab1beee400050ba7da73de81cd999ffee5a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libf/libffi", "libffi-dev_3.4.4-1_amd64.deb",
+             "89fb890aee5148f4d308a46cd8980a54fd44135f068f05b38a6ad06800bf6df3",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libf/libffi", "libffi8_3.4.4-1_amd64.deb",
+             "6d9f6c25c30efccce6d4bceaa48ea86c329a3432abb360a141f76ac223a4c34a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("j/json-glib", "libjson-glib-dev_1.6.6-1_amd64.deb",
+             "7af7f57f8b4e12f03a4ef3dc2a631d3c32f5d7bc26ac4319a7f813207f9339d6",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("j/json-glib", "libjson-glib-1.0-0_1.6.6-1_amd64.deb",
+             "b8d407ece57b0dc2e6d2895625a2485b1eb49294b8db0fdb780fb8211fe9e635",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libt/libtpms", "libtpms-dev_0.9.2-3.2_amd64.deb",
+             "c605656a04aa0fad233866a5e9cdfe50b25ccb3accf65cc808fa3c7ec210d8af",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libt/libtpms", "libtpms0_0.9.2-3.2_amd64.deb",
+             "6748109482aeabfa564b33ddd158aab8e26dabf5943389b372d9dd6c7d5564d4",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libt/libtasn1-6", "libtasn1-6-dev_4.19.0-2+deb12u1_amd64.deb",
+             "7fec7d9df23aa7de25a36c5752cefd8d1e45fbfa0889150de9384281a4329bf7",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libt/libtasn1-6", "libtasn1-6_4.19.0-2+deb12u1_amd64.deb",
+             "2c27c613b69be248d09432839ea3d3382f6ee27fabaa65987aa2d884cd00afda",
+             library_dirs=(_AUX_MULTIARCH,)),
+)
+
+# swtpm's configure requires the test tools expect/gawk/socat/netstat and gio-2.0's private
+# Requires name mount/libselinux. None is part of the runtime path; the shims only satisfy
+# configure's probes, and the two stub .pc files carry no libraries. gawk maps to the venue's
+# /usr/bin/awk because setup generates its Makefiles with it.
+_SWTPM_PRE_BUILD = [
+    ["sh", "-c", (
+        "set -e; "
+        "mkdir -p m4 {root}/.l7-bin {root}/.l7-pc; "
+        "printf '#!/bin/sh\\nexec /usr/bin/awk \"$@\"\\n' > {root}/.l7-bin/gawk; "
+        "for t in netstat expect socat; do "
+        "printf '#!/bin/sh\\nexit 0\\n' > {root}/.l7-bin/$t; done; "
+        "chmod +x {root}/.l7-bin/*; "
+        "printf 'prefix=/nonexistent\\nName: mount\\nDescription: mount\\nVersion: 2.38\\n"
+        "Libs:\\nCflags:\\n' > {root}/.l7-pc/mount.pc; "
+        "printf 'prefix=/nonexistent\\nName: libselinux\\nDescription: libselinux\\n"
+        "Version: 3.4\\nLibs:\\nCflags:\\n' > {root}/.l7-pc/libselinux.pc"
+    )],
+    *_AUTORECONF_PRE_BUILD,
+]
+
+_SWTPM_ENV: dict[str, str] = dict(_AUTORECONF_ENV)
+_SWTPM_ENV["PATH"] = ("{root}/.l7-autotools:{root}/.l7-bin:{aux}/usr/bin:"
+                      + os.environ.get("PATH", ""))
+_SWTPM_ENV["PKG_CONFIG_PATH"] = ("{root}/.l7-pc:{aux}/usr/lib/x86_64-linux-gnu/pkgconfig:"
+                                 "{prefix}/lib/pkgconfig")
+
+# The Phase-25 L7 expansion batch (b13).
+_L7_EXPAND10_SPECS: tuple[dict, ...] = (
+    {
+        "family": "elinks", "version": "0.16.1",
+        "url": ("https://github.com/rkd77/elinks/releases/download/v0.16.1/"
+                "elinks-0.16.1.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "825f65819d39c4890f81b5bb6f3a4197542e58908d40a5c52ff8d5ecf5bf8fae",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--without-gnutls", "--without-zlib", "--without-bzlib",
+                      "--without-lzma", "--without-gpm", "--without-libev",
+                      "--disable-nls"],
+        "make": ["-j4"], "artifact": "src/elinks", "launch": ["-version"],
+        "note": ("ELinks 0.16.1's HTTPS client path (src/network/ssl) linked against the subject "
+                 "libssl; the admitted workload dumps a local HTTPS page and rejects an unrelated "
+                 "CA"),
+    },
+    {
+        "family": "lynx", "version": "2.9.2",
+        "url": ("https://deb.debian.org/debian/pool/main/l/lynx/"
+                "lynx_2.9.2.orig.tar.bz2"),
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "7374b89936d991669e101f4e97f2c9592036e1e8cdaa7bafc259a77ab6fb07ce",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}",
+                      "--with-screen=ncursesw", "--with-curses-dir={aux}/usr",
+                      "--disable-nls", "--without-bzlib", "--without-zlib"],
+        "make": ["-j4"], "artifact": "src/lynx", "launch": ["-version"],
+        "aux_sources": list(_NCURSES_AUX),
+        "ldflags_extra": ("-Wl,-rpath,{prefix}/lib "
+                          "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"),
+        "note": ("Lynx 2.9.2's HTTPS client (src/HTSSL.c) linked against the subject libssl; "
+                 "ncursesw is the pinned terminal library and the admitted workload is a "
+                 "`-dump` of a local HTTPS page"),
+    },
+    {
+        "family": "lftp", "version": "4.9.3",
+        "url": ("https://deb.debian.org/debian/pool/main/l/lftp/"
+                "lftp_4.9.3.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "96e7199d7935be33cf6b1161e955b2aab40ab77ecdf2a19cea4fc1193f457edc",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--without-gnutls", "--without-expat", "--with-readline={aux}/usr"],
+        "make": ["-j4"], "artifact": "src/lftp", "launch": ["--version"],
+        "aux_sources": list(_NCURSES_AUX) + list(_READLINE_AUX),
+        "ldflags_extra": ("-Wl,-rpath,{prefix}/lib "
+                          "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"),
+        "note": ("lftp 4.9.3 with --with-openssl (src/lftp_ssl.cc): the admitted workload gets a "
+                 "file over a verified local HTTPS session and rejects an unrelated CA; "
+                 "readline/ncurses are the pinned terminal libraries"),
+    },
+    {
+        "family": "swtpm", "version": "0.7.1",
+        "url": "https://deb.debian.org/debian/pool/main/s/swtpm/swtpm_0.7.1.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "6ce3e1555275e3a387dfbc04ee3bf61ff24371736e3527293bdae00c2a4ab937",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl", "--without-cuse",
+                      "--without-selinux", "--without-seccomp", "--without-gnutls"],
+        "make": ["-j4"], "artifact": "src/swtpm/.libs/libswtpm_libtpms.so*",
+        "launch": ["--version"],
+        "aux_sources": (list(_SWTPM_AUX) + list(_DCAP_AUTOTOOLS)),
+        "pre_build": _SWTPM_PRE_BUILD, "env_extra": dict(_SWTPM_ENV),
+        "ldflags_extra": ("-Wl,-rpath,{prefix}/lib "
+                          "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"),
+        "note": ("swtpm 0.7.1's TPM2 socket front end linked against the subject libcrypto; "
+                 "libtpms, glib and json-glib are pinned bookworm packages and the admitted "
+                 "workload drives TPM2_Startup/GetRandom over swtpm's TCP data channel"),
+    },
+    {
+        "family": "httping", "version": "2.5",
+        "url": "https://deb.debian.org/debian/pool/main/h/httping/httping_2.5.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "be6bd3e5426f85545b6fa23f447dbb97fd7cc2704b8e2faf38b8690943211d9d",
+        "configure": None, "make": ["SSL=yes", "httping"], "artifact": "httping",
+        "launch": ["-V"],
+        "env_extra": {"CFLAGS": "-I{prefix}/include"},
+        "ldflags_extra": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib",
+        "note": ("httping 2.5 built with SSL=yes (its configure probe cannot see the prefix on "
+                 "its own); the admitted workload pings a local HTTPS page and a plain-TCP "
+                 "listener must fail the TLS handshake"),
+    },
+)
+
+_LATE_RECIPE_OVERRIDES: dict[str, dict] = {
+    "libssh": {
+        "build_system": "cmake",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DWITH_GSSAPI=OFF", "-DWITH_ZLIB=ON", "-DWITH_PCAP=OFF",
+                      "-DWITH_SERVER=OFF", "-DBUILD_EXAMPLES=OFF", "-DUNIT_TESTING=OFF"],
+        "make": [], "artifact": "b/lib/libssh.so*", "launch": None,
+        "note": ("libssh 0.10.6 built by CMake against the subject libssl/libcrypto; the admitted "
+                 "workload imports a pinned RSA private key and checks its exported public blob"),
+    },
+}
 
 RECIPES: tuple[dict, ...] = _build_catalogue()
 _RECIPE_BY_FAMILY: dict[str, dict] = {r["family"]: r for r in RECIPES}

@@ -696,6 +696,58 @@ PROGRAMS: dict[str, dict] = {
         "note": ("sofia-sip's tport TLS transport: a SIP MESSAGE over loopback TLS returns its "
                  "payload, and an unrelated CA is rejected"),
     },
+    # The Phase-25 L7 expansion batch (b13): two text browsers, an FTP/HTTP client, a web server
+    # and a library harness. Each program is built against the subject prefix by the shared recipe.
+    "elinks": {
+        "program": "src/elinks", "launch": ["-version"],
+        "version_re": r"ELinks 0\.16\.1",
+        "note": ("ELinks' HTTPS client dumps a local page with the fixture CA and rejects an "
+                 "unrelated CA"),
+    },
+    "lynx": {
+        "program": "src/lynx", "launch": ["-version"],
+        "version_re": r"Lynx Version 2\.9\.2",
+        "note": ("Lynx's HTTPS client dumps a local page with the fixture CA and rejects an "
+                 "unrelated CA"),
+    },
+    "lftp": {
+        "program": "src/lftp", "launch": ["--version"],
+        "version_re": r"LFTP \| Version 4\.9\.3",
+        "note": ("lftp's OpenSSL backend fetches a file over a verified local HTTPS session and "
+                 "rejects an unrelated CA"),
+    },
+    "lighttpd": {
+        "program": "src/lighttpd", "launch": ["-v"],
+        "version_re": r"lighttpd/1\.4\.76",
+        "note": ("lighttpd's mod_openssl serves a document over TLS, and a client trusting only "
+                 "an unrelated CA rejects the server certificate"),
+    },
+    "swtpm": {
+        "program": "src/swtpm/.libs/swtpm", "launch": ["--version"],
+        "version_re": r"TPM emulator version 0\.7\.1", "lib_paths": ["src/swtpm/.libs"],
+        "note": ("swtpm's TPM2 socket front end: TPM2_Startup and GetRandom over the TCP data "
+                 "channel, and an unknown command code rejected"),
+    },
+    "httping": {
+        "program": "httping", "launch": ["-V"],
+        "version_re": r"HTTPing v2\.5",
+        "note": ("httping's HTTPS ping succeeds only against a real TLS peer (200 OK), while a "
+                 "plain-TCP listener fails the handshake"),
+    },
+    "libssh": {
+        "program": ".l7-libssh-harness", "launch": ["--version"],
+        "version_re": r"libssh-l7-harness", "lib_paths": ["b/lib"],
+        "harness": {
+            "source": "forensics/tools/l7_libssh.c",
+            "cflags": ["-I{root}/include", "-I{root}/b/include", "-I{prefix}/include"],
+            "ldflags": ["-L{root}/b/lib", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/b/lib", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lssh", "-lssl", "-lcrypto", "-lz",
+                        "-lpthread"],
+        },
+        "note": ("libssh's RSA key path: a pinned private key imports to its exact public blob, "
+                 "and a corrupted encoding is rejected"),
+    },
     # The Phase-25 L7 expansion batch (b12): five library/toolkit consumers whose OpenSSL paths are
     # driven by harnesses (libtpms' TPM2 command interface, libre's tls/tcp backend, libnetconf2's
     # TLS session client, liboauth2's JOSE path); arm-trusted-firmware-tools uses its own tools.
@@ -8177,18 +8229,17 @@ def _wl_jimtcl(ctx: dict) -> dict:
 def _wl_sofia_sip(ctx: dict) -> dict:
     """sofia-sip's tport TLS transport round trip and an unrelated-CA reject.
 
-    The fixture CA is the presented server certificate itself: tport loads its trust store with
-    `SSL_CTX_load_verify_locations(cafile, capath)` and its server side presents the leaf only
-    (`SSL_CTX_use_certificate_file`), so the robust fixture is for the client to trust exactly the
-    certificate the server sends. This is a fixture property, not a subject behaviour.
+    tport presents `agent.pem` with SSL_CTX_use_certificate_file(), which sends only the first
+    certificate, so the fixture's agent.pem is leaf + issuing CA + key and the client's trust
+    anchor is the CA. This is the fixture shape tport expects; it is not a subject behaviour.
     """
     ap, d = ctx["authority_prefix"], ctx["workdir"]
     pki = _gen_pki(ap, d)
     prog = str(ctx["program"])
-    res = _run_captured([prog, "--cert", str(pki["self_crt"]), "--key", str(pki["self_key"]),
-                         "--ca", str(pki["self_crt"]), "--other-ca", str(pki["other_crt"]),
-                         "--client-cert", str(pki["self_crt"]),
-                         "--client-key", str(pki["self_key"])],
+    res = _run_captured([prog, "--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"]),
+                         "--ca", str(pki["ca_crt"]), "--other-ca", str(pki["other_crt"]),
+                         "--client-cert", str(pki["srv_crt"]),
+                         "--client-key", str(pki["srv_key"])],
                         cwd=d, env=ctx["env"], timeout=120)
     text = res["stdout"] + res["stderr"]
     ok = bool(res["ok"] and "tls_session=ok" in text and
@@ -8375,6 +8426,372 @@ def _wl_liboauth2(ctx: dict) -> dict:
     }
 
 
+def _https_client_fixture(ctx: dict, argv_of, env_of=None, timeout: int = 60) -> dict:
+    """A local HTTPS page fetched by a browser/client with the fixture CA and the wrong CA.
+
+    `argv_of(url)` builds the client argv, and `env_of(ca)` the environment. The good run must
+    render the exact body; the unrelated-CA run must not, and must report a verification failure.
+    This is the shared shape of the elinks/lynx/lftp workloads (each keeps its own flags).
+    """
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    body = f"phase25-l7-{ctx['family']}-fixture"
+    state: dict = {}
+    stop = threading.Event()
+    thread = _https_fixture(ctx["port"], pki, body, state, stop)
+    url = f"https://127.0.0.1:{ctx['port']}/phase25.txt"
+    try:
+        if not _wait_tcp("127.0.0.1", ctx["port"]):
+            return _wl_fail([("https fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local HTTPS fixture did not open its port",
+                            "runtime-failure", d)
+        good = _run_captured(argv_of(url), cwd=d,
+                             env=(env_of(pki["ca_crt"]) if env_of else ctx["env"]),
+                             timeout=timeout)
+        neg = _run_captured(argv_of(url), cwd=d,
+                            env=(env_of(pki["other_crt"]) if env_of else ctx["env"]),
+                            timeout=timeout)
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    rendered = bool(good["ok"] and body in good_text)
+    neg_rejected = bool(body not in neg_text and not neg["ok"])
+    functional_ok = rendered and neg_rejected
+    return {
+        "runtime_ok": rendered, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if rendered else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if rendered else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the local HTTPS page body was not rendered" if not rendered else
+            "the unrelated CA was not rejected, so the fixture CA is not being verified"),
+        "transcript": _transcript((f"{ctx['family']} HTTPS (fixture CA)", good),
+                                  (f"{ctx['family']} HTTPS (unrelated CA, must fail)", neg)),
+        "workload": (f"{ctx['family']}: a local HTTPS page rendered with the fixture CA + "
+                     "unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
+def _wl_elinks(ctx: dict) -> dict:
+    """ELinks' OpenSSL HTTPS client: `-dump` with the fixture CA, wrong-CA reject."""
+    prog = str(ctx["program"])
+    run_env = {k: v for k, v in ctx["env"].items()
+               if k.lower() not in ("http_proxy", "https_proxy", "all_proxy")}
+
+    def env_of(ca: Path) -> dict:
+        return dict(run_env, SSL_CERT_FILE=str(ca))
+
+    return _https_client_fixture(ctx, lambda url: [prog, "-dump", "-no-home", url], env_of)
+
+
+def _wl_lynx(ctx: dict) -> dict:
+    """Lynx's OpenSSL HTTPS client: `-dump` with the fixture CA, wrong-CA reject."""
+    prog = str(ctx["program"])
+    cfg = ctx["root"] / "lynx.cfg"
+    run_env = {k: v for k, v in ctx["env"].items()
+               if k.lower() not in ("http_proxy", "https_proxy", "all_proxy")}
+
+    def env_of(ca: Path) -> dict:
+        return dict(run_env, SSL_CERT_FILE=str(ca))
+
+    argv = [prog]
+    if cfg.is_file():
+        argv.append(f"-cfg={cfg}")
+    argv += ["-dump", "-nolist"]
+    return _https_client_fixture(ctx, lambda url: argv + [url], env_of, timeout=90)
+
+
+def _wl_lftp(ctx: dict) -> dict:
+    """lftp's OpenSSL backend: `get` over HTTPS with the fixture CA, wrong-CA reject."""
+    ap, d, prog = ctx["authority_prefix"], ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = "phase25-l7-lftp-fixture"
+    state: dict = {}
+    stop = threading.Event()
+    thread = _https_fixture(ctx["port"], pki, body, state, stop)
+    url = f"https://127.0.0.1:{ctx['port']}/phase25.txt"
+    out_good, out_bad = d / "got.txt", d / "bad.txt"
+    base = f"set net:timeout 10; set ssl:verify-certificate yes; set ssl:ca-file "
+    try:
+        if not _wait_tcp("127.0.0.1", ctx["port"]):
+            return _wl_fail([("https fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local HTTPS fixture did not open its port",
+                            "runtime-failure", d)
+        good = _run_captured([prog, "-c", f"{base}{pki['ca_crt']}; get {url} -o {out_good}"],
+                             cwd=d, env=ctx["env"], timeout=90)
+        neg = _run_captured([prog, "-c",
+                             f"{base}{pki['other_crt']}; get {url} -o {out_bad}"],
+                            cwd=d, env=ctx["env"], timeout=90)
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    fetched = out_good.is_file() and body in out_good.read_text(encoding="utf-8",
+                                                               errors="replace")
+    neg_text = neg["stdout"] + neg["stderr"]
+    neg_rejected = bool(not neg["ok"] and "Certificate verification" in neg_text
+                        and not (out_bad.is_file() and body in out_bad.read_text(
+                            encoding="utf-8", errors="replace")))
+    functional_ok = fetched and neg_rejected
+    return {
+        "runtime_ok": fetched, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if fetched else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if fetched else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "lftp did not fetch the local HTTPS file" if not fetched else
+            "lftp accepted the unrelated CA"),
+        "transcript": _transcript(("lftp get (fixture CA)", good),
+                                  ("lftp get (unrelated CA, must fail)", neg)),
+        "workload": "lftp: `get` over verified local HTTPS + unrelated-CA reject",
+        "local_only": True,
+    }
+
+
+def _wl_lighttpd(ctx: dict) -> dict:
+    """lighttpd's mod_openssl: serves a document over TLS; an unrelated CA is rejected."""
+    ap, d, prog = ctx["authority_prefix"], ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = "phase25-l7-lighttpd-fixture"
+    www = d / "www"
+    www.mkdir(parents=True, exist_ok=True)
+    (www / "index.txt").write_text(body, encoding="utf-8")
+    conf = d / "lighttpd.conf"
+    conf.write_text(
+        f'server.document-root = "{www}"\n'
+        f'server.bind = "127.0.0.1"\nserver.port = {ctx["port"]}\n'
+        'server.modules = ( "mod_openssl" )\n'
+        'ssl.engine = "enable"\n'
+        f'ssl.pemfile = "{pki["srv_pem"]}"\n'
+        'mimetype.assign = ( ".txt" => "text/plain" )\n', encoding="utf-8")
+    srv_out, srv_err = d / "server.out", d / "server.err"
+    proc, outf, errf = _spawn([prog, "-D", "-f", str(conf)], d, ctx["env"], srv_out, srv_err)
+
+    def get(ca: Path) -> tuple[bool, str]:
+        ctx_ssl = ssl.create_default_context(cafile=str(ca))
+        try:
+            with socket.create_connection(("127.0.0.1", ctx["port"]), timeout=10) as raw:
+                with ctx_ssl.wrap_socket(raw, server_hostname="127.0.0.1") as tls:
+                    tls.sendall(b"GET /index.txt HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n")
+                    data = b""
+                    while True:
+                        chunk = tls.recv(4096)
+                        if not chunk:
+                            break
+                        data += chunk
+            return True, data.decode("utf-8", "replace")
+        except (ssl.SSLError, OSError) as exc:
+            return False, str(exc)
+
+    try:
+        if not _wait_tcp("127.0.0.1", ctx["port"]):
+            return _wl_fail([("lighttpd", {"stdout": _read(srv_out),
+                                            "stderr": _read(srv_err), "exit_code": 1})],
+                            "lighttpd did not listen on its TLS port", "runtime-failure", d)
+        good_ok, good_text = get(pki["ca_crt"])
+        neg_ok, neg_text = get(pki["other_crt"])
+    finally:
+        _stop(proc)
+        outf.close()
+        errf.close()
+    rendered = bool(good_ok and body in good_text)
+    neg_rejected = bool(not neg_ok and body not in neg_text
+                        and ("CERTIFICATE_VERIFY_FAILED" in neg_text
+                             or "certificate verify failed" in neg_text))
+    functional_ok = rendered and neg_rejected
+    res_good = {"ok": good_ok, "exit_code": 0 if good_ok else 1,
+                "stdout": good_text, "stderr": "", "elapsed_seconds": 0}
+    res_neg = {"ok": neg_ok, "exit_code": 0 if neg_ok else 1,
+               "stdout": neg_text, "stderr": "" if neg_ok else neg_text,
+               "elapsed_seconds": 0}
+    return {
+        "runtime_ok": rendered, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if rendered else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if rendered else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "lighttpd did not serve the TLS document" if not rendered else
+            "the client trusting only the unrelated CA accepted lighttpd's certificate"),
+        "transcript": _transcript(("lighttpd TLS + fixture CA", res_good),
+                                  ("lighttpd TLS + unrelated CA (must fail)", res_neg)),
+        "workload": "lighttpd: mod_openssl serves a local document + unrelated-CA reject",
+        "local_only": True,
+    }
+
+
+def _tpm_recv(sock: socket.socket, size: int) -> bytes:
+    data = b""
+    while len(data) < size:
+        chunk = sock.recv(size - len(data))
+        if not chunk:
+            break
+        data += chunk
+    return data
+
+
+def _tpm_exchange(sock: socket.socket, command: bytes) -> tuple[int, bytes]:
+    sock.sendall(command)
+    header = _tpm_recv(sock, 10)
+    if len(header) != 10:
+        return -1, b""
+    _tag, size, rc = struct.unpack(">HII", header)
+    return rc, _tpm_recv(sock, max(0, size - 10))
+
+
+def _wl_swtpm(ctx: dict) -> dict:
+    """swtpm's TPM2 command interface over its TCP data channel.
+
+    `swtpm socket --tpm2` is started with `--flags not-need-init` so the TPM is ready to receive
+    `TPM2_Startup(CLEAR)`. The workload then sends `TPM2_GetRandom(32)` and asserts the returned
+    digest length, while an unknown command code must be rejected with TPM_RC_COMMAND_CODE.
+    """
+    d = ctx["workdir"]
+    state = d / "tpmstate"
+    state.mkdir(parents=True, exist_ok=True)
+    ctrl = _free_port()
+    log = d / "swtpm.log"
+    out, err = d / "swtpm.out", d / "swtpm.err"
+    prog = str(ctx["program"])
+    proc, outf, errf = _spawn(
+        [prog, "socket", "--tpm2", "--tpmstate", f"dir={state}",
+         "--server", f"type=tcp,port={ctx['port']},bindaddr=127.0.0.1",
+         "--ctrl", f"type=tcp,port={ctrl},bindaddr=127.0.0.1",
+         "--flags", "not-need-init", "--log", f"file={log},level=1"],
+        d, ctx["env"], out, err)
+    try:
+        if not _wait_tcp("127.0.0.1", ctx["port"]):
+            return _wl_fail([("swtpm socket", {"stdout": _read(out), "stderr": _read(err),
+                                                "exit_code": 1})],
+                            "swtpm did not listen on its TCP data channel",
+                            "runtime-failure", d)
+        with socket.create_connection(("127.0.0.1", ctx["port"]), timeout=15) as sock:
+            startup_rc, _ = _tpm_exchange(sock, bytes.fromhex("80010000000c000001440000"))
+            random_rc, random_body = _tpm_exchange(
+                sock, bytes.fromhex("80010000000c0000017b0020"))
+            unknown_rc, _ = _tpm_exchange(sock, bytes.fromhex("80010000000a000001ff"))
+    finally:
+        _stop(proc)
+        outf.close()
+        errf.close()
+    digest_len = len(random_body) - 2 if len(random_body) >= 2 else 0
+    functional_ok = (startup_rc == 0 and random_rc == 0 and digest_len == 32
+                     and unknown_rc == 0x143)
+    transcript = "\n".join([
+        f"tpm2_startup_rc=0x{startup_rc:x}",
+        f"tpm2_getrandom_rc=0x{random_rc:x}",
+        f"tpm2_getrandom_bytes={digest_len}",
+        f"tpm2_unknown_rc=0x{unknown_rc:x}",
+        f"result={'ok' if functional_ok else 'fail'}",
+    ]) + "\n"
+    res = {"ok": functional_ok, "exit_code": 0 if functional_ok else 1,
+           "stdout": transcript, "stderr": "", "elapsed_seconds": 0}
+    return {
+        "runtime_ok": functional_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else "functional-failure",
+        "residual": "none" if functional_ok else "functional-divergence",
+        "reason": None if functional_ok else (
+            "swtpm did not complete TPM2_Startup/GetRandom or accepted an unknown command code"),
+        "transcript": _transcript(("swtpm TPM2 command interface", res)),
+        "workload": ("swtpm: TPM2_Startup, TPM2_GetRandom(32) over the TCP data channel and an "
+                     "unknown-command reject"),
+        "local_only": True,
+    }
+
+
+def _wl_httping(ctx: dict) -> dict:
+    """httping's HTTPS path: a real TLS peer succeeds, a plain-TCP peer fails the handshake."""
+    ap, d, prog = ctx["authority_prefix"], ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ap, d)
+    body = "phase25-l7-httping-fixture"
+    state: dict = {}
+    stop = threading.Event()
+    thread = _https_fixture(ctx["port"], pki, body, state, stop)
+    plain_port = _free_port()
+    plain = socket.socket()
+    plain.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    plain.bind(("127.0.0.1", plain_port))
+    plain.listen(4)
+    plain_stop = threading.Event()
+
+    def plain_serve() -> None:
+        plain.settimeout(0.5)
+        while not plain_stop.is_set():
+            try:
+                conn, _ = plain.accept()
+            except (socket.timeout, OSError):
+                continue
+            conn.close()
+
+    plain_thread = threading.Thread(target=plain_serve, daemon=True)
+    plain_thread.start()
+    url = f"https://127.0.0.1:{ctx['port']}/phase25.txt"
+    bad_url = f"https://127.0.0.1:{plain_port}/phase25.txt"
+    try:
+        if not _wait_tcp("127.0.0.1", ctx["port"]):
+            return _wl_fail([("https fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local HTTPS fixture did not open its port",
+                            "runtime-failure", d)
+        good = _run_captured([prog, "-c", "1", "-t", "5", "-g", url, "-s"],
+                             cwd=d, env=ctx["env"], timeout=45)
+        neg = _run_captured([prog, "-c", "1", "-t", "3", "-g", bad_url, "-s"],
+                            cwd=d, env=ctx["env"], timeout=45)
+    finally:
+        stop.set()
+        plain_stop.set()
+        state.get("listener", socket.socket()).close()
+        plain.close()
+        thread.join(timeout=2)
+        plain_thread.join(timeout=2)
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    ok_good = bool("200 OK" in good_text and "1 connects, 1 ok" in good_text)
+    ok_neg = bool("1 connects, 0 ok" in neg_text)
+    functional_ok = ok_good and ok_neg
+    return {
+        "runtime_ok": ok_good, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if ok_good else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if ok_good else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the HTTPS ping did not report 200 OK" if not ok_good else
+            "a plain-TCP listener did not fail the TLS handshake"),
+        "transcript": _transcript(("httping https (TLS fixture)", good),
+                                  ("httping https (plain TCP, must fail)", neg)),
+        "workload": ("httping: an HTTPS ping of a local page reports 200 OK + a plain-TCP peer "
+                     "fails the TLS handshake"),
+        "local_only": True,
+    }
+
+
+def _wl_libssh(ctx: dict) -> dict:
+    """libssh's RSA key path: a pinned key's exact public blob, and a corrupted key reject."""
+    res = _run_captured([str(ctx["program"])], cwd=ctx["workdir"], env=ctx["env"], timeout=120)
+    text = res["stdout"] + res["stderr"]
+    ok = bool(res["ok"] and "key_import=ok" in text and "pubkey_blob=ok" in text
+              and "roundtrip=ok" in text and "tamper=rejected" in text)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else (
+            "libssh did not import the pinned RSA key to its exact public blob, or accepted a "
+            "corrupted private-key encoding"),
+        "transcript": _transcript(("libssh RSA key path", res)),
+        "workload": ("libssh: import a pinned RSA key, compare its exported public blob and "
+                     "reject a corrupted encoding"),
+        "local_only": True,
+    }
+
+
+
 RUNNERS = {
     "curl": _wl_curl,
     "nginx": _wl_nginx,
@@ -8483,6 +8900,14 @@ RUNNERS = {
     "arm-trusted-firmware-tools": _wl_atf,
     "libnetconf2": _wl_libnetconf2,
     "liboauth2": _wl_liboauth2,
+    # The Phase-25 L7 expansion batch (b13).
+    "elinks": _wl_elinks,
+    "lynx": _wl_lynx,
+    "lftp": _wl_lftp,
+    "lighttpd": _wl_lighttpd,
+    "swtpm": _wl_swtpm,
+    "httping": _wl_httping,
+    "libssh": _wl_libssh,
 }
 
 
