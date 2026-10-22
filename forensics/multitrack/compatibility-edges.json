@@ -1491,14 +1491,14 @@
             "kind": "court_transcript",
             "note": "the 23.9 compatibility view distribution_pkg_config",
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "side": "pair"
           },
           {
             "kind": "court_transcript",
             "note": "the 23.9 compatibility view distribution_install_layout",
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "side": "pair"
           },
           {
@@ -1612,7 +1612,7 @@
             "kind": "manual_adjudication",
             "note": "no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible",
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "side": "pair"
           }
         ],
@@ -1852,14 +1852,14 @@
             "kind": "court_transcript",
             "note": "the 23.9 compatibility view distribution_pkg_config",
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "side": "pair"
           },
           {
             "kind": "court_transcript",
             "note": "the 23.9 compatibility view distribution_install_layout",
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "side": "pair"
           },
           {
@@ -1973,7 +1973,7 @@
             "kind": "manual_adjudication",
             "note": "no committed candidate-to-authority measurement exists for this facet: the Phase-2 ABI courts do not cover it and the compatibility views record no view for it, so it is unmeasured rather than compatible",
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "side": "pair"
           }
         ],
@@ -2094,7 +2094,7 @@
     {
       "name": "compatibility-views",
       "path": "forensics/multitrack/compatibility-views.json",
-      "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84"
+      "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7"
     },
     {
       "name": "delta-3.6.3-3.6.4",

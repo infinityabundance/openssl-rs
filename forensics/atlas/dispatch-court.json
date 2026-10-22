@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 862,
+      "crate_files_read": 877,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -14,13 +14,13 @@
       "identities_mismatches": 0,
       "links_convention": 302,
       "links_documented": 25,
-      "links_explicit": 19,
+      "links_explicit": 21,
       "problems": 0,
       "signatures_authority_only": 286,
-      "signatures_checked": 353,
+      "signatures_checked": 355,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 266,
-      "signatures_unlinked": 0,
+      "signatures_unlinked": 4,
       "signatures_unmapped": 0
     },
     "identities": {
@@ -4122,6 +4122,22 @@
           "how": "explicit"
         },
         {
+          "alias": "MallocFn",
+          "at": "src/runtime/dso_shared.rs",
+          "authority": "CRYPTO_malloc_fn",
+          "authority_signature": "fptr(ptr(opaque); int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "how": "explicit"
+        },
+        {
+          "alias": "ReallocFn",
+          "at": "src/runtime/dso_shared.rs",
+          "authority": "CRYPTO_realloc_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "how": "explicit"
+        },
+        {
           "alias": "NewFunc",
           "at": "src/runtime/ex_data.rs",
           "authority": "CRYPTO_EX_new",
@@ -5991,7 +6007,24 @@
           "why": "not a provider dispatch: `struct x509_trust_st`'s `check_trust` member and `X509_TRUST_set_default`'s argument (`include/openssl/x509_vfy.h.in:83-88,145`), declared inline as plain function pointers rather than through `OSSL_CORE_MAKE_FUNC`"
         }
       ],
-      "unlinked": [],
+      "unlinked": [
+        {
+          "alias": "RecipientInfoPushFn",
+          "at": "src/cms/cms_env.rs"
+        },
+        {
+          "alias": "FreeFn",
+          "at": "src/runtime/dso_shared.rs"
+        },
+        {
+          "alias": "FreeCb",
+          "at": "src/runtime/refcount.rs"
+        },
+        {
+          "alias": "StatusCb",
+          "at": "src/ssl/ssl_lib.rs"
+        }
+      ],
       "unmapped": []
     },
     "what": "every `OSSL_FUNC_*` dispatch identity the crate declares agrees with the authority's recorded macro value, and every Rust function-type alias the crate declares agrees with the canonical form of the authority function-type typedef it implements",
