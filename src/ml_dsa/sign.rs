@@ -193,7 +193,7 @@ fn signature_init(
 /// is a checked length and no `.add()` chain remains. `take_polys` is the one place a byte span is
 /// viewed as `Poly`s; `Poly` is `[u32; 256]`, so every bit pattern is valid, and `align_to_mut`
 /// refuses a non-multiple or misaligned split.
-struct Scratch<'a> {
+pub(crate) struct Scratch<'a> {
     bytes: &'a mut [u8],
 }
 
@@ -202,14 +202,14 @@ impl<'a> Scratch<'a> {
     ///
     /// `ptr` names `len` writable bytes owned by the caller for `'a` (the `OwnedBuf` that outlives
     /// every partition).
-    unsafe fn new(ptr: *mut u8, len: usize) -> Scratch<'a> {
+    pub(crate) unsafe fn new(ptr: *mut u8, len: usize) -> Scratch<'a> {
         Scratch {
             // SAFETY: the contract gives `ptr` that extent for `'a`.
             bytes: unsafe { core::slice::from_raw_parts_mut(ptr, len) },
         }
     }
 
-    fn take_bytes(&mut self, n: usize) -> Option<&'a mut [u8]> {
+    pub(crate) fn take_bytes(&mut self, n: usize) -> Option<&'a mut [u8]> {
         if self.bytes.len() < n {
             return None;
         }
@@ -219,7 +219,7 @@ impl<'a> Scratch<'a> {
         Some(head)
     }
 
-    fn take_polys(&mut self, n: usize) -> Option<&'a mut [Poly]> {
+    pub(crate) fn take_polys(&mut self, n: usize) -> Option<&'a mut [Poly]> {
         let need = n.checked_mul(core::mem::size_of::<Poly>())?;
         if self.bytes.len() < need
             || !(self.bytes.as_ptr() as usize).is_multiple_of(core::mem::align_of::<Poly>())
