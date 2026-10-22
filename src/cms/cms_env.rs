@@ -542,6 +542,57 @@ pub(crate) unsafe extern "C" fn CMS_EnvelopedData_create(
     unsafe { CMS_EnvelopedData_create_ex(cipher, ptr::null_mut(), ptr::null()) }
 }
 
+/// A `CMS_ContentInfo` this frame owns.
+struct OwnedContentInfo(core::ptr::NonNull<CmsContentInfo>);
+
+impl OwnedContentInfo {
+    /// # Safety
+    /// `p` is NULL or a live container whose ownership the caller transfers.
+    unsafe fn adopt(p: *mut CmsContentInfo) -> Option<Self> {
+        core::ptr::NonNull::new(p).map(Self)
+    }
+
+    fn as_ptr(&self) -> *mut CmsContentInfo {
+        self.0.as_ptr()
+    }
+}
+
+impl Drop for OwnedContentInfo {
+    fn drop(&mut self) {
+        // SAFETY: this frame built the container and holds the only reference.
+        unsafe { CMS_ContentInfo_free(self.0.as_ptr()) };
+    }
+}
+
+/// A `BIO` this frame owns.
+struct OwnedBio(core::ptr::NonNull<Bio>);
+
+impl OwnedBio {
+    /// # Safety
+    /// `p` is NULL or a live BIO whose ownership the caller transfers.
+    unsafe fn adopt(p: *mut Bio) -> Option<Self> {
+        core::ptr::NonNull::new(p).map(Self)
+    }
+
+    fn as_ptr(&self) -> *mut Bio {
+        self.0.as_ptr()
+    }
+
+    /// Hand the BIO to the caller.
+    fn into_raw(self) -> *mut Bio {
+        let p = self.0.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedBio {
+    fn drop(&mut self) {
+        // SAFETY: this frame created the BIO and holds the only reference.
+        unsafe { BIO_free(self.0.as_ptr()) };
+    }
+}
+
 /// `BIO *CMS_EnvelopedData_decrypt(CMS_EnvelopedData *env, BIO *detached_data, EVP_PKEY *pkey,`
 /// `X509 *cert, ASN1_OCTET_STRING *secret, unsigned int flags, OSSL_LIB_CTX *libctx,`
 /// `const char *propq)` — `cms_env.c:273-311`.
@@ -559,9 +610,6 @@ pub(crate) unsafe extern "C" fn CMS_EnvelopedData_decrypt(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> *mut Bio {
-    let mut bio: *mut Bio = ptr::null_mut();
-    let mut res = 0;
-
     if env.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe {
@@ -575,21 +623,23 @@ pub(crate) unsafe extern "C" fn CMS_EnvelopedData_decrypt(
     }
 
     // SAFETY: the constructor answers a fresh container.
-    let ci = unsafe { CMS_ContentInfo_new_ex(libctx, propq) };
-    if ci.is_null() {
+    let Some(ci) = (unsafe { OwnedContentInfo::adopt(CMS_ContentInfo_new_ex(libctx, propq)) })
+    else {
         return ptr::null_mut();
-    }
+    };
     // SAFETY: the allocator answers a fresh memory BIO.
-    bio = unsafe { crate::runtime::bio::BIO_new(crate::runtime::bio::bss_mem::BIO_s_mem()) };
-    if bio.is_null() {
-        // SAFETY: `ci` is live and owned here.
-        unsafe { CMS_ContentInfo_free(ci) };
+    let Some(bio) = (unsafe {
+        OwnedBio::adopt(crate::runtime::bio::BIO_new(
+            crate::runtime::bio::bss_mem::BIO_s_mem(),
+        ))
+    }) else {
         return ptr::null_mut();
-    }
-    // SAFETY: `ci` is live.
+    };
+    // SAFETY: `ci` is live. `env` is **borrowed** here: it is installed so `CMS_decrypt` can use
+    // it and detached again before the container's destructor runs.
     unsafe {
-        (*ci).content_type = OBJ_nid2obj(NID_pkcs7_enveloped);
-        (*ci).d = env.cast();
+        (*ci.as_ptr()).content_type = OBJ_nid2obj(NID_pkcs7_enveloped);
+        (*ci.as_ptr()).d = env.cast();
     }
     if !secret.is_null() {
         // SAFETY: `secret` is live.
@@ -598,23 +648,22 @@ pub(crate) unsafe extern "C" fn CMS_EnvelopedData_decrypt(
         let slen = unsafe { ASN1_STRING_length(secret) };
         // SAFETY: `ci` is live; `data` is readable for `slen`.
         if unsafe {
-            super::cms_smime::CMS_decrypt_set1_password(ci, data.cast_mut(), slen as isize)
+            super::cms_smime::CMS_decrypt_set1_password(ci.as_ptr(), data.cast_mut(), slen as isize)
         } != 1
         {
-            // SAFETY: `ci` is live and owned here.
+            // Detach the borrowed envelope before the container is released.
+            // SAFETY: `ci` is live.
             unsafe {
-                (*ci).d = ptr::null_mut();
-                (*ci).content_type = ptr::null_mut();
-                CMS_ContentInfo_free(ci);
-                BIO_free(bio);
+                (*ci.as_ptr()).d = ptr::null_mut();
+                (*ci.as_ptr()).content_type = ptr::null_mut();
             }
             return ptr::null_mut();
         }
     }
     // SAFETY: `ci` is live.
-    res = unsafe {
+    let res = unsafe {
         super::cms_smime::CMS_decrypt(
-            ci,
+            ci.as_ptr(),
             if secret.is_null() {
                 pkey
             } else {
@@ -626,22 +675,22 @@ pub(crate) unsafe extern "C" fn CMS_EnvelopedData_decrypt(
                 ptr::null_mut()
             },
             detached_data,
-            bio,
+            bio.as_ptr(),
             flags,
         )
     };
-    // SAFETY: `ci` is live and owned here.
+    // SAFETY: `ci` is live.
     unsafe {
-        (*ci).d = ptr::null_mut(); /* do not indirectly free |env| */
-        (*ci).content_type = ptr::null_mut();
-        CMS_ContentInfo_free(ci);
+        (*ci.as_ptr()).d = ptr::null_mut(); /* do not indirectly free |env| */
+        (*ci.as_ptr()).content_type = ptr::null_mut();
     }
+    drop(ci);
     if res == 0 {
-        // SAFETY: `bio` is live and owned here.
-        unsafe { BIO_free(bio) };
+        // `bio` is released on this path.
         return ptr::null_mut();
     }
-    bio
+    // Ownership of the BIO passes to the caller.
+    bio.into_raw()
 }
 
 /// `CMS_ContentInfo *CMS_AuthEnvelopedData_create_ex(const EVP_CIPHER *cipher,`
@@ -3507,6 +3556,75 @@ mod tests {
             m_asn1_free(tri.cast(), cms_recipientinfo_it());
 
             // One container free releases the recipient, its key, id and algorithm.
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// A failed `CMS_EnvelopedData_decrypt` must release the container wrapper and the memory BIO
+    /// it built, and a retry must build a fresh chain rather than reuse a released one.
+    #[test]
+    fn enveloped_data_decrypt_failure_releases_the_chain_and_is_retryable() {
+        // SAFETY: `cms` owns the envelope; `CMS_EnvelopedData_decrypt` borrows it and detaches it
+        // from its wrapper before that wrapper is released.
+        unsafe {
+            let cms = enveloped_cms();
+            let env = (*cms).d.cast::<CmsEnvelopedData>();
+            assert!(!env.is_null());
+            let first = CMS_EnvelopedData_decrypt(
+                env,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                0,
+                ptr::null_mut(),
+                ptr::null(),
+            );
+            assert!(first.is_null(), "no key means the content cannot decrypt");
+            let second = CMS_EnvelopedData_decrypt(
+                env,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                0,
+                ptr::null_mut(),
+                ptr::null(),
+            );
+            assert!(
+                second.is_null(),
+                "the chain is rebuilt, not reused after release"
+            );
+            // The envelope still belongs to the container: freeing it here is its single release.
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// A refused memory-BIO allocation must release the container wrapper it was paired with and
+    /// return NULL rather than a half-built chain.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn refused_mem_bio_allocation_leaves_no_half_built_chain() {
+        assert!(crate::ssl::adv_alloc::install());
+        crate::ssl::adv_alloc::assert_instrument_live();
+        // SAFETY: the container is live; the envelope is borrowed and detached before release.
+        unsafe {
+            let cms = enveloped_cms();
+            let env = (*cms).d.cast::<CmsEnvelopedData>();
+            crate::ssl::adv_alloc::arm_any(core::mem::size_of::<crate::runtime::bio::Bio>());
+            let bio = CMS_EnvelopedData_decrypt(
+                env,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                0,
+                ptr::null_mut(),
+                ptr::null(),
+            );
+            assert!(bio.is_null(), "the refused BIO allocation fails the call");
+            crate::ssl::adv_alloc::disarm_any();
+            crate::ssl::adv_alloc::reset();
             CMS_ContentInfo_free(cms);
         }
     }
