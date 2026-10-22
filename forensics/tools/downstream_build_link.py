@@ -1980,6 +1980,13 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 template-layer continuation's bespoke-workload recipes (see
+    # `_L7_ONBOARD_SPECS`).  Same pristine acquire/configure/make path and the same single
+    # `{prefix}` substitution as every other recipe.
+    for spec in _L7_ONBOARD_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     # The declarative template cohort.  Each entry is a small config row (URL + SHA-256 +
     # build-system fields + a bucket workload) rather than a bespoke recipe; the same pristine
     # acquire/configure/make path is used, and `{prefix}` is still the only substitution.
@@ -2683,6 +2690,128 @@ _L7_EXPAND10_SPECS: tuple[dict, ...] = (
         "note": ("httping 2.5 built with SSL=yes (its configure probe cannot see the prefix on "
                  "its own); the admitted workload pings a local HTTPS page and a plain-TCP "
                  "listener must fail the TLS handshake"),
+    },
+)
+
+# The Phase-25 template-layer continuation: eight further consumers built from pristine pinned
+# archives against the subject prefix. `ldnsutils` and `nagios-plugins-http` are declarative
+# template rows; these are the families whose workload cannot be expressed by a bucket template
+# and therefore carry a bespoke admitted harness. No candidate-specific patch is applied.
+_L7_ONBOARD_SPECS: tuple[dict, ...] = (
+    {
+        "family": "git-crypt", "version": "0.8.0+git8c7a90ff",
+        "url": ("https://github.com/AGWA/git-crypt/archive/"
+                "8c7a90ff38fc9daf41e5f6ccb3f105ee82782231.tar.gz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "c33a86f71a0ded430977cfad116060c0dc1217ccb685b9af315fe5ef4a228b59",
+        "configure": None,
+        "make": ["-j4", "CXXFLAGS=-I{prefix}/include -O2 -std=c++11",
+                 "LDFLAGS=-L{prefix}/lib -lcrypto -Wl,-rpath,{prefix}/lib"],
+        "artifact": "git-crypt", "launch": ["--version"],
+        "note": ("git-crypt 0.8.0 (pinned commit archive) links the subject libcrypto; the "
+                 "admitted workload initialises a repository, encrypts, locks, unlocks and "
+                 "rejects a key from a different repository"),
+    },
+    {
+        "family": "s2n-tls", "version": "1.5.5",
+        "url": "https://github.com/aws/s2n-tls/archive/refs/tags/v1.5.5.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "6316e1ad2c8ef5807519758bb159d314b9fef31d79ae27bc8f809104b978bb04",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DSEARCH_LIBCRYPTO=ON",
+                      "-DS2N_USE_CRYPTO_SHARED_LIBS=ON", "-DBUILD_TESTING=ON",
+                      "-DS2N_INSTALL_S2NC_S2ND=ON"],
+        "make": [], "artifact": "b/bin/s2nd", "launch": ["--help"],
+        "note": ("s2n-tls 1.5.5's s2nd TLS server linked to the subject libcrypto; the "
+                 "admitted workload completes a verified TLS exchange and rejects an unrelated "
+                 "CA"),
+    },
+    {
+        "family": "openldap", "version": "2.6.8",
+        "url": ("https://www.openldap.org/software/download/OpenLDAP/openldap-release/"
+                "openldap-2.6.8.tgz"),
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "48969323e94e3be3b03c6a132942dcba7ef8d545f2ad35401709019f696c3c4e",
+        "configure": None,
+        "pre_build": [["./configure", "--with-tls=openssl", "--without-cyrus-sasl",
+                       "--disable-slurpd", "--disable-backends", "--enable-mdb",
+                       "--disable-overlays", "--disable-debug"],
+                      ["make", "-C", "include"],
+                      ["make", "-j4", "-C", "libraries"],
+                      ["make", "-j4", "-C", "clients/tools"]],
+        "make": ["-j4", "-C", "servers/slapd"],
+        "artifact": "servers/slapd/slapd", "launch": ["-VV"],
+        "env_extra": {"CPPFLAGS": "-I{prefix}/include",
+                      "LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "note": ("OpenLDAP 2.6.8's slapd over ldaps:// and the shipped ldapmodify/ldapsearch "
+                 "clients, all linked against the subject libssl/libcrypto; an unrelated CA is "
+                 "rejected"),
+    },
+    {
+        "family": "srt", "version": "1.5.4",
+        "url": "https://github.com/Haivision/srt/archive/refs/tags/v1.5.4.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "d0a8b600fe1b4eaaf6277530e3cfc8f15b8ce4035f16af4a5eb5d4b123640cdd",
+        "configure": ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DUSE_ENCLIB=openssl",
+                      "-DENABLE_ENCRYPTION=ON", "-DENABLE_APPS=ON",
+                      "-DENABLE_TESTING=OFF", "-DUSE_OPENSSL_PC=OFF"],
+        "make": [], "artifact": "b/srt-live-transmit", "launch": ["-h"],
+        "note": ("SRT 1.5.4's live transmitter with its OpenSSL AES-CTR/HMAC encryption path "
+                 "linked to the subject libcrypto; the admitted workload round-trips over "
+                 "loopback with a passphrase and rejects a mismatched passphrase"),
+    },
+    {
+        "family": "slowhttptest", "version": "1.9.0",
+        "url": ("https://github.com/shekyan/slowhttptest/archive/refs/tags/v1.9.0.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "a3910b9b844e05ee55838aa17beddc6aa9d6c5c0012eab647a21cc9ccd6c8749",
+        "configure": [], "make": ["-j4"],
+        "artifact": "src/slowhttptest", "launch": ["-h"],
+        "env_extra": {"CPPFLAGS": "-I{prefix}/include",
+                      "LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "note": ("slowhttptest 1.9.0's HTTPS client path links the subject libssl; the admitted "
+                 "workload completes a TLS slow-read exchange and a plaintext peer is rejected"),
+    },
+    {
+        "family": "cyrus-sasl-scram", "version": "2.1.28",
+        "url": ("https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/"
+                "cyrus-sasl-2.1.28.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c",
+        "configure": ["--with-openssl={prefix}", "--disable-static", "--enable-shared",
+                      "--disable-otp", "--disable-ldapdb", "--without-pam", "--disable-sql"],
+        "make": [MAKE_JOBS], "artifact": "plugins/.libs/libscram.so*", "launch": None,
+        "note": ("cyrus-sasl 2.1.28's SCRAM plugin linked to the subject libcrypto; the admitted "
+                 "client/server harness authenticates with SCRAM-SHA-256 and rejects a wrong "
+                 "password"),
+    },
+    {
+        "family": "sipsak", "version": "0.9.8.1",
+        "url": ("https://github.com/nils-ohlmeier/sipsak/releases/download/0.9.8.1/"
+                "sipsak-0.9.8.1.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c6faa022cd8c002165875d4aac83b7a2b59194f0491802924117fc6ac980c778",
+        "configure": ["--prefix={root}/.l7-install"],
+        "make": [MAKE_JOBS], "artifact": "sipsak", "launch": ["-V"],
+        "env_extra": {"CPPFLAGS": "-I{prefix}/include",
+                      "LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "note": ("sipsak 0.9.8.1 links the subject libcrypto for its SIP MD5 digest "
+                 "authentication; the admitted workload authenticates against a local SIP peer "
+                 "and a wrong password is rejected"),
+    },
+    {
+        "family": "cyrus-sasl-digestmd5", "version": "2.1.28",
+        "url": ("https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/"
+                "cyrus-sasl-2.1.28.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c",
+        "configure": ["--with-openssl={prefix}", "--disable-static", "--enable-shared",
+                      "--disable-otp", "--disable-ldapdb", "--without-pam", "--disable-sql"],
+        "make": [MAKE_JOBS], "artifact": "plugins/.libs/libdigestmd5.so*", "launch": None,
+        "note": ("cyrus-sasl 2.1.28's DIGEST-MD5 plugin linked to the subject libcrypto; the "
+                 "admitted client/server harness authenticates with DIGEST-MD5 and rejects a "
+                 "wrong password"),
     },
 )
 

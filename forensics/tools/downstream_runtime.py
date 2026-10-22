@@ -346,6 +346,46 @@ PROGRAMS: dict[str, dict] = {
         "note": ("the cyrus-sasl client and server APIs over a socketpair authenticate with "
                  "DIGEST-MD5 (libcrypto MD5/HMAC), and a wrong password is rejected"),
     },
+    # The Phase-25 template-layer continuation's bespoke-workload families.  Each program links
+    # the subject OpenSSL directly; the harnesses drive the family's own OpenSSL surface.
+    "git-crypt": {"program": "git-crypt", "launch": ["--version"],
+                  "version_re": r"git-crypt \d"},
+    "s2n-tls": {"program": "b/bin/s2nd", "launch": ["--help"],
+                "version_re": r"s2nd is an s2n-tls"},
+    "openldap": {"program": "servers/slapd/slapd", "launch": ["-VV"],
+                 "version_re": r"slapd 2\.6"},
+    "srt": {"program": "b/srt-live-transmit", "launch": ["-h"],
+            "version_re": r"SRT Library version"},
+    "slowhttptest": {"program": "src/slowhttptest", "launch": ["-h"],
+                     "version_re": r"slowhttptest.*version"},
+    "cyrus-sasl-scram": {
+        "program": ".l7-sasl-scram-harness", "launch": ["--version"],
+        "version_re": r"cyrus-sasl-l7-harness SCRAM-SHA-256", "lib_paths": ["lib/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_cyrus_sasl.c",
+            "cflags": ["-I{root}/include", "-Wno-cast-function-type",
+                       "-DL7_MECH=\"SCRAM-SHA-256\""],
+            "ldflags": ["-L{root}/lib/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/lib/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lsasl2", "-lssl", "-lcrypto"],
+        },
+        "note": "SCRAM-SHA-256 client/server over a socketpair; wrong password rejected",
+    },
+    "sipsak": {"program": "sipsak", "launch": ["-V"],
+              "version_re": r"sipsak \d"},
+    "cyrus-sasl-digestmd5": {
+        "program": ".l7-sasl-digestmd5-harness", "launch": ["--version"],
+        "version_re": r"cyrus-sasl-l7-harness DIGEST-MD5", "lib_paths": ["lib/.libs"],
+        "harness": {
+            "source": "forensics/tools/l7_cyrus_sasl.c",
+            "cflags": ["-I{root}/include", "-Wno-cast-function-type",
+                       "-DL7_MECH=\"DIGEST-MD5\""],
+            "ldflags": ["-L{root}/lib/.libs", "-L{prefix}/lib",
+                        "-Wl,-rpath,{root}/lib/.libs", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-lsasl2", "-lssl", "-lcrypto"],
+        },
+        "note": "DIGEST-MD5 client/server over a socketpair; wrong password rejected",
+    },
     "links": {
         "program": "links", "launch": ["-version"],
         "version_re": r"Links 2\.30",
@@ -3741,7 +3781,10 @@ def _wl_cyrus_sasl(ctx: dict) -> dict:
     env = dict(ctx["env"], SASL_PATH=str(ctx["root"] / "plugins" / ".libs"))
     good = _run_captured([prog], cwd=d, env=env, timeout=60)
     text = good["stdout"] + good["stderr"]
-    runtime_ok = bool(good["ok"] and "mech=DIGEST-MD5" in text and "auth=ok" in text)
+    # The mechanism is selected at harness compile time (DIGEST-MD5, SCRAM-SHA-256 or
+    # CRAM-MD5); the contract checked here is the same for each: the client/server
+    # exchange authenticates and a wrong password is rejected.
+    runtime_ok = bool(good["ok"] and "mech=" in text and "auth=ok" in text)
     rejected = "wrong-password=rejected" in text
     functional_ok = runtime_ok and rejected
     return {
@@ -3752,11 +3795,460 @@ def _wl_cyrus_sasl(ctx: dict) -> dict:
         "residual": "none" if functional_ok else (
             "functional-divergence" if runtime_ok else "runtime-failure"),
         "reason": None if functional_ok else (
-            "the DIGEST-MD5 client/server exchange did not authenticate" if not runtime_ok else
+            "the SASL client/server exchange did not authenticate" if not runtime_ok else
             "the wrong password was not rejected"),
-        "transcript": _transcript(("cyrus-sasl DIGEST-MD5 client/server", good)),
-        "workload": ("cyrus-sasl: client+server SASL over a socketpair + DIGEST-MD5 "
+        "transcript": _transcript((f"{ctx['family']} client/server", good)),
+        "workload": (f"{ctx['family']}: client+server SASL over a socketpair + "
                      "authentication + wrong-password reject"),
+        "local_only": True,
+    }
+
+
+def _wl_sipsak(ctx: dict) -> dict:
+    """sipsak's SIP MD5 digest authentication against a local UDP peer."""
+    d = ctx["workdir"]
+    prog = str(ctx["program"])
+    nonce = "fixture-nonce-123"
+    # The peer's secret is fixed; `password` is what the client under test is told.  Using the
+    # client-supplied value on both sides would make the negative arm vacuous.
+    fixture_password = "password"
+
+    def run(password: str) -> tuple[dict, dict]:
+        port = _free_port()
+        state = {"requests": 0, "verified": False, "challenged": False}
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("127.0.0.1", port))
+        sock.settimeout(8)
+
+        def md5(text: str) -> str:
+            return hashlib.md5(text.encode("utf-8")).hexdigest()
+
+        def serve() -> None:
+            try:
+                for _ in range(3):
+                    data, addr = sock.recvfrom(65535)
+                    state["requests"] += 1
+                    msg = data.decode("utf-8", "replace")
+                    lines = msg.split("\r\n")
+                    headers: dict[str, str] = {}
+                    for line in lines[1:]:
+                        if not line:
+                            break
+                        if ":" in line:
+                            key, value = line.split(":", 1)
+                            headers.setdefault(key.lower(), value.strip())
+                    auth_line = "\r\n".join(
+                        line for line in lines if line.lower().startswith("authorization:"))
+                    params = {key: (quoted or bare) for key, quoted, bare in re.findall(
+                        r"(\w+)=(?:\"([^\"]*)\"|([^,\s]+))", auth_line)}
+                    code = "401 Unauthorized"
+                    extra = ""
+                    if auth_line and "response" in params:
+                        uri = params.get("uri", "")
+                        qop = params.get("qop", "")
+                        ha1 = md5(f"{params.get('username', '')}:{params.get('realm', '')}:"
+                                  f"{fixture_password}")
+                        ha2 = md5(f"OPTIONS:{uri}")
+                        if qop:
+                            expected = md5(f"{ha1}:{nonce}:{params.get('nc', '')}:"
+                                           f"{params.get('cnonce', '')}:{qop}:{ha2}")
+                        else:
+                            expected = md5(f"{ha1}:{nonce}:{ha2}")
+                        state["verified"] = expected == params.get("response")
+                        code = "200 OK" if state["verified"] else "403 Forbidden"
+                    else:
+                        state["challenged"] = True
+                        extra = (f"WWW-Authenticate: Digest realm=\"fixture\", "
+                                 f"nonce=\"{nonce}\", algorithm=MD5, qop=\"auth\"\r\n")
+                    reply = f"SIP/2.0 {code}\r\n"
+                    for name in ("via", "from", "to", "call-id", "cseq"):
+                        if name in headers:
+                            canonical = {"via": "Via", "from": "From", "to": "To",
+                                         "call-id": "Call-ID", "cseq": "CSeq"}[name]
+                            reply += f"{canonical}: {headers[name]}\r\n"
+                    reply += extra + "Content-Length: 0\r\n\r\n"
+                    sock.sendto(reply.encode("utf-8"), addr)
+            except OSError:
+                return
+
+        thread = threading.Thread(target=serve, daemon=True)
+        thread.start()
+        try:
+            res = _run_captured([prog, "-s", f"sip:fixture@127.0.0.1:{port}", "-u", "fixture",
+                                 "-a", password, "-N"], cwd=d, env=ctx["env"], timeout=20)
+        finally:
+            thread.join(timeout=1)
+            sock.close()
+        return res, state
+
+    good, good_state = run("password")
+    neg, neg_state = run("wrong-password")
+    pos_ok = bool(good["ok"] and "SIP ok" in good["stdout"] and good_state["verified"])
+    # sipsak's Nagios mode treats any SIP response as reachability, so the negative
+    # control is the peer's actual decision: the peer received the authenticated request
+    # and its digest did not verify.  A verified second request would mean the wrong
+    # password was accepted.
+    neg_ok = bool(neg_state["challenged"] and not neg_state["verified"]
+                  and neg_state["requests"] >= 2)
+    functional = bool(pos_ok and neg_ok)
+    return {
+        "runtime_ok": pos_ok, "functional_ok": functional,
+        "failure_class": None if functional else (
+            "functional-failure" if pos_ok else "runtime-failure"),
+        "residual": "none" if functional else (
+            "functional-divergence" if pos_ok else "runtime-failure"),
+        "reason": None if functional else (
+            "the SIP digest exchange did not authenticate" if not pos_ok else
+            "the wrong password was not rejected"),
+        "transcript": _transcript(("sipsak MD5 digest auth", good),
+                                  ("sipsak wrong password (must fail)", neg),
+                                  ("peer decision on the wrong password", {
+                                      "exit_code": 0,
+                                      "stdout": (f"requests={neg_state['requests']} "
+                                                 f"challenged={neg_state['challenged']} "
+                                                 f"verified={neg_state['verified']}")})),
+        "workload": "sipsak: SIP OPTIONS with MD5 digest auth + wrong-password reject",
+        "local_only": True,
+    }
+
+
+def _wl_git_crypt(ctx: dict) -> dict:
+    """git-crypt's symmetric encryption path in a local repository.
+
+    The workload initialises a repository (libcrypto RNG/HMAC), encrypts a committed file,
+    proves the locked worktree no longer contains the plaintext, unlocks it with the exported
+    key, and requires a key exported from a different repository to be rejected.  Only the
+    family's own binary and git's local object store are involved.
+    """
+    d = ctx["workdir"]
+    prog = str(ctx["program"])
+    env = ctx["env"]
+    repo = d / "repo"
+    other = d / "other"
+    repo.mkdir(parents=True, exist_ok=True)
+    other.mkdir(parents=True, exist_ok=True)
+
+    def git(root: Path, *argv: str) -> dict:
+        return _run_captured(["git", *argv], cwd=root, env=env, timeout=60)
+
+    for root in (repo, other):
+        git(root, "init", "-q")
+        git(root, "config", "user.email", "fixture@example.invalid")
+        git(root, "config", "user.name", "fixture")
+    init = _run_captured([prog, "init"], cwd=repo, env=env, timeout=60)
+    other_init = _run_captured([prog, "init"], cwd=other, env=env, timeout=60)
+    key = d / "key"
+    other_key = d / "other.key"
+    export = _run_captured([prog, "export-key", str(key)], cwd=repo, env=env, timeout=60)
+    export_other = _run_captured([prog, "export-key", str(other_key)], cwd=other, env=env,
+                                 timeout=60)
+    (repo / ".gitattributes").write_text(
+        "secret.txt filter=git-crypt diff=git-crypt\n", encoding="utf-8")
+    (repo / "secret.txt").write_text("template-payload\n", encoding="utf-8")
+    add = git(repo, "add", ".gitattributes", "secret.txt")
+    commit = git(repo, "commit", "-qm", "fixture")
+    lock = _run_captured([prog, "lock"], cwd=repo, env=env, timeout=60)
+    locked = (repo / "secret.txt").read_bytes() if (repo / "secret.txt").is_file() else b""
+    encrypted = b"template-payload" not in locked
+    bad = d / "bad"
+    if repo.is_dir():
+        shutil.copytree(repo, bad)
+    wrong = _run_captured([prog, "unlock", str(other_key)], cwd=bad, env=env, timeout=60) \
+        if bad.is_dir() else {"ok": True, "exit_code": 0, "stdout": "", "stderr": ""}
+    wrong_secret = (bad / "secret.txt").read_bytes() if (bad / "secret.txt").is_file() else b""
+    wrong_rejected = (not wrong["ok"]) and b"template-payload" not in wrong_secret
+    unlock = _run_captured([prog, "unlock", str(key)], cwd=repo, env=env, timeout=60)
+    # Materialise the worktree through the family's smudge filter.  `unlock` normally does this
+    # itself; the explicit checkout makes the decrypt path observable even when the worktree is
+    # already considered clean.
+    checkout = git(repo, "checkout", "--", "secret.txt")
+    restored = (repo / "secret.txt").read_bytes() if (repo / "secret.txt").is_file() else b""
+    functional = bool(init["ok"] and other_init["ok"] and export["ok"] and export_other["ok"]
+                      and add["ok"] and commit["ok"] and lock["ok"] and encrypted
+                      and wrong_rejected and unlock["ok"] and checkout["ok"]
+                      and b"template-payload" in restored)
+    return {
+        "runtime_ok": bool(init["ok"] and lock["ok"] and unlock["ok"]),
+        "functional_ok": functional,
+        "failure_class": None if functional else (
+            "functional-failure" if (init["ok"] and lock["ok"]) else "runtime-failure"),
+        "residual": "none" if functional else (
+            "functional-divergence" if (init["ok"] and lock["ok"]) else "runtime-failure"),
+        "reason": None if functional else (
+            "the locked worktree still held the plaintext" if not encrypted else
+            "a key from a different repository was accepted" if not wrong_rejected else
+            "the exported key did not restore the plaintext"),
+        "transcript": _transcript(
+            ("git-crypt init", init), ("git-crypt export-key", export),
+            ("git add", add), ("git commit", commit), ("git-crypt lock", lock),
+            ("locked worktree (must not contain the payload)", {
+                "exit_code": 0, "stdout": f"ciphertext-bytes={len(locked)}",
+                "stderr": "payload-absent" if encrypted else "PLAINTEXT-PRESENT"}),
+            ("git-crypt unlock with a foreign key (must fail)", wrong),
+            ("git-crypt unlock with the exported key", unlock),
+            ("git checkout through the smudge filter", checkout),
+            ("restored worktree", {
+                "exit_code": 0, "stdout": restored.decode("utf-8", "replace")[:64]})),
+        "workload": ("git-crypt: init/export/lock over a local repository + ciphertext differs "
+                     "from plaintext + foreign-key reject + exported-key restore"),
+        "local_only": True,
+    }
+
+
+def _wl_s2n(ctx: dict) -> dict:
+    """s2n-tls' s2nd server, driven by a verifying Python TLS client."""
+    d = ctx["workdir"]
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    port = ctx["port"]
+    log_path = d / "s2nd.log"
+    log = open(log_path, "w", encoding="utf-8")
+    proc = subprocess.Popen(
+        [str(ctx["program"]), "--cert", str(pki["srv_crt"]), "--key", str(pki["srv_key"]),
+         "-X3", "127.0.0.1", str(port)], cwd=str(d), env=ctx["env"], text=True,
+        stdin=subprocess.PIPE, stdout=log, stderr=log)
+    payload = "template-payload\n"
+    good: dict = {"exit_code": -1, "stdout": "", "stderr": "server did not listen"}
+    neg: dict = {"exit_code": -1, "stdout": "", "stderr": "negative control not run"}
+    try:
+        if _wait_log(log_path, "Listening on", timeout=20) and proc.stdin is not None:
+            proc.stdin.write(payload)
+            proc.stdin.flush()
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
+                    with _tls_context(pki).wrap_socket(sock, server_hostname="localhost") as tls:
+                        data = tls.recv(len(payload))
+                good = {"exit_code": 0, "stdout": data.decode("utf-8", "replace"),
+                        "stderr": ""}
+            except (ssl.SSLError, OSError) as exc:
+                good = {"exit_code": 1, "stdout": "", "stderr": str(exc)}
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
+                    with _tls_context(pki, ca=pki["other_crt"]).wrap_socket(
+                            sock, server_hostname="localhost") as tls:
+                        tls.recv(1)
+                neg = {"exit_code": 0, "stdout": "unrelated CA accepted", "stderr": ""}
+            except (ssl.SSLError, OSError) as exc:
+                neg = {"exit_code": 1, "stdout": "", "stderr": str(exc)}
+    finally:
+        proc.kill()
+        try:
+            proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        log.close()
+    pos_ok = good["exit_code"] == 0 and good["stdout"] == payload
+    neg_ok = neg["exit_code"] != 0
+    functional = bool(pos_ok and neg_ok)
+    return {
+        "runtime_ok": pos_ok, "functional_ok": functional,
+        "failure_class": None if functional else (
+            "functional-failure" if pos_ok else "runtime-failure"),
+        "residual": "none" if functional else (
+            "functional-divergence" if pos_ok else "runtime-failure"),
+        "reason": None if functional else (
+            "s2nd did not deliver the server payload" if not pos_ok else
+            "an unrelated CA was accepted"),
+        "transcript": _transcript(("s2nd verified TLS exchange", good),
+                                  ("s2nd unrelated CA (must fail)", neg)),
+        "workload": "s2n-tls: verified TLS server exchange + unrelated-CA reject",
+        "local_only": True,
+    }
+
+
+def _wl_openldap(ctx: dict) -> dict:
+    """OpenLDAP slapd over ldaps:// plus its own ldapmodify/ldapsearch clients."""
+    d = ctx["workdir"]
+    root = ctx["root"]
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    db = d / "db"
+    db.mkdir(parents=True, exist_ok=True)
+    port = ctx["port"]
+    conf = d / "slapd.conf"
+    conf.write_text(
+        f"include {root}/servers/slapd/schema/core.schema\n"
+        f"pidfile {d}/slapd.pid\n"
+        f"TLSCertificateFile {pki['srv_crt']}\n"
+        f"TLSCertificateKeyFile {pki['srv_key']}\n"
+        f"TLSCACertificateFile {pki['ca_crt']}\n"
+        "database mdb\n"
+        'suffix "dc=fixture,dc=test"\n'
+        'rootdn "cn=admin,dc=fixture,dc=test"\n'
+        "rootpw secret\n"
+        f"directory {db}\n", encoding="utf-8")
+    base = d / "base.ldif"
+    base.write_text("dn: dc=fixture,dc=test\nobjectClass: top\nobjectClass: dcObject\n"
+                    "objectClass: organization\ndc: fixture\no: fixture\n\n",
+                    encoding="utf-8")
+    proc = subprocess.Popen([str(ctx["program"]), "-f", str(conf), "-h",
+                             f"ldaps://127.0.0.1:{port}/", "-d", "0"], cwd=str(d),
+                            env=ctx["env"], stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL)
+    client_env = dict(ctx["env"], LDAPTLS_CACERT=str(pki["ca_crt"]),
+                      LDAPTLS_REQCERT="demand")
+    neg_env = dict(ctx["env"], LDAPTLS_CACERT=str(pki["other_crt"]),
+                   LDAPTLS_REQCERT="demand")
+    modify = str(root / "clients/tools/ldapmodify")
+    search = str(root / "clients/tools/ldapsearch")
+    good = {"exit_code": -1, "stdout": "", "stderr": "server did not listen"}
+    neg = {"exit_code": -1, "stdout": "", "stderr": "negative control not run"}
+    try:
+        if _wait_tcp("127.0.0.1", port, timeout=20):
+            add = _run_captured([modify, "-a", "-x", "-H", f"ldaps://127.0.0.1:{port}",
+                                 "-D", "cn=admin,dc=fixture,dc=test", "-w", "secret", "-f",
+                                 str(base)], cwd=d, env=client_env, timeout=60)
+            good = _run_captured([search, "-x", "-H", f"ldaps://127.0.0.1:{port}", "-b",
+                                  "dc=fixture,dc=test", "-s", "base", "dn"], cwd=d,
+                                 env=client_env, timeout=60)
+            neg = _run_captured([search, "-x", "-H", f"ldaps://127.0.0.1:{port}", "-b",
+                                 "dc=fixture,dc=test"], cwd=d, env=neg_env, timeout=60)
+            good["stdout"] = (add["stdout"] + add["stderr"] + "\n" + good["stdout"])
+    finally:
+        proc.terminate()
+        try:
+            proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+    pos_ok = good["exit_code"] == 0 and "dn: dc=fixture,dc=test" in good["stdout"]
+    neg_ok = neg["exit_code"] != 0
+    functional = bool(pos_ok and neg_ok)
+    return {
+        "runtime_ok": pos_ok, "functional_ok": functional,
+        "failure_class": None if functional else (
+            "functional-failure" if pos_ok else "runtime-failure"),
+        "residual": "none" if functional else (
+            "functional-divergence" if pos_ok else "runtime-failure"),
+        "reason": None if functional else (
+            "the ldaps:// add/search did not return the fixture entry" if not pos_ok else
+            "an unrelated CA was accepted"),
+        "transcript": _transcript(("slapd ldaps add/search", good),
+                                  ("ldapsearch unrelated CA (must fail)", neg)),
+        "workload": "openldap: ldaps:// add + base search + unrelated-CA reject",
+        "local_only": True,
+    }
+
+
+def _wl_srt(ctx: dict) -> dict:
+    """SRT's OpenSSL-encrypted transport over loopback, with a passphrase control."""
+    d = ctx["workdir"]
+    prog = str(ctx["program"])
+    payload = b"template-payload\n"
+
+    def round_trip(passphrase: str, listen_pass: str) -> tuple[bool, str]:
+        srt_port, udp_in, udp_out = _free_port(), _free_port(), _free_port()
+        rx = subprocess.Popen(
+            [prog, "-t", "8", f"srt://:{srt_port}?mode=listener&passphrase={listen_pass}",
+             f"udp://127.0.0.1:{udp_out}?mode=receiver"], cwd=str(d), env=ctx["env"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        tx = subprocess.Popen(
+            [prog, "-t", "8", f"udp://127.0.0.1:{udp_in}?mode=receiver",
+             f"srt://127.0.0.1:{srt_port}?passphrase={passphrase}"], cwd=str(d),
+            env=ctx["env"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        got = b""
+        try:
+            time.sleep(1.5)
+            sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sender.sendto(payload, ("127.0.0.1", udp_in))
+            receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            receiver.bind(("127.0.0.1", udp_out))
+            receiver.settimeout(5)
+            try:
+                got, _ = receiver.recvfrom(4096)
+            except socket.timeout:
+                got = b""
+            finally:
+                receiver.close()
+                sender.close()
+        finally:
+            for proc in (tx, rx):
+                proc.kill()
+                try:
+                    proc.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+        return got == payload, f"received={got!r}"
+
+    pos_ok, pos_detail = round_trip("fixture-passphrase", "fixture-passphrase")
+    neg_ok, neg_detail = round_trip("wrong-passphrase", "fixture-passphrase")
+    # The negative arm must deliver nothing: `neg_ok` is True when the mismatch was rejected.
+    rejected = not neg_ok
+    functional = bool(pos_ok and rejected)
+    return {
+        "runtime_ok": pos_ok, "functional_ok": functional,
+        "failure_class": None if functional else (
+            "functional-failure" if pos_ok else "runtime-failure"),
+        "residual": "none" if functional else (
+            "functional-divergence" if pos_ok else "runtime-failure"),
+        "reason": None if functional else (
+            "the encrypted round trip did not deliver the payload" if not pos_ok else
+            "a mismatched passphrase still delivered data"),
+        "transcript": _transcript(
+            ("srt encrypted round trip", {"exit_code": 0, "stdout": pos_detail}),
+            ("srt mismatched passphrase (must deliver nothing)", {
+                "exit_code": 0, "stdout": neg_detail})),
+        "workload": "srt: encrypted sender/receiver round trip + mismatched-passphrase reject",
+        "local_only": True,
+    }
+
+
+def _wl_slowhttptest(ctx: dict) -> dict:
+    """slowhttptest's HTTPS slow-read client against a local TLS fixture."""
+    d = ctx["workdir"]
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    prog = str(ctx["program"])
+    body = b"x" * 4096
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        hits = 0
+
+        def do_GET(self) -> None:  # noqa: N802 - stdlib name
+            type(self).hits += 1
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            try:
+                self.wfile.write(body)
+            except OSError:
+                pass
+
+        def log_message(self, *args: object) -> None:
+            return
+
+    def drive(port: int, *, tls: bool) -> tuple[dict, int]:
+        Handler.hits = 0
+        server = http.server.HTTPServer(("127.0.0.1", port), Handler)
+        if tls:
+            sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            sctx.load_cert_chain(str(pki["srv_crt"]), str(pki["srv_key"]))
+            server.socket = sctx.wrap_socket(server.socket, server_side=True)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            res = _run_captured([prog, "-X", "-c", "1", "-l", "2", "-i", "1", "-r", "1",
+                                 "-u", f"https://127.0.0.1:{port}/"], cwd=d, env=ctx["env"],
+                                timeout=30)
+        finally:
+            server.shutdown()
+            server.server_close()
+        return res, Handler.hits
+
+    pos, pos_hits = drive(ctx["port"], tls=True)
+    neg, neg_hits = drive(_free_port(), tls=False)
+    pos_ok = bool(pos["ok"] and "Test ended" in (pos["stdout"] + pos["stderr"])
+                  and pos_hits >= 1)
+    neg_ok = neg_hits == 0
+    functional = bool(pos_ok and neg_ok)
+    return {
+        "runtime_ok": pos_ok, "functional_ok": functional,
+        "failure_class": None if functional else (
+            "functional-failure" if pos_ok else "runtime-failure"),
+        "residual": "none" if functional else (
+            "functional-divergence" if pos_ok else "runtime-failure"),
+        "reason": None if functional else (
+            "the HTTPS slow-read exchange did not complete" if not pos_ok else
+            "the plaintext peer was not rejected"),
+        "transcript": _transcript(("slowhttptest TLS slow read", pos),
+                                  ("slowhttptest plaintext peer (must fail)", neg)),
+        "workload": "slowhttptest: HTTPS slow-read exchange + plaintext-peer reject",
         "local_only": True,
     }
 
@@ -8840,6 +9332,15 @@ RUNNERS = {
     "libarchive": _wl_libarchive,
     "mosquitto": _wl_mosquitto,
     "cyrus-sasl": _wl_cyrus_sasl,
+    # The Phase-25 template-layer continuation's bespoke workloads.
+    "git-crypt": _wl_git_crypt,
+    "s2n-tls": _wl_s2n,
+    "openldap": _wl_openldap,
+    "srt": _wl_srt,
+    "slowhttptest": _wl_slowhttptest,
+    "cyrus-sasl-scram": _wl_cyrus_sasl,
+    "cyrus-sasl-digestmd5": _wl_cyrus_sasl,
+    "sipsak": _wl_sipsak,
     "links": _wl_links,
     "dovecot": _wl_dovecot,
     "librdkafka": _wl_rdkafka,

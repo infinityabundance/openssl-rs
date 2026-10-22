@@ -523,8 +523,9 @@ def _tpl_digest(entry: dict, ctx: dict) -> dict:
     pos_match = re.search(expect, pos["stdout"] + pos["stderr"], re.MULTILINE)
     neg_argv = _expand_wl(wl.get("negative_argv") or wl["argv"], b)
     neg = _run([str(ctx["program"]), *neg_argv], cwd=ctx["workdir"], env=ctx["env"], timeout=120)
-    digest_match = re.search(r"[0-9a-f]{32,128}", pos["stdout"])
-    different = bool(digest_match) and digest_match.group(0) not in (neg["stdout"] + neg["stderr"])
+    # The negative control compares the *expectation* the family declares, not an assumed
+    # lowercase-hex shape: NSEC3 hashes are base32hex and would otherwise never be compared.
+    different = bool(pos_match) and pos_match.group(0) not in (neg["stdout"] + neg["stderr"])
     functional = bool(pos["ok"] and pos_match and (different or neg["exit_code"] != 0))
     return {
         "runtime_ok": bool(pos["ok"]),
@@ -548,13 +549,15 @@ def _http_client_argv(entry: dict, body: dict, *, negative: bool) -> list[str]:
     mode = str(wl.get("negative", "wrong_ca"))
     ca = body["ca"]
     url = body["url"]
+    port = body["port"]
     if negative:
         if mode in ("plaintext", "closed_port"):
             url = f"https://127.0.0.1:{body['neg_port']}/"
+            port = body["neg_port"]
             ca = body["ca"]
         else:
             ca = body["wrong_ca"]
-    return _expand_wl(argv, body, extra={"url": url, "ca": ca})
+    return _expand_wl(argv, body, extra={"url": url, "ca": ca, "port": port})
 
 
 def _mirror_has(ctx: dict, needle: str, name: str = "mirror") -> bool:
