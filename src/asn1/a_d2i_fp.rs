@@ -587,3 +587,57 @@ unsafe fn buffer_dest(b: *mut BufMem, len: usize) -> *mut c_void {
 const TAG_NUMBER_MASK: u8 = 0x1f;
 /// `V_ASN1_EOC` — the tag an end-of-contents marker carries.
 const V_ASN1_EOC: c_int = 0;
+
+/// `ASN1_d2i_fp` with the decoder's pointee type in the signature.
+///
+/// The body is the untyped door's, with the callback called directly: no function pointer is
+/// ever re-typed, and `x`'s `void *` spelling is preserved so callers need no cast of their own.
+///
+/// # Safety
+/// `d2i` must be a live decoder; `in_` must be a live `FILE *`; `x` must be writable for a
+/// `void *` (the decoder writes the new object through it).
+#[allow(non_snake_case)]
+pub(crate) unsafe fn ASN1_d2i_fp_typed<T>(
+    d2i: unsafe extern "C" fn(*mut *mut T, *mut *const c_uchar, c_long) -> *mut T,
+    in_: *mut FILE,
+    x: *mut *mut c_void,
+) -> *mut c_void {
+    guard_ffi(core::ptr::null_mut(), || {
+        // SAFETY: `in_` is the caller's `FILE`; the closure forwards the same decoder.
+        unsafe {
+            with_file_bio(in_, &err_sites::A_D2I_FP_28, |b| {
+                ASN1_d2i_bio_typed(d2i, b, x)
+            })
+        }
+    })
+}
+
+/// `ASN1_d2i_bio` with the decoder's pointee type in the signature.
+///
+/// # Safety
+/// As [`ASN1_d2i_fp_typed`]; `in_` must be a live BIO.
+#[allow(non_snake_case)]
+pub(crate) unsafe fn ASN1_d2i_bio_typed<T>(
+    d2i: unsafe extern "C" fn(*mut *mut T, *mut *const c_uchar, c_long) -> *mut T,
+    in_: *mut Bio,
+    x: *mut *mut c_void,
+) -> *mut c_void {
+    guard_ffi(core::ptr::null_mut(), || {
+        let mut b: *mut BufMem = core::ptr::null_mut();
+        // SAFETY: `in_` is the caller's live BIO and `b` is a null slot.
+        let len = unsafe { asn1_d2i_read_bio(in_, &mut b) };
+        let ret = if len < 0 {
+            core::ptr::null_mut()
+        } else {
+            // SAFETY: `b` is the buffer the read just filled.
+            let data = unsafe { (*b).data }.cast::<c_uchar>();
+            let mut p: *const c_uchar = data;
+            // SAFETY: `data` holds `len` bytes; `x` is the caller's writable slot, retyped to
+            // the decoder's own pointee type.
+            unsafe { d2i(x.cast::<*mut T>(), &mut p, c_long::from(len)) }.cast::<c_void>()
+        };
+        // SAFETY: `b` is this call's buffer or null; the decode has copied what it needs.
+        unsafe { BUF_MEM_free(b) };
+        ret
+    })
+}

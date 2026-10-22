@@ -254,3 +254,57 @@ unsafe fn write_all(out: *mut Bio, b: *mut c_uchar, n: c_int) -> c_int {
         remaining -= i;
     }
 }
+
+/// `ASN1_i2d_fp` with the encoder's pointee type in the signature.
+///
+/// The body is the untyped door's, with the callback called directly: no function pointer is
+/// ever re-typed, and `x`'s `const void *` spelling is preserved.
+///
+/// # Safety
+/// `i2d` must be a live encoder for `x`'s type; `out` must be a live `FILE *`; `x` must be null
+/// or a live value of that type.
+#[allow(non_snake_case)]
+pub(crate) unsafe fn ASN1_i2d_fp_typed<T>(
+    i2d: unsafe extern "C" fn(*const T, *mut *mut c_uchar) -> c_int,
+    out: *mut FILE,
+    x: *const c_void,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `out` is the caller's `FILE`.
+        unsafe {
+            with_file_bio(out, &err_sites::A_I2D_FP_24, |b| {
+                ASN1_i2d_bio_typed(i2d, b, x)
+            })
+        }
+    })
+}
+
+/// `ASN1_i2d_bio` with the encoder's pointee type in the signature.
+///
+/// # Safety
+/// `i2d` must be a live encoder for `x`'s type; `out` must be a live BIO; `x` must be null or a
+/// live value of that type.
+#[allow(non_snake_case)]
+pub(crate) unsafe fn ASN1_i2d_bio_typed<T>(
+    i2d: unsafe extern "C" fn(*const T, *mut *mut c_uchar) -> c_int,
+    out: *mut Bio,
+    x: *const c_void,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `i2d` is the caller's live encoder, called with `x` retyped to its pointee.
+        let n = unsafe { i2d(x.cast::<T>(), core::ptr::null_mut()) };
+        if n <= 0 {
+            return 0;
+        }
+        // SAFETY: `n` is positive, so it is a valid byte count for the block.
+        let Some(b) = OwnedBlock::<u8>::malloc(n as usize, SeamFile::new(FILE_NAME), LINE) else {
+            return 0;
+        };
+        let mut p = b.as_ptr();
+        // SAFETY: `p` has room for the length the sizing pass reported.
+        unsafe { i2d(x.cast::<T>(), &mut p) };
+
+        // SAFETY: `out` is the caller's live BIO and `b` is readable for `n` bytes.
+        unsafe { write_all(out, b.as_ptr(), n) }
+    })
+}

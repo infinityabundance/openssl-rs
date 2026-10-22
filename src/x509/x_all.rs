@@ -74,10 +74,12 @@
 //! transcription expands them the same way rather than calling the item layer, because the two
 //! differ in their failure classification. The first argument, the "new" function, is **never
 //! called** by `ASN1_d2i_fp`/`ASN1_d2i_bio` — not here and not in the authority
-//! (`src/asn1/a_d2i_fp.rs:106-111`) — so [`unused_new`] stands in for it and the cast is
-//! observable only through the arity. The typed `d2i`/`i2d` function is restated as the untyped
-//! `D2iOfVoid`/`I2dOfVoid` by [`d2i_of`]/[`i2d_of`], the way the authority's `(d2i_of_void *)`
-//! cast does.
+//! (`src/asn1/a_d2i_fp.rs:106-111`).
+//!
+//! The `_of` macros' signature re-typing is not reproduced: every call site uses the typed doors
+//! [`ASN1_d2i_fp_typed`]/[`ASN1_d2i_bio_typed`]/[`ASN1_i2d_fp_typed`]/[`ASN1_i2d_bio_typed`],
+//! which take the object's real `d2i`/`i2d` function pointer and re-type only the out-parameter
+//! (`x`) or value pointer (`x`) at the one audited seam. No `transmute` remains in this unit.
 //!
 //! ## The raise sites
 //!
@@ -100,16 +102,18 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::a_d2i_fp::{
-    asn1_d2i_read_bio, ASN1_d2i_bio, ASN1_d2i_fp, ASN1_item_d2i_bio, ASN1_item_d2i_bio_ex,
-    ASN1_item_d2i_fp, ASN1_item_d2i_fp_ex,
+    asn1_d2i_read_bio, ASN1_d2i_bio_typed, ASN1_d2i_fp_typed, ASN1_item_d2i_bio,
+    ASN1_item_d2i_bio_ex, ASN1_item_d2i_fp, ASN1_item_d2i_fp_ex,
 };
 use crate::asn1::a_digest::{ossl_asn1_item_digest_ex, ASN1_item_digest};
-use crate::asn1::a_i2d_fp::{ASN1_i2d_bio, ASN1_i2d_fp, ASN1_item_i2d_bio, ASN1_item_i2d_fp};
+use crate::asn1::a_i2d_fp::{
+    ASN1_i2d_bio_typed, ASN1_i2d_fp_typed, ASN1_item_i2d_bio, ASN1_item_i2d_fp,
+};
 use crate::asn1::a_sign::{ASN1_item_sign_ctx, ASN1_item_sign_ex};
 use crate::asn1::a_verify::{ASN1_item_verify, ASN1_item_verify_ex};
 use crate::asn1::d2i_pr::{d2i_AutoPrivateKey, d2i_AutoPrivateKey_ex};
 use crate::asn1::i2d_evp::i2d_PrivateKey;
-use crate::asn1::layout::{Asn1Item, Asn1String, D2iOfVoid, I2dOfVoid};
+use crate::asn1::layout::{Asn1Item, Asn1String};
 use crate::asn1::p8_pkey::{
     d2i_PKCS8_PRIV_KEY_INFO, i2d_PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO_free, Pkcs8PrivKeyInfo,
 };
@@ -175,31 +179,6 @@ const OSSL_HTTP_DEFAULT_MAX_RESP_LEN: usize = 100 * 1024;
 /// `OSSL_HTTP_DEFAULT_MAX_CRL_LEN` — `include/openssl/http.h:44`, the larger cap a CRL
 /// download is allowed.
 const OSSL_HTTP_DEFAULT_MAX_CRL_LEN: usize = 32 * 1024 * 1024;
-
-/// The "new" function `ASN1_d2i_fp`/`ASN1_d2i_bio` take as their first argument and **never
-/// call** (`src/asn1/a_d2i_fp.rs:106-111`; the authority's own `ASN1_d2i_bio` does not call it
-/// either). It exists so the arity of the `ASN1_d2i_*_of` expansion is preserved; the typed
-/// `X_new` the authority passes would be dead code here for the same reason.
-unsafe extern "C" fn unused_new() -> *mut c_void {
-    ptr::null_mut()
-}
-
-/// Restate a typed decoder as the untyped [`D2iOfVoid`], the way the authority's
-/// `(d2i_of_void *)d2i_X` cast does. Both are `unsafe extern "C"` function pointers, so the cast
-/// preserves the ABI and erases only the pointee type.
-fn d2i_of<T>(
-    f: unsafe extern "C" fn(*mut *mut T, *mut *const c_uchar, c_long) -> *mut T,
-) -> D2iOfVoid {
-    // SAFETY: both are function pointers of the same size and ABI; the callee re-types the
-    // erased pointee.
-    unsafe { core::mem::transmute(f) }
-}
-
-/// Restate a typed encoder as the untyped [`I2dOfVoid`], as in [`d2i_of`].
-fn i2d_of<T>(f: unsafe extern "C" fn(*const T, *mut *mut c_uchar) -> c_int) -> I2dOfVoid {
-    // SAFETY: as [`d2i_of`], the other direction.
-    unsafe { core::mem::transmute(f) }
-}
 
 // ---------------------------------------------------------------------------------------------
 // The sign / verify doors — `x_all.c:33-213`
@@ -1068,16 +1047,8 @@ pub unsafe extern "C" fn d2i_RSAPublicKey_fp(fp: *mut FILE, rsa: *mut *mut Rsa) 
 /// `fp` must be a live `FILE *`; `rsa` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_RSA_PUBKEY_fp(fp: *mut FILE, rsa: *mut *mut Rsa) -> *mut Rsa {
-    // SAFETY: `fp`/`rsa` are the caller's; `d2i_of` restates `d2i_RSA_PUBKEY`'s contract.
-    unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<Rsa>(d2i_RSA_PUBKEY),
-            fp,
-            rsa.cast::<*mut c_void>(),
-        )
-        .cast::<Rsa>()
-    }
+    // SAFETY: `fp`/`rsa` are the caller's; the typed door forwards `d2i_RSA_PUBKEY` without re-typing it.
+    unsafe { ASN1_d2i_fp_typed::<Rsa>(d2i_RSA_PUBKEY, fp, rsa.cast::<*mut c_void>()).cast::<Rsa>() }
 }
 
 /// `int i2d_RSAPublicKey_fp(FILE *fp, const RSA *rsa)` — `crypto/x509/x_all.c:359-362`.
@@ -1098,8 +1069,8 @@ pub unsafe extern "C" fn i2d_RSAPublicKey_fp(fp: *mut FILE, rsa: *const Rsa) -> 
 /// `fp` must be a live `FILE *`; `rsa` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_RSA_PUBKEY_fp(fp: *mut FILE, rsa: *const Rsa) -> c_int {
-    // SAFETY: `fp`/`rsa` are the caller's; `i2d_of` restates `i2d_RSA_PUBKEY`'s contract.
-    unsafe { ASN1_i2d_fp(i2d_of::<Rsa>(i2d_RSA_PUBKEY), fp, rsa.cast::<c_void>()) }
+    // SAFETY: `fp`/`rsa` are the caller's; the typed door forwards `i2d_RSA_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<Rsa>(i2d_RSA_PUBKEY, fp, rsa.cast::<c_void>()) }
 }
 
 /// `RSA *d2i_RSAPrivateKey_bio(BIO *bp, RSA **rsa)` — `crypto/x509/x_all.c:370-373`.
@@ -1143,15 +1114,9 @@ pub unsafe extern "C" fn d2i_RSAPublicKey_bio(bp: *mut Bio, rsa: *mut *mut Rsa) 
 /// `bp` must be a live BIO; `rsa` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_RSA_PUBKEY_bio(bp: *mut Bio, rsa: *mut *mut Rsa) -> *mut Rsa {
-    // SAFETY: `bp`/`rsa` are the caller's; `d2i_of` restates `d2i_RSA_PUBKEY`'s contract.
+    // SAFETY: `bp`/`rsa` are the caller's; the typed door forwards `d2i_RSA_PUBKEY` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<Rsa>(d2i_RSA_PUBKEY),
-            bp,
-            rsa.cast::<*mut c_void>(),
-        )
-        .cast::<Rsa>()
+        ASN1_d2i_bio_typed::<Rsa>(d2i_RSA_PUBKEY, bp, rsa.cast::<*mut c_void>()).cast::<Rsa>()
     }
 }
 
@@ -1173,8 +1138,8 @@ pub unsafe extern "C" fn i2d_RSAPublicKey_bio(bp: *mut Bio, rsa: *const Rsa) -> 
 /// `bp` must be a live BIO; `rsa` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_RSA_PUBKEY_bio(bp: *mut Bio, rsa: *const Rsa) -> c_int {
-    // SAFETY: `bp`/`rsa` are the caller's; `i2d_of` restates `i2d_RSA_PUBKEY`'s contract.
-    unsafe { ASN1_i2d_bio(i2d_of::<Rsa>(i2d_RSA_PUBKEY), bp, rsa.cast::<c_void>()) }
+    // SAFETY: `bp`/`rsa` are the caller's; the typed door forwards `i2d_RSA_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_bio_typed::<Rsa>(i2d_RSA_PUBKEY, bp, rsa.cast::<c_void>()) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1189,15 +1154,9 @@ pub unsafe extern "C" fn i2d_RSA_PUBKEY_bio(bp: *mut Bio, rsa: *const Rsa) -> c_
 /// `fp` must be a live `FILE *`; `dsa` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_DSAPrivateKey_fp(fp: *mut FILE, dsa: *mut *mut Dsa) -> *mut Dsa {
-    // SAFETY: `fp`/`dsa` are the caller's; `d2i_of` restates `d2i_DSAPrivateKey`'s contract.
+    // SAFETY: `fp`/`dsa` are the caller's; the typed door forwards `d2i_DSAPrivateKey` without re-typing it.
     unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<Dsa>(d2i_DSAPrivateKey),
-            fp,
-            dsa.cast::<*mut c_void>(),
-        )
-        .cast::<Dsa>()
+        ASN1_d2i_fp_typed::<Dsa>(d2i_DSAPrivateKey, fp, dsa.cast::<*mut c_void>()).cast::<Dsa>()
     }
 }
 
@@ -1208,8 +1167,8 @@ pub unsafe extern "C" fn d2i_DSAPrivateKey_fp(fp: *mut FILE, dsa: *mut *mut Dsa)
 /// `fp` must be a live `FILE *`; `dsa` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_DSAPrivateKey_fp(fp: *mut FILE, dsa: *const Dsa) -> c_int {
-    // SAFETY: `fp`/`dsa` are the caller's; `i2d_of` restates `i2d_DSAPrivateKey`'s contract.
-    unsafe { ASN1_i2d_fp(i2d_of::<Dsa>(i2d_DSAPrivateKey), fp, dsa.cast::<c_void>()) }
+    // SAFETY: `fp`/`dsa` are the caller's; the typed door forwards `i2d_DSAPrivateKey` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<Dsa>(i2d_DSAPrivateKey, fp, dsa.cast::<c_void>()) }
 }
 
 /// `DSA *d2i_DSA_PUBKEY_fp(FILE *fp, DSA **dsa)` — `crypto/x509/x_all.c:412-415`, the
@@ -1220,16 +1179,8 @@ pub unsafe extern "C" fn i2d_DSAPrivateKey_fp(fp: *mut FILE, dsa: *const Dsa) ->
 /// `fp` must be a live `FILE *`; `dsa` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_DSA_PUBKEY_fp(fp: *mut FILE, dsa: *mut *mut Dsa) -> *mut Dsa {
-    // SAFETY: `fp`/`dsa` are the caller's; `d2i_of` restates `d2i_DSA_PUBKEY`'s contract.
-    unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<Dsa>(d2i_DSA_PUBKEY),
-            fp,
-            dsa.cast::<*mut c_void>(),
-        )
-        .cast::<Dsa>()
-    }
+    // SAFETY: `fp`/`dsa` are the caller's; the typed door forwards `d2i_DSA_PUBKEY` without re-typing it.
+    unsafe { ASN1_d2i_fp_typed::<Dsa>(d2i_DSA_PUBKEY, fp, dsa.cast::<*mut c_void>()).cast::<Dsa>() }
 }
 
 /// `int i2d_DSA_PUBKEY_fp(FILE *fp, const DSA *dsa)` — `crypto/x509/x_all.c:417-420`.
@@ -1239,8 +1190,8 @@ pub unsafe extern "C" fn d2i_DSA_PUBKEY_fp(fp: *mut FILE, dsa: *mut *mut Dsa) ->
 /// `fp` must be a live `FILE *`; `dsa` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_DSA_PUBKEY_fp(fp: *mut FILE, dsa: *const Dsa) -> c_int {
-    // SAFETY: `fp`/`dsa` are the caller's; `i2d_of` restates `i2d_DSA_PUBKEY`'s contract.
-    unsafe { ASN1_i2d_fp(i2d_of::<Dsa>(i2d_DSA_PUBKEY), fp, dsa.cast::<c_void>()) }
+    // SAFETY: `fp`/`dsa` are the caller's; the typed door forwards `i2d_DSA_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<Dsa>(i2d_DSA_PUBKEY, fp, dsa.cast::<c_void>()) }
 }
 
 /// `DSA *d2i_DSAPrivateKey_bio(BIO *bp, DSA **dsa)` — `crypto/x509/x_all.c:423-426`.
@@ -1250,15 +1201,9 @@ pub unsafe extern "C" fn i2d_DSA_PUBKEY_fp(fp: *mut FILE, dsa: *const Dsa) -> c_
 /// `bp` must be a live BIO; `dsa` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_DSAPrivateKey_bio(bp: *mut Bio, dsa: *mut *mut Dsa) -> *mut Dsa {
-    // SAFETY: `bp`/`dsa` are the caller's; `d2i_of` restates `d2i_DSAPrivateKey`'s contract.
+    // SAFETY: `bp`/`dsa` are the caller's; the typed door forwards `d2i_DSAPrivateKey` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<Dsa>(d2i_DSAPrivateKey),
-            bp,
-            dsa.cast::<*mut c_void>(),
-        )
-        .cast::<Dsa>()
+        ASN1_d2i_bio_typed::<Dsa>(d2i_DSAPrivateKey, bp, dsa.cast::<*mut c_void>()).cast::<Dsa>()
     }
 }
 
@@ -1269,8 +1214,8 @@ pub unsafe extern "C" fn d2i_DSAPrivateKey_bio(bp: *mut Bio, dsa: *mut *mut Dsa)
 /// `bp` must be a live BIO; `dsa` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_DSAPrivateKey_bio(bp: *mut Bio, dsa: *const Dsa) -> c_int {
-    // SAFETY: `bp`/`dsa` are the caller's; `i2d_of` restates `i2d_DSAPrivateKey`'s contract.
-    unsafe { ASN1_i2d_bio(i2d_of::<Dsa>(i2d_DSAPrivateKey), bp, dsa.cast::<c_void>()) }
+    // SAFETY: `bp`/`dsa` are the caller's; the typed door forwards `i2d_DSAPrivateKey` without re-typing it.
+    unsafe { ASN1_i2d_bio_typed::<Dsa>(i2d_DSAPrivateKey, bp, dsa.cast::<c_void>()) }
 }
 
 /// `DSA *d2i_DSA_PUBKEY_bio(BIO *bp, DSA **dsa)` — `crypto/x509/x_all.c:433-436`.
@@ -1280,15 +1225,9 @@ pub unsafe extern "C" fn i2d_DSAPrivateKey_bio(bp: *mut Bio, dsa: *const Dsa) ->
 /// `bp` must be a live BIO; `dsa` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_DSA_PUBKEY_bio(bp: *mut Bio, dsa: *mut *mut Dsa) -> *mut Dsa {
-    // SAFETY: `bp`/`dsa` are the caller's; `d2i_of` restates `d2i_DSA_PUBKEY`'s contract.
+    // SAFETY: `bp`/`dsa` are the caller's; the typed door forwards `d2i_DSA_PUBKEY` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<Dsa>(d2i_DSA_PUBKEY),
-            bp,
-            dsa.cast::<*mut c_void>(),
-        )
-        .cast::<Dsa>()
+        ASN1_d2i_bio_typed::<Dsa>(d2i_DSA_PUBKEY, bp, dsa.cast::<*mut c_void>()).cast::<Dsa>()
     }
 }
 
@@ -1299,8 +1238,8 @@ pub unsafe extern "C" fn d2i_DSA_PUBKEY_bio(bp: *mut Bio, dsa: *mut *mut Dsa) ->
 /// `bp` must be a live BIO; `dsa` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_DSA_PUBKEY_bio(bp: *mut Bio, dsa: *const Dsa) -> c_int {
-    // SAFETY: `bp`/`dsa` are the caller's; `i2d_of` restates `i2d_DSA_PUBKEY`'s contract.
-    unsafe { ASN1_i2d_bio(i2d_of::<Dsa>(i2d_DSA_PUBKEY), bp, dsa.cast::<c_void>()) }
+    // SAFETY: `bp`/`dsa` are the caller's; the typed door forwards `i2d_DSA_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_bio_typed::<Dsa>(i2d_DSA_PUBKEY, bp, dsa.cast::<c_void>()) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1315,15 +1254,9 @@ pub unsafe extern "C" fn i2d_DSA_PUBKEY_bio(bp: *mut Bio, dsa: *const Dsa) -> c_
 /// `fp` must be a live `FILE *`; `eckey` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_EC_PUBKEY_fp(fp: *mut FILE, eckey: *mut *mut EcKey) -> *mut EcKey {
-    // SAFETY: `fp`/`eckey` are the caller's; `d2i_of` restates `d2i_EC_PUBKEY`'s contract.
+    // SAFETY: `fp`/`eckey` are the caller's; the typed door forwards `d2i_EC_PUBKEY` without re-typing it.
     unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<EcKey>(d2i_EC_PUBKEY),
-            fp,
-            eckey.cast::<*mut c_void>(),
-        )
-        .cast::<EcKey>()
+        ASN1_d2i_fp_typed::<EcKey>(d2i_EC_PUBKEY, fp, eckey.cast::<*mut c_void>()).cast::<EcKey>()
     }
 }
 
@@ -1334,8 +1267,8 @@ pub unsafe extern "C" fn d2i_EC_PUBKEY_fp(fp: *mut FILE, eckey: *mut *mut EcKey)
 /// `fp` must be a live `FILE *`; `eckey` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_EC_PUBKEY_fp(fp: *mut FILE, eckey: *const EcKey) -> c_int {
-    // SAFETY: `fp`/`eckey` are the caller's; `i2d_of` restates `i2d_EC_PUBKEY`'s contract.
-    unsafe { ASN1_i2d_fp(i2d_of::<EcKey>(i2d_EC_PUBKEY), fp, eckey.cast::<c_void>()) }
+    // SAFETY: `fp`/`eckey` are the caller's; the typed door forwards `i2d_EC_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<EcKey>(i2d_EC_PUBKEY, fp, eckey.cast::<c_void>()) }
 }
 
 /// `EC_KEY *d2i_ECPrivateKey_fp(FILE *fp, EC_KEY **eckey)` — `crypto/x509/x_all.c:457-460`, the
@@ -1346,15 +1279,10 @@ pub unsafe extern "C" fn i2d_EC_PUBKEY_fp(fp: *mut FILE, eckey: *const EcKey) ->
 /// `fp` must be a live `FILE *`; `eckey` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_ECPrivateKey_fp(fp: *mut FILE, eckey: *mut *mut EcKey) -> *mut EcKey {
-    // SAFETY: `fp`/`eckey` are the caller's; `d2i_of` restates `d2i_ECPrivateKey`'s contract.
+    // SAFETY: `fp`/`eckey` are the caller's; the typed door forwards `d2i_ECPrivateKey` without re-typing it.
     unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<EcKey>(d2i_ECPrivateKey),
-            fp,
-            eckey.cast::<*mut c_void>(),
-        )
-        .cast::<EcKey>()
+        ASN1_d2i_fp_typed::<EcKey>(d2i_ECPrivateKey, fp, eckey.cast::<*mut c_void>())
+            .cast::<EcKey>()
     }
 }
 
@@ -1365,14 +1293,8 @@ pub unsafe extern "C" fn d2i_ECPrivateKey_fp(fp: *mut FILE, eckey: *mut *mut EcK
 /// `fp` must be a live `FILE *`; `eckey` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_ECPrivateKey_fp(fp: *mut FILE, eckey: *const EcKey) -> c_int {
-    // SAFETY: `fp`/`eckey` are the caller's; `i2d_of` restates `i2d_ECPrivateKey`'s contract.
-    unsafe {
-        ASN1_i2d_fp(
-            i2d_of::<EcKey>(i2d_ECPrivateKey),
-            fp,
-            eckey.cast::<c_void>(),
-        )
-    }
+    // SAFETY: `fp`/`eckey` are the caller's; the typed door forwards `i2d_ECPrivateKey` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<EcKey>(i2d_ECPrivateKey, fp, eckey.cast::<c_void>()) }
 }
 
 /// `EC_KEY *d2i_EC_PUBKEY_bio(BIO *bp, EC_KEY **eckey)` — `crypto/x509/x_all.c:467-470`.
@@ -1382,15 +1304,9 @@ pub unsafe extern "C" fn i2d_ECPrivateKey_fp(fp: *mut FILE, eckey: *const EcKey)
 /// `bp` must be a live BIO; `eckey` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_EC_PUBKEY_bio(bp: *mut Bio, eckey: *mut *mut EcKey) -> *mut EcKey {
-    // SAFETY: `bp`/`eckey` are the caller's; `d2i_of` restates `d2i_EC_PUBKEY`'s contract.
+    // SAFETY: `bp`/`eckey` are the caller's; the typed door forwards `d2i_EC_PUBKEY` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<EcKey>(d2i_EC_PUBKEY),
-            bp,
-            eckey.cast::<*mut c_void>(),
-        )
-        .cast::<EcKey>()
+        ASN1_d2i_bio_typed::<EcKey>(d2i_EC_PUBKEY, bp, eckey.cast::<*mut c_void>()).cast::<EcKey>()
     }
 }
 
@@ -1401,8 +1317,8 @@ pub unsafe extern "C" fn d2i_EC_PUBKEY_bio(bp: *mut Bio, eckey: *mut *mut EcKey)
 /// `bp` must be a live BIO; `eckey` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_EC_PUBKEY_bio(bp: *mut Bio, eckey: *const EcKey) -> c_int {
-    // SAFETY: `bp`/`eckey` are the caller's; `i2d_of` restates `i2d_EC_PUBKEY`'s contract.
-    unsafe { ASN1_i2d_bio(i2d_of::<EcKey>(i2d_EC_PUBKEY), bp, eckey.cast::<c_void>()) }
+    // SAFETY: `bp`/`eckey` are the caller's; the typed door forwards `i2d_EC_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_bio_typed::<EcKey>(i2d_EC_PUBKEY, bp, eckey.cast::<c_void>()) }
 }
 
 /// `EC_KEY *d2i_ECPrivateKey_bio(BIO *bp, EC_KEY **eckey)` — `crypto/x509/x_all.c:477-480`.
@@ -1412,15 +1328,10 @@ pub unsafe extern "C" fn i2d_EC_PUBKEY_bio(bp: *mut Bio, eckey: *const EcKey) ->
 /// `bp` must be a live BIO; `eckey` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_ECPrivateKey_bio(bp: *mut Bio, eckey: *mut *mut EcKey) -> *mut EcKey {
-    // SAFETY: `bp`/`eckey` are the caller's; `d2i_of` restates `d2i_ECPrivateKey`'s contract.
+    // SAFETY: `bp`/`eckey` are the caller's; the typed door forwards `d2i_ECPrivateKey` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<EcKey>(d2i_ECPrivateKey),
-            bp,
-            eckey.cast::<*mut c_void>(),
-        )
-        .cast::<EcKey>()
+        ASN1_d2i_bio_typed::<EcKey>(d2i_ECPrivateKey, bp, eckey.cast::<*mut c_void>())
+            .cast::<EcKey>()
     }
 }
 
@@ -1431,14 +1342,8 @@ pub unsafe extern "C" fn d2i_ECPrivateKey_bio(bp: *mut Bio, eckey: *mut *mut EcK
 /// `bp` must be a live BIO; `eckey` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_ECPrivateKey_bio(bp: *mut Bio, eckey: *const EcKey) -> c_int {
-    // SAFETY: `bp`/`eckey` are the caller's; `i2d_of` restates `i2d_ECPrivateKey`'s contract.
-    unsafe {
-        ASN1_i2d_bio(
-            i2d_of::<EcKey>(i2d_ECPrivateKey),
-            bp,
-            eckey.cast::<c_void>(),
-        )
-    }
+    // SAFETY: `bp`/`eckey` are the caller's; the typed door forwards `i2d_ECPrivateKey` without re-typing it.
+    unsafe { ASN1_i2d_bio_typed::<EcKey>(i2d_ECPrivateKey, bp, eckey.cast::<c_void>()) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1793,15 +1698,9 @@ pub unsafe extern "C" fn PKCS7_ISSUER_AND_SERIAL_digest(
 /// `fp` must be a live `FILE *`; `p8` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_PKCS8_fp(fp: *mut FILE, p8: *mut *mut X509Sig) -> *mut X509Sig {
-    // SAFETY: `fp`/`p8` are the caller's; `d2i_of` restates `d2i_X509_SIG`'s contract.
+    // SAFETY: `fp`/`p8` are the caller's; the typed door forwards `d2i_X509_SIG` without re-typing it.
     unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<X509Sig>(d2i_X509_SIG),
-            fp,
-            p8.cast::<*mut c_void>(),
-        )
-        .cast::<X509Sig>()
+        ASN1_d2i_fp_typed::<X509Sig>(d2i_X509_SIG, fp, p8.cast::<*mut c_void>()).cast::<X509Sig>()
     }
 }
 
@@ -1812,8 +1711,8 @@ pub unsafe extern "C" fn d2i_PKCS8_fp(fp: *mut FILE, p8: *mut *mut X509Sig) -> *
 /// `fp` must be a live `FILE *`; `p8` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_PKCS8_fp(fp: *mut FILE, p8: *const X509Sig) -> c_int {
-    // SAFETY: `fp`/`p8` are the caller's; `i2d_of` restates `i2d_X509_SIG`'s contract.
-    unsafe { ASN1_i2d_fp(i2d_of::<X509Sig>(i2d_X509_SIG), fp, p8.cast::<c_void>()) }
+    // SAFETY: `fp`/`p8` are the caller's; the typed door forwards `i2d_X509_SIG` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<X509Sig>(i2d_X509_SIG, fp, p8.cast::<c_void>()) }
 }
 
 /// `X509_SIG *d2i_PKCS8_bio(BIO *bp, X509_SIG **p8)` — `crypto/x509/x_all.c:662-665`.
@@ -1823,15 +1722,9 @@ pub unsafe extern "C" fn i2d_PKCS8_fp(fp: *mut FILE, p8: *const X509Sig) -> c_in
 /// `bp` must be a live BIO; `p8` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_PKCS8_bio(bp: *mut Bio, p8: *mut *mut X509Sig) -> *mut X509Sig {
-    // SAFETY: `bp`/`p8` are the caller's; `d2i_of` restates `d2i_X509_SIG`'s contract.
+    // SAFETY: `bp`/`p8` are the caller's; the typed door forwards `d2i_X509_SIG` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<X509Sig>(d2i_X509_SIG),
-            bp,
-            p8.cast::<*mut c_void>(),
-        )
-        .cast::<X509Sig>()
+        ASN1_d2i_bio_typed::<X509Sig>(d2i_X509_SIG, bp, p8.cast::<*mut c_void>()).cast::<X509Sig>()
     }
 }
 
@@ -1842,8 +1735,8 @@ pub unsafe extern "C" fn d2i_PKCS8_bio(bp: *mut Bio, p8: *mut *mut X509Sig) -> *
 /// `bp` must be a live BIO; `p8` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_PKCS8_bio(bp: *mut Bio, p8: *const X509Sig) -> c_int {
-    // SAFETY: `bp`/`p8` are the caller's; `i2d_of` restates `i2d_X509_SIG`'s contract.
-    unsafe { ASN1_i2d_bio(i2d_of::<X509Sig>(i2d_X509_SIG), bp, p8.cast::<c_void>()) }
+    // SAFETY: `bp`/`p8` are the caller's; the typed door forwards `i2d_X509_SIG` without re-typing it.
+    unsafe { ASN1_i2d_bio_typed::<X509Sig>(i2d_X509_SIG, bp, p8.cast::<c_void>()) }
 }
 
 /// `X509_PUBKEY *d2i_X509_PUBKEY_fp(FILE *fp, X509_PUBKEY **xpk)` — `crypto/x509/x_all.c:673-677`,
@@ -1857,15 +1750,10 @@ pub unsafe extern "C" fn d2i_X509_PUBKEY_fp(
     fp: *mut FILE,
     xpk: *mut *mut X509Pubkey,
 ) -> *mut X509Pubkey {
-    // SAFETY: `fp`/`xpk` are the caller's; `d2i_of` restates `d2i_X509_PUBKEY`'s contract.
+    // SAFETY: `fp`/`xpk` are the caller's; the typed door forwards `d2i_X509_PUBKEY` without re-typing it.
     unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<X509Pubkey>(d2i_X509_PUBKEY),
-            fp,
-            xpk.cast::<*mut c_void>(),
-        )
-        .cast::<X509Pubkey>()
+        ASN1_d2i_fp_typed::<X509Pubkey>(d2i_X509_PUBKEY, fp, xpk.cast::<*mut c_void>())
+            .cast::<X509Pubkey>()
     }
 }
 
@@ -1879,14 +1767,8 @@ pub unsafe extern "C" fn d2i_X509_PUBKEY_fp(
 /// `fp` must be a live `FILE *`; `xpk` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_X509_PUBKEY_fp(fp: *mut FILE, xpk: *const X509Pubkey) -> c_int {
-    // SAFETY: `fp`/`xpk` are the caller's; `i2d_of` restates `i2d_X509_PUBKEY`'s contract.
-    unsafe {
-        ASN1_i2d_fp(
-            i2d_of::<X509Pubkey>(i2d_X509_PUBKEY),
-            fp,
-            xpk.cast::<c_void>(),
-        )
-    }
+    // SAFETY: `fp`/`xpk` are the caller's; the typed door forwards `i2d_X509_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<X509Pubkey>(i2d_X509_PUBKEY, fp, xpk.cast::<c_void>()) }
 }
 
 /// `X509_PUBKEY *d2i_X509_PUBKEY_bio(BIO *bp, X509_PUBKEY **xpk)` — `crypto/x509/x_all.c:685-689`.
@@ -1899,15 +1781,10 @@ pub unsafe extern "C" fn d2i_X509_PUBKEY_bio(
     bp: *mut Bio,
     xpk: *mut *mut X509Pubkey,
 ) -> *mut X509Pubkey {
-    // SAFETY: `bp`/`xpk` are the caller's; `d2i_of` restates `d2i_X509_PUBKEY`'s contract.
+    // SAFETY: `bp`/`xpk` are the caller's; the typed door forwards `d2i_X509_PUBKEY` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<X509Pubkey>(d2i_X509_PUBKEY),
-            bp,
-            xpk.cast::<*mut c_void>(),
-        )
-        .cast::<X509Pubkey>()
+        ASN1_d2i_bio_typed::<X509Pubkey>(d2i_X509_PUBKEY, bp, xpk.cast::<*mut c_void>())
+            .cast::<X509Pubkey>()
     }
 }
 
@@ -1923,11 +1800,10 @@ pub unsafe extern "C" fn d2i_PKCS8_PRIV_KEY_INFO_fp(
     fp: *mut FILE,
     p8inf: *mut *mut Pkcs8PrivKeyInfo,
 ) -> *mut Pkcs8PrivKeyInfo {
-    // SAFETY: `fp`/`p8inf` are the caller's; `d2i_of` restates `d2i_PKCS8_PRIV_KEY_INFO`'s contract.
+    // SAFETY: `fp`/`p8inf` are the caller's; the typed door forwards `d2i_PKCS8_PRIV_KEY_INFO` without re-typing it.
     unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<Pkcs8PrivKeyInfo>(d2i_PKCS8_PRIV_KEY_INFO),
+        ASN1_d2i_fp_typed::<Pkcs8PrivKeyInfo>(
+            d2i_PKCS8_PRIV_KEY_INFO,
             fp,
             p8inf.cast::<*mut c_void>(),
         )
@@ -1946,13 +1822,9 @@ pub unsafe extern "C" fn i2d_PKCS8_PRIV_KEY_INFO_fp(
     fp: *mut FILE,
     p8inf: *const Pkcs8PrivKeyInfo,
 ) -> c_int {
-    // SAFETY: `fp`/`p8inf` are the caller's; `i2d_of` restates `i2d_PKCS8_PRIV_KEY_INFO`'s contract.
+    // SAFETY: `fp`/`p8inf` are the caller's; the typed door forwards `i2d_PKCS8_PRIV_KEY_INFO` without re-typing it.
     unsafe {
-        ASN1_i2d_fp(
-            i2d_of::<Pkcs8PrivKeyInfo>(i2d_PKCS8_PRIV_KEY_INFO),
-            fp,
-            p8inf.cast::<c_void>(),
-        )
+        ASN1_i2d_fp_typed::<Pkcs8PrivKeyInfo>(i2d_PKCS8_PRIV_KEY_INFO, fp, p8inf.cast::<c_void>())
     }
 }
 
@@ -1986,8 +1858,8 @@ pub unsafe extern "C" fn i2d_PKCS8PrivateKeyInfo_fp(fp: *mut FILE, key: *const E
 /// `fp` must be a live `FILE *`; `pkey` a live key.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_PrivateKey_fp(fp: *mut FILE, pkey: *const EvpPkey) -> c_int {
-    // SAFETY: `fp`/`pkey` are the caller's; `i2d_of` restates `i2d_PrivateKey`'s contract.
-    unsafe { ASN1_i2d_fp(i2d_of::<EvpPkey>(i2d_PrivateKey), fp, pkey.cast::<c_void>()) }
+    // SAFETY: `fp`/`pkey` are the caller's; the typed door forwards `i2d_PrivateKey` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<EvpPkey>(i2d_PrivateKey, fp, pkey.cast::<c_void>()) }
 }
 
 /// `EVP_PKEY *d2i_PrivateKey_fp(FILE *fp, EVP_PKEY **a)` — `crypto/x509/x_all.c:728-731`, the
@@ -1998,15 +1870,10 @@ pub unsafe extern "C" fn i2d_PrivateKey_fp(fp: *mut FILE, pkey: *const EvpPkey) 
 /// `fp` must be a live `FILE *`; `a` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_PrivateKey_fp(fp: *mut FILE, a: *mut *mut EvpPkey) -> *mut EvpPkey {
-    // SAFETY: `fp`/`a` are the caller's; `d2i_of` restates `d2i_AutoPrivateKey`'s contract.
+    // SAFETY: `fp`/`a` are the caller's; the typed door forwards `d2i_AutoPrivateKey` without re-typing it.
     unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<EvpPkey>(d2i_AutoPrivateKey),
-            fp,
-            a.cast::<*mut c_void>(),
-        )
-        .cast::<EvpPkey>()
+        ASN1_d2i_fp_typed::<EvpPkey>(d2i_AutoPrivateKey, fp, a.cast::<*mut c_void>())
+            .cast::<EvpPkey>()
     }
 }
 
@@ -2057,8 +1924,8 @@ pub unsafe extern "C" fn d2i_PrivateKey_ex_fp(
 /// `fp` must be a live `FILE *`; `pkey` a live key.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_PUBKEY_fp(fp: *mut FILE, pkey: *const EvpPkey) -> c_int {
-    // SAFETY: `fp`/`pkey` are the caller's; `i2d_of` restates `i2d_PUBKEY`'s contract.
-    unsafe { ASN1_i2d_fp(i2d_of::<EvpPkey>(i2d_PUBKEY), fp, pkey.cast::<c_void>()) }
+    // SAFETY: `fp`/`pkey` are the caller's; the typed door forwards `i2d_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_fp_typed::<EvpPkey>(i2d_PUBKEY, fp, pkey.cast::<c_void>()) }
 }
 
 /// `EVP_PKEY *d2i_PUBKEY_ex_fp(FILE *fp, EVP_PKEY **a, OSSL_LIB_CTX *libctx, const char *propq)`
@@ -2106,15 +1973,9 @@ pub unsafe extern "C" fn d2i_PUBKEY_ex_fp(
 /// `fp` must be a live `FILE *`; `a` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_PUBKEY_fp(fp: *mut FILE, a: *mut *mut EvpPkey) -> *mut EvpPkey {
-    // SAFETY: `fp`/`a` are the caller's; `d2i_of` restates `d2i_PUBKEY`'s contract.
+    // SAFETY: `fp`/`a` are the caller's; the typed door forwards `d2i_PUBKEY` without re-typing it.
     unsafe {
-        ASN1_d2i_fp(
-            unused_new,
-            d2i_of::<EvpPkey>(d2i_PUBKEY),
-            fp,
-            a.cast::<*mut c_void>(),
-        )
-        .cast::<EvpPkey>()
+        ASN1_d2i_fp_typed::<EvpPkey>(d2i_PUBKEY, fp, a.cast::<*mut c_void>()).cast::<EvpPkey>()
     }
 }
 
@@ -2129,11 +1990,10 @@ pub unsafe extern "C" fn d2i_PKCS8_PRIV_KEY_INFO_bio(
     bp: *mut Bio,
     p8inf: *mut *mut Pkcs8PrivKeyInfo,
 ) -> *mut Pkcs8PrivKeyInfo {
-    // SAFETY: `bp`/`p8inf` are the caller's; `d2i_of` restates `d2i_PKCS8_PRIV_KEY_INFO`'s contract.
+    // SAFETY: `bp`/`p8inf` are the caller's; the typed door forwards `d2i_PKCS8_PRIV_KEY_INFO` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<Pkcs8PrivKeyInfo>(d2i_PKCS8_PRIV_KEY_INFO),
+        ASN1_d2i_bio_typed::<Pkcs8PrivKeyInfo>(
+            d2i_PKCS8_PRIV_KEY_INFO,
             bp,
             p8inf.cast::<*mut c_void>(),
         )
@@ -2152,13 +2012,9 @@ pub unsafe extern "C" fn i2d_PKCS8_PRIV_KEY_INFO_bio(
     bp: *mut Bio,
     p8inf: *const Pkcs8PrivKeyInfo,
 ) -> c_int {
-    // SAFETY: `bp`/`p8inf` are the caller's; `i2d_of` restates `i2d_PKCS8_PRIV_KEY_INFO`'s contract.
+    // SAFETY: `bp`/`p8inf` are the caller's; the typed door forwards `i2d_PKCS8_PRIV_KEY_INFO` without re-typing it.
     unsafe {
-        ASN1_i2d_bio(
-            i2d_of::<Pkcs8PrivKeyInfo>(i2d_PKCS8_PRIV_KEY_INFO),
-            bp,
-            p8inf.cast::<c_void>(),
-        )
+        ASN1_i2d_bio_typed::<Pkcs8PrivKeyInfo>(i2d_PKCS8_PRIV_KEY_INFO, bp, p8inf.cast::<c_void>())
     }
 }
 
@@ -2189,8 +2045,8 @@ pub unsafe extern "C" fn i2d_PKCS8PrivateKeyInfo_bio(bp: *mut Bio, key: *const E
 /// `bp` must be a live BIO; `pkey` a live key.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_PrivateKey_bio(bp: *mut Bio, pkey: *const EvpPkey) -> c_int {
-    // SAFETY: `bp`/`pkey` are the caller's; `i2d_of` restates `i2d_PrivateKey`'s contract.
-    unsafe { ASN1_i2d_bio(i2d_of::<EvpPkey>(i2d_PrivateKey), bp, pkey.cast::<c_void>()) }
+    // SAFETY: `bp`/`pkey` are the caller's; the typed door forwards `i2d_PrivateKey` without re-typing it.
+    unsafe { ASN1_i2d_bio_typed::<EvpPkey>(i2d_PrivateKey, bp, pkey.cast::<c_void>()) }
 }
 
 /// `EVP_PKEY *d2i_PrivateKey_bio(BIO *bp, EVP_PKEY **a)` — `crypto/x509/x_all.c:808-811`.
@@ -2200,15 +2056,10 @@ pub unsafe extern "C" fn i2d_PrivateKey_bio(bp: *mut Bio, pkey: *const EvpPkey) 
 /// `bp` must be a live BIO; `a` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_PrivateKey_bio(bp: *mut Bio, a: *mut *mut EvpPkey) -> *mut EvpPkey {
-    // SAFETY: `bp`/`a` are the caller's; `d2i_of` restates `d2i_AutoPrivateKey`'s contract.
+    // SAFETY: `bp`/`a` are the caller's; the typed door forwards `d2i_AutoPrivateKey` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<EvpPkey>(d2i_AutoPrivateKey),
-            bp,
-            a.cast::<*mut c_void>(),
-        )
-        .cast::<EvpPkey>()
+        ASN1_d2i_bio_typed::<EvpPkey>(d2i_AutoPrivateKey, bp, a.cast::<*mut c_void>())
+            .cast::<EvpPkey>()
     }
 }
 
@@ -2253,8 +2104,8 @@ pub unsafe extern "C" fn d2i_PrivateKey_ex_bio(
 /// `bp` must be a live BIO; `pkey` a live key.
 #[no_mangle]
 pub unsafe extern "C" fn i2d_PUBKEY_bio(bp: *mut Bio, pkey: *const EvpPkey) -> c_int {
-    // SAFETY: `bp`/`pkey` are the caller's; `i2d_of` restates `i2d_PUBKEY`'s contract.
-    unsafe { ASN1_i2d_bio(i2d_of::<EvpPkey>(i2d_PUBKEY), bp, pkey.cast::<c_void>()) }
+    // SAFETY: `bp`/`pkey` are the caller's; the typed door forwards `i2d_PUBKEY` without re-typing it.
+    unsafe { ASN1_i2d_bio_typed::<EvpPkey>(i2d_PUBKEY, bp, pkey.cast::<c_void>()) }
 }
 
 /// `EVP_PKEY *d2i_PUBKEY_ex_bio(BIO *bp, EVP_PKEY **a, OSSL_LIB_CTX *libctx, const char *propq)`
@@ -2295,18 +2146,116 @@ pub unsafe extern "C" fn d2i_PUBKEY_ex_bio(
 /// `bp` must be a live BIO; `a` NULL or a writable slot.
 #[no_mangle]
 pub unsafe extern "C" fn d2i_PUBKEY_bio(bp: *mut Bio, a: *mut *mut EvpPkey) -> *mut EvpPkey {
-    // SAFETY: `bp`/`a` are the caller's; `d2i_of` restates `d2i_PUBKEY`'s contract.
+    // SAFETY: `bp`/`a` are the caller's; the typed door forwards `d2i_PUBKEY` without re-typing it.
     unsafe {
-        ASN1_d2i_bio(
-            unused_new,
-            d2i_of::<EvpPkey>(d2i_PUBKEY),
-            bp,
-            a.cast::<*mut c_void>(),
-        )
-        .cast::<EvpPkey>()
+        ASN1_d2i_bio_typed::<EvpPkey>(d2i_PUBKEY, bp, a.cast::<*mut c_void>()).cast::<EvpPkey>()
     }
 }
 
 // The `X509_CINF_it`/`X509_it`/`X509_CRL_it`/`X509_CRL_INFO_it` used above are 10.8's items, in
 // `src/x509/x_x509.rs` and `src/x509/x_crl.rs`; `X509_get0_extensions` is `crypto/x509/x509_set.c`
 // and `X509_get0_pubkey_bitstr` is `crypto/x509/x_pubkey.c`, both un-withheld by this subphase.
+
+#[cfg(test)]
+mod typed_door_tests {
+    #![allow(clippy::panic, clippy::unwrap_used)]
+
+    use super::*;
+    use crate::asn1::layout::V_ASN1_UNDEF;
+    use crate::asn1::owned::OwnedBlock;
+    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_free, BIO_new};
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::runtime::mem_coords::SeamFile;
+    use crate::runtime::obj::{NID_rsaEncryption, OBJ_nid2obj};
+    use crate::x509::x_pubkey::{
+        i2d_X509_PUBKEY, i2d_X509_PUBKEY_bio, X509_PUBKEY_free, X509_PUBKEY_new,
+        X509_PUBKEY_set0_param,
+    };
+
+    /// A live `X509_PUBKEY` whose algorithm is `rsaEncryption` and whose bit string is the three
+    /// bytes `04 aa bb`. The key body is deliberately not a valid RSAPublicKey: the decode arm
+    /// tolerates an undecodable key, and the round trip is compared on DER, not on the pkey.
+    unsafe fn fixture() -> *mut X509Pubkey {
+        let pk = X509_PUBKEY_new();
+        assert!(!pk.is_null());
+        // A crate-allocator block, unlike a `Vec`, is releasable by the object's own free path.
+        let bytes = OwnedBlock::<u8>::malloc(3, SeamFile::NULL, 0).unwrap();
+        let raw = bytes.into_raw();
+        // SAFETY: `raw` is three writable bytes from the allocator seam, transferred to `pk`.
+        unsafe {
+            core::ptr::copy_nonoverlapping([0x04u8, 0xaa, 0xbb].as_ptr(), raw, 3);
+            assert_eq!(
+                X509_PUBKEY_set0_param(
+                    pk,
+                    OBJ_nid2obj(NID_rsaEncryption),
+                    V_ASN1_UNDEF,
+                    ptr::null_mut(),
+                    raw,
+                    3,
+                ),
+                1
+            );
+        }
+        pk
+    }
+
+    /// The canonical DER of `pk`, copied out of the allocator and released through the seam.
+    unsafe fn der_of(pk: *const X509Pubkey) -> Vec<u8> {
+        let mut out: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `pk` is live and `out` is a null slot the encoder fills with an owned block.
+        let n = unsafe { i2d_X509_PUBKEY(pk, &raw mut out) };
+        assert!(n > 0);
+        // SAFETY: `out` is the encoder's block of `n` bytes.
+        let v = unsafe { core::slice::from_raw_parts(out, n as usize) }.to_vec();
+        // SAFETY: `out` is the block the encoder allocated and nothing else owns it.
+        unsafe { CRYPTO_free(out.cast::<c_void>(), ptr::null(), 0) };
+        v
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_typed_fp_doors_round_trip_a_pubkey() {
+        extern "C" {
+            fn tmpfile() -> *mut FILE;
+            fn rewind(fp: *mut FILE);
+            fn fclose(fp: *mut FILE) -> c_int;
+        }
+        // SAFETY: `tmpfile` opens a fresh stream; every pointer below is this frame's.
+        unsafe {
+            let pk = fixture();
+            let want = der_of(pk);
+            let fp = tmpfile();
+            assert!(!fp.is_null());
+            assert!(i2d_X509_PUBKEY_fp(fp, pk) > 0);
+            rewind(fp);
+            let mut back: *mut X509Pubkey = ptr::null_mut();
+            let read = d2i_X509_PUBKEY_fp(fp, &raw mut back);
+            assert!(!read.is_null());
+            assert_eq!(der_of(read), want);
+            X509_PUBKEY_free(back);
+            X509_PUBKEY_free(pk);
+            assert_eq!(fclose(fp), 0);
+        }
+    }
+
+    #[test]
+    fn the_typed_bio_read_door_round_trips_a_pubkey() {
+        // SAFETY: `pk` is live, `bio` is a fresh memory BIO, and every out-slot is this frame's.
+        unsafe {
+            let pk = fixture();
+            let want = der_of(pk);
+            let bio = BIO_new(BIO_s_mem());
+            assert!(!bio.is_null());
+            assert!(i2d_X509_PUBKEY_bio(bio, pk) > 0);
+            // A memory BIO reads from the start of what was written; `BIO_CTRL_RESET` would
+            // discard the buffer (the authority's `mem_ctrl` frees it), so it is not used here.
+            let mut back: *mut X509Pubkey = ptr::null_mut();
+            let read = d2i_X509_PUBKEY_bio(bio, &raw mut back);
+            assert!(!read.is_null());
+            assert_eq!(der_of(read), want);
+            X509_PUBKEY_free(back);
+            X509_PUBKEY_free(pk);
+            BIO_free(bio);
+        }
+    }
+}
