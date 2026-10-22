@@ -788,6 +788,76 @@ unsafe fn cms_RecipientInfo_ktri_init(
     1
 }
 
+/// The push step of recipient publication, parameterised so a test can force the one fallible
+/// operation that remains after the recipient has been allocated.
+type RecipientInfoPushFn = unsafe extern "C" fn(*mut OpenSslStack, *const c_void) -> c_int;
+
+/// Ownership of one `CMS_RecipientInfo` between allocation and publication on the enclosing
+/// `recipientInfos` stack.
+///
+/// The authority allocates a recipient, fills it through an arm-specific constructor, and only
+/// then pushes it; every step before the push can fail, and each failure arm frees the recipient
+/// itself. This owner states that claim in the type: until [`publish`](Self::publish) consumes
+/// it, `Drop` runs the authority's own destructor (`cms_ri_cb`, through `cms_recipientinfo_it`),
+/// and `publish` consumes it **only after** a successful push. A refused push therefore cannot
+/// both release the recipient and leave its pointer on the stack, and no failure arm can forget
+/// the release.
+struct UnpublishedRecipient {
+    /// The sole claim on the allocated recipient. Never published while this exists.
+    ri: core::ptr::NonNull<CmsRecipientInfo>,
+}
+
+impl UnpublishedRecipient {
+    /// Adopt a freshly allocated recipient.
+    ///
+    /// # Safety
+    /// `ri` is NULL or the result of `m_asn1_new(cms_recipientinfo_it())` with no other owner.
+    unsafe fn adopt(ri: *mut CmsRecipientInfo) -> Option<Self> {
+        core::ptr::NonNull::new(ri).map(|ri| Self { ri })
+    }
+
+    fn as_ptr(&self) -> *mut CmsRecipientInfo {
+        self.ri.as_ptr()
+    }
+
+    /// Publish on `ris`, consuming the owner only on success. On failure the owner is handed
+    /// back, so a caller that installed adopted fields can detach them before it drops.
+    ///
+    /// # Safety
+    /// `ris` is the live recipient stack of the enclosing `CMS_ContentInfo`.
+    unsafe fn publish(self, ris: *mut OpenSslStack) -> Result<*mut CmsRecipientInfo, Self> {
+        // SAFETY: the caller's contract; `OPENSSL_sk_push` is the ordinary push step.
+        unsafe { self.publish_with(ris, OPENSSL_sk_push) }
+    }
+
+    /// [`publish`](Self::publish) with an explicit push step, so a test can exercise a refused
+    /// publication without a failing allocator.
+    ///
+    /// # Safety
+    /// `ris` is the live recipient stack and `push` is a stack-push operation valid for it.
+    unsafe fn publish_with(
+        self,
+        ris: *mut OpenSslStack,
+        push: RecipientInfoPushFn,
+    ) -> Result<*mut CmsRecipientInfo, Self> {
+        let ri = self.ri.as_ptr();
+        // SAFETY: `ris`/`ri` are live and `ri` has not been published while this owner exists.
+        if unsafe { push(ris, ri.cast()) } == 0 {
+            return Err(self);
+        }
+        // The push transferred the claim to the stack; dropping now would double-release.
+        core::mem::forget(self);
+        Ok(ri)
+    }
+}
+
+impl Drop for UnpublishedRecipient {
+    fn drop(&mut self) {
+        // SAFETY: this is the only claim on a recipient that was never published.
+        unsafe { m_asn1_free(self.ri.as_ptr().cast(), cms_recipientinfo_it()) };
+    }
+}
+
 /// `CMS_RecipientInfo *CMS_add1_recipient(CMS_ContentInfo *cms, X509 *recip,`
 /// `EVP_PKEY *originatorPrivKey, X509 *originator, unsigned int flags)` — `cms_env.c:404-463`.
 ///
@@ -801,7 +871,6 @@ pub(crate) unsafe extern "C" fn CMS_add1_recipient(
     originator: *mut X509,
     flags: c_uint,
 ) -> *mut CmsRecipientInfo {
-    let mut ri: *mut CmsRecipientInfo = ptr::null_mut();
     let mut pk: *mut EvpPkey = ptr::null_mut();
     // SAFETY: `cms` is live.
     let ctx = unsafe { ossl_cms_get0_cmsctx(cms) };
@@ -814,12 +883,14 @@ pub(crate) unsafe extern "C" fn CMS_add1_recipient(
 
     // Initialize recipient info.
     // SAFETY: the item answers a fresh recipient.
-    ri = unsafe { m_asn1_new(cms_recipientinfo_it()) }.cast::<CmsRecipientInfo>();
-    if ri.is_null() {
+    let ri = unsafe { m_asn1_new(cms_recipientinfo_it()) }.cast::<CmsRecipientInfo>();
+    // SAFETY: `ri` is NULL or a fresh recipient with no other owner.
+    let Some(slot) = (unsafe { UnpublishedRecipient::adopt(ri) }) else {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(420, c"CMS_add1_recipient", ERR_R_ASN1_LIB) };
         return ptr::null_mut();
-    }
+    };
+    let ri = slot.as_ptr();
 
     // SAFETY: `recip` is live.
     pk = unsafe { X509_get0_pubkey(recip) };
@@ -832,8 +903,7 @@ pub(crate) unsafe extern "C" fn CMS_add1_recipient(
                 crate::runtime::err::err_reasons::CMS_R_ERROR_GETTING_PUBLIC_KEY,
             )
         };
-        // SAFETY: `ri` is NULL or owned.
-        unsafe { m_asn1_free(ri.cast(), cms_recipientinfo_it()) };
+        // `slot` releases the un-published recipient (only its own skeleton was acquired).
         return ptr::null_mut();
     }
 
@@ -863,8 +933,8 @@ pub(crate) unsafe extern "C" fn CMS_add1_recipient(
         false
     };
     if !ok {
-        // SAFETY: `ri` is NULL or owned.
-        unsafe { m_asn1_free(ri.cast(), cms_recipientinfo_it()) };
+        // `slot` releases the un-published recipient; each arm's constructor has already
+        // detached or released whatever it acquired before reporting failure.
         // SAFETY: the site is a compile-time constant.
         unsafe {
             raise_cms(
@@ -876,16 +946,16 @@ pub(crate) unsafe extern "C" fn CMS_add1_recipient(
         return ptr::null_mut();
     }
 
-    // SAFETY: `ris`/`ri` are live.
-    if unsafe { OPENSSL_sk_push(ris, ri.cast()) } == 0 {
-        // SAFETY: the site is a compile-time constant.
-        unsafe { raise_cms(454, c"CMS_add1_recipient", ERR_R_CRYPTO_LIB) };
-        // SAFETY: `ri` is owned here.
-        unsafe { m_asn1_free(ri.cast(), cms_recipientinfo_it()) };
-        return ptr::null_mut();
+    // SAFETY: `ris` is live and the slot is the sole claim until the push succeeds.
+    match unsafe { slot.publish(ris) } {
+        Ok(published) => published,
+        Err(_slot) => {
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_cms(454, c"CMS_add1_recipient", ERR_R_CRYPTO_LIB) };
+            // `_slot` drops here with the recipient never published on the stack.
+            ptr::null_mut()
+        }
     }
-
-    ri
 }
 
 /// `CMS_RecipientInfo *CMS_add1_recipient_cert(CMS_ContentInfo *cms, X509 *recip,`
@@ -1424,10 +1494,6 @@ pub(crate) unsafe extern "C" fn CMS_add0_recipient_key(
     }
 }
 
-/// The push step of [`CMS_add0_recipient_key`], parameterised so a test can force the one
-/// fallible operation that remains after the recipient has been allocated.
-type RecipientInfoPushFn = unsafe extern "C" fn(*mut OpenSslStack, *const c_void) -> c_int;
-
 /// Body of [`CMS_add0_recipient_key`].
 ///
 /// **Recorded divergence (failure atomicity).** The authority pushes `ri` onto
@@ -1455,7 +1521,6 @@ unsafe fn cms_add0_recipient_key_with_push(
     other_type: *mut Asn1Type,
     push: RecipientInfoPushFn,
 ) -> *mut CmsRecipientInfo {
-    let mut ri: *mut CmsRecipientInfo = ptr::null_mut();
     // SAFETY: `cms` is live.
     let ris = unsafe { CMS_get0_RecipientInfos(cms) };
 
@@ -1510,12 +1575,14 @@ unsafe fn cms_add0_recipient_key_with_push(
 
     // Initialize recipient info.
     // SAFETY: the item answers a fresh recipient.
-    ri = unsafe { m_asn1_new(cms_recipientinfo_it()) }.cast::<CmsRecipientInfo>();
-    if ri.is_null() {
+    let ri = unsafe { m_asn1_new(cms_recipientinfo_it()) }.cast::<CmsRecipientInfo>();
+    // SAFETY: `ri` is NULL or a fresh recipient with no other owner.
+    let Some(slot) = (unsafe { UnpublishedRecipient::adopt(ri) }) else {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(757, c"CMS_add0_recipient_key", ERR_R_ASN1_LIB) };
         return ptr::null_mut();
-    }
+    };
+    let ri = slot.as_ptr();
 
     // SAFETY: the item answers a fresh KEK recipient.
     let kekri = unsafe { m_asn1_new(cms_kekrecipientinfo_it()) }.cast::<CmsKekRecipientInfo>();
@@ -1524,8 +1591,8 @@ unsafe fn cms_add0_recipient_key_with_push(
     if kekri.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_cms(763, c"CMS_add0_recipient_key", ERR_R_ASN1_LIB) };
-        // SAFETY: `ri` is owned here.
-        unsafe { m_asn1_free(ri.cast(), cms_recipientinfo_it()) };
+        // `slot` releases the un-published recipient; its selector is still unset, so the
+        // destructor releases only the CHOICE skeleton.
         return ptr::null_mut();
     }
     // SAFETY: `ri` is live.
@@ -1543,8 +1610,7 @@ unsafe fn cms_add0_recipient_key_with_push(
         if other.is_null() {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_cms(773, c"CMS_add0_recipient_key", ERR_R_ASN1_LIB) };
-            // SAFETY: `ri` is owned here.
-            unsafe { m_asn1_free(ri.cast(), cms_recipientinfo_it()) };
+            // `slot` releases the un-published recipient; no caller buffer has been installed yet.
             return ptr::null_mut();
         }
     }
@@ -1581,34 +1647,36 @@ unsafe fn cms_add0_recipient_key_with_push(
         );
     }
 
-    // SAFETY: `ris`/`ri` are live; on failure `ri` has never been published.
-    if unsafe { push(ris, ri.cast()) } == 0 {
-        // SAFETY: the site is a compile-time constant.
-        unsafe { raise_cms(779, c"CMS_add0_recipient_key", ERR_R_CRYPTO_LIB) };
-        // The authority adopts the caller's buffers only on success: its failure arm frees `ri`
-        // before any of them are installed. Detach the values installed above (without releasing
-        // them) so the destructor releases only the recipient's own skeleton and the caller keeps
-        // ownership of `key`, `id`, `date` and the `other` values.
-        //
-        // SAFETY: `ri`/`kekri` are live and owned here; every write is to a field this frame set.
-        unsafe {
-            (*kekri).key = ptr::null_mut();
-            (*kekri).keylen = 0;
-            let kid = (*kekri).kekid;
-            (*(*kid).key_identifier).data = ptr::null_mut();
-            (*(*kid).key_identifier).length = 0;
-            (*kid).date = ptr::null_mut();
-            if !(*kid).other.is_null() {
-                (*(*kid).other).key_attr_id = ptr::null_mut();
-                (*(*kid).other).key_attr = ptr::null_mut();
+    // SAFETY: `ris` is live and the slot is the sole claim until the push succeeds.
+    match unsafe { slot.publish_with(ris, push) } {
+        Ok(published) => published,
+        Err(slot) => {
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_cms(779, c"CMS_add0_recipient_key", ERR_R_CRYPTO_LIB) };
+            // The authority adopts the caller's buffers only on success: its failure arm frees
+            // `ri` before any of them are installed. Detach the values installed above (without
+            // releasing them) so the destructor releases only the recipient's own skeleton and
+            // the caller keeps ownership of `key`, `id`, `date` and the `other` values.
+            //
+            // SAFETY: `ri`/`kekri` are live and owned here; every write is to a field this
+            // frame set.
+            unsafe {
+                (*kekri).key = ptr::null_mut();
+                (*kekri).keylen = 0;
+                let kid = (*kekri).kekid;
+                (*(*kid).key_identifier).data = ptr::null_mut();
+                (*(*kid).key_identifier).length = 0;
+                (*kid).date = ptr::null_mut();
+                if !(*kid).other.is_null() {
+                    (*(*kid).other).key_attr_id = ptr::null_mut();
+                    (*(*kid).other).key_attr = ptr::null_mut();
+                }
             }
+            // The un-published recipient is released exactly once, after the detach.
+            drop(slot);
+            ptr::null_mut()
         }
-        // SAFETY: `ri` is owned here; its adopted fields have been detached.
-        unsafe { m_asn1_free(ri.cast(), cms_recipientinfo_it()) };
-        return ptr::null_mut();
     }
-
-    ri
 }
 
 /// `int CMS_RecipientInfo_kekri_get0_id(CMS_RecipientInfo *ri, X509_ALGOR **palg,`
@@ -1888,7 +1956,17 @@ unsafe fn cms_RecipientInfo_kekri_encrypt(
     r
 }
 
-/// `static int cms_RecipientInfo_kekri_decrypt(CMS_ContentInfo *cms,`
+/// Whether a key-unwrap output length fits the block CMS allocated for it.
+///
+/// The block is sized from the queried unwrapped-key length; the primitive reports what it
+/// wrote. A report larger than the block is a divergence the caller must refuse, because the
+/// length later becomes `ec->keylen`, which `OPENSSL_clear_free` uses as its cleanse extent.
+#[inline]
+fn unwrap_length_fits(reported: c_int, capacity: usize) -> bool {
+    reported >= 0 && reported as usize <= capacity
+}
+
+/// `static int cms_RecipientInfo_kekri_decrypt(CMS_ContentInfo *cms,``
 /// `CMS_RecipientInfo *ri)` — `cms_env.c:950-1028`.
 ///
 /// # Safety
@@ -2042,7 +2120,7 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
     // `OPENSSL_clear_free((*ec).key, (*ec).keylen)` cleanse past the allocation, so the reported
     // length is checked against the capacity here instead of being trusted (CVE-2026-63072's
     // second edge; §17).
-    if ukeylen < 0 || ukeylen as usize > ukey_alloc_len {
+    if !unwrap_length_fits(ukeylen, ukey_alloc_len) {
         // SAFETY: the site is a compile-time constant.
         unsafe {
             raise_cms(
@@ -3326,6 +3404,165 @@ mod tests {
             }
 
             crate::evp::cipher_ctx::EVP_CIPHER_CTX_free(ctx);
+        }
+    }
+
+    // -------------------------------------------------------------------------------------
+    // The recipient-info ownership cluster: allocation, publication, failure release, free
+    // -------------------------------------------------------------------------------------
+
+    /// A live `CMS_ContentInfo` in the standard EnvelopedData arm, with its recipient stack.
+    ///
+    /// # Safety
+    /// The caller owns the container and must release it with `CMS_ContentInfo_free`.
+    unsafe fn enveloped_cms() -> *mut CmsContentInfo {
+        // SAFETY: the accessor answers a live legacy cipher and the constructor a fresh
+        // container whose `recipientInfos` stack `cms_enveloped_data_init` creates.
+        let cms = unsafe { CMS_EnvelopedData_create(crate::evp::e_aes::EVP_aes_128_cbc()) };
+        assert!(!cms.is_null(), "the EnvelopedData container must allocate");
+        cms
+    }
+
+    /// A publication step that always refuses, standing in for a failing stack push.
+    unsafe extern "C" fn refuse_push(_st: *mut OpenSslStack, _data: *const c_void) -> c_int {
+        0
+    }
+
+    /// A successful add publishes exactly one recipient, the stack holds that same pointer, and
+    /// the container's destructor releases it once (a second release would abort here).
+    #[test]
+    fn add_recipient_key_publishes_once_and_releases_once() {
+        // SAFETY: every allocation below is owned by this frame until it is transferred or freed.
+        unsafe {
+            let cms = enveloped_cms();
+            let ris = CMS_get0_RecipientInfos(cms);
+            assert!(!ris.is_null());
+            // `key` and `id` transfer to the recipient on success.
+            let key = filled_block(16, 0xA1);
+            let id = filled_block(KEY_ID_LEN, 0x5C);
+            let ri = cms_add0_recipient_key_with_push(
+                cms,
+                NID_id_aes128_wrap,
+                key,
+                16,
+                id,
+                KEY_ID_LEN,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                OPENSSL_sk_push,
+            );
+            assert!(!ri.is_null(), "the recipient must be published");
+            assert_eq!(OPENSSL_sk_num(ris), 1, "exactly one publication");
+            assert_eq!(
+                OPENSSL_sk_value(ris, 0),
+                ri.cast(),
+                "the published value is the recipient itself"
+            );
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// A refused publication must leave the stack empty and must not adopt the caller's buffers:
+    /// releasing them afterwards would double-free if the failure arm had freed them.
+    #[test]
+    fn refused_publication_publishes_nothing_and_keeps_the_callers_buffers() {
+        // SAFETY: as above; the two blocks are freed by this frame because they were not adopted.
+        unsafe {
+            let cms = enveloped_cms();
+            let ris = CMS_get0_RecipientInfos(cms);
+            assert!(!ris.is_null());
+            let key = filled_block(16, 0x11);
+            let id = filled_block(KEY_ID_LEN, 0x22);
+            let ri = cms_add0_recipient_key_with_push(
+                cms,
+                NID_id_aes128_wrap,
+                key,
+                16,
+                id,
+                KEY_ID_LEN,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                refuse_push,
+            );
+            assert!(ri.is_null(), "a refused push must not publish");
+            assert_eq!(OPENSSL_sk_num(ris), 0, "nothing was published");
+            CRYPTO_free(key.cast(), c"cms_env-test".as_ptr(), 0);
+            CRYPTO_free(id.cast(), c"cms_env-test".as_ptr(), 0);
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// Two adds of the same key produce two distinct recipients and two publications; each is
+    /// released once when the container is freed.
+    #[test]
+    fn duplicate_recipient_add_appends_two_distinct_publications() {
+        // SAFETY: every block is transferred to the recipient it is passed to.
+        unsafe {
+            let cms = enveloped_cms();
+            let ris = CMS_get0_RecipientInfos(cms);
+            assert!(!ris.is_null());
+            let first = cms_add0_recipient_key_with_push(
+                cms,
+                NID_id_aes128_wrap,
+                filled_block(16, 0x31),
+                16,
+                filled_block(KEY_ID_LEN, 0x41),
+                KEY_ID_LEN,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                OPENSSL_sk_push,
+            );
+            let second = cms_add0_recipient_key_with_push(
+                cms,
+                NID_id_aes128_wrap,
+                filled_block(16, 0x32),
+                16,
+                filled_block(KEY_ID_LEN, 0x42),
+                KEY_ID_LEN,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                OPENSSL_sk_push,
+            );
+            assert!(!first.is_null() && !second.is_null());
+            assert_ne!(first, second, "each add allocates its own recipient");
+            assert_eq!(OPENSSL_sk_num(ris), 2);
+            assert_eq!(OPENSSL_sk_value(ris, 0), first.cast());
+            assert_eq!(OPENSSL_sk_value(ris, 1), second.cast());
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// CVE-2026-63072's regression at the length boundary: a report larger than the block is
+    /// refused, an exact report is accepted, and a negative report is refused.
+    #[test]
+    fn unwrap_length_larger_than_the_allocation_is_refused() {
+        assert!(unwrap_length_fits(16, 16));
+        assert!(unwrap_length_fits(0, 16));
+        assert!(!unwrap_length_fits(17, 16));
+        assert!(!unwrap_length_fits(-1, 16));
+        assert!(!unwrap_length_fits(c_int::MAX, 0));
+    }
+
+    /// An EnvelopedData whose `recipientInfos` SET is cut short must not decode: the recipient
+    /// set is never handed to the destructor in a half-parsed state.
+    #[test]
+    fn truncated_recipient_set_is_refused_at_decode() {
+        // `SEQUENCE { INTEGER 0, SET { SEQUENCE (truncated) } }` -- the SET claims three bytes
+        // but only the two-byte `30 01` header is present.
+        let der = [0x30u8, 0x07, 0x02, 0x01, 0x00, 0x31, 0x03, 0x30, 0x01];
+        // SAFETY: `der` is a live local and the out-slot is this frame's.
+        unsafe {
+            let mut p = der.as_ptr();
+            let cms = super::super::cms_lib::d2i_CMS_ContentInfo(
+                ptr::null_mut(),
+                &mut p,
+                der.len() as core::ffi::c_long,
+            );
+            assert!(cms.is_null(), "a truncated recipient set must be refused");
         }
     }
 }
