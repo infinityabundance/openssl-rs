@@ -1021,6 +1021,11 @@ PROGRAMS: dict[str, dict] = {
     "irssi": {
         "program": "src/fe-text/irssi", "launch": ["--version"],
         "version_re": r"irssi 1\.4\.5",
+        # The recipe's single top-level `make` recurses into `src/fe-text`, but a re-measured
+        # tree has been observed without the front-end program. Run the workload's own sub-make
+        # explicitly so the artifact the load proof resolves is always built, and a failure here
+        # is reported as a build-step failure rather than a misleading "no program".
+        "make_steps": [["-C", "src/fe-text"]],
         "note": ("irssi's IRC-over-TLS client: it connects, registers, joins the fixture channel "
                  "and receives the fixture message over a verified TLS session; with only the "
                  "unrelated CA the TLS verification fails and it never registers"),
@@ -6276,6 +6281,11 @@ def _wl_prosody(ctx: dict) -> dict:
         "http_ports = { }\nhttps_ports = { }\n"
         "log = { { levels = { min = 'debug' }, to = 'file', filename = '"
         + str(d / "log/prosody.log") + "' } }\n"
+        # The venue runs as root. Without this, mod_posix calls prosody.shutdown() during
+        # startup, before prosody.main_thread is set (startup.lua:357), and the fixture then
+        # aborts on a nil index instead of serving the XMPP listener. The refusal is a
+        # deployment guard, not a protocol behaviour under test; the container is disposable.
+        "run_as_root = true\n"
         f"ssl = {{ certificate = '{pki['srv_crt']}'; key = '{pki['srv_key']}'; }}\n"
         "VirtualHost 'localhost'\n"
         "  modules_enabled = { 'tls', 'saslauth', 'disco', 'ping' }\n"
