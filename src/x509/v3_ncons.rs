@@ -76,7 +76,7 @@ use crate::http::http_lib::OSSL_parse_url;
 use crate::punycode::ossl_a2ulabel;
 use crate::runtime::bio::iolib::BIO_puts;
 use crate::runtime::bio::print::BIO_printf;
-use crate::runtime::bio::sys::{memchr, memcmp, strlen, strncmp};
+use crate::runtime::bio::sys::{memchr, strlen, strncmp};
 use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::err_reasons::X509V3_R_INVALID_SYNTAX;
@@ -842,36 +842,46 @@ unsafe fn subtree_skipped(
     }
 }
 
+/// The canonical encoding of a name, or the empty slice when it has none.
+///
+/// # Safety
+///
+/// `nm` is live and `canon_enc` is NULL or owns `canon_enclen` readable bytes.
+unsafe fn canon_bytes(nm: &X509Name) -> &[u8] {
+    if nm.canon_enclen <= 0 || nm.canon_enc.is_null() {
+        return &[];
+    }
+    // SAFETY: the canonical encoder wrote `canon_enclen` bytes at `canon_enc`.
+    unsafe { core::slice::from_raw_parts(nm.canon_enc, nm.canon_enclen as usize) }
+}
+
 /// `static int nc_dn(const X509_NAME *nm, const X509_NAME *base)` — `crypto/x509/v3_ncons.c:607-625`.
 /// The canonical encoding makes a directory-name subtree test a prefix comparison.
+///
+/// The comparison is `starts_with` over bounded slices: no `memcmp`, no caller-supplied length.
 ///
 /// # Safety
 ///
 /// `nm` and `base` are live `X509_NAME`s.
 unsafe fn nc_dn(nm: *const X509Name, base: *const X509Name) -> c_int {
-    // SAFETY: `nm` is live per the contract; a NULL out-pointer only refreshes `canon_enc`.
-    if unsafe { (*nm).modified } != 0 && unsafe { i2d_X509_NAME(nm, ptr::null_mut()) } < 0 {
-        return X509_V_ERR_OUT_OF_MEM;
-    }
-    // SAFETY: `base` is live per the contract.
-    if unsafe { (*base).modified } != 0 && unsafe { i2d_X509_NAME(base, ptr::null_mut()) } < 0 {
-        return X509_V_ERR_OUT_OF_MEM;
-    }
-    // SAFETY: both are live per the contract.
+    // SAFETY: both are live per the contract; a NULL out-pointer only refreshes `canon_enc`.
     unsafe {
-        if (*base).canon_enclen > (*nm).canon_enclen {
+        if (*nm).modified != 0 && i2d_X509_NAME(nm.cast_mut(), ptr::null_mut()) < 0 {
+            return X509_V_ERR_OUT_OF_MEM;
+        }
+        if (*base).modified != 0 && i2d_X509_NAME(base.cast_mut(), ptr::null_mut()) < 0 {
+            return X509_V_ERR_OUT_OF_MEM;
+        }
+        let nm = canon_bytes(&*nm);
+        let base = canon_bytes(&*base);
+        if base.len() > nm.len() {
             return X509_V_ERR_PERMITTED_VIOLATION;
         }
         // An empty base Name has no canonical encoding and is a prefix of every Name.
-        if (*base).canon_enclen == 0 {
+        if base.is_empty() {
             return X509_V_OK;
         }
-        if memcmp(
-            (*base).canon_enc.cast(),
-            (*nm).canon_enc.cast(),
-            (*base).canon_enclen as usize,
-        ) != 0
-        {
+        if !nm.starts_with(base) {
             return X509_V_ERR_PERMITTED_VIOLATION;
         }
     }
@@ -926,6 +936,68 @@ fn nc_dns(dns: &Asn1String, base: &Asn1String) -> c_int {
     X509_V_OK
 }
 
+/// ASCII case-insensitive equality of two byte spans (lengths must agree).
+fn ia5_eq_ignore_case(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    // SAFETY: both spans have `a.len()` readable bytes.
+    unsafe { ia5ncasecmp(a.as_ptr().cast(), b.as_ptr().cast(), a.len()) == 0 }
+}
+
+/// `static int nc_email(ASN1_IA5STRING *eml, ASN1_IA5STRING *base)` — `crypto/x509/v3_ncons.c:732-775`.
+///
+/// The local part is the slice before the last `@` and the host the slice after it; every
+/// comparison is over bounded slices, so no offset computed from a pointer survives.
+fn nc_email(eml: &Asn1String, base: &Asn1String) -> c_int {
+    // SAFETY: both are live decoded IA5 strings.
+    let (eml, base) = unsafe { (asn1_bytes(eml), asn1_bytes(base)) };
+
+    let Some(eml_at) = eml.iter().rposition(|&b| b == b'@') else {
+        return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
+    };
+    let base_at = base.iter().rposition(|&b| b == b'@');
+
+    // Special case: an initial '.' in a base with no local part is an RHS match.
+    if base_at.is_none() && !base.is_empty() && base[0] == b'.' {
+        if eml.len() > base.len() {
+            let tail = &eml[eml.len() - base.len()..];
+            if ia5_eq_ignore_case(base, tail) {
+                return X509_V_OK;
+            }
+        }
+        return X509_V_ERR_PERMITTED_VIOLATION;
+    }
+
+    // If we have anything before '@', match the local part.
+    if let Some(base_at) = base_at {
+        if base_at > 0 {
+            let base_local = &base[..base_at];
+            let eml_local = &eml[..eml_at];
+            if base_local.len() != eml_local.len() {
+                return X509_V_ERR_PERMITTED_VIOLATION;
+            }
+            if base_local.contains(&0) || eml_local.contains(&0) {
+                return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
+            }
+            // Case sensitive match of the local part.
+            if base_local != eml_local {
+                return X509_V_ERR_PERMITTED_VIOLATION;
+            }
+        }
+    }
+
+    // Just the hostname is left to match: case insensitive.
+    let base_host = match base_at {
+        Some(at) => &base[at + 1..],
+        None => base,
+    };
+    if !ia5_eq_ignore_case(base_host, &eml[eml_at + 1..]) {
+        return X509_V_ERR_PERMITTED_VIOLATION;
+    }
+    X509_V_OK
+}
+
 /// `static int nc_email_eai(ASN1_TYPE *emltype, ASN1_IA5STRING *base)` — `crypto/x509/v3_ncons.c:662-730`.
 /// RFC 8398 §6's A-label/U-label comparison of an `SmtpUTF8Mailbox` value against a `base`
 /// rfc822Name.
@@ -935,10 +1007,9 @@ fn nc_dns(dns: &Asn1String, base: &Asn1String) -> c_int {
 /// `emltype` is a live `ASN1_TYPE`; `base` a live IA5 string.
 fn nc_email_eai(emltype: *mut Asn1Type, base: &Asn1String) -> c_int {
     // We do not accept embedded NUL characters.
-    let base_len_prefix = base.length;
-    // SAFETY: `base` owns `base_len_prefix` readable bytes.
-    let base_has_nul = unsafe { !memchr(base.data.cast(), 0, base_len_prefix as usize).is_null() };
-    if base_len_prefix > 0 && base_has_nul {
+    // SAFETY: `base` is a live decoded string.
+    let base_bytes = unsafe { asn1_bytes(base) };
+    if base_bytes.contains(&0) {
         return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
     }
     // 'base' may not be NUL terminated. Create a copy that is.
@@ -972,12 +1043,10 @@ fn nc_email_eai(emltype: *mut Asn1Type, base: &Asn1String) -> c_int {
         // SAFETY: the `utf8string` arm is live under this selector.
         let eml = unsafe { (*emltype).value.ptr.cast::<Asn1String>() };
         // SAFETY: `eml` is a live UTF8 string.
-        let mut emlptr = unsafe { (*eml).data.cast::<c_char>() };
-        // SAFETY: `eml` is live and its content is `eml->length` bytes.
-        let emlat = unsafe { ia5memrchr(eml, '@' as c_int) };
-        if emlat.is_null() {
+        let eml_bytes = unsafe { asn1_bytes(&*eml) };
+        let Some(eml_at) = eml_bytes.iter().rposition(|&b| b == b'@') else {
             break 'end X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
-        }
+        };
         // SAFETY: `baseptr` is NUL-terminated per `CRYPTO_strndup`.
         if unsafe { *baseptr } == b'.' as c_char {
             ulabel[0] = b'.' as c_char;
@@ -987,12 +1056,11 @@ fn nc_email_eai(emltype: *mut Asn1Type, base: &Asn1String) -> c_int {
             }
             // SAFETY: `ulabel` is NUL-terminated by `ossl_a2ulabel` on success.
             let ulen = unsafe { strlen(ulabel.as_ptr()) };
-            // SAFETY: `eml` is live per the contract.
-            if unsafe { (*eml).length as usize } > ulen {
-                // SAFETY: `emlptr` has `eml->length` bytes; the offset is within them.
-                emlptr = unsafe { emlptr.add((*eml).length as usize - ulen) };
-                // SAFETY: `emlptr` has `ulen` readable bytes; `ulabel` is NUL-terminated.
-                if unsafe { ia5ncasecmp(ulabel.as_ptr(), emlptr, ulen) } == 0 {
+            if eml_bytes.len() > ulen {
+                let tail = &eml_bytes[eml_bytes.len() - ulen..];
+                // SAFETY: the label's first `ulen` bytes are the NUL-terminated string.
+                let ul = unsafe { core::slice::from_raw_parts(ulabel.as_ptr().cast::<u8>(), ulen) };
+                if ia5_eq_ignore_case(ul, tail) {
                     break 'end X509_V_OK;
                 }
             }
@@ -1003,92 +1071,15 @@ fn nc_email_eai(emltype: *mut Asn1Type, base: &Asn1String) -> c_int {
             break 'end X509_V_ERR_UNSPECIFIED;
         }
         // Just have hostname left to match: case insensitive.
-        // SAFETY: `emlat` points into `eml`'s bytes, so `emlat + 1` is within them.
-        let hostptr = unsafe { emlat.add(1) };
-        // SAFETY: `eml` is live and `hostptr` points within its bytes.
-        let emlhostlen = unsafe { ia5_offset_len(eml, hostptr) };
         // SAFETY: `ulabel` is NUL-terminated by `ossl_a2ulabel` on success.
         let ulen = unsafe { strlen(ulabel.as_ptr()) };
-        // SAFETY: both pointers have `emlhostlen`/`ulen` readable bytes.
-        if emlhostlen != ulen || unsafe { ia5ncasecmp(ulabel.as_ptr(), hostptr, emlhostlen) } != 0 {
+        // SAFETY: the label's first `ulen` bytes are the NUL-terminated string.
+        let ul = unsafe { core::slice::from_raw_parts(ulabel.as_ptr().cast::<u8>(), ulen) };
+        if !ia5_eq_ignore_case(ul, &eml_bytes[eml_at + 1..]) {
             break 'end X509_V_ERR_PERMITTED_VIOLATION;
         }
         X509_V_OK
     }
-}
-
-/// `static int nc_email(ASN1_IA5STRING *eml, ASN1_IA5STRING *base)` — `crypto/x509/v3_ncons.c:732-775`.
-///
-/// # Safety
-///
-/// `eml` and `base` are live IA5 strings.
-fn nc_email(eml: &Asn1String, base: &Asn1String) -> c_int {
-    let (mut baseptr, mut emlptr, eml_len, base_len) = (
-        base.data.cast::<c_char>().cast_const(),
-        eml.data.cast::<c_char>().cast_const(),
-        eml.length,
-        base.length,
-    );
-    // SAFETY: both are live IA5 strings; `ia5memrchr` reads within them.
-    let baseat = unsafe { ia5memrchr(base, '@' as c_int) };
-    // SAFETY: as above.
-    let emlat = unsafe { ia5memrchr(eml, '@' as c_int) };
-
-    if emlat.is_null() {
-        return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
-    }
-    // Special case: initial '.' is RHS match.
-    // SAFETY: `baseptr` has `base_len` readable bytes (or `base_len == 0`).
-    if baseat.is_null() && base_len > 0 && unsafe { *baseptr } == b'.' as c_char {
-        if eml_len > base_len {
-            // SAFETY: `emlptr` has `eml_len` bytes and `eml_len > base_len`.
-            emlptr = unsafe { emlptr.add((eml_len - base_len) as usize) };
-            // SAFETY: both pointers have `base_len` readable bytes.
-            if unsafe { ia5ncasecmp(baseptr, emlptr, base_len as usize) } == 0 {
-                return X509_V_OK;
-            }
-        }
-        return X509_V_ERR_PERMITTED_VIOLATION;
-    }
-
-    // If we have anything before '@' match local part.
-    if !baseat.is_null() {
-        if baseat != baseptr {
-            // Both pointers are into their live strings, so the differences are the local-part
-            // lengths the authority compares.
-            let base_local = baseat as usize - baseptr as usize;
-            let eml_local = emlat as usize - emlptr as usize;
-            if base_local != eml_local {
-                return X509_V_ERR_PERMITTED_VIOLATION;
-            }
-            // SAFETY: both spans are within their live strings.
-            if unsafe {
-                !memchr(baseptr.cast(), 0, base_local).is_null()
-                    || !memchr(emlptr.cast(), 0, eml_local).is_null()
-            } {
-                return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
-            }
-            // Case sensitive match of local part.
-            // SAFETY: both pointers have `eml_local` readable bytes.
-            if unsafe { strncmp(baseptr, emlptr, eml_local) } != 0 {
-                return X509_V_ERR_PERMITTED_VIOLATION;
-            }
-        }
-        // Position base after '@'.
-        // SAFETY: `baseat` points at an '@' within `base`, so `baseat + 1` is within it.
-        baseptr = unsafe { baseat.add(1) };
-    }
-    // SAFETY: `emlat` points at an '@' within `eml`, so `emlat + 1` is within it.
-    emlptr = unsafe { emlat.add(1) };
-    // SAFETY: `base`/`eml` are live and the two pointers point within them.
-    let (basehostlen, emlhostlen) =
-        unsafe { (ia5_offset_len(base, baseptr), ia5_offset_len(eml, emlptr)) };
-    // Just have hostname left to match: case insensitive.
-    // SAFETY: both pointers have `emlhostlen` readable bytes.
-    if basehostlen != emlhostlen || unsafe { ia5ncasecmp(baseptr, emlptr, emlhostlen) } != 0 {
-        return X509_V_ERR_PERMITTED_VIOLATION;
-    }
-    X509_V_OK
 }
 
 /// `static int nc_uri(ASN1_IA5STRING *uri, ASN1_IA5STRING *base)` — `crypto/x509/v3_ncons.c:777-832`.
@@ -1228,29 +1219,6 @@ fn nc_ip(ip: &Asn1String, base: &Asn1String) -> c_int {
     X509_V_OK
 }
 
-/// `static char *ia5memrchr(ASN1_IA5STRING *str, int c)` — `crypto/x509/v3_ncons.c:102-113`.
-/// The last occurrence of `c` in an IA5 string, or NULL.
-///
-/// # Safety
-///
-/// `str_` is a live IA5 string.
-unsafe fn ia5memrchr(str_: *const Asn1String, c: c_int) -> *const c_char {
-    // SAFETY: `str_` is live per the contract.
-    let mut i = unsafe { (*str_).length };
-    while i > 0 {
-        // SAFETY: `i - 1` is a valid index into `data`'s `length` bytes.
-        if unsafe { *(*str_).data.add((i - 1) as usize) } as c_int == c {
-            break;
-        }
-        i -= 1;
-    }
-    if i == 0 {
-        return ptr::null();
-    }
-    // SAFETY: `i - 1` is a valid index into `data`'s `length` bytes.
-    unsafe { (*str_).data.add((i - 1) as usize).cast::<c_char>() }
-}
-
 /// `static int ia5ncasecmp(const char *s1, const char *s2, size_t n)` — `crypto/x509/v3_ncons.c:122-146`.
 /// A locale-independent ASCII case comparison, so embedded NULs and Turkish `I` are handled as the
 /// authority documents.
@@ -1290,17 +1258,6 @@ unsafe fn ia5ncasecmp(s1: *const c_char, s2: *const c_char, n: usize) -> c_int {
         }
     }
     0
-}
-
-/// `IA5_OFFSET_LEN(ia5base, offset)` — `crypto/x509/v3_ncons.c:93-94`. The byte count from
-/// `offset` to the end of `ia5base`.
-///
-/// # Safety
-///
-/// `offset` points within `ia5base`'s `data` span.
-unsafe fn ia5_offset_len(ia5base: *const Asn1String, offset: *const c_char) -> usize {
-    // SAFETY: `ia5base` is live and `offset` is within its data per the contract.
-    unsafe { ((*ia5base).length as isize - (offset as isize - (*ia5base).data as isize)) as usize }
 }
 
 /// `static int cn2dnsid(ASN1_STRING *cn, unsigned char **dnsid, size_t *idlen)` —
@@ -1601,6 +1558,7 @@ mod tests {
     #![allow(clippy::panic, clippy::unwrap_used)]
 
     use super::*;
+    use crate::asn1::layout::MBSTRING_UTF8;
     use crate::asn1::layout::V_ASN1_OCTET_STRING;
     use crate::asn1::prim::ASN1_INTEGER_set;
     use crate::asn1::string::{
@@ -1610,6 +1568,8 @@ mod tests {
     use crate::x509::v3_genn::{
         GENERAL_NAME_free, GENERAL_NAME_new, GENERAL_NAME_set0_value, GEN_RID,
     };
+    use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+    use crate::x509::x_name::{X509Name, X509_NAME_new};
 
     /// A decoded string of `type_`, owned by the `GENERAL_NAME`/subtree that adopts it.
     unsafe fn str_of(type_: c_int, bytes: &[u8]) -> *mut Asn1String {
@@ -1858,6 +1818,81 @@ mod tests {
             assert_eq!(
                 check(general_name(GEN_RID, rid.cast()), nc),
                 X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE
+            );
+        }
+    }
+
+    unsafe fn dn(entries: &[(&CStr, &CStr)]) -> *mut X509Name {
+        let n = X509_NAME_new();
+        assert!(!n.is_null());
+        for (field, value) in entries {
+            // SAFETY: `n` is fresh; both strings are static literals readable for their length.
+            let rc = unsafe {
+                X509_NAME_add_entry_by_txt(
+                    n,
+                    field.as_ptr(),
+                    MBSTRING_UTF8,
+                    value.as_ptr().cast::<c_uchar>(),
+                    value.to_bytes().len() as c_int,
+                    -1,
+                    0,
+                )
+            };
+            assert_eq!(rc, 1);
+        }
+        n
+    }
+
+    #[test]
+    fn a_directory_name_subtree_is_a_canonical_prefix() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            // The subtree base is the leading RDN; the name carries it as a prefix.
+            let permitted = [subtree(general_name(
+                GEN_DIRNAME,
+                dn(&[(c"O", c"org")]).cast(),
+            ))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(
+                    general_name(GEN_DIRNAME, dn(&[(c"O", c"org"), (c"CN", c"leaf")]).cast()),
+                    nc
+                ),
+                X509_V_OK
+            );
+
+            let permitted = [subtree(general_name(
+                GEN_DIRNAME,
+                dn(&[(c"O", c"other")]).cast(),
+            ))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(general_name(GEN_DIRNAME, dn(&[(c"O", c"org")]).cast()), nc),
+                X509_V_ERR_PERMITTED_VIOLATION
+            );
+
+            // An empty base name is a prefix of every name.
+            let permitted = [subtree(general_name(GEN_DIRNAME, X509_NAME_new().cast()))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(general_name(GEN_DIRNAME, dn(&[(c"O", c"org")]).cast()), nc),
+                X509_V_OK
+            );
+        }
+    }
+
+    #[test]
+    fn an_embedded_nul_in_an_email_local_part_is_unsupported() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own; `check` releases them.
+        unsafe {
+            // Equal local-part lengths, so the authority reaches the embedded-NUL check.
+            let permitted = [subtree(email_name(b"us\0er@example.com"))];
+            let nc = constraints(&permitted, &[]);
+            assert_eq!(
+                check(email_name(b"us\0er@example.com"), nc),
+                X509_V_ERR_UNSUPPORTED_NAME_SYNTAX
             );
         }
     }
