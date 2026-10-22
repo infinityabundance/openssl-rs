@@ -1945,6 +1945,14 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 L7 expansion batch (b10): six more LIBRARY-only consumers, built from their
+    # pristine Debian source archives against the subject prefix. lua-luaossl and lua-sec are Lua
+    # modules whose admitted program is a small Lua harness; getdns, libu2f-server, duo_unix and
+    # dcap-tunnel-ssl are C libraries/plugins driven by the runtime harnesses.
+    for spec in _L7_EXPAND7_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -2058,6 +2066,198 @@ _L7_EXPAND6_SPECS: tuple[dict, ...] = (
         "note": ("libtins 4.5 with its WPA2 decryption path enabled; the PMK derivation uses "
                  "the subject libcrypto's PBKDF2/HMAC (libpcap capture is disabled: the "
                  "workload needs no capture device)"),
+    },
+)
+
+# The Phase-25 L7 expansion batch (b10): six library-only consumers. Each archive is the
+# pristine Debian upstream source, pinned by digest; the subject prefix is the only OpenSSL.
+_LUA54_AUX: tuple[dict, ...] = (
+    _aux_deb("l/lua5.4", "liblua5.4-0_5.4.4-3+deb12u1_amd64.deb",
+             "b042e78d02dd8457cf7de253ae89992e50050f450d9bec66843ffb1a14ab23c7",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("l/lua5.4", "liblua5.4-dev_5.4.4-3+deb12u1_amd64.deb",
+             "f02e06d3598de40a1df51ea4144668a1c6acb8813d4647a6d89cca0d256179d3",
+             include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_LUA_SOCKET_AUX: tuple[dict, ...] = (
+    _aux_deb("l/luasocket", "lua-socket_3.1.0-1+b1_amd64.deb",
+             "63217faf1d497a61e23f8b7a128a494a8db593f4965ead1411429d1a1e46d9dd",
+             library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_LIBU2F_AUX: tuple[dict, ...] = (
+    _aux_deb("j/json-c", "libjson-c5_0.16-2_amd64.deb",
+             "d0e1ed8637d1c26b9720f6057d6355f18378bba5cc2553e459d1632783c00d70",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("j/json-c", "libjson-c-dev_0.16-2_amd64.deb",
+             "b91a921675bde7c777930f9f77e49010a754d787219104464ea0fce04a887337",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("h/help2man", "help2man_1.49.3_amd64.deb",
+             "9b17251751ee4e813df789ba39c25841b9e26bf44206fd53ce4d34bc2d761eed",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gengetopt", "gengetopt_2.23+dfsg1-1_amd64.deb",
+             "b6cc627f20a806625603fa9f97071b4b7da662338e1f22829ffc92867e36695a",
+             bin_dirs=("usr/bin",)),
+)
+
+_DCAP_AUTOTOOLS: tuple[dict, ...] = (
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autoconf", "autoconf_2.71-3_all.deb",
+             "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/automake-1.16", "automake_1.16.5-1.3_all.deb",
+             "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("a/autotools-dev", "autotools-dev_20220109.1_all.deb",
+             "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libltdl-dev_2.4.7-7~deb12u1_amd64.deb",
+             "60ad26b3007d4304a1141649d4e764a27735ff4f1835a62c845d51bd734932b0",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("g/gettext", "gettext_0.21-12_amd64.deb",
+             "8c1f9d43575373ce311f51d00a13afbb4888d63aa559a93a3472f5d77513b60c",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("g/gettext", "autopoint_0.21-12_all.deb",
+             "9864777e777f1f641858e27396bf7dd53c9b38197b7ac47388995ec60bb9789f",
+             bin_dirs=("usr/bin",)),
+)
+
+_L7_EXPAND7_SPECS: tuple[dict, ...] = (
+    {
+        "family": "getdns", "version": "1.7.3",
+        "url": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_SHARED=ON",
+                      "-DENABLE_STATIC=OFF", "-DBUILD_TESTING=OFF",
+                      "-DENABLE_STUB_ONLY=ON", "-DUSE_LIBIDN2=OFF",
+                      "-DBUILD_LIBEV=OFF", "-DBUILD_LIBEVENT2=OFF", "-DBUILD_LIBUV=OFF",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_GETDNS_QUERY=OFF",
+                      "-DBUILD_GETDNS_SERVER_MON=OFF", "-DBUILD_STUBBY=OFF",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib "
+                      "-Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libgetdns.so*", "launch": None,
+        "note": ("getdns 1.7.3 with the stub-only resolver and the poll event loop; its DoT client "
+                 "uses the subject libssl, and the test apps are disabled because the workload is "
+                 "the harness"),
+    },
+    {
+        "family": "libu2f-server", "version": "1.1.0",
+        "url": ("https://deb.debian.org/debian/pool/main/libu/libu2f-server/"
+                "libu2f-server_1.1.0.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "8dcd3caeacebef6e36a42462039fd035e45fa85653dcb2013f45e15aad49a277",
+        "configure": ["--prefix={root}/.l7-install", "--disable-static", "--enable-shared",
+                      "--disable-tests"],
+        "make": ["-j4", "-C", "u2f-server", "CFLAGS=-O2 -DFALSE=0 -DTRUE=1"],
+        "artifact": "u2f-server/.libs/libu2f-server.so*", "launch": None,
+        "aux_sources": list(_LIBU2F_AUX),
+        "note": ("libu2f-server 1.1.0 with its P-256/ES256 verification path linked to the subject "
+                 "libcrypto; json-c is the pinned parser and the two command-line helpers satisfy "
+                 "its configure-time checks"),
+    },
+    {
+        "family": "lua-luaossl", "version": "20220711",
+        "url": ("https://deb.debian.org/debian/pool/main/l/lua-luaossl/"
+                "lua-luaossl_20220711.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "f16c4cd2c880f270c1c73daa0a4bfdd11ae3155b92a2086863731e06d241300b",
+        "make": ["-f", "GNUmakefile", "all", "install5.4", "LUA_APIS=5.4",
+                 "prefix={root}/.l7-install",
+                 "LUA54_CPPFLAGS=-I{aux}/usr/include/lua5.4 "
+                 "-I{aux}/usr/include/x86_64-linux-gnu",
+                 "LUAC54=true", "CPPFLAGS=-I{prefix}/include",
+                 "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "src/5.4/openssl.so", "launch": None,
+        "aux_sources": list(_LUA54_AUX),
+        "note": ("lua-luaossl 20220711 built for Lua 5.4 against the subject libssl/libcrypto; the "
+                 "admitted workload is the Lua digest/HMAC harness"),
+    },
+    {
+        "family": "lua-sec", "version": "1.3.2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lua-sec/lua-sec_1.3.2.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "97293092ba385ab390decb6678bc8cbeffd5899bfbc49eb7ef4aa00f5e31c3d4",
+        "make": ["linux", "EXTRA=luasocket", "DEFS=-DWITH_LUASOCKET",
+                 "INC_PATH=-I{aux}/usr/include/lua5.4 "
+                 "-I{aux}/usr/include/x86_64-linux-gnu -I{prefix}/include",
+                 "LIB_PATH=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "src/ssl.so", "launch": None,
+        "aux_sources": list(_LUA54_AUX) + list(_LUA_SOCKET_AUX),
+        "note": ("LuaSec 1.3.2 built for Lua 5.4 against the subject libssl, with its bundled "
+                 "LuaSocket support; the admitted workload is the Lua TLS client harness"),
+    },
+    {
+        "family": "duo_unix", "version": "1.11.3",
+        "url": "https://deb.debian.org/debian/pool/main/d/duo-unix/duo-unix_1.11.3.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "0fe0f85a834f6522070cb77edb29e77d853eb13932744b98b7b7d9657513f124",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--with-pam=no"],
+        "make": ["-j4"], "artifact": "login_duo/login_duo", "launch": None,
+        "note": ("duo_unix 1.11.3's libduo HMAC-SHA1 request signing against the subject libcrypto; "
+                 "login_duo is the linked executable, and PAM is disabled because the workload "
+                 "drives libduo directly"),
+    },
+    {
+        "family": "dcap-tunnel-ssl", "version": "2.47.14",
+        "url": "https://deb.debian.org/debian/pool/main/d/dcap/dcap_2.47.14.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "dda98990d93cded815ee425101674ad2f48438fff76b3d4d5d3f91e380e9cc49",
+        "configure": ["--prefix={root}/.l7-install"],
+        "make": ["-j4", "-C", "plugins/ssl"],
+        "artifact": "plugins/ssl/.libs/libsslTunnel.so", "launch": None,
+        "aux_sources": list(_DCAP_AUTOTOOLS),
+        "pre_build": [["sh", "-c", (
+            "set -e; "
+            "W={root}/.autotools; mkdir -p $W; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/aclocal-1.16 "
+            "--system-acdir={aux}/usr/share/aclocal-1.16 "
+            "--automake-acdir={aux}/usr/share/aclocal-1.16 \"$@\"\\n' > $W/aclocal; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/automake-1.16 "
+            "--libdir={aux}/usr/share/automake-1.16 \"$@\"\\n' > $W/automake; "
+            "printf '#!/bin/sh\\nexec {aux}/usr/bin/libtoolize \"$@\"\\n' > $W/libtoolize; "
+            "chmod +x $W/aclocal $W/automake $W/libtoolize; "
+            "sed -i 's#/usr/share/autoconf#{aux}/usr/share/autoconf#g' "
+            "{aux}/usr/share/autoconf/autom4te.cfg; "
+            "mkdir -p {aux}/usr/share/libtool/m4; "
+            "cp {aux}/usr/share/aclocal/libtool.m4 {aux}/usr/share/aclocal/lt*.m4 "
+            "{aux}/usr/share/libtool/m4/; "
+            "touch NEWS; "
+            "autoreconf -fi"
+        )]],
+        "env_extra": {
+            "_lt_pkgdatadir": "{aux}/usr/share/libtool",
+            "PATH": "{root}/.autotools:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+            "PERL5LIB": "{aux}/usr/share/autoconf:{aux}/usr/share/automake-1.16",
+            "ACLOCAL_PATH": "/usr/share/aclocal:{aux}/usr/share/aclocal:"
+                            "{aux}/usr/share/libtool/m4",
+            "ACLOCAL": "{root}/.autotools/aclocal",
+            "AUTOMAKE": "{root}/.autotools/automake",
+            "LIBTOOLIZE": "{root}/.autotools/libtoolize",
+            "AUTOPOINT": "true",
+            "AUTOCONF": "{aux}/usr/bin/autoconf",
+            "AUTOHEADER": "{aux}/usr/bin/autoheader",
+            "AUTOM4TE": "{aux}/usr/bin/autom4te",
+            "AUTOM4TE_CFG": "{aux}/usr/share/autoconf/autom4te.cfg",
+            "AC_MACRODIR": "{aux}/usr/share/autoconf",
+            "trailer_m4": "{aux}/usr/share/autoconf/autoconf/trailer.m4",
+            "autom4te_perllibdir": "{aux}/usr/share/autoconf",
+            "M4": "{aux}/usr/bin/m4",
+        },
+        "note": ("dcap-tunnel-ssl 2.47.14's libsslTunnel plugin, the family's actual OpenSSL "
+                 "consumer, built against the subject libssl; the source has no generated "
+                 "configure, so the pinned bookworm autotools bootstrap it as a build input"),
     },
 )
 
