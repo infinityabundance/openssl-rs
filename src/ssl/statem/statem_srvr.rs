@@ -1007,18 +1007,18 @@ impl<'a> SliceCursor<'a> {
 /// are safe functions: no argument can make them panic or write out of bounds. A too-small block
 /// is a clean `None` at the body-writer seam, which the callers turn into the existing failure
 /// return.
-struct BytesWriter<'a> {
+pub(crate) struct BytesWriter<'a> {
     out: &'a mut [u8],
     pos: usize,
 }
 
 impl<'a> BytesWriter<'a> {
-    fn new(out: &'a mut [u8]) -> Self {
+    pub(crate) fn new(out: &'a mut [u8]) -> Self {
         Self { out, pos: 0 }
     }
 
     /// Bytes written so far; `pos` never exceeds `out.len()`.
-    fn written(&self) -> usize {
+    pub(crate) fn written(&self) -> usize {
         self.pos
     }
 
@@ -1031,7 +1031,7 @@ impl<'a> BytesWriter<'a> {
         }
     }
 
-    fn put_bytes(&mut self, bytes: &[u8]) -> bool {
+    pub(crate) fn put_bytes(&mut self, bytes: &[u8]) -> bool {
         let Some(end) = self.pos.checked_add(bytes.len()) else {
             return false;
         };
@@ -1043,17 +1043,17 @@ impl<'a> BytesWriter<'a> {
         true
     }
 
-    fn put_u8(&mut self, value: u8) -> bool {
+    pub(crate) fn put_u8(&mut self, value: u8) -> bool {
         self.put_bytes(&[value])
     }
 
-    fn put_u16(&mut self, value: u16) -> bool {
+    pub(crate) fn put_u16(&mut self, value: u16) -> bool {
         self.put_bytes(&value.to_be_bytes())
     }
 
     /// `length(1) || bytes`, with the length derived from the slice and refused when it
     /// cannot be expressed in one byte. Transactional: a refused length or extent writes nothing.
-    fn put_u8_len_prefixed(&mut self, bytes: &[u8]) -> bool {
+    pub(crate) fn put_u8_len_prefixed(&mut self, bytes: &[u8]) -> bool {
         let Ok(len) = u8::try_from(bytes.len()) else {
             return false;
         };
@@ -1068,7 +1068,7 @@ impl<'a> BytesWriter<'a> {
 
     /// `length(2) || bytes`, with the length derived from the slice. Transactional: a refused
     /// length or extent writes nothing.
-    fn put_u16_len_prefixed(&mut self, bytes: &[u8]) -> bool {
+    pub(crate) fn put_u16_len_prefixed(&mut self, bytes: &[u8]) -> bool {
         let Ok(len) = u16::try_from(bytes.len()) else {
             return false;
         };
