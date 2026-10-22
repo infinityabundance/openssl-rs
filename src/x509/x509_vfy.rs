@@ -698,6 +698,107 @@ unsafe extern "C" fn x509_free_void(x: *mut c_void) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Chain ownership
+// ---------------------------------------------------------------------------------------------
+
+/// A stack plus the ownership its release must apply to the **elements**.
+///
+/// The authority spells these two releases `sk_X509_free` (the stack only) and
+/// `sk_X509_pop_free` (the stack and one reference per element). They are not interchangeable:
+/// the scratch stack `build_chain` filters untrusted certificates through holds borrowed elements
+/// (`X509_ADD_FLAG_DEFAULT`), while `X509_build_chain`'s result stack holds up-ref'd ones
+/// (`X509_ADD_FLAG_UP_REF`). Keeping the choice in the constructor and the release in `Drop` gives
+/// a partially built chain **exactly one**, correctly-shaped release on every exit -- including a
+/// failure arm added later -- and makes an element-ownership mix-up a type error at the call site.
+pub(crate) struct ChainStack {
+    stack: *mut OpenSslStack,
+    elements: ElementOwnership,
+}
+
+/// What a [`ChainStack`]'s `Drop` does after releasing the stack block.
+#[derive(Clone, Copy)]
+enum ElementOwnership {
+    /// The elements belong to someone else: release the stack only (the authority's `sk_free`).
+    Borrowed,
+    /// The stack owns one reference per element: release each, then the stack (`sk_pop_free`).
+    Owned,
+}
+
+impl ChainStack {
+    /// A fresh empty stack with borrowed elements, or `None` when the allocator refuses it.
+    fn new_borrowed() -> Option<ChainStack> {
+        let stack = OPENSSL_sk_new_null();
+        (!stack.is_null()).then_some(ChainStack {
+            stack,
+            elements: ElementOwnership::Borrowed,
+        })
+    }
+
+    /// Adopt a stack that owns one reference per element.
+    ///
+    /// # Safety
+    ///
+    /// `stack` is NULL or a live stack from `ossl_x509_add_certs_new` called with
+    /// `X509_ADD_FLAG_UP_REF`, so every element holds a reference this owner is the sole
+    /// releaser of; no other owner will release the stack or those references.
+    unsafe fn adopt_owned(stack: *mut OpenSslStack) -> ChainStack {
+        ChainStack {
+            stack,
+            elements: ElementOwnership::Owned,
+        }
+    }
+
+    /// The stack address, for the raw C calls that fill it.
+    fn as_ptr(&self) -> *mut OpenSslStack {
+        self.stack
+    }
+}
+
+impl Drop for ChainStack {
+    fn drop(&mut self) {
+        // SAFETY: `stack` is NULL or the exclusively owned stack this handle created or adopted
+        // and has not released; `Drop` runs once. `Borrowed` matches the authority's `sk_free`
+        // (the elements belong to another owner), `Owned` its `sk_pop_free` over the references
+        // this stack acquired.
+        unsafe {
+            match self.elements {
+                ElementOwnership::Borrowed => OPENSSL_sk_free(self.stack),
+                ElementOwnership::Owned => OPENSSL_sk_pop_free(self.stack, Some(x509_free_void)),
+            }
+        }
+    }
+}
+
+/// Replace `ctx.chain` with `next`, releasing the incumbent exactly once.
+///
+/// `next` transfers ownership to the context. The slot is written **before** the incumbent's
+/// destructors run, so a re-entrant `X509_free` ex-data callback observes the new chain rather
+/// than a freed one; nothing is written to the slot afterwards, so a callback that replaces the
+/// chain itself is neither overwritten nor double-released.
+///
+/// A self-assignment is a no-op. The authority's `sk_X509_pop_free(ctx->chain, X509_free);
+/// ctx->chain = sk;` would free the stack and then store the dangling pointer; that is undefined
+/// behaviour and is not preserved (AGENTS.md §17). For distinct stacks the observable sequence is
+/// the authority's: the incumbent's elements and stack are released, and the slot names `next`.
+///
+/// # Safety
+///
+/// `ctx` must be live. `next` must be NULL or a live stack of `X509` whose ownership transfers
+/// here; on return the context owns it.
+unsafe fn replace_chain(ctx: *mut X509StoreCtx, next: *mut OpenSslStack) {
+    // SAFETY: `ctx` is live per the contract; reading and writing one pointer field is in bounds.
+    let incumbent = unsafe { (*ctx).chain };
+    if incumbent == next {
+        return;
+    }
+    // SAFETY: `ctx` is live; `next`'s ownership transfers per the contract.
+    unsafe { (*ctx).chain = next };
+    // SAFETY: `incumbent` was the context's own chain and this is its single release; `next` has
+    // already replaced it in the slot, so a re-entrant reader cannot observe a freed pointer.
+    unsafe { OPENSSL_sk_pop_free(incumbent, Some(x509_free_void)) };
+}
+
+// ---------------------------------------------------------------------------------------------
 // `X509_self_signed` — `crypto/x509/x509_vfy.c:100-115`.
 // ---------------------------------------------------------------------------------------------
 
@@ -1576,8 +1677,7 @@ pub unsafe extern "C" fn X509_STORE_CTX_cleanup(ctx: *mut X509StoreCtx) {
         }
         X509_policy_tree_free((*ctx).tree.cast());
         (*ctx).tree = ptr::null_mut();
-        OPENSSL_sk_pop_free((*ctx).chain, Some(x509_free_void));
-        (*ctx).chain = ptr::null_mut();
+        replace_chain(ctx, ptr::null_mut());
         CRYPTO_free_ex_data(
             CRYPTO_EX_INDEX_X509_STORE_CTX,
             ctx.cast(),
@@ -1987,11 +2087,9 @@ pub unsafe extern "C" fn X509_STORE_CTX_set0_verified_chain(
     ctx: *mut X509StoreCtx,
     sk: *mut OpenSslStack,
 ) {
-    // SAFETY: `ctx` is live per the contract.
-    unsafe {
-        OPENSSL_sk_pop_free((*ctx).chain, Some(x509_free_void));
-        (*ctx).chain = sk;
-    }
+    // SAFETY: `ctx` is live per the contract; `sk`'s ownership transfers and `replace_chain` is
+    // the single release mechanism (a self-assignment is a no-op rather than a use-after-free).
+    unsafe { replace_chain(ctx, sk) };
 }
 
 /// `void X509_STORE_CTX_set_verify_cb(X509_STORE_CTX *ctx, X509_STORE_CTX_verify_cb verify_cb)` —
@@ -2349,6 +2447,14 @@ pub unsafe extern "C" fn X509_STORE_CTX_set_current_reasons(
 
 /// `static int verify_cb_cert(X509_STORE_CTX *ctx, X509 *x, int depth, int err)` —
 /// `x509_vfy.c:162-172`.
+///
+/// **Re-entrancy contract (§21.3).** `ctx->verify_cb` is application code. The engine holds no
+/// Rust reference across the call — every field is read or written through the raw `ctx` before
+/// the callback and the callback is the **last** operation, so a callback may query or mutate the
+/// context (including replacing `verify_cb`, the chain, or the error) without any later engine
+/// write clobbering it or observing a stale borrow. The engine does not free `ctx` around the
+/// call; a callback that frees it must not return through code that touches it, and this function
+/// does not.
 ///
 /// # Safety
 ///
@@ -4663,13 +4769,12 @@ unsafe fn build_chain(ctx: *mut X509StoreCtx) -> c_int {
         let dane = (*ctx).dane.cast::<SslDane>();
         let param = (*ctx).param.cast::<X509VerifyParam>();
         let mut num = OPENSSL_sk_num((*ctx).chain);
-        let mut sk_untrusted: *mut OpenSslStack = ptr::null_mut();
         let mut may_trusted = 0;
         let mut may_alternate = 0;
         let mut trust = X509_TRUST_UNTRUSTED;
         let mut alt_untrusted = 0;
 
-        let result = 'build: {
+        'build: {
             // `ossl_assert(num == 1 && ctx->num_untrusted == num)`.
             if !(num == 1 && (*ctx).num_untrusted == num) {
                 raise_site(&X509_VFY_3844);
@@ -4691,23 +4796,26 @@ unsafe fn build_chain(ctx: *mut X509StoreCtx) -> c_int {
                 may_trusted = 1;
             }
 
-            sk_untrusted = OPENSSL_sk_new_null();
-            if sk_untrusted.is_null() {
-                raise_site(&X509_VFY_3552);
-                (*ctx).error = X509_V_ERR_OUT_OF_MEM;
-                break 'build -1;
-            }
+            let sk_untrusted = match ChainStack::new_borrowed() {
+                Some(stack) => stack,
+                None => {
+                    raise_site(&X509_VFY_3552);
+                    (*ctx).error = X509_V_ERR_OUT_OF_MEM;
+                    break 'build -1;
+                }
+            };
+            let sk_untrusted_ptr = sk_untrusted.as_ptr();
 
             if danetls_enabled(dane)
                 && !(*dane).certs.is_null()
-                && X509_add_certs(sk_untrusted, (*dane).certs, X509_ADD_FLAG_DEFAULT) == 0
+                && X509_add_certs(sk_untrusted_ptr, (*dane).certs, X509_ADD_FLAG_DEFAULT) == 0
             {
                 raise_site(&X509_VFY_3562);
                 (*ctx).error = X509_V_ERR_OUT_OF_MEM;
                 break 'build -1;
             }
 
-            if X509_add_certs(sk_untrusted, (*ctx).untrusted, X509_ADD_FLAG_DEFAULT) == 0 {
+            if X509_add_certs(sk_untrusted_ptr, (*ctx).untrusted, X509_ADD_FLAG_DEFAULT) == 0 {
                 raise_site(&X509_VFY_3572);
                 (*ctx).error = X509_V_ERR_OUT_OF_MEM;
                 break 'build -1;
@@ -4849,7 +4957,7 @@ unsafe fn build_chain(ctx: *mut X509StoreCtx) -> c_int {
                     issuer = if X509_self_signed(curr, 0) > 0 || num > max_depth {
                         ptr::null_mut()
                     } else {
-                        get0_best_issuer_sk(ctx, 0, 1, sk_untrusted, curr)
+                        get0_best_issuer_sk(ctx, 0, 1, sk_untrusted_ptr, curr)
                     };
                     if issuer.is_null() {
                         search &= !S_DOUNTRUSTED;
@@ -4859,7 +4967,7 @@ unsafe fn build_chain(ctx: *mut X509StoreCtx) -> c_int {
                         continue;
                     }
 
-                    OPENSSL_sk_delete_ptr(sk_untrusted, issuer.cast());
+                    OPENSSL_sk_delete_ptr(sk_untrusted_ptr, issuer.cast());
 
                     if X509_add_cert((*ctx).chain, issuer, X509_ADD_FLAG_UP_REF) == 0 {
                         raise_site(&X509_VFY_3844);
@@ -4875,6 +4983,11 @@ unsafe fn build_chain(ctx: *mut X509StoreCtx) -> c_int {
                     }
                 }
             }
+
+            // The authority's single `sk_X509_free(sk_untrusted)` on the normal path
+            // (`x509_vfy.c:3849`) — before the trust checks and their callbacks. Every early
+            // `break 'build` above leaves through the owner's scope and releases exactly once.
+            drop(sk_untrusted);
 
             if trust < 0 {
                 break 'build trust;
@@ -4950,10 +5063,7 @@ unsafe fn build_chain(ctx: *mut X509StoreCtx) -> c_int {
                     _ => verify_cb_cert(ctx, ptr::null_mut(), num - 1, (*ctx).error),
                 },
             }
-        };
-
-        OPENSSL_sk_free(sk_untrusted);
-        result
+        }
     }
 }
 
@@ -5361,8 +5471,14 @@ pub unsafe extern "C" fn X509_build_chain(
             flags |= X509_ADD_FLAG_NO_SS;
         }
         if ossl_x509_add_certs_new(&raw mut result, (*ctx).chain, flags) == 0 {
-            OPENSSL_sk_free(result);
-            result = ptr::null_mut();
+            // SAFETY: `result` is the NULL-or-fresh stack the helper just filled; it was called
+            // with `X509_ADD_FLAG_UP_REF`, so every element holds a reference this stack owns and
+            // `adopt_owned` releases exactly those (the authority's `sk_X509_free` here leaks
+            // them; releasing what was acquired is the deliberate correction, and no success-path
+            // byte or result changes).
+            drop(ChainStack::adopt_owned(result));
+            X509_STORE_CTX_free(ctx);
+            return ptr::null_mut();
         }
 
         X509_STORE_CTX_free(ctx);
@@ -5476,7 +5592,27 @@ unsafe fn dane_verify(ctx: *mut X509StoreCtx) -> c_int {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::panic, clippy::unwrap_used)]
+
+    use core::sync::atomic::{AtomicBool, AtomicI32, AtomicUsize, Ordering};
+
     use super::*;
+    use crate::asn1::layout::MBSTRING_UTF8;
+    use crate::asn1::prim::ASN1_INTEGER_set;
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free};
+    use crate::runtime::obj::NID_basic_constraints;
+    use crate::x509::v3_bcons::{BASIC_CONSTRAINTS_free, BASIC_CONSTRAINTS_new};
+    use crate::x509::x509_ext::X509_add1_ext_i2d;
+    use crate::x509::x509_lu::{X509_STORE_add_cert, X509_STORE_free, X509_STORE_new};
+    use crate::x509::x509_set::{
+        X509_set1_notAfter, X509_set1_notBefore, X509_set_issuer_name, X509_set_pubkey,
+        X509_set_subject_name, X509_set_version,
+    };
+    use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+    use crate::x509::x_all::X509_sign;
+    use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+    use crate::x509::x_x509::X509_new;
 
     /// A freshly allocated context is zeroed and its callbacks are unset.
     #[test]
@@ -5512,6 +5648,400 @@ mod tests {
             X509_STORE_CTX_set0_param(ctx, p);
             assert_eq!(X509_STORE_CTX_get0_param(ctx), p);
             // `free` releases the adopted block through `cleanup`.
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // The trust-decision chain fixtures
+    // -----------------------------------------------------------------------------------------
+
+    /// A fresh P-256 key; every certificate below signs with one.
+    unsafe fn key() -> *mut EvpPkey {
+        // SAFETY: the shim builds its own parameter array; the type and group names are literals.
+        let k = unsafe {
+            openssl_rs_evp_pkey_q_keygen(
+                ptr::null_mut(),
+                ptr::null(),
+                c"EC".as_ptr(),
+                2,
+                0,
+                c"prime256v1".as_ptr(),
+            )
+        };
+        assert!(!k.is_null(), "an EC key must be generatable");
+        k
+    }
+
+    /// A one-entry `CN` name.
+    unsafe fn name(cn: &CStr) -> *mut X509Name {
+        let n = X509_NAME_new();
+        assert!(!n.is_null());
+        // SAFETY: `n` is fresh; `cn` is a static literal readable for its length.
+        let rc = unsafe {
+            X509_NAME_add_entry_by_txt(
+                n,
+                c"CN".as_ptr(),
+                MBSTRING_UTF8,
+                cn.as_ptr().cast::<c_uchar>(),
+                cn.to_bytes().len() as c_int,
+                -1,
+                0,
+            )
+        };
+        assert_eq!(rc, 1);
+        n
+    }
+
+    /// A v3 certificate with `basicConstraints`, signed by its issuer's key. `ca` writes the
+    /// authority's `TRUE` (`0xFF`) rather than a one-byte `1` so the encoding is canonical.
+    #[allow(clippy::too_many_arguments)]
+    unsafe fn make_cert(
+        subject: &CStr,
+        issuer: &CStr,
+        subject_key: *mut EvpPkey,
+        issuer_key: *mut EvpPkey,
+        ca: bool,
+        not_before: c_long,
+        not_after: c_long,
+        serial: c_long,
+    ) -> *mut X509 {
+        let x = X509_new();
+        assert!(!x.is_null());
+        // SAFETY: `x` is fresh and every callee is called under its own contract.
+        unsafe {
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(
+                ASN1_INTEGER_set(&raw mut (*x).cert_info.serialNumber, serial),
+                1
+            );
+            let subj = name(subject);
+            let iss = name(issuer);
+            assert_eq!(X509_set_subject_name(x, subj), 1);
+            assert_eq!(X509_set_issuer_name(x, iss), 1);
+            X509_NAME_free(subj);
+            X509_NAME_free(iss);
+            let nb = X509_gmtime_adj(ptr::null_mut(), not_before);
+            let na = X509_gmtime_adj(ptr::null_mut(), not_after);
+            assert!(!nb.is_null() && !na.is_null());
+            assert_eq!(X509_set1_notBefore(x, nb), 1);
+            assert_eq!(X509_set1_notAfter(x, na), 1);
+            ASN1_TIME_free(nb);
+            ASN1_TIME_free(na);
+            assert_eq!(X509_set_pubkey(x, subject_key), 1);
+
+            let bc = BASIC_CONSTRAINTS_new();
+            assert!(!bc.is_null());
+            (*bc).ca = if ca { 0xFF } else { 0 };
+            assert_eq!(
+                X509_add1_ext_i2d(x, NID_basic_constraints, bc.cast(), 1, 0),
+                1
+            );
+            BASIC_CONSTRAINTS_free(bc);
+
+            assert!(X509_sign(x, issuer_key, EVP_sha256()) > 0);
+        }
+        x
+    }
+
+    /// `root` (trusted) <- `inter` (untrusted) <- `leaf`, with one key per certificate.
+    struct Chain {
+        root: *mut X509,
+        inter: *mut X509,
+        leaf: *mut X509,
+        root_key: *mut EvpPkey,
+        inter_key: *mut EvpPkey,
+        leaf_key: *mut EvpPkey,
+        store: *mut X509Store,
+        untrusted: *mut OpenSslStack,
+    }
+
+    impl Chain {
+        /// Build the three-certificate fixture; `leaf_validity` is relative to now, in seconds.
+        unsafe fn new(leaf_validity: (c_long, c_long)) -> Chain {
+            // SAFETY: every object below is this fixture's own and is released exactly once by
+            // `Drop`; each constructor is called under its own contract.
+            unsafe {
+                let root_key = key();
+                let inter_key = key();
+                let leaf_key = key();
+                let root = make_cert(c"root", c"root", root_key, root_key, true, 0, 86_400, 1);
+                let inter = make_cert(c"inter", c"root", inter_key, root_key, true, 0, 86_400, 2);
+                let leaf = make_cert(
+                    c"leaf",
+                    c"inter",
+                    leaf_key,
+                    inter_key,
+                    false,
+                    leaf_validity.0,
+                    leaf_validity.1,
+                    3,
+                );
+                let store = X509_STORE_new();
+                assert!(!store.is_null());
+                assert_eq!(X509_STORE_add_cert(store, root), 1);
+                let untrusted = OPENSSL_sk_new_null();
+                assert!(!untrusted.is_null());
+                assert_eq!(OPENSSL_sk_push(untrusted, inter.cast()), 1);
+                Chain {
+                    root,
+                    inter,
+                    leaf,
+                    root_key,
+                    inter_key,
+                    leaf_key,
+                    store,
+                    untrusted,
+                }
+            }
+        }
+
+        /// A context initialised over the fixture; the caller frees it.
+        unsafe fn ctx(&self) -> *mut X509StoreCtx {
+            let ctx = X509_STORE_CTX_new();
+            assert!(!ctx.is_null());
+            // SAFETY: `ctx` is fresh and the three pointers are the fixture's live objects.
+            let rc = unsafe { X509_STORE_CTX_init(ctx, self.store, self.leaf, self.untrusted) };
+            assert_eq!(rc, 1);
+            ctx
+        }
+
+        /// A context with no untrusted chain, so the intermediate is missing.
+        unsafe fn ctx_missing_intermediate(&self) -> *mut X509StoreCtx {
+            let ctx = X509_STORE_CTX_new();
+            assert!(!ctx.is_null());
+            // SAFETY: `ctx` is fresh; the NULL untrusted stack is the authority's "no chain".
+            let rc = unsafe { X509_STORE_CTX_init(ctx, self.store, self.leaf, ptr::null_mut()) };
+            assert_eq!(rc, 1);
+            ctx
+        }
+    }
+
+    impl Drop for Chain {
+        fn drop(&mut self) {
+            // SAFETY: each pointer is this fixture's own reference. Every test frees its context
+            // before the fixture drops, so the context's up-refs are already released.
+            unsafe {
+                OPENSSL_sk_pop_free(self.untrusted, Some(x509_free_void));
+                X509_STORE_free(self.store);
+                X509_free(self.leaf);
+                X509_free(self.inter);
+                X509_free(self.root);
+                EVP_PKEY_free(self.leaf_key);
+                EVP_PKEY_free(self.inter_key);
+                EVP_PKEY_free(self.root_key);
+            }
+        }
+    }
+
+    #[test]
+    fn a_valid_chain_verifies() {
+        // SAFETY: the fixture owns every object and the context is freed before it drops.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let ctx = chain.ctx();
+            assert_eq!(X509_verify_cert(ctx), 1);
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_OK);
+            assert_eq!(OPENSSL_sk_num(X509_STORE_CTX_get0_chain(ctx)), 3);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn an_expired_leaf_keeps_its_error_code() {
+        // SAFETY: as `a_valid_chain_verifies`.
+        unsafe {
+            let chain = Chain::new((-172_800, -86_400));
+            let ctx = chain.ctx();
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_CERT_HAS_EXPIRED);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn a_missing_intermediate_keeps_its_error_code() {
+        // SAFETY: as `a_valid_chain_verifies`.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let ctx = chain.ctx_missing_intermediate();
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(
+                X509_STORE_CTX_get_error(ctx),
+                X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY
+            );
+            // The partial chain (the leaf) is published and still owned by the context, so a
+            // second verify is refused by the `chain != NULL` guard rather than reading freed
+            // memory. Freeing the context afterwards releases it exactly once.
+            assert_eq!(OPENSSL_sk_num(X509_STORE_CTX_get0_chain(ctx)), 1);
+            assert_eq!(X509_verify_cert(ctx), -1);
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_INVALID_CALL);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    static CALLBACK_QUERIES: AtomicUsize = AtomicUsize::new(0);
+    static CALLBACK_CHAIN_LEN: AtomicI32 = AtomicI32::new(-1);
+    static CALLBACK_ERROR: AtomicI32 = AtomicI32::new(-1);
+
+    /// A callback that re-enters nothing but the read-only surface: error, depth, certificate,
+    /// parameter block and a `get1_chain` it owns and releases.
+    unsafe extern "C" fn querying_cb(ok: c_int, raw: *mut c_void) -> c_int {
+        let ctx = raw.cast::<X509StoreCtx>();
+        // SAFETY: `ctx` is the live context the engine is verifying, passed by the engine.
+        unsafe {
+            CALLBACK_ERROR.store(X509_STORE_CTX_get_error(ctx), Ordering::Relaxed);
+            let owned = X509_STORE_CTX_get1_chain(ctx);
+            if !owned.is_null() {
+                CALLBACK_CHAIN_LEN.store(OPENSSL_sk_num(owned), Ordering::Relaxed);
+                // The `get1` answer is the caller's to release; its elements were up-ref'd.
+                OPENSSL_sk_pop_free(owned, Some(x509_free_void));
+            }
+            let _ = X509_STORE_CTX_get0_cert(ctx);
+            let _ = X509_STORE_CTX_get0_param(ctx);
+            let _ = X509_STORE_CTX_get_error_depth(ctx);
+        }
+        CALLBACK_QUERIES.fetch_add(1, Ordering::Relaxed);
+        ok
+    }
+
+    #[test]
+    fn a_reentrant_callback_may_query_the_context() {
+        // SAFETY: as `a_valid_chain_verifies`; the callback only reads and frees its own `get1`.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let ctx = chain.ctx();
+            X509_STORE_CTX_set_verify_cb(ctx, Some(querying_cb));
+            assert_eq!(X509_verify_cert(ctx), 1);
+            assert!(CALLBACK_QUERIES.load(Ordering::Relaxed) > 0);
+            assert_eq!(CALLBACK_CHAIN_LEN.load(Ordering::Relaxed), 3);
+            assert_eq!(CALLBACK_ERROR.load(Ordering::Relaxed), X509_V_OK);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    static CALLBACK_WRITE_SURVIVED: AtomicBool = AtomicBool::new(false);
+    static MUTATING_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// Writes a different error than the engine's and accepts. The **next** invocation checks the
+    /// write is still visible: the dispatch contract is that the callback is the last operation, so
+    /// the engine never overwrites what the application wrote.
+    unsafe extern "C" fn writing_cb(_ok: c_int, raw: *mut c_void) -> c_int {
+        let ctx = raw.cast::<X509StoreCtx>();
+        // SAFETY: `ctx` is the live context the engine is verifying.
+        unsafe {
+            if X509_STORE_CTX_get_error(ctx) == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY {
+                CALLBACK_WRITE_SURVIVED.store(true, Ordering::Relaxed);
+            }
+            X509_STORE_CTX_set_error(ctx, X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY);
+        }
+        MUTATING_CALLS.fetch_add(1, Ordering::Relaxed);
+        1
+    }
+
+    #[test]
+    fn the_engine_never_overwrites_a_callback_write() {
+        // SAFETY: as `a_valid_chain_verifies`; the callback only writes the context's error.
+        unsafe {
+            let chain = Chain::new((-172_800, -86_400));
+            let ctx = chain.ctx();
+            X509_STORE_CTX_set_verify_cb(ctx, Some(writing_cb));
+            // The expired leaf is accepted by the callback, so verification succeeds.
+            assert_eq!(X509_verify_cert(ctx), 1);
+            assert!(MUTATING_CALLS.load(Ordering::Relaxed) >= 2);
+            assert!(CALLBACK_WRITE_SURVIVED.load(Ordering::Relaxed));
+            assert_eq!(
+                X509_STORE_CTX_get_error(ctx),
+                X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY
+            );
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    unsafe extern "C" fn accept_all(_ok: c_int, _ctx: *mut c_void) -> c_int {
+        1
+    }
+
+    unsafe extern "C" fn reject_all(_ok: c_int, _ctx: *mut c_void) -> c_int {
+        0
+    }
+
+    static SAW_EXPIRED_AT_ENTRY: AtomicBool = AtomicBool::new(false);
+    static OBSERVER_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// A read-only callback that records the error the engine published **before** dispatching.
+    unsafe extern "C" fn observing_cb(ok: c_int, raw: *mut c_void) -> c_int {
+        let ctx = raw.cast::<X509StoreCtx>();
+        // SAFETY: `ctx` is the live context the engine is verifying.
+        unsafe {
+            if X509_STORE_CTX_get_error(ctx) == X509_V_ERR_CERT_HAS_EXPIRED {
+                SAW_EXPIRED_AT_ENTRY.store(true, Ordering::Relaxed);
+            }
+        }
+        OBSERVER_CALLS.fetch_add(1, Ordering::Relaxed);
+        ok
+    }
+
+    #[test]
+    fn the_error_is_published_before_the_callback_runs() {
+        // SAFETY: as `a_valid_chain_verifies`; the callback only reads.
+        unsafe {
+            let chain = Chain::new((-172_800, -86_400));
+            let ctx = chain.ctx();
+            X509_STORE_CTX_set_verify_cb(ctx, Some(observing_cb));
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert!(OBSERVER_CALLS.load(Ordering::Relaxed) > 0);
+            // `verify_cb_cert` writes `error = err` before dispatch, so the application sees the
+            // exact `X509_V_ERR_*` the engine is reporting.
+            assert!(SAW_EXPIRED_AT_ENTRY.load(Ordering::Relaxed));
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_CERT_HAS_EXPIRED);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn an_app_callback_can_accept_what_the_default_rejects() {
+        // SAFETY: as `a_valid_chain_verifies`.
+        unsafe {
+            let chain = Chain::new((-172_800, -86_400));
+            let ctx = chain.ctx();
+            X509_STORE_CTX_set_verify_cb(ctx, Some(accept_all));
+            assert_eq!(X509_verify_cert(ctx), 1);
+            // The authority keeps the overridden error visible after the callback accepts.
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_CERT_HAS_EXPIRED);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn an_app_callback_can_reject_what_the_default_accepts() {
+        // SAFETY: as `a_valid_chain_verifies`.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let ctx = chain.ctx();
+            X509_STORE_CTX_set_verify_cb(ctx, Some(reject_all));
+            assert_eq!(X509_verify_cert(ctx), 0);
+            assert_eq!(X509_STORE_CTX_get_error(ctx), X509_V_ERR_UNSPECIFIED);
+            X509_STORE_CTX_free(ctx);
+        }
+    }
+
+    #[test]
+    fn set0_verified_chain_tolerates_its_own_chain() {
+        // SAFETY: as `a_valid_chain_verifies`.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let ctx = chain.ctx();
+            assert_eq!(X509_verify_cert(ctx), 1);
+            let owned = X509_STORE_CTX_get0_chain(ctx);
+            assert!(!owned.is_null());
+            // A self-assignment is a no-op: the incumbent must not be released and re-stored.
+            X509_STORE_CTX_set0_verified_chain(ctx, owned);
+            assert_eq!(X509_STORE_CTX_get0_chain(ctx), owned);
+            assert_eq!(OPENSSL_sk_num(owned), 3);
+            // Replacing with NULL releases the chain exactly once; a double release would abort.
+            X509_STORE_CTX_set0_verified_chain(ctx, ptr::null_mut());
+            assert!(X509_STORE_CTX_get0_chain(ctx).is_null());
             X509_STORE_CTX_free(ctx);
         }
     }
