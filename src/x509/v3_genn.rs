@@ -34,7 +34,7 @@
 use core::ffi::{c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
-use crate::asn1::a_dup::ASN1_dup;
+use crate::asn1::a_dup::ASN1_dup_typed;
 use crate::asn1::a_type::{ASN1_TYPE_cmp, ASN1_TYPE_free};
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::fre::ASN1_item_free;
@@ -53,6 +53,45 @@ use crate::x509::x509_cmp::X509_NAME_cmp;
 use crate::x509::x_name::{X509Name, X509_NAME_it, X509_NAME_new, X509_NAME_set};
 
 /// `GEN_OTHERNAME` — `include/openssl/x509v3.h:153`.
+/// A selector-checked view of a `GENERAL_NAME`'s union.
+///
+/// The selector is the only thing that says which arm is live, so this enum is the **one** place
+/// the union is read: consumers match on the accessor instead of re-reading `d`, which makes
+/// "compare through an arm the selector does not name" inexpressible at every call site.
+#[derive(Clone, Copy)]
+pub(crate) enum GeneralNameRef<'a> {
+    OtherName(&'a Othername),
+    Ia5(&'a Asn1String),
+    X400(&'a Asn1String),
+    DirectoryName(&'a X509Name),
+    EdiPartyName(&'a EdiPartyName),
+    IpAddress(&'a Asn1String),
+    RegisteredId(&'a Asn1Object),
+}
+
+impl GeneralName {
+    /// The live arm, or `None` for a selector the authority's comparator does not handle.
+    ///
+    /// # Safety
+    /// `self` is live and its selector names the live arm (the item decoder writes the selector
+    /// from the tag, and `GENERAL_NAME_set0_value` writes the arm the caller named).
+    pub(crate) unsafe fn as_ref(&self) -> Option<GeneralNameRef<'_>> {
+        // SAFETY: the caller's contract; each arm reads only the pointer its selector names.
+        unsafe {
+            match self.type_ {
+                GEN_OTHERNAME => Some(GeneralNameRef::OtherName(&*self.d.otherName)),
+                GEN_EMAIL | GEN_DNS | GEN_URI => Some(GeneralNameRef::Ia5(&*self.d.ia5)),
+                GEN_X400 => Some(GeneralNameRef::X400(&*self.d.x400Address)),
+                GEN_DIRNAME => Some(GeneralNameRef::DirectoryName(&*self.d.directoryName)),
+                GEN_EDIPARTY => Some(GeneralNameRef::EdiPartyName(&*self.d.ediPartyName)),
+                GEN_IPADD => Some(GeneralNameRef::IpAddress(&*self.d.iPAddress)),
+                GEN_RID => Some(GeneralNameRef::RegisteredId(&*self.d.registeredID)),
+                _ => None,
+            }
+        }
+    }
+}
+
 pub(crate) const GEN_OTHERNAME: c_int = 0;
 /// `GEN_EMAIL` — `include/openssl/x509v3.h:154`.
 pub(crate) const GEN_EMAIL: c_int = 1;
@@ -529,27 +568,12 @@ pub unsafe extern "C" fn i2d_GENERAL_NAMES(
 /// `a` is NULL or a live `GENERAL_NAME`. The answer is owned by the caller.
 #[no_mangle]
 pub unsafe extern "C" fn GENERAL_NAME_dup(a: *const GeneralName) -> *mut GeneralName {
-    // The authority casts `i2d_GENERAL_NAME`/`d2i_GENERAL_NAME` to the `void` spellings
-    // `ASN1_dup` takes; the same transmute is written here rather than a shim.
-    let i2d: I2dOfVoid =
-        // SAFETY: both signatures are `(const T *, unsigned char **) -> int`; `T` is a pointer
-        // type, so the call through the reinterpreted pointer is layout-compatible.
-        unsafe {
-            core::mem::transmute::<unsafe extern "C" fn(*const GeneralName, *mut *mut c_uchar) -> c_int, I2dOfVoid>(
-                i2d_GENERAL_NAME,
-            )
-        };
-    let d2i: D2iOfVoid =
-        // SAFETY: both signatures are `(T **, const unsigned char **, long) -> T *`; `T` is a
-        // pointer type, so the call through the reinterpreted pointer is layout-compatible.
-        unsafe {
-            core::mem::transmute::<
-                unsafe extern "C" fn(*mut *mut GeneralName, *mut *const c_uchar, c_long) -> *mut GeneralName,
-                D2iOfVoid,
-            >(d2i_GENERAL_NAME)
-        };
-    // SAFETY: `i2d`/`d2i` match each other and `a` is NULL or live per the contract.
-    unsafe { ASN1_dup(i2d, d2i, a.cast()) }.cast::<GeneralName>()
+    // The typed helper carries the callbacks' pointee type in its signature, so the authority's
+    // `void *` spelling -- and the function-pointer transmute that reaching it used to need -- is
+    // gone from this path.
+    // SAFETY: `i2d_GENERAL_NAME`/`d2i_GENERAL_NAME` are the matching pair for `GeneralName`, and
+    // `a` is NULL or live per the contract.
+    unsafe { ASN1_dup_typed(i2d_GENERAL_NAME, d2i_GENERAL_NAME, a) }
 }
 
 /// `int GENERAL_NAME_set1_X509_NAME(GENERAL_NAME **tgt, const X509_NAME *src)` —
@@ -661,16 +685,42 @@ pub unsafe extern "C" fn GENERAL_NAME_cmp(a: *mut GeneralName, b: *mut GeneralNa
     if ta != tb {
         return -1;
     }
-    // SAFETY: the selector is equal on both sides, so each arm reads a pair of the same type.
+    // SAFETY: the selector is equal on both sides; each side's selector names its live arm, so the
+    // accessor is the only reader and a cross-arm read cannot be written here.
     unsafe {
-        match ta {
-            GEN_X400 => ASN1_STRING_cmp((*a).d.x400Address, (*b).d.x400Address),
-            GEN_EDIPARTY => edipartyname_cmp((*a).d.ediPartyName, (*b).d.ediPartyName),
-            GEN_OTHERNAME => OTHERNAME_cmp((*a).d.otherName, (*b).d.otherName),
-            GEN_EMAIL | GEN_DNS | GEN_URI => ASN1_STRING_cmp((*a).d.ia5, (*b).d.ia5),
-            GEN_DIRNAME => X509_NAME_cmp((*a).d.directoryName, (*b).d.directoryName),
-            GEN_IPADD => ASN1_OCTET_STRING_cmp((*a).d.iPAddress, (*b).d.iPAddress),
-            GEN_RID => OBJ_cmp((*a).d.registeredID, (*b).d.registeredID),
+        match ((*a).as_ref(), (*b).as_ref()) {
+            (Some(GeneralNameRef::X400(x)), Some(GeneralNameRef::X400(y))) => ASN1_STRING_cmp(
+                x as *const Asn1String as *mut Asn1String,
+                y as *const Asn1String as *mut Asn1String,
+            ),
+            (Some(GeneralNameRef::EdiPartyName(x)), Some(GeneralNameRef::EdiPartyName(y))) => {
+                edipartyname_cmp(x as *const EdiPartyName, y as *const EdiPartyName)
+            }
+            (Some(GeneralNameRef::OtherName(x)), Some(GeneralNameRef::OtherName(y))) => {
+                OTHERNAME_cmp(
+                    x as *const Othername as *mut Othername,
+                    y as *const Othername as *mut Othername,
+                )
+            }
+            (Some(GeneralNameRef::Ia5(x)), Some(GeneralNameRef::Ia5(y))) => ASN1_STRING_cmp(
+                x as *const Asn1String as *mut Asn1String,
+                y as *const Asn1String as *mut Asn1String,
+            ),
+            (Some(GeneralNameRef::DirectoryName(x)), Some(GeneralNameRef::DirectoryName(y))) => {
+                X509_NAME_cmp(x as *const X509Name, y as *const X509Name)
+            }
+            (Some(GeneralNameRef::IpAddress(x)), Some(GeneralNameRef::IpAddress(y))) => {
+                ASN1_OCTET_STRING_cmp(
+                    x as *const Asn1String as *mut Asn1String,
+                    y as *const Asn1String as *mut Asn1String,
+                )
+            }
+            (Some(GeneralNameRef::RegisteredId(x)), Some(GeneralNameRef::RegisteredId(y))) => {
+                OBJ_cmp(
+                    x as *const Asn1Object as *mut Asn1Object,
+                    y as *const Asn1Object as *mut Asn1Object,
+                )
+            }
             _ => -1,
         }
     }
@@ -714,6 +764,14 @@ pub unsafe extern "C" fn GENERAL_NAME_set0_value(
 ) {
     // SAFETY: `a` is live and the union is writable; every arm is one pointer.
     unsafe {
+        // The union is cleared **before** the selector is examined, so an unhandled selector can
+        // never leave a stale, still-readable arm in the slot. The authority's switch has no
+        // `default` and leaves `d` untouched there; clearing is a deliberate safety improvement,
+        // unobservable through `get0_value`/`as_ref`/`cmp`, which all refuse an unhandled selector
+        // either way (NULL / `None` / `-1`).
+        (*a).d = GeneralNameValue {
+            otherName: ptr::null_mut(),
+        };
         (*a).d = match type_ {
             GEN_X400 => GeneralNameValue {
                 x400Address: value.cast::<Asn1String>(),
@@ -736,9 +794,10 @@ pub unsafe extern "C" fn GENERAL_NAME_set0_value(
             GEN_RID => GeneralNameValue {
                 registeredID: value.cast::<Asn1Object>(),
             },
-            // An unknown selector writes nothing into the union (the authority's switch has no
-            // default, so `d` keeps its previous bytes), and still records the type.
-            _ => (*a).d,
+            // The cleared union is kept, and the type is still recorded as the authority does.
+            _ => GeneralNameValue {
+                otherName: ptr::null_mut(),
+            },
         };
         (*a).type_ = type_;
     }
@@ -842,7 +901,114 @@ pub unsafe extern "C" fn GENERAL_NAME_get0_otherName(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asn1::string::{ASN1_IA5STRING_new, ASN1_STRING_set};
     use crate::runtime::obj::{NID_commonName, OBJ_nid2obj};
+
+    /// The selector is the only thing that says which arm is live: the checked accessor names
+    /// the arm, an equal pair of every comparable type answers its own comparison, and a
+    /// cross-type pair answers the authority's `-1`.
+    #[test]
+    fn the_selector_picks_the_compared_arm() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is freshly allocated here and ownership passes into the union.
+        unsafe {
+            let a = GENERAL_NAME_new();
+            let b = GENERAL_NAME_new();
+            assert!(!a.is_null() && !b.is_null());
+            let ia5_a = ASN1_IA5STRING_new();
+            let ia5_b = ASN1_IA5STRING_new();
+            assert!(!ia5_a.is_null() && !ia5_b.is_null());
+            let bytes = b"example.test";
+            assert_eq!(
+                ASN1_STRING_set(ia5_a, bytes.as_ptr().cast(), bytes.len() as c_int),
+                1
+            );
+            assert_eq!(
+                ASN1_STRING_set(ia5_b, bytes.as_ptr().cast(), bytes.len() as c_int),
+                1
+            );
+            GENERAL_NAME_set0_value(a, GEN_DNS, ia5_a.cast::<c_void>());
+            GENERAL_NAME_set0_value(b, GEN_DNS, ia5_b.cast::<c_void>());
+            assert_eq!(GENERAL_NAME_cmp(a, b), 0, "equal dNSNames compare equal");
+            assert!(matches!((*a).as_ref(), Some(GeneralNameRef::Ia5(_))));
+
+            // Same value, different selector: the authority answers -1 before any arm read.
+            (*b).type_ = GEN_URI;
+            assert_eq!(GENERAL_NAME_cmp(a, b), -1);
+
+            // An unhandled selector answers -1 and the accessor yields no arm.
+            (*b).type_ = 99;
+            assert_eq!(GENERAL_NAME_cmp(a, b), -1);
+            assert!((*b).as_ref().is_none());
+
+            // A NULL argument answers -1.
+            assert_eq!(GENERAL_NAME_cmp(a, core::ptr::null_mut()), -1);
+            GENERAL_NAME_free(a);
+            GENERAL_NAME_free(b);
+        }
+    }
+
+    /// **CVE-2023-0286 probe.** The selector/arm pairing is what the comparator trusts. A pair
+    /// whose selector is `GEN_X400` is read as an `ASN1_STRING` and nothing else, so the historical
+    /// confusion -- comparing an X.400 name through another arm -- cannot be written at the call
+    /// site. The mismatch itself can still be *constructed* through the raw `set0_value` ABI, which
+    /// is why the campaign records the mechanism as HIDDEN rather than eliminated.
+    #[test]
+    fn the_x400_arm_is_only_ever_read_as_an_asn1_string() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: objects are freshly allocated and ownership passes into the union.
+        unsafe {
+            let a = GENERAL_NAME_new();
+            let b = GENERAL_NAME_new();
+            let s1 = ASN1_IA5STRING_new();
+            let s2 = ASN1_IA5STRING_new();
+            assert!(ASN1_STRING_set(s1, b"x".as_ptr().cast(), 1) == 1);
+            assert!(ASN1_STRING_set(s2, b"x".as_ptr().cast(), 1) == 1);
+            GENERAL_NAME_set0_value(a, GEN_X400, s1.cast::<c_void>());
+            GENERAL_NAME_set0_value(b, GEN_X400, s2.cast::<c_void>());
+            assert!(matches!((*a).as_ref(), Some(GeneralNameRef::X400(_))));
+            assert_eq!(
+                GENERAL_NAME_cmp(a, b),
+                0,
+                "two X.400 names compare through the ASN1_STRING arm only"
+            );
+            GENERAL_NAME_free(a);
+            GENERAL_NAME_free(b);
+        }
+    }
+
+    /// **CVE-2023-0286 mechanism probe.** After a set, the slot holds only the arm the selector
+    /// names; an unhandled selector normalises the slot to NULL. The authority instead leaves the
+    /// previous bytes in `d`, which is the controllable-pointer residue the confusion needs.
+    #[test]
+    fn a_set_name_never_leaves_a_stale_arm_behind() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: objects are freshly allocated; the string is transferred to the name on the
+        // first set and freed here after the normalisation detached it.
+        unsafe {
+            let n = GENERAL_NAME_new();
+            let s = ASN1_IA5STRING_new();
+            assert_eq!(ASN1_STRING_set(s, b"dns".as_ptr().cast(), 3), 1);
+            GENERAL_NAME_set0_value(n, GEN_DNS, s.cast::<c_void>());
+            assert!(matches!((*n).as_ref(), Some(GeneralNameRef::Ia5(_))));
+
+            // An unhandled selector records the type but must not preserve the old pointer.
+            GENERAL_NAME_set0_value(n, 99, core::ptr::null_mut());
+            assert_eq!((*n).type_, 99);
+            assert!((*n).as_ref().is_none(), "no arm is readable");
+            assert_eq!(
+                GENERAL_NAME_get0_value(n, core::ptr::null_mut()),
+                core::ptr::null_mut()
+            );
+            assert!(
+                (*n).d.ia5.is_null(),
+                "the cleared slot holds no controllable pointer"
+            );
+
+            crate::asn1::string::ASN1_STRING_free(s);
+            GENERAL_NAME_free(n);
+        }
+    }
 
     /// The item group is stable, a decoded `iPAddress` carries its octets, and the selector is
     /// the `GEN_*` the wire tag named. A `dNSName` round-trips to the same bytes.

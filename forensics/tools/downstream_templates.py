@@ -67,28 +67,8 @@ HARNESS_TEMPLATES: tuple[str, ...] = (
     "http_bench",
     "http_mirror",
     "tls_server",
-    "tls_client",
     "signature",
     "ssh_client",
-    "irc_server",
-    "ftp_server",
-    "mail_client",
-    "dns_tls",
-)
-
-#: Every non-library bucket the P1000 classifier can emit.
-CLASSIFICATION_BUCKETS: tuple[str, ...] = (
-    "HTTP(S) client",
-    "HTTP(S) server",
-    "TLS generic client",
-    "TLS generic server",
-    "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "DNSSEC/DoT",
-    "digest/HMAC/HKDF tool",
-    "signature/cert tool",
-    "key/cert management tool",
-    "library-only (needs C)",
-    "no-plausible-OpenSSL-surface",
 )
 
 _TEMPLATE_SCHEMA = "openssl-rs/downstream-template-families/1"
@@ -526,6 +506,10 @@ def _expand_wl(value: Any, body: dict, *, extra: dict | None = None) -> Any:
         "root": body["root"],
         "port": body["port"],
         "ca": (body.get("ca") or ""),
+        "cert": (body.get("cert") or ""),
+        "key": (body.get("key") or ""),
+        "pem": (body.get("pem") or ""),
+        "wrong_ca": (body.get("wrong_ca") or ""),
         "url": (body.get("url") or ""),
         "config": (body.get("config") or ""),
     }
@@ -543,8 +527,9 @@ def _tpl_digest(entry: dict, ctx: dict) -> dict:
     pos_match = re.search(expect, pos["stdout"] + pos["stderr"], re.MULTILINE)
     neg_argv = _expand_wl(wl.get("negative_argv") or wl["argv"], b)
     neg = _run([str(ctx["program"]), *neg_argv], cwd=ctx["workdir"], env=ctx["env"], timeout=120)
-    digest_match = re.search(r"[0-9a-f]{32,128}", pos["stdout"])
-    different = bool(digest_match) and digest_match.group(0) not in (neg["stdout"] + neg["stderr"])
+    # The negative control compares the *expectation* the family declares, not an assumed
+    # lowercase-hex shape: NSEC3 hashes are base32hex and would otherwise never be compared.
+    different = bool(pos_match) and pos_match.group(0) not in (neg["stdout"] + neg["stderr"])
     functional = bool(pos["ok"] and pos_match and (different or neg["exit_code"] != 0))
     return {
         "runtime_ok": bool(pos["ok"]),
@@ -568,13 +553,15 @@ def _http_client_argv(entry: dict, body: dict, *, negative: bool) -> list[str]:
     mode = str(wl.get("negative", "wrong_ca"))
     ca = body["ca"]
     url = body["url"]
+    port = body["port"]
     if negative:
-        if mode == "plaintext":
+        if mode in ("plaintext", "closed_port"):
             url = f"https://127.0.0.1:{body['neg_port']}/"
+            port = body["neg_port"]
             ca = body["ca"]
         else:
             ca = body["wrong_ca"]
-    return _expand_wl(argv, body, extra={"url": url, "ca": ca})
+    return _expand_wl(argv, body, extra={"url": url, "ca": ca, "port": port})
 
 
 def _mirror_has(ctx: dict, needle: str, name: str = "mirror") -> bool:
@@ -606,21 +593,30 @@ def _tpl_http(entry: dict, ctx: dict) -> dict:
                 results += [("positive", pos), ("negative (plaintext peer)", neg)]
                 good_requests, plain_requests = good.requests, plain.requests
         else:
+            # ``closed_port`` is for a client that does not verify certificates (wrk): an
+            # unrelated CA is not a rejection it can express, but a refused connection must
+            # never be reported as a successful transaction.
             pos = _run([str(ctx["program"]), *_http_client_argv(entry, b, negative=False)],
                        cwd=ctx["workdir"], env=ctx["env"], timeout=120)
             neg = _run([str(ctx["program"]), *_http_client_argv(entry, b, negative=True)],
                        cwd=ctx["workdir"], env=ctx["env"], timeout=120)
-            results += [("positive", pos), ("negative (unrelated CA)", neg)]
+            results += [("positive", pos), ("negative (no listener)", neg)]
             good_requests, plain_requests = good.requests, 0
     pos_match = re.search(str(wl["expect"]), pos["stdout"] + pos["stderr"], re.MULTILINE)
     if wl["template"] == "http_mirror":
-        mirror = ctx["workdir"] / "mirror"
         mirror_ok = _mirror_has(ctx, body_text)
         # httrack's own progress log is not the evidence; the mirrored payload is.
         pos_match = mirror_ok
-    neg_bad = (neg["exit_code"] != 0 or not re.search(
-        str(wl["expect"]), neg["stdout"] + neg["stderr"], re.MULTILINE)) \
-        and not (wl["template"] == "http_mirror" and _mirror_has(ctx, body_text, "mirror-neg"))
+    if mode == "closed_port":
+        # The client must not report the refused connection as a completed transaction.
+        neg_output = neg["stdout"] + neg["stderr"]
+        neg_bad = (neg["exit_code"] != 0
+                   and re.search(str(wl["expect"]), neg_output, re.MULTILINE) is None)
+    else:
+        neg_bad = (neg["exit_code"] != 0 or not re.search(
+            str(wl["expect"]), neg["stdout"] + neg["stderr"], re.MULTILINE)) \
+            and not (wl["template"] == "http_mirror"
+                     and _mirror_has(ctx, body_text, "mirror-neg"))
     functional = bool(pos["ok"] and pos_match and good_requests >= 1 and neg_bad
                       and (mirror_ok if wl["template"] == "http_mirror" else True))
     return {
@@ -647,6 +643,15 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
     root = workdir / "root"
     root.mkdir(parents=True, exist_ok=True)
     (root / "index.gmi").write_text("template-payload\n", encoding="utf-8")
+    # A family that does not mint its own certificate (lighttpd, h2o, httpd) is given the same
+    # fixture PKI the HTTP bucket uses; the server certificate is CA-signed, so the positive
+    # client verifies it and an unrelated CA must be rejected.  A family that generates its own
+    # certificate on first use (gmnisrv) keeps `cert_path` and never references these names.
+    pki = _generate_pki(ctx)
+    pem = workdir / "pki" / "server.pem"
+    pem.write_bytes(pki["cert"].read_bytes() + pki["key"].read_bytes())
+    b["ca"], b["wrong_ca"] = pki["ca"], pki["wrong_ca"]
+    b["cert"], b["key"], b["pem"] = pki["cert"], pki["key"], pem
     config_path = workdir / "server.conf"
     b["config"] = config_path
     config_path.write_text(str(_expand_wl(wl["config"], b)), encoding="utf-8")
@@ -658,7 +663,7 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
             out, err = server.communicate(timeout=5)
             return _fail(f"the TLS server did not listen: {(err or out or '')[-300:]}",
                          "runtime-failure")
-        cert_path = Path(str(_expand_wl(wl.get("cert_path", ""), b)))
+        cert_path = Path(str(_expand_wl(wl.get("cert_path", "{ca}"), b)))
         # gmnisrv creates its self-signed certificate on first use; trigger and wait.
         deadline = time.monotonic() + 5
         while not cert_path.is_file() and time.monotonic() < deadline:
@@ -671,8 +676,7 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
                 pass
             time.sleep(0.1)
         good = _tls_exchange(b["port"], cert_path, str(wl.get("payload", "")), verify_host=True)
-        wrong = _tls_exchange(b["port"], Path(str(_expand_wl(wl.get("wrong_ca", ""), b)))
-                              if wl.get("wrong_ca") else _generate_pki(ctx)["wrong_ca"],
+        wrong = _tls_exchange(b["port"], b["wrong_ca"],
                               str(wl.get("payload", "")), verify_host=True)
     finally:
         server.terminate()
@@ -845,296 +849,3 @@ def _tpl_ssh_client(entry: dict, ctx: dict) -> dict:
         "local_only": True,
     }
 
-
-# --------------------------------------------------------------------------------------------
-# classification of the unbuilt families (the report's bucket counts)
-# --------------------------------------------------------------------------------------------
-
-# Curated names whose bucket is not inferable from a substring.  Everything not
-# named here falls through the ordered keyword rules below; the bucket is a
-# planning classification, not a safety or compatibility claim.
-_EXPLICIT: dict[str, str] = {
-    "cargo": "HTTP(S) client", "rustup": "HTTP(S) client",
-    "python3": "TLS generic client", "python3-cryptography": "digest/HMAC/HKDF tool",
-    "python3-m2crypto": "TLS generic client", "python3-awscrt": "TLS generic client",
-    "ruby": "TLS generic client", "perl-net-ssleay": "TLS generic client",
-    "perl-crypt-ssleay": "TLS generic client", "nodejs": "TLS generic server",
-    "git-core": "HTTP(S) client", "cmake": "HTTP(S) client", "nix": "HTTP(S) client",
-    "sccache": "HTTP(S) client", "jujutsu": "HTTP(S) client",
-    "rhash": "digest/HMAC/HKDF tool", "gostsum": "digest/HMAC/HKDF tool",
-    "fsverity-utils": "digest/HMAC/HKDF tool", "fsverity": "digest/HMAC/HKDF tool",
-    "appx-util": "signature/cert tool", "osslsigncode": "signature/cert tool",
-    "sbsigntool": "signature/cert tool", "efitools": "signature/cert tool",
-    "u-boot-tools": "signature/cert tool", "xar": "signature/cert tool",
-    "sscg": "key/cert management tool", "certmonger": "key/cert management tool",
-    "mokutil": "key/cert management tool", "xca": "key/cert management tool",
-    "opensc": "key/cert management tool", "yubico-piv-tool": "key/cert management tool",
-    "pkcs11-dump": "key/cert management tool", "tpm2-tools": "key/cert management tool",
-    "tpm2-tss-engine": "key/cert management tool", "opencryptoki": "key/cert management tool",
-    "clevis": "key/cert management tool", "easy-rsa": "key/cert management tool",
-    "acme-client": "key/cert management tool", "acme-tiny": "key/cert management tool",
-    "acme-redirect": "key/cert management tool", "acmed": "key/cert management tool",
-    "dehydrated": "key/cert management tool", "lacme": "key/cert management tool",
-    "curl-minimal": "HTTP(S) client", "openssh-client": "TLS generic client",
-    "openssh-server": "TLS generic server", "sshd": "TLS generic server",
-    "vsftpd": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "proftpd": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "pure-ftpd": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "ftpd-ssl": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "ftp-ssl": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "unrealircd": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "charybdis": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "ircd-hybrid": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "atheme-services": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "prosody": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "ejabberd": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "jabberd": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "jabberd2": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "exim": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "exim-mysql": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "postfix": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "sendmail": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "dovecot": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "cyrus-imapd": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "fetchmail": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "s-nail": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "ssmtp": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "dma": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "fdm": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "slrn": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "tin": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "ircii": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "epic": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "epic4": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "epic5-lite": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "hexchat": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "kvirc": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "znc": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "sylpheed": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "mutt": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "neomutt": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "nmh": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "nmail": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "dnsdist": "DNSSEC/DoT", "pdns": "DNSSEC/DoT", "pdns-recursor": "DNSSEC/DoT",
-    "bind": "DNSSEC/DoT", "bind9": "DNSSEC/DoT", "nsd": "DNSSEC/DoT",
-    "unbound": "DNSSEC/DoT", "unbound-anchor": "DNSSEC/DoT", "yadifa": "DNSSEC/DoT",
-    "ldnsutils": "DNSSEC/DoT", "stubby": "DNSSEC/DoT", "dog": "DNSSEC/DoT",
-    "dnsperf": "DNSSEC/DoT", "dnscap": "DNSSEC/DoT", "dnssec-tools": "DNSSEC/DoT",
-    "dnssec-trigger": "DNSSEC/DoT", "fort-validator": "DNSSEC/DoT",
-    "rpki-client": "DNSSEC/DoT", "dns-compliance-testing": "DNSSEC/DoT",
-    "h2o": "HTTP(S) server", "hinsightd": "HTTP(S) server", "kore": "HTTP(S) server",
-    "trafficserver": "HTTP(S) server", "uwsgi": "HTTP(S) server",
-    "lighttpd": "HTTP(S) server", "nginx": "HTTP(S) server", "httpd": "HTTP(S) server",
-    "apache2-bin": "HTTP(S) server", "apache2-ssl": "HTTP(S) server",
-    "apache2-http2": "HTTP(S) server", "apache2-dev": "HTTP(S) server",
-    "hitch": "TLS generic server", "stunnel": "TLS generic server",
-    "openvpn": "TLS generic server", "tinc": "TLS generic server",
-    "fastd": "TLS generic server", "socat": "TLS generic client",
-    "openfortivpn": "TLS generic client", "sstp-client": "TLS generic client",
-    "proxytunnel": "TLS generic client", "gsocket": "TLS generic client",
-    "trojan": "TLS generic server", "sslscan": "TLS generic client",
-    "ssldump": "TLS generic client", "nmap": "TLS generic client",
-    "nmap-ncat": "TLS generic client", "sipsak": "TLS generic client",
-    "sipp": "TLS generic client", "sngrep": "TLS generic client",
-    "srt": "TLS generic client", "srtp": "TLS generic client",
-    "libreswan": "TLS generic server", "strongswan": "TLS generic server",
-    "openiked": "TLS generic server", "ike-scan": "TLS generic client",
-    "isakmp": "TLS generic client",
-}
-
-_EXPLICIT.update({
-    # Mail/IRC/XMPP/FTP families
-    "alpine": "IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-    "mupdf": "no-plausible-OpenSSL-surface",
-    "kitty": "no-plausible-OpenSSL-surface",
-    "poedit": "no-plausible-OpenSSL-surface",
-    "mold": "no-plausible-OpenSSL-surface",
-    "lxc": "no-plausible-OpenSSL-surface",
-    "partimage": "no-plausible-OpenSSL-surface",
-    "grub-customizer": "no-plausible-OpenSSL-surface",
-    "grisbi": "no-plausible-OpenSSL-surface",
-    "butt": "no-plausible-OpenSSL-surface",
-    "classified-ads": "no-plausible-OpenSSL-surface",
-    "ddnet": "no-plausible-OpenSSL-surface",
-    "ddnet-server": "no-plausible-OpenSSL-surface",
-    "dmg2img": "no-plausible-OpenSSL-surface",
-    "mstflint": "no-plausible-OpenSSL-surface",
-    # HTTP clients/servers and libraries
-    "clamav": "HTTP(S) client",
-    "casync": "HTTP(S) client",
-    "nghttp2": "HTTP(S) client",
-    "nheko": "HTTP(S) client",
-    "kristall": "HTTP(S) client",
-    "fragments": "HTTP(S) client",
-    "mtxclient": "HTTP(S) client",
-    "ostree": "HTTP(S) client",
-    "gitui": "HTTP(S) client",
-    "arc-gui-clients": "TLS generic client",
-    "njs": "HTTP(S) server",
-    "pcp": "HTTP(S) server",
-    "nsca-ng-server": "TLS generic server",
-    "nsca-ng-client": "TLS generic client",
-    # TLS peers / key management
-    "ausweisapp2": "TLS generic client",
-    "pgbouncer": "TLS generic server",
-    "collectd": "TLS generic server",
-    "conserver-client": "TLS generic client",
-    "eurephia": "TLS generic server",
-    "galera": "TLS generic server",
-    "ceph-osd": "TLS generic server",
-    "netatalk": "TLS generic server",
-    "gvpe": "TLS generic server",
-    "mosh": "TLS generic client",
-    "barrier": "TLS generic client",
-    "open-iscsi": "TLS generic client",
-    "open-isns": "TLS generic client",
-    "open-vm-tools": "TLS generic server",
-    "networkmanager-l2tp": "TLS generic client",
-    "ovn": "TLS generic server", "ovn-central": "TLS generic server",
-    "ovn-host": "TLS generic server",
-    "tcpflow": "TLS generic client", "ettercap": "TLS generic client",
-    "fastnetmon": "TLS generic client", "dsniff": "TLS generic client",
-    "pam-u2f": "key/cert management tool", "pamu2fcfg": "key/cert management tool",
-    "git-crypt": "key/cert management tool", "gocryptfs": "key/cert management tool",
-    "freeipa-client": "key/cert management tool",
-    "myproxy": "key/cert management tool", "myproxy-voms": "key/cert management tool",
-    "globus-gass-copy-progs": "TLS generic client",
-    "globus-gatekeeper": "TLS generic server",
-    "globus-gram-job-manager": "TLS generic server",
-    "globus-proxy-utils": "key/cert management tool",
-    "gridsite-clients": "TLS generic client",
-    "nordugrid-arc-arex": "TLS generic server",
-    "nordugrid-arc-client": "TLS generic client",
-    "nordugrid-arc-datadelivery-service": "TLS generic server",
-    "nordugrid-arc-plugins-arcrest": "HTTP(S) client",
-    "nordugrid-arc-plugins-lcas-lcmaps": "TLS generic client",
-    "nordugrid-arc-plugins-needed": "TLS generic client",
-    "ipmitool": "digest/HMAC/HKDF tool", "ipmiutil": "digest/HMAC/HKDF tool",
-    "openipmi-lanserv": "digest/HMAC/HKDF tool",
-    "systemd": "DNSSEC/DoT",
-    "gambas3-gb-openssl": "library-only (needs C)",
-})
-
-_KW_RULES: list[tuple[str, tuple[str, ...]]] = [
-    ("HTTP(S) server", ("httpd", "apache", "nginx", "lighttpd", "mini-httpd", "h2o", "kore",
-                        "trafficserver", "uwsgi", "gunicorn", "passenger", "caddy", "tomcat",
-                        "jetty", "cockpit-ws", "ttyd", "guacd", "guacamole-server",
-                        "dmlite-apache", "groonga-httpd", "althttpd", "hinsightd")),
-    ("HTTP(S) client", ("curl", "wget", "aria2", "siege", "wrk", "httperf", "httping",
-                        "bannergrab", "httrack", "axel", "lynx", "links", "w3m", "elinks",
-                        "dillo", "netsurf", "falkon", "snownews", "edbrowse", "megatools",
-                        "s3fs", "davix", "http_ping", "httest", "libcurl", "neon", "serf",
-                        "httpie", "hurl", "gdown", "youtube-dl", "yt-dlp", "transmission",
-                        "qbittorrent", "deluge", "rtorrent", "libtorrent", "aria")),
-    ("DNSSEC/DoT", ("dns", "bind", "nsd", "unbound", "yadifa", "ldns", "getdns", "stubby",
-                    "dnsdist", "dnscap", "dnsperf", "dnssec", "rpki", "fort-validator",
-                    "pdns", "knot", "powerdns", "dog")),
-    ("IRC/XMPP/SMTP/IMAP/POP/NNTP/FTPS client or server",
-     ("irc", "xmpp", "jabber", "prosody", "ejabberd", "smtp", "imap", "pop3", "pop",
-      "nntp", "ftp", "sylpheed", "mutt", "neomutt", "nmh", "mail", "dovecot", "cyrus",
-      "exim", "postfix", "sendmail", "fetchmail", "getmail", "fdm", "dma", "msmtp",
-      "ssmtp", "s-nail", "nmail", "tin", "slrn", "epic", "ircii", "hexchat", "kvirc",
-      "znc", "charybdis", "unrealircd", "atheme", "inspircd", "ngircd", "ircd")),
-    ("signature/cert tool", ("sign", "signtool", "codesign", "appx", "xar", "xmlsec",
-                             "xml-security", "osslsigncode", "sbsign", "efitools",
-                             "mokutil", "u-boot", "mkimage", "imx-code-signing",
-                             "mender-artifact", "pesign", "rpm-sign")),
-    ("key/cert management tool", ("sscg", "certmonger", "certwatch", "easy-rsa", "acme",
-                                  "xca", "yubico-piv", "pkcs11", "tpm", "opencryptoki",
-                                  "clevis", "keyring", "hsm", "softhsm", "p11-kit",
-                                  "p11tool", "keytool")),
-    ("digest/HMAC/HKDF tool", ("rhash", "gostsum", "fsverity", "hash", "sha1", "sha256",
-                               "sha512", "md5", "digest", "hmac", "hkdf", "pbkdf",
-                               "cowpatty", "hcxtools", "hcxdumptool", "hcxkeys", "aircrack",
-                               "john", "ophcrack", "bruteforce", "mktorrent", "makepasswd",
-                               "cryptsetup", "scrypt", "argon2", "bcrypt")),
-]
-
-_KW_RULES.append(("TLS generic server", ("tor", "i2pd", "hostapd", "wpa_supplicant",
-                                     "freeradius", "radsecproxy", "strongswan", "libreswan",
-                                     "openiked", "openvswitch", "ntpsec", "krb5", "kdc",
-                                     "asterisk", "kamailio", "mumble", "coturn",
-                                     "shairport-sync", "xrdp", "x11vnc", "openvpn",
-                                     "wireguard", "zerotier", "tinc", "fastd")))
-_KW_RULES.append(("TLS generic client", ("freerdp", "rdesktop", "remmina", "wpa_supplicant",
-                                     "hydra", "ncrack", "medusa", "ssh", "sftp",
-                                     "borgbackup", "restic", "duplicity")))
-_KW_RULES.append(("HTTP(S) server", ("netdata", "syslog-ng", "domoticz", "zabbix", "icinga",
-                                  "nagios", "cups", "apt-cacher", "e2guardian",
-                                  "firehol", "goaccess", "freedombox", "ceph-radosgw",
-                                  "glusterfs", "openvas", "mattermost", "grafana")))
-_KW_RULES.append(("HTTP(S) client", ("lastpass", "monero", "calibre", "fractal", "datovka",
-                                  "evernote", "nextcloud", "owncloud", "dropbox",
-                                  "gdrive", "onedrive")))
-_KW_RULES.append(("library-only (needs C)", ("gdal", "pdal", "gsoap", "gwenhywfar", "cjose",
-                                          "xmlsec", "xml-security", "poco", "cpprest",
-                                          "cpr", "capnproto", "grpc", "thrift", "fbthrift",
-                                          "proxygen", "folly", "fizz", "wangle", "s2n",
-                                          "aws-c-cal", "spice-glib", "sofia-sip", "serf",
-                                          "neon", "mongo-c-driver", "opusfile", "pulseaudio",
-                                          "tarantool", "xrootd", "yara", "afflib", "libewf",
-                                          "ewf-tools", "gdal", "libcouchbase", "librabbitmq",
-                                          "rabbitmq-c", "srtp", "srt", "libks", "libpaho")))
-_KW_RULES.append(("key/cert management tool", ("ca-certificates", "ecryptfs", "encfs",
-                                             "fapolicyd", "ima-evm", "vboot", "keylime",
-                                             "certificate", "cert", "pki", "gpg",
-                                             "keychain", "keyring")))
-_KW_RULES.append(("digest/HMAC/HKDF tool", ("coreutils-sha", "coreutils-md5", "hashcat",
-                                          "hydra", "medusa", "ncrack", "bruteforce",
-                                          "rainbowcrack", "rcrack", "genpmk", "hcxpmk")))
-
-_LIBRARY_PREFIXES = ("lib", "python3-", "python-", "perl-", "lua5.", "lua-", "ghc-",
-                     "ruby-", "node-", "erlang-", "ocaml-", "php-", "qt5-", "qt6-",
-                     "dotnet", "golang-", "rust-", "cargo-", "clang-", "gcc-")
-_LIBRARY_SUFFIXES = ("-libs", "-devel", "-dev", "-common", "-base", "-headers", "-lib",
-                     "-plugin", "-plugins", "-module", "-modules", "-runtime", "-doc",
-                     "-tools-libs", "-static", "-shared")
-
-
-def classify_name(name: str) -> str:
-    """Classify one frozen family into a planning bucket.
-
-    The model is deliberately conservative: a name that looks like a library
-    package is ``library-only (needs C)`` even when a package also ships a tiny
-    CLI; a family with no recognisable protocol/crypto surface is
-    ``no-plausible-OpenSSL-surface``.  The bucket is planning metadata, not a
-    measured result.
-    """
-    low = name.lower()
-    if low in _EXPLICIT:
-        return _EXPLICIT[low]
-    if low.startswith(_LIBRARY_PREFIXES) or low.endswith(_LIBRARY_SUFFIXES):
-        return "library-only (needs C)"
-    for bucket, keys in _KW_RULES:
-        if any(k in low for k in keys):
-            return bucket
-    return "no-plausible-OpenSSL-surface"
-
-
-def classify_names(names: list[str]) -> dict[str, int]:
-    counts = {b: 0 for b in CLASSIFICATION_BUCKETS}
-    for name in names:
-        counts[classify_name(name)] += 1
-    return counts
-
-
-def classification_report(names: list[str]) -> dict:
-    counts = classify_names(names)
-    return {"total": len(names), "buckets": counts,
-            "unclassified": [n for n in names
-                             if classify_name(n) == "no-plausible-OpenSSL-surface"][:80]}
-
-
-if __name__ == "__main__":
-    # A tiny planning report; never a measurement.  Reads the frozen list only.
-    import argparse
-
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--classify", metavar="FREEZE_JSON",
-                    help="classify the families in the frozen P1000 list")
-    args = ap.parse_args()
-    if args.classify:
-        doc = json.loads(Path(args.classify).read_text(encoding="utf-8"))
-        names = [str(e["canonical_name"]) for e in doc["body"]["p1000"]]
-        report = classification_report(names)
-        print(json.dumps(report, indent=2, sort_keys=True))

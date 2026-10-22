@@ -147,25 +147,8 @@ const fn ext_ia5string(nid: c_int) -> X509V3ExtMethod {
         ext_free: None,
         d2i: None,
         i2d: None,
-        // SAFETY: both function types take two pointer arguments and answer a pointer; the
-        // authority writes exactly this cast in the macro.
-        i2s: Some(unsafe {
-            core::mem::transmute::<
-                unsafe extern "C" fn(*mut c_void, *mut Asn1String) -> *mut c_char,
-                unsafe extern "C" fn(*const X509V3ExtMethod, *mut c_void) -> *mut c_char,
-            >(i2s_ASN1_IA5STRING)
-        }),
-        // SAFETY: both function types take three pointer arguments and answer a pointer.
-        s2i: Some(unsafe {
-            core::mem::transmute::<
-                unsafe extern "C" fn(*mut c_void, *mut c_void, *const c_char) -> *mut Asn1String,
-                unsafe extern "C" fn(
-                    *const X509V3ExtMethod,
-                    *mut c_void,
-                    *const c_char,
-                ) -> *mut c_void,
-            >(s2i_ASN1_IA5STRING)
-        }),
+        i2s: Some(ia5_i2s),
+        s2i: Some(ia5_s2i),
         i2v: None,
         v2i: None,
         i2r: None,
@@ -193,6 +176,22 @@ const EXT_END: X509V3ExtMethod = X509V3ExtMethod {
     usr_data: ptr::null_mut(),
 };
 
+/// The `i2s` slot for `i2s_ASN1_IA5STRING`.
+unsafe extern "C" fn ia5_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {
+    // SAFETY: `meth` is the table's live row (read only); `value` is the IA5 string in the slot.
+    unsafe { i2s_ASN1_IA5STRING(meth.cast_mut().cast::<c_void>(), value.cast::<Asn1String>()) }
+}
+
+/// The `s2i` slot for `s2i_ASN1_IA5STRING`.
+unsafe extern "C" fn ia5_s2i(
+    meth: *const X509V3ExtMethod,
+    ctx: *mut c_void,
+    value: *const c_char,
+) -> *mut c_void {
+    // SAFETY: as `ia5_i2s`; the answer is a fresh IA5 string.
+    unsafe { s2i_ASN1_IA5STRING(meth.cast_mut().cast::<c_void>(), ctx, value).cast::<c_void>() }
+}
+
 /// `const X509V3_EXT_METHOD ossl_v3_ns_ia5_list[8]` — `crypto/x509/v3_ia5.c:17-26`.
 ///
 /// The seven Netscape IA5 extensions a `NID` names, plus the `EXT_END` sentinel the array's
@@ -207,3 +206,49 @@ pub static ossl_v3_ns_ia5_list: [X509V3ExtMethod; 8] = [
     ext_ia5string(NID_netscape_comment),
     EXT_END,
 ];
+
+#[cfg(test)]
+#[allow(clippy::panic, clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::asn1::layout::Asn1String as LAsn1String;
+    use crate::asn1::string::ASN1_IA5STRING_new;
+
+    /// The converted slots behave exactly as the implementation they forward to: `i2s` answers
+    /// the same C string, `s2i` the same fresh ASN1 string, and the table's slot points at the
+    /// adapter (not a re-typed function pointer).
+    #[test]
+    fn the_ia5_slot_adapters_round_trip() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object below is freshly allocated and live for the call.
+        unsafe {
+            let row = &ossl_v3_ns_ia5_list[0] as *const X509V3ExtMethod;
+            let i2s = (*row).i2s.unwrap();
+            let s2i = (*row).s2i.unwrap();
+
+            let bs: *mut LAsn1String = ASN1_IA5STRING_new();
+            assert!(!bs.is_null());
+            let value = b"example.test";
+            assert_eq!(
+                crate::asn1::string::ASN1_STRING_set(bs, value.as_ptr().cast(), value.len() as i32),
+                1
+            );
+            let text = i2s(row, bs.cast::<c_void>());
+            assert!(!text.is_null());
+            let seen = core::ffi::CStr::from_ptr(text).to_bytes();
+            assert_eq!(seen, value, "i2s answers the stored bytes");
+            crate::runtime::mem::CRYPTO_free(text.cast(), core::ptr::null(), 0);
+
+            let back = s2i(row, core::ptr::null_mut(), c"example.test".as_ptr());
+            assert!(!back.is_null(), "s2i answers a fresh ASN1 string");
+            let out = &*back.cast::<LAsn1String>();
+            assert_eq!(
+                core::slice::from_raw_parts(out.data, out.length as usize),
+                value,
+                "s2i round-trips the same bytes"
+            );
+            crate::asn1::string::ASN1_STRING_free(back.cast::<LAsn1String>());
+            crate::asn1::string::ASN1_STRING_free(bs);
+        }
+    }
+}

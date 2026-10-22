@@ -872,11 +872,29 @@ unsafe extern "C" fn dir_ctrl(
             // environment is defined.
             let dir = unsafe { ossl_safe_getenv(X509_get_default_cert_dir_env()) };
             if !dir.is_null() {
+                // An override is added verbatim, including an empty one: `SSL_CERT_DIR=""` is
+                // `X509_R_INVALID_DIRECTORY` with `X509_R_LOADING_CERT_DIR` around it, exactly
+                // as the authority answers.
                 // SAFETY: `ld` is this method's own record; `dir` is NUL-terminated.
                 ret = unsafe { add_cert_dir(ld, dir, X509_FILETYPE_PEM) };
             } else {
-                // SAFETY: `ld` is this method's record; the default answers a `'static` string.
-                ret = unsafe { add_cert_dir(ld, X509_get_default_cert_dir(), X509_FILETYPE_PEM) };
+                // The default answers a `'static` string, never NULL.
+                let dir = X509_get_default_cert_dir();
+                // SAFETY: `dir` is a NUL-terminated static string.
+                if unsafe { *dir } != 0 {
+                    // SAFETY: `ld` is this method's record; `dir` is NUL-terminated.
+                    ret = unsafe { add_cert_dir(ld, dir, X509_FILETYPE_PEM) };
+                } else {
+                    // `OPENSSL_RS_OPENSSLDIR` unset: this distribution answers the empty sentinel
+                    // for `X509_CERT_DIR` instead of the authority's textual `"/certs"` (the
+                    // documented OPENSSLDIR divergence in `x509_def.rs`). The authority never
+                    // asks `add_cert_dir` to add an empty string on this path — its compiled
+                    // default is non-empty, and the add does not stat the path — so the request
+                    // succeeds with nothing to register, exactly as it does for a
+                    // separator-only list. Answering 0 here made a caller that checks the
+                    // return (xmlsec's keys manager) refuse to initialise.
+                    ret = 1;
+                }
             }
             if ret == 0 {
                 // SAFETY: a compile-time-constant site.
@@ -942,3 +960,119 @@ pub unsafe extern "C" fn X509_LOOKUP_hash_dir() -> *mut X509LookupMethod {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(ByDirHash => zero_state_sweep_by_dir_hash, ByDirEntry => zero_state_sweep_by_dir_entry, ByDir => zero_state_sweep_by_dir);
+
+#[cfg(test)]
+mod add_dir_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::err::{ERR_get_error, ERR_peek_error};
+    use crate::x509::x509_lu::{X509_LOOKUP_ctrl, X509_LOOKUP_free, X509_LOOKUP_new};
+
+    /// A fresh hashed-directory lookup.
+    ///
+    /// # Safety
+    /// The caller owns the returned lookup and releases it with `X509_LOOKUP_free`.
+    unsafe fn new_lookup() -> *mut X509Lookup {
+        // SAFETY: `X509_LOOKUP_hash_dir` is a static table's address.
+        let l = unsafe { X509_LOOKUP_new(X509_LOOKUP_hash_dir()) };
+        assert!(!l.is_null(), "a hashed-directory lookup must allocate");
+        l
+    }
+
+    /// `X509_LOOKUP_add_dir(l, dir, type)`.
+    fn add(l: *mut X509Lookup, dir: *const c_char, ty: c_int) -> c_int {
+        // SAFETY: `l` is live; `dir` is NULL or NUL-terminated.
+        unsafe { X509_LOOKUP_ctrl(l, X509_L_ADD_DIR, dir, c_long::from(ty), ptr::null_mut()) }
+    }
+
+    /// The number of registered directories.
+    ///
+    /// # Safety
+    /// `l` must be a live hashed-directory lookup.
+    unsafe fn dir_count(l: *mut X509Lookup) -> c_int {
+        // SAFETY: `l` is live; its method data is this module's `BY_DIR`.
+        let ld = unsafe { (*l).method_data }.cast::<ByDir>();
+        // SAFETY: `ld` is the live record; a NULL stack answers -1, which is no directories.
+        let n = unsafe { OPENSSL_sk_num((*ld).dirs) };
+        if n < 0 {
+            0
+        } else {
+            n
+        }
+    }
+
+    /// `X509_LOOKUP_add_dir(l, NULL, X509_FILETYPE_DEFAULT)` succeeds, and a second identical
+    /// call succeeds without changing the list (the authority's duplicate check in
+    /// `add_cert_dir`, `by_dir.c:187-193`).
+    #[test]
+    fn null_default_add_dir_succeeds_and_repeats_like_the_authority() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the lookup is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let l = new_lookup();
+            assert_eq!(add(l, ptr::null(), X509_FILETYPE_DEFAULT), 1);
+            let after_first = dir_count(l);
+            assert_eq!(add(l, ptr::null(), X509_FILETYPE_DEFAULT), 1);
+            assert_eq!(
+                dir_count(l),
+                after_first,
+                "the second add must not duplicate"
+            );
+            assert_eq!(
+                ERR_peek_error(),
+                0,
+                "a successful default add raises nothing"
+            );
+            X509_LOOKUP_free(l);
+        }
+    }
+
+    /// A real directory is registered once; the authority does not stat it, so a nonexistent
+    /// path is registered just the same.
+    #[test]
+    fn real_and_nonexistent_directories_are_registered_once() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the lookup is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let l = new_lookup();
+            assert_eq!(dir_count(l), 0);
+            assert_eq!(add(l, c"/tmp".as_ptr(), X509_FILETYPE_PEM), 1);
+            assert_eq!(dir_count(l), 1);
+            assert_eq!(add(l, c"/tmp".as_ptr(), X509_FILETYPE_PEM), 1);
+            assert_eq!(dir_count(l), 1, "the same path is not added twice");
+            assert_eq!(
+                add(
+                    l,
+                    c"/nonexistent-openssl-rs-dir".as_ptr(),
+                    X509_FILETYPE_PEM
+                ),
+                1,
+                "add_cert_dir does not stat the path"
+            );
+            assert_eq!(dir_count(l), 2);
+            X509_LOOKUP_free(l);
+        }
+    }
+
+    /// A NULL directory with a non-default type reaches `add_cert_dir`'s refusal
+    /// (`X509_R_INVALID_DIRECTORY`, `by_dir.c:172-176`).
+    #[test]
+    fn null_directory_with_a_file_type_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the lookup is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let l = new_lookup();
+            assert_eq!(add(l, ptr::null(), X509_FILETYPE_PEM), 0);
+            assert_eq!(
+                (ERR_get_error() & 0x7f_ffff) as c_int,
+                X509_R_INVALID_DIRECTORY
+            );
+            assert_eq!(dir_count(l), 0);
+            X509_LOOKUP_free(l);
+        }
+    }
+}

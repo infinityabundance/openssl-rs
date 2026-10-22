@@ -60,6 +60,10 @@ unsafe fn c_strlen(s: *const core::ffi::c_char) -> usize {
 /// slack is the authority's and is not used by anything, which is why a caller cannot
 /// observe it beyond the allocation succeeding where a tighter one might have.
 ///
+/// **Typed form.** [`ASN1_dup_typed`] is the same body with the callbacks' pointee type
+/// carried in the signature, so a caller never has to cast a function pointer to the
+/// `void` spelling. It is the form every in-crate caller uses.
+///
 /// # Safety
 ///
 /// `i2d` and `d2i` must be live functions matching each other's type; neither is checked
@@ -97,6 +101,50 @@ pub unsafe extern "C" fn ASN1_dup(i2d: I2dOfVoid, d2i: D2iOfVoid, x: *const c_vo
         // SAFETY: the block holds `written` bytes and `d2i` is the caller's function.
         // `buf`'s `Drop` is the authority's own `CRYPTO_free(b, FILE, LINE)` tail, after this
         // decode has read the block.
+        unsafe { d2i(core::ptr::null_mut(), &mut p2, c_long::from(written)) }
+    })
+}
+
+/// The typed form of [`ASN1_dup`]: the same encode/decode with the callbacks' pointee type in the
+/// signature, so no caller needs a function-pointer transmute.
+///
+/// The two signatures are the authority's own pair for the type; nothing is reinterpreted here.
+///
+/// # Safety
+/// `i2d` and `d2i` must be live functions matching each other's type. `x` must be null or a live
+/// value of that type.
+#[allow(non_snake_case)] // the authority's `ASN1_dup` spelling, with the typed suffix
+pub(crate) unsafe fn ASN1_dup_typed<T>(
+    i2d: unsafe extern "C" fn(*const T, *mut *mut c_uchar) -> c_int,
+    d2i: unsafe extern "C" fn(*mut *mut T, *mut *const c_uchar, c_long) -> *mut T,
+    x: *const T,
+) -> *mut T {
+    guard_ffi(core::ptr::null_mut(), || {
+        if x.is_null() {
+            return core::ptr::null_mut();
+        }
+        // SAFETY: `i2d` is the caller's live function and a null destination is the sizing
+        // convention it shares with `ASN1_item_i2d`.
+        let sized = unsafe { i2d(x, core::ptr::null_mut()) };
+        if sized <= 0 {
+            return core::ptr::null_mut();
+        }
+        // SAFETY: `sized > 0`, so the seam request is non-zero and cannot wrap with the slack.
+        let Some(buf) = OwnedBuf::new_plain_released(
+            sized as usize + 10,
+            SeamFile::new(FILE),
+            LINE,
+            SeamFile::new(FILE),
+            LINE,
+        ) else {
+            return core::ptr::null_mut();
+        };
+        let mut p = buf.as_ptr();
+        // SAFETY: `p` has room for the length the sizing pass reported.
+        let written = unsafe { i2d(x, &mut p) };
+        let mut p2: *const c_uchar = buf.as_ptr();
+        // SAFETY: the block holds `written` bytes; `buf`'s `Drop` is the release tail, after the
+        // decode has read it.
         unsafe { d2i(core::ptr::null_mut(), &mut p2, c_long::from(written)) }
     })
 }

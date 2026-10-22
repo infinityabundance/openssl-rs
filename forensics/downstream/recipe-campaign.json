@@ -70,8 +70,8 @@
         "family": "mosquitto",
         "linkage_proven": true,
         "recipe_id": "recipe:mosquitto:2.0.20",
-        "sha256": "ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8",
-        "url": "https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz",
+        "sha256": "851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a",
+        "url": "https://github.com/eclipse-mosquitto/mosquitto/archive/refs/tags/v2.0.20.tar.gz",
         "version": "2.0.20"
       },
       {
@@ -232,9 +232,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "make",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "s-nail",
         "failure_class": "link-failure",
         "family": "s-nail",
@@ -246,9 +246,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "unsupported",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "libcoap",
         "failure_class": "recipe-build-system-unsupported",
         "family": "libcoap",
@@ -268,8 +268,8 @@
         "family": "mosquitto",
         "outcome": "admitted",
         "reason": null,
-        "sha256": "ebd07d89d2a446a7f74100ad51272e4a8bf300b61634a7812e19f068f2759de8",
-        "tarball_url": "https://mosquitto.org/files/source/mosquitto-2.0.20.tar.gz",
+        "sha256": "851fb4b5bf5e2ddc4c341efcfe24c877fcb3a4356c79838103a44751c5731f6a",
+        "tarball_url": "https://github.com/eclipse-mosquitto/mosquitto/archive/refs/tags/v2.0.20.tar.gz",
         "version": "2.0.20"
       },
       {
@@ -288,9 +288,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "lftp",
         "failure_class": "configure-failure",
         "family": "lftp",
@@ -330,9 +330,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "memcached",
         "failure_class": "configure-failure",
         "family": "memcached",
@@ -470,9 +470,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "nsd",
         "failure_class": "configure-failure",
         "family": "nsd",
@@ -610,9 +610,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "libstrophe",
         "failure_class": "configure-failure",
         "family": "libstrophe",
@@ -722,9 +722,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "fetch-failed",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "libesmtp",
         "failure_class": "acquire-failure",
         "family": "libesmtp",
@@ -736,9 +736,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "fetch-failed",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "sofia-sip",
         "failure_class": "acquire-failure",
         "family": "sofia-sip",
@@ -806,9 +806,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "fetch-failed",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "w3m",
         "failure_class": "acquire-failure",
         "family": "w3m",
@@ -820,9 +820,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "fetch-failed",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "nmap",
         "failure_class": "acquire-failure",
         "family": "nmap",
@@ -890,9 +890,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "unsupported",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "libwebsockets",
         "failure_class": "recipe-build-system-unsupported",
         "family": "libwebsockets",
@@ -932,9 +932,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "unsupported",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "libzip",
         "failure_class": "recipe-build-system-unsupported",
         "family": "libzip",
@@ -946,9 +946,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "fetch-failed",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "cowpatty",
         "failure_class": "acquire-failure",
         "family": "cowpatty",
@@ -1016,9 +1016,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "fetch-failed",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "exim",
         "failure_class": "acquire-failure",
         "family": "exim",
@@ -1058,9 +1058,9 @@
       },
       {
         "admitted": false,
-        "authority_level": "L0-catalogued",
+        "authority_level": "L4-linked",
         "build_system": "configure",
-        "candidate_level": "L0-catalogued",
+        "candidate_level": "L4-linked",
         "canonical_name": "tcpdump",
         "failure_class": "configure-failure",
         "family": "tcpdump",
@@ -1218,7 +1218,7 @@
       "priority_rule": "the recipe-less counted families in the frozen 24.16 recipe-queue order -- source breadth descending, then distro breadth descending, then popularity descending, then canonical name ascending, then family_id ascending -- preferring well-known direct OpenSSL consumers with stable upstream release tarballs. It is a **heuristic** ranking over frozen breadth signals, never a measurement of buildability"
     }
   },
-  "body_hash": "98418e41b59da5486c42060cae98cf9e9edae93efdc84964ae1d5ba6931179ae",
+  "body_hash": "741e1d16ded11c7211a3b1666cc7fac889a6dbaf0d1d5745db983857ec9d7bd5",
   "generator": "forensics/tools/downstream_recipe_campaign.py",
   "inputs": [
     {
@@ -1229,12 +1229,12 @@
     {
       "name": "shared-blockers",
       "path": "forensics/downstream/shared-blockers.json",
-      "sha256": "3f88ab7051c894b8fbaf0c23dae4d2cecf0634e48e254912f7f65eb7308570af"
+      "sha256": "1d7c40ab0e4e13f804a0811ea0c3bba96761479adf9ce3354caf397577f8ac7d"
     },
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "edba5a53394093ec5e36cec2c88f1d34994bd418d266de5d59055daeeb70350c"
+      "sha256": "69cc1ce96e0e644d22ae09b387fcf3c08aee811623f0efc73f024d46af566587"
     },
     {
       "name": "p1000-run",
@@ -1244,7 +1244,7 @@
     {
       "name": "family-freeze",
       "path": "forensics/downstream/family-freeze.json",
-      "sha256": "cf7a8968d400dda2984fe772c8b8851aa732d922ad14e74bf3958eb6e2eae04a"
+      "sha256": "2c933674a7af44fbbd9fb4ce80d27d41bfe3e2b29a79b732a6d3627dc3f07381"
     },
     {
       "name": "families",
@@ -1254,7 +1254,7 @@
     {
       "name": "downstream-recipe-campaign",
       "path": "forensics/tools/downstream_recipe_campaign.py",
-      "sha256": "04e703a940a75ae4e68ca4b6477fffd112d3e1cbbf50e1441ca34ff6ad8bc297"
+      "sha256": "26996b62ab05836eac341a5ed5d021ca063116c70b99b5c2b806fd8f8618c5bf"
     },
     {
       "name": "downstream-blockers",
@@ -1264,7 +1264,7 @@
     {
       "name": "downstream-build-link",
       "path": "forensics/tools/downstream_build_link.py",
-      "sha256": "bc10c361ba294d371b56983fbde06725df3f777e357c3729ac93e05d51c3fdf8"
+      "sha256": "51ffb4146753e6c0b3b216ace9844471e687b52d7f0017b92a0bad693365b753"
     },
     {
       "name": "downstream-schemas",
@@ -1274,7 +1274,7 @@
     {
       "name": "phase24-guard",
       "path": "forensics/tools/phase24_guard.py",
-      "sha256": "94ea35a66565d01f3a82dc7113e571e7f59eb5c5f378911196c0783600b41192"
+      "sha256": "cb9c5d2949c9997f4d239514225330ffac5f91f295596f413bd8604d1052b026"
     },
     {
       "name": "phase-24-plan",

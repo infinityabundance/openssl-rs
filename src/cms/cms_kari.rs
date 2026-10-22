@@ -329,26 +329,26 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kari_set0_pkey_and_peer(
 ) -> c_int {
     // SAFETY: `ri` is live.
     let kari = unsafe { (*ri).d.cast::<CmsKeyAgreeRecipientInfo>() };
-    // SAFETY: `kari` is live.
-    unsafe { EVP_PKEY_CTX_free((*kari).pctx.cast()) };
-    // SAFETY: `kari` is live.
-    unsafe { (*kari).pctx = ptr::null_mut() };
+    // Release whatever the slot held. The authority frees the incumbent first, even when `pk` is
+    // NULL; the slot also clears the field.
+    // The recipient is live for this call.
+    drop(KariAgreeCtx(kari));
     if pk.is_null() {
         return 1;
     }
 
     // SAFETY: `kari` is live; `pk` is live.
-    let pctx = unsafe {
-        EVP_PKEY_CTX_new_from_pkey(
+    let Some(pctx) = (unsafe {
+        OwnedPkeyCtx::adopt(EVP_PKEY_CTX_new_from_pkey(
             ossl_cms_ctx_get0_libctx((*kari).cms_ctx),
             pk,
             ossl_cms_ctx_get0_propq((*kari).cms_ctx),
-        )
+        ))
+    }) else {
+        return 0;
     };
     // SAFETY: `pctx` is live.
-    if pctx.is_null() || unsafe { EVP_PKEY_derive_init(pctx) } <= 0 {
-        // SAFETY: `pctx` is NULL or owned.
-        unsafe { EVP_PKEY_CTX_free(pctx) };
+    if unsafe { EVP_PKEY_derive_init(pctx.as_ptr()) } <= 0 {
         return 0;
     }
 
@@ -357,15 +357,13 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kari_set0_pkey_and_peer(
         let pub_pkey = unsafe { X509_get0_pubkey(peer) };
 
         // SAFETY: `pctx`/`pub_pkey` are live.
-        if unsafe { EVP_PKEY_derive_set_peer(pctx, pub_pkey) } <= 0 {
-            // SAFETY: `pctx` is owned here.
-            unsafe { EVP_PKEY_CTX_free(pctx) };
+        if unsafe { EVP_PKEY_derive_set_peer(pctx.as_ptr(), pub_pkey) } <= 0 {
             return 0;
         }
     }
 
-    // SAFETY: `kari` is live.
-    unsafe { (*kari).pctx = pctx.cast() };
+    // SAFETY: `kari` is live; the context transfers into the recipient's slot.
+    unsafe { (*kari).pctx = pctx.into_raw().cast() };
     1
 }
 
@@ -404,7 +402,101 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kari_get0_ctx(
     ptr::null_mut()
 }
 
-/// `int cms_kek_cipher(unsigned char **pout, size_t *poutlen, const unsigned char *in,`
+/// An `EVP_PKEY_CTX` this frame owns.
+struct OwnedPkeyCtx(core::ptr::NonNull<EvpPkeyCtx>);
+
+impl OwnedPkeyCtx {
+    /// # Safety
+    /// `p` is NULL or a live context whose ownership the caller transfers.
+    unsafe fn adopt(p: *mut EvpPkeyCtx) -> Option<Self> {
+        core::ptr::NonNull::new(p).map(Self)
+    }
+
+    fn as_ptr(&self) -> *mut EvpPkeyCtx {
+        self.0.as_ptr()
+    }
+
+    /// Transfer the context to the recipient's slot.
+    fn into_raw(self) -> *mut EvpPkeyCtx {
+        let p = self.0.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl Drop for OwnedPkeyCtx {
+    fn drop(&mut self) {
+        // SAFETY: this frame holds the only reference.
+        unsafe { EVP_PKEY_CTX_free(self.0.as_ptr()) };
+    }
+}
+
+/// An `EVP_PKEY` this frame owns.
+struct OwnedPkey(core::ptr::NonNull<EvpPkey>);
+
+impl OwnedPkey {
+    /// # Safety
+    /// `p` is NULL or a live key whose reference the caller transfers.
+    unsafe fn adopt(p: *mut EvpPkey) -> Option<Self> {
+        core::ptr::NonNull::new(p).map(Self)
+    }
+
+    fn as_ptr(&self) -> *mut EvpPkey {
+        self.0.as_ptr()
+    }
+}
+
+impl Drop for OwnedPkey {
+    fn drop(&mut self) {
+        // SAFETY: this frame holds the only reference.
+        unsafe { EVP_PKEY_free(self.0.as_ptr()) };
+    }
+}
+
+/// The `kari->pctx` slot.
+///
+/// The agreement context lives **in the field** while an operation runs (the ASN.1 callbacks reach
+/// it through `CMS_RecipientInfo_kari_get0_ctx` and the KDF arm), so the slot releases it on every
+/// exit and clears the field. Clearing stops the recipient's destructor from releasing it again;
+/// releasing here stops any failure arm from leaking it.
+struct KariAgreeCtx(*mut CmsKeyAgreeRecipientInfo);
+
+impl Drop for KariAgreeCtx {
+    fn drop(&mut self) {
+        // SAFETY: the recipient is live for this owner's lifetime.
+        unsafe {
+            let p = (*self.0).pctx;
+            (*self.0).pctx = ptr::null_mut();
+            EVP_PKEY_CTX_free(p.cast());
+        }
+    }
+}
+
+/// Resets the recipient's cipher context on every exit. `EVP_CIPHER_CTX_reset` keeps the
+/// allocation and zeroes its state, which is the authority's own `kari->ctx` cleanup.
+struct KariCipherCtxReset(*mut CmsKeyAgreeRecipientInfo);
+
+impl Drop for KariCipherCtxReset {
+    fn drop(&mut self) {
+        // SAFETY: the recipient is live for this owner's lifetime.
+        unsafe { EVP_CIPHER_CTX_reset((*self.0).ctx.cast()) };
+    }
+}
+
+/// The derived KEK, cleansed on every exit at the length the derivation produced.
+struct DerivedKek {
+    bytes: [u8; EVP_MAX_KEY_LENGTH],
+    len: usize,
+}
+
+impl Drop for DerivedKek {
+    fn drop(&mut self) {
+        // SAFETY: `bytes` is a live `EVP_MAX_KEY_LENGTH` buffer and `len` never exceeds it.
+        unsafe { OPENSSL_cleanse(self.bytes.as_mut_ptr().cast(), self.len) };
+    }
+}
+
+/// `int cms_kek_cipher(unsigned char **pout, size_t *poutlen, const unsigned char *in,``
 /// `size_t inlen, CMS_KeyAgreeRecipientInfo *kari, int enc)` — `cms_kari.c:204-254`.
 ///
 /// # Safety
@@ -417,49 +509,42 @@ unsafe fn cms_kek_cipher(
     kari: *mut CmsKeyAgreeRecipientInfo,
     enc: c_int,
 ) -> c_int {
-    let mut kek = [0u8; EVP_MAX_KEY_LENGTH];
-    let mut keklen;
-    let mut rv = 0;
     let mut outlen: c_int = 0;
     let mut outsize = 0usize;
 
     // SAFETY: `kari` is live.
-    keklen = unsafe { EVP_CIPHER_CTX_get_key_length((*kari).ctx.cast()) } as usize;
+    let keklen = unsafe { EVP_CIPHER_CTX_get_key_length((*kari).ctx.cast()) } as usize;
     if keklen > EVP_MAX_KEY_LENGTH || inlen > c_int::MAX as usize {
         return 0;
     }
+    // Every exit below cleanses the KEK, resets the cipher context and releases the agreement
+    // context in the authority's order -- reverse declaration order does it: KEK, cipher, pkey.
+    // The recipient is live for this call.
+    let _agree = KariAgreeCtx(kari);
+    // The recipient is live for this call.
+    let _ctx = KariCipherCtxReset(kari);
+    let mut kek = DerivedKek {
+        bytes: [0u8; EVP_MAX_KEY_LENGTH],
+        len: keklen,
+    };
     // Derive KEK.
-    // SAFETY: `kari` is live; `kek` is writable for `keklen`.
-    if unsafe { EVP_PKEY_derive((*kari).pctx.cast(), kek.as_mut_ptr(), &mut keklen) } <= 0 {
-        // SAFETY: `kari` is live; nothing allocated.
-        unsafe {
-            OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
-            EVP_CIPHER_CTX_reset((*kari).ctx.cast());
-            EVP_PKEY_CTX_free((*kari).pctx.cast());
-            (*kari).pctx = ptr::null_mut();
-        }
+    // SAFETY: `kari` is live; `kek` is writable for `kek.len`.
+    if unsafe { EVP_PKEY_derive((*kari).pctx.cast(), kek.bytes.as_mut_ptr(), &mut kek.len) } <= 0 {
         return 0;
     }
     // Set KEK in context.
-    // SAFETY: `kari` is live; `kek` is readable for `keklen`.
+    // SAFETY: `kari` is live; `kek` is readable for `kek.len`.
     if unsafe {
         EVP_CipherInit_ex(
             (*kari).ctx.cast(),
             ptr::null(),
             ptr::null_mut(),
-            kek.as_ptr(),
+            kek.bytes.as_ptr(),
             ptr::null(),
             enc,
         )
     } == 0
     {
-        // SAFETY: the context and key are live.
-        unsafe {
-            OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
-            EVP_CIPHER_CTX_reset((*kari).ctx.cast());
-            EVP_PKEY_CTX_free((*kari).pctx.cast());
-            (*kari).pctx = ptr::null_mut();
-        }
         return 0;
     }
     // Obtain output length of ciphered key.
@@ -474,13 +559,6 @@ unsafe fn cms_kek_cipher(
         )
     } == 0
     {
-        // SAFETY: the context and key are live.
-        unsafe {
-            OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
-            EVP_CIPHER_CTX_reset((*kari).ctx.cast());
-            EVP_PKEY_CTX_free((*kari).pctx.cast());
-            (*kari).pctx = ptr::null_mut();
-        }
         return 0;
     }
     // Size the buffer for the worst case the primitive cleanses on failure.
@@ -499,13 +577,6 @@ unsafe fn cms_kek_cipher(
         SeamFile::NULL,
         0,
     ) else {
-        // SAFETY: the context and key are live.
-        unsafe {
-            OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
-            EVP_CIPHER_CTX_reset((*kari).ctx.cast());
-            EVP_PKEY_CTX_free((*kari).pctx.cast());
-            (*kari).pctx = ptr::null_mut();
-        }
         return 0;
     };
     // SAFETY: `kari` is live; `out` is writable.
@@ -519,15 +590,7 @@ unsafe fn cms_kek_cipher(
         )
     } == 0
     {
-        // `out` clears and releases its own block, at the authority's own site.
-        drop(out);
-        // SAFETY: the context and key are live.
-        unsafe {
-            OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
-            EVP_CIPHER_CTX_reset((*kari).ctx.cast());
-            EVP_PKEY_CTX_free((*kari).pctx.cast());
-            (*kari).pctx = ptr::null_mut();
-        }
+        // `out` clears and releases its own block on drop; the guards release the rest.
         return 0;
     }
     // SAFETY: `pout`/`poutlen` are writable; ownership of the block transfers to the caller.
@@ -535,17 +598,7 @@ unsafe fn cms_kek_cipher(
         *pout = out.into_raw();
         *poutlen = outlen as usize;
     }
-    rv = 1;
-
-    // SAFETY: `kek` is a live buffer; the contexts are live.
-    unsafe {
-        OPENSSL_cleanse(kek.as_mut_ptr().cast(), keklen);
-        EVP_CIPHER_CTX_reset((*kari).ctx.cast());
-        EVP_PKEY_CTX_free((*kari).pctx.cast());
-        (*kari).pctx = ptr::null_mut();
-    }
-    let _ = rv;
-    rv
+    1
 }
 
 /// `int CMS_RecipientInfo_kari_decrypt(CMS_ContentInfo *cms, CMS_RecipientInfo *ri,`
@@ -619,9 +672,6 @@ unsafe fn cms_kari_create_ephemeral_key(
     kari: *mut CmsKeyAgreeRecipientInfo,
     pk: *mut EvpPkey,
 ) -> c_int {
-    let mut pctx: *mut EvpPkeyCtx = ptr::null_mut();
-    let mut ekey: *mut EvpPkey = ptr::null_mut();
-    let mut rv = 0;
     // SAFETY: `kari` is live.
     let ctx = unsafe { (*kari).cms_ctx };
     // SAFETY: `ctx` is live.
@@ -630,47 +680,40 @@ unsafe fn cms_kari_create_ephemeral_key(
     let propq = unsafe { ossl_cms_ctx_get0_propq(ctx) };
 
     // SAFETY: `pk` is live.
-    pctx = unsafe { EVP_PKEY_CTX_new_from_pkey(libctx, pk, propq) };
-    // SAFETY: `pctx` is live.
-    if pctx.is_null() || unsafe { EVP_PKEY_keygen_init(pctx) } <= 0 {
-        if !pctx.is_null() {
-            // SAFETY: the context and key are live.
-            unsafe { EVP_PKEY_CTX_free(pctx) };
-        }
-        // SAFETY: the context and key are live.
-        unsafe { EVP_PKEY_free(ekey) };
-        return rv;
+    let Some(keygen_ctx) =
+        (unsafe { OwnedPkeyCtx::adopt(EVP_PKEY_CTX_new_from_pkey(libctx, pk, propq)) })
+    else {
+        return 0;
+    };
+    // SAFETY: `keygen_ctx` is live.
+    if unsafe { EVP_PKEY_keygen_init(keygen_ctx.as_ptr()) } <= 0 {
+        return 0;
     }
-    // SAFETY: `pctx` is live; `ekey` is this frame's slot.
-    if unsafe { EVP_PKEY_keygen(pctx, &mut ekey) } <= 0 {
-        // SAFETY: the context and key are live.
-        unsafe {
-            EVP_PKEY_CTX_free(pctx);
-            EVP_PKEY_free(ekey);
-        }
-        return rv;
+    let mut ekey: *mut EvpPkey = ptr::null_mut();
+    // SAFETY: `keygen_ctx` is live; `ekey` is this frame's slot.
+    if unsafe { EVP_PKEY_keygen(keygen_ctx.as_ptr(), &mut ekey) } <= 0 {
+        return 0;
     }
-    // SAFETY: `pctx` is owned here.
-    unsafe { EVP_PKEY_CTX_free(pctx) };
-    pctx = ptr::null_mut();
+    // The key generator is done with; release it before the agreement context is created.
+    drop(keygen_ctx);
+    // SAFETY: a successful `EVP_PKEY_keygen` wrote a fresh key into `ekey`.
+    let Some(ekey) = (unsafe { OwnedPkey::adopt(ekey) }) else {
+        return 0;
+    };
     // SAFETY: `ekey` is live.
-    pctx = unsafe { EVP_PKEY_CTX_new_from_pkey(libctx, ekey, propq) };
+    let Some(pctx) =
+        (unsafe { OwnedPkeyCtx::adopt(EVP_PKEY_CTX_new_from_pkey(libctx, ekey.as_ptr(), propq)) })
+    else {
+        return 0;
+    };
     // SAFETY: `pctx` is live.
-    if pctx.is_null() || unsafe { EVP_PKEY_derive_init(pctx) } <= 0 {
-        if !pctx.is_null() {
-            // SAFETY: the context and key are live.
-            unsafe { EVP_PKEY_CTX_free(pctx) };
-        }
-        // SAFETY: the context and key are live.
-        unsafe { EVP_PKEY_free(ekey) };
-        return rv;
+    if unsafe { EVP_PKEY_derive_init(pctx.as_ptr()) } <= 0 {
+        return 0;
     }
-    // SAFETY: `kari` is live.
-    unsafe { (*kari).pctx = pctx.cast() };
-    rv = 1;
-    // SAFETY: `ekey` is owned here.
-    unsafe { EVP_PKEY_free(ekey) };
-    rv
+    // SAFETY: `kari` is live; the context transfers into the recipient's slot. The context holds
+    // its own reference to `ekey`, which drops at the end of this frame.
+    unsafe { (*kari).pctx = pctx.into_raw().cast() };
+    1
 }
 
 /// `int cms_kari_set_originator_private_key(CMS_KeyAgreeRecipientInfo *kari,`
@@ -682,32 +725,27 @@ unsafe fn cms_kari_set_originator_private_key(
     kari: *mut CmsKeyAgreeRecipientInfo,
     originator_priv_key: *mut EvpPkey,
 ) -> c_int {
-    let mut pctx: *mut EvpPkeyCtx = ptr::null_mut();
-    let mut rv = 0;
     // SAFETY: `kari` is live.
     let ctx = unsafe { (*kari).cms_ctx };
 
     // SAFETY: `originator_priv_key` is live.
-    pctx = unsafe {
-        EVP_PKEY_CTX_new_from_pkey(
+    let Some(pctx) = (unsafe {
+        OwnedPkeyCtx::adopt(EVP_PKEY_CTX_new_from_pkey(
             ossl_cms_ctx_get0_libctx(ctx),
             originator_priv_key,
             ossl_cms_ctx_get0_propq(ctx),
-        )
+        ))
+    }) else {
+        return 0;
     };
     // SAFETY: `pctx` is live.
-    if pctx.is_null() || unsafe { EVP_PKEY_derive_init(pctx) } <= 0 {
-        if rv == 0 && !pctx.is_null() {
-            // SAFETY: the context and key are live.
-            unsafe { EVP_PKEY_CTX_free(pctx) };
-        }
-        return rv;
+    if unsafe { EVP_PKEY_derive_init(pctx.as_ptr()) } <= 0 {
+        return 0;
     }
 
-    // SAFETY: `kari` is live.
-    unsafe { (*kari).pctx = pctx.cast() };
-    rv = 1;
-    rv
+    // SAFETY: `kari` is live; the context transfers into the recipient's slot.
+    unsafe { (*kari).pctx = pctx.into_raw().cast() };
+    1
 }
 
 /// `int ossl_cms_RecipientInfo_kari_init(CMS_RecipientInfo *ri, X509 *recip,`
@@ -967,3 +1005,75 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kari_encrypt(
 /// The error reason the key-agreement arms raise; the name lives in `cms_err.c`.
 const ERR_CMS_R_NOT_KEY_AGREEMENT: c_int =
     crate::runtime::err::err_reasons::CMS_R_NOT_KEY_AGREEMENT;
+
+#[cfg(test)]
+#[allow(clippy::panic, clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::evp::pkey::EVP_PKEY_new;
+    use crate::evp::pkey_ctx::EVP_PKEY_CTX_new_from_name;
+
+    /// A live `CMS_RecipientInfo` in the AGREE arm with no agreement context installed.
+    ///
+    /// # Safety
+    /// The caller owns the recipient and must free it with `cms_recipientinfo_it`.
+    unsafe fn agree_recipient() -> (*mut CmsRecipientInfo, *mut CmsKeyAgreeRecipientInfo) {
+        // SAFETY: the item answers a fresh recipient and a fresh AGREE arm.
+        unsafe {
+            let ri = m_asn1_new(cms_recipientinfo_it()).cast::<CmsRecipientInfo>();
+            assert!(!ri.is_null());
+            let kari =
+                m_asn1_new(cms_keyagreerecipientinfo_it()).cast::<CmsKeyAgreeRecipientInfo>();
+            assert!(!kari.is_null());
+            (*ri).d = kari.cast();
+            (*ri).encoded_type = CMS_RECIPINFO_AGREE;
+            (*ri).type_ = CMS_RECIPINFO_AGREE;
+            (*kari).cms_ctx = ptr::null();
+            (ri, kari)
+        }
+    }
+
+    /// The slot owns `kari->pctx` for an operation and clears the field when it releases it, so
+    /// the recipient's destructor cannot release the same context a second time.
+    #[test]
+    fn kari_agree_slot_clears_the_field_before_releasing() {
+        // SAFETY: the recipient is live; the context is a fresh keymgmt context transferred to
+        // the slot.
+        unsafe {
+            let (ri, kari) = agree_recipient();
+            let pctx = EVP_PKEY_CTX_new_from_name(ptr::null_mut(), c"EC".as_ptr(), ptr::null());
+            assert!(!pctx.is_null(), "a keymgmt context must be available");
+            (*kari).pctx = pctx.cast();
+            drop(KariAgreeCtx(kari));
+            assert!(
+                (*kari).pctx.is_null(),
+                "the slot must clear the field it released"
+            );
+            // The recipient's destructor now has nothing to release.
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    /// A key that yields no agreement context is refused, and the refused call adopts nothing:
+    /// the slot stays empty and the caller still owns the key. Clearing the slot with NULL
+    /// succeeds and releases nothing.
+    #[test]
+    fn kari_set0_refuses_a_key_that_cannot_agree() {
+        // SAFETY: the recipient is live and the blank key is this frame's.
+        unsafe {
+            let (ri, kari) = agree_recipient();
+            let pk = EVP_PKEY_new();
+            assert!(!pk.is_null());
+            assert_eq!(
+                CMS_RecipientInfo_kari_set0_pkey(ri, pk),
+                0,
+                "a blank key cannot produce an agreement context"
+            );
+            assert!((*kari).pctx.is_null(), "nothing was installed");
+            EVP_PKEY_free(pk);
+            assert_eq!(CMS_RecipientInfo_kari_set0_pkey(ri, ptr::null_mut()), 1);
+            assert!((*kari).pctx.is_null());
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+}

@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "boundary": "the population covers the catalogue and records a status per node; it is not a compatibility claim about any release. The `downstream-evidenced` rung is read from forensics/multitrack/downstream-multitrack.json (23.11): a node attains it when an unmodified real downstream consumer was built against its authority and ran a real workload, and it may be attained without the oracle-to-oracle `runtime-evidenced` rung, because the two are independent evidence planes rather than a contiguous prefix. An unavailable release is archaeology -- studied, catalogued, and never runtime-compatible -- and each major ABI epoch carries at least one built representative: 0.9.8zh (pre-1.0), 1.0.2u (1.0.x), 1.1.1w (1.1.x), 3.0.0 (3.x) and 3.6.3/3.6.4 (3.6+/4.x). The epoch representatives are built in the historical and forensic venues; the profile each was built with is a property of its authority node, not of its release identity",
-    "content_hash": "6609a78c22bdd3b3c2b11b710b3be9b954f451810d9d3f31663af68aa06b6e3a",
+    "content_hash": "e063fa682fd120e0b78af770539949080e988782d52e3276cd118bb2ebc5f8a8",
     "counts": {
       "built": 20,
       "by_epoch": {
@@ -7021,7 +7021,7 @@
           },
           {
             "path": "forensics/multitrack/compatibility-views.json",
-            "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84",
+            "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7",
             "what": "the compatible candidate view the authority carries"
           },
           {
@@ -8184,7 +8184,7 @@
     {
       "name": "compatibility-views",
       "path": "forensics/multitrack/compatibility-views.json",
-      "sha256": "bc83bb0d3ce4aae61649b31abb60df0364d04771dd85f3dff87609ddca527e84"
+      "sha256": "82db40988553ae4276d61485b4f1575d519a08d38bc51cd2fa40b0e63c41ede7"
     },
     {
       "name": "semantic-courts",
