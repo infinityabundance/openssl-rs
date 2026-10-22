@@ -3045,7 +3045,12 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
             if (*ret).ctlog_store.is_null() {
                 return ptr::null_mut();
             }
-            if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ret.cast(), &mut (*ret).ex_data) == 0 {
+            if CRYPTO_new_ex_data(
+                CRYPTO_EX_INDEX_SSL_CTX,
+                ret.cast(),
+                core::ptr::addr_of_mut!((*ret).ex_data),
+            ) == 0
+            {
                 return ptr::null_mut();
             }
 
@@ -3168,7 +3173,11 @@ unsafe impl CtxDestroy for SslCtx {
             // The authority frees `ex_data` only after the flush: `remove_session_cb` may read
             // it, and an `ex_data` free callback may touch the cache. The container release is
             // last, and only entries a callback re-added during the flush remain in it.
-            CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_SSL_CTX,
+                ctx.cast(),
+                core::ptr::addr_of_mut!((*ctx).ex_data),
+            );
             ssl_ctx_session_cache_free(ctx);
 
             X509_STORE_free((*ctx).cert_store);
@@ -3284,7 +3293,12 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 }
             }
 
-            if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data) == 0 {
+            if CRYPTO_new_ex_data(
+                CRYPTO_EX_INDEX_SSL,
+                s.cast(),
+                core::ptr::addr_of_mut!((*s).ex_data),
+            ) == 0
+            {
                 // The authority allocates the DTLS state only after `ossl_ssl_init`'s
                 // `CRYPTO_new_ex_data` succeeds (`ossl_ssl_connection_new_int` calls
                 // `dtls1_new` afterwards), so its refusal path has no `d1` to release.
@@ -3612,7 +3626,11 @@ unsafe impl CtxDestroy for Ssl {
             CRYPTO_free((*s).ext_ocsp_resp.cast(), FILE, 0);
             (*s).pha_context_slot().clear(FILE, 0);
             crate::evp::digest::EVP_MD_CTX_free((*s).pha_dgst.cast());
-            CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data);
+            CRYPTO_free_ex_data(
+                CRYPTO_EX_INDEX_SSL,
+                s.cast(),
+                core::ptr::addr_of_mut!((*s).ex_data),
+            );
             SSL_CTX_free((*s).ctx);
             // `ossl_ssl_connection_free` releases the connection's own reference to the initial
             // context (`ssl_lib.c:1485`), distinct from the `ssl->ctx` reference released just
@@ -8118,9 +8136,19 @@ pub unsafe extern "C" fn SSL_CTX_get_cert_store(ctx: *const SslCtx) -> *mut X509
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CTX_set_cert_store(ctx: *mut SslCtx, store: *mut X509Store) {
     // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
-    guard_ffi((), || unsafe {
-        X509_STORE_free((*ctx).cert_store);
-        (*ctx).cert_store = store;
+    guard_ffi((), || {
+        // A self-assignment would free the store and then publish the freed pointer. The
+        // authority (3.6.4) does exactly that; refusing the no-op is a recorded safety repair
+        // (the caller's ownership transfer is already satisfied by the pointer in the slot).
+        // SAFETY: `ctx` is live per the contract.
+        if unsafe { (*ctx).cert_store } == store {
+            return;
+        }
+        // SAFETY: `ctx` is live; `store` is the caller's.
+        unsafe {
+            X509_STORE_free((*ctx).cert_store);
+            (*ctx).cert_store = store;
+        }
     })
 }
 
@@ -8777,6 +8805,12 @@ pub unsafe extern "C" fn SSL_CTX_set_default_ctlog_list_file(ctx: *mut SslCtx) -
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CTX_set0_ctlog_store(ctx: *mut SslCtx, logs: *mut CtlogStore) {
     guard_ffi((), || {
+        // As for `SSL_CTX_set_cert_store`: a self-assignment must not free the slot and then
+        // re-publish the released pointer.
+        // SAFETY: `ctx` is live per the caller's contract.
+        if unsafe { (*ctx).ctlog_store } == logs {
+            return;
+        }
         // SAFETY: `ctx` is live per the caller's contract.
         unsafe {
             CTLOG_STORE_free((*ctx).ctlog_store);
@@ -11457,6 +11491,10 @@ pub unsafe extern "C" fn SSL_set0_tmp_dh_pkey(s: *mut Ssl, dhpkey: *mut c_void) 
             unsafe { raise_ssl(SSL_R_DH_KEY_TOO_SMALL, 7597) };
             return 0;
         }
+        // SAFETY: `s` and its cert are live.
+        if unsafe { (*(*s).cert).dh_tmp } == dhpkey {
+            return 1;
+        }
         // SAFETY: `s` and its cert are live; `dhpkey` is live.
         unsafe {
             let cert = (*s).cert;
@@ -11514,6 +11552,10 @@ pub unsafe extern "C" fn SSL_CTX_set0_tmp_dh_pkey(ctx: *mut SslCtx, dhpkey: *mut
             // SAFETY: a constant site.
             unsafe { raise_ssl(SSL_R_DH_KEY_TOO_SMALL, 7609) };
             return 0;
+        }
+        // SAFETY: `ctx` and its cert are live.
+        if unsafe { (*(*ctx).cert).dh_tmp } == dhpkey {
+            return 1;
         }
         // SAFETY: `ctx` and its cert are live; `dhpkey` is live.
         unsafe {
@@ -12583,7 +12625,12 @@ pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
             (*ret).generate_session_id = (*s).generate_session_id;
             SSL_set_info_callback(ret, SSL_get_info_callback(s));
 
-            if CRYPTO_dup_ex_data(CRYPTO_EX_INDEX_SSL, &mut (*ret).ex_data, &(*s).ex_data) == 0 {
+            if CRYPTO_dup_ex_data(
+                CRYPTO_EX_INDEX_SSL,
+                core::ptr::addr_of_mut!((*ret).ex_data),
+                core::ptr::addr_of!((*s).ex_data),
+            ) == 0
+            {
                 return ptr::null_mut();
             }
 
@@ -14301,6 +14348,296 @@ mod downstream_compat_tests {
         unsafe {
             SSL_free(ssl);
             BIO_free(bio2);
+            SSL_CTX_free(ctx);
+        }
+    }
+}
+
+/// The three `ssl_lib.rs` contracts: context replacement, certificate-adjacent ownership, and
+/// callback re-entrancy.
+#[cfg(test)]
+mod contract_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use core::sync::atomic::{AtomicI32, Ordering};
+
+    use crate::evp::pkey::EVP_PKEY_new;
+    use crate::ssl::methods::TLS_method;
+    use crate::x509::x509_lu::{X509_STORE_free, X509_STORE_new, X509_STORE_up_ref};
+    use crate::x509::x_x509::X509_new;
+
+    fn new_ctx() -> *mut SslCtx {
+        // SAFETY: the method table is process-lifetime; the answer is an owned context.
+        let ctx = unsafe { SSL_CTX_new(TLS_method()) };
+        assert!(!ctx.is_null());
+        ctx
+    }
+
+    /// **A: the CVE-2026-72897 class.** The port's certificate representation is a fixed
+    /// `[CertKey; SSL_PKEY_NUM]` with a constant `ssl_pkey_num`, and there is no per-slot
+    /// signature-algorithm validity array sized from the context, so a swap cannot leave a slot
+    /// count that disagrees with the replacement context. What must hold is that the slots are
+    /// rebuilt from the *new* context, the slot count stays `SSL_PKEY_NUM`, and connection-scoped
+    /// state (handshake state, peer sigalgs) is untouched.
+    #[test]
+    fn a_context_swap_rebuilds_the_cert_slots_and_preserves_connection_state() {
+        let _g = crate::test_support::lock_global_state();
+        let ctx1 = new_ctx();
+        let ctx2 = new_ctx();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let leaf1 = X509_new();
+            let leaf2 = X509_new();
+            assert!(!leaf1.is_null() && !leaf2.is_null());
+            (*(*ctx1).cert).pkeys[0].x509 = leaf1;
+            (*(*ctx2).cert).pkeys[0].x509 = leaf2;
+            assert_eq!((*ctx1).references.load(Ordering::Relaxed), 1);
+            assert_eq!((*ctx2).references.load(Ordering::Relaxed), 1);
+
+            let s = SSL_new(ctx1);
+            assert!(!s.is_null());
+            // `SSL_new` takes its context references (ctx and session_ctx both alias here), and
+            // the cert dup up-refs the leaf.
+            assert_eq!((*ctx1).references.load(Ordering::Relaxed), 3);
+            assert_eq!((*leaf1).references.load(Ordering::Relaxed), 2);
+            assert_eq!((*(*s).cert).pkeys[0].x509, leaf1);
+            assert_eq!((*(*s).cert).ssl_pkey_num, SSL_PKEY_NUM);
+
+            // Model a mid-handshake connection: state that a swap must not disturb.
+            (*s).hand_state = 7;
+            (*s).statem_state = 3;
+            let sigs = crate::runtime::mem::CRYPTO_malloc(4, ptr::null(), 0).cast::<u16>();
+            assert!(!sigs.is_null());
+            sigs.write(0x0403);
+            sigs.add(1).write(0x0503);
+            (*s).peer_sigalgs = sigs;
+            (*s).peer_sigalgslen = 2;
+
+            let ret = SSL_set_SSL_CTX(s, ctx2);
+            assert_eq!(ret, ctx2);
+            assert_eq!(SSL_get_SSL_CTX(s), ctx2);
+            assert_eq!((*(*s).cert).pkeys[0].x509, leaf2, "new context's leaf");
+            assert_eq!((*(*s).cert).ssl_pkey_num, SSL_PKEY_NUM, "fixed slot count");
+            assert_eq!(
+                (*leaf1).references.load(Ordering::Relaxed),
+                1,
+                "old cert released"
+            );
+            assert_eq!(
+                (*leaf2).references.load(Ordering::Relaxed),
+                2,
+                "new cert adopted"
+            );
+            assert_eq!((*s).hand_state, 7, "handshake state survives the swap");
+            assert_eq!((*s).statem_state, 3);
+            assert_eq!((*s).peer_sigalgslen, 2, "peer sigalgs are connection state");
+            assert_eq!((*s).peer_sigalgs.read(), 0x0403);
+            assert_eq!((*s).peer_sigalgs.add(1).read(), 0x0503);
+            assert_eq!(
+                (*ctx1).references.load(Ordering::Relaxed),
+                2,
+                "one old ctx ref released"
+            );
+            assert_eq!(
+                (*ctx2).references.load(Ordering::Relaxed),
+                2,
+                "new ctx ref taken"
+            );
+
+            // Swapping back re-derives the slots from ctx1 again.
+            assert_eq!(SSL_set_SSL_CTX(s, ctx1), ctx1);
+            assert_eq!((*(*s).cert).pkeys[0].x509, leaf1);
+            assert_eq!((*(*s).cert).ssl_pkey_num, SSL_PKEY_NUM);
+            assert_eq!((*ctx2).references.load(Ordering::Relaxed), 1);
+            assert_eq!((*ctx1).references.load(Ordering::Relaxed), 3);
+
+            // An equal context is the authority's early-return arm.
+            assert_eq!(SSL_set_SSL_CTX(s, ctx1), ctx1);
+            assert_eq!((*ctx1).references.load(Ordering::Relaxed), 3);
+            // The repeated call releases two context references, leaving the creation reference.
+            SSL_free(s);
+            assert_eq!((*ctx1).references.load(Ordering::Relaxed), 1);
+            SSL_CTX_free(ctx1);
+            SSL_CTX_free(ctx2);
+        }
+    }
+
+    /// **B: cert-store replacement.** The incumbent is released exactly once and the slot adopts
+    /// only the replacement; a self-assignment is a no-op rather than a free-then-dangling slot.
+    #[test]
+    fn replacing_a_cert_store_releases_the_incumbent_exactly_once() {
+        let _g = crate::test_support::lock_global_state();
+        let ctx = new_ctx();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let first = X509_STORE_new();
+            let second = X509_STORE_new();
+            assert!(!first.is_null() && !second.is_null());
+            // Keep one reference so the released object is still readable as a witness.
+            assert_eq!(X509_STORE_up_ref(first), 1);
+            assert_eq!((*first).references.load(Ordering::Relaxed), 2);
+
+            SSL_CTX_set_cert_store(ctx, first);
+            assert_eq!(SSL_CTX_get_cert_store(ctx), first);
+            assert_eq!((*first).references.load(Ordering::Relaxed), 2);
+
+            SSL_CTX_set_cert_store(ctx, second);
+            assert_eq!(SSL_CTX_get_cert_store(ctx), second);
+            assert_eq!(
+                (*first).references.load(Ordering::Relaxed),
+                1,
+                "the incumbent was released exactly once"
+            );
+
+            // Self-assignment: no release, slot unchanged.
+            SSL_CTX_set_cert_store(ctx, second);
+            assert_eq!(SSL_CTX_get_cert_store(ctx), second);
+            assert_eq!((*second).references.load(Ordering::Relaxed), 1);
+
+            X509_STORE_free(first); // our retained reference
+            SSL_CTX_free(ctx); // releases `second`
+        }
+    }
+
+    /// The security callback's verdict is the refusal arm's decision.
+    ///
+    /// # Safety
+    /// The opaque arguments are not dereferenced.
+    unsafe extern "C" fn deny_security(
+        _s: *const Ssl,
+        _ctx: *const SslCtx,
+        _op: c_int,
+        _bits: c_int,
+        _nid: c_int,
+        _other: *mut c_void,
+        _ex: *mut c_void,
+    ) -> c_int {
+        0
+    }
+
+    /// # Safety
+    /// As [`deny_security`]; this one accepts every operation.
+    unsafe extern "C" fn allow_security(
+        _s: *const Ssl,
+        _ctx: *const SslCtx,
+        _op: c_int,
+        _bits: c_int,
+        _nid: c_int,
+        _other: *mut c_void,
+        _ex: *mut c_void,
+    ) -> c_int {
+        1
+    }
+
+    /// **B: refused adoption.** A key the security callback rejects is not adopted and the
+    /// incumbent stays exactly as it was; re-adopting the same key is a no-op.
+    #[test]
+    fn a_refused_tmp_dh_adoption_leaves_the_incumbent() {
+        let _g = crate::test_support::lock_global_state();
+        let ctx = new_ctx();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            let incumbent = EVP_PKEY_new();
+            assert!(!incumbent.is_null());
+            (*(*s).cert).dh_tmp = incumbent.cast();
+            (*(*s).cert).sec_cb = Some(deny_security);
+            assert_eq!(SSL_set0_tmp_dh_pkey(s, ptr::null_mut()), 0);
+            assert_eq!(
+                (*(*s).cert).dh_tmp,
+                incumbent.cast(),
+                "the refused key did not displace the incumbent"
+            );
+            // With the callback accepting, the identical pointer is a no-op: the slot is not
+            // released and re-published.
+            (*(*s).cert).sec_cb = Some(allow_security);
+            assert_eq!(SSL_set0_tmp_dh_pkey(s, incumbent.cast()), 1);
+            assert_eq!((*(*s).cert).dh_tmp, incumbent.cast());
+            (*(*s).cert).sec_cb = Some(ssl_security_default_callback);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    static EX_FREE_SEEN: AtomicI32 = AtomicI32::new(-1);
+    static EX_NEW_SEEN: AtomicI32 = AtomicI32::new(-1);
+
+    /// # Safety
+    /// The registered ex-data free callback contract: `parent` is the connection being freed.
+    unsafe extern "C" fn seen_free(
+        parent: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut crate::runtime::ex_data::CryptoExData,
+        idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        // SAFETY: `parent` is the live connection passed to the free callback. Querying it through
+        // the public API is the re-entrant read the destructor must tolerate.
+        let value = unsafe { SSL_get_ex_data(parent.cast::<Ssl>(), idx) };
+        EX_FREE_SEEN.store(value as usize as i32, Ordering::SeqCst);
+    }
+
+    /// # Safety
+    /// The registered ex-data new callback contract: `parent` is the connection being built.
+    unsafe extern "C" fn seen_new(
+        parent: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut crate::runtime::ex_data::CryptoExData,
+        idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        // SAFETY: `parent` is the connection being constructed; the context pointer is live.
+        let ctx = unsafe { SSL_get_SSL_CTX(parent.cast::<Ssl>()) };
+        assert!(!ctx.is_null());
+        // A callback may install its own slot; the constructor must not overwrite it afterwards.
+        // SAFETY: `parent` is the live connection.
+        unsafe { SSL_set_ex_data(parent.cast::<Ssl>(), idx, 0x5151 as *mut c_void) };
+        EX_NEW_SEEN.store(1, Ordering::SeqCst);
+    }
+
+    /// **C: callback re-entrancy.** The ex-data new/free callbacks receive the connection and may
+    /// query or mutate it; the constructor/destructor hold no exclusive borrow across them.
+    #[test]
+    fn an_ex_data_callback_may_re_enter_and_mutate() {
+        let _g = crate::test_support::lock_global_state();
+        EX_FREE_SEEN.store(-1, Ordering::SeqCst);
+        EX_NEW_SEEN.store(-1, Ordering::SeqCst);
+        let idx = crate::runtime::ex_data::CRYPTO_get_ex_new_index(
+            crate::runtime::ex_data::CRYPTO_EX_INDEX_SSL,
+            0,
+            ptr::null_mut(),
+            Some(seen_new),
+            None,
+            Some(seen_free),
+        );
+        assert!(idx >= 1);
+        let ctx = new_ctx();
+        // SAFETY: every object is created and released in this frame.
+        unsafe {
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            assert_eq!(
+                EX_NEW_SEEN.load(Ordering::SeqCst),
+                1,
+                "the new callback ran"
+            );
+            assert_eq!(
+                SSL_get_ex_data(s, idx),
+                0x5151 as *mut c_void,
+                "the slot the callback installed survives construction"
+            );
+            // A later owner-visible value is what the free callback must observe.
+            assert_eq!(SSL_set_ex_data(s, idx, 0x4242 as *mut c_void), 1);
+            SSL_free(s);
+            assert_eq!(
+                EX_FREE_SEEN.load(Ordering::SeqCst),
+                0x4242,
+                "the free callback re-entered and read the live slot"
+            );
             SSL_CTX_free(ctx);
         }
     }
