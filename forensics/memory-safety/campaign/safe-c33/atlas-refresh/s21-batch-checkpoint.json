@@ -1,0 +1,234 @@
+{
+  "schema": "openssl-rs/safe-c33/batch-checkpoint/v1",
+  "kind": "s21-batch-checkpoint",
+  "task_id": "S21",
+  "title": "BATCH verification checkpoint after the S16-S20 cluster, stale-documentation regeneration, and closure of S20-O1",
+  "phase": 25,
+  "stage_branch": "integrate/safe-c33",
+  "source_identity": {
+    "parent_sha": "c911ca6299e4e1bc93fa4944b66255a16242f005",
+    "parent_subject": "Merge stage/p25/ameth-closure",
+    "result_sha": null,
+    "working_tree": "S21 source edits are uncommitted (this subagent does not commit or push); the gate ran against that working tree on top of c911ca629.",
+    "source_files_changed": [
+      "src/evp/pkey.rs",
+      "src/ml_dsa/poly.rs"
+    ],
+    "generated_or_rebuilt": [
+      "artifacts/phase2/libcrypto.so.3",
+      "artifacts/phase2/libssl.so.3",
+      "artifacts/phase2/legacy.so",
+      "artifacts/phase2/openssl",
+      "artifacts/phase2/COURTS.json",
+      "artifacts/phase2/install/**",
+      "forensics/atlas/implemented-surface.json",
+      "forensics/downstream/runtime-functional-atlas.json",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/test-baseline.json",
+      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md",
+      "forensics/STATUS.md",
+      "README.md"
+    ],
+    "tooling_changed": [
+      "forensics/tools/render_docs.py"
+    ]
+  },
+  "findings_closed": [
+    {
+      "id": "S20-O1",
+      "site": "src/evp/pkey.rs evp_pkey_name2type",
+      "before": "The EVP_PKEY_type(OBJ_sn2nid/OBJ_ln2nid) fallback was absent. A legacy origin key (keymgmt == NULL) reaching EVP_PKEY_is_a answered 0 for \"rsaEncryption\" where the authority answers 1.",
+      "after": "Implemented the authority's two fallback arms: EVP_PKEY_type(OBJ_sn2nid(name)) then EVP_PKEY_type(OBJ_ln2nid(name)). \"rsaEncryption\" and \"id-ecPublicKey\" resolve to their method NIDs; an unknown name still answers NID_undef.",
+      "authority": "crypto/evp/p_lib.c, int evp_pkey_name2type(const char *name)",
+      "test": "evp::pkey::tests::a_method_name_outside_the_table_resolves_through_the_object_lookup (unit path plus a legacy EVP_PKEY_is_a reachability check)",
+      "disposition": "CLOSED"
+    },
+    {
+      "id": "S21-TEST-1",
+      "site": "src/ml_dsa/poly.rs tests",
+      "before": "a_vector_allocation_round_trips_and_frees_once asserted s[3].coeff[0] == 0 on a freshly OPENSSL_malloc_array'd block. The allocator never zero-initialises; the assertion passed only when the allocator returned fresh zero pages.",
+      "after": "The test initialises the block through ptr::write_bytes before the first read and keeps the extent/release assertions. Production allocator behaviour is unchanged (authority-identical).",
+      "authority": "crypto/ml_dsa/ml_dsa_vector.h vector_alloc uses OPENSSL_malloc_array; callers zero explicitly",
+      "disposition": "TEST_CORRECTED"
+    }
+  ],
+  "authority_contract": "OpenSSL 3.6.4: crypto/evp/p_lib.c evp_pkey_name2type; crypto/ml_dsa/ml_dsa_vector.h vector_alloc/vector_free.",
+  "ownership_before": "No ownership change in S21. The name2type fallback writes no allocation. The ml_dsa test only reads an allocation after explicitly initialising it.",
+  "ownership_after": "Unchanged.",
+  "mechanisms": [],
+  "unsafe_ops": {
+    "removed": 0,
+    "retained": "Unchanged; the two added fallback calls are unsafe FFI calls inside the existing private unsafe fn, each with a SAFETY contract.",
+    "introduced": 0
+  },
+  "boundary": "The existing C ABI/accessor boundary (OBJ_sn2nid, OBJ_ln2nid, EVP_PKEY_type). No new unsafe abstraction.",
+  "obligations": {
+    "discharged": [
+      "S20-O1: the evp_pkey_name2type method-table fallback now matches the authority."
+    ],
+    "retained": [
+      "S20-O2: stale 'Phase 8'/'unreachable' site comments at some EVP_PKEY sites; only the evp_pkey_name2type comment was corrected in S21.",
+      "The S20 ameth/legacy-key repairs remain test-asserted transcriptions with no C-authority differential."
+    ],
+    "introduced": []
+  },
+  "compatibility_delta": {
+    "ab": "No signature, #[repr(C)] or exported-symbol change.",
+    "behavior": "EVP_PKEY_is_a(legacy_key, \"rsaEncryption\") now answers 1 (authority 1) instead of 0. Unknown names still answer NID_undef.",
+    "phase2_abi": "11/11 ABI courts pass after the rebuild."
+  },
+  "commands": [
+    {
+      "step": "focused name2type test",
+      "command": "cargo test --lib evp::pkey::tests::a_method_name_outside -- --test-threads=1",
+      "exit": 0,
+      "tail": "running 1 test\ntest evp::pkey::tests::a_method_name_outside_the_table_resolves_through_the_object_lookup ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2091 filtered out; finished in 0.00s"
+    },
+    {
+      "step": "phase-2 install rebuild and ABI courts",
+      "command": "bash forensics/tools/build_phase2.sh",
+      "exit": 0,
+      "tail": "[phase2-courts] authority=openssl-3.6.4-production\n  ABI-SYMBOL                 pass\n  ABI-VERSION                pass\n  ABI-DYNAMIC                pass\n  ABI-LAYOUT                 pass\n  ABI-LINK                   pass\n  ABI-LOAD                   pass\n  ABI-CONSTANTS              pass\n  ABI-MATRIX                 pass\n  ABI-SUBSTITUTION           pass\n  ABI-INSTALL-LAYOUT         pass\n  libcrypto-contamination    pass\n  -> artifacts/phase2/COURTS.json all_pass=True"
+    },
+    {
+      "step": "fmt (final tree)",
+      "command": "cargo fmt --all -- --check",
+      "exit": 0,
+      "tail": "FMT_OK"
+    },
+    {
+      "step": "clippy (final tree)",
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "exit": 0,
+      "tail": "Checking openssl-rs v0.0.33 (/work)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.40s\nCLIPPY_EXIT=0"
+    },
+    {
+      "step": "library tests (parallel, first run)",
+      "command": "cargo test --lib -- --test-threads=4",
+      "exit": 101,
+      "tail": "failures:\n\n---- ml_dsa::poly::tests::a_vector_allocation_round_trips_and_frees_once stdout ----\nthread 'ml_dsa::poly::tests::a_vector_allocation_round_trips_and_frees_once' (18186) panicked at src/ml_dsa/poly.rs:836:13:\nassertion `left == right` failed\n  left: 223\n right: 0\n\ntest result: FAILED. 2047 passed; 1 failed; 44 ignored; 0 measured; 0 filtered out; finished in 104.10s",
+      "disposition": "Test corrected (S21-TEST-1); not a source regression."
+    },
+    {
+      "step": "focused ml_dsa tests after the correction",
+      "command": "cargo test --lib ml_dsa::poly::tests -- --test-threads=1",
+      "exit": 0,
+      "tail": "running 3 tests\ntest ml_dsa::poly::tests::a_matrix_with_an_overflowing_shape_names_nothing ... ok\ntest ml_dsa::poly::tests::a_vector_allocation_round_trips_and_frees_once ... ok\ntest ml_dsa::poly::tests::an_overflowing_element_count_is_refused_without_publication ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2089 filtered out; finished in 0.00s"
+    },
+    {
+      "step": "library tests (parallel, final)",
+      "command": "cargo test --lib -- --test-threads=4",
+      "exit": 0,
+      "tail": "test result: ok. 2048 passed; 0 failed; 44 ignored; 0 measured; 0 filtered out; finished in 123.20s\nTEST_EXIT=0"
+    },
+    {
+      "step": "library tests (serial, final)",
+      "command": "cargo test --lib -- --test-threads=1",
+      "exit": 0,
+      "tail": "test result: ok. 2048 passed; 0 failed; 44 ignored; 0 measured; 0 filtered out; finished in 274.85s\nTEST_EXIT=0"
+    },
+    {
+      "step": "docs drift before regeneration",
+      "command": "python3 forensics/tools/render_docs.py --check",
+      "exit": 1,
+      "tail": "DRIFT: README.md: readme-achievements, readme-l7-families\nDRIFT: forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md: status-current-evidence\nCHECK_EXIT=1"
+    },
+    {
+      "step": "docs regeneration",
+      "command": "python3 forensics/tools/render_docs.py --write",
+      "exit": 0,
+      "tail": "wrote README.md (readme-achievements, readme-l7-families, readme-memory-safety)\nwrote forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md (status-current-evidence, status-mechanisms, status-subphase-outcomes, status-reduction-census)\nWRITE_EXIT=0"
+    },
+    {
+      "step": "docs check after regeneration",
+      "command": "python3 forensics/tools/render_docs.py --check",
+      "exit": 0,
+      "tail": "render_docs: clean — all generated blocks match their evidence\nCHECK_EXIT=0"
+    },
+    {
+      "step": "status.md regeneration",
+      "command": "python3 forensics/tools/render_status.py",
+      "exit": 0,
+      "tail": "wrote forensics/STATUS.md"
+    }
+  ],
+  "gates": {
+    "level": "BATCH",
+    "fmt": "clean",
+    "clippy": "clean",
+    "library_tests_parallel": "2048 passed; 0 failed; 44 ignored",
+    "library_tests_serial": "2048 passed; 0 failed; 44 ignored",
+    "phase2_abi_courts": "11/11 pass",
+    "docs_rendered": "render_docs.py --check clean",
+    "boundary": "NOT_RUN",
+    "seal": "NOT_RUN",
+    "miri_asan_loom": "NOT_RUN",
+    "authority_differential": "NOT_RUN"
+  },
+  "library_hashes": {
+    "libcrypto_so_3_sha256": "77eaf1b5695d51e08ee147e279206f22f4e43e58dc63725bde96d71bf27a9413",
+    "libssl_so_3_sha256": "d5ad8d903944aefac209f77de76a69774470c6d5a2a58007549384848d5c7903",
+    "legacy_so_sha256": "9b7fd964a336261504921c563aedc3d6576061d1e27c9d7e92484d9e148ad41b",
+    "libcrypto_a_sha256": "f4cada66bea843453d1ec07481d6a6641414718cce8537d58d90a5d81219a67a",
+    "libssl_a_sha256": "6ad0f76ca1bc23f32682773648619c3efad77ccd591646c1d5419aa8d80fd4cf",
+    "openssl_exe_sha256": "1e186102e28e80b7495f8990c4c4324f5d934baa4438258331f10e6ee07d3fec"
+  },
+  "test_count": {
+    "passed": 2048,
+    "failed": 0,
+    "ignored": 44,
+    "total": 2092,
+    "previous_floor": 1962,
+    "net_increase": 86,
+    "note": "No test was newly ignored or removed. One pre-existing test was corrected (S21-TEST-1)."
+  },
+  "reduction_census": {
+    "benign": 7,
+    "divergence": 5,
+    "latent_regression": 24,
+    "latent_open_at_census": 11,
+    "latent_closed_by_s20": 11,
+    "latent_open_now": 0,
+    "source": "atlas-refresh/s19-reduction-census.json; atlas-refresh/s20-ameth-closure.json"
+  },
+  "mechanism_states": {
+    "mechanism_discharges": [
+      "RC-1 SAFETY_DISCHARGED",
+      "OB-1 SAFETY_DISCHARGED",
+      "OB-2 SAFETY_DISCHARGED",
+      "OB-3 SAFETY_DISCHARGED",
+      "ERR-1 SAFETY_DISCHARGED",
+      "GEN-1 SAFETY_DISCHARGED (S16, scoped to the GENERAL_NAME selector/arm representation)"
+    ],
+    "bio": "CONTRACTED",
+    "runtime_alloc_ownership": "UNSAFE_OPEN",
+    "safe_compatible": "0/33"
+  },
+  "unsafe_count_note": {
+    "s20_before": 1817,
+    "s20_after": 1992,
+    "why": "S20 restored authority dispatch that had been deleted. The added operations are FFI calls at existing documented C-ABI/accessor boundaries with explicit SAFETY contracts; no unsafe abstraction's contract was widened, and six authority-UB paths were removed.",
+    "classification": "correctness win, not a safety regression"
+  },
+  "residuals": [
+    {
+      "id": "S21-O1",
+      "site": "src/ml_dsa/poly.rs Vector::alloc / as_slice / as_mut_slice",
+      "disposition": "OBSERVED, not repaired (out of S21 scope): Vector::alloc publishes a NonNull<Poly> for uninitialised storage, and a caller that forms as_slice/as_mut_slice before writing every coefficient creates a reference over uninitialised integer storage (AGENTS.md section 2). The authority's vector_alloc has the same allocation semantics and its callers zero or fill before the first read; this owner still lacks a MaybeUninit state between allocation and initialisation. Recorded for a BOUNDARY visit. S21 only corrected the test that read the allocation before initialising it."
+    },
+    {
+      "id": "S20-O2",
+      "disposition": "OPEN (partially corrected): stale 'Phase 8'/'unreachable' comments remain at some EVP_PKEY sites."
+    },
+    {
+      "id": "S20-BOUNDARY",
+      "disposition": "NOT_RUN: independent caller/dependency-closure audit, Miri/ASan/Loom, and a C-authority differential for the 11 S20 entries."
+    },
+    {
+      "id": "S21-SEAL",
+      "disposition": "NOT_RUN: full probe suite and forensic regeneration."
+    }
+  ],
+  "graduation": "No new graduation. GEN-1 is the S16 mechanism-scope discharge already recorded by its own receipt; S21 adds no mechanism or consumer claim. SAFE_COMPATIBLE remains 0/33.",
+  "honesty": "Every figure above is from observed output or the named generated artefact. BOUNDARY and SEAL were not run. The S21 run is on an uncommitted working tree; the orchestrator commits it."
+}
