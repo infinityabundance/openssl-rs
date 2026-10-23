@@ -55,6 +55,9 @@ BLOCKS = {
     "readme-l7-families": README,
     "readme-memory-safety": README,
     "status-current-evidence": STATUS_DOC,
+    "status-mechanisms": STATUS_DOC,
+    "status-subphase-outcomes": STATUS_DOC,
+    "status-reduction-census": STATUS_DOC,
 }
 
 
@@ -187,6 +190,8 @@ def test_baseline(root: Path, candidate: dict) -> dict:
         counts = {key: int(data[key]) for key in ("passed", "failed", "ignored")}
         commit = str(data["source_commit"])
         kind = str(data["kind"])
+        observed = int(data.get("observed_total") or 0)
+        observed_note = str(data.get("observed_total_note") or "")
         if kind != "full-library-run":
             raise ValueError(f"kind is {kind!r}, not 'full-library-run'")
     except (RenderError, KeyError, TypeError, ValueError) as exc:
@@ -199,6 +204,8 @@ def test_baseline(root: Path, candidate: dict) -> dict:
         "source_commit": commit,
         "kind": kind,
         "floor": candidate.get("commit") != commit,
+        "observed_total": observed,
+        "observed_total_note": observed_note,
     }
 
 
@@ -226,6 +233,11 @@ def test_row(tests: dict, label: str, verb: str = "passing") -> str:
             result += (
                 f" at `{tests['source_commit']}` — a **floor**, not the current "
                 "count: later commits add tests without a further full run"
+            )
+        if tests.get("observed_total"):
+            result += (
+                f"; **{tests['observed_total']:,} total tests observed** on a later "
+                "tree — a full-suite pass after the recorded commit is `NOT_RUN`"
             )
         evidence = f"`{TEST_BASELINE_S}` (`{tests['kind']}`)"
     return f"| {label} | {result} | {evidence} |"
@@ -421,6 +433,24 @@ class Evidence:
             if m.get("state") == "SAFETY_DISCHARGED"
         ]
         self.consumers = self.status["consumers"]
+        self.reuse = self.atlas.get("body", {}).get("evidence_reuse") or {}
+        self.gates = self.status.get("gates") or {}
+        self.invariants = self.status.get("structural_invariants") or {}
+        self.known_gaps = self.status.get("known_gaps") or []
+
+    def evidence_reuse(self) -> dict:
+        """The atlas's carried-forward disclosure, with the names as a set."""
+        return {
+            "mode": str(self.reuse.get("mode", "unknown")),
+            "reused": int(self.reuse.get("families_reused", 0) or 0),
+            "match": bool(self.reuse.get("candidate_identity_match", False)),
+            "names": set(self.reuse.get("reused_families") or []),
+        }
+
+    def gate_state(self, key: str) -> str:
+        """A gate's recorded state, never a default PASS."""
+        gate = self.gates.get(key) or {}
+        return str(gate.get("state") or gate.get("result") or "UNKNOWN")
 
     # -- derived values -------------------------------------------------
     def counts(self) -> dict:
@@ -457,6 +487,7 @@ class Evidence:
     # -- blocks ---------------------------------------------------------
     def achievements(self) -> str:
         corpus = self.corpus()
+        reuse = self.evidence_reuse()
         mechanisms = ", ".join(
             f"{m['id']} {m['mechanism']}".replace("shared reference counting", "refcounting")
             for m in self.mechanisms
@@ -464,6 +495,36 @@ class Evidence:
         audit = self.audit()
         partition = self.partition
         b = self.boundaries
+        cohort = set(self.consumers.get("l7_families") or [])
+        cohort_reused = len(cohort & reuse["names"])
+        if reuse["match"]:
+            freshness = "measured at the identity above"
+            reuse_text = (
+                "Downstream evidence reuse: **no carried-forward rows** "
+                "(`candidate_identity_match=true`); these rows are measured at the "
+                "identity above."
+            )
+        else:
+            freshness = (
+                f"**carried forward** — {cohort_reused}/{len(cohort)} cohort rows are in "
+                "`evidence_reuse.reused_families` and "
+                "`candidate_identity_match=false`"
+            )
+            reuse_text = (
+                "Downstream evidence reuse: "
+                f"**{reuse['reused']} of {corpus['loaded']} measured families carried "
+                f"forward** (`{reuse['mode']}`); `candidate_identity_match` = "
+                "`false`. A carried-forward row is compatibility evidence from the "
+                "build recorded on that row, not a fresh measurement at the identity "
+                f"above. The Safe-33 cohort has {cohort_reused}/{len(cohort)} of its "
+                "families in that set."
+            )
+        gap_bits = "; ".join(
+            f"`{g.get('id', '?')}` {g.get('status', '?')}" for g in self.known_gaps
+        )
+        invariants = ", ".join(
+            f"`{key}`" for key in sorted(self.invariants) if key != "source"
+        )
         return "\n".join(
             [
                 f"Source identity: {self.identity_text()}. Derived by "
@@ -474,14 +535,15 @@ class Evidence:
                 "|---|---|---|",
                 "| **Downstream drop-in, Safe-33 cohort** | "
                 f"**{self.consumers['l7_functional']} / {self.consumers['families_total']} "
-                "families at `L7-functional`**, candidate and authority | "
-                f"`{ATLAS_S}` (`body.runs`) |",
+                f"families at `L7-functional`**, candidate and authority; {freshness} | "
+                f"`{ATLAS_S}` (`body.runs`); `{STATUS_S}` (`consumers`) |",
                 "| **Downstream drop-in, 1000-family corpus** | "
                 f"**{corpus['candidate']} / {corpus['total']} at `L7-functional`**; "
                 f"candidate {corpus['candidate']} = authority {corpus['authority']}; "
                 f"**{corpus['failed']} failed**; {corpus['loaded']} loaded; "
-                f"{corpus['not_attempted']} not attempted | same atlas, "
-                "`body.counts.by_subject` |",
+                f"{corpus['not_attempted']} not attempted; **{reuse['reused']} of "
+                f"{corpus['loaded']} measured rows carried forward** | same atlas, "
+                "`body.counts.by_subject`, `body.evidence_reuse` |",
                 test_row(self.tests, "**Library test suite**"),
                 "| **Memory safety: mechanisms** | "
                 f"**{plural(len(self.mechanisms), 'mechanism')} discharged at mechanism scope** "
@@ -493,7 +555,7 @@ class Evidence:
                 f"{compact(b['batch'])} batch-checked; "
                 f"{compact(b['author'])} author-evidenced | "
                 "`atlas-refresh/boundary-sweep-*.json` |",
-                "| **Memory safety: file census** | "
+                "| **Memory safety: files converted / partial** | "
                 f"**{partition['total']} files**: {partition['ZERO_UNSAFE']} `ZERO_UNSAFE`, "
                 f"{partition['BOUNDARY_COVERED']} `BOUNDARY_COVERED`, "
                 f"{partition['PARTIAL']} `PARTIAL` "
@@ -505,16 +567,57 @@ class Evidence:
                 f"**{self.consumers['safe_compatible']} / {self.consumers['families_total']}** "
                 "— no family has a proven dependency closure | "
                 f"`{STATUS_S}` (`consumers`) |",
+                "| **BOUNDARY / SEAL gates** | "
+                f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
+                "— no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation "
+                "control, authority differential, full forensic regeneration or held-out "
+                "compatibility for the S16–S24 cluster | "
+                f"`{STATUS_S}` (`gates.boundary_gate`, `gates.seal_gate`) |",
+                "| **Allocator / ABI invariants** | "
+                f"**preserved** — recorded invariant planes: {invariants or 'none recorded'} | "
+                f"`{STATUS_S}` (`structural_invariants`) |",
+                "| **Known gaps** | " + (gap_bits or "none recorded") + " | "
+                f"`{STATUS_S}` (`known_gaps`) |",
                 "| **Release** | "
                 f"**{self.publish['version']}** on crates.io ({self.publish['date']}), "
                 f"checksum `{self.publish['checksum']}…` | "
                 f"`{self.publish['source']}` |",
+                "",
+                reuse_text,
             ]
         )
 
     def l7_families(self) -> str:
         corpus = self.corpus()
-        listed = ", ".join(f"`{name}`" for name in self.families)
+        reuse = self.evidence_reuse()
+        cohort = set(self.consumers.get("l7_families") or [])
+        carried = [name for name in self.families if name in reuse["names"]]
+        marker = "" if reuse["match"] else "†"
+        listed = ", ".join(
+            f"`{name}`" + (marker if name in reuse["names"] else "")
+            for name in self.families
+        )
+        not_carried = sorted(set(self.families) - reuse["names"])
+        uncovered = (
+            f" Not in that list: {', '.join(f'`{n}`' for n in not_carried)}; the "
+            "atlas-level `candidate_identity_match=false` still applies, so it is not "
+            "claimed as a fresh measurement at the identity above."
+            if not_carried
+            else ""
+        )
+        freshness = (
+            "**Freshness:** `candidate_identity_match=true`; these rows are measured at "
+            "the identity above."
+            if reuse["match"]
+            else (
+                f"**† carried forward:** {len(carried)} of {len(self.families)} listed "
+                f"rows are in `evidence_reuse.reused_families` (`{reuse['mode']}`, "
+                "`candidate_identity_match=false`); they were not re-measured at the "
+                "identity above. The Safe-33 cohort has "
+                f"{len(cohort & reuse['names'])}/{len(cohort)} of its families in the same "
+                "carried-forward set." + uncovered
+            )
+        )
         return "\n".join(
             [
                 f"**{len(self.families)} of {corpus['total']} counted corpus families are "
@@ -523,6 +626,8 @@ class Evidence:
                 f"{corpus['loaded']} loaded, {corpus['not_attempted']} not attempted.",
                 "",
                 listed + ".",
+                "",
+                freshness,
             ]
         )
 
@@ -530,10 +635,10 @@ class Evidence:
         b = self.boundaries
         audit = self.audit()
         partition = self.partition
+        uninit = self.status.get("uninitialised_storage_census") or {}
         mechanisms = "; ".join(
             f"{m['id']} {m['mechanism']}" for m in self.mechanisms
         )
-        closed = [d for d in self.stop_defects if d["closed_by"]]
         open_defects = self.open_stop()
         if self.stop_defects:
             stop_bits = []
@@ -588,6 +693,20 @@ class Evidence:
             if scoped
             else "none"
         )
+        retained = uninit.get("retained") or []
+        uninit_text = (
+            f"**{uninit.get('unsound_total_fixed', '?')} UNSOUND fixed** "
+            f"({uninit.get('unsound_owner_shaped', '?')} owner-shaped + "
+            f"{uninit.get('unsound_frame_local_same_shape', '?')} frame-local), from "
+            f"{uninit.get('owner_shaped_examined', '?')} owner-shaped entries examined; "
+            f"{uninit.get('safe_by_construction', '?')} safe-by-construction and "
+            f"{uninit.get('misuse_resistant', '?')} misuse-resistant. "
+            f"{uninit.get('class_status', '')} Retained: "
+            + "; ".join(r.rstrip(".") for r in retained[:3])
+        )
+        gap_bits = "; ".join(
+            f"`{g.get('id', '?')}` {g.get('status', '?')}" for g in self.known_gaps
+        )
 
         return "\n".join(
             [
@@ -604,6 +723,7 @@ class Evidence:
                 "(memory-BIO constructor/destructor, connect-BIO descriptor); "
                 f"{compact(b['batch'])} batch-checked; "
                 f"{compact(b['author'])} **author-evidenced only**. |",
+                "| **Uninitialised-storage class** | " + uninit_text + " |",
                 f"| **STOP-class defects** | {stop_text}. |",
                 "| **Audited but not converted** | "
                 f"**{partition['PARTIAL']} `PARTIAL` files**; "
@@ -611,16 +731,73 @@ class Evidence:
                 f"audited, {audit.get('remaining', '?')} remaining. "
                 "Audit completion is not discharge. |",
                 "| **Not discharged** | " + not_discharged + " |",
+                "| **BOUNDARY / SEAL gates** | "
+                f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
+                "— the S16–S24 cluster has no independent caller/dependency-closure audit, "
+                "Miri/ASan/Loom/mutation control, authority differential, full forensic "
+                "regeneration or held-out compatibility. |",
+                "| **Known gaps** | " + (gap_bits or "none recorded") + " |",
                 "| **`SAFE_COMPATIBLE` consumers** | "
                 f"**{self.consumers['safe_compatible']} / {self.consumers['families_total']}** "
                 "— no consumer family has a proven dependency closure. |",
             ]
         )
 
+    def status_mechanisms(self) -> str:
+        rows = [
+            "| id | mechanism | source | state | evidence |",
+            "|---|---|---|---|---|",
+        ]
+        for m in self.status.get("mechanism_discharges") or []:
+            evidence = ", ".join(f"`{e}`" for e in (m.get("evidence") or []))
+            rows.append(
+                f"| {m.get('id', '?')} | {m.get('mechanism', '?')} | "
+                f"`{m.get('source', '?')}` | {m.get('state', '?')} | {evidence} |"
+            )
+        return "\n".join(rows)
+
+    def status_subphase_outcomes(self) -> str:
+        rows = ["| subphase | outcome | evidence |", "|---|---|---|"]
+        for s in self.status.get("subphase_outcomes") or []:
+            rows.append(
+                f"| {s.get('subphase', '?')} | {s.get('outcome', '?')} | "
+                f"`{s.get('evidence', '?')}` |"
+            )
+        return "\n".join(rows)
+
+    def status_reduction_census(self) -> str:
+        r = self.status.get("reduction_census") or {}
+        if not r:
+            return (
+                "**UNKNOWN** — no reduction census is recorded in "
+                "`CAMPAIGN-STATUS.json`."
+            )
+        return "\n".join(
+            [
+                "| class | count | state |",
+                "|---|---|---|",
+                f"| BENIGN | {r['benign']} | no behaviour removed |",
+                f"| DIVERGENCE | {r['divergence']} | explicit, compatibility "
+                "consequence recorded |",
+                f"| LATENT REGRESSION | {r['latent_regression']} | "
+                f"{r.get('latent_repaired_before_census', '?')} repaired before the "
+                f"census; {r.get('latent_closed_by_s20', '?')} closed by S20; "
+                f"**{r.get('latent_open_now', '?')} open now** |",
+                "",
+                f"Highest-scoring open entry at the census: "
+                f"{r.get('highest_score_open_at_census', '?')}. Source: "
+                f"`{r.get('artifact', '?')}`. {r.get('note', '')}",
+            ]
+        )
+
     def status_evidence(self) -> str:
         corpus = self.corpus()
+        reuse = self.evidence_reuse()
         mechanisms = ", ".join(m["id"] for m in self.mechanisms)
         partition = self.partition
+        invariants = ", ".join(
+            f"`{key}`" for key in sorted(self.invariants) if key != "source"
+        )
         return "\n".join(
             [
                 "| item | current value | source |",
@@ -640,6 +817,11 @@ class Evidence:
                 f"`L7-functional`; {corpus['loaded']} loaded; "
                 f"{corpus['not_attempted']} not attempted; {corpus['failed']} failed | "
                 "same atlas, `body.counts.by_subject` |",
+                "| downstream evidence reuse | "
+                f"{reuse['reused']} of {corpus['loaded']} measured families carried "
+                f"forward (`{reuse['mode']}`); `candidate_identity_match` = "
+                f"`{str(reuse['match']).lower()}` | same atlas, "
+                "`body.evidence_reuse` |",
                 "| `SAFE_COMPATIBLE` consumers | "
                 f"**{self.consumers['safe_compatible']}/{self.consumers['families_total']}** | "
                 f"`{STATUS_S}` (`consumers`) |",
@@ -652,6 +834,12 @@ class Evidence:
                 f"{partition['PARTIAL']} `PARTIAL`, {partition['TEST_ONLY']} `TEST_ONLY`; "
                 f"{self.delta['unaccounted_files']} unaccounted | "
                 f"`{CENSUS_S}`; `{DELTA_S}` |",
+                "| BOUNDARY / SEAL gates | "
+                f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** | "
+                f"`{STATUS_S}` (`gates`) |",
+                "| allocator / ABI invariants | "
+                f"**preserved** — {invariants or 'none recorded'} | "
+                f"`{STATUS_S}` (`structural_invariants`) |",
             ]
         )
 
@@ -661,6 +849,9 @@ class Evidence:
             "readme-l7-families": self.l7_families(),
             "readme-memory-safety": self.memory_safety(),
             "status-current-evidence": self.status_evidence(),
+            "status-mechanisms": self.status_mechanisms(),
+            "status-subphase-outcomes": self.status_subphase_outcomes(),
+            "status-reduction-census": self.status_reduction_census(),
         }
 
 

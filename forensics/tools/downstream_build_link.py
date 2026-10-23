@@ -3527,7 +3527,7 @@ _B16_PCRE_AUX: tuple[dict, ...] = (
     _aux_deb("p/pcre3", "libpcre3-dev_8.39-15_amd64.deb",
              "a2bd77ac61b2dbbbc6cac3f7238780a591cf23774f9f0b1fc79d1c07b6d7f0c4",
              include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
-             bin_dirs=("usr/bin",)),
+             bin_dirs=("usr/bin",), links={"usr/include/pcre": "."}),
 )
 
 _B16_NCURSES_AUX: tuple[dict, ...] = (
@@ -3538,10 +3538,10 @@ _B16_NCURSES_AUX: tuple[dict, ...] = (
 )
 
 _B16_SSCG_AUX: tuple[dict, ...] = (
-    _aux_deb("libt/talloc", "libtalloc2_2.4.0-f2_amd64.deb",
+    _aux_deb("t/talloc", "libtalloc2_2.4.0-f2_amd64.deb",
              "2cbba68ca13003a0da794f5bcc44d95d0a191514fdd2d2764858b37215f0867c",
              library_dirs=(_AUX_MULTIARCH,)),
-    _aux_deb("libt/talloc", "libtalloc-dev_2.4.0-f2_amd64.deb",
+    _aux_deb("t/talloc", "libtalloc-dev_2.4.0-f2_amd64.deb",
              "f2d37c120625bedd410b2d53e1c866855cbabae0138b5b004c6a8cac901c1296",
              include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
              pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
@@ -3601,7 +3601,15 @@ _B16_NGHTTP2_AUX: tuple[dict, ...] = tuple(_LIBEV_AUX) + (
 )
 
 _B16_CHARYBDIS_ENV = dict(_ONBOARD_AUTOTOOLS_ENV,
-                          CFLAGS="-include time.h -D_GNU_SOURCE")
+                          CFLAGS="-include time.h -D_GNU_SOURCE",
+                          BISON_PKGDATADIR="{aux}/usr/share/bison")
+
+# charybdis ships configure.ac only, and its own autogen.sh drives aclocal/automake for the
+# root and for librb.  The pinned autotools need the same /usr/share rewrite and wrapper
+# creation the other autotools recipes use; only the shared bootstrap's final
+# `autoreconf -fi` is omitted, because charybdis's autogen.sh performs that step itself.
+_B16_CHARYBDIS_BOOTSTRAP = (_ONBOARD_AUTOTOOLS_BOOTSTRAP.rsplit("autoreconf -fi", 1)[0]
+                            + "true")
 
 _L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
     {
@@ -3609,7 +3617,7 @@ _L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
         "url": "https://deb.debian.org/debian/pool/main/s/sscg/sscg_4.0.3.orig.tar.xz",
         "archive": "tar.xz", "build_system": "meson",
         "sha256": "08123b2c73e41df3a744fa01c7b737942a248e6510ff57f3c19b14fc55fe9bed",
-        "configure": ["b", "--prefix={root}/.l7-install"], "make": [],
+        "configure": ["--prefix={root}/.l7-install"], "make": [],
         "artifact": "b/sscg", "launch": ["--version"],
         "aux_sources": list(_B16_SSCG_AUX),
         "env_extra": {"PERL5LIB": "{aux}/usr/lib/x86_64-linux-gnu/perl5/5.36"},
@@ -3639,10 +3647,10 @@ _L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
         "sha256": "a3f4e572877c5a3abdab3af652746c0682f0c41b3f9e3c9866315f5d03f2bb57",
         "configure": ["--prefix={root}/.l7-install", "--enable-openssl={prefix}"],
         "make": [MAKE_JOBS],
-        "pre_build": [["sh", "autogen.sh"]],
+        "pre_build": [["sh", "-c", _B16_CHARYBDIS_BOOTSTRAP], ["sh", "autogen.sh"]],
         "env_extra": dict(_B16_CHARYBDIS_ENV),
         "aux_sources": list(_B16_AUTOTOOLS_AUX),
-        "artifact": "src/ircd/.libs/charybdis", "launch": ["--version"],
+        "artifact": "librb/src/.libs/librb.so*", "launch": ["--version"],
         "note": ("charybdis 4.1.2 listens with a TLS listener; the admitted workload completes "
                  "the IRC greeting over a verified TLS session, and an unrelated CA is refused"),
     },
@@ -3656,7 +3664,7 @@ _L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
         "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
         "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
         "aux_sources": list(_B16_AUTOTOOLS_AUX),
-        "artifact": ".libs/libafflib.so*", "launch": None,
+        "artifact": "lib/.libs/libafflib.so*", "launch": None,
         "note": ("AFFLIB 3.7.20's affsign signs an AFF image with the subject libcrypto; the "
                  "admitted workload verifies it and a tampered image no longer verifies"),
     },
@@ -3669,7 +3677,7 @@ _L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
         "make": [MAKE_JOBS],
         "env_extra": {"CFLAGS": "-fcommon"},
         "aux_sources": list(_B16_PCRE_AUX),
-        "artifact": "src/.libs/httest", "launch": ["--version"],
+        "artifact": "src/httest", "launch": ["--version"],
         "note": ("httest 2.4.23 drives an HTTPS request over a verified TLS session with its "
                  "own CA option; an unrelated CA is refused"),
     },
@@ -3695,6 +3703,8 @@ _L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
         "sha256": "a36e77a59dd288a582dbeed7166ac4212e39120323bac75c74d7923e1d7b63e8",
         "configure": None,
         "make": [MAKE_JOBS, "YACC=bison -y", "LEX=flex"],
+        "env_extra": {"BISON_PKGDATADIR": "{aux}/usr/share/bison",
+                      "M4": "{aux}/usr/bin/m4"},
         "aux_sources": list(_B16_AUTOTOOLS_AUX),
         "artifact": "dma", "launch": ["-h"],
         "note": ("DMA 0.14 submits a message to a local SMTPS peer over verified TLS; an "

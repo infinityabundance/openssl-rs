@@ -20,32 +20,19 @@
 //! Nothing else in this file reads the default method, so the object's whole surface — lifetime,
 //! accessors and constructor — is now in one place.
 //!
-//! ## The two reductions, and why the reachable answer is the answer
+//! ## The engine block and the one reduction
 //!
-//! **1. `ENGINE_*`.** [`RSA_set_method`] and [`RSA_free`] call `ENGINE_finish(rsa->engine)` in the
-//! authority (`rsa_lib.c:56`, `:157`); [`rsa_new_intern`] additionally calls `ENGINE_init`,
-//! `ENGINE_get_default_RSA` and `ENGINE_get_RSA` (`:105`, `:111`, `:114`). None of the four is in
-//! this crate. `#ifndef OPENSSL_NO_ENGINE` is **undefined** on this profile, so the authority's
-//! blocks are compiled, but `ENGINE_*` is Phase 13's (`docs/DECISIONS.md` D181) and there is no
-//! engine registry to register one in. With no engine registered, `ENGINE_get_default_RSA()`
-//! selects from an empty table and answers NULL (`tb_rsa.c:59`), `ENGINE_finish(NULL)` returns 1
-//! without touching anything (`eng_init.c:108-111`), and `(*rsa).engine` is therefore NULL on
-//! every state this crate can reach. So the two `ENGINE_finish` calls are written as the reachable
-//! answer: omitted, with `rsa->engine = NULL;` kept where the authority sets it. This is
-//! `src/evp/pkey_asn1.rs:54-60`'s established reduction and D313's argument, and its observable
-//! half is that [`RSA_get0_engine`] answers NULL for every object the crate can build.
-//!
-//! The constructor's three calls reduce the same way and one step further: with
-//! `ENGINE_get_default_RSA()` answering NULL, the `if (ret->engine)` block — the only reader of
-//! `ENGINE_get_RSA` — is unreachable, so the whole `#ifndef OPENSSL_NO_ENGINE` block becomes
-//! `ret->engine = NULL;` with the `flags` assignment beside it kept. **The consequence is
-//! observable and is named here rather than left implicit**: a caller who passes a non-NULL
-//! `engine` to [`RSA_new_method`] gets an object whose `engine` member is NULL, where the authority
-//! would `ENGINE_init` that pointer and adopt the table `ENGINE_get_RSA` answered — or raise
-//! `RSA_LIB_116` and release the object if it answered NULL. No state this crate can reach can
-//! hold an `ENGINE` (there is no registry and no constructor), so the difference is unreachable by
-//! any caller that got its pointer legitimately; `RT-RSA` calls `RSA_new_method(NULL)` and nothing
-//! else, and D325 records why.
+//! **1. `ENGINE_*`.** [`RSA_set_method`], [`RSA_free`] and [`rsa_new_intern`] call
+//! `ENGINE_init`/`ENGINE_get_default_RSA`/`ENGINE_get_RSA`/`ENGINE_finish` where the authority
+//! does (`rsa_lib.c:105`, `:111`, `:114`, `:56`, `:157`). `#ifndef OPENSSL_NO_ENGINE` is
+//! **undefined** on this profile, so the authority's blocks are compiled and are transcribed.
+//! The earlier reduction that treated them as unreachable is **falsified by a real consumer**:
+//! h2o's neverbleed builds an `ENGINE` with `ENGINE_new`/`ENGINE_set_RSA` and calls
+//! `RSA_new_method(engine)` for a public-only RSA key whose private operation lives in a custom
+//! `RSA_METHOD`. Ignoring `engine` silently selected the default table, so the TLS 1.3
+//! `CertificateVerify` reached `rsa_ossl_private_encrypt` with no private key and the server
+//! handshake failed with `SSL_R_INTERNAL_ERROR`. The block is therefore implemented, and the
+//! functional reference it takes is the one `RSA_free`/`RSA_set_method` release.
 //!
 //! **2. `RSA_PSS_PARAMS_free`.** [`RSA_free`] and [`ossl_rsa_set0_pss_params`] call it
 //! (`rsa_lib.c:186`, `:702`). The field has three writers in this crate:
@@ -57,8 +44,8 @@
 //! value on every PSS PKCS#8 decode and on every replacement through
 //! [`ossl_rsa_set0_pss_params`].
 //!
-//! Neither reduction is a `forensics/prerequisites.json` `divergences` row: the gate resolves
-//! **internal** symbols only, so a row covering an export is refused with
+//! The `RSA_PSS_PARAMS_free` reduction is not a `forensics/prerequisites.json` `divergences` row:
+//! the gate resolves **internal** symbols only, so a row covering an export is refused with
 //! `divergence_record_does_not_match`. The record is the transcribed site, the integration plan's
 //! steps 4-5, and the commit's decision entry.
 //!
@@ -220,7 +207,7 @@ use core::sync::atomic::Ordering;
 
 use crate::bn::bignum::{BN_clear_free, BN_free, BN_num_bits, BN_set_flags, BigNum};
 use crate::bn::ctx::BnCtx;
-use crate::evp::pkey_asn1::Engine;
+use crate::engine::eng_lib::Engine;
 use crate::rsa::asn1::RSA_PSS_PARAMS_free;
 use crate::rsa::mp::{
     multip_info_free_ex_thunk, multip_info_free_thunk, ossl_rsa_multip_calc_product,
@@ -348,19 +335,14 @@ unsafe fn safe_bn_num_bits(k: *const BigNum) -> c_int {
 ///   the constructor is holding".
 /// * **`flags` is assigned twice**, once inside the `#if !defined(OPENSSL_NO_ENGINE) &&
 ///   !defined(FIPS_MODULE)` block and once after it, because an engine may have replaced `meth`
-///   in between. Both are transcribed; on the no-engine path they compute the same word.
-/// * **The engine block is written as the reachable answer.** `ENGINE_init(engine)`,
-///   `ENGINE_get_default_RSA()` and `ENGINE_get_RSA(ret->engine)` are the three calls inside
-///   `#ifndef OPENSSL_NO_ENGINE`, which **is** compiled on this profile, but `ENGINE_*` is Phase
-///   13's (`docs/DECISIONS.md` D181) and there is no engine registry to register one in. With no
-///   engine registered, `ENGINE_get_default_RSA()` selects from an empty table and answers NULL
-///   (`tb_rsa.c:59`), so `ret->engine` is NULL on the else arm and the `if (ret->engine)` block —
-///   the only reader of `ENGINE_get_RSA` — is unreachable. So the block reduces to
-///   `ret->engine = NULL;`, and the `flags` assignment beside it is kept. A caller-supplied
-///   non-NULL `engine` therefore has no effect here where the authority would call `ENGINE_init`
-///   on it and then adopt the table `ENGINE_get_RSA` answers: no state this crate can reach can
-///   hold one, because nothing in it can build an `ENGINE`. That edge is a recorded reduction of
-///   the same shape as the two `ENGINE_finish` omissions, not a silent difference.
+///   in between. Both are transcribed.
+/// * **The engine block is transcribed, not reduced.** `ENGINE_init(engine)`,
+///   `ENGINE_get_default_RSA()` and `ENGINE_get_RSA(ret->engine)` are all landed in
+///   `src/engine/`, and a real consumer (h2o's neverbleed) supplies an engine whose `RSA_METHOD`
+///   holds the private operation. Ignoring the argument here made `RSA_sign`/`RSA_private_encrypt`
+///   dispatch to the default method and fail on the public-only key, so the block below is the
+///   authority's own, including the `RSA_LIB_106`/`RSA_LIB_116` failures and the functional
+///   reference `RSA_free`/`RSA_set_method` release.
 /// * **`RSA_get_default_method` is read, not tested.** The authority checks the table for NULL
 ///   only after an engine supplied it; on the no-engine path a caller who has made the default
 ///   method NULL gets the fault the authority's own `ret->meth->flags` would take. That is
@@ -368,8 +350,9 @@ unsafe fn safe_bn_num_bits(k: *const BigNum) -> c_int {
 ///   `RSA_new()` is a caller's bug in both libraries.
 ///
 /// # Safety
-/// `engine` is NULL and is ignored; `libctx` is NULL or a live library context.
-unsafe fn rsa_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Rsa {
+/// `engine` is NULL or a live engine the caller keeps alive for the call; `libctx` is NULL or a
+/// live library context.
+unsafe fn rsa_new_intern(engine: *mut Engine, libctx: *mut c_void) -> *mut Rsa {
     // The block, allocated through the crate's allocator seam at the authority's own line. It is a
     // `RawCtx` — owned *storage* that is not yet a validated `Rsa` — because the lock failure below
     // releases the block **alone**, running no destructor body: exactly the authority's inline
@@ -417,22 +400,52 @@ unsafe fn rsa_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Rsa 
         // authority stores it and never read here.
         unsafe { (*ret).libctx = libctx };
         // SAFETY: `RSA_get_default_method` takes no pointers.
-        let meth = RSA_get_default_method();
+        let mut meth = RSA_get_default_method();
         // SAFETY: `ret` is this call's own allocation.
         unsafe { (*ret).meth = meth };
 
-        /* `#if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)` — compiled here, and reduced:
-         * see this function's doc comment. */
+        /* `#if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)` — compiled on this profile. */
         // SAFETY: `meth` is the table the getter answered, read exactly as the authority reads it.
         unsafe { (*ret).flags = (*meth).flags & !RSA_FLAG_NON_FIPS_ALLOW };
-        // The authority's `ENGINE_init(engine)`/`ENGINE_get_default_RSA()`/`ENGINE_get_RSA`
-        // block is omitted; `ret->engine` is NULL on every state this crate can reach.
+        // `if (engine) { if (!ENGINE_init(engine)) goto err; ret->engine = engine; }
+        //  else ret->engine = ENGINE_get_default_RSA();`
+        //
+        // SAFETY: `engine` is NULL or a live engine; `ENGINE_init` takes the functional reference
+        // this object releases in `RSA_free`/`RSA_set_method`.
+        let engine_ref = if engine.is_null() {
+            // The table select takes no caller pointer and answers a functional reference (or NULL
+            // when no engine is registered for RSA). It is a safe `extern "C"` entry point.
+            crate::engine::tb_rsa::ENGINE_get_default_RSA()
+        } else {
+            // SAFETY: `engine` is the caller's live engine.
+            if unsafe { crate::engine::eng_init::ENGINE_init(engine) } == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::RSA_LIB_106) };
+                break 'build false;
+            }
+            engine
+        };
         // SAFETY: `ret` is this call's own allocation.
-        unsafe { (*ret).engine = ptr::null_mut() };
+        unsafe { (*ret).engine = engine_ref };
+        // `if (ret->engine) { ret->meth = ENGINE_get_RSA(ret->engine);
+        //  if (ret->meth == NULL) goto err; }`
+        if !engine_ref.is_null() {
+            // SAFETY: `engine_ref` is the functional reference acquired above.
+            let engine_meth =
+                unsafe { crate::engine::tb_rsa::ENGINE_get_RSA(engine_ref) }.cast::<RsaMethod>();
+            if engine_meth.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::RSA_LIB_116) };
+                break 'build false;
+            }
+            meth = engine_meth;
+            // SAFETY: `ret` is this call's own allocation.
+            unsafe { (*ret).meth = meth };
+        }
 
         // The second assignment, and the one that matters when an engine replaced the table.
         // SAFETY: `ret` is this call's own allocation and `meth` its own member.
-        unsafe { (*ret).flags = (*(*ret).meth).flags & !RSA_FLAG_NON_FIPS_ALLOW };
+        unsafe { (*ret).flags = (*meth).flags & !RSA_FLAG_NON_FIPS_ALLOW };
 
         // SAFETY: `ret` is this call's own allocation and `ex_data` is a field of it.
         if unsafe {
@@ -508,12 +521,10 @@ pub unsafe extern "C" fn RSA_get_method(rsa: *const Rsa) -> *const RsaMethod {
 /// The order is load-bearing and is preserved: `finish` on the outgoing table, then the engine
 /// release, then the store, then `init` on the incoming table.
 ///
-/// **`ENGINE_finish` is the reachable answer, not a call.** The authority calls
-/// `ENGINE_finish(rsa->engine)` between the `finish` and the store; this crate has no engine
-/// registry, so `(*rsa).engine` is NULL on every state it can reach and `ENGINE_finish(NULL)`
-/// returns 1 without touching anything (`eng_init.c:108-111`). The call is therefore omitted and
-/// the `rsa->engine = NULL;` assignment the authority makes beside it is kept — the reduction
-/// `src/evp/pkey_asn1.rs:54-60` established. See the module documentation.
+/// **`ENGINE_finish` releases the outgoing functional reference.** The authority calls
+/// `ENGINE_finish(rsa->engine)` between the `finish` and the store; this crate now adopts an
+/// engine table in [`rsa_new_intern`], so that reference is live and this is its single release.
+/// `ENGINE_finish(NULL)` remains a defined no-op for objects constructed without an engine.
 ///
 /// # Safety
 /// `rsa` is a live object; `meth` is a live table that outlives its use.
@@ -526,10 +537,9 @@ pub unsafe extern "C" fn RSA_set_method(rsa: *mut Rsa, meth: *const RsaMethod) -
         // SAFETY: `finish` is that table's own destructor for this object.
         unsafe { finish(rsa) };
     }
-    // The authority's `ENGINE_finish(rsa->engine)` is omitted: `rsa->engine` is NULL on every
-    // state this crate can reach (there is no engine registry to attach one), and
-    // `ENGINE_finish(NULL)` returns 1 without touching anything (`eng_init.c:108-111`). The clear
-    // below is the assignment the authority makes beside the call.
+    // SAFETY: `rsa` is live; `engine` is NULL or the functional reference this object took when
+    // its outgoing table was adopted, and this is its single release.
+    unsafe { crate::engine::eng_init::ENGINE_finish((*rsa).engine) };
     // SAFETY: `rsa` is live per the contract.
     unsafe { (*rsa).engine = ptr::null_mut() };
     // SAFETY: `rsa` is live per the contract.
@@ -544,16 +554,17 @@ pub unsafe extern "C" fn RSA_set_method(rsa: *mut Rsa, meth: *const RsaMethod) -
 
 /// `RSA *RSA_new_method(ENGINE *engine)` — `rsa_lib.c:65-68`.
 ///
-/// **The engine argument is ignored**, which is what the constructor's doc comment records: the
-/// crate has no `ENGINE` to hand `ENGINE_init`, and `RSA_new_method(NULL)` is therefore this
-/// function's whole reachable surface. A caller who passes a non-NULL pointer gets an object whose
-/// `engine` member is NULL, exactly as `RSA_new` answers.
+/// **The engine argument is honoured.** A non-NULL `engine` takes a functional reference through
+/// `ENGINE_init` and its `RSA_METHOD` becomes the object's table; NULL consults
+/// `ENGINE_get_default_RSA()`, exactly as the authority does. This is the path h2o's neverbleed
+/// relies on, and ignoring it made the TLS server handshake fail on a public-only RSA key.
 ///
 /// # Safety
-/// `engine` is NULL and is ignored.
+/// `engine` is NULL or a live engine the caller keeps alive for this call.
 #[no_mangle]
 pub unsafe extern "C" fn RSA_new_method(engine: *mut Engine) -> *mut Rsa {
-    // SAFETY: `engine` is not read; the library context is NULL as the authority passes it.
+    // SAFETY: `engine` is NULL or live per the contract; the library context is NULL as the
+    // authority passes it.
     unsafe { rsa_new_intern(engine, ptr::null_mut()) }
 }
 
@@ -604,9 +615,11 @@ unsafe impl CtxDestroy for Rsa {
             }
         }
 
-        // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every state
-        // this crate can reach, and `ENGINE_finish(NULL)` returns 1 without touching anything
-        // (`eng_init.c:108-111`). See the module documentation and `src/evp/pkey_asn1.rs:54-60`.
+        // The authority's `ENGINE_finish(r->engine)`: `r->engine` is NULL unless the constructor
+        // adopted an engine table (or `ENGINE_get_default_RSA` selected one), in which case this
+        // is its single functional release. `ENGINE_finish(NULL)` is a defined no-op.
+        // SAFETY: `ptr` is live and `engine` is NULL or the functional reference this object took.
+        unsafe { crate::engine::eng_init::ENGINE_finish((*ptr).engine) };
 
         // SAFETY: `ptr` is live and `ex_data` is a field of it.
         unsafe {
@@ -2198,6 +2211,8 @@ mod tests {
 
     use super::*;
     use crate::bn::bignum::{BN_get_flags, BN_new, BN_set_bit, BN_set_word};
+    use crate::rsa::sign::RSA_sign;
+    use core::ffi::c_uint;
 
     /// A zeroed object, which is the state every "no key at all" arm below needs: all eight
     /// `BIGNUM` fields NULL, `prime_infos` NULL, `flags` 0, `version` 0. It is **not** a usable key
@@ -2878,6 +2893,376 @@ mod tests {
             assert_eq!((*rsa).pss, second);
 
             RSA_free(rsa);
+        }
+    }
+
+    /// The call counter for [`engine_test_sign`]. A module-level `static` because the callback is
+    /// an `extern "C"` item and cannot capture a local.
+    static ENGINE_SIGN_CALLED: core::sync::atomic::AtomicUsize =
+        core::sync::atomic::AtomicUsize::new(0);
+
+    /// A stand-in for neverbleed's `sign_proxy`: it proves `RSA_sign` reached the engine's table
+    /// rather than the default one, and writes a recognisable marker instead of a real signature.
+    unsafe extern "C" fn engine_test_sign(
+        _type_: c_int,
+        _m: *const c_uchar,
+        _m_length: c_uint,
+        sigret: *mut c_uchar,
+        siglen: *mut c_uint,
+        _rsa: *const Rsa,
+    ) -> c_int {
+        ENGINE_SIGN_CALLED.fetch_add(1, Ordering::SeqCst);
+        if !sigret.is_null() {
+            // SAFETY: the caller provides `RSA_size(rsa)` writable bytes.
+            unsafe { core::ptr::copy_nonoverlapping(b"sig".as_ptr(), sigret, 3) };
+        }
+        if !siglen.is_null() {
+            // SAFETY: `siglen` is the caller's out-parameter.
+            unsafe { *siglen = 3 };
+        }
+        1
+    }
+
+    /// The matching `rsa_priv_enc` stub, so a caller that takes the PSS or raw-encrypt path also
+    /// reaches the engine table instead of `rsa_ossl_private_encrypt`.
+    unsafe extern "C" fn engine_test_priv_enc(
+        _flen: c_int,
+        _from: *const c_uchar,
+        to: *mut c_uchar,
+        _rsa: *mut Rsa,
+        _padding: c_int,
+    ) -> c_int {
+        if !to.is_null() {
+            // SAFETY: the caller provides the operation's output width.
+            unsafe { *to = 0 };
+        }
+        1
+    }
+
+    /// **`RSA_new_method(engine)` adopts the engine's `RSA_METHOD`, and `RSA_sign` dispatches to
+    /// it.** This is the contract h2o's neverbleed relies on with a public-only RSA key: the
+    /// private operation lives in a custom `rsa_sign`/`rsa_priv_enc`, so selecting the default
+    /// table makes the TLS 1.3 `CertificateVerify` fail with "missing private key". Before the
+    /// constructor honoured `engine`, `RSA_get_method` answered the default table and the
+    /// callback below was never entered; the test fails at the first assertion instead.
+    #[test]
+    fn rsa_new_method_adopts_the_engine_method_and_rsa_sign_dispatches_to_it() {
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_rsa::ENGINE_set_RSA;
+        use crate::rsa::{RSA_meth_free, RSA_meth_new, RSA_meth_set_priv_enc, RSA_meth_set_sign};
+        use crate::runtime::obj::NID_sha256;
+
+        // SAFETY: every pointer below is a value this test constructed and keeps alive until its
+        // matching release; the engine is not registered in the global table.
+        unsafe {
+            let meth = RSA_meth_new(c"unit-test-engine".as_ptr(), 0);
+            assert!(!meth.is_null());
+            assert_eq!(RSA_meth_set_sign(meth, Some(engine_test_sign)), 1);
+            assert_eq!(RSA_meth_set_priv_enc(meth, Some(engine_test_priv_enc)), 1);
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(ENGINE_set_id(engine, c"unit-test-engine".as_ptr()), 1);
+            assert_eq!(ENGINE_set_name(engine, c"unit test engine".as_ptr()), 1);
+            assert_eq!(ENGINE_set_RSA(engine, meth as *const c_void), 1);
+
+            // The pivot: the object must take a functional reference and the engine's table.
+            let rsa = RSA_new_method(engine);
+            assert!(!rsa.is_null());
+            assert_eq!(RSA_get0_engine(rsa), engine);
+            assert_eq!(RSA_get_method(rsa), meth as *const RsaMethod);
+
+            ENGINE_SIGN_CALLED.store(0, Ordering::SeqCst);
+            let digest = [0x5au8; 32];
+            let mut sig = [0u8; 8];
+            let mut siglen: c_uint = 0;
+            assert_eq!(
+                RSA_sign(
+                    NID_sha256,
+                    digest.as_ptr(),
+                    digest.len() as c_uint,
+                    sig.as_mut_ptr(),
+                    &mut siglen,
+                    rsa,
+                ),
+                1
+            );
+            assert_eq!(ENGINE_SIGN_CALLED.load(Ordering::SeqCst), 1);
+            assert_eq!(siglen, 3);
+            assert_eq!(&sig[..3], b"sig");
+
+            // `RSA_free` releases the functional reference; then the structural one and the table.
+            RSA_free(rsa);
+            assert_eq!(ENGINE_free(engine), 1);
+            RSA_meth_free(meth);
+        }
+    }
+
+    /// **The full h2o/neverbleed shape: a public-only engine-backed RSA signs through the legacy
+    /// EVP path.** `int_ctx_new` must keep a `foreign` key on its `EVP_PKEY_METHOD` (never export
+    /// it to a provider, which cannot carry the custom `RSA_METHOD`), and `EVP_DigestSignInit` /
+    /// `EVP_DigestSign` must route through `sigver_legacy` → `EVP_PKEY_sign` → `pmeth->sign` →
+    /// `RSA_sign` → the engine callback. Before that routing existed, the key was exported to a
+    /// provider and signing failed with `RSA_R_MISSING_PRIVATE_KEY`.
+    #[test]
+    fn engine_backed_public_key_signs_through_the_legacy_evp_path() {
+        use crate::bn::bignum::{BN_new, BN_set_bit, BN_set_word};
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_rsa::ENGINE_set_RSA;
+        use crate::evp::digest::{
+            EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_free, EVP_MD_CTX_new,
+        };
+        use crate::evp::legacy_sha::EVP_sha256;
+        use crate::evp::p_legacy_assign::EVP_PKEY_set1_RSA;
+        use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_new, EvpPkey};
+        use crate::evp::pkey_ctx::EvpPkeyCtx;
+        use crate::rsa::{RSA_meth_free, RSA_meth_new, RSA_meth_set_priv_enc, RSA_meth_set_sign};
+
+        // SAFETY: every pointer below is a value this test constructed and keeps alive until its
+        // matching release; the engine is not registered in the global table.
+        unsafe {
+            let meth = RSA_meth_new(c"unit-test-engine-evp".as_ptr(), 0);
+            assert!(!meth.is_null());
+            assert_eq!(RSA_meth_set_sign(meth, Some(engine_test_sign)), 1);
+            assert_eq!(RSA_meth_set_priv_enc(meth, Some(engine_test_priv_enc)), 1);
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(ENGINE_set_id(engine, c"unit-test-engine-evp".as_ptr()), 1);
+            assert_eq!(ENGINE_set_name(engine, c"unit test engine evp".as_ptr()), 1);
+            assert_eq!(ENGINE_set_RSA(engine, meth as *const c_void), 1);
+
+            // The neverbleed key: (n, e) only, `RSA_FLAG_EXT_PKEY`, method supplied by the engine.
+            let rsa = RSA_new_method(engine);
+            assert!(!rsa.is_null());
+            let n = BN_new();
+            let e = BN_new();
+            assert!(!n.is_null() && !e.is_null());
+            assert_eq!(BN_set_bit(n, 2047), 1);
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(RSA_set0_key(rsa, n, e, core::ptr::null_mut()), 1);
+            RSA_set_flags(rsa, RSA_FLAG_EXT_PKEY);
+
+            let pkey: *mut EvpPkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(EVP_PKEY_set1_RSA(pkey, rsa), 1);
+
+            let mctx = EVP_MD_CTX_new();
+            assert!(!mctx.is_null());
+            let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
+            assert_eq!(
+                EVP_DigestSignInit(mctx, &mut pctx, EVP_sha256(), core::ptr::null_mut(), pkey,),
+                1
+            );
+
+            ENGINE_SIGN_CALLED.store(0, Ordering::SeqCst);
+            let tbs = [0x42u8; 32];
+            let mut siglen: usize = 0;
+            assert_eq!(
+                EVP_DigestSign(
+                    mctx,
+                    core::ptr::null_mut(),
+                    &mut siglen,
+                    tbs.as_ptr(),
+                    tbs.len(),
+                ),
+                1
+            );
+            // `RSA_size` of the 2048-bit public modulus.
+            assert!(siglen >= 256);
+            let mut sig = vec![0u8; siglen];
+            assert_eq!(
+                EVP_DigestSign(mctx, sig.as_mut_ptr(), &mut siglen, tbs.as_ptr(), tbs.len()),
+                1
+            );
+            // The engine's own `RSA_sign` proxy ran — the private operation never reached
+            // `rsa_ossl_private_encrypt`.
+            assert_eq!(ENGINE_SIGN_CALLED.load(Ordering::SeqCst), 1);
+            assert_eq!(siglen, 3);
+            assert_eq!(&sig[..3], b"sig");
+
+            EVP_MD_CTX_free(mctx);
+            EVP_PKEY_free(pkey);
+            RSA_free(rsa);
+            assert_eq!(ENGINE_free(engine), 1);
+            RSA_meth_free(meth);
+        }
+    }
+
+    /// The call counter for [`engine_test_verify`].
+    static ENGINE_VERIFY_CALLED: core::sync::atomic::AtomicUsize =
+        core::sync::atomic::AtomicUsize::new(0);
+
+    /// A stand-in for a verifying engine's `rsa_verify`: it proves the legacy verify path reached
+    /// the engine's table instead of `rsa_ossl` (which would need a public operation the
+    /// public-only key cannot perform).
+    unsafe extern "C" fn engine_test_verify(
+        _dtype: c_int,
+        _m: *const c_uchar,
+        _m_length: c_uint,
+        _sigbuf: *const c_uchar,
+        _siglen: c_uint,
+        _rsa: *const Rsa,
+    ) -> c_int {
+        ENGINE_VERIFY_CALLED.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    /// **An engine-backed public-only key verifies through the legacy EVP `EVP_PKEY_verify` arm.**
+    /// Before the legacy verify arm existed, a foreign key's context had no algorithm context and
+    /// `EVP_PKEY_verify` answered `-2` without ever calling `pmeth->verify`; the assertion below
+    /// fails on that behaviour.
+    #[test]
+    fn evp_pkey_verify_dispatches_to_the_legacy_method_for_an_engine_key() {
+        use crate::bn::bignum::{BN_new, BN_set_bit, BN_set_word};
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_rsa::ENGINE_set_RSA;
+        use crate::evp::legacy_sha::EVP_sha256;
+        use crate::evp::p_legacy_assign::EVP_PKEY_set1_RSA;
+        use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_new, EvpPkey};
+        use crate::evp::pkey_ctx::{
+            EVP_PKEY_CTX_free, EVP_PKEY_CTX_new, EVP_PKEY_CTX_set_signature_md,
+        };
+        use crate::evp::signature::{EVP_PKEY_verify, EVP_PKEY_verify_init};
+        use crate::rsa::{
+            RSA_meth_free, RSA_meth_new, RSA_meth_set_priv_enc, RSA_meth_set_sign,
+            RSA_meth_set_verify,
+        };
+
+        // SAFETY: every pointer below is a value this test constructed and keeps alive until its
+        // matching release; the engine is not registered in the global table.
+        unsafe {
+            let meth = RSA_meth_new(c"unit-test-engine-verify".as_ptr(), 0);
+            assert!(!meth.is_null());
+            assert_eq!(RSA_meth_set_sign(meth, Some(engine_test_sign)), 1);
+            assert_eq!(RSA_meth_set_priv_enc(meth, Some(engine_test_priv_enc)), 1);
+            assert_eq!(RSA_meth_set_verify(meth, Some(engine_test_verify)), 1);
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(
+                ENGINE_set_id(engine, c"unit-test-engine-verify".as_ptr()),
+                1
+            );
+            assert_eq!(
+                ENGINE_set_name(engine, c"unit test engine verify".as_ptr()),
+                1
+            );
+            assert_eq!(ENGINE_set_RSA(engine, meth as *const c_void), 1);
+
+            let rsa = RSA_new_method(engine);
+            assert!(!rsa.is_null());
+            let n = BN_new();
+            let e = BN_new();
+            assert!(!n.is_null() && !e.is_null());
+            assert_eq!(BN_set_bit(n, 2047), 1);
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(RSA_set0_key(rsa, n, e, core::ptr::null_mut()), 1);
+            RSA_set_flags(rsa, RSA_FLAG_EXT_PKEY);
+
+            let pkey: *mut EvpPkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(EVP_PKEY_set1_RSA(pkey, rsa), 1);
+
+            let ctx = EVP_PKEY_CTX_new(pkey, core::ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(EVP_PKEY_verify_init(ctx), 1);
+            assert_eq!(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha256()), 1);
+
+            ENGINE_VERIFY_CALLED.store(0, Ordering::SeqCst);
+            let tbs = [0x42u8; 32];
+            let sig = [0u8; 256];
+            assert_eq!(
+                EVP_PKEY_verify(ctx, sig.as_ptr(), sig.len(), tbs.as_ptr(), tbs.len()),
+                1
+            );
+            assert_eq!(ENGINE_VERIFY_CALLED.load(Ordering::SeqCst), 1);
+
+            EVP_PKEY_CTX_free(ctx);
+            EVP_PKEY_free(pkey);
+            RSA_free(rsa);
+            assert_eq!(ENGINE_free(engine), 1);
+            RSA_meth_free(meth);
+        }
+    }
+
+    /// **The same key verifies through `EVP_DigestVerify`, which is the legacy
+    /// `digest_custom`/`EVP_DigestFinal_ex`/`EVP_PKEY_verify` tail of `EVP_DigestVerifyFinal`.**
+    /// This is the symmetric half of the S18 `EVP_DigestSign` test, and it fails at the init or the
+    /// first verify when either legacy arm is missing.
+    #[test]
+    fn engine_backed_public_key_verifies_through_the_legacy_evp_path() {
+        use crate::bn::bignum::{BN_new, BN_set_bit, BN_set_word};
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_rsa::ENGINE_set_RSA;
+        use crate::evp::digest::{
+            EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_free, EVP_MD_CTX_new,
+        };
+        use crate::evp::legacy_sha::EVP_sha256;
+        use crate::evp::p_legacy_assign::EVP_PKEY_set1_RSA;
+        use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_new, EvpPkey};
+        use crate::evp::pkey_ctx::EvpPkeyCtx;
+        use crate::rsa::{
+            RSA_meth_free, RSA_meth_new, RSA_meth_set_priv_enc, RSA_meth_set_sign,
+            RSA_meth_set_verify,
+        };
+
+        // SAFETY: as in the sibling test.
+        unsafe {
+            let meth = RSA_meth_new(c"unit-test-engine-digestverify".as_ptr(), 0);
+            assert!(!meth.is_null());
+            assert_eq!(RSA_meth_set_sign(meth, Some(engine_test_sign)), 1);
+            assert_eq!(RSA_meth_set_priv_enc(meth, Some(engine_test_priv_enc)), 1);
+            assert_eq!(RSA_meth_set_verify(meth, Some(engine_test_verify)), 1);
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(
+                ENGINE_set_id(engine, c"unit-test-engine-digestverify".as_ptr()),
+                1
+            );
+            assert_eq!(
+                ENGINE_set_name(engine, c"unit test engine digestverify".as_ptr()),
+                1
+            );
+            assert_eq!(ENGINE_set_RSA(engine, meth as *const c_void), 1);
+
+            let rsa = RSA_new_method(engine);
+            assert!(!rsa.is_null());
+            let n = BN_new();
+            let e = BN_new();
+            assert!(!n.is_null() && !e.is_null());
+            assert_eq!(BN_set_bit(n, 2047), 1);
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(RSA_set0_key(rsa, n, e, core::ptr::null_mut()), 1);
+            RSA_set_flags(rsa, RSA_FLAG_EXT_PKEY);
+
+            let pkey: *mut EvpPkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(EVP_PKEY_set1_RSA(pkey, rsa), 1);
+
+            let mctx = EVP_MD_CTX_new();
+            assert!(!mctx.is_null());
+            let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
+            assert_eq!(
+                EVP_DigestVerifyInit(mctx, &mut pctx, EVP_sha256(), core::ptr::null_mut(), pkey,),
+                1
+            );
+
+            ENGINE_VERIFY_CALLED.store(0, Ordering::SeqCst);
+            let tbs = [0x42u8; 32];
+            let sig = [0u8; 256];
+            assert_eq!(
+                EVP_DigestVerify(mctx, sig.as_ptr(), sig.len(), tbs.as_ptr(), tbs.len()),
+                1
+            );
+            assert_eq!(ENGINE_VERIFY_CALLED.load(Ordering::SeqCst), 1);
+
+            EVP_MD_CTX_free(mctx);
+            EVP_PKEY_free(pkey);
+            RSA_free(rsa);
+            assert_eq!(ENGINE_free(engine), 1);
+            RSA_meth_free(meth);
         }
     }
 }

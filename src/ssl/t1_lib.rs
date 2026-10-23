@@ -837,11 +837,13 @@ pub(crate) unsafe fn tls1_save_peer_sigalgs_raw(s: *mut Ssl, schemes: &[u8]) -> 
     if p.is_null() {
         return 0;
     }
-    // SAFETY: `p` is `count * size_of::<u16>()` writable bytes from `CRYPTO_malloc` (maximally
-    // aligned), so it is a valid `count`-element `u16` slice; this frame is its only writer.
-    let out = unsafe { core::slice::from_raw_parts_mut(p, count) };
-    for (slot, pair) in out.iter_mut().zip(schemes.as_chunks::<2>().0) {
-        *slot = u16::from_be_bytes(*pair);
+    // `p` is `count * size_of::<u16>()` writable bytes from `CRYPTO_malloc` (maximally aligned).
+    // Each slot is written through the raw pointer before any typed view exists, so no reference is
+    // ever formed over uninitialised storage; `schemes` has exactly `count` pairs.
+    for (i, pair) in schemes.as_chunks::<2>().0.iter().enumerate() {
+        // SAFETY: `p` names `count` writable `u16`s and `i < count`, so `p.add(i)` is in bounds;
+        // the write initialises the slot through a raw pointer (no typed view is formed).
+        unsafe { p.add(i).write(u16::from_be_bytes(*pair)) };
     }
     1
 }
@@ -865,9 +867,10 @@ pub(crate) unsafe fn tls1_save_peer_sigalgs_default(s: *mut Ssl, schemes: &[u16]
     if p.is_null() {
         return 0;
     }
-    // SAFETY: `p` is `schemes.len()` writable `u16`s; this frame is its only writer.
-    let out = unsafe { core::slice::from_raw_parts_mut(p, schemes.len()) };
-    out.copy_from_slice(schemes);
+    // SAFETY: `p` is `schemes.len()` writable `u16`s; this frame is its only writer and `schemes`
+    // cannot alias the fresh block. Copying through raw pointers avoids forming a `&mut [u16]`
+    // over storage that is not yet initialised.
+    unsafe { core::ptr::copy_nonoverlapping(schemes.as_ptr(), p, schemes.len()) };
     1
 }
 

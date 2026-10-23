@@ -77,11 +77,11 @@ use crate::bn::primes::{
     BN_X931_derive_prime_ex, BN_X931_generate_Xpq, BN_X931_generate_prime_ex, BN_check_prime,
 };
 use crate::digest::sha2::SHA256_DIGEST_LENGTH;
+use crate::engine::eng_lib::Engine;
 use crate::evp::digest::{
     EVP_DigestFinal_ex, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_free, EVP_MD_CTX_new,
     EVP_MD_fetch, EVP_MD_free, EVP_MD_get_size, EvpMd,
 };
-use crate::evp::pkey_asn1::Engine;
 use crate::mac::hmac::{
     HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HmacCtx,
 };

@@ -79,8 +79,9 @@ impl GeneralName {
     /// controllable-pointer residue CVE-2023-0286 needs.
     ///
     /// Returns whether `type_` is a handled `GEN_*` selector. Ownership of `value` passes to
-    /// `self` in both cases.
-    fn install(&mut self, type_: c_int, value: *mut c_void) -> bool {
+    /// `self` only for a handled selector; an unhandled selector stores nothing, so the caller
+    /// retains ownership (the authority's switch default does not write the union).
+    pub(crate) fn install(&mut self, type_: c_int, value: *mut c_void) -> bool {
         self.d = GeneralNameValue {
             otherName: ptr::null_mut(),
         };
@@ -133,6 +134,137 @@ impl GeneralName {
         handled
     }
 
+    /// The audited typed constructor family — the **only** in-crate way to select an arm.
+    ///
+    /// Each setter delegates to [`Self::install`], so the selector and the arm are written
+    /// together: there is no point at which a handled selector names a pointer of another arm.
+    /// Ownership of the value passes to `self` exactly as `GENERAL_NAME_set0_value` does (the
+    /// previous arm is **not** released). A setter that refuses its selector installs nothing
+    /// and leaves ownership with the caller.
+    pub(crate) fn set_other_name(&mut self, value: *mut Othername) {
+        self.install(GEN_OTHERNAME, value.cast());
+    }
+
+    /// Install an RFC822/DNS/URI arm. Refuses any other selector instead of writing `ia5`
+    /// behind a selector that does not name it.
+    pub(crate) fn set_ia5(&mut self, type_: c_int, value: *mut Asn1String) -> bool {
+        if !matches!(type_, GEN_EMAIL | GEN_DNS | GEN_URI) {
+            return false;
+        }
+        self.install(type_, value.cast());
+        true
+    }
+
+    /// Install the `x400Address` arm (an `ASN1_STRING` carrying the raw `SEQUENCE` content).
+    pub(crate) fn set_x400(&mut self, value: *mut Asn1String) {
+        self.install(GEN_X400, value.cast());
+    }
+
+    /// Install the `directoryName` arm.
+    pub(crate) fn set_directory_name(&mut self, value: *mut X509Name) {
+        self.install(GEN_DIRNAME, value.cast());
+    }
+
+    /// Install the `ediPartyName` arm.
+    pub(crate) fn set_edi_party_name(&mut self, value: *mut EdiPartyName) {
+        self.install(GEN_EDIPARTY, value.cast());
+    }
+
+    /// Install the `iPAddress` arm (an `ASN1_OCTET_STRING`).
+    pub(crate) fn set_ip_address(&mut self, value: *mut Asn1String) {
+        self.install(GEN_IPADD, value.cast());
+    }
+
+    /// Install the `registeredID` arm.
+    pub(crate) fn set_registered_id(&mut self, value: *mut Asn1Object) {
+        self.install(GEN_RID, value.cast());
+    }
+
+    /// The `otherName` arm, but only when the selector names it.
+    ///
+    /// # Safety
+    /// `self` is live and, if the selector is `GEN_OTHERNAME`, its arm is a live `OTHERNAME`.
+    pub(crate) unsafe fn other_name(&self) -> Option<&Othername> {
+        // SAFETY: the caller's contract; `as_ref` checks the selector before reading an arm.
+        match unsafe { self.as_ref() } {
+            Some(GeneralNameRef::OtherName(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `rfc822Name`/`dNSName`/`uniformResourceIdentifier` arm, but only when the
+    /// selector names one of those.
+    ///
+    /// # Safety
+    /// As [`Self::as_ref`].
+    pub(crate) unsafe fn ia5(&self) -> Option<&Asn1String> {
+        // SAFETY: the caller's contract; `as_ref` checks the selector before reading an arm.
+        match unsafe { self.as_ref() } {
+            Some(GeneralNameRef::Ia5(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `x400Address` arm, but only when the selector names it.
+    ///
+    /// # Safety
+    /// As [`Self::as_ref`].
+    pub(crate) unsafe fn x400(&self) -> Option<&Asn1String> {
+        // SAFETY: the caller's contract; `as_ref` checks the selector before reading an arm.
+        match unsafe { self.as_ref() } {
+            Some(GeneralNameRef::X400(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `directoryName` arm, but only when the selector names it.
+    ///
+    /// # Safety
+    /// As [`Self::as_ref`].
+    pub(crate) unsafe fn directory_name(&self) -> Option<&X509Name> {
+        // SAFETY: the caller's contract; `as_ref` checks the selector before reading an arm.
+        match unsafe { self.as_ref() } {
+            Some(GeneralNameRef::DirectoryName(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `ediPartyName` arm, but only when the selector names it.
+    ///
+    /// # Safety
+    /// As [`Self::as_ref`].
+    pub(crate) unsafe fn edi_party_name(&self) -> Option<&EdiPartyName> {
+        // SAFETY: the caller's contract; `as_ref` checks the selector before reading an arm.
+        match unsafe { self.as_ref() } {
+            Some(GeneralNameRef::EdiPartyName(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `iPAddress` arm, but only when the selector names it.
+    ///
+    /// # Safety
+    /// As [`Self::as_ref`].
+    pub(crate) unsafe fn ip_address(&self) -> Option<&Asn1String> {
+        // SAFETY: the caller's contract; `as_ref` checks the selector before reading an arm.
+        match unsafe { self.as_ref() } {
+            Some(GeneralNameRef::IpAddress(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// The `registeredID` arm, but only when the selector names it.
+    ///
+    /// # Safety
+    /// As [`Self::as_ref`].
+    pub(crate) unsafe fn registered_id(&self) -> Option<&Asn1Object> {
+        // SAFETY: the caller's contract; `as_ref` checks the selector before reading an arm.
+        match unsafe { self.as_ref() } {
+            Some(GeneralNameRef::RegisteredId(v)) => Some(v),
+            _ => None,
+        }
+    }
+
     /// The live arm, or `None` for an unhandled selector or a slot whose selected arm is NULL.
     ///
     /// # Safety
@@ -176,16 +308,26 @@ impl GeneralName {
     /// # Safety
     /// As [`Self::as_ref`].
     pub(crate) unsafe fn arm_ptr(&self) -> *mut c_void {
-        // SAFETY: the caller's contract for `as_ref`.
-        match unsafe { self.as_ref() } {
-            Some(GeneralNameRef::OtherName(p)) => (p as *const Othername).cast_mut().cast(),
-            Some(GeneralNameRef::Ia5(p)) => (p as *const Asn1String).cast_mut().cast(),
-            Some(GeneralNameRef::X400(p)) => (p as *const Asn1String).cast_mut().cast(),
-            Some(GeneralNameRef::DirectoryName(p)) => (p as *const X509Name).cast_mut().cast(),
-            Some(GeneralNameRef::EdiPartyName(p)) => (p as *const EdiPartyName).cast_mut().cast(),
-            Some(GeneralNameRef::IpAddress(p)) => (p as *const Asn1String).cast_mut().cast(),
-            Some(GeneralNameRef::RegisteredId(p)) => (p as *const Asn1Object).cast_mut().cast(),
-            None => ptr::null_mut(),
+        // SAFETY: the caller's contract for `as_ref`; each typed accessor checks the selector
+        // and answers `None` for any other arm, so only the selected arm is ever read.
+        unsafe {
+            if let Some(p) = self.other_name() {
+                (p as *const Othername).cast_mut().cast()
+            } else if let Some(p) = self.ia5() {
+                (p as *const Asn1String).cast_mut().cast()
+            } else if let Some(p) = self.x400() {
+                (p as *const Asn1String).cast_mut().cast()
+            } else if let Some(p) = self.directory_name() {
+                (p as *const X509Name).cast_mut().cast()
+            } else if let Some(p) = self.edi_party_name() {
+                (p as *const EdiPartyName).cast_mut().cast()
+            } else if let Some(p) = self.ip_address() {
+                (p as *const Asn1String).cast_mut().cast()
+            } else if let Some(p) = self.registered_id() {
+                (p as *const Asn1Object).cast_mut().cast()
+            } else {
+                ptr::null_mut()
+            }
         }
     }
 }
@@ -868,18 +1010,33 @@ pub unsafe extern "C" fn OTHERNAME_cmp(a: *mut Othername, b: *mut Othername) -> 
 /// the union held, which is the authority's transfer-of-ownership contract and is observable.
 ///
 /// # Safety
-/// `a` is live; `value` is NULL or a live value of the arm `type` selects, and ownership passes
-/// to `a`.
+/// `a` is live; `value` is NULL or a live value of the arm `type` selects. Ownership passes to
+/// `a` when `type` is a handled `GEN_*`; for an unhandled selector nothing is stored and the
+/// caller retains ownership.
 #[no_mangle]
 pub unsafe extern "C" fn GENERAL_NAME_set0_value(
     a: *mut GeneralName,
     type_: c_int,
     value: *mut c_void,
 ) {
-    // SAFETY: `a` is live and the union is writable; every arm is one pointer. `install` is the
-    // single selector+arm producer, so a caller can no longer create a half-written pair here.
+    // SAFETY: `a` is live and the union is writable; every arm is one pointer. Each typed setter
+    // is the same write `install` performs, and `install` remains the single underlying producer,
+    // so a caller cannot create a half-written pair here.
     unsafe {
-        (*a).install(type_, value);
+        match type_ {
+            GEN_OTHERNAME => (*a).set_other_name(value.cast()),
+            GEN_X400 => (*a).set_x400(value.cast()),
+            GEN_DIRNAME => (*a).set_directory_name(value.cast()),
+            GEN_EDIPARTY => (*a).set_edi_party_name(value.cast()),
+            GEN_IPADD => (*a).set_ip_address(value.cast()),
+            GEN_RID => (*a).set_registered_id(value.cast()),
+            GEN_EMAIL | GEN_DNS | GEN_URI => {
+                let _ = (*a).set_ia5(type_, value.cast());
+            }
+            _ => {
+                (*a).install(type_, value);
+            }
+        }
     }
 }
 
@@ -1352,6 +1509,238 @@ mod tests {
                 0
             );
             GENERAL_NAME_free(ip);
+        }
+    }
+
+    /// Every arm is constructed through the typed constructor family and read back through
+    /// the selector-guarded accessor that names it; no accessor answers for another arm.
+    #[test]
+    fn genn_each_arm_round_trips_through_the_typed_constructor_and_reader() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is freshly allocated in this frame and ownership passes into the
+        // name (or remains here when a setter refuses its selector).
+        unsafe {
+            let n = GENERAL_NAME_new();
+            let on = OTHERNAME_new();
+            assert!(!on.is_null());
+            (*n).set_other_name(on);
+            assert!(matches!((*n).as_ref(), Some(GeneralNameRef::OtherName(_))));
+            assert!((*n).other_name().is_some());
+            assert!((*n).directory_name().is_none());
+            assert!((*n).ia5().is_none());
+            GENERAL_NAME_free(n);
+
+            for sel in [GEN_EMAIL, GEN_DNS, GEN_URI] {
+                let n = GENERAL_NAME_new();
+                let s = ASN1_IA5STRING_new();
+                assert_eq!(ASN1_STRING_set(s, b"a@b".as_ptr().cast(), 3), 1);
+                assert!((*n).set_ia5(sel, s));
+                assert_eq!((*n).type_, sel);
+                assert!(matches!((*n).as_ref(), Some(GeneralNameRef::Ia5(_))));
+                assert!((*n).ia5().is_some());
+                assert!((*n).x400().is_none());
+                GENERAL_NAME_free(n);
+            }
+
+            let n = GENERAL_NAME_new();
+            let x400 = ASN1_STRING_type_new(V_ASN1_SEQUENCE);
+            assert_eq!(ASN1_STRING_set(x400, [0x05u8, 0x00].as_ptr().cast(), 2), 1);
+            (*n).set_x400(x400);
+            assert_eq!((*n).type_, GEN_X400);
+            assert!(matches!((*n).as_ref(), Some(GeneralNameRef::X400(_))));
+            assert!((*n).x400().is_some());
+            GENERAL_NAME_free(n);
+
+            let n = GENERAL_NAME_new();
+            let dn = X509_NAME_new();
+            assert!(!dn.is_null());
+            (*n).set_directory_name(dn);
+            assert!(matches!(
+                (*n).as_ref(),
+                Some(GeneralNameRef::DirectoryName(_))
+            ));
+            assert!((*n).directory_name().is_some());
+            assert!((*n).other_name().is_none());
+            GENERAL_NAME_free(n);
+
+            let n = GENERAL_NAME_new();
+            let e = EDIPARTYNAME_new();
+            assert!(!e.is_null());
+            (*n).set_edi_party_name(e);
+            assert!(matches!(
+                (*n).as_ref(),
+                Some(GeneralNameRef::EdiPartyName(_))
+            ));
+            assert!((*n).edi_party_name().is_some());
+            GENERAL_NAME_free(n);
+
+            let n = GENERAL_NAME_new();
+            let ip = ASN1_OCTET_STRING_new();
+            assert_eq!(ASN1_STRING_set(ip, [10u8, 0, 0, 1].as_ptr().cast(), 4), 1);
+            (*n).set_ip_address(ip);
+            assert!(matches!((*n).as_ref(), Some(GeneralNameRef::IpAddress(_))));
+            assert!((*n).ip_address().is_some());
+            GENERAL_NAME_free(n);
+
+            let n = GENERAL_NAME_new();
+            let rid = OBJ_nid2obj(NID_commonName);
+            assert!(!rid.is_null());
+            (*n).set_registered_id(rid);
+            assert!(matches!(
+                (*n).as_ref(),
+                Some(GeneralNameRef::RegisteredId(_))
+            ));
+            assert!((*n).registered_id().is_some());
+            GENERAL_NAME_free(n);
+        }
+    }
+
+    /// A selector that does not name an arm makes every typed accessor answer `None`; the
+    /// accessor never forms a reference to a different arm.
+    #[test]
+    fn genn_selector_mismatch_returns_none_and_forms_no_reference() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is freshly allocated and `n` owns the IA5 arm until the final
+        // selector change detaches it (released here explicitly).
+        unsafe {
+            let n = GENERAL_NAME_new();
+            let s = ASN1_IA5STRING_new();
+            assert_eq!(ASN1_STRING_set(s, b"dns".as_ptr().cast(), 3), 1);
+            assert!((*n).set_ia5(GEN_DNS, s));
+
+            assert!((*n).other_name().is_none());
+            assert!((*n).directory_name().is_none());
+            assert!((*n).registered_id().is_none());
+            assert!((*n).ip_address().is_none());
+            assert!((*n).x400().is_none());
+            assert!((*n).edi_party_name().is_none());
+
+            // An unhandled selector selects no arm at all.
+            (*n).type_ = 99;
+            assert!((*n).as_ref().is_none());
+            assert!((*n).directory_name().is_none());
+            GENERAL_NAME_free(n);
+            // Selector 99 released nothing, so the IA5 arm is still this frame's.
+            ASN1_STRING_free(s);
+        }
+    }
+
+    /// A refused setter installs nothing; a NULL arm under a handled selector is unreadable
+    /// and the destructor releases nothing for it.
+    #[test]
+    fn genn_failed_construction_leaves_nothing_to_free() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is freshly allocated in this frame.
+        unsafe {
+            let n = GENERAL_NAME_new();
+            let s = ASN1_IA5STRING_new();
+            // RID is not an IA5 selector: the setter refuses and leaves ownership here.
+            assert!(!(*n).set_ia5(GEN_RID, s));
+            assert!((*n).as_ref().is_none());
+            assert_eq!((*n).type_, -1);
+            GENERAL_NAME_free(n);
+            assert_eq!((*s).length, 0);
+            ASN1_STRING_free(s);
+
+            // A NULL arm under a handled selector: no arm is readable and free is a no-op.
+            let n = GENERAL_NAME_new();
+            assert!((*n).set_ia5(GEN_DNS, ptr::null_mut()));
+            assert!((*n).as_ref().is_none());
+            GENERAL_NAME_free(n);
+        }
+    }
+
+    /// `GENERAL_NAME_cmp` keeps the authority's results: equality on the same arm, `-1` for a
+    /// selector mismatch (including X.400 versus another arm), and `-1` for unhandled pairs.
+    #[test]
+    fn genn_cmp_is_openssl_compatible_for_same_and_cross_arm_pairs() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is freshly allocated and each name takes ownership of its arm.
+        unsafe {
+            let a = GENERAL_NAME_new();
+            let b = GENERAL_NAME_new();
+            let c = GENERAL_NAME_new();
+            let sa = ASN1_IA5STRING_new();
+            let sb = ASN1_IA5STRING_new();
+            let sc = ASN1_IA5STRING_new();
+            assert_eq!(ASN1_STRING_set(sa, b"x".as_ptr().cast(), 1), 1);
+            assert_eq!(ASN1_STRING_set(sb, b"x".as_ptr().cast(), 1), 1);
+            assert_eq!(ASN1_STRING_set(sc, b"y".as_ptr().cast(), 1), 1);
+            assert!((*a).set_ia5(GEN_DNS, sa));
+            assert!((*b).set_ia5(GEN_DNS, sb));
+            assert!((*c).set_ia5(GEN_DNS, sc));
+            assert_eq!(GENERAL_NAME_cmp(a, b), 0, "equal dNSNames compare equal");
+            assert_ne!(GENERAL_NAME_cmp(a, c), 0, "different dNSNames differ");
+
+            // Same bytes, different selector: the authority answers -1 before any arm read.
+            (*c).type_ = GEN_URI;
+            assert_eq!(GENERAL_NAME_cmp(a, c), -1);
+
+            // The X.400 arm compares only as an `ASN1_STRING`.
+            let x1 = GENERAL_NAME_new();
+            let x2 = GENERAL_NAME_new();
+            let xa = ASN1_STRING_type_new(V_ASN1_SEQUENCE);
+            let xb = ASN1_STRING_type_new(V_ASN1_SEQUENCE);
+            assert_eq!(ASN1_STRING_set(xa, b"x".as_ptr().cast(), 1), 1);
+            assert_eq!(ASN1_STRING_set(xb, b"x".as_ptr().cast(), 1), 1);
+            (*x1).set_x400(xa);
+            (*x2).set_x400(xb);
+            assert_eq!(
+                GENERAL_NAME_cmp(x1, x2),
+                0,
+                "equal X.400 names compare equal"
+            );
+            assert_eq!(
+                GENERAL_NAME_cmp(x1, a),
+                -1,
+                "X.400 versus DNS is a mismatch"
+            );
+
+            // Two unhandled selectors are equal selectors with no readable arm: -1.
+            (*c).type_ = 99;
+            (*b).type_ = 99;
+            assert_eq!(GENERAL_NAME_cmp(b, c), -1);
+
+            GENERAL_NAME_free(a);
+            GENERAL_NAME_free(b);
+            GENERAL_NAME_free(c);
+            GENERAL_NAME_free(x1);
+            GENERAL_NAME_free(x2);
+        }
+    }
+
+    /// **Test-only negative control.** It fires only when the guarded `directory_name()`
+    /// accessor refuses an arm the selector does not name while the pre-conversion pattern
+    /// (an unguarded `d.directoryName` read) still yields a non-NULL pointer to the IA5 arm.
+    /// Forming `&X509Name` over that pointer would be UB; the guarded accessor answers `None`
+    /// instead, which is what this canary checks.
+    #[test]
+    fn genn_canary_guarded_accessor_refuses_selector_arm_mismatch() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every object is freshly allocated and `n` owns the IA5 arm.
+        unsafe {
+            let n = GENERAL_NAME_new();
+            let s = ASN1_IA5STRING_new();
+            assert_eq!(ASN1_STRING_set(s, b"canary".as_ptr().cast(), 6), 1);
+            assert!((*n).set_ia5(GEN_DNS, s));
+
+            assert!(
+                (*n).directory_name().is_none(),
+                "the guarded accessor must refuse a non-directoryName selector"
+            );
+            // The pre-conversion shape: read the arm the caller wanted without checking the
+            // selector. The union is one pointer slot, so this yields the IA5 arm's address
+            // typed as `X509_NAME *`.
+            let unguarded: *mut X509Name = (*n).d.directoryName;
+            assert!(
+                !unguarded.is_null(),
+                "the unguarded read yields a pointer to the wrong arm"
+            );
+            assert_eq!(unguarded.cast::<c_void>(), s.cast::<c_void>());
+            eprintln!(
+                "genn canary fired: guarded directory_name() = None; unguarded d.directoryName = {unguarded:p} == IA5 arm {s:p}"
+            );
+            GENERAL_NAME_free(n);
         }
     }
 }

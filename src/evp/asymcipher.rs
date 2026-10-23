@@ -53,9 +53,10 @@ use crate::evp::keymgmt::{
 };
 use crate::evp::keymgmt_lib::evp_keymgmt_util_query_operation_name;
 use crate::evp::pkey::evp_pkey_export_to_provider;
+use crate::evp::pkey::EVP_PKEY_get_size;
 use crate::evp::pkey_ctx::{
-    evp_pkey_ctx_free_old_ops, EvpPkeyCtx, EVP_PKEY_OP_DECRYPT, EVP_PKEY_OP_ENCRYPT,
-    EVP_PKEY_OP_UNDEFINED,
+    evp_pkey_ctx_free_old_ops, EvpPkeyCtx, EVP_PKEY_FLAG_AUTOARGLEN, EVP_PKEY_OP_DECRYPT,
+    EVP_PKEY_OP_ENCRYPT, EVP_PKEY_OP_UNDEFINED,
 };
 use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
@@ -840,15 +841,62 @@ unsafe fn asym_cipher_init_err(
 /// it guards is the one that hands the operation to a legacy method, which is the branch this crate
 /// cannot represent.
 ///
+/// The method's own `encrypt_init`/`decrypt_init` runs when it has one; a method without it (RSA's
+/// standard table is one) reports success and leaves the operation armed, which is what makes the
+/// one-shot `pmeth->encrypt`/`decrypt` reachable from [`evp_pkey_asym_cipher_operate`].
+///
 /// # Safety
-/// `tmp_keymgmt` NULL or live.
-unsafe fn asym_cipher_init_legacy(tmp_keymgmt: *mut EvpKeyMgmt) -> c_int {
+/// `ctx` live; `tmp_keymgmt` NULL or live; `operation` is `EVP_PKEY_OP_ENCRYPT`/`_DECRYPT` or an
+/// unsupported value the authority refuses.
+unsafe fn asym_cipher_init_legacy(
+    ctx: *mut EvpPkeyCtx,
+    tmp_keymgmt: *mut EvpKeyMgmt,
+    operation: c_int,
+) -> c_int {
     ERR_pop_to_mark();
     // SAFETY: `tmp_keymgmt` is NULL or live.
     unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
-    // SAFETY: a compile-time-constant site.
-    unsafe { raise_site(&err_sites::ASYMCIPHER_204) };
-    -2
+
+    // SAFETY: `ctx` is live per the contract.
+    let pmeth = unsafe { (*ctx).pmeth };
+    if pmeth.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_204) };
+        return -2;
+    }
+    // SAFETY: `pmeth` is live.
+    if unsafe { (*pmeth).encrypt.is_none() } {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_204) };
+        return -2;
+    }
+
+    // SAFETY: `pmeth`/`ctx` are live.
+    let ret = unsafe {
+        match operation {
+            EVP_PKEY_OP_ENCRYPT => match (*pmeth).encrypt_init {
+                None => return 1,
+                Some(f) => f(ctx),
+            },
+            EVP_PKEY_OP_DECRYPT => match (*pmeth).decrypt_init {
+                None => return 1,
+                Some(f) => f(ctx),
+            },
+            _ => {
+                // SAFETY: a compile-time-constant site.
+                raise_site(&err_sites::ASYMCIPHER_219);
+                -1
+            }
+        }
+    };
+
+    if ret <= 0 {
+        // SAFETY: `ctx` is live.
+        unsafe { evp_pkey_ctx_free_old_ops(ctx) };
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).operation = EVP_PKEY_OP_UNDEFINED };
+    }
+    ret
 }
 
 /// `static int evp_pkey_asym_cipher_init(EVP_PKEY_CTX *ctx, int operation,
@@ -882,8 +930,8 @@ unsafe fn evp_pkey_asym_cipher_init(
 
     // SAFETY: `ctx` is live.
     if unsafe { &*ctx }.is_legacy() {
-        // SAFETY: the second argument is a literal NULL and the label holds no live method.
-        return unsafe { asym_cipher_init_legacy(ptr::null_mut()) };
+        // SAFETY: `ctx` is live, the keymgmt is a literal NULL, and `operation` is the caller's.
+        return unsafe { asym_cipher_init_legacy(ctx, ptr::null_mut(), operation) };
     }
 
     // SAFETY: `ctx` is live.
@@ -954,8 +1002,8 @@ unsafe fn evp_pkey_asym_cipher_init(
                 evp_asym_cipher_fetch_from_prov(tmp_prov.cast_mut(), supported_ciph, propquery)
             };
             if cipher.is_null() {
-                // SAFETY: `tmp_keymgmt` is NULL or live at this label, and the arm frees it and refuses without touching another pointer.
-                return unsafe { asym_cipher_init_legacy(tmp_keymgmt) };
+                // SAFETY: `ctx` is live, `tmp_keymgmt` is NULL or live, and `operation` is the caller's.
+                return unsafe { asym_cipher_init_legacy(ctx, tmp_keymgmt, operation) };
             }
         }
 
@@ -993,8 +1041,8 @@ unsafe fn evp_pkey_asym_cipher_init(
     if provkey.is_null() {
         // SAFETY: `cipher` is NULL or live.
         unsafe { EVP_ASYM_CIPHER_free(cipher) };
-        // SAFETY: `tmp_keymgmt` is NULL or live at this label, and the arm frees it and refuses without touching another pointer.
-        return unsafe { asym_cipher_init_legacy(tmp_keymgmt) };
+        // SAFETY: `ctx` is live, `tmp_keymgmt` is NULL or live, and `operation` is the caller's.
+        return unsafe { asym_cipher_init_legacy(ctx, tmp_keymgmt, operation) };
     }
 
     ERR_pop_to_mark();
@@ -1289,11 +1337,50 @@ unsafe fn evp_pkey_asym_cipher_operate(
     // SAFETY: `ctx` is live.
     let algctx = unsafe { (*ctx).op_ciph_algctx };
     if algctx.is_null() {
-        /* The authority's `goto legacy`. `ctx->pmeth` is Phase 8's and always NULL here, so
-         * `ctx->pmeth == NULL || ctx->pmeth->encrypt == NULL` is satisfied on arrival. */
-        // SAFETY: a compile-time-constant site.
-        unsafe { raise_site(legacy_site) };
-        return -2;
+        /* The authority's `goto legacy`: a foreign/engine key keeps its `EVP_PKEY_METHOD`, so the
+         * one-shot `pmeth->encrypt`/`decrypt` is the operation. */
+        // SAFETY: `ctx` is live per the contract.
+        let pmeth = unsafe { (*ctx).pmeth };
+        if pmeth.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(legacy_site) };
+            return -2;
+        }
+        // SAFETY: `pmeth` is live.
+        let f = unsafe {
+            if operation == EVP_PKEY_OP_ENCRYPT {
+                (*pmeth).encrypt
+            } else {
+                (*pmeth).decrypt
+            }
+        };
+        let Some(f) = f else {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(legacy_site) };
+            return -2;
+        };
+        /* `M_check_autoarg(ctx, out, outlen, ...)`. */
+        // SAFETY: `pmeth` is live.
+        if (unsafe { (*pmeth).flags } & EVP_PKEY_FLAG_AUTOARGLEN) != 0 {
+            // SAFETY: `ctx` is live and its key is the operated-on key.
+            let pksize = unsafe { EVP_PKEY_get_size((*ctx).pkey) } as usize;
+            if pksize == 0 {
+                return 0;
+            }
+            if out.is_null() {
+                if !outlen.is_null() {
+                    // SAFETY: `outlen` is the caller's out-parameter.
+                    unsafe { *outlen = pksize };
+                }
+                return 1;
+            }
+            // SAFETY: `out` is non-NULL, so `*outlen` is the caller's buffer length.
+            if unsafe { *outlen } < pksize {
+                return 0;
+            }
+        }
+        // SAFETY: `f` is the method's own one-shot operation with the caller's arguments.
+        return unsafe { f(ctx, out, outlen, input, inlen) };
     }
 
     // SAFETY: `ctx` is live and the operation is bound, so the method is live.

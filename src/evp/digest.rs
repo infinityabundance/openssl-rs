@@ -92,13 +92,17 @@
 //! existed before this slice, because `ctx->pctx` was NULL on every input those courts drove; each
 //! is written so the `pctx == NULL` answer is the statement that follows it.
 //!
-//! ## The ENGINE arms, for the reason `src/evp/cipher_ctx.rs` records for the cipher half: the
-//! profile has `OPENSSL_NO_ENGINE` undefined, so `engines`' 115 exports are compiled into the
-//! authority and none of them exists here. `tmpimpl` is therefore omitted and NULL,
-//! `ctx->engine` is always NULL, and every `ENGINE_init`/`ENGINE_get_digest`/`ENGINE_finish` call
-//! is guarded by a test on one of those two — so each is unreachable rather than unimplemented.
-//! An `impl` argument that is **not** NULL is a caller holding an ENGINE, which no caller can
-//! obtain here, and is refused at the authority's own raise site (`DIGEST_311`).
+//! ## The ENGINE arms
+//!
+//! The engine registry (`src/engine/`) is landed, so a caller *can* obtain an `ENGINE`. This
+//! unit's digest-side adoption is nevertheless not transcribed: `tmpimpl`/`ctx->engine` have no
+//! writer here, so `ENGINE_init`/`ENGINE_get_digest`/`ENGINE_finish` are absent. An `impl`
+//! argument that is not NULL is **refused explicitly** at `DIGEST_311` (`EVP_R_INITIALIZATION_`
+//! `ERROR`) rather than silently ignored, and the same is true of `EVP_DigestInit_ex`'s exposed
+//! `impl` parameter. That is a recorded compatibility gap (§17), not a safety win: an
+//! engine-backed digest cannot be selected through these entry points. The signature entry points
+//! (`EVP_DigestSignInit`/`EVP_DigestVerifyInit`) *do* adopt their engine argument — they forward it
+//! to `EVP_PKEY_CTX_new`, which takes the functional reference and the legacy `EVP_PKEY_METHOD`.
 //!
 //! ## Ownership: the method, the context and the legacy `md_data` block own themselves
 //!
@@ -138,17 +142,19 @@ use crate::evp::keymgmt_lib::{
     evp_keymgmt_util_get_deflt_digest_name, evp_keymgmt_util_query_operation_name,
 };
 use crate::evp::legacy_evp::{evp_get_digestbyname_ex, EVP_get_digestbyname};
-use crate::evp::pkey::{evp_pkey_export_to_provider, EvpPkey};
+use crate::evp::pkey::{evp_pkey_export_to_provider, EVP_PKEY_get_default_digest_nid, EvpPkey};
 use crate::evp::pkey_asn1::Engine;
 use crate::evp::pkey_ctx::{
     evp_pkey_ctx_dup, evp_pkey_ctx_free, evp_pkey_ctx_free_old_ops, evp_pkey_ctx_use_cached_data,
     EVP_PKEY_CTX_dup, EVP_PKEY_CTX_free, EVP_PKEY_CTX_new, EVP_PKEY_CTX_new_from_pkey,
-    EVP_PKEY_CTX_set1_id, EvpPkeyCtx, EVP_PKEY_OP_SIGNCTX, EVP_PKEY_OP_TYPE_SIG,
-    EVP_PKEY_OP_UNDEFINED, EVP_PKEY_OP_VERIFYCTX,
+    EVP_PKEY_CTX_set1_id, EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx, EVP_PKEY_FLAG_SIGCTX_CUSTOM,
+    EVP_PKEY_OP_SIGN, EVP_PKEY_OP_SIGNCTX, EVP_PKEY_OP_TYPE_SIG, EVP_PKEY_OP_UNDEFINED,
+    EVP_PKEY_OP_VERIFY, EVP_PKEY_OP_VERIFYCTX,
 };
 use crate::evp::signature::{
-    evp_signature_fetch_from_prov, EVP_SIGNATURE_fetch, EVP_SIGNATURE_free,
-    EVP_SIGNATURE_get0_provider, EvpSignature, OSSL_OP_SIGNATURE,
+    evp_signature_fetch_from_prov, EVP_PKEY_sign, EVP_PKEY_sign_init, EVP_PKEY_verify,
+    EVP_PKEY_verify_init, EVP_SIGNATURE_fetch, EVP_SIGNATURE_free, EVP_SIGNATURE_get0_provider,
+    EvpSignature, OSSL_OP_SIGNATURE,
 };
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_int, OSSL_PARAM_construct_octet_string,
@@ -1710,7 +1716,8 @@ pub struct EvpMdCtx {
     pub(crate) flags: c_ulong,
     /// `void *md_data` — the legacy half's block, `digest->ctx_size` bytes.
     pub(crate) md_data: *mut c_void,
-    /// `EVP_PKEY_CTX *pctx` — **always NULL** until 7.4; see `src/evp/pkey_ctx.rs`.
+    /// `EVP_PKEY_CTX *pctx` — NULL until an init builder installs one; a signing/verifying context
+    /// owns it and releases it on reset.
     pub(crate) pctx: *mut EvpPkeyCtx,
     /// `int (*update)(EVP_MD_CTX *, const void *, size_t)` — copied from the method.
     pub(crate) update: Option<MdLegacyUpdateFn>,
@@ -1787,8 +1794,9 @@ unsafe fn cleanup_old_md_data(ctx: *mut EvpMdCtx, force: c_int) {
 /// to overwrite the whole struct keeps the fetched reference it is going to re-set, rather than
 /// dropping and re-acquiring it.
 ///
-/// The `ENGINE_finish(ctx->engine)` between the legacy half and the fetched half is omitted, and
-/// it is unreachable rather than unimplemented: `ctx->engine` is always NULL here.
+/// The `ENGINE_finish(ctx->engine)` between the legacy half and the fetched half is omitted:
+/// the digest-side engine slot (`ctx->engine`) is not implemented in this unit, so it is NULL on
+/// every state this crate can produce. See the module documentation's ENGINE paragraph.
 ///
 /// `pub(crate)` because `m_sigver.c` calls it, and `m_sigver.c` is 7.4's.
 ///
@@ -2373,8 +2381,12 @@ pub unsafe extern "C" fn EVP_DigestInit(ctx: *mut EvpMdCtx, type_: *const EvpMd)
 
 /// `int EVP_DigestInit_ex(EVP_MD_CTX *ctx, const EVP_MD *type, ENGINE *impl)`.
 ///
+/// A non-NULL `impl` is refused at `DIGEST_311` with `EVP_R_INITIALIZATION_ERROR`: the digest-side
+/// engine adoption is not transcribed (see the module documentation's ENGINE paragraph). It is an
+/// explicit refusal, not a silent fallback to the default digest.
+///
 /// # Safety
-/// `ctx` live; `type` NULL or live; `impl` NULL.
+/// `ctx` live; `type` NULL or live; `impl_` NULL or a live engine.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_DigestInit_ex(
     ctx: *mut EvpMdCtx,
@@ -2392,9 +2404,9 @@ pub unsafe extern "C" fn EVP_DigestInit_ex(
 /// initialised and on one that has been finalised. That is a contract fact a caller can see, and
 /// it is the reason this function can be called with `data` NULL.
 ///
-/// The `pctx` redirect into `EVP_DigestSignUpdate`/`EVP_DigestVerifyUpdate` is omitted and is
-/// unreachable: `ctx->pctx` is NULL until 7.4 (`src/evp/pkey_ctx.rs`), and the authority's own
-/// comment says the redirect exists only for a context that was initialised for signing.
+/// The `pctx` redirect into `EVP_DigestSignUpdate`/`EVP_DigestVerifyUpdate` is live for a context
+/// that was initialised for signing: that is what lets a caller continue to drive the operation
+/// with the pre-3.0 spelling.
 ///
 /// The legacy test is `digest == NULL || digest->prov == NULL || NO_INIT`, which is why a
 /// hand-built method takes the `ctx->update` pointer rather than the provider callback.
@@ -4179,20 +4191,15 @@ const ERR_DATA_BUFFER: usize = 1024;
 
 /// `static int update(EVP_MD_CTX *ctx, const void *data, size_t datalen)` — `m_sigver.c:19`.
 ///
-/// **Never called, and its two authorities are written and unreachable.** The only statements that
-/// could install it are `do_sigver_init`'s two legacy arms (`m_sigver.c:330` and `:341`,
-/// `ctx->update = update`), and both sit *after* the label's `ctx->pctx->pmeth == NULL` refusal,
-/// which fires on every arrival because `EVP_PKEY_METHOD` is Phase 8's and the crate's
-/// `EvpPkeyCtx` has no `pmeth` field at all. So this is a transcribed function with no caller
-/// until that stratum fills the field; `#[allow(dead_code)]` names the caller that will land
-/// rather than pretending it exists.
+/// Installed by `sigver_legacy` when the legacy method publishes `digestsign`/`digestverify`
+/// without a `signctx`/`verifyctx` (`m_sigver.c:330` and `:341`, `ctx->update = update`), so a
+/// foreign key's one-shot method is reached from `EVP_DigestSignUpdate`/`EVP_DigestVerifyUpdate`.
 ///
-/// Its body is the whole of what a legacy one-shot context answers to an update: the digest half
-/// supports only a one-shot, so a second update is `EVP_R_ONLY_ONESHOT_SUPPORTED`.
+/// Its body is the whole of what such a legacy one-shot context answers to an update: the digest
+/// half supports only a one-shot, so a second update is `EVP_R_ONLY_ONESHOT_SUPPORTED`.
 ///
 /// # Safety
-/// Unreachable here; the signature is the authority's.
-#[allow(dead_code)] // caller: `do_sigver_init`'s legacy arms, which need `ctx->pmeth` (Phase 8)
+/// `ctx` is live; `data` is readable for `datalen` bytes (or `datalen` zero).
 unsafe extern "C" fn update(_ctx: *mut EvpMdCtx, _data: *const c_void, _datalen: usize) -> c_int {
     // SAFETY: a compile-time-constant site.
     unsafe { raise_site(&err_sites::M_SIGVER_21) };
@@ -4291,45 +4298,122 @@ unsafe fn sigver_end(locpctx: *mut EvpPkeyCtx, tmp_keymgmt: *mut EvpKeyMgmt, ret
     c_int::from(ret > 0)
 }
 
-/// The authority's `legacy:` label — `m_sigver.c:292`.
+/// The authority's `legacy:` label — `m_sigver.c:291`.
 ///
-/// **The label does not `return 0` at its top and does not reset the operation.** What it does,
-/// in order: pop the mark the caller set, release the keymgmt it was handed, look up the digest by
-/// name when the caller gave a name and no method, and then test `ctx->pctx->pmeth`. That test is
-/// the whole reachable body here: `EVP_PKEY_METHOD` is Phase 8's, the crate's `EvpPkeyCtx` has no
-/// `pmeth` field, so the answer is `EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` from
-/// `m_sigver.c:305` on every arrival and the six `pmeth` arms below it — the `SIGCTX_CUSTOM` test,
-/// the `EVP_PKEY_get_default_digest_nid` fallback and its `NO_DEFAULT_DIGEST` raise, the two
-/// `signctx_init`/`verifyctx_init`/`digestsign`/`digestverify` chains, `set_signature_md` and the
-/// final `EVP_DigestInit_ex` — are unreachable and are named here rather than written.
+/// Pops the mark the caller set, releases the keymgmt it was handed, looks up the digest by name
+/// when the caller gave a name and no method, and then hands the operation to the context's legacy
+/// `EVP_PKEY_METHOD`. This is the path a **foreign** key takes (an engine- or
+/// application-method-backed low-level key, whose private operation cannot be exported to a
+/// provider): `int_ctx_new` leaves `keymgmt` NULL and installs the standard method, so
+/// `is_legacy()` is true and the provider half of `do_sigver_init` is skipped.
 ///
-/// The digest lookup is kept even though its result has no reader here, because it is a **lookup
-/// with a side effect**: `evp_get_digestbyname_ex` registers the name in the namemap, which is
-/// exactly what the unreachable `EVP_DigestInit_ex(ctx, type, e)` below would then use.
+/// The digest lookup is kept because it is a **lookup with a side effect**:
+/// `evp_get_digestbyname_ex` registers the name in the namemap, which the final
+/// `EVP_DigestInit_ex(ctx, type, e)` then uses.
 ///
 /// # Safety
-/// `locpctx` live (the caller checked `ctx->pctx`); `tmp_keymgmt` NULL or live; `type_` NULL or a
-/// live method; `mdname` NULL or NUL-terminated.
+/// `ctx`/`locpctx` live (the caller checked `ctx->pctx`); `pctx_out` NULL or live; `tmp_keymgmt`
+/// NULL or live; `type_` NULL or a live method; `mdname` NULL or NUL-terminated; `e` NULL or live;
+/// `pkey` NULL or live.
+#[allow(clippy::too_many_arguments)]
 unsafe fn sigver_legacy(
+    ctx: *mut EvpMdCtx,
+    pctx_out: *mut *mut EvpPkeyCtx,
     locpctx: *mut EvpPkeyCtx,
     tmp_keymgmt: *mut EvpKeyMgmt,
-    type_: *const EvpMd,
+    mut type_: *const EvpMd,
     mdname: *const c_char,
+    ver: c_int,
+    e: *mut Engine,
+    pkey: *mut EvpPkey,
 ) -> c_int {
     ERR_pop_to_mark();
     // SAFETY: `tmp_keymgmt` is NULL or live.
     unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
 
     if type_.is_null() && !mdname.is_null() {
-        // SAFETY: `locpctx` is live and `mdname` is NUL-terminated. The result's only readers are
-        // the unreachable `pmeth` arms, so it is discarded; the lookup itself is kept.
-        let _ = unsafe { evp_get_digestbyname_ex((*locpctx).libctx, mdname) };
+        // SAFETY: `locpctx` is live and `mdname` is NUL-terminated.
+        type_ = unsafe { evp_get_digestbyname_ex((*locpctx).libctx, mdname) };
     }
 
-    /* `if (ctx->pctx->pmeth == NULL)` — always true here. */
-    // SAFETY: a compile-time-constant site.
-    unsafe { raise_site(&err_sites::M_SIGVER_305) };
-    0
+    // SAFETY: `locpctx` is live.
+    let pmeth = unsafe { (*locpctx).pmeth };
+    if pmeth.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::M_SIGVER_305) };
+        return 0;
+    }
+
+    // SAFETY: `pmeth` is live.
+    if (unsafe { (*pmeth).flags } & EVP_PKEY_FLAG_SIGCTX_CUSTOM) == 0 {
+        if type_.is_null() {
+            let mut def_nid: c_int = 0;
+            // SAFETY: `pkey` is NULL or live; `def_nid` is this frame's own local.
+            if unsafe { EVP_PKEY_get_default_digest_nid(pkey, &mut def_nid) } > 0 {
+                let sn = OBJ_nid2sn(def_nid);
+                if !sn.is_null() {
+                    /* `EVP_get_digestbynid` is the header's macro
+                     * `EVP_get_digestbyname(OBJ_nid2sn(nid))`. */
+                    // SAFETY: `sn` is NUL-terminated.
+                    type_ = unsafe { EVP_get_digestbyname(sn) };
+                }
+            }
+        }
+        if type_.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::M_SIGVER_318) };
+            return 0;
+        }
+    }
+
+    // SAFETY: `pmeth`/`locpctx`/`ctx` are live.
+    unsafe {
+        if ver != 0 {
+            if let Some(f) = (*pmeth).verifyctx_init {
+                if f(locpctx, ctx) <= 0 {
+                    return 0;
+                }
+                (*locpctx).operation = EVP_PKEY_OP_VERIFYCTX;
+            } else if (*pmeth).digestverify.is_some() {
+                (*locpctx).operation = EVP_PKEY_OP_VERIFY;
+                (*ctx).update = Some(update);
+            } else if EVP_PKEY_verify_init(locpctx) <= 0 {
+                return 0;
+            }
+        } else if let Some(f) = (*pmeth).signctx_init {
+            if f(locpctx, ctx) <= 0 {
+                return 0;
+            }
+            (*locpctx).operation = EVP_PKEY_OP_SIGNCTX;
+        } else if (*pmeth).digestsign.is_some() {
+            (*locpctx).operation = EVP_PKEY_OP_SIGN;
+            (*ctx).update = Some(update);
+        } else if EVP_PKEY_sign_init(locpctx) <= 0 {
+            return 0;
+        }
+
+        if EVP_PKEY_CTX_set_signature_md(locpctx, type_) <= 0 {
+            return 0;
+        }
+        if !pctx_out.is_null() {
+            *pctx_out = locpctx;
+        }
+        if ((*pmeth).flags & EVP_PKEY_FLAG_SIGCTX_CUSTOM) != 0 {
+            return 1;
+        }
+        if EVP_DigestInit_ex(ctx, type_, e.cast::<c_void>()) == 0 {
+            return 0;
+        }
+        (*locpctx).flag_call_digest_custom = 0;
+        if (*pmeth).digest_custom.is_some() {
+            (*locpctx).flag_call_digest_custom = 1;
+        }
+    }
+
+    /* `end:` — the cached-data replay, then the authority's normalised answer. */
+    // SAFETY: `locpctx` is live.
+    let ret = unsafe { evp_pkey_ctx_use_cached_data(locpctx) };
+    c_int::from(ret > 0)
 }
 
 /// `static int do_sigver_init(EVP_MD_CTX *ctx, EVP_PKEY_CTX **pctx, const EVP_MD *type,
@@ -4378,8 +4462,8 @@ unsafe fn sigver_legacy(
 /// # Safety
 /// `ctx` must be a live context (the authority has no NULL test and dereferences it at once);
 /// `pctx` NULL or a live out-pointer; `type_` NULL or a live method; `mdname`, `props` NULL or
-/// NUL-terminated; `e` NULL (ENGINE is Phase 13's); `pkey` NULL or live; `params` NULL or
-/// terminated.
+/// NUL-terminated; `e` NULL or a live engine (forwarded to `EVP_PKEY_CTX_new`); `pkey` NULL or
+/// live; `params` NULL or terminated.
 #[allow(clippy::too_many_arguments)]
 unsafe fn do_sigver_init(
     ctx: *mut EvpMdCtx,
@@ -4431,8 +4515,10 @@ unsafe fn do_sigver_init(
 
     // SAFETY: `locpctx` is live.
     if unsafe { &*locpctx }.is_legacy() {
-        // SAFETY: `tmp_keymgmt` is NULL here and the other arguments are the caller's.
-        return unsafe { sigver_legacy(locpctx, tmp_keymgmt, type_, mdname) };
+        // SAFETY: the arguments are the caller's, and `tmp_keymgmt` is NULL here.
+        return unsafe {
+            sigver_legacy(ctx, pctx, locpctx, tmp_keymgmt, type_, mdname, ver, e, pkey)
+        };
     }
 
     /* Do not reinitialize if the key is set or the operation is different. **The `signature`
@@ -4567,7 +4653,9 @@ unsafe fn do_sigver_init(
                  * only remaining road. */
                 // SAFETY: `locpctx` is live, `tmp_keymgmt` is NULL here, and the rest are the
                 // caller's.
-                return unsafe { sigver_legacy(locpctx, tmp_keymgmt, type_, mdname) };
+                return unsafe {
+                    sigver_legacy(ctx, pctx, locpctx, tmp_keymgmt, type_, mdname, ver, e, pkey)
+                };
             }
         }
         if signature.is_null() {
@@ -4998,11 +5086,27 @@ pub unsafe extern "C" fn EVP_DigestSignUpdate(
         || unsafe { (*pctx).op_sig_signature }.is_null()
     {
         if !pctx.is_null() {
-            /* `pctx->pmeth == NULL` on every arrival — `EVP_PKEY_METHOD` is Phase 8's — so the
-             * `flag_call_digest_custom`/`digest_custom` pair below it is unreachable. */
-            // SAFETY: a compile-time-constant site.
-            unsafe { raise_site(&err_sites::M_SIGVER_440) };
-            return 0;
+            /* `if (pctx->pmeth == NULL) { raise INITIALIZATION_ERROR; return 0; }` followed by the
+             * `digest_custom` call and its flag clear. */
+            // SAFETY: `pctx` is live on this arm.
+            let pmeth = unsafe { (*pctx).pmeth };
+            if pmeth.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::M_SIGVER_440) };
+                return 0;
+            }
+            // SAFETY: `pctx` is live.
+            if unsafe { (*pctx).flag_call_digest_custom } != 0 {
+                // SAFETY: `pmeth` is live.
+                if let Some(f) = unsafe { (*pmeth).digest_custom } {
+                    // SAFETY: the method's own digest-custom callback with the two live contexts.
+                    if unsafe { f(pctx, ctx) } == 0 {
+                        return 0;
+                    }
+                }
+            }
+            // SAFETY: `pctx` is live.
+            unsafe { (*pctx).flag_call_digest_custom = 0 };
         }
         /* The pre-3.0 spelling: an update on a context that was never initialised for signing is
          * a digest update. */
@@ -5035,10 +5139,10 @@ pub unsafe extern "C" fn EVP_DigestSignUpdate(
 /// `m_sigver.c:453`.
 ///
 /// **The legacy arm does not test `pmeth`.** Where `EVP_DigestSignUpdate` refuses when its
-/// `pctx` has no legacy method, this one falls through to `EVP_DigestUpdate` for a non-NULL
-/// `pctx` too — the `flag_call_digest_custom` test it does have short-circuits, because that flag
-/// is never set. So the two siblings answer *differently* for the same state, and that is the
-/// authority's shape rather than a transcription artefact.
+/// `pctx` has no legacy method, this one runs `digest_custom` when the flag is set (which
+/// `sigver_legacy` does for a method that publishes it) and otherwise falls through to
+/// `EVP_DigestUpdate`. So the two siblings answer *differently* for the same state, and that is
+/// the authority's shape rather than a transcription artefact.
 ///
 /// # Safety
 /// `ctx` live; `data` readable for `dsize` bytes (or `dsize` zero).
@@ -5065,10 +5169,24 @@ pub unsafe extern "C" fn EVP_DigestVerifyUpdate(
         // SAFETY: `pctx` is live on this arm.
         || unsafe { (*pctx).op_sig_signature }.is_null()
     {
-        /* `if (pctx != NULL) { if (pctx->flag_call_digest_custom && ...) return 0; ... = 0; }` —
-         * the flag is never set (its only writer is `do_sigver_init`'s unreachable `pmeth` arm),
-         * so the test short-circuits and the store is a no-op. Both are named rather than
-         * written. */
+        /* `if (pctx != NULL) { if (pctx->flag_call_digest_custom &&
+         * !ctx->pctx->pmeth->digest_custom(ctx->pctx, ctx)) return 0;
+         * pctx->flag_call_digest_custom = 0; }` — the flag is set by `sigver_legacy` when the
+         * method publishes `digest_custom`, so this is live on a foreign key's verify path. */
+        if !pctx.is_null() {
+            // SAFETY: `pctx` is live on this arm.
+            if unsafe { (*pctx).flag_call_digest_custom } != 0 {
+                // SAFETY: `pctx` is live and a set flag implies the method is live.
+                if let Some(f) = unsafe { (*pctx).pmeth.as_ref() }.and_then(|m| m.digest_custom) {
+                    // SAFETY: the method's own digest-custom callback with the live contexts.
+                    if unsafe { f(pctx, ctx) } == 0 {
+                        return 0;
+                    }
+                }
+            }
+            // SAFETY: `pctx` is live on this arm.
+            unsafe { (*pctx).flag_call_digest_custom = 0 };
+        }
         // SAFETY: the arguments are forwarded under this function's contract.
         return unsafe { EVP_DigestUpdate(ctx, data, dsize) };
     }
@@ -5093,8 +5211,164 @@ pub unsafe extern "C" fn EVP_DigestVerifyUpdate(
     ret
 }
 
+/// `EVP_DigestSignFinal`'s `legacy:` label — `m_sigver.c:549-618`.
+///
+/// The `SIGCTX_CUSTOM` method arm, then the `signctx`/digest arm: a method with a `signctx` signs
+/// the context itself, and one without it finalises the digest first and hands the digest to the
+/// method's one-shot `EVP_PKEY_sign`. The non-`FINALISE` path runs on a **copied** `EVP_MD_CTX`
+/// (via `EVP_MD_CTX_copy_ex`, which duplicates the `EVP_PKEY_CTX` through the method's `copy`), so
+/// the original stays usable; the `FINALISE` path signs in place and marks the context finalised.
+///
+/// # Safety
+/// `ctx` live; `pctx` NULL or live; `sigret` NULL or writable for `*siglen`; `siglen` NULL or live.
+unsafe fn digest_sign_final_legacy(
+    ctx: *mut EvpMdCtx,
+    pctx: *mut EvpPkeyCtx,
+    sigret: *mut u8,
+    siglen: *mut usize,
+) -> c_int {
+    if pctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::M_SIGVER_549) };
+        return 0;
+    }
+    // SAFETY: `pctx` is live.
+    let pmeth = unsafe { (*pctx).pmeth };
+    if pmeth.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::M_SIGVER_549) };
+        return 0;
+    }
+
+    // SAFETY: `pctx` and `ctx` are live.
+    if unsafe { (*pctx).flag_call_digest_custom } != 0 {
+        // SAFETY: `pmeth` is live.
+        if let Some(f) = unsafe { (*pmeth).digest_custom } {
+            // SAFETY: the method's own digest-custom callback.
+            if unsafe { f(pctx, ctx) } == 0 {
+                return 0;
+            }
+        }
+    }
+    // SAFETY: `pctx` is live.
+    unsafe { (*pctx).flag_call_digest_custom = 0 };
+
+    // SAFETY: `pmeth` is live.
+    let sigctx_custom = unsafe { (*pmeth).flags } & EVP_PKEY_FLAG_SIGCTX_CUSTOM != 0;
+    if sigctx_custom {
+        // SAFETY: `pmeth` is live and a `SIGCTX_CUSTOM` method publishes `signctx`.
+        let Some(signctx) = (unsafe { (*pmeth).signctx }) else {
+            return 0;
+        };
+        if sigret.is_null() {
+            // SAFETY: the method's own signctx with the live context.
+            return unsafe { signctx(pctx, sigret, siglen, ctx) };
+        }
+        // SAFETY: `ctx` is live.
+        if (unsafe { (*ctx).flags } & EVP_MD_CTX_FLAG_FINALISE as c_ulong) != 0 {
+            // SAFETY: as above.
+            let r = unsafe { signctx(pctx, sigret, siglen, ctx) };
+            // SAFETY: `ctx` is live.
+            unsafe { (*ctx).flags |= EVP_MD_CTX_FLAG_FINALISED as c_ulong };
+            return r;
+        }
+        // SAFETY: `pctx` is live.
+        let d = unsafe { EVP_PKEY_CTX_dup(pctx) };
+        if d.is_null() {
+            return 0;
+        }
+        // SAFETY: `d` is live and its method is the same `SIGCTX_CUSTOM` method.
+        let r = match unsafe { (*(*d).pmeth).signctx } {
+            Some(f) => {
+                // SAFETY: `f` is the method's own signctx and `d`/`ctx` are live.
+                unsafe { f(d, sigret, siglen, ctx) }
+            }
+            None => 0,
+        };
+        // SAFETY: `d` is live and this releases the duplicate.
+        unsafe { EVP_PKEY_CTX_free(d) };
+        return r;
+    }
+
+    // SAFETY: `pmeth` is live.
+    let sctx = unsafe { (*pmeth).signctx };
+    if !sigret.is_null() {
+        /* `unsigned char md[EVP_MAX_MD_SIZE]` — `include/openssl/evp.h:34`. */
+        let mut md = [0u8; 64];
+        let mut mdlen: c_uint = 0;
+        let r: c_int;
+        // SAFETY: `ctx` is live.
+        if (unsafe { (*ctx).flags } & EVP_MD_CTX_FLAG_FINALISE as c_ulong) != 0 {
+            r = match sctx {
+                // SAFETY: the method's own signctx with the live context.
+                Some(f) => unsafe { f(pctx, sigret, siglen, ctx) },
+                // SAFETY: the live context and this frame's own buffer.
+                None => unsafe { EVP_DigestFinal_ex(ctx, md.as_mut_ptr(), &mut mdlen) },
+            };
+        } else {
+            // SAFETY: no caller pointer.
+            let tmp = EVP_MD_CTX_new();
+            if tmp.is_null() {
+                return 0;
+            }
+            // SAFETY: `tmp` is live and `ctx` is the source.
+            if unsafe { EVP_MD_CTX_copy_ex(tmp, ctx) } == 0 {
+                // SAFETY: `tmp` is live.
+                unsafe { EVP_MD_CTX_free(tmp) };
+                return 0;
+            }
+            r = match sctx {
+                Some(_) => {
+                    // SAFETY: `tmp` is live and its duplicated pkey context was installed by
+                    // `EVP_MD_CTX_copy_ex`.
+                    let tp = unsafe { (*tmp).pctx };
+                    // SAFETY: `tp` is live.
+                    let tp_pmeth = unsafe { (*tp).pmeth };
+                    if tp_pmeth.is_null() {
+                        0
+                    } else {
+                        // SAFETY: `tp_pmeth` is live.
+                        match unsafe { (*tp_pmeth).signctx } {
+                            Some(f) => {
+                                // SAFETY: the method's own signctx with the live duplicate.
+                                unsafe { f(tp, sigret, siglen, tmp) }
+                            }
+                            None => 0,
+                        }
+                    }
+                }
+                // SAFETY: `tmp` is live and this frame's buffer is writable.
+                None => unsafe { EVP_DigestFinal_ex(tmp, md.as_mut_ptr(), &mut mdlen) },
+            };
+            // SAFETY: `tmp` is live.
+            unsafe { EVP_MD_CTX_free(tmp) };
+        }
+        if sctx.is_some() || r == 0 {
+            return r;
+        }
+        // SAFETY: `pctx` is live and `md` holds `mdlen` digest bytes from this frame.
+        if unsafe { EVP_PKEY_sign(pctx, sigret, siglen, md.as_ptr(), mdlen as usize) } <= 0 {
+            return 0;
+        }
+    } else if let Some(f) = sctx {
+        // SAFETY: the method's own signctx with the live context.
+        return unsafe { f(pctx, sigret, siglen, ctx) };
+    } else {
+        // SAFETY: `ctx` is live.
+        let s = unsafe { EVP_MD_get_size((*ctx).digest) };
+        if s <= 0
+            // SAFETY: `pctx` is live; a NULL buffer with the digest size is the method's length
+            // query.
+            || unsafe { EVP_PKEY_sign(pctx, sigret, siglen, ptr::null(), s as usize) } <= 0
+        {
+            return 0;
+        }
+    }
+    1
+}
+
 /// `int EVP_DigestSignFinal(EVP_MD_CTX *ctx, unsigned char *sigret, size_t *siglen)` —
-/// `m_sigver.c:499`.
+/// `m_sigver.c:496`.
 ///
 /// The two-call convention, and the flag that decides whether the provider's context may be
 /// consumed: with `FINALISE` clear and a buffer present, the final runs on an `EVP_PKEY_CTX_dup`
@@ -5129,12 +5403,10 @@ pub unsafe extern "C" fn EVP_DigestSignFinal(
         // SAFETY: `pctx` is live on this arm.
         || unsafe { (*pctx).op_sig_signature }.is_null()
     {
-        /* `if (pctx == NULL || pctx->pmeth == NULL)` — `pmeth` is NULL on every arrival, so the
-         * refusal is unconditional and the `pmeth->digest_custom`/`signctx`/`EVP_PKEY_sign` tail
-         * below it is unreachable. */
-        // SAFETY: a compile-time-constant site.
-        unsafe { raise_site(&err_sites::M_SIGVER_549) };
-        return 0;
+        /* `if (pctx == NULL || pctx->pmeth == NULL) { raise INITIALIZATION_ERROR; return 0; }`,
+         * then the legacy `digest_custom`/`signctx`/`EVP_PKEY_sign` tail. */
+        // SAFETY: `ctx` is live and `pctx` is NULL or live.
+        return unsafe { digest_sign_final_legacy(ctx, pctx, sigret, siglen) };
     }
 
     // SAFETY: `pctx` is live and its signature is non-NULL on this arm.
@@ -5180,6 +5452,111 @@ pub unsafe extern "C" fn EVP_DigestSignFinal(
         unsafe { EVP_PKEY_CTX_free(dctx) };
     }
     r
+}
+
+/// `EVP_DigestVerifyFinal`'s `legacy:` label — `m_sigver.c:712-751`.
+///
+/// The symmetric half of [`digest_sign_final_legacy`]: `digest_custom`, then `verifyctx` when the
+/// method has one, otherwise finalise the digest (on a copy unless `FINALISE` is set) and hand it to
+/// `EVP_PKEY_verify`. A method without `verifyctx` that fails to finalise answers that failure; a
+/// `verifyctx` failure is its own answer. A NULL context or method is `M_SIGVER_718`.
+///
+/// # Safety
+/// `ctx` live; `pctx` NULL or live; `sig` readable for `siglen` bytes.
+unsafe fn digest_verify_final_legacy(
+    ctx: *mut EvpMdCtx,
+    pctx: *mut EvpPkeyCtx,
+    sig: *const u8,
+    siglen: usize,
+) -> c_int {
+    if pctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::M_SIGVER_718) };
+        return 0;
+    }
+    // SAFETY: `pctx` is live.
+    let pmeth = unsafe { (*pctx).pmeth };
+    if pmeth.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::M_SIGVER_718) };
+        return 0;
+    }
+
+    // SAFETY: `pctx` is live and `pmeth` was checked non-NULL above.
+    if unsafe { (*pctx).flag_call_digest_custom } != 0 {
+        // SAFETY: `pmeth` is live.
+        if let Some(f) = unsafe { (*pmeth).digest_custom } {
+            // SAFETY: the method's own digest-custom callback.
+            if unsafe { f(pctx, ctx) } == 0 {
+                return 0;
+            }
+        }
+    }
+    // SAFETY: `pctx` is live.
+    unsafe { (*pctx).flag_call_digest_custom = 0 };
+
+    // SAFETY: `pmeth` is live.
+    let verifyctx = unsafe { (*pmeth).verifyctx };
+    /* `unsigned char md[EVP_MAX_MD_SIZE]` — `include/openssl/evp.h:34`. */
+    let mut md = [0u8; 64];
+    let mut mdlen: c_uint = 0;
+    let r: c_int;
+    // SAFETY: `ctx` is live.
+    if (unsafe { (*ctx).flags } & EVP_MD_CTX_FLAG_FINALISE as c_ulong) != 0 {
+        match verifyctx {
+            Some(f) => {
+                // SAFETY: the method's own verifyctx with the live context.
+                r = unsafe { f(pctx, sig, siglen as c_int, ctx) };
+                // SAFETY: `ctx` is live.
+                unsafe { (*ctx).flags |= EVP_MD_CTX_FLAG_FINALISED as c_ulong };
+            }
+            // SAFETY: the live context and this frame's own buffer.
+            None => r = unsafe { EVP_DigestFinal_ex(ctx, md.as_mut_ptr(), &mut mdlen) },
+        }
+    } else {
+        // SAFETY: no caller pointer.
+        let tmp = EVP_MD_CTX_new();
+        if tmp.is_null() {
+            return -1;
+        }
+        // SAFETY: `tmp` is live and `ctx` is the source.
+        if unsafe { EVP_MD_CTX_copy_ex(tmp, ctx) } == 0 {
+            // SAFETY: `tmp` is live.
+            unsafe { EVP_MD_CTX_free(tmp) };
+            return -1;
+        }
+        r = match verifyctx {
+            Some(_) => {
+                // SAFETY: `tmp` is live and its duplicated pkey context was installed by
+                // `EVP_MD_CTX_copy_ex`.
+                let tp = unsafe { (*tmp).pctx };
+                // SAFETY: `tp` is live.
+                let tp_pmeth = unsafe { (*tp).pmeth };
+                if tp_pmeth.is_null() {
+                    0
+                } else {
+                    // SAFETY: `tp_pmeth` is live.
+                    match unsafe { (*tp_pmeth).verifyctx } {
+                        Some(f) => {
+                            // SAFETY: the method's own verifyctx with the live duplicate.
+                            unsafe { f(tp, sig, siglen as c_int, tmp) }
+                        }
+                        None => 0,
+                    }
+                }
+            }
+            // SAFETY: `tmp` is live and this frame's buffer is writable.
+            None => unsafe { EVP_DigestFinal_ex(tmp, md.as_mut_ptr(), &mut mdlen) },
+        };
+        // SAFETY: `tmp` is live.
+        unsafe { EVP_MD_CTX_free(tmp) };
+    }
+
+    if verifyctx.is_some() || r == 0 {
+        return r;
+    }
+    // SAFETY: `pctx` is live and `md` holds `mdlen` digest bytes from this frame.
+    unsafe { EVP_PKEY_verify(pctx, sig, siglen, md.as_ptr(), mdlen as usize) }
 }
 
 /// `int EVP_DigestSign(EVP_MD_CTX *ctx, unsigned char *sigret, size_t *siglen,
@@ -5250,9 +5627,15 @@ pub unsafe extern "C" fn EVP_DigestSign(
             let _ = ERR_clear_last_mark();
             return ret;
         }
+    } else {
+        /* The legacy arm: `if (pctx->pmeth != NULL && pctx->pmeth->digestsign != NULL) return
+         * pctx->pmeth->digestsign(...)`. Live on a foreign/engine key's signing path. */
+        // SAFETY: `pctx` is live on this arm.
+        if let Some(digestsign) = unsafe { (*pctx).pmeth.as_ref() }.and_then(|m| m.digestsign) {
+            // SAFETY: the method's own one-shot digestsign with the caller's arguments.
+            return unsafe { digestsign(ctx, sigret, siglen, tbs, tbslen) };
+        }
     }
-    /* The `else` arm is the legacy one: `if (pctx->pmeth != NULL && pctx->pmeth->digestsign !=
-     * NULL) return ...`. `pmeth` is Phase 8's and NULL here, so nothing returns from it. */
 
     // SAFETY: `ctx` is live and `tbs`/`tbslen` are the caller's.
     if !sigret.is_null() && unsafe { EVP_DigestSignUpdate(ctx, tbs.cast::<c_void>(), tbslen) } <= 0
@@ -5296,11 +5679,10 @@ pub unsafe extern "C" fn EVP_DigestVerifyFinal(
         // SAFETY: `pctx` is live on this arm.
         || unsafe { (*pctx).op_sig_signature }.is_null()
     {
-        /* `if (pctx == NULL || pctx->pmeth == NULL)` — both arms take the same raise. The
-         * `digest_custom`/`verifyctx`/`EVP_PKEY_verify` tail is unreachable. */
-        // SAFETY: a compile-time-constant site.
-        unsafe { raise_site(&err_sites::M_SIGVER_718) };
-        return 0;
+        /* `if (pctx == NULL || pctx->pmeth == NULL)` and the check above both take the legacy
+         * label: `digest_custom`, `verifyctx`, and the digest-then-`EVP_PKEY_verify` tail. */
+        // SAFETY: `ctx` is live and `pctx` is NULL or live.
+        return unsafe { digest_verify_final_legacy(ctx, pctx, sig, siglen) };
     }
 
     // SAFETY: `pctx` is live and its signature is non-NULL on this arm.
@@ -5396,8 +5778,15 @@ pub unsafe extern "C" fn EVP_DigestVerify(
             let _ = ERR_clear_last_mark();
             return ret;
         }
+    } else {
+        /* The legacy arm: `if (pctx->pmeth != NULL && pctx->pmeth->digestverify != NULL) return
+         * pctx->pmeth->digestverify(...)`. Live on a foreign/engine key's verification path. */
+        // SAFETY: `pctx` is live on this arm.
+        if let Some(digestverify) = unsafe { (*pctx).pmeth.as_ref() }.and_then(|m| m.digestverify) {
+            // SAFETY: the method's own one-shot digestverify with the caller's arguments.
+            return unsafe { digestverify(ctx, sigret, siglen, tbs, tbslen) };
+        }
     }
-    /* The `else` arm is the legacy one, and `pmeth` is NULL here as everywhere. */
 
     // SAFETY: `ctx` is live and `tbs`/`tbslen` are the caller's.
     if unsafe { EVP_DigestVerifyUpdate(ctx, tbs.cast::<c_void>(), tbslen) } <= 0 {

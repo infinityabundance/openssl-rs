@@ -27,16 +27,13 @@
 //!      refusal structure: a NULL context or one whose operation is not a *derivation* one is `-2`
 //!      with `EVP_R_COMMAND_NOT_SUPPORTED`, and a *legacy* context of the wrong key type is `-1`.
 //!
-//! **The legacy key-type arm of the gate is unreachable here, and that is the `pmeth` reduction
-//! rather than an omission.** The authority's guard is `evp_pkey_ctx_is_legacy(ctx) &&
-//! ctx->pmeth != NULL && ctx->pmeth->pkey_id != EVP_PKEY_EC`. `evp_pkey_ctx_is_legacy` is
-//! `keymgmt == NULL` (`src/evp/pkey_ctx.rs` records that reading it by its name would be wrong),
-//! and `int_ctx_new` refuses to return a context with a NULL `keymgmt` at all — so the first clause
-//! is false for every context this crate can build and the `&&` never reaches `ctx->pmeth`, which
-//! this crate's `EvpPkeyCtx` does not carry anyway. It is the same reduction `src/dh/ctrl.rs` makes
-//! for `dh_param_derive_check` and `src/dsa/ctrl.rs` for `dsa_paramgen_check`, written for the form
-//! that tests `pmeth` directly (the DSA spelling) rather than the `is_legacy`-guarded one (the DH
-//! spelling).
+//! **The legacy key-type arm of the gate is live, and it is the authority's own refusal.** The
+//! guard is `evp_pkey_ctx_is_legacy(ctx) && ctx->pmeth != NULL && ctx->pmeth->pkey_id != EVP_PKEY_EC`.
+//! `evp_pkey_ctx_is_legacy` is `keymgmt == NULL`; an engine-backed or foreign EC context has no
+//! `keymgmt` and keeps its `EVP_PKEY_METHOD`, so the arm can fire and answers `-1` (the ctrl
+//! family's "not mine, try the legacy path"). It was previously omitted on the premise that no
+//! context with a NULL `keymgmt` could be built; S18's engine adoption made that false, so a ctrl on
+//! a mismatched-key engine context was silently accepted (S19 census L08).
 //!
 //! **`set0_ecdh_kdf_ukm` takes custody of memory, and unlike its DH sibling it does *not* refuse a
 //! negative length.** `crypto/evp/dh_ctrl.c`'s `set0_dh_kdf_ukm` has an `if (len < 0) return -1;`
@@ -102,9 +99,8 @@ unsafe fn release_caller_ukm_on_success(ukm: *mut c_uchar) {
 /// wrong key type — which this crate cannot reach (this module's header).
 ///
 /// The authority's second clause tests `evp_pkey_ctx_is_legacy(ctx) && ctx->pmeth != NULL &&
-/// ctx->pmeth->pkey_id != EVP_PKEY_EC`; its first clause is false for every context that reaches
-/// here, so the remaining two are never evaluated — and `ctx->pmeth` is absent from this crate's
-/// `EvpPkeyCtx` anyway.
+/// ctx->pmeth->pkey_id != EVP_PKEY_EC`. It is written in full: a legacy (engine/foreign) context of
+/// another key type is `-1`, a refusal this function did not make before S19 L08.
 ///
 /// # Safety
 /// `ctx` NULL or live.
@@ -116,12 +112,17 @@ unsafe fn evp_pkey_ctx_getset_ecdh_param_checks(ctx: *mut EvpPkeyCtx) -> c_int {
         /* Uses the same return values as `EVP_PKEY_CTX_ctrl`. */
         return -2;
     }
-    /* `if (evp_pkey_ctx_is_legacy(ctx) && ctx->pmeth != NULL
-     *  && ctx->pmeth->pkey_id != EVP_PKEY_EC) return -1;` — the authority's key-type guard, and
-     * its first clause is false for every context that reaches here: `evp_pkey_ctx_is_legacy` is
-     * `keymgmt == NULL` and `int_ctx_new` never returns a context with a NULL `keymgmt`. The
-     * remaining clauses read `ctx->pmeth`, absent from this crate's `EvpPkeyCtx`, and the
-     * short-circuit means they are never evaluated. */
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).is_legacy() } {
+        // SAFETY: `ctx` is live.
+        let pmeth = unsafe { (*ctx).pmeth };
+        if !pmeth.is_null() {
+            // SAFETY: `pmeth` is the live method this context was built with.
+            if unsafe { (*pmeth).pkey_id } != EVP_PKEY_EC {
+                return -1;
+            }
+        }
+    }
     1
 }
 
@@ -664,5 +665,42 @@ mod tests {
         }
         assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
         crate::runtime::err::ERR_clear_error();
+    }
+
+    /// S19 L08. `evp_pkey_ctx_getset_ecdh_param_checks` refuses (`-1`) a **legacy** context whose
+    /// method is not EC (`ec_ctrl.c:31-34`), and accepts the EC method. An engine/foreign context
+    /// has `keymgmt == NULL` and keeps its `EVP_PKEY_METHOD`, so the arm is reachable; before this
+    /// fix the ctrl was silently accepted on a mismatched-key context.
+    #[test]
+    // The method's id is only read through the context's raw `pmeth`, which the lint cannot see.
+    #[allow(unused_assignments)]
+    fn the_legacy_key_type_guard_refuses_a_non_ec_context() {
+        use crate::evp::pkey_ctx::{EvpPkeyMethod, EVP_PKEY_RSA};
+
+        // SAFETY: the method and the context are stack locals; nothing is transferred or freed.
+        unsafe {
+            let mut meth: EvpPkeyMethod = core::mem::zeroed();
+            meth.pkey_id = EVP_PKEY_RSA;
+            let mut ctx: EvpPkeyCtx = core::mem::zeroed();
+            ctx.operation = EVP_PKEY_OP_DERIVE;
+            ctx.pmeth = core::ptr::addr_of!(meth);
+
+            assert_eq!(
+                EVP_PKEY_CTX_set_ecdh_cofactor_mode(core::ptr::addr_of_mut!(ctx), 1),
+                -1,
+                "a legacy context of another key type is the authority's -1"
+            );
+            assert_eq!(
+                evp_pkey_ctx_getset_ecdh_param_checks(core::ptr::addr_of_mut!(ctx)),
+                -1
+            );
+
+            meth.pkey_id = EVP_PKEY_EC;
+            assert_eq!(
+                evp_pkey_ctx_getset_ecdh_param_checks(core::ptr::addr_of_mut!(ctx)),
+                1,
+                "the EC method itself passes the gate"
+            );
+        }
     }
 }

@@ -61,12 +61,12 @@ use crate::runtime::err::raise_site;
 use crate::runtime::obj::{NID_id_pkix_OCSP_basic, OBJ_obj2nid};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::time::TimeT;
-use crate::x509::v3_genn::{GENERAL_NAME_free, GENERAL_NAME_new, GEN_DIRNAME};
+use crate::x509::v3_genn::{GENERAL_NAME_free, GENERAL_NAME_new};
 use crate::x509::x509_cmp::{
     ossl_x509_add_cert_new, X509_add_certs, X509_check_private_key, X509_get_subject_name,
 };
 use crate::x509::x509_vfy::X509_cmp_time;
-use crate::x509::x_name::{X509Name, X509_NAME_dup, X509_NAME_set};
+use crate::x509::x_name::{X509Name, X509_NAME_dup};
 use crate::x509::x_x509::X509;
 
 /// `ERR_LIB_OCSP` — `include/openssl/err.h.in:104`.
@@ -470,11 +470,14 @@ pub unsafe extern "C" fn OCSP_request_set1_name(
         if gen.is_null() {
             return 0;
         }
-        if X509_NAME_set(ptr::addr_of_mut!((*gen).d.directoryName), nm) == 0 {
+        // The duplicate is built first so a failed allocation leaves `gen` untouched, then
+        // installed through the audited writer (selector and arm written together).
+        let dn = X509_NAME_dup(nm);
+        if dn.is_null() {
             GENERAL_NAME_free(gen);
             return 0;
         }
-        (*gen).type_ = GEN_DIRNAME;
+        (*gen).set_directory_name(dn);
         GENERAL_NAME_free((*req).tbsRequest.requestorName);
         (*req).tbsRequest.requestorName = gen;
         1

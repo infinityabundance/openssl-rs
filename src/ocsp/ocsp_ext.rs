@@ -1001,8 +1001,7 @@ pub unsafe extern "C" fn OCSP_url_svcloc_new(
                 break;
             }
             // `ad->location` is allocated inside `ACCESS_DESCRIPTION_new`.
-            (*(*ad).location).type_ = GEN_URI;
-            (*(*ad).location).d.ia5 = ia5;
+            let _ = (*(*ad).location).set_ia5(GEN_URI, ia5);
             ia5 = ptr::null_mut();
             if OPENSSL_sk_push((*sloc).locator, ad.cast()) == 0 {
                 break;
