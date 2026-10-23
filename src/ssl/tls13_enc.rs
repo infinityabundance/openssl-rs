@@ -929,13 +929,31 @@ pub(crate) fn tls13_md_for_kind(kind: c_int) -> *const EvpMd {
     }
 }
 
+/// The digest size for a [`tls13_cipher_md_kind`] selector, or 0 when the selector is unknown.
+/// This is the length of a TLS1.3 binder for that suite (`hashsize` in `tls_psk_do_binder`), so a
+/// received binder of any other length must be refused before the constant-time compare reads it.
+pub(crate) fn tls13_md_size(kind: c_int) -> usize {
+    if kind < 0 {
+        return 0;
+    }
+    // SAFETY: `tls13_md_for_kind` answers one of the crate's live static digests.
+    let n = unsafe { EVP_MD_get_size(tls13_md_for_kind(kind)) };
+    if n > 0 {
+        n as usize
+    } else {
+        0
+    }
+}
+
 /// `int tls_psk_do_binder(...)` — `ssl/statem/extensions.c:1463-1638`, the internal (resumption)
 /// arm: derive the early secret from the session's PSK, the `"res binder"` binder key, and its
 /// finished key, then HMAC `Hash(ClientHello up to the binders)` (`extensions.c:1519-1627`).
 ///
 /// When `sign` is false (`binderout == NULL` on the caller's side) the received binder is compared
-/// in constant time; here the caller supplies the receive buffer to compare. `msgstart` is the
-/// ClientHello message start and `binderoffset` the byte offset of the `binders` vector.
+/// in constant time; here the caller supplies the receive slice to compare, and its length must
+/// equal the digest size (a received binder of any other length is refused rather than read past).
+/// `msgstart` is the ClientHello message start and `binderoffset` the byte offset of the `binders`
+/// vector.
 ///
 /// # Safety
 /// `md` is live; `msgstart` readable for `binderoffset`; `psk` readable; `binder` readable and
@@ -947,7 +965,7 @@ pub(crate) unsafe fn tls13_psk_do_binder(
     psk: &[u8],
     binder: *mut u8,
     sign: bool,
-    received: *const u8,
+    received: &[u8],
 ) -> c_int {
     // SAFETY: `md` is live.
     let sz = unsafe { EVP_MD_get_size(md) };
@@ -1041,11 +1059,18 @@ pub(crate) unsafe fn tls13_psk_do_binder(
         return 0;
     }
     if !sign {
+        // `tls_parse_ctos_psk` has already required `PACKET_remaining(&binder) == hashsize`
+        // (`extensions_srvr.c:1441-1448`); this makes the precondition explicit, so a short binder
+        // can never be read past its slice.
+        if received.len() != hashsize {
+            return 0;
+        }
         // Constant-time compare against the received binder (`extensions.c:1628-1636`).
         let mut diff = 0u8;
-        for i in 0..hashsize {
-            // SAFETY: `binder`/`received` are the caller's `hashsize`-byte buffers.
-            diff |= unsafe { *binder.add(i) ^ *received.add(i) };
+        for (i, &received_byte) in received.iter().enumerate() {
+            // SAFETY: `received.len() == hashsize` (checked above) and `binder` is the caller's
+            // `hashsize`-byte writable buffer, so `i < hashsize`.
+            diff |= unsafe { *binder.add(i) } ^ received_byte;
         }
         if diff != 0 {
             return 0;
@@ -2279,5 +2304,30 @@ mod tests {
             vec![0u8; 1],
             "nothing copied into a short buffer"
         );
+    }
+
+    /// The received binder must be exactly the digest size. The pre-fix signature took a bare
+    /// `*const u8` and read `hashsize` bytes unconditionally, so a short binder from a client with
+    /// a valid ticket was an out-of-bounds read. The slice parameter and its length check are the
+    /// repair; this test is the regression control.
+    #[test]
+    fn binder_length_must_match_the_digest_size() {
+        let md = EVP_sha256();
+        let psk = [0x11u8; 32];
+        let msg = [0u8; 4];
+        let mut calc = [0u8; 32];
+        let short = [0u8; 31];
+        // SAFETY: `md` is the live SHA-256 method table; `msg` is readable for `binderoffset` (0);
+        // `calc` is writable for the digest size; `short` is a live slice.
+        let r = unsafe {
+            tls13_psk_do_binder(md, msg.as_ptr(), 0, &psk, calc.as_mut_ptr(), false, &short)
+        };
+        assert_eq!(r, 0, "a 31-byte binder must be refused, not read as 32");
+        let long = [0u8; 33];
+        // SAFETY: as above.
+        let r = unsafe {
+            tls13_psk_do_binder(md, msg.as_ptr(), 0, &psk, calc.as_mut_ptr(), false, &long)
+        };
+        assert_eq!(r, 0, "a 33-byte binder must be refused");
     }
 }
