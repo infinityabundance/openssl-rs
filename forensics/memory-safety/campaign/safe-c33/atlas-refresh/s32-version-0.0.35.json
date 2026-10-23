@@ -1,0 +1,163 @@
+{
+  "schema": "safe-c33/atlas-refresh/s32/v1",
+  "kind": "s32-version-0.0.35",
+  "subphase": "S32",
+  "branch": "integrate/safe-c33",
+  "source_head": "008f28627ab43d8fb3c28ceec358009f97f35bce",
+  "date": "2026-10-23",
+  "purpose": "Move the working tree to 0.0.35 because 0.0.34 is published with artefacts that do not contain the S27-S32 code. Rebuild the Phase-2 install from the credited source, re-run the ABI courts, rebind the downstream atlas identity while keeping carried-forward rows explicitly unverified at the new identity, and regenerate the documentation so the published and unpublished states cannot be confused.",
+  "version_bump": {
+    "from": "0.0.34",
+    "to": "0.0.35",
+    "cargo_toml": "version = \"0.0.35\"",
+    "cargo_lock": "the openssl-rs package entry is 0.0.35",
+    "dependency_versions_changed": false,
+    "note": "Only the openssl-rs package version changed. Cargo.lock dependency entries are untouched."
+  },
+  "published_release": {
+    "version": "0.0.34",
+    "status": "PUBLISHED",
+    "registry": "crates-io",
+    "published_at": "2026-10-23T08:19:11Z",
+    "checksum": "e1f553b3a57259ef8699bb0c2e91e4945f86e97ff25f870526b1e3e1a92ae15b",
+    "checksum_prefix": "e1f553b3",
+    "source_commit": "ba278c476",
+    "artefacts": {
+      "libcrypto.so.3": "defe179fd0b9e62566e08056eb22280ef1166e61153d4e3c8d533db0b2c38d7e",
+      "libssl.so.3": "5066aa3290ef46f1e453fd52e3c91276d043cce3d012e2c945066682ee6e933a"
+    },
+    "receipt": "atlas-refresh/publish-0.0.34.json"
+  },
+  "working_tree_release": {
+    "version": "0.0.35",
+    "status": "NOT_PUBLISHED",
+    "publish_receipt_exists": false,
+    "cargo_publish_run": false,
+    "note": "The tree is explicitly unreleased. No published artefact contains the S27-S32 code."
+  },
+  "rebuild": {
+    "command": "CARGO_BUILD_JOBS=4 CARGO_TARGET_DIR=/work/target bash forensics/tools/build_phase2.sh",
+    "exit_code": 0,
+    "log": "court/tmp/s32-build-candidate.log",
+    "log_sha256": "bf639cdad6be3d09cfeed46285e39b72184186240a3c3d2ee92f5ee234997ae4",
+    "target_dir_note": "build_phase2.sh hardwires CRATE=/work/target/release, so the build used the existing on-disk /work/target (bind-mounted NVMe, never tmpfs). TMPDIR stayed on /work/court/tmp; the container overlay was not used for build output.",
+    "determinism": {
+      "rerun_without_source_change": true,
+      "hashes_identical": true,
+      "log": "court/tmp/s32-rebuild-determinism.log",
+      "log_sha256": "99de438134ac3ba3d9e7d8890be75ebcd7ede1276ac94f72065e43e0cc67802a",
+      "note": "Two consecutive builds of the same source produced byte-identical artefacts, so the identity delta below is a source/metadata delta, not build nondeterminism."
+    },
+    "artefacts": {
+      "libcrypto.so.3": "61373488ceea36d2a8e60c244034da756bd29391aa6a1a695168f83a5d9c6ba6",
+      "libssl.so.3": "cd24d2075273cc8bb71b0f301163615333f5ef2b7a655dbea1be8ea49b89241d",
+      "legacy.so": "723595a6dc820d46eaabf87e22b6b945659624edda57a07a1af31e33d257702e",
+      "openssl": "64614da466e9cf53905ccb9f3ea07df4062d2fca274c21eebbcfc7da770c7a5d"
+    },
+    "identical_to_previous_identity": false,
+    "previous_identity": {
+      "label": "S31 build",
+      "libcrypto.so.3": "2b0ff1b6b33b3f37c3abc61182f44328b6fdc99d91f7b10c69c0b0b9cc20d3ff",
+      "libssl.so.3": "f99f7159a7ff7e6f8da95d023a82ddb54339edf20a78890645250b4ef3570803",
+      "legacy.so": "fe24c7744839821367738453011405a578964dc829c53f5b4fc452ab23655892",
+      "openssl": "7c92aef9b2f3a493fab14d505798db075e09c271849e327f1ddde48914266e48"
+    },
+    "identity_delta_cause": {
+      "source_change": "none beyond Cargo.toml/Cargo.lock version bump; git diff for src/ is empty",
+      "mechanism": "the crate version participates in rustc crate metadata, so every linked object changes its crate-metadata identity even though the compiled Rust code is unchanged",
+      "evidence": [
+        "the build is deterministic across runs",
+        "no literal version string is embedded in the artefacts",
+        "the version bump is the only source change in the tree"
+      ]
+    },
+    "abi_courts": {
+      "all_pass": true,
+      "passed": 11,
+      "total": 11,
+      "courts": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "artifact": "artifacts/phase2/COURTS.json",
+      "body_hash": "d4b9e82420753db75260424af6865214a4bcd6384d701d13a757d83fa29b1d53"
+    }
+  },
+  "atlas_rebind": {
+    "atlas": "forensics/downstream/runtime-functional-atlas.json",
+    "candidate_identity": {
+      "install_prefix": "artifacts/phase2/install",
+      "libcrypto_so_3_sha256": "61373488ceea36d2a8e60c244034da756bd29391aa6a1a695168f83a5d9c6ba6",
+      "libssl_so_3_sha256": "cd24d2075273cc8bb71b0f301163615333f5ef2b7a655dbea1be8ea49b89241d"
+    },
+    "superseded_identity": {
+      "libcrypto_so_3_sha256": "2b0ff1b6b33b3f37c3abc61182f44328b6fdc99d91f7b10c69c0b0b9cc20d3ff",
+      "libssl_so_3_sha256": "f99f7159a7ff7e6f8da95d023a82ddb54339edf20a78890645250b4ef3570803"
+    },
+    "evidence_reuse": {
+      "mode": "committed-rows-carried-forward",
+      "families_reused": 166,
+      "candidate_identity_match": false,
+      "rows_marked_reused_from_candidate_identity": 332,
+      "note": "The 157 L7 rows were measured with evidence_reuse=null at the S31 identity. They are not re-measured at the 0.0.35 identity; every measured family is carried forward, including all 33 Safe-33 cohort families."
+    },
+    "evidence_status_upgraded": false,
+    "build_link_atlas_note": "forensics/downstream/build-link-atlas.json is left untouched. It is the historical record of the S31 build/link measurement at 2b0ff1b6/f99f7159 and is not the artifact the documentation generator reads for candidate identity. Rebinding it without re-running its 3,506-second measurement would claim a measurement that was not made.",
+    "body_hash": "ea9aaf4ec85a44f4094a15d05258d9d03c70bf1b181f2a0d53d75dc594d80bb1",
+    "file_sha256": "ac4a0e7fe45a2e38c664cc71c6a249938564a6dd5b2950891917ef2f79bf4bde",
+    "self_check": {
+      "command": "CARGO_TARGET_DIR=/work/court/target python3 forensics/tools/downstream_runtime.py --check",
+      "exit_code": 0,
+      "result": "with_recipe=166 cand_loaded=166 cand_functional=157 reaches_baseline=166 findings=0 control honest=True"
+    }
+  },
+  "documentation": {
+    "generator": "forensics/tools/render_docs.py",
+    "changes": [
+      "generated release row now separates the published release from the working tree",
+      "generated identity rows state that the working-tree version is not published and that the evidence is bound to the 0.0.35 tree, not the published 0.0.34 crate",
+      "generated release row now names the published artefacts (defe179f / 5066aa32)",
+      "hand-written STATUS-2026-10-20.md ## Release section corrected to the same facts"
+    ],
+    "published_release_statement": "The published release is 0.0.34 (checksum e1f553b3...), with libcrypto.so.3 defe179f... and libssl.so.3 5066aa32....",
+    "working_tree_statement": "The working tree is 0.0.35 and is not published.",
+    "evidence_binding_statement": "The evidence is bound to the 0.0.35 tree, not to the published 0.0.34 crate; downstream rows are carried forward at candidate_identity_match=false.",
+    "render_docs_check": {
+      "exit_code": 0,
+      "result": "render_docs: clean — all generated blocks match their evidence"
+    }
+  },
+  "packaging": {
+    "command": "cargo package --list --offline --allow-dirty",
+    "exit_code": 0,
+    "version_reported": "openssl-rs 0.0.35",
+    "manifest": "/work/Cargo.toml",
+    "files": 1010,
+    "previous_published_packaging_files": 1010,
+    "shape_unchanged": true,
+    "list_sha256": "aa9692fea97045f9f20e7771841f2a8273a5c295c853eeda27d138567199c62f",
+    "warnings": "four pre-existing reserved-Windows-filename warnings for src/{dsa,rsa,ec,dh}/prn.rs"
+  },
+  "not_run": [
+    "full library test suite at 0.0.35 (the 2,048-test full run remains the c911ca629 floor)",
+    "the 41 adversarial probes at 0.0.35",
+    "downstream runtime/build-link re-measurement at the 0.0.35 identity (rows carried forward instead)",
+    "BOUNDARY and SEAL gates (unchanged: NOT_RUN)"
+  ],
+  "non_claims": [
+    "The version bump and rebuild add no assurance; they only prevent the published 0.0.34 from being confused with the newer code.",
+    "The 157/157 L7 result is not a measurement at the 0.0.35 identity; every measured downstream row is carried forward at candidate_identity_match=false.",
+    "The 11 ABI courts are structural only; passing them is not parity or memory safety.",
+    "SAFE_COMPATIBLE remains 0/33; no consumer family has graduated.",
+    "A deterministic rebuild does not imply bit-identical artefacts across different compilers, flags or machines."
+  ]
+}
