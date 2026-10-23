@@ -3,9 +3,9 @@
   "kind": "safe-c33-campaign-status",
   "generated_date": "2026-10-23",
   "branch": "integrate/safe-c33",
-  "source_head": "c911ca6299e4e1bc93fa4944b66255a16242f005",
-  "source_head_subject": "Merge stage/p25/ameth-closure",
-  "source_head_note": "S21 BATCH checkpoint. The source tree includes S16-S20 (GENERAL_NAME closure, downstream re-measurement, RSA/EC/DSA/DH ENGINE adoption, the reduction census and the ameth closure) and the S21 working-tree edits (the evp_pkey_name2type method-table fallback and an ml_dsa allocation-test initialisation fix). The pinned census remains c09eef8b; no census refresh is claimed.",
+  "source_head": "7206fac7e",
+  "source_head_subject": "Merge stage/p25/uninit-class",
+  "source_head_note": "S24 working tree on top of 7206fac7e. The source tree includes S16-S22 (GENERAL_NAME closure, downstream re-measurement, RSA/EC/DSA/DH ENGINE adoption, the reduction census, the ameth closure and the uninitialised-storage class closure) and the S24 probe/documentation edits. The two DSA/DH probe corrections are #[cfg(test)]-only; no production allocation, release or dispatch site changed in S24. The pinned census remains c09eef8b; no census refresh is claimed.",
   "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
   "census": {
     "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
@@ -395,6 +395,8 @@
       "failed": 0,
       "ignored": 44,
       "total": 2092,
+      "observed_total_after_s22": 2098,
+      "observed_total_note": "2,098 tests were observed on the S22 tree through focused filters; this is not a full-suite pass. The 2,048/0/44 S21 result remains the recorded full-run floor at c911ca629.",
       "ignored_note": "The 44 ignored tests are probes run separately by design; no test was newly ignored and none was removed.",
       "source": "S21 BATCH: cargo test --lib -- --test-threads=4 and cargo test --lib -- --test-threads=1 agree",
       "parallel": "2048 passed; 0 failed; 44 ignored",
@@ -407,22 +409,35 @@
       "artifact": "artifacts/phase2/COURTS.json",
       "source": "S21 rebuild via forensics/tools/build_phase2.sh"
     },
+    "boundary_gate": {
+      "state": "NOT_RUN",
+      "scope": "S16-S24 cluster",
+      "source": "S24: no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control or C-authority differential was executed"
+    },
+    "seal_gate": {
+      "state": "NOT_RUN",
+      "scope": "S16-S24 cluster",
+      "source": "S24: all 41 adversarial probes pass, but full forensic regeneration, held-out compatibility and the complete SEAL evidence set were not executed"
+    },
     "per_file_audit_gate": {
       "partial_audited": 761,
       "remaining": 0,
       "source": "M89 receipt"
     },
     "this_batch": {
-      "batch": "S21 BATCH checkpoint after the S16-S20 cluster",
+      "batch": "S24 probe repair and documentation truth pass",
       "rust_source_changed": true,
-      "cargo_fmt": "cargo fmt --all -- --check -> clean",
-      "cargo_clippy": "cargo clippy --all-targets -- -D warnings -> clean",
-      "full_library_suite": "parallel 2048/0/44; serial 2048/0/44",
-      "phase2_rebuild": "build_phase2.sh; 11/11 ABI courts pass",
-      "docs": "render_docs.py --write; render_docs.py --check clean after regeneration",
+      "test_only_source_change": "src/dsa/object.rs and src/dh/object.rs adv_probe release assertions only; no production code changed",
+      "cargo_fmt": "cargo fmt --all -- --check -> clean (exit 0)",
+      "cargo_check": "cargo check --lib -> Finished dev profile (exit 0)",
+      "adversarial_probes": "scripts/adv-probe.sh -> all 41 probes passed (one process per probe); the ML-DSA secure-heap initialisation probe passed 10/10 isolated runs",
+      "full_library_suite": "NOT_RUN in S24; the S21 full run (2048 passed / 0 failed / 44 ignored, parallel and serial) remains the recorded floor",
+      "docs": "render_docs.py --write; render_docs.py --check clean after regeneration; render_status.py executed",
+      "release_readiness": "version 0.0.33; description/license/repository/keywords present; no cargo publish run",
       "not_run": [
-        "BOUNDARY gate for the S16-S21 cluster (independent caller/dependency-closure audit, Miri/ASan/Loom/mutation controls, authority differential)",
-        "SEAL gate (full probe suite, forensic regeneration, held-out compatibility)",
+        "BOUNDARY gate for the S16-S24 cluster (independent caller/dependency-closure audit, Miri/ASan/Loom/mutation controls, authority differential)",
+        "SEAL gate (full forensic regeneration, held-out compatibility, complete probe/court evidence set)",
+        "the full library suite after c911ca629; S24 ran only the affected probes, the ml_dsa module subset and the release-readiness checks",
         "the C-authority differential for the 11 S20 entries; S20 honesty records return codes as transcribed and asserted, not measured"
       ]
     }
@@ -477,12 +492,20 @@
       "fastd": "L6-runtime (needs TUN)",
       "sofia_sip": "L7-functional",
       "jimtcl": "L7-functional in the current atlas; the earlier L5-vs-L7 conflict is resolved by the committed row and no longer counted as unresolved",
-      "source": "forensics/downstream/runtime-functional-atlas.json body.counts.by_subject and body.runs"
+      "source": "forensics/downstream/runtime-functional-atlas.json body.counts.by_subject and body.runs",
+      "evidence_reuse": {
+        "mode": "committed-rows-carried-forward",
+        "families_reused": 165,
+        "measured_families": 166,
+        "candidate_identity_match": false,
+        "note": "165 of the 166 measured families are carried forward from a superseded candidate identity; h2o is the only measured family not in the carried-forward set. All 33 Safe-33 cohort families are in that set, so the cohort result is compatibility evidence from an earlier build, not a fresh measurement at the current identity."
+      }
     },
-    "note": "The 33 L7 results are current-candidate differential evidence, not SAFE_COMPATIBLE graduation. Each family still needs its whole dependency closure SAFETY_DISCHARGED and current-candidate functional replay."
+    "note": "The 33 L7 results are differential compatibility evidence, not SAFE_COMPATIBLE graduation. All 33 cohort rows are among the 165 carried-forward rows (`candidate_identity_match=false`), so none is presented as a fresh measurement at the current identity. Each family still needs its whole dependency closure SAFETY_DISCHARGED and current-candidate functional replay."
   },
   "remaining_obligations": [
-    "BOUNDARY and SEAL remain NOT_RUN for the S16-S21 cluster; S21 is a BATCH checkpoint only.",
+    "BOUNDARY and SEAL remain NOT_RUN for the S16-S24 cluster; S24 is a FAST probe/docs pass plus a release-readiness check, not a BATCH or SEAL gate.",
+    "S22 retained items: ml_dsa Vector::init / matrix_init remain safe raw-pointer constructors; x509::pcy_lib::tree_levels retains its aliasing obligation; provider::cipher_gcm out-buffer slice formation remains outside the owner class.",
     "S20-O2: stale 'Phase 8'/'unreachable' site comments remain at some EVP_PKEY sites; the evp_pkey_name2type comment was corrected in S21, the rest are still open.",
     "Independent review of the remaining per-file audit receipts: no per-file record claims INDEPENDENTLY_CHECKED. B39-B43 are checked at their signed scopes; B44's isolation fix and salt_len guard move are author-evidenced only (re-review NOT_RUN).",
     "B27-X2 is CLOSED by boundary-sweep-B28: OSSL_STORE_attach now assigns loader_ctx only after loader_set_params accepts, the refusal probe passes in the normal court and under ASan, and restoring the pre-fix ordering makes it fail (child-process canary faults at OSSL_STORE_close and OSSL_STORE_load). The pre-existing B27-R1 allocation-refusal leak remains recorded.",
@@ -501,7 +524,8 @@
     "The six mechanism discharges, scoped boundary discharges and independently checked batches do not sum into any consumer-level graduation.",
     "B44 is BATCH_AUTHOR_EVIDENCED, not independently checked for its isolation fix.",
     "The nine-file delta is classification (6 TEST_ONLY + 3 BOUNDARY_COVERED by shared-boundary receipt), not a re-pin of the census and not a new safety claim.",
-    "S21 is a BATCH checkpoint: BOUNDARY and SEAL are NOT_RUN, and passing the local gate does not graduate any mechanism or consumer.",
+    "S21 is a BATCH checkpoint and S24 is a FAST probe/docs pass: BOUNDARY and SEAL are NOT_RUN, and passing either local gate does not graduate any mechanism or consumer.",
+    "The S24 DSA/DH probe corrections change test assertions only: the old window-wide release count included a transient error-queue formatting allocation that is not an object member. No production behaviour, allocator seam or ownership model changed.",
     "The S20 unsafe-operation increase (1817 -> 1992) is restored authority dispatch at contracted FFI boundaries, not a widened unsafe abstraction."
   ],
   "reduction_census": {
@@ -546,6 +570,90 @@
       "subphase": "S21",
       "outcome": "BATCH checkpoint. Closed S20-O1 by implementing EVP_PKEY_type(OBJ_sn2nid(name)) / EVP_PKEY_type(OBJ_ln2nid(name)) in evp_pkey_name2type (legacy EVP_PKEY_is_a now resolves \"rsaEncryption\"). Rebuilt the Phase-2 install and ran 11/11 ABI courts green. Full BATCH gate green: fmt, clippy -D warnings, 2048 passed / 0 failed / 44 ignored both parallel and serial. BOUNDARY and SEAL remain NOT_RUN; SAFE_COMPATIBLE remains 0/33.",
       "evidence": "atlas-refresh/s21-batch-checkpoint.json; artifacts/phase2/COURTS.json"
+    },
+    {
+      "subphase": "S22",
+      "outcome": "Uninitialised-storage census: 32 owner-shaped entries examined; 5 UNSOUND sites (4 owner-shaped + 1 frame-local of the same shape) repaired, 16 SAFE-BY-CONSTRUCTION and 12 MISUSE-RESISTANT retained. ml_dsa PolyBlock and Scratch, the pkcs12 and bn owning buffers, and ssl t1_lib now initialise before any typed view or publish only raw pointers. S21-O1 is closed by construction. FAST gate only: fmt, check and focused tests; the full suite and the adversarial probes were NOT_RUN in S22. 2,098 tests observed through focused filters, not a full-suite pass. No graduation claimed.",
+      "evidence": "atlas-refresh/s22-uninit-closure.json; atlas-refresh/s22-uninit-census.md"
+    },
+    {
+      "subphase": "S23",
+      "outcome": "Integration: stage/p25/uninit-class merged into integrate/safe-c33 at 7206fac7e; the S22 source change becomes the candidate state. No additional source change in this subphase.",
+      "evidence": "git log 7206fac7e (Merge stage/p25/uninit-class)"
+    },
+    {
+      "subphase": "S24",
+      "outcome": "Probe repair and documentation truth pass. The two DSA/DH partial-cleanup probes now identify the context block and its seam-visible lock by address instead of counting every release in the window; the old total counted a transient error-queue formatting allocation as if it were an object member and never described an ownership requirement. All 41 adversarial probes pass, and the ML-DSA secure-heap initialisation probe passes 10/10 isolated runs. render_docs.py --check is clean after regeneration. Release readiness: fmt and cargo check --lib clean; crate version 0.0.33. No full library suite was run in S24; the S21 2,048-test BATCH remains the full-run floor. BOUNDARY and SEAL remain NOT_RUN; SAFE_COMPATIBLE remains 0/33.",
+      "evidence": "atlas-refresh/s24-docs-and-probes.json"
+    }
+  ],
+  "uninitialised_storage_census": {
+    "artifact": "atlas-refresh/s22-uninit-closure.json",
+    "census": "atlas-refresh/s22-uninit-census.md",
+    "owner_shaped_examined": 32,
+    "unsound_owner_shaped": 4,
+    "unsound_frame_local_same_shape": 1,
+    "unsound_total_fixed": 5,
+    "safe_by_construction": 16,
+    "misuse_resistant": 12,
+    "class_status": "CLOSED for the typed-accessor-over-uninitialised-storage class: both ml_dsa allocation surfaces and the scratch partition initialise before publication; the pkcs12 and bn owning-buffer accessors and the ssl t1_lib peer-sigalgs write no longer form a typed view over uninitialised storage.",
+    "retained": [
+      "ml_dsa Vector::init / matrix_init remain safe constructors over caller raw pointers; they do not dereference, so no UB is reachable alone. Making them unsafe fn is the AGENTS.md section 1 end state, deferred because it touches about 20 call sites.",
+      "x509::pcy_lib::tree_levels aliasing obligation (owner-derived borrow) remains retained.",
+      "provider::cipher_gcm out-buffer slice formation remains retained outside the owner class."
+    ],
+    "graduation": "No graduation claimed; FAST gate only. BOUNDARY and SEAL were not run."
+  },
+  "structural_invariants": {
+    "allocator_seam": "unchanged: CRYPTO_malloc_array and CRYPTO_secure_malloc_array keep the authority's exact size, file and line across S22 and S24; the S24 probe correction changes no production allocation or release site",
+    "repr_c_layouts": "unchanged: zero #[repr(C)] attribute diffs in S22 and S24",
+    "exported_symbols": "unchanged: zero #[no_mangle] diffs in S22 and S24",
+    "unsafe_lints": "unchanged: unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks and missing_safety_doc remain enforced",
+    "abi_courts": "Phase-2 ABI courts 11/11 at the S21 rebuild; no Phase-2 rebuild was claimed in S22 or S24",
+    "source": "atlas-refresh/s22-uninit-closure.json (structural block); S24 gate record"
+  },
+  "known_gaps": [
+    {
+      "id": "S21-O1",
+      "status": "CLOSED",
+      "detail": "The ml_dsa Vector typed-accessor-over-uninitialised-storage defect is closed by construction (PolyBlock zero-initialises before into_raw); S22 also closed the four sibling sites.",
+      "evidence": "atlas-refresh/s22-uninit-closure.json"
+    },
+    {
+      "id": "S22-RETAINED",
+      "status": "RETAINED",
+      "detail": "Vector::init / matrix_init remain safe raw-pointer constructors; the x509 policy-tree borrow and the provider cipher_gcm out-buffer slice formation remain retained obligations.",
+      "evidence": "atlas-refresh/s22-uninit-closure.json (obligations.retained)"
+    },
+    {
+      "id": "DOWNSTREAM-IMPLEMENTATION",
+      "status": "0 OPEN",
+      "detail": "No downstream family remains classified IMPLEMENTATION after the S18 h2o repair; h2o is L7-functional in the current atlas.",
+      "evidence": "atlas-refresh/s17-downstream-batch.json; atlas-refresh/s18-h2o-gap.json"
+    },
+    {
+      "id": "DOWNSTREAM-h2o",
+      "status": "CLOSED",
+      "detail": "The only S17 IMPLEMENTATION-class downstream family (h2o/neverbleed legacy RSA dispatch) was repaired in S18 and is L7-functional in the current atlas.",
+      "evidence": "atlas-refresh/s17-downstream-batch.json; atlas-refresh/s18-h2o-gap.json"
+    },
+    {
+      "id": "DOWNSTREAM-charybdis",
+      "status": "ENVIRONMENT",
+      "detail": "charybdis is L5-loaded under the authority baseline; it refuses to run as euid 0 and the court runs as root, so the environment, not the candidate, blocks it. It is not counted as a candidate failure.",
+      "evidence": "atlas-refresh/s17-downstream-batch.json"
+    },
+    {
+      "id": "DOWNSTREAM-fastd",
+      "status": "ENVIRONMENT",
+      "detail": "fastd is L6-runtime (needs a TUN device); the court does not provide TUN, so it is not counted as a candidate failure.",
+      "evidence": "atlas-refresh/s17-downstream-batch.json; forensics/downstream/runtime-functional-atlas.json"
+    },
+    {
+      "id": "DOWNSTREAM-HARNESS-FIXTURE",
+      "status": "HARNESS/FIXTURE",
+      "detail": "Seven families are HARNESS and one is FIXTURE; none is SOURCE_UNREACHABLE. They fail identically under the authority and are not implementation failures.",
+      "evidence": "atlas-refresh/s17-downstream-batch.json (classification_summary)"
     }
   ],
   "unsafe_count": {

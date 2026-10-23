@@ -1,0 +1,30 @@
+{
+  "receipt": "publish-0.0.33",
+  "date": "2026-10-23",
+  "crate": "openssl-rs",
+  "version": "0.0.33",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "note": "The contemporaneous publish receipt for 0.0.33 was not committed. This record was reconstructed in S25 from the crates.io registry response; the source commit is not recorded here rather than guessed.",
+    "working_tree": "not captured"
+  },
+  "packaging": {
+    "compressed_bytes": 8757315,
+    "limit_bytes": 10000000
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs",
+    "max_version": "0.0.33",
+    "newest_version": "0.0.33",
+    "default_version": "0.0.33",
+    "version_id": 3579425,
+    "checksum_prefix": "1230b9fc",
+    "crate_size": 8757315,
+    "published_at": "2026-10-23T00:29:16Z"
+  },
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "This record attests registry state only; it does not claim a source identity that was not captured."
+  ]
+}
