@@ -1,0 +1,205 @@
+{
+  "schema": "openssl-rs/atlas/s19-reduction-census/v1",
+  "kind": "s19-reduction-census",
+  "subphase": "S19",
+  "generated_at_utc": "2026-10-23T00:00:00Z",
+  "source": {
+    "branch": "integrate/safe-c33",
+    "head": "bcbc69d78",
+    "working_tree": "modified, uncommitted (this subagent did not commit or push)"
+  },
+  "scope": {
+    "campaign_evidence_files_with_hits": 78,
+    "campaign_evidence_matching_lines": 336,
+    "source_comment_matching_lines": 749,
+    "note": "The campaign contains no separate W1-W5 receipt directory; the present wave records are the mechanism-sweep/boundary-sweep JSONs and the per-file receipts, used as such."
+  },
+  "classification_rules": {
+    "BENIGN": "genuinely dead path, documented OpenSSL-invalid input, or stale record with no behavioural difference",
+    "DIVERGENCE": "deliberate explicit divergence, compatibility consequence stated",
+    "LATENT_REGRESSION": "reachable behaviour removed and evidence described it as a safety win (the S18 class)"
+  },
+  "summary": {
+    "benign": 7,
+    "divergence": 5,
+    "latent_regression": 24,
+    "latent_regression_open": 11,
+    "latent_regression_repaired": 13,
+    "highest_score_open": "L01 evp_pkey_asn1_ctrl pkey_ctrl arm omitted (score 100)"
+  },
+  "exposure_scale": {
+    "5": "unauthenticated remote input can reach it",
+    "4": "remote peer reachable through a normal protocol path, or public C API used by any application",
+    "3": "application API in ordinary use",
+    "2": "application using deprecated/legacy key APIs",
+    "1": "internal or rare"
+  },
+  "family_count_caveat": "families_plausibly_affected is an S19 estimate over the 166 loaded downstream rows; no per-consumer symbol-use analysis was run in this FAST subphase",
+  "latent_open": [
+    {
+      "id": "L01",
+      "file_line": "src/evp/pkey.rs:3609-3633",
+      "recorded_reduction": "the ameth half of evp_pkey_asn1_ctrl is Phase 8's and unreachable; nothing in this crate sets ameth",
+      "reachable_behaviour": "evp_pkey_asn1_ctrl returns -2 for every key with an ameth; pkey_set_type populates ameth from the landed standard_methods[] and EVP_PKEY_set1_RSA/_assign_*/EVP_PKEY_new_raw_private_key all build such keys",
+      "authority_behaviour": "calls ameth->pkey_ctrl",
+      "section17": "implementation omission; no safety justification",
+      "exposure": 4,
+      "families_plausibly_affected": 25,
+      "score": 100,
+      "status": "OPEN",
+      "mechanisms": ["EVP_PKEY_get_default_digest_nid", "EVP_PKEY_set1_encoded_public_key", "EVP_PKEY_get1_encoded_public_key", "EVP_PKEY_get_default_digest_name"]
+    },
+    {
+      "id": "L11",
+      "file_line": "src/evp/pkey.rs:3635-3720",
+      "recorded_reduction": "the delegation always goes through legacy_asn1_ctrl_to_param, because no key has an ameth",
+      "reachable_behaviour": "EVP_PKEY_get_default_digest_nid/_name return -2/failure for a legacy key whose ameth publishes pkey_ctrl (RSA/DSA/DH legacy keys)",
+      "authority_behaviour": "answers the ameth NID or name",
+      "section17": "implementation omission; symptom of L01",
+      "exposure": 4,
+      "families_plausibly_affected": 20,
+      "score": 80,
+      "status": "OPEN",
+      "depends_on": "L01"
+    },
+    {
+      "id": "L02",
+      "file_line": "src/evp/pkey.rs:1781-1806",
+      "recorded_reduction": "the error is raised for a NULL key and for a legacy key alike",
+      "reachable_behaviour": "EVP_PKEY_get_params raises P_LIB_2455 and returns 0 for a key with keymgmt == NULL; evp_pkey_get_params_to_ctrl is dead-coded on the (now false) claim that the legacy block is absent",
+      "authority_behaviour": "dispatches to evp_pkey_get_params_to_ctrl and returns translated parameters",
+      "section17": "implementation omission",
+      "exposure": 3,
+      "families_plausibly_affected": 20,
+      "score": 60,
+      "status": "OPEN"
+    },
+    {
+      "id": "L03",
+      "file_line": "src/evp/pkey.rs:2422-2469",
+      "recorded_reduction": "ameth is always NULL here, so the second path is unreachable",
+      "reachable_behaviour": "EVP_PKEY_get_raw_private_key refuses a legacy X25519/Ed25519/X448/Ed448 key whose ameth publishes get_priv_key",
+      "authority_behaviour": "exports the raw private key through ameth->get_priv_key",
+      "section17": "implementation omission",
+      "exposure": 4,
+      "families_plausibly_affected": 12,
+      "score": 48,
+      "status": "OPEN"
+    },
+    {
+      "id": "L04",
+      "file_line": "src/evp/pmeth_check.rs:154-308",
+      "recorded_reduction": "the legacy half is unreachable for the reason given on evp_pkey_public_check_combined",
+      "reachable_behaviour": "EVP_PKEY_public_check/_quick/_private_check/_pairwise_check answer -2 for legacy keys; pmeth->check and ameth->pkey_check are never called",
+      "authority_behaviour": "runs the legacy check",
+      "section17": "implementation omission; mechanism-sweep-M57 records the same claim and a wrong raise coordinate",
+      "exposure": 4,
+      "families_plausibly_affected": 12,
+      "score": 48,
+      "status": "OPEN"
+    },
+    {
+      "id": "L05",
+      "file_line": "src/evp/pkey.rs:2471-2513",
+      "recorded_reduction": "same ameth-always-NULL record as L03",
+      "reachable_behaviour": "EVP_PKEY_get_raw_public_key refuses a legacy ecx key whose ameth publishes get_pub_key",
+      "authority_behaviour": "exports the raw public key",
+      "section17": "implementation omission",
+      "exposure": 4,
+      "families_plausibly_affected": 10,
+      "score": 40,
+      "status": "OPEN"
+    },
+    {
+      "id": "L07",
+      "file_line": "src/evp/pmeth_gn.rs:745-772",
+      "recorded_reduction": "this crate's ameth is always NULL, so the legacy arm is unreachable",
+      "reachable_behaviour": "EVP_PKEY_export returns 0 for every legacy key instead of calling ameth->export_to; EVP_PKEY_todata shares the provider-only helper",
+      "authority_behaviour": "exports the legacy key through ameth->export_to",
+      "section17": "implementation omission",
+      "exposure": 3,
+      "families_plausibly_affected": 12,
+      "score": 36,
+      "status": "OPEN"
+    },
+    {
+      "id": "L06",
+      "file_line": "src/evp/pkey.rs:998-1025",
+      "recorded_reduction": "the pkey->ameth->info arm is Phase 8's and unreachable",
+      "reachable_behaviour": "EVP_PKEY_get0_description tests only keydata != NULL, so a legacy origin key (data in pkey) returns NULL instead of ameth->info",
+      "authority_behaviour": "returns the method's description",
+      "section17": "implementation omission",
+      "exposure": 3,
+      "families_plausibly_affected": 10,
+      "score": 30,
+      "status": "OPEN"
+    },
+    {
+      "id": "L08",
+      "file_line": "src/ec/ctrl.rs:30-39",
+      "recorded_reduction": "the first clause is false for every context this crate can build",
+      "reachable_behaviour": "the authority's is_legacy && pmeth != NULL && pmeth->pkey_id != EVP_PKEY_EC -> -1 guard is reachable for an engine/foreign EC context and is omitted",
+      "authority_behaviour": "refuses with -1",
+      "section17": "implementation omission; mechanism-sweep-M49 records the reduction",
+      "exposure": 2,
+      "families_plausibly_affected": 3,
+      "score": 6,
+      "status": "OPEN"
+    },
+    {
+      "id": "L09",
+      "file_line": "src/dh/ctrl.rs:32-40,131",
+      "recorded_reduction": "the first clause is false for every context this crate can build",
+      "reachable_behaviour": "the DH/DHX key-type guard is omitted and reachable for an engine/foreign DH context",
+      "authority_behaviour": "refuses with -1",
+      "section17": "implementation omission; mechanism-sweep-M48's sibling argument is stale",
+      "exposure": 2,
+      "families_plausibly_affected": 2,
+      "score": 4,
+      "status": "OPEN"
+    },
+    {
+      "id": "L10",
+      "file_line": "src/dsa/ctrl.rs:19-24,62-64",
+      "recorded_reduction": "this crate's EvpPkeyCtx has no pmeth",
+      "reachable_behaviour": "dsa_paramgen_check's pmeth != NULL && pmeth->pkey_id != EVP_PKEY_DSA -> -1 arm is reachable and omitted",
+      "authority_behaviour": "refuses with -1",
+      "section17": "implementation omission",
+      "exposure": 2,
+      "families_plausibly_affected": 1,
+      "score": 2,
+      "status": "OPEN"
+    }
+  ],
+  "latent_repaired": [
+    {"id": "F01", "file_line": "src/rsa/object.rs:340-350 (old)", "recorded_reduction": "rsa_new_intern ignored its ENGINE argument", "status": "FIXED_S18", "evidence": "s18-h2o-gap.json; h2o L5-loaded -> L7-functional"},
+    {"id": "F02", "file_line": "src/evp/pkey_ctx.rs:507-518 (old)", "recorded_reduction": "int_ctx_new/do_sigver_init/EVP_PKEY_sign provider-only; pkey->foreign ignored", "status": "FIXED_S18"},
+    {"id": "F03", "file_line": "src/evp/signature.rs:2070-2126", "recorded_reduction": "legacy one-shot sign only", "status": "FIXED_S18"},
+    {"id": "F04", "file_line": "src/ec/kmeth.rs:344-359,427", "recorded_reduction": "EC_KEY_new_method engine ignored; EC_KEY_free/set_method/copy omitted ENGINE_finish", "status": "FIXED_S19"},
+    {"id": "F05", "file_line": "src/dsa/object.rs:131-137,168", "recorded_reduction": "DSA_new_method engine ignored; DSA_free/set_method omitted ENGINE_finish", "status": "FIXED_S19"},
+    {"id": "F06", "file_line": "src/dh/object.rs:191-197,229", "recorded_reduction": "DH_new_method engine ignored; DH_free/set_method omitted ENGINE_finish", "status": "FIXED_S19"},
+    {"id": "F07", "file_line": "src/evp/signature.rs:1180-1186,2242", "recorded_reduction": "EVP_PKEY_verify/_verify_recover legacy arms stubbed as -2", "status": "FIXED_S19"},
+    {"id": "F08", "file_line": "src/evp/digest.rs:453-557,712-751", "recorded_reduction": "EVP_DigestVerifyUpdate/Final/EVP_DigestVerify legacy arms stubbed; update declared dead code", "status": "FIXED_S19"},
+    {"id": "F09", "file_line": "src/evp/asymcipher.rs:194,325", "recorded_reduction": "EVP_PKEY_encrypt/decrypt legacy arms stubbed as -2", "status": "FIXED_S19"},
+    {"id": "F10", "file_line": "src/evp/pkey.rs:2518-2554", "recorded_reduction": "EVP_PKEY_new_raw_* ignored its engine argument", "status": "FIXED_S19"},
+    {"id": "F11", "file_line": "src/evp/pkey.rs:3359,3449", "recorded_reduction": "EVP_PKEY_new_CMAC_key dropped ENGINE_get_id / OSSL_ALG_PARAM_ENGINE", "status": "FIXED_S19"},
+    {"id": "F12", "file_line": "mechanism-sweep-M6.json:39", "recorded_reduction": "r->pss was unreachable; RSA_PSS_PARAMS_free omitted", "status": "FIXED_M6"},
+    {"id": "F13", "file_line": "src/evp/pkey.rs evp_pkey_free_legacy", "recorded_reduction": "nothing writes pkey->engine/pmeth_engine; their functional references were never released", "status": "FIXED_S19"}
+  ],
+  "divergences": [
+    {"id": "D01", "file_line": "src/evp/digest.rs:95-105,1781-1798,2125", "divergence": "EVP_DigestInit_ex's non-NULL impl refused at DIGEST_311 rather than adopting the engine", "consequence": "engine-backed digest unavailable; explicit EVP_R_INITIALIZATION_ERROR"},
+    {"id": "D02", "file_line": "src/evp/cipher_ctx.rs:1928-1936,2460", "divergence": "EVP_CipherInit_ex's non-NULL impl refused at EVP_ENC_296; ctx->engine never set", "consequence": "engine-backed cipher unavailable; explicit refusal"},
+    {"id": "D03", "file_line": "src/evp/pkey.rs:2521-2527", "divergence": "new_raw_key_int still writes ameth = NULL for e == NULL, so the provider branch is tried first", "consequence": "provider-vs-legacy construction order differs for a type with both; the engine argument itself is adopted"},
+    {"id": "D04", "file_line": "mechanism-sweep-M57.json:78", "divergence": "pmeth-check legacy raise coordinate wrong (PMETH_CHECK_78 vs NO_KEY_SET); no authority differential", "consequence": "evidence gap; the legacy arm itself is L04"},
+    {"id": "D05", "file_line": "per-file/src__evp__digest.rs.md:317-322", "divergence": "sigver_legacy pmeth tail and update recorded as unreachable/dead code", "consequence": "evidence rows stale after S18/S19; no separate behaviour change"}
+  ],
+  "benign": [
+    {"id": "B01", "file_line": "src/ssl/ssl_conf.rs:27-31,1254", "record": "canames always NULL and cert_filename never installed", "why_benign": "SSL_CONF does not install a filename in this slice"},
+    {"id": "B02", "file_line": "mechanism-sweep-M45.json:41,128", "record": "DER writer has no caller in authority or crate", "why_benign": "no observable changes"},
+    {"id": "B03", "file_line": "mechanism-sweep-M67.json:46-47,167", "record": "ProvEcxCtx::propq never assigned", "why_benign": "authority-identical inert field"},
+    {"id": "B04", "file_line": "mechanism-sweep-M28.json:36", "record": "Ed448 dom2 cleared but never read", "why_benign": "setup re-checks the key type"},
+    {"id": "B05", "file_line": "mechanism-sweep-M64.json:33", "record": "NULL property definition; function dead", "why_benign": "no production caller"},
+    {"id": "B06", "file_line": "src/evp/pkey.rs:3016-3019 vs 1825-1832", "record": "export_to_provider legacy-origin arm described as absent and as live in two places", "why_benign": "documentation contradiction; code is live"},
+    {"id": "B07", "file_line": "src/evp/mac.rs:551, src/evp/fetch.rs:50, src/evp/rand.rs:722, src/evp/kdf.rs:511, src/evp/encode.rs:74, src/evp/keymgmt.rs:809, src/runtime/thread.rs:1866", "record": "allow(dead_code) for strata not landed", "why_benign": "genuinely no caller yet"}
+  ]
+}

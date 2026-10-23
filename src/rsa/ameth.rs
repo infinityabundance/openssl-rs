@@ -822,7 +822,17 @@ unsafe extern "C" fn rsa_pkey_ctrl(
 ) -> c_int {
     match op {
         ASN1_PKEY_CTRL_DEFAULT_MD_NID => {
+            /* A typed but unassigned key (`EVP_PKEY_set_type` without an assign) has no union
+             * member, and the authority's `RSA_get0_pss_params(pkey->pkey.rsa)` dereferences NULL
+             * there — UB, which §17 says not to reproduce. With no key there are no PSS parameters,
+             * so the method's own default (SHA-256) is the answer its `pss == NULL` arm gives. */
             // SAFETY: `pkey` is live.
+            if unsafe { (*pkey).pkey }.is_null() {
+                // SAFETY: `arg2` is the caller's writable `int *`.
+                unsafe { *(arg2.cast::<c_int>()) = NID_sha256 };
+                return 1;
+            }
+            // SAFETY: `pkey` is live and its union member is the live RSA object.
             if !unsafe { (*(*pkey).pkey.cast::<Rsa>()).pss }.is_null() {
                 let mut md: *const EvpMd = ptr::null();
                 let mut mgf1md: *const EvpMd = ptr::null();

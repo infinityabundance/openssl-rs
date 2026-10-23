@@ -74,7 +74,7 @@ use crate::ec::lib::{
 };
 use crate::ec::oct::{EC_POINT_oct2point, EC_POINT_point2buf};
 use crate::ec::{EcGroup, EcKey, EcPoint, EC_FLAGS_CUSTOM_CURVE, EC_FLAGS_NO_SIGN};
-use crate::evp::pkey_asn1::Engine;
+use crate::engine::eng_lib::Engine;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_EX_INDEX_EC_KEY};
@@ -208,8 +208,8 @@ pub unsafe extern "C" fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EcKey {
 ///
 /// 1. the count is decremented and a positive remainder returns **without** touching anything;
 /// 2. the key method's `finish` (the object is still whole, so a table may read it);
-/// 3. the engine release, which has no call on this crate's reachable states (see the module
-///    documentation);
+/// 3. the engine release (`ENGINE_finish(r->engine)`), which is the single release of the
+///    functional reference the constructor took when it adopted an engine;
 /// 4. the group method's `keyfinish`, which is why it is read through `r->group` rather than
 ///    `r->meth`;
 /// 5. `CRYPTO_free_ex_data`, then `CRYPTO_FREE_REF` (a no-op on this profile), then the group and
@@ -249,9 +249,11 @@ pub unsafe extern "C" fn EC_KEY_free(r: *mut EcKey) {
         unsafe { finish(r) };
     }
 
-    // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every state
-    // this crate can reach, and `ENGINE_finish(NULL)` returns 1 without touching anything. See the
-    // module documentation.
+    // The authority's `ENGINE_finish(r->engine)`: NULL unless the constructor adopted an engine,
+    // in which case this is the functional reference's single release. `ENGINE_finish(NULL)` is a
+    // defined no-op.
+    // SAFETY: `r` is live and `engine` is NULL or the functional reference this object took.
+    unsafe { crate::engine::eng_init::ENGINE_finish((*r).engine) };
 
     // SAFETY: `r` is live and this is the last reference.
     unsafe {
@@ -322,8 +324,11 @@ pub unsafe extern "C" fn EC_KEY_copy(dest: *mut EcKey, src: *const EcKey) -> *mu
                     keyfinish(dest);
                 }
             }
-            // The `#if !defined(OPENSSL_NO_ENGINE)` arm's three statements reduce to the clear:
-            // `ENGINE_finish(dest->engine)` with a NULL engine returns 1.
+            // `if (ENGINE_finish(dest->engine) == 0) return NULL; dest->engine = NULL;`
+            // SAFETY: `dest` is live and `engine` is NULL or the functional reference it holds.
+            if crate::engine::eng_init::ENGINE_finish((*dest).engine) == 0 {
+                return ptr::null_mut();
+            }
             (*dest).engine = ptr::null_mut();
         }
         (*dest).libctx = (*src).libctx;
@@ -386,8 +391,13 @@ pub unsafe extern "C" fn EC_KEY_copy(dest: *mut EcKey, src: *const EcKey) -> *mu
         }
 
         if (*src).meth != (*dest).meth {
-            // The `#if !defined(OPENSSL_NO_ENGINE)` arm reduces: `src->engine` is NULL, so
-            // `ENGINE_init` is not called and `dest->engine = src->engine` stores NULL.
+            // `if (src->engine != NULL && ENGINE_init(src->engine) == 0) return NULL;
+            //  dest->engine = src->engine;` — the destination takes its own functional reference.
+            // SAFETY: `src` is live and its `engine` is NULL or a live engine.
+            if !(*src).engine.is_null() && crate::engine::eng_init::ENGINE_init((*src).engine) == 0
+            {
+                return ptr::null_mut();
+            }
             (*dest).engine = (*src).engine;
             (*dest).meth = (*src).meth;
         }

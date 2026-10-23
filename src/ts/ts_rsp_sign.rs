@@ -63,7 +63,7 @@ use crate::runtime::stack::{
 };
 use crate::runtime::time::{OPENSSL_gmtime, TimeT, Tm};
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
-use crate::x509::v3_genn::{GENERAL_NAME_free, GENERAL_NAME_new, GeneralName, GEN_DIRNAME};
+use crate::x509::v3_genn::{GENERAL_NAME_free, GENERAL_NAME_new, GeneralName};
 use crate::x509::v3_purp::X509_check_purpose;
 use crate::x509::x509_cmp::{X509_chain_up_ref, X509_check_private_key, X509_get_subject_name};
 use crate::x509::x509_set::X509_up_ref;
@@ -1392,13 +1392,11 @@ unsafe fn ts_RESP_create_tst_info(ctx: *mut TsRespCtx, policy: *mut Asn1Object) 
                 break 'end;
             }
             // SAFETY: `tsa_name` is live; the subject name is borrowed and dup'ed.
-            unsafe {
-                (*tsa_name).type_ = GEN_DIRNAME;
-                (*tsa_name).d.directoryName =
-                    X509_NAME_dup(X509_get_subject_name((*ctx).signer_cert));
-            }
-            // SAFETY: `tsa_name` is live.
-            if unsafe { (*tsa_name).d.directoryName }.is_null() {
+            let dn = unsafe { X509_NAME_dup(X509_get_subject_name((*ctx).signer_cert)) };
+            // SAFETY: `tsa_name` is live; the duplicate is installed with the selector in one
+            // step through the audited writer.
+            unsafe { (*tsa_name).set_directory_name(dn) };
+            if dn.is_null() {
                 break 'end;
             }
             // SAFETY: `tst_info` and `tsa_name` are live.

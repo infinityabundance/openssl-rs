@@ -1,0 +1,353 @@
+{
+  "schema": "openssl-rs/safe-c33/s20-ameth-closure/v1",
+  "kind": "proof-carrying conversion receipt",
+  "subphase": "S20",
+  "title": "Close the 11 open LATENT REGRESSION entries of the S19 reduction census (legacy EVP_PKEY/ameth cluster)",
+  "source_identity": {
+    "branch": "integrate/safe-c33",
+    "head": "d271358a7",
+    "census_source_identity": "bcbc69d78 + S19 working-tree changes (s19-reduction-census.md)",
+    "working_tree": "S20 source changes, not committed and not pushed (as instructed)",
+    "authority": "forensics/authorities/src/openssl-3.6.4 (read-only transcription source)",
+    "files_changed": [
+      "src/dh/ctrl.rs",
+      "src/dsa/ctrl.rs",
+      "src/ec/ctrl.rs",
+      "src/evp/pkey.rs",
+      "src/evp/pkey_ctx.rs",
+      "src/evp/pmeth_check.rs",
+      "src/evp/pmeth_gn.rs",
+      "src/rsa/ameth.rs"
+    ]
+  },
+  "verification_rule": "Every entry below was re-read at HEAD before editing. All 11 were still real; none was already closed. No entry is retained as an intentional divergence; six safety repairs of authority UB are recorded separately under `divergences`.",
+  "entries": [
+    {
+      "id": "L01",
+      "file": "src/evp/pkey.rs",
+      "head_lines": "3609-3633 (evp_pkey_asn1_ctrl)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "evp_pkey_asn1_ctrl now dispatches: ameth == NULL -> legacy_asn1_ctrl_to_param; ameth->pkey_ctrl == NULL -> -2; otherwise calls the method's callback with arg1 widened from c_int to c_long (the ABI's pkey_ctrl signature).",
+      "authority_return_values": {
+        "ameth_null": "legacy_asn1_ctrl_to_param's value (p_lib.c:1358-1359)",
+        "pkey_ctrl_null": "-2 (p_lib.c:1360-1361)",
+        "otherwise": "pkey->ameth->pkey_ctrl(pkey, op, arg1, arg2) unchanged (p_lib.c:1362)"
+      },
+      "test": "evp::pkey::tests::evp_pkey_get_default_digest_nid_and_name_read_the_legacy_ameth",
+      "reachable_commands": "DEFAULT_MD_NID (get_default_digest_nid), SET1_TLS_ENCPT / GET1_TLS_ENCPT (set1/get1_encoded_public_key)"
+    },
+    {
+      "id": "L02",
+      "file": "src/evp/pkey.rs",
+      "head_lines": "1781-1806 (EVP_PKEY_get_params)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "Added the authority's third arm: provided key -> evp_keymgmt_get_params > 0; legacy key (type != NONE, keymgmt NULL) -> evp_pkey_get_params_to_ctrl(pkey, params) > 0; NULL/blank -> EVP_R_INVALID_KEY (P_LIB_2455) and 0. Removed the #[allow(dead_code)] that guarded the translator chain and rewrote its stale 'cannot be entered' section note. Implemented the payload-getter dispatch that the chain was missing (13 getters + 3 RSA base getters + rsa_payload_key guard): group name (DH via DH_get_nid/ossl_ffc_*, EC via EC_GROUP_get_curve_name/OSSL_EC_curve_nid2name), private key (DH/EC), public key (DH octet via ossl_dh_key2buf, DH/DSA BN, EC compressed point via EC_POINT_point2buf), EC pub x/y, DH/DSA p/q/g, decoded-from-explicit-params, RSA n/e/d, and the factor/exponent/coefficient families with the multi-prime bounds tests.",
+      "authority_return_values": {
+        "provided": "evp_keymgmt_get_params(...) > 0 (p_lib.c:2449)",
+        "legacy": "evp_pkey_get_params_to_ctrl(...) > 0 (p_lib.c:2451); translator returns 1 when every parameter is answered and -2 if any parameter has no row, is not a GET row, or has no fixer",
+        "null_or_blank": "ERR_raise(EVP_R_INVALID_KEY); return 0 (p_lib.c:2455-2456)"
+      },
+      "test": "evp::pkey::tests::evp_pkey_get_params_translates_a_legacy_key",
+      "note": "Without the getter dispatch the entry-point fix alone would have answered a wrong negative for every parameter, so both halves are required for the entry to be closed."
+    },
+    {
+      "id": "L03",
+      "file": "src/evp/pkey.rs",
+      "head_lines": "2422-2469 (EVP_PKEY_get_raw_private_key)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "Added the legacy arm: ameth NULL -> raise P_LIB_606 and 0; get_priv_key NULL -> raise P_LIB_611 and 0; callback returns 0 -> raise P_LIB_616 (EVP_R_GET_RAW_KEY_FAILED) and 0; success -> 1 (not the callback's value).",
+      "authority_return_values": "p_lib.c:605-619; success is 1, callback failure is the GET_RAW_KEY_FAILED raise plus 0, and the two absence cases are OPERATION_NOT_SUPPORTED raises plus 0",
+      "test": "evp::pkey::tests::evp_pkey_get_raw_private_and_public_key_read_the_legacy_ameth"
+    },
+    {
+      "id": "L04",
+      "file": "src/evp/pmeth_check.rs",
+      "head_lines": "154-308 (the four check entry points)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "public/param/pairwise combined functions now run the authority's legacy half in its order: type == EVP_PKEY_NONE -> -2 with the not_supported raise; ctx->pmeth->{public,param,check} when published; pkey->ameth->pkey_{public,param,check} when published; neither -> -2 with the same raise. private_check is unchanged and still answers -2, which the authority also does (pmeth_check.c:147-155).",
+      "authority_return_values": {
+        "public_check": "try_provided_check != -1 -> its 0/1; type NONE -> -2; pmeth->public_check -> its value; ameth->pkey_public_check -> its value; else -2",
+        "param_check": "same with param_check / pkey_param_check",
+        "pairwise_check": "same with check / pkey_check",
+        "private_check": "-2 for every legacy context (authority's own comment: 'not supported for legacy keys')"
+      },
+      "tests": [
+        "evp::pmeth_check::tests::evp_pkey_checks_dispatch_to_the_legacy_ameth",
+        "evp::pmeth_check::tests::evp_pkey_checks_keep_their_unsupported_answers",
+        "evp::pmeth_check::tests::evp_pkey_pairwise_check_runs_the_context_methods_check_first"
+      ]
+    },
+    {
+      "id": "L05",
+      "file": "src/evp/pkey.rs",
+      "head_lines": "2471-2513 (EVP_PKEY_get_raw_public_key)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "Added the legacy arm through ameth->get_pub_key with the three distinct sites: P_LIB_638 (no ameth), P_LIB_643 (no callback), P_LIB_648 (callback failure).",
+      "authority_return_values": "p_lib.c:637-651; identical shape to the private getter",
+      "test": "evp::pkey::tests::evp_pkey_get_raw_private_and_public_key_read_the_legacy_ameth"
+    },
+    {
+      "id": "L06",
+      "file": "src/evp/pkey.rs",
+      "head_lines": "998-1025 (EVP_PKEY_get0_description)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "The assignment test is now `keydata != NULL || pkey.ptr != NULL` (evp_pkey_is_assigned), and the legacy arm returns ameth->info. The provider arm still requires a non-NULL description and falls through.",
+      "authority_return_values": "p_lib.c:1872-1884; NULL when unassigned, provider description when provided and published, ameth->info otherwise (which is itself NULL for a method with no prose)",
+      "test": "evp::pkey::tests::evp_pkey_get0_description_reads_the_legacy_ameth"
+    },
+    {
+      "id": "L07",
+      "file": "src/evp/pmeth_gn.rs",
+      "head_lines": "745-772 (EVP_PKEY_export)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "Added struct FakeImportData and pkey_fake_import(keydata, selection, params) -> export_cb(params, export_cbarg), and the legacy arm `ameth->export_to(pkey, &data, pkey_fake_import, NULL, NULL)`. EVP_PKEY_todata inherits it unchanged.",
+      "authority_return_values": "pmeth_gn.c:435-465; NULL pkey -> raise + 0; legacy -> ameth->export_to's own value; otherwise evp_keymgmt_util_export's value",
+      "test": "evp::pmeth_gn::tests::evp_pkey_export_exports_a_legacy_key_through_its_ameth"
+    },
+    {
+      "id": "L08",
+      "file": "src/ec/ctrl.rs",
+      "head_lines": "30-39 (evp_pkey_ctx_getset_ecdh_param_checks)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "Added the authority's key-type guard: is_legacy() && pmeth != NULL && pmeth->pkey_id != EVP_PKEY_EC -> -1.",
+      "authority_return_values": "ec_ctrl.c:29-36; -2 for NULL/not-derive, -1 for a legacy context of another key type, 1 otherwise",
+      "test": "ec::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_ec_context"
+    },
+    {
+      "id": "L09",
+      "file": "src/dh/ctrl.rs",
+      "head_lines": "32-40, 131 (dh_paramgen_check, dh_param_derive_check)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "Added the authority's guard to both gates: is_legacy() && pmeth->pkey_id not in {EVP_PKEY_DH, EVP_PKEY_DHX} -> -1. The authority dereferences ctx->pmeth without a NULL test; the transcription tests it first (int_ctx_new guarantees it for a legacy context, so the answer is identical for every constructible context).",
+      "authority_return_values": "dh_ctrl.c:19-42; -2 for NULL/not-{gen,derive}, -1 for a legacy context of another key type, 1 otherwise",
+      "test": "dh::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_dh_context"
+    },
+    {
+      "id": "L10",
+      "file": "src/dsa/ctrl.rs",
+      "head_lines": "19-24, 62-64 (dsa_paramgen_check)",
+      "was_real": true,
+      "status": "repaired",
+      "change": "Added the authority's guard: pmeth != NULL && pmeth->pkey_id != EVP_PKEY_DSA -> -1. Not gated on is_legacy, as the authority's spelling is not.",
+      "authority_return_values": "dsa_ctrl.c:17-23; -2 for NULL/not-gen, -1 for a context carrying another key type's method, 1 otherwise",
+      "test": "dsa::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_dsa_context"
+    },
+    {
+      "id": "L11",
+      "file": "src/evp/pkey.rs",
+      "head_lines": "3635-3720 (EVP_PKEY_get_default_digest_nid / _name)",
+      "was_real": true,
+      "status": "repaired_by_L01",
+      "change": "No separate code change was needed: EVP_PKEY_get_default_digest_name's ameth half was already transcribed and correct, and only L01's refusal kept it unreachable. The stale 'ameth is always NULL' doc was corrected and the NID path is now exercised by the L01 test.",
+      "authority_return_values": "p_lib.c:1365-1392; the NID path returns the ameth ctrl's value (1, 2, 0 or -2) and the name path converts a positive answer with OBJ_nid2sn + OPENSSL_strlcpy while returning that value unchanged",
+      "test": "evp::pkey::tests::evp_pkey_get_default_digest_nid_and_name_read_the_legacy_ameth"
+    }
+  ],
+  "unsafe": {
+    "counting_rule": "occurrences of `unsafe {` plus `unsafe fn ` per file; HEAD = d271358a7, NOW = the S20 working tree",
+    "per_file_before_after": {
+      "src/dh/ctrl.rs": [56, 63],
+      "src/dsa/ctrl.rs": [24, 27],
+      "src/ec/ctrl.rs": [38, 42],
+      "src/evp/pkey.rs": [496, 514],
+      "src/evp/pkey_ctx.rs": [870, 975],
+      "src/evp/pmeth_check.rs": [36, 62],
+      "src/evp/pmeth_gn.rs": [103, 113],
+      "src/rsa/ameth.rs": [194, 196]
+    },
+    "total_before_after": [1817, 1992],
+    "why_it_increased": "The batch restores authority code that was absent, and that code is made of calls to existing legacy-key accessors (EVP_PKEY_get0_*, DH/DSA/RSA/EC accessors, BN_CTX, method callbacks). Each new unsafe operation is an FFI call at the documented C-ABI/accessor boundary and carries an explicit SAFETY contract. No new unsafe *assumption* was introduced without a guard; six authority-UB paths were removed instead (see `divergences`). No unsafe abstraction's contract was widened.",
+    "structural_guards": {
+      "no_mangle_diff_lines": 0,
+      "repr_c_diff_lines": 0,
+      "allocator_seam": "untouched; the only allocator-coordinate addition is the authority's own OPENSSL_free(buf) for the payload-getter buffer at ctrl_params_translate.c:1654 (CRYPTO_free with FILE_CTRL_PARAMS_TRANSLATE and LINE_FREE_PAYLOAD_BUF)"
+    }
+  },
+  "divergences": {
+    "rule": "AGENTS.md §17: UB in the C authority is not reproduced; document the boundary. Every item below is a refusal or a defined value where the authority would dereference NULL; none is a false success.",
+    "items": [
+      {
+        "id": "S20-D1",
+        "site": "src/rsa/ameth.rs (rsa_pkey_ctrl, DEFAULT_MD_NID)",
+        "authority": "RSA_get0_pss_params(pkey->pkey.rsa) dereferences a NULL union member for a typed-but-unassigned key",
+        "crate": "answers the method's default NID_sha256 with 1; no PSS parameters can exist without a key",
+        "consequence": "a typed-but-unassigned RSA key answers its default digest instead of crashing"
+      },
+      {
+        "id": "S20-D2",
+        "site": "src/evp/pkey_ctx.rs (evp_pkey_get_params_to_ctrl)",
+        "authority": "the payload getters dereference a NULL legacy union member",
+        "crate": "returns 0 (no material to answer from)",
+        "consequence": "EVP_PKEY_get_params on a typed-but-unassigned legacy key is a refusal rather than a crash"
+      },
+      {
+        "id": "S20-D3",
+        "site": "src/evp/pmeth_gn.rs (EVP_PKEY_export legacy arm)",
+        "authority": "every built-in export_to dereferences the union immediately; ameth->export_to itself is not NULL-tested",
+        "crate": "returns 0 when the union member is NULL or the method publishes no export_to",
+        "consequence": "an unassigned legacy key, or an application-registered method without export_to, is a refusal rather than a crash"
+      },
+      {
+        "id": "S20-D4",
+        "site": "src/evp/pmeth_gn.rs (pkey_fake_import)",
+        "authority": "calls data->export_cb without a NULL test",
+        "crate": "returns 0 when export_cb is None",
+        "consequence": "EVP_PKEY_export(pkey, sel, NULL, arg) cannot call through a NULL function pointer; no caller in this crate passes NULL"
+      },
+      {
+        "id": "S20-D5",
+        "site": "src/evp/pmeth_check.rs (the three combined checks, ameth arm)",
+        "authority": "the built-in check callbacks dereference the union (ec_pkey_param_check dereferences (*eckey).group, rsa_pkey_check dereferences the RSA)",
+        "crate": "with no union member, skips the ameth callback and takes not_supported (-2)",
+        "consequence": "an unassigned legacy key is refused, never reported valid"
+      },
+      {
+        "id": "S20-D6",
+        "site": "src/evp/pkey_ctx.rs (get_payload_public_key and get_payload_public_key_ec, EC arms)",
+        "authority": "EC_POINT_point2oct / EC_POINT_get_affine_coordinates dereference the group's method",
+        "crate": "returns 0 when the group or point is NULL",
+        "consequence": "an EC key with no group is refused; for a NULL point the authority's own function already returns 0"
+      }
+    ]
+  },
+  "tests": {
+    "new_tests": [
+      "evp::pkey::tests::evp_pkey_get_default_digest_nid_and_name_read_the_legacy_ameth",
+      "evp::pkey::tests::evp_pkey_get_params_translates_a_legacy_key",
+      "evp::pkey::tests::evp_pkey_get_raw_private_and_public_key_read_the_legacy_ameth",
+      "evp::pkey::tests::evp_pkey_get0_description_reads_the_legacy_ameth",
+      "evp::pmeth_check::tests::evp_pkey_checks_dispatch_to_the_legacy_ameth",
+      "evp::pmeth_check::tests::evp_pkey_checks_keep_their_unsupported_answers",
+      "evp::pmeth_check::tests::evp_pkey_pairwise_check_runs_the_context_methods_check_first",
+      "evp::pmeth_gn::tests::evp_pkey_export_exports_a_legacy_key_through_its_ameth",
+      "ec::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_ec_context",
+      "dh::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_dh_context",
+      "dsa::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_dsa_context"
+    ],
+    "negative_cases": [
+      "EVP_PKEY_get_params on a legacy RSA key asked for the EC-only group parameter -> 0 with a raised error",
+      "EVP_PKEY_get_raw_private_key on a legacy EC key (no ECX getter) -> 0 with an error",
+      "EVP_PKEY_get_default_digest_nid/-_name on a legacy DHX key (dhx_pkey_ctrl refuses every command) -> -2, output untouched",
+      "evp_pkey_asn1_ctrl driven directly with a stack ameth whose pkey_ctrl is NULL -> -2",
+      "EVP_PKEY_get0_description on a blank key -> NULL",
+      "EVP_PKEY_export on a blank key -> 0, callback not called",
+      "the three check functions on a blank key -> -2; pairwise check on a group-only EC key -> 0",
+      "EVP_PKEY_private_check on a legacy context -> -2 (authority parity)",
+      "each ctrl key-type guard: mismatched method -> -1; the correct method ids -> 1"
+    ],
+    "pre_fix_failure_basis": "Established by inspection of the removed branches, not by executing the new tests against HEAD: every positive assertion targets a branch that did not exist at d271358a7 (L01/L11 -2, L02 0 for every legacy parameter, L03/L05 0, L04 -2, L06 NULL, L07 0, L08-L10 no -1 path). No test was run against a reverted tree in this subphase.",
+    "provider_and_legacy_agreement": "Not asserted side-by-side for the same logical key. The typed evidence here is the legacy path's return codes and values; a provider comparison would need a provider key of the same type and was not run."
+  },
+  "gate": {
+    "level": "FAST",
+    "commands": [
+      "cargo fmt --all -- --check",
+      "cargo check --lib",
+      "cargo check --lib --tests",
+      "cargo clippy --lib -- -D warnings",
+      "cargo test --lib -- --test-threads=4 <name> for each new test"
+    ],
+    "verbatim": [
+      "FMT_CHECK_OK",
+      "    Checking openssl-rs v0.0.33 (/work)",
+      "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.25s",
+      "CHECK_LIB_OK",
+      "    Checking openssl-rs v0.0.33 (/work)",
+      "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.85s",
+      "CLIPPY_OK",
+      "test evp::pmeth_check::tests::evp_pkey_checks_dispatch_to_the_legacy_ameth ... ok",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.05s",
+      "test evp::pmeth_check::tests::evp_pkey_checks_keep_their_unsupported_answers ... ok",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.00s",
+      "test evp::pmeth_check::tests::evp_pkey_pairwise_check_runs_the_context_methods_check_first ... ok",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.00s",
+      "test dh::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_dh_context ... ok",
+      "test dsa::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_dsa_context ... ok",
+      "test ec::ctrl::tests::the_legacy_key_type_guard_refuses_a_non_ec_context ... ok",
+      "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2088 filtered out; finished in 0.00s",
+      "test evp::pmeth_gn::tests::evp_pkey_export_exports_a_legacy_key_through_its_ameth ... ok",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.00s",
+      "test evp::pkey::tests::evp_pkey_get_params_translates_a_legacy_key ... ok",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.00s",
+      "test evp::pkey::tests::evp_pkey_get_raw_private_and_public_key_read_the_legacy_ameth ... ok",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.00s",
+      "test evp::pkey::tests::evp_pkey_get0_description_reads_the_legacy_ameth ... ok",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.00s",
+      "test evp::pkey::tests::evp_pkey_get_default_digest_nid_and_name_read_the_legacy_ameth ... ok",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.00s",
+      "FOCUSED_OK"
+    ],
+    "not_run": [
+      "the full library suite (BATCH)",
+      "the 26 adversarial probes",
+      "authority differential for the 11 entries",
+      "Miri / sanitizers",
+      "BOUNDARY caller/dependency-closure audit"
+    ],
+    "test_count": "2091 library tests run in the working tree (2080 at HEAD + 11 new #[test] functions; the runtime total includes macro-generated tests)"
+  },
+  "empirical_downstream_spot_check": {
+    "venue": "openssl-rs-court-expand:1 (the expansion image; PHASE24_CONTAINER=1, PHASE24_IMAGE=openssl-rs-court-expand:1, PHASE24_PLATFORM=linux; both listed in forensics/downstream/container.json)",
+    "candidate": "rebuilt from the S20 working tree with forensics/tools/build_phase2.sh; the Phase-2 ABI courts all passed (ABI-SYMBOL, ABI-VERSION, ABI-DYNAMIC, ABI-LAYOUT, ABI-LINK, ABI-LOAD, ABI-CONSTANTS, ABI-MATRIX, ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT, libcrypto-contamination)",
+    "command": "python3 forensics/tools/downstream_runtime.py --measure --only h2o,stunnel,dovecot --reuse-committed --reuse-previous-candidate",
+    "verbatim": [
+      "[p1000   11] dovecot    authority L7-functional",
+      "[p1000   11] dovecot    candidate L7-functional",
+      "[p1000  403] stunnel    authority L7-functional",
+      "[p1000  403] stunnel    candidate L7-functional",
+      "[p1000  460] h2o        authority L7-functional",
+      "[p1000  460] h2o        candidate L7-functional",
+      "[downstream-runtime] elapsed=182s with_recipe=166 no_recipe=834",
+      "authority loaded=166 runtime=159 functional=157 failed=8 not_attempted=834",
+      "candidate loaded=166 runtime=159 functional=157 failed=8 not_attempted=834",
+      "candidate_reaches_baseline=166 reaches_linked_baseline=166 below_baseline=0 baseline_not_linked=0 candidate_failures={'acquire-failure': 834, 'runtime-failure': 7, 'functional-failure': 1}"
+    ],
+    "grades": {
+      "h2o": "L7-functional (authority: L7-functional)",
+      "stunnel": "L7-functional (authority: L7-functional)",
+      "dovecot": "L7-functional (authority: L7-functional)"
+    },
+    "scope_limit": "Only these three families were re-measured. The remaining 163 loaded rows in the emitted atlas are reused committed rows bound to the previous candidate install (recorded by the tool as a superseded identity), not fresh measurements."
+  },
+  "working_tree_hygiene": {
+    "reverted_after_measurement": [
+      "artifacts/phase2/install/** and artifacts/phase2/openssl (rebuilt binaries)",
+      "forensics/atlas/implemented-surface.json",
+      "forensics/downstream/runtime-functional-atlas.json (re-measured atlas)"
+    ],
+    "consequence": "The committed artifacts/phase2 install still corresponds to HEAD, not to this working-tree source. Any consumer that loads the install must rebuild it; the S20 measurement above was taken against the rebuilt install before it was reverted.",
+    "final_git_status": "only the eight src/ files listed under source_identity.files_changed are modified"
+  },
+  "residual_obligations": {
+    "open_entries": [],
+    "retained": [
+      "L02's translator is now faithful for the key material the legacy accessors expose, but no authority differential was run; the parameter-name-to-getter table is the transcription's, not a measured comparison.",
+      "The pmeth-check legacy arm is tested with a stack-built EvpPkeyCtx that int_ctx_new would not produce (no keymgmt and no pmeth); the engine-backed/foreign path that produces a real legacy context was not driven in this subphase.",
+      "The authority's unguarded ctx->pmeth dereferences in the DH gates and the check functions are represented by defensive NULL tests; the int_ctx_new invariant that makes them safe is stated in the code but not proved by a test."
+    ],
+    "newly_observed_not_fixed": [
+      {
+        "id": "S20-O1",
+        "site": "src/evp/pkey.rs evp_pkey_name2type (~line 187-206)",
+        "issue": "The EVP_PKEY_type(OBJ_sn2nid/OBJ_ln2nid) fallback is still absent, while its doc claims 'nothing exported can observe the gap'. Legacy keys now make EVP_PKEY_is_a reachable, and its legacy arm calls this function, so EVP_PKEY_is_a(legacy_key, \"rsaEncryption\") answers 0 where the authority answers 1.",
+        "disposition": "Not in the census's 11; same reachability premise, but out of S20 scope. Reported for a follow-up subphase."
+      },
+      {
+        "id": "S20-O2",
+        "site": "src/evp/pkey.rs stale 'Phase 8's' / 'unreachable' doc claims remaining at ~lines 181-206, 1041, 1152, 2948 (corrected), 3864 (corrected)",
+        "issue": "Several site comments still describe the legacy block as absent. The ones falsified by this batch were corrected; the rest are pre-existing stale prose.",
+        "disposition": "Documentation only; no behaviour change."
+      }
+    ]
+  },
+  "honesty": "No claim of authority parity is made on the basis of an unobserved comparison. Return codes are transcribed from forensics/authorities/src/openssl-3.6.4 and asserted by tests; no C-authority differential was executed for these 11 entries in S20. The pre-fix failure of the new tests is established by inspection of the removed branches, not by execution against HEAD."
+}

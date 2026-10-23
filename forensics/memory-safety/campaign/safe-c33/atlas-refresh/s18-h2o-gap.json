@@ -1,0 +1,220 @@
+{
+  "schema": "openssl-rs/atlas/s18-h2o-gap/v1",
+  "kind": "s18-h2o-gap",
+  "subphase": "S18",
+  "generated_at_utc": "2026-10-23T05:47:06Z",
+  "source": {
+    "branch": "integrate/safe-c33",
+    "head": "5da2d7490b2b9c68c0c4a4d04281e9fd6ce0ca20",
+    "head_short": "5da2d7490",
+    "working_tree": "modified, uncommitted (this subagent did not commit or push)",
+    "src_diff_sha256": "695a959ca4e477e5f71f6ab1af5400bad788f74bb38404fa85f03b5e8493a5bd",
+    "src_diffstat": "5 files changed, 954 insertions(+), 191 deletions(-)",
+    "note": "The candidate install was rebuilt from this working tree; the measurement identity below is the rebuilt library, not the S17 install."
+  },
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "01e774b386f35bd917245bc539ad462d2631305a794dfbd0df279e90b17d9f6e",
+    "libssl_so_3_sha256": "43dfcad45f7196d882e8fb583de68bda146c2d537ce30969cdbcc30b9d1f5dca"
+  },
+  "previous_candidate_identity": {
+    "source": "s17-downstream-batch.json",
+    "libcrypto_so_3_sha256": "f4ba3f7369339e396fba2df1ea6907ec50b8729b8d2d65111a0226067cdf69b6",
+    "libssl_so_3_sha256": "862afafada1b30e7bb7f1dc05f7f2aa55c639bcc7b8b88ae5cdfbc526e043f16"
+  },
+  "build": {
+    "command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh (inside docker/openssl-rs-court.sh, expansion image)",
+    "exit_code": 0,
+    "log": "court/tmp/s18-build-final2.log",
+    "log_sha256": "aa1f4d96fcfb3f524cc757f2096972cdc2a9463c8c3b66eb49f88bc7b8fbd04f",
+    "phase2_courts": "all_pass=True (ABI-SYMBOL, ABI-VERSION, ABI-DYNAMIC, ABI-LAYOUT, ABI-LINK, ABI-LOAD, ABI-CONSTANTS, ABI-MATRIX, ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT, libcrypto-contamination)"
+  },
+  "reproduction": {
+    "finding": "The failure is NOT h2o-specific and is NOT before SSL_new. A versioned trace of the first run shows SSL_new and SSL_accept are reached; SSL_accept returns -1 with SSL_get_error = 1 (SSL_ERROR_SSL). The S17 LD_PRELOAD trace's missing SSL_new was incomplete instrumentation, not the call flow.",
+    "standalone_c": {
+      "program": "court/tmp/s18-h2o/ssl_accept_engine_probe.c (never committed)",
+      "shape": "PEM private key -> public-only RSA (n,e + RSA_FLAG_EXT_PKEY) whose rsa_sign/rsa_priv_enc live in a custom RSA_METHOD installed on an ENGINE, adopted with RSA_new_method(engine); SSL_CTX_use_certificate_chain_file + SSL_CTX_use_PrivateKey + socketpair + SSL_new/SSL_set_fd/SSL_accept on one side and SSL_connect on the other",
+      "authority_output": [
+        "engine_adopted=1",
+        "method_adopted=1",
+        "server_accept=1 server_error=0",
+        "client_connect=1 client_error=0",
+        "sign_calls=0 priv_enc_calls=1"
+      ],
+      "pre_fix_candidate_output": [
+        "engine_adopted=0",
+        "method_adopted=0",
+        "server_accept=-1 server_error=1",
+        "client_connect=-1 client_error=1",
+        "sign_calls=0 priv_enc_calls=0"
+      ],
+      "post_fix_candidate_output": [
+        "engine_adopted=1",
+        "method_adopted=1",
+        "server_accept=1 server_error=0",
+        "client_connect=1 client_error=0",
+        "sign_calls=0 priv_enc_calls=1"
+      ]
+    },
+    "h2o_manual": {
+      "program": "court/tmp/s18-h2o/run_h2o.sh (never committed)",
+      "config": "listen/ssl with the fixture cert+key; host default; access-log /dev/null; error-log to a file",
+      "pre_fix": "CLIENT_ERROR SSLZeroReturnError TLS/SSL connection has been closed (EOF); server accepts and closes",
+      "post_fix": "CONNECTED TLSv1.3 TLS_AES_256_GCM_SHA384; BODY HTTP/1.1 200 OK; template-payload served"
+    }
+  },
+  "divergence_table": [
+    {
+      "call": "RSA_new_method(engine) -> RSA_get0_engine / RSA_get_method",
+      "authority": "engine pointer / custom RSA_METHOD",
+      "candidate_pre_fix": "NULL / default table (RSA_PKCS1_OpenSSL)",
+      "candidate_post_fix": "engine pointer / custom RSA_METHOD"
+    },
+    {
+      "call": "SSL_accept (TLS 1.3, public-only engine-backed RSA key)",
+      "authority": "1 (with SSL_ERROR_WANT_READ on the earlier non-blocking calls); engine priv_enc invoked once",
+      "candidate_pre_fix": "-1, SSL_get_error=1 (SSL_ERROR_SSL); error stack: rsa_ossl_private_encrypt:missing private key (rsa_ossl.c:400), rsa_sign_directly:RSA lib (rsa_sig.c:821), SSL routines::internal error (statem.c:170); engine callbacks never invoked",
+      "candidate_post_fix": "1; engine priv_enc invoked once"
+    },
+    {
+      "call": "SSL_CTX_use_certificate_chain_file / SSL_CTX_use_PrivateKey / SSL_CTX_callback_ctrl(63,72) / SSL_CTX_ctrl(64)",
+      "authority": "1 / 1 / 1 / 1",
+      "candidate_pre_fix": "1 / 1 / 1 / 1 — these were never the divergence",
+      "candidate_post_fix": "1 / 1 / 1 / 1"
+    },
+    {
+      "call": "h2o listener workload (TLS 1.3, verified client)",
+      "authority": "L7-functional (HTTP 200, template-payload)",
+      "candidate_pre_fix": "L5-loaded (TCP listener accepts, handshake closed before completion)",
+      "candidate_post_fix": "L7-functional"
+    }
+  ],
+  "root_cause": {
+    "mechanism_1": "rsa_new_intern ignored its ENGINE argument (an explicitly documented 'unreachable' reduction), so neverbleed's custom RSA_METHOD was never adopted; RSA_sign/RSA_private_encrypt dispatched to the default table, which has no private key for the public-only object.",
+    "mechanism_2": "Even with the method adopted, int_ctx_new / do_sigver_init / EVP_PKEY_sign / EVP_DigestSignFinal always took the provider path and ignored pkey->foreign. A foreign legacy key was exported to a provider keymgmt, which rebuilds the key from n/e (the custom RSA_METHOD cannot cross the provider boundary), so the provider's rsa_sign_directly again reached rsa_ossl_private_encrypt with no private key.",
+    "regression_from_own_conversion": "yes — both are reductions introduced by this campaign: the ENGINE block was omitted from rsa_new_intern, and the legacy EVP_PKEY_METHOD half was stubbed with 'pmeth is always NULL' assumptions that a real consumer (h2o/neverbleed) falsifies.",
+    "evidence": "engine_adopted changed 0 -> 1 with the first fix; server_accept stayed -1 until the foreign-key legacy routing landed; the direct C probe and the h2o trace reproduce both stages."
+  },
+  "fix": {
+    "src/rsa/object.rs": [
+      "rsa_new_intern: restore the authority's ENGINE block (ENGINE_init(engine) / ENGINE_get_default_RSA() / ENGINE_get_RSA, RSA_LIB_106/116 failures, functional reference stored in r->engine).",
+      "Rsa::destroy_body and RSA_set_method: call ENGINE_finish(r->engine) at the authority's position.",
+      "RSA_new_method/RSA_get0_engine docs updated (the 'engine is ignored' claim removed).",
+      "New focused tests (see tests)."
+    ],
+    "src/rsa/mod.rs": [
+      "Rsa::engine is typed with the real crate::engine::eng_lib::Engine (layout-neutral: still one pointer)."
+    ],
+    "src/evp/pkey_ctx.rs": [
+      "int_ctx_new: honour pkey->pmeth_engine/pkey->engine and ENGINE_get_pkey_meth_engine; keytype = OBJ_nid2sn(id) only for a non-foreign key; foreign keys take EVP_PKEY_meth_find(id) with no provider fetch; application methods suppress the fetch; the method's init callback runs and a failed init clears pmeth before release.",
+      "EVP_PKEY_CTX_new / EVP_PKEY_CTX_new_id: forward the caller's explicit ENGINE instead of discarding it; the constructor's engine argument now takes the functional reference exactly as the authority does.",
+      "EVP_PKEY_CTX_free body: pmeth->cleanup at the authority's position and ENGINE_finish(ctx->engine).",
+      "EVP_PKEY_CTX_ctrl: the legacy pmeth->ctrl arm (with the keytype test and the -2 command-not-supported raise).",
+      "EVP_PKEY_CTX_dup: the legacy pmeth->copy arm (with ENGINE_init for the copy) instead of the unconditional err:."
+    ],
+    "src/evp/signature.rs": [
+      "signature_init_legacy: the authority's pmeth sign/verify/verify_recover init switch, the missing-callback 'return 1', the err: reset and the cached-data replay.",
+      "EVP_PKEY_sign: the legacy arm (pmeth->sign) with the M_check_autoarg length-query/short-buffer prelude."
+    ],
+    "src/evp/digest.rs": [
+      "sigver_legacy: the authority's legacy init (digest-by-name lookup, default digest NID fallback, signctx_init/digestsign/EVP_PKEY_sign_init chain, set_signature_md, EVP_DigestInit_ex, digest_custom flag).",
+      "EVP_DigestSignUpdate: the legacy pmeth digest_custom arm, then EVP_DigestUpdate.",
+      "EVP_DigestSignFinal: the legacy digest_custom/SIGCTX_CUSTOM/signctx/EVP_PKEY_sign arms, including the copied-context path."
+    ],
+    "abi": "No export added or removed; no #[repr(C)] line changed; pointer-only Rust parameter type changes are ABI-neutral. The Phase-2 ABI courts all pass."
+  },
+  "tests": [
+    {
+      "name": "rsa::object::tests::rsa_new_method_adopts_the_engine_method_and_rsa_sign_dispatches_to_it",
+      "kind": "precise API contract",
+      "before_fix": "FAILED at the first RSA_get0_engine assertion (left 0x0, right 0x...), observed by temporarily restoring the pre-fix constructor behaviour",
+      "after_fix_line": "test rsa::object::tests::rsa_new_method_adopts_the_engine_method_and_rsa_sign_dispatches_to_it ... ok"
+    },
+    {
+      "name": "rsa::object::tests::engine_backed_public_key_signs_through_the_legacy_evp_path",
+      "kind": "direct-call proxy for the TLS signing path",
+      "before_fix": "FAILED at EVP_DigestSignInit (left 0, right 1), observed by temporarily disabling the foreign-key branch; the pre-fix candidate install fails the same contract end-to-end",
+      "after_fix_line": "test rsa::object::tests::engine_backed_public_key_signs_through_the_legacy_evp_path ... ok",
+      "honesty": "This is a direct-call proxy, not a TLS handshake. The end-to-end evidence is the standalone SSL_accept probe and the h2o measurement below."
+    }
+  ],
+  "gate": {
+    "fmt": "cargo fmt --all -- --check -> FMT_OK",
+    "check": "cargo check --lib -> Finished (no warnings)",
+    "clippy": "cargo clippy --lib -- -D warnings -> Finished (no warnings)",
+    "focused_tests": "both tests pass; 2073 other tests filtered out",
+    "abi": "no export/signature-name diff; 0 #[repr(C)] diff lines; 0 #[no_mangle] diff lines; build_phase2 ABI courts all_pass=True",
+    "not_run": [
+      "full library suite (task gate says FAST only; deferred to BATCH)",
+      "adversarial probes (deferred)",
+      "Miri/ASan on the new legacy path (deferred to BOUNDARY)"
+    ]
+  },
+  "measurement": {
+    "command": "python3 forensics/tools/downstream_runtime.py --measure --only h2o --reuse-committed --reuse-previous-candidate",
+    "why_reuse": "the tool's --only only limits work when a reuse atlas is supplied; --reuse-previous-candidate is the explicit superseded-identity escape hatch after a rebuild",
+    "log": "court/tmp/s18-h2o-measure-final2.log",
+    "log_sha256": "e7f2c4c323aa662a8402ffd2262a8269c5d1e1768cecd5f992e6d4b1490574f8",
+    "candidate_identity_match": false,
+    "candidate_identity_match_note": "h2o's two rows were freshly measured against the new install; the 165 other families are committed rows bound to the S17 candidate identity, which is why the atlas records evidence_reuse.candidate_identity_match=false and carried-forward rows.",
+    "summary_lines": [
+      "  [p1000  460] h2o        authority L7-functional",
+      "  [p1000  460] h2o        candidate L7-functional",
+      "[downstream-runtime] elapsed=17s with_recipe=166 no_recipe=834",
+      "authority loaded=166 runtime=159 functional=157 failed=8 not_attempted=834",
+      "candidate loaded=166 runtime=159 functional=157 failed=8 not_attempted=834",
+      "candidate_reaches_baseline=166 reaches_linked_baseline=166 below_baseline=0 baseline_not_linked=0 candidate_failures={'acquire-failure': 834, 'runtime-failure': 7, 'functional-failure': 1}"
+    ],
+    "h2o_grade_before": "L5-loaded",
+    "h2o_grade_after": "L7-functional",
+    "atlas": "forensics/downstream/runtime-functional-atlas.json (h2o rows: authority L7-functional, candidate L7-functional, reused_from_candidate_identity=null)"
+  },
+  "compatibility_divergences_accepted": [
+    {
+      "divergence": "EVP_PKEY_sign's M_check_autoarg error raises (EVP_R_INVALID_KEY for a zero-size key, EVP_R_BUFFER_TOO_SMALL for a short buffer) are not raised; the authority's return values are preserved.",
+      "classification": "authority macro-defined raise sites are absent from the generated err-site table; the two branches are not reachable in the h2o/neverbleed shape (the TLS caller queries the length first and allocates that size). Recorded as an evidence gap, not a behavior change in the tested path.",
+      "section17": "implementation-defined / evidence gap"
+    },
+    {
+      "divergence": "EVP_PKEY_CTX_dup takes the ENGINE functional reference immediately before pmeth->copy rather than before the allocation.",
+      "classification": "not observable: no callback or error path runs between the two positions for a successful copy; the failure path releases the reference exactly once.",
+      "section17": "implementation-defined ordering"
+    }
+  ],
+  "remaining_gaps": [
+    {
+      "gap": "EC_KEY_new_method / ossl_ec_key_new_method_int still ignore the ENGINE argument (the same omission class as the RSA one).",
+      "impact": "an ECDSA neverbleed key would still fail; the h2o fixture uses an RSA certificate, so this subphase did not exercise it.",
+      "status": "recorded, not fixed"
+    },
+    {
+      "gap": "The legacy verify half (EVP_DigestVerifyUpdate/Final and EVP_PKEY_verify legacy arms) remains stubbed.",
+      "impact": "server-side h2o only signs with the engine key; a client-side/foreign-key verify path is not claimed.",
+      "status": "recorded, not fixed"
+    }
+  ],
+  "safety_obligations": {
+    "new_unsafe_abstractions": "none",
+    "notes": "All added unsafe operations are dereferences of the context/key/method pointers and calls to the method tables inside private unsafe fns (sigver_legacy, evp_pkey_sign_legacy, digest_sign_final_legacy, signature_init_legacy, int_ctx_new, EVP_PKEY_CTX_dup, ctrl). Each has a SAFETY comment and an explicit precondition. No safe fn was given raw work.",
+    "retained_obligations": [
+      "An EVP_PKEY_METHOD installed by an application must outlive any context built from it (authority contract; standard tables are statics).",
+      "ENGINE_init's functional reference is released exactly once: RSA_free/RSA_set_method for Rsa, EVP_PKEY_CTX_free for EvpPkeyCtx, and the dup failure path for its copy.",
+      "The method's init must have run before its ctrl/sign/cleanup callbacks; int_ctx_new now calls it and clears pmeth on failure so cleanup never sees a half-built method context."
+    ],
+    "hidden_obligations_found": "The 'engine is unreachable' claim in src/rsa/object.rs was a hidden false assumption: a real consumer builds an ENGINE and passes it to RSA_new_method. It is removed and the code now honours the argument.",
+    "unsafe_block_lines_before_after": {
+      "src/rsa/object.rs": "163 -> 175",
+      "src/rsa/mod.rs": "90 -> 90",
+      "src/evp/pkey_ctx.rs": "811 -> 841",
+      "src/evp/signature.rs": "207 -> 225",
+      "src/evp/digest.rs": "620 -> 665",
+      "metric_note": "counted as lines containing 'unsafe {' (grep -c), which includes doc-comment examples and test code; the diff adds call-site unsafe blocks, not new unsafe abstractions"
+    }
+  },
+  "non_claims": [
+    "h2o reaching L7-functional does not graduate any mechanism to SAFETY_DISCHARGED: no Miri/ASan/negative-control evidence was produced in this FAST-only subphase.",
+    "The two focused tests are API/contract tests; the end-to-end claim rests on the standalone SSL_accept probe and the downstream workload, not on the unit tests alone.",
+    "The S17 observation 'no SSL_new/SSL_accept' is corrected: a versioned trace shows both calls; the earlier trace did not capture them.",
+    "No full library suite, adversarial probe suite or forensic regeneration was run."
+  ]
+}

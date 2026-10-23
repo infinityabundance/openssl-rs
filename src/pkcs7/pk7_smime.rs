@@ -456,6 +456,27 @@ unsafe fn pkcs7_copy_existing_digest(p7: *mut Pkcs7, si: *mut Pkcs7SignerInfo) -
     0
 }
 
+/// Release the chain `PKCS7_dataInit` returned, but never the caller's `indata`.
+///
+/// `PKCS7_dataInit` puts the filters it built at the head of the chain and the data source at
+/// the tail; when no filter was built (a SignedData with an empty `digestAlgorithms` SET and no
+/// cipher) it returns the caller's BIO itself. The authority's `err:` label therefore unwinds
+/// with `BIO_pop`/`BIO_free` **while `p7bio != indata`** (`pk7_smime.c:356-360`). This helper is
+/// that loop, so no failure path can free a BIO this call did not create (CVE-2026-45447).
+///
+/// # Safety
+/// `p7bio` is NULL or the live head of a chain; `indata` is NULL or the caller's live BIO at the
+/// tail of that chain (or `p7bio` itself, when no filter was constructed).
+unsafe fn free_p7bio_chain(mut p7bio: *mut Bio, indata: *mut Bio) {
+    while !p7bio.is_null() && p7bio != indata {
+        // SAFETY: `p7bio` is a live chain head; popping detaches its next link.
+        let next = unsafe { BIO_pop(p7bio) };
+        // SAFETY: `p7bio` was created by `PKCS7_dataInit` for this call.
+        unsafe { BIO_free(p7bio) };
+        p7bio = next;
+    }
+}
+
 /// `int PKCS7_verify(PKCS7 *p7, STACK_OF(X509) *certs, X509_STORE *store, BIO *indata, BIO *out,
 /// int flags)` — `pk7_smime.c:211-364`.
 ///
@@ -607,7 +628,7 @@ pub unsafe extern "C" fn PKCS7_verify(
     }
 
     // SAFETY: `p7` is live; `indata` is null or live.
-    let mut p7bio = unsafe { PKCS7_dataInit(p7, indata) };
+    let p7bio = unsafe { PKCS7_dataInit(p7, indata) };
     if p7bio.is_null() {
         // SAFETY: owned here.
         unsafe {
@@ -627,7 +648,7 @@ pub unsafe extern "C" fn PKCS7_verify(
             // SAFETY: a compile-time-constant site.
             unsafe {
                 raise_site(&err_sites::PKCS7_SMIME_312);
-                BIO_free_all(p7bio);
+                free_p7bio_chain(p7bio, indata);
                 X509_STORE_CTX_free(cert_ctx);
                 OPENSSL_sk_free(untrusted);
                 OPENSSL_sk_free(signers);
@@ -647,7 +668,7 @@ pub unsafe extern "C" fn PKCS7_verify(
             if text {
                 BIO_free(tmpout);
             }
-            BIO_free_all(p7bio);
+            free_p7bio_chain(p7bio, indata);
             X509_STORE_CTX_free(cert_ctx);
             OPENSSL_sk_free(untrusted);
             OPENSSL_sk_free(signers);
@@ -673,7 +694,7 @@ pub unsafe extern "C" fn PKCS7_verify(
             unsafe {
                 raise_site(&err_sites::PKCS7_SMIME_332);
                 BIO_free(tmpout);
-                BIO_free_all(p7bio);
+                free_p7bio_chain(p7bio, indata);
                 X509_STORE_CTX_free(cert_ctx);
                 OPENSSL_sk_free(untrusted);
                 OPENSSL_sk_free(signers);
@@ -700,7 +721,7 @@ pub unsafe extern "C" fn PKCS7_verify(
                     if text {
                         BIO_free(tmpout);
                     }
-                    BIO_free_all(p7bio);
+                    free_p7bio_chain(p7bio, indata);
                     X509_STORE_CTX_free(cert_ctx);
                     OPENSSL_sk_free(untrusted);
                     OPENSSL_sk_free(signers);
@@ -719,14 +740,8 @@ pub unsafe extern "C" fn PKCS7_verify(
         }
         X509_STORE_CTX_free(cert_ctx);
     }
-    // SAFETY: unwind the BIO chain back to the caller's `indata`.
-    while !p7bio.is_null() && p7bio != indata {
-        // SAFETY: `p7bio` is a live chain.
-        let next = unsafe { BIO_pop(p7bio) };
-        // SAFETY: `p7bio` is live and owned here.
-        unsafe { BIO_free(p7bio) };
-        p7bio = next;
-    }
+    // SAFETY: unwind the chain back to the caller's `indata`; the caller's BIO is never freed.
+    unsafe { free_p7bio_chain(p7bio, indata) };
     // SAFETY: both are live stacks owned here.
     unsafe {
         OPENSSL_sk_free(signers);
@@ -993,4 +1008,286 @@ pub unsafe extern "C" fn PKCS7_decrypt(
     // SAFETY: `tmpmem` is owned here; `buf` releases its own block on drop.
     unsafe { BIO_free_all(tmpmem) };
     ret
+}
+
+#[cfg(test)]
+mod data_init_ownership_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::runtime::bio::method::{
+        BIO_meth_free, BIO_meth_new, BIO_meth_set_destroy, BIO_meth_set_read,
+    };
+    use crate::runtime::bio::{BIO_free, BIO_new, Bio};
+    use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_push};
+    use core::sync::atomic::{AtomicI32, Ordering};
+
+    static CALLER_FREES: AtomicI32 = AtomicI32::new(0);
+    static PAYLOAD_LEFT: AtomicI32 = AtomicI32::new(1);
+
+    unsafe extern "C" fn caller_read(_b: *mut Bio, data: *mut c_char, len: c_int) -> c_int {
+        if PAYLOAD_LEFT.swap(0, Ordering::SeqCst) == 0 {
+            return 0;
+        }
+        let n = len.clamp(0, 5);
+        // SAFETY: `data` is writable for `len` bytes per the BIO read contract.
+        unsafe {
+            for i in 0..n as usize {
+                *data.add(i) = b'x' as c_char;
+            }
+        }
+        n
+    }
+
+    unsafe extern "C" fn caller_destroy(_b: *mut Bio) -> c_int {
+        CALLER_FREES.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    /// Build a SignedData whose `digestAlgorithms` SET is empty but which still carries one
+    /// signer info whose issuer+serial matches `cert`. That is the CVE-2026-45447 input shape:
+    /// `PKCS7_dataInit` builds no filter, so it returns the caller's BIO itself.
+    ///
+    /// # Safety
+    /// Every pointer is created here and released by the caller of the returned tuple.
+    unsafe fn signed_data_fixture(
+        cert: *mut X509,
+        empty_digest_set: bool,
+    ) -> (*mut Pkcs7, *mut OpenSslStack) {
+        // SAFETY: all objects are created here; failures panic in the test.
+        unsafe {
+            let p7 = crate::pkcs7::pk7_asn1::PKCS7_new();
+            assert!(!p7.is_null());
+            assert_eq!(
+                crate::pkcs7::pk7_lib::PKCS7_set_type(p7, crate::runtime::obj::NID_pkcs7_signed),
+                1
+            );
+
+            let si = crate::pkcs7::pk7_asn1::PKCS7_SIGNER_INFO_new();
+            assert!(!si.is_null());
+            let ias = crate::pkcs7::pk7_asn1::PKCS7_ISSUER_AND_SERIAL_new();
+            assert!(!ias.is_null());
+            let issuer = crate::x509::x509_cmp::X509_get_issuer_name(cert);
+            (*ias).issuer = crate::x509::x_name::X509_NAME_dup(issuer);
+            assert!(!(*ias).issuer.is_null());
+            (*ias).serial = crate::asn1::prim::ASN1_INTEGER_dup(
+                crate::x509::x509_cmp::X509_get0_serialNumber(cert),
+            );
+            assert!(!(*ias).serial.is_null());
+            (*si).issuer_and_serial = ias;
+            let alg = crate::asn1::x_algor::X509_ALGOR_new();
+            assert!(!alg.is_null());
+            assert_eq!(
+                crate::asn1::x_algor::X509_ALGOR_set0(
+                    alg,
+                    crate::runtime::obj::OBJ_nid2obj(crate::runtime::obj::NID_sha256),
+                    crate::asn1::layout::V_ASN1_NULL,
+                    ptr::null_mut(),
+                ),
+                1
+            );
+            (*si).digest_alg = alg;
+            assert_eq!(crate::pkcs7::pk7_lib::PKCS7_add_signer(p7, si), 1);
+
+            let sign = (*p7).d.sign;
+            if empty_digest_set {
+                // Drop the digest algorithm the setter registered, leaving the malformed empty
+                // SET (`OPENSSL_sk_free` of the stack only; its element stays owned by the
+                // signer info).
+                OPENSSL_sk_free((*sign).md_algs);
+                (*sign).md_algs = OPENSSL_sk_new_null();
+                assert!(!(*sign).md_algs.is_null());
+            }
+
+            let certs = OPENSSL_sk_new_null();
+            assert!(!certs.is_null());
+            assert_eq!(OPENSSL_sk_push(certs, cert.cast()), 1);
+            (p7, certs)
+        }
+    }
+
+    /// The caller's BIO must survive a failed verification whose `digestAlgorithms` is empty:
+    /// `PKCS7_dataInit` returned it unchanged, so no cleanup path may free it.
+    #[test]
+    fn a_failed_verify_never_frees_the_callers_bio() {
+        let _g = crate::test_support::lock_global_state();
+        CALLER_FREES.store(0, Ordering::SeqCst);
+        PAYLOAD_LEFT.store(1, Ordering::SeqCst);
+        // SAFETY: every object is created and released below; the caller BIO is freed only if
+        // the verification did not already free it.
+        unsafe {
+            let cert = crate::x509::x_x509::X509_new();
+            assert!(!cert.is_null());
+            let name = crate::x509::x509_cmp::X509_get_issuer_name(cert);
+            assert_eq!(
+                crate::x509::x509name::X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    crate::asn1::layout::MBSTRING_UTF8,
+                    b"caller".as_ptr(),
+                    6,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            let serial = crate::x509::x509_cmp::X509_get0_serialNumber(cert) as *mut _;
+            assert_eq!(crate::asn1::prim::ASN1_INTEGER_set(serial, 1), 1);
+
+            let (p7, certs) = signed_data_fixture(cert, true);
+
+            let method = BIO_meth_new(0, c"caller-owned".as_ptr());
+            assert!(!method.is_null());
+            assert_eq!(BIO_meth_set_read(method, Some(caller_read)), 1);
+            assert_eq!(BIO_meth_set_destroy(method, Some(caller_destroy)), 1);
+            let caller_bio = BIO_new(method);
+            assert!(!caller_bio.is_null());
+
+            // `PKCS7_NOVERIFY` skips the certificate path so the run reaches `PKCS7_dataInit`;
+            // the signature check then fails because the chain has no MD filter.
+            let rc = PKCS7_verify(
+                p7,
+                certs,
+                ptr::null_mut(),
+                caller_bio,
+                ptr::null_mut(),
+                PKCS7_NOVERIFY,
+            );
+            assert_eq!(rc, 0, "the malformed SignedData must fail verification");
+            assert_eq!(
+                CALLER_FREES.load(Ordering::SeqCst),
+                0,
+                "PKCS7_verify freed a BIO it did not create"
+            );
+
+            // The caller can still use and release it exactly once.
+            BIO_free(caller_bio);
+            assert_eq!(
+                CALLER_FREES.load(Ordering::SeqCst),
+                1,
+                "the caller's single free is the only release"
+            );
+            BIO_meth_free(method);
+            OPENSSL_sk_free(certs);
+            crate::pkcs7::pk7_asn1::PKCS7_free(p7);
+            crate::x509::x_x509::X509_free(cert);
+        }
+    }
+
+    /// A successful path (signature checking disabled) must also leave the caller's BIO alone:
+    /// with no filter the value of `PKCS7_dataInit` is the caller's BIO itself.
+    #[test]
+    fn a_successful_verify_keeps_the_caller_bio() {
+        let _g = crate::test_support::lock_global_state();
+        CALLER_FREES.store(0, Ordering::SeqCst);
+        PAYLOAD_LEFT.store(1, Ordering::SeqCst);
+        // SAFETY: every object is created and released below.
+        unsafe {
+            let cert = crate::x509::x_x509::X509_new();
+            assert!(!cert.is_null());
+            let name = crate::x509::x509_cmp::X509_get_issuer_name(cert);
+            assert_eq!(
+                crate::x509::x509name::X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    crate::asn1::layout::MBSTRING_UTF8,
+                    b"caller2".as_ptr(),
+                    7,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            let serial = crate::x509::x509_cmp::X509_get0_serialNumber(cert) as *mut _;
+            assert_eq!(crate::asn1::prim::ASN1_INTEGER_set(serial, 1), 1);
+            let (p7, certs) = signed_data_fixture(cert, true);
+
+            let method = BIO_meth_new(0, c"caller-owned-ok".as_ptr());
+            assert!(!method.is_null());
+            assert_eq!(BIO_meth_set_read(method, Some(caller_read)), 1);
+            assert_eq!(BIO_meth_set_destroy(method, Some(caller_destroy)), 1);
+            let caller_bio = BIO_new(method);
+            assert!(!caller_bio.is_null());
+            let rc = PKCS7_verify(
+                p7,
+                certs,
+                ptr::null_mut(),
+                caller_bio,
+                ptr::null_mut(),
+                PKCS7_NOVERIFY | PKCS7_NOSIGS,
+            );
+            assert_eq!(rc, 1, "the NOSIGS arm returns success");
+            assert_eq!(
+                CALLER_FREES.load(Ordering::SeqCst),
+                0,
+                "borrowed BIO survives"
+            );
+            BIO_free(caller_bio);
+            assert_eq!(CALLER_FREES.load(Ordering::SeqCst), 1);
+            BIO_meth_free(method);
+            OPENSSL_sk_free(certs);
+            crate::pkcs7::pk7_asn1::PKCS7_free(p7);
+            crate::x509::x_x509::X509_free(cert);
+        }
+    }
+
+    /// With a digest filter present, `PKCS7_dataInit` returns an owned chain whose tail is the
+    /// caller's BIO. A failure must release the owned filters and stop at the borrowed tail.
+    #[test]
+    fn an_owned_filter_chain_failure_keeps_the_caller_bio() {
+        let _g = crate::test_support::lock_global_state();
+        CALLER_FREES.store(0, Ordering::SeqCst);
+        PAYLOAD_LEFT.store(1, Ordering::SeqCst);
+        // SAFETY: every object is created and released below.
+        unsafe {
+            let cert = crate::x509::x_x509::X509_new();
+            assert!(!cert.is_null());
+            let name = crate::x509::x509_cmp::X509_get_issuer_name(cert);
+            assert_eq!(
+                crate::x509::x509name::X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    crate::asn1::layout::MBSTRING_UTF8,
+                    b"caller3".as_ptr(),
+                    7,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            let serial = crate::x509::x509_cmp::X509_get0_serialNumber(cert) as *mut _;
+            assert_eq!(crate::asn1::prim::ASN1_INTEGER_set(serial, 1), 1);
+            // The digest algorithm stays registered, so an MD filter chain is built.
+            let (p7, certs) = signed_data_fixture(cert, false);
+
+            let method = BIO_meth_new(0, c"caller-owned-chain".as_ptr());
+            assert!(!method.is_null());
+            assert_eq!(BIO_meth_set_read(method, Some(caller_read)), 1);
+            assert_eq!(BIO_meth_set_destroy(method, Some(caller_destroy)), 1);
+            let caller_bio = BIO_new(method);
+            assert!(!caller_bio.is_null());
+            // The signer names a certificate with no public key, so the signature check fails
+            // after the MD filter has consumed the caller's data.
+            let rc = PKCS7_verify(
+                p7,
+                certs,
+                ptr::null_mut(),
+                caller_bio,
+                ptr::null_mut(),
+                PKCS7_NOVERIFY,
+            );
+            assert_eq!(rc, 0, "the signature check fails");
+            assert_eq!(
+                CALLER_FREES.load(Ordering::SeqCst),
+                0,
+                "the owned filters are released, the borrowed tail is not"
+            );
+            BIO_free(caller_bio);
+            assert_eq!(CALLER_FREES.load(Ordering::SeqCst), 1);
+            BIO_meth_free(method);
+            OPENSSL_sk_free(certs);
+            crate::pkcs7::pk7_asn1::PKCS7_free(p7);
+            crate::x509::x_x509::X509_free(cert);
+        }
+    }
 }

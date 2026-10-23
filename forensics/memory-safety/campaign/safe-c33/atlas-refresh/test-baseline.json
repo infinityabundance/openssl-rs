@@ -1,9 +1,11 @@
 {
-  "command": "cargo test --lib -- --test-threads=4",
-  "source_commit": "3ee81389e",
-  "passed": 1962,
+  "command": "cargo test --lib -- --test-threads=4 (and serially with --test-threads=1)",
+  "source_commit": "c911ca629",
+  "passed": 2048,
   "failed": 0,
   "ignored": 44,
   "kind": "full-library-run",
-  "note": "later commits add tests without a further full run; this is a floor"
+  "observed_total": 2098,
+  "observed_total_note": "2,098 total tests were observed on the S22 tree through focused filters (ml_dsa: 2098 total; p12/bn focused filters agree). No full-suite pass after c911ca629 is claimed.",
+  "note": "S21 BATCH full run on the working tree on top of c911ca629; the S21 edits are the change under test and become the next commit. Parallel and serial runs agree: 2048 passed, 0 failed, 44 ignored."
 }

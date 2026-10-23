@@ -69,7 +69,8 @@ use crate::evp::keymgmt_lib::{
     evp_keymgmt_util_export, evp_keymgmt_util_fromdata, evp_keymgmt_util_gen,
 };
 use crate::evp::pkey::{
-    evp_pkey_export_to_provider, evp_pkey_free_legacy, EVP_PKEY_free, EVP_PKEY_new, EvpPkey,
+    evp_pkey_export_to_provider, evp_pkey_free_legacy, evp_pkey_is_legacy, EVP_PKEY_free,
+    EVP_PKEY_new, EvpPkey,
 };
 use crate::evp::pkey_asn1::Engine;
 use crate::evp::pkey_ctx::{
@@ -94,9 +95,6 @@ const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int = 0x01 | 0x02;
 const OSSL_GEN_PARAM_POTENTIAL: *const c_char = c"potential".as_ptr();
 /// `OSSL_GEN_PARAM_ITERATION` — the same header, and the same note as above.
 const OSSL_GEN_PARAM_ITERATION: *const c_char = c"iteration".as_ptr();
-
-/// `EVP_PKEY_TYPE_NONE` — `EVP_PKEY_NONE`, `include/openssl/evp.h`.
-const EVP_PKEY_NONE: c_int = 0;
 
 /// `static int gen_init(EVP_PKEY_CTX *ctx, int operation)` — `crypto/evp/pmeth_gn.c:25`.
 ///
@@ -739,14 +737,58 @@ pub unsafe extern "C" fn EVP_PKEY_todata(
     }
 }
 
+/// `struct fake_import_data_st` — `crypto/evp/pmeth_gn.c:419-422`.
+///
+/// The two callbacks a legacy export hands the method's `export_to`, which the method calls back
+/// through `pkey_fake_import` as if it were importing into a provider.
+struct FakeImportData {
+    export_cb: Option<unsafe extern "C" fn(*const OsslParam, *mut c_void) -> c_int>,
+    export_cbarg: *mut c_void,
+}
+
+/// `static int pkey_fake_import(void *fake_keydata, int ignored_selection,
+/// const OSSL_PARAM params[])` — `crypto/evp/pmeth_gn.c:425`.
+///
+/// The bridge from the method's `OSSL_FUNC_keymgmt_import_fn` shape to the caller's
+/// `OSSL_CALLBACK`. The authority calls `data->export_cb(params, data->export_cbarg)` without a NULL
+/// test; a NULL `export_cb` there is a call through a NULL function pointer, so this transcription
+/// answers 0 instead (§17: UB in the C authority is not reproduced). No caller this crate can build
+/// passes NULL — `EVP_PKEY_export`'s callers all supply a callback — so the arm is a safety repair
+/// with no compatibility consequence.
+///
+/// # Safety
+/// `fake_keydata` is the live `FakeImportData` the export handed the method; `params` is NULL or a
+/// terminated array.
+unsafe extern "C" fn pkey_fake_import(
+    fake_keydata: *mut c_void,
+    _ignored_selection: c_int,
+    params: *const OsslParam,
+) -> c_int {
+    let data = fake_keydata.cast::<FakeImportData>();
+    // SAFETY: `data` is live per the contract.
+    match unsafe { (*data).export_cb } {
+        // SAFETY: the caller's own callback with the caller's own argument and the method's params.
+        Some(f) => unsafe { f(params, (*data).export_cbarg) },
+        None => 0,
+    }
+}
+
 /// `int EVP_PKEY_export(const EVP_PKEY *pkey, int selection, OSSL_CALLBACK *export_cb,
 /// void *export_cbarg)` — `crypto/evp/pmeth_gn.c:435`.
 ///
-/// The legacy arm is `pkey->ameth->export_to(...)`, and this crate's `ameth` is always NULL — so the
-/// arm is unreachable and the provider call is the whole function. The test that selects it is
-/// `evp_pkey_is_legacy(pkey)`, the header macro `type != EVP_PKEY_NONE && keymgmt == NULL`, which is
-/// written because a key whose type was set and whose `keymgmt` cleared is a state the authority can
-/// reach through `EVP_PKEY_set_type` — Phase 8's.
+/// `pkey == NULL` raises and answers 0. A **legacy** key (`type != EVP_PKEY_NONE && keymgmt ==
+/// NULL`) is exported through its own `ameth->export_to`, with `pkey_fake_import` bridging the
+/// method's importer call to the caller's callback; the authority checks that arm first. Everything
+/// else is the provider export.
+///
+/// The legacy arm was omitted on the recorded premise that `ameth` was always NULL. The ASN.1
+/// method table made it reachable, and without it `EVP_PKEY_export` (and so `EVP_PKEY_todata`)
+/// answered 0 for every legacy key — the census's L07.
+///
+/// The authority dereferences `pkey->ameth->export_to` with no NULL test. A typed key always has an
+/// `ameth`, but an application-registered method need not publish `export_to`; this transcription
+/// answers 0 for that state rather than calling NULL (§17: UB in the C authority is not reproduced).
+/// That is the only divergence in this function and it is a refusal, never a false success.
 ///
 /// # Safety
 /// `pkey` NULL or live; `export_cb` the caller's callback; `export_cbarg` its argument.
@@ -763,13 +805,38 @@ pub unsafe extern "C" fn EVP_PKEY_export(
         return 0;
     }
     // SAFETY: `pkey` is live per the contract.
-    let is_legacy = unsafe { (*pkey).type_ != EVP_PKEY_NONE && (*pkey).keymgmt.is_null() };
-    if is_legacy {
-        /* The legacy arm: `pkey->ameth->export_to(pkey, &data, pkey_fake_import, NULL, NULL)` with
-         * `pkey_fake_import` forwarding to `export_cb`. Both `ameth` and the `export_to` callback
-         * are Phase 8's, and `ameth` is NULL in every key this crate can build, so the arm is
-         * unreachable. It answers as the legacy path does when there is nothing to export from. */
-        return 0;
+    if unsafe { evp_pkey_is_legacy(pkey) } != 0 {
+        // SAFETY: `pkey` is live.
+        let ameth = unsafe { (*pkey).ameth };
+        if ameth.is_null() {
+            return 0;
+        }
+        // SAFETY: `ameth` is live.
+        let Some(export_to) = (unsafe { (*ameth).export_to }) else {
+            return 0;
+        };
+        /* Every built-in `export_to` reads the legacy union immediately, and a typed-but-unassigned
+         * key has none; the authority dereferences NULL there (UB, §17). Answer 0 — there is
+         * nothing to export — rather than reproducing the crash. */
+        // SAFETY: `pkey` is live.
+        if unsafe { (*pkey).pkey }.is_null() {
+            return 0;
+        }
+        let mut data = FakeImportData {
+            export_cb,
+            export_cbarg,
+        };
+        // SAFETY: the method's own exporter, handed the live key, this frame's bridge record, the
+        // bridge itself and the authority's NULL libctx/propq.
+        return unsafe {
+            export_to(
+                pkey,
+                ptr::addr_of_mut!(data).cast::<c_void>(),
+                Some(pkey_fake_import),
+                ptr::null_mut(),
+                ptr::null(),
+            )
+        };
     }
     // SAFETY: `pkey` is live and `export_cb` is the caller's own.
     unsafe { evp_keymgmt_util_export(pkey, selection, export_cb, export_cbarg) }
@@ -785,8 +852,9 @@ pub unsafe extern "C" fn EVP_PKEY_export(
 /// this file's, which is the whole of why D173 could not land it and D193's reason for withholding
 /// it does not apply: there is no legacy key here, no `evp_pkey_get_legacy` and no `ameth` read.
 ///
-/// The engine parameter is passed through to `EVP_PKEY_CTX_new_id`, which reads and discards it
-/// (D186), so the crate inherits that call's recorded behaviour rather than introducing one.
+/// The engine parameter is passed through to `EVP_PKEY_CTX_new_id`, which adopts it (S18): the
+/// context takes the functional reference and the engine's `EVP_PKEY_METHOD`, and releases the
+/// reference in `EVP_PKEY_CTX_free`. The older "reads and discards it (D186)" note is superseded.
 ///
 /// # Safety
 /// `e` NULL or a live `ENGINE`; `key` NULL or `keylen` readable bytes.
@@ -890,6 +958,69 @@ mod tests {
                 EVP_PKEY_CTX_get_keygen_info(ptr::addr_of_mut!(fresh), -1),
                 0
             );
+        }
+    }
+
+    /// S19 L07. `EVP_PKEY_export` sends a **legacy** key through `pkey->ameth->export_to`, with
+    /// `pkey_fake_import` bridging the method's importer call to the caller's callback
+    /// (`pmeth_gn.c:450-463`). A legacy EC key's method exports its domain parameters, so the
+    /// callback must see a parameter array carrying `group`; a blank key is neither legacy nor
+    /// provided and still answers 0.
+    #[test]
+    fn evp_pkey_export_exports_a_legacy_key_through_its_ameth() {
+        use crate::ec::key::EC_KEY_new_by_curve_name;
+        use crate::evp::pkey::EVP_PKEY_assign;
+        use crate::evp::pkey_ctx::EVP_PKEY_EC;
+        use crate::runtime::obj::NID_X9_62_prime256v1;
+
+        unsafe extern "C" fn collect(params: *const OsslParam, arg: *mut c_void) -> c_int {
+            let seen = arg.cast::<c_int>();
+            // SAFETY: `seen` is the test's own live counter.
+            unsafe { *seen += 1 };
+            // SAFETY: `params` is the exporter's terminated array.
+            if !unsafe { OSSL_PARAM_locate_const(params, c"group".as_ptr()) }.is_null() {
+                // SAFETY: as above.
+                unsafe { *seen += 10 };
+            }
+            1
+        }
+
+        // SAFETY: every object below is this test's own and is freed exactly once.
+        unsafe {
+            let pkey = EVP_PKEY_new();
+            let ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!pkey.is_null() && !ec.is_null());
+            assert_eq!(EVP_PKEY_assign(pkey, EVP_PKEY_EC, ec.cast()), 1);
+
+            let mut seen: c_int = 0;
+            assert_eq!(
+                EVP_PKEY_export(
+                    pkey,
+                    0,
+                    Some(collect),
+                    ptr::addr_of_mut!(seen).cast::<c_void>()
+                ),
+                1,
+                "the legacy export answers the method's own result"
+            );
+            assert_eq!(seen, 11, "one import carrying the group name");
+            EVP_PKEY_free(pkey);
+
+            let blank = EVP_PKEY_new();
+            assert!(!blank.is_null());
+            let mut seen: c_int = 0;
+            assert_eq!(
+                EVP_PKEY_export(
+                    blank,
+                    0,
+                    Some(collect),
+                    ptr::addr_of_mut!(seen).cast::<c_void>()
+                ),
+                0,
+                "neither legacy nor provided is the provider export's refusal"
+            );
+            assert_eq!(seen, 0);
+            EVP_PKEY_free(blank);
         }
     }
 }

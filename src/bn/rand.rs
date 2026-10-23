@@ -152,7 +152,14 @@ struct OwnedBuf {
 }
 
 impl OwnedBuf {
-    /// `CRYPTO_malloc(len, FILE, LINE)`, or `None` when the allocator answers NULL.
+    /// `CRYPTO_malloc(len, FILE, LINE)`, zero-initialised, or `None` when the allocator answers
+    /// NULL.
+    ///
+    /// The authority allocates these draw buffers with `OPENSSL_malloc` and fills them (from the
+    /// DRBG, or from the digest loop) before they are read. The owner establishes that initial
+    /// state itself — zero is a valid `u8` — so [`Self::as_mut_slice`] can never lend a reference
+    /// over uninitialised storage (AGENTS.md §2). The allocation event (same size, `file`, `line`)
+    /// is unchanged.
     fn new(len: usize) -> Option<OwnedBuf> {
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, exclusively owned block of
         // `len` bytes.
@@ -164,14 +171,20 @@ impl OwnedBuf {
         if raw.is_null() {
             None
         } else {
+            // SAFETY: `raw` is a live block of `len` writable bytes this call exclusively owns,
+            // and writing zero through the raw pointer before any typed view exists is defined.
+            unsafe { core::ptr::write_bytes(raw, 0u8, len) };
             Some(OwnedBuf { ptr: raw, len })
         }
     }
 
     /// The owned bytes, as a mutable slice.
+    ///
+    /// Sound for a safe caller: [`Self::new`] initialises the whole extent before the handle is
+    /// returned, so the slice never covers uninitialised storage.
     fn as_mut_slice(&mut self) -> &mut [u8] {
-        // SAFETY: `self.ptr` is the block this handle owns, `self.len` its length, and `&mut self`
-        // proves exclusive access for the returned borrow's lifetime.
+        // SAFETY: `self.ptr` is the live, initialised block this handle owns, `self.len` its
+        // length, and `&mut self` proves exclusive access for the returned borrow's lifetime.
         unsafe { core::slice::from_raw_parts_mut(self.ptr, self.len) }
     }
 
@@ -1166,9 +1179,22 @@ pub unsafe extern "C" fn BN_generate_dsa_nonce(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
+
     use super::*;
     use crate::bn::bignum::{BN_free, BN_new, BN_set_negative, BN_set_word};
     use crate::runtime::err::{err_sites, ERR_clear_error, ERR_peek_error};
+
+    /// The owning draw buffer is safe to borrow immediately: `new` zero-initialises the block
+    /// before any typed view exists, so `as_mut_slice` never covers uninitialised storage.
+    #[test]
+    fn bn_rand_uninit_owning_buffer_exposes_initialised_bytes() {
+        let _guard = crate::test_support::lock_global_state();
+        let mut buf = OwnedBuf::new(16).expect("16 bytes must allocate");
+        assert_eq!(buf.as_mut_slice(), &[0u8; 16]);
+        buf.as_mut_slice()[0] = 0x5A;
+        assert_eq!(buf.as_mut_slice()[0], 0x5A);
+    }
 
     /// The packed code `ERR_peek_error` reports for a recorded site:
     /// `(lib & 0xff) << 23 | (reason & 0x7fffff)`, read from the generated table

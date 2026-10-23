@@ -86,7 +86,7 @@ use crate::x509::x509name::{
     X509_NAME_ENTRY_get_data, X509_NAME_delete_entry, X509_NAME_get_entry,
     X509_NAME_get_index_by_NID,
 };
-use crate::x509::x_name::{X509_NAME_ENTRY_free, X509_NAME_free, X509_NAME_new};
+use crate::x509::x_name::{X509Name, X509_NAME_ENTRY_free, X509_NAME_free, X509_NAME_new};
 
 /// The authority file path this module's raises name.
 const FILE: &CStr = c"crypto/x509/v3_san.c";
@@ -201,46 +201,70 @@ unsafe fn gen_type(gen: *mut GeneralName) -> c_int {
 /// Read the `otherName` arm.
 ///
 /// # Safety
-/// `gen` must be live and its `type` must be `GEN_OTHERNAME`.
+/// `gen` must be live. The accessor checks the selector itself and answers NULL when the
+/// selector does not name `GEN_OTHERNAME`.
 unsafe fn gen_othername(gen: *mut GeneralName) -> *mut crate::x509::v3_genn::Othername {
-    // SAFETY: the caller's contract selects the live `otherName` union member.
-    unsafe { (*gen).d.otherName }
+    // SAFETY: `gen` is live per the contract; `other_name` reads only the arm its selector names.
+    match unsafe { (*gen).other_name() } {
+        Some(v) => {
+            v as *const crate::x509::v3_genn::Othername as *mut crate::x509::v3_genn::Othername
+        }
+        None => core::ptr::null_mut(),
+    }
 }
 
 /// Read the `ia5` arm (RFC822/DNS/URI).
 ///
 /// # Safety
-/// `gen` must be live and its `type` must select one of the three IA5 general names.
+/// `gen` must be live. The accessor checks the selector itself and answers NULL when the
+/// selector does not name one of the three IA5 general names.
 unsafe fn gen_ia5(gen: *mut GeneralName) -> *mut Asn1String {
-    // SAFETY: the caller's contract selects the live `ia5` union member.
-    unsafe { (*gen).d.ia5 }
+    // SAFETY: `gen` is live per the contract; `ia5` reads only the arm its selector names.
+    match unsafe { (*gen).ia5() } {
+        Some(v) => v as *const Asn1String as *mut Asn1String,
+        None => core::ptr::null_mut(),
+    }
 }
 
 /// Read the `directoryName` arm.
 ///
 /// # Safety
-/// `gen` must be live and its `type` must be `GEN_DIRNAME`.
+/// `gen` must be live. The accessor checks the selector itself and answers NULL when the
+/// selector does not name `GEN_DIRNAME`.
 unsafe fn gen_dirname(gen: *mut GeneralName) -> *mut crate::x509::x_name::X509Name {
-    // SAFETY: the caller's contract selects the live `directoryName` union member.
-    unsafe { (*gen).d.directoryName }
+    // SAFETY: `gen` is live per the contract; `directory_name` reads only the selected arm.
+    match unsafe { (*gen).directory_name() } {
+        Some(v) => v as *const crate::x509::x_name::X509Name as *mut crate::x509::x_name::X509Name,
+        None => core::ptr::null_mut(),
+    }
 }
 
 /// Read the `iPAddress` arm.
 ///
 /// # Safety
-/// `gen` must be live and its `type` must be `GEN_IPADD`.
+/// `gen` must be live. The accessor checks the selector itself and answers NULL when the
+/// selector does not name `GEN_IPADD`.
 unsafe fn gen_ip(gen: *mut GeneralName) -> *mut Asn1String {
-    // SAFETY: the caller's contract selects the live `iPAddress` union member.
-    unsafe { (*gen).d.iPAddress }
+    // SAFETY: `gen` is live per the contract; `ip_address` reads only the selected arm.
+    match unsafe { (*gen).ip_address() } {
+        Some(v) => v as *const Asn1String as *mut Asn1String,
+        None => core::ptr::null_mut(),
+    }
 }
 
 /// Read the `registeredID` arm.
 ///
 /// # Safety
-/// `gen` must be live and its `type` must be `GEN_RID`.
+/// `gen` must be live. The accessor checks the selector itself and answers NULL when the
+/// selector does not name `GEN_RID`.
 unsafe fn gen_rid(gen: *mut GeneralName) -> *mut crate::runtime::obj::Asn1Object {
-    // SAFETY: the caller's contract selects the live `registeredID` union member.
-    unsafe { (*gen).d.registeredID }
+    // SAFETY: `gen` is live per the contract; `registered_id` reads only the selected arm.
+    match unsafe { (*gen).registered_id() } {
+        Some(v) => {
+            v as *const crate::runtime::obj::Asn1Object as *mut crate::runtime::obj::Asn1Object
+        }
+        None => core::ptr::null_mut(),
+    }
 }
 
 /// Read the `ASN1_TYPE` arm of an `OTHERNAME`'s optional value.
@@ -765,26 +789,27 @@ unsafe extern "C" fn general_name_free_thunk(p: *mut c_void) {
 /// `static int do_othername(GENERAL_NAME *gen, const char *value, X509V3_CTX *ctx)` —
 /// `crypto/x509/v3_san.c:631-662`.
 ///
-/// Splits `value` at its `;` into an OID and an `ASN1_generate_v3` operand, and installs both on
-/// the name's `otherName` arm. The one call is what made this whole cluster wait on Phase 5's
-/// deferred pair (D465).
+/// Splits `value` at its `;` into an OID and an `ASN1_generate_v3` operand. Answers the built
+/// `OTHERNAME` (owned by the caller) or NULL after releasing everything it acquired; the caller
+/// publishes it through the audited selector/arm writer.
 ///
 /// # Safety
 ///
-/// `gen` must be live; `value` must be NUL-terminated; `ctx` is NULL or a live `X509V3_CTX`.
-unsafe fn do_othername(gen: *mut GeneralName, value: *const c_char, ctx: *mut X509V3Ctx) -> c_int {
+/// `value` must be NUL-terminated; `ctx` is NULL or a live `X509V3_CTX`.
+unsafe fn do_othername(
+    value: *const c_char,
+    ctx: *mut X509V3Ctx,
+) -> *mut crate::x509::v3_genn::Othername {
     // SAFETY: `value` is NUL-terminated per the contract.
     let p = unsafe { strchr(value, b';' as c_int) };
     if p.is_null() {
-        return 0;
+        return core::ptr::null_mut();
     }
     // SAFETY: the item allocator answers NULL or a live value.
     let on = OTHERNAME_new();
     if on.is_null() {
-        return 0;
+        return core::ptr::null_mut();
     }
-    // SAFETY: `gen` is live; ownership of `on` passes to the union.
-    unsafe { (*gen).d.otherName = on };
     // SAFETY: `on` is live; the fresh item's optional value is released before it is
     // overwritten, as the authority does.
     unsafe { ASN1_TYPE_free((*on).value) };
@@ -794,9 +819,9 @@ unsafe fn do_othername(gen: *mut GeneralName, value: *const c_char, ctx: *mut X5
     // release path below cannot double-free the old value.
     unsafe { (*on).value = v };
     if v.is_null() {
-        // SAFETY: `gen`/`on` are live per this function's contract.
-        unsafe { othername_err(gen, on) };
-        return 0;
+        // SAFETY: `on` is live and this call owns it.
+        unsafe { OTHERNAME_free(on) };
+        return core::ptr::null_mut();
     }
     let objlen = (p as usize).wrapping_sub(value as usize);
     // SAFETY: `value` is NUL-terminated and `objlen <= strlen(value)`; the returned block is this
@@ -809,9 +834,9 @@ unsafe fn do_othername(gen: *mut GeneralName, value: *const c_char, ctx: *mut X5
         )
     };
     let Some(objtmp) = objtmp else {
-        // SAFETY: `gen`/`on` are live per this function's contract.
-        unsafe { othername_err(gen, on) };
-        return 0;
+        // SAFETY: `on` is live and this call owns it.
+        unsafe { OTHERNAME_free(on) };
+        return core::ptr::null_mut();
     };
     // SAFETY: `objtmp` is NUL-terminated.
     let type_id = unsafe { OBJ_txt2obj(objtmp.as_ptr(), 0) };
@@ -820,34 +845,23 @@ unsafe fn do_othername(gen: *mut GeneralName, value: *const c_char, ctx: *mut X5
     // SAFETY: `on` is live.
     unsafe { (*on).type_id = type_id };
     if type_id.is_null() {
-        // SAFETY: `gen`/`on` are live per this function's contract.
-        unsafe { othername_err(gen, on) };
-        return 0;
+        // SAFETY: `on` is live and this call owns it.
+        unsafe { OTHERNAME_free(on) };
+        return core::ptr::null_mut();
     }
-    1
-}
-
-/// The authority's `err:` tail of [`do_othername`]: free the `OTHERNAME` and clear the slot.
-///
-/// # Safety
-///
-/// `gen` must be live and `on` must be the `OTHERNAME` installed on its `otherName` arm.
-unsafe fn othername_err(gen: *mut GeneralName, on: *mut crate::x509::v3_genn::Othername) {
-    // SAFETY: `on` is live and this call owns it.
-    unsafe { OTHERNAME_free(on) };
-    // SAFETY: `gen` is live.
-    unsafe { (*gen).d.otherName = core::ptr::null_mut() };
+    on
 }
 
 /// `static int do_dirname(GENERAL_NAME *gen, const char *value, X509V3_CTX *ctx)` —
 /// `crypto/x509/v3_san.c:664-689`.
 ///
-/// Builds an `X509_NAME` from the config section `value` names.
+/// Builds an `X509_NAME` from the config section `value` names. Answers the name (owned by the
+/// caller) or NULL after releasing it; the caller publishes it through the audited writer.
 ///
 /// # Safety
 ///
-/// `gen` must be live; `value` must be NUL-terminated; `ctx` must be a live `X509V3_CTX`.
-unsafe fn do_dirname(gen: *mut GeneralName, value: *const c_char, ctx: *mut X509V3Ctx) -> c_int {
+/// `value` must be NUL-terminated; `ctx` must be a live `X509V3_CTX`.
+unsafe fn do_dirname(value: *const c_char, ctx: *mut X509V3Ctx) -> *mut X509Name {
     let mut ret = 0;
     let mut sk: *mut OpenSslStack = core::ptr::null_mut();
     // SAFETY: the item allocator answers NULL or a live value.
@@ -867,19 +881,17 @@ unsafe fn do_dirname(gen: *mut GeneralName, value: *const c_char, ctx: *mut X509
             // SAFETY: `nm` is live and `sk` is a live section; `MBSTRING_ASC` is the
             // authority's `chtype` for a directoryName.
             ret = unsafe { X509V3_NAME_from_section(nm, sk, MBSTRING_ASC as c_ulong) };
-            if ret != 0 {
-                // SAFETY: `gen` is live; ownership of `nm` passes to the union.
-                unsafe { (*gen).d.directoryName = nm };
-            }
         }
-    }
-    if ret == 0 {
-        // SAFETY: `nm` is NULL or this call's own value.
-        unsafe { X509_NAME_free(nm) };
     }
     // SAFETY: `ctx` is live and `sk` is NULL or this call's own section.
     unsafe { X509V3_section_free(ctx, sk) };
-    ret
+    if ret == 0 {
+        // SAFETY: `nm` is NULL or this call's own value.
+        unsafe { X509_NAME_free(nm) };
+        core::ptr::null_mut()
+    } else {
+        nm
+    }
 }
 
 /// `GENERAL_NAME *a2i_GENERAL_NAME(GENERAL_NAME *out, const X509V3_EXT_METHOD *method,
@@ -919,8 +931,11 @@ pub unsafe extern "C" fn a2i_GENERAL_NAME(
         g
     };
 
-    // A `'build` block reproduces the authority's `err:` tail, which frees only a
-    // freshly allocated `gen` (`if (!out)`).
+    // Build the arm in a local and publish it through the one audited writer only after the
+    // whole arm is valid. The authority stages the arm in the union before `type` is set and
+    // leaves that residue on failure; this build releases the partial arm here instead, so a
+    // failed build cannot leave a caller-owned name whose selector and arm disagree.
+    let mut arm: *mut c_void = core::ptr::null_mut();
     let ok = 'build: {
         match gen_type {
             GEN_URI | GEN_EMAIL | GEN_DNS => is_string = true,
@@ -932,8 +947,7 @@ pub unsafe extern "C" fn a2i_GENERAL_NAME(
                     unsafe { err_value(&V3_SAN_536, value) };
                     break 'build false;
                 }
-                // SAFETY: `gen` is live; the `rid` arm is the selected one.
-                unsafe { (*gen).d.registeredID = obj };
+                arm = obj.cast::<c_void>();
             }
             GEN_IPADD => {
                 // SAFETY: `value` is NUL-terminated; the two builders answer NULL or a
@@ -945,29 +959,32 @@ pub unsafe extern "C" fn a2i_GENERAL_NAME(
                     // SAFETY: `value` is NUL-terminated per this function's contract.
                     unsafe { a2i_IPADDRESS(value) }
                 };
-                // SAFETY: `gen` is live; the `ip` arm is the selected one.
-                unsafe { (*gen).d.iPAddress = ip };
                 if ip.is_null() {
                     // SAFETY: `value` is NUL-terminated per this function's contract.
                     unsafe { err_value(&V3_SAN_549, value) };
                     break 'build false;
                 }
+                arm = ip.cast::<c_void>();
             }
             GEN_DIRNAME => {
-                // SAFETY: `gen` is live; `value`/`ctx` are per the contract.
-                if unsafe { do_dirname(gen, value, ctx) } == 0 {
+                // SAFETY: `value`/`ctx` are per the contract; the answer is this call's own.
+                let nm = unsafe { do_dirname(value, ctx) };
+                if nm.is_null() {
                     // SAFETY: the site is a declared constant.
                     unsafe { raise_site(&V3_SAN_557) };
                     break 'build false;
                 }
+                arm = nm.cast::<c_void>();
             }
             GEN_OTHERNAME => {
-                // SAFETY: `gen` is live; `value`/`ctx` are per the contract.
-                if unsafe { do_othername(gen, value, ctx) } == 0 {
+                // SAFETY: `value`/`ctx` are per the contract; the answer is this call's own.
+                let on = unsafe { do_othername(value, ctx) };
+                if on.is_null() {
                     // SAFETY: the site is a declared constant.
                     unsafe { raise_site(&V3_SAN_564) };
                     break 'build false;
                 }
+                arm = on.cast::<c_void>();
             }
             _ => {
                 // SAFETY: the site is a declared constant.
@@ -979,25 +996,27 @@ pub unsafe extern "C" fn a2i_GENERAL_NAME(
         if is_string {
             // SAFETY: no preconditions.
             let ia5 = ASN1_IA5STRING_new();
-            // SAFETY: `gen` is live; the `ia5` arm is the selected one. `value` is
-            // NUL-terminated, so `strlen` measures it.
+            // SAFETY: `ia5` is NULL or fresh; `value` is NUL-terminated, so `strlen`
+            // measures it.
             let set_ok = unsafe {
-                (*gen).d.ia5 = ia5;
                 !ia5.is_null() && ASN1_STRING_set(ia5, value.cast(), strlen(value) as c_int) != 0
             };
             if !set_ok {
-                // SAFETY: `gen`'s `ia5` arm is this call's own or NULL.
+                // SAFETY: `ia5` is NULL or this call's own value.
                 unsafe {
-                    ASN1_IA5STRING_free((*gen).d.ia5);
-                    (*gen).d.ia5 = core::ptr::null_mut();
+                    ASN1_IA5STRING_free(ia5);
                     raise_site(&V3_SAN_577);
                 }
                 break 'build false;
             }
+            arm = ia5.cast::<c_void>();
         }
 
-        // SAFETY: `gen` is live and uniquely owned here.
-        unsafe { (*gen).type_ = gen_type };
+        // SAFETY: `gen` is live and uniquely owned here; the writer sets the selector and the
+        // fully built arm together. Every arm above is non-NULL at this point.
+        unsafe {
+            (*gen).install(gen_type, arm);
+        }
         true
     };
 
@@ -1005,7 +1024,8 @@ pub unsafe extern "C" fn a2i_GENERAL_NAME(
         gen
     } else {
         if out.is_null() {
-            // SAFETY: `gen` is this call's own value.
+            // SAFETY: `gen` is this call's own value; a failed build left its selector unset
+            // (or, for `out`, left the caller's value untouched).
             unsafe { GENERAL_NAME_free(gen) };
         }
         core::ptr::null_mut()
@@ -1457,12 +1477,12 @@ unsafe extern "C" fn copy_email(
             }
             return 0;
         }
-        // SAFETY: `gen` is live; the `ia5` arm is the selected one, and it takes ownership of
-        // `email` (nulled so the failure path below cannot double-free it).
+        // SAFETY: `gen` is live; the audited writer installs the IA5 arm and its selector
+        // together, and `email` transfers to it (nulled so the failure path below cannot
+        // double-free it).
         unsafe {
-            (*gen).d.ia5 = email;
+            let _ = (*gen).set_ia5(GEN_EMAIL, email);
             email = core::ptr::null_mut();
-            (*gen).type_ = GEN_EMAIL;
         }
         // SAFETY: `gens` is live and `gen` is this call's own value.
         if unsafe { OPENSSL_sk_push(gens, gen.cast::<c_void>()) } == 0 {

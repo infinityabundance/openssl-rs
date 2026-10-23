@@ -1,0 +1,186 @@
+{
+  "schema": "openssl-rs/safe-c33/batch-closure/v1",
+  "kind": "s22-uninit-closure",
+  "task_id": "S22",
+  "title": "Eliminate the safe-accessor-over-uninitialised-storage defect class (S21-O1 and siblings)",
+  "phase": 25,
+  "stage_branch": "integrate/safe-c33",
+  "source_identity": {
+    "parent_sha": "7e2de368d",
+    "working_tree": "S22 edits are uncommitted (this subagent does not commit or push); the gate ran against this working tree on top of 7e2de368d.",
+    "source_files_changed": [
+      "src/ml_dsa/poly.rs",
+      "src/ml_dsa/sign.rs",
+      "src/pkcs12/p12_utl.rs",
+      "src/bn/rand.rs",
+      "src/ssl/t1_lib.rs",
+      "src/runtime/secure.rs"
+    ],
+    "forensics_added": [
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s22-uninit-census.md",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s22-uninit-closure.json"
+    ]
+  },
+  "census": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s22-uninit-census.md",
+    "tally": {
+      "unsound_owner_shaped": 4,
+      "unsound_frame_local_same_shape": 1,
+      "safe_by_construction": 16,
+      "misuse_resistant": 12,
+      "owner_shaped_examined": 32
+    },
+    "unsound_sites": [
+      {
+        "id": "U1",
+        "site": "src/ml_dsa/poly.rs:148,176 (PolyBlock) / :383,410 (Vector::alloc,secure_alloc) / :462,472 (as_slice,as_mut_slice)",
+        "finding": "S21-O1",
+        "disposition": "FIXED"
+      },
+      {
+        "id": "U2",
+        "site": "src/ml_dsa/sign.rs:206 Scratch::new -> take_bytes/take_polys",
+        "finding": "typed partition views formed over a fresh CRYPTO_malloc scratch blob",
+        "disposition": "FIXED"
+      },
+      {
+        "id": "U3",
+        "site": "src/pkcs12/p12_utl.rs:79 OwnedBuf::new -> :104 safe as_mut_slice",
+        "finding": "a safe method could lend &mut [u8] over uninitialised storage",
+        "disposition": "FIXED"
+      },
+      {
+        "id": "U4",
+        "site": "src/bn/rand.rs:163 OwnedBuf::new -> :185 safe as_mut_slice",
+        "finding": "same shape as U3",
+        "disposition": "FIXED"
+      },
+      {
+        "id": "U5",
+        "site": "src/ssl/t1_lib.rs:846,873 (alloc_peer_sigalgs users)",
+        "finding": "frame-local &mut [u16] over a fresh CRYPTO_malloc block before the fill",
+        "disposition": "FIXED"
+      }
+    ]
+  },
+  "design": {
+    "chosen": "ZERO_INITIALISE_IN_THE_OWNER",
+    "justification": "Poly is #[repr(C)] { coeff: [u32; 256] } with no invalid bit patterns, and all-zero is exactly the value the authority's own poly_zero/vector_zero writes before any read; initialising inside the owner makes the uninitialised state unrepresentable without changing behaviour, any signature, or the allocator seam.",
+    "ml_dsa_vector": {
+      "mechanism_eliminated": "a Vector can no longer be published over uninitialised storage: PolyBlock holds NonNull<MaybeUninit<Poly>>, zeroes the whole extent in malloc/secure_malloc, and only into_raw casts to *mut Poly after the write.",
+      "mechanism_relocated": "the raw zero write in PolyBlock::initialise_zeroed (one documented unsafe block per allocator arm)",
+      "mechanism_hidden": 0,
+      "why_zero_is_valid": "Poly is a #[repr(C)] struct of 256 u32 coefficients; every bit pattern is a valid Poly and 0 is in range. It is the authority's own pre-use state, not an arbitrary filler.",
+      "release_and_cleansing": "unchanged: plain CRYPTO_free for alloc/free; CRYPTO_secure_clear_free (same rank * sizeof(Poly) extent) for secure_alloc/secure_free."
+    },
+    "ml_dsa_scratch": {
+      "mechanism_eliminated": "Scratch::new zero-initialises len bytes through the raw pointer before forming &mut [u8]; take_bytes/take_polys therefore never view uninitialised storage.",
+      "why_safe": "u8 has no invalid bit patterns and Poly (a partition target) accepts all-zero; the authority treats the blob as uninitialised scratch and no reader consumes an indeterminate value."
+    },
+    "pkcs12_and_bn_bufs": {
+      "mechanism_eliminated": "the safe as_mut_slice accessors can no longer observe uninitialised bytes: both constructors zero the CRYPTO_malloc extent before the handle is returned.",
+      "seam_preserved": "the malloc call keeps the authority's exact size/file/line; only a memset is added between allocation and handle construction."
+    },
+    "t1_lib": {
+      "mechanism_eliminated": "peer-sigalgs writes go through p.add(i).write / ptr::copy_nonoverlapping, so no typed view is formed before the fill.",
+      "behaviour": "byte-identical; allocation and release unchanged."
+    },
+    "rejected_alternative": "Leaving the block in MaybeUninit form and requiring an explicit state transition at the Vector level is not expressible without changing Vector's #[repr(C)] shape (the C keys share one allocation and recover s2/t0 by pointer arithmetic), so the MaybeUninit window is kept private to PolyBlock and closed in the constructor."
+  },
+  "authority_comparison": {
+    "authority": "OpenSSL 3.6.4 forensics/authorities/src/openssl-3.6.4",
+    "vector_alloc": "crypto/ml_dsa/ml_dsa_vector.h:33-40 uses OPENSSL_malloc_array and does not zero; vector_secure_alloc :42-49 uses OPENSSL_secure_malloc_array and does not zero.",
+    "initialisation_point": "the authority initialises at the caller's first use: vector_zero (:66-70) memsets, and the keygen/sign callers fill every polynomial before reading one.",
+    "divergence": "S22 initialises at the owner boundary instead of the caller. This is a recorded deliberate safety improvement (AGENTS.md preamble and section 2): no caller reads before writing, so no observable behaviour changes, and an indeterminate read would have been undefined in C too.",
+    "allocation_event": "unchanged: CRYPTO_malloc_array(count, size_of::<Poly>(), file, line) and CRYPTO_secure_malloc_array(count, size_of::<Poly>(), file, line)."
+  },
+  "tests": {
+    "ml_dsa": {
+      "command": "cargo test --lib -- --test-threads=4 ml_dsa",
+      "result": "test result: ok. 33 passed; 0 failed; 3 ignored; 0 measured; 2062 filtered out; finished in 0.05s",
+      "new_tests": [
+        "test ml_dsa::poly::tests::ml_dsa_uninit_a_fresh_vector_is_safe_to_read ... ok",
+        "test ml_dsa::poly::tests::ml_dsa_uninit_a_secure_vector_is_cleansed_on_release ... ok",
+        "test ml_dsa::poly::tests::ml_dsa_uninit_canary_the_prefix_shape_exposed_allocator_contents ... ok",
+        "test ml_dsa::sign::uninit_tests::ml_dsa_uninit_scratch_partitions_are_initialised ... ok"
+      ]
+    },
+    "pkcs12": {
+      "command": "cargo test --lib -- --test-threads=4 p12_uninit",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2097 filtered out; finished in 0.00s",
+      "line": "test pkcs12::p12_utl::tests::p12_uninit_owning_buffer_exposes_initialised_bytes ... ok",
+      "module_regression": "cargo test --lib -- --test-threads=4 pkcs12::p12_utl: test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2093 filtered out; finished in 0.00s"
+    },
+    "bn_rand": {
+      "command": "cargo test --lib -- --test-threads=4 bn_rand_uninit",
+      "result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2097 filtered out; finished in 0.00s",
+      "line": "test bn::rand::tests::bn_rand_uninit_owning_buffer_exposes_initialised_bytes ... ok",
+      "module_regression": "cargo test --lib -- --test-threads=4 bn::rand: test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 2090 filtered out; finished in 0.00s"
+    },
+    "t1_lib": {
+      "command": "cargo test --lib -- --test-threads=4 sigalgs",
+      "result": "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 2091 filtered out; finished in 0.06s"
+    },
+    "secure_runtime_regression": {
+      "command": "cargo test --lib -- --test-threads=4 runtime::secure",
+      "result": "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 2083 filtered out; finished in 0.01s"
+    },
+    "compile_fail": {
+      "trybuild_present": false,
+      "decision": "No compile-fail test: the chosen design keeps the accessor signatures and makes the storage initialised at construction, so there is no early typed borrow to reject. The contract is enforced structurally (PolyBlock holds NonNull<MaybeUninit<Poly>>; into_raw is reachable only after initialise_zeroed in both constructors) and exercised by the fresh-vector and canary tests. trybuild is not a dependency, so none was added."
+    }
+  },
+  "canary": {
+    "name": "ml_dsa_uninit_canary_the_prefix_shape_exposed_allocator_contents",
+    "gating": "#[cfg(test)] only (the tests module is test-gated; no release-build occurrence)",
+    "observed": {
+      "prefix_shape_read": "0xA5A5A5A5 for every coefficient (the sentinel standing in for the allocator's indeterminate bytes the pre-fix Vector::alloc published)",
+      "new_owner_read": "0x00000000 for every coefficient after Vector::alloc over the same seam allocation",
+      "assertions": "prefix.iter().all(coeff[0] == 0xA5A5A5A5) and s.iter().all(coeff == 0) both held (test passed)"
+    },
+    "honesty": "The pre-fix half models the published-raw-block state with an explicit sentinel rather than relying on allocator garbage; the structural claim (the owner performed no initialisation) is exactly the pre-fix code path. Miri, which would diagnose the un-poisoned equivalent, is not available (MIRI_NOT_RUN)."
+  },
+  "gate": {
+    "level": "FAST",
+    "fmt": "FMT_OK (cargo fmt --all -- --check)",
+    "check": "cargo check --lib: Finished dev profile, exit 0",
+    "clippy": "cargo clippy --lib -- -D warnings: Finished, CLIPPY_OK; additionally cargo clippy --all-targets -- -D warnings: Finished, CLIPPY_ALL_DONE (the new #[cfg(test)] modules are covered)",
+    "structural": {
+      "no_mangle_attribute_diff_lines": 0,
+      "repr_c_attribute_diff_lines": 0,
+      "no_mangle_occurrences_head_vs_worktree": "6642 -> 6642",
+      "repr_c_occurrences_head_vs_worktree": "1013 -> 1014 (the one delta is a doc-comment spelling of the layout in the new PolyBlock note, not an attribute)",
+      "allocator_seam": "unchanged: CRYPTO_malloc_array(count, elem, file, line) and CRYPTO_secure_malloc_array(count, elem, file, line), same size/file/line"
+    },
+    "unsafe": {
+      "new_unsafe_fn": 0,
+      "unsafe_fn_counts_unchanged_in_all_changed_files": true,
+      "unsafe_blocks_changed_files_head_to_worktree": "315 -> 333 (production: +5 raw zero-writes/probe call, tests: the rest; each new block carries a SAFETY contract)"
+    },
+    "miri": "MIRI_NOT_RUN — the 'miri' component is not available for toolchain 1.98.1-x86_64-unknown-linux-gnu (cargo miri --version: component not available)",
+    "full_suite": "NOT_RUN by instruction (FAST gate only)",
+    "lib_test_count_observed": "2098 total (6 added: 4 ml_dsa, 1 pkcs12, 1 bn). The focused filters report 2097/2091/2062 filtered, which is how the total was observed; no full-suite pass is claimed.",
+    "probes": "NOT_RUN by instruction"
+  },
+  "boundary": "No new unsafe abstraction. PolyBlock's window is private and established-by-construction; the accessors keep their existing unsafe signatures and their initialisation precondition now holds for every block this module publishes.",
+  "obligations": {
+    "discharged": [
+      "S21-O1: alloc/secure_alloc publish only initialised polynomials; as_slice/as_mut_slice are valid immediately.",
+      "U2-U5: the four other typed-accessor-over-uninitialised-storage sites now establish initialisation before the first typed view."
+    ],
+    "retained": [
+      "Vector::init / matrix_init remain safe constructors over caller raw pointers (no dereference, so no UB reachable alone). Making them unsafe fn is the section-1 end state; deferred because it touches ~20 call sites.",
+      "x509::pcy_lib::tree_levels aliasing obligation (zeroed block, owner-derived borrow; section 2 audit item).",
+      "provider::cipher_gcm out-buffer slice formation (FFI output-buffer modelling, cross-cutting)."
+    ],
+    "introduced": [
+      "One test-only cleansing observation module (runtime::secure::cleanse_probe), gated #[cfg(test)]; it captures bytes after the cleanse and before the free."
+    ]
+  },
+  "class_status": {
+    "src_ml_dsa": "CLOSED for the typed-accessor-over-uninitialised-storage class: both allocation surfaces (Vector and Scratch) initialise before publication, and the remaining constructors are either raw-only or carry an explicit caller contract.",
+    "crate": "Four owner-shaped sites plus one frame-local site repaired; FFI out-buffer slice formation remains outside the owner class and is retained with its blocker.",
+    "graduation": "No graduation claimed. This is a FAST gate only; BOUNDARY/SEAL were not run."
+  },
+  "honesty": "Every gate figure is from observed output in the court container on the uncommitted working tree. Miri and the full suite were not run and are recorded as NOT_RUN, not PASS. The census classification of SAFE-BY-CONSTRUCTION entries is by code inspection, not by instrument."
+}
