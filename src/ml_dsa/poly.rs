@@ -828,11 +828,19 @@ mod tests {
         // SAFETY: `v` is empty and NULL is the allocator's default coordinate.
         assert_eq!(unsafe { v.alloc(4, ptr::null(), 0) }, 1);
         assert_eq!(v.num_poly, 4);
-        // SAFETY: the vector owns four initialised polynomials.
+        /* `OPENSSL_malloc_array` is `CRYPTO_malloc_array`, which does **not** zero the block; the
+         * authority's callers zero it explicitly (`vector_zero`) before the first read. Reading a
+         * coefficient of the untouched allocation asserted a guarantee the allocator never made —
+         * it passed only while the allocator happened to hand back fresh zero pages. Initialise
+         * here, then test the extent and the release. */
+        // SAFETY: `poly` names `num_poly` allocated polynomials and zero is a valid `Poly`.
+        unsafe { ptr::write_bytes(v.poly, 0u8, v.num_poly) };
+        // SAFETY: the vector owns four now-initialised polynomials.
         unsafe {
             let s = v.as_mut_slice();
             assert_eq!(s.len(), 4);
             s[0].coeff[0] = 7;
+            assert_eq!(s[0].coeff[0], 7);
             assert_eq!(s[3].coeff[0], 0);
         }
         // SAFETY: the block came from `alloc` and is released exactly once here.
