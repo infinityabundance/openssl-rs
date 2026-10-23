@@ -165,7 +165,7 @@ use core::sync::atomic::AtomicI32;
 use crate::bn::bignum::BigNum;
 use crate::bn::ctx::{BnCtx, BnGencb};
 use crate::bn::mont::MontCtx;
-use crate::evp::pkey_asn1::Engine;
+use crate::engine::eng_lib::Engine;
 use crate::ffc::FfcParams;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};

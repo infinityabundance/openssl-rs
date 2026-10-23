@@ -599,13 +599,14 @@ unsafe fn evp_pkey_free_it(x: *mut EvpPkey) {
     unsafe { (*x).type_ = EVP_PKEY_NONE };
 }
 
-/// `void evp_pkey_free_legacy(EVP_PKEY *x)` — `crypto/evp/p_lib.c:1777`.
+/// `void evp_pkey_free_legacy(EVP_PKEY *x)` — `crypto/evp/p_lib.c:1786`.
 ///
 /// The authority's body releases a legacy **origin** key through `ameth->pkey_free`, and it also
 /// releases a legacy **cache** key: when `ameth` is NULL but `legacy_cache_pkey.ptr` is set it
 /// re-finds the method by `x->type`, then makes the cache key look like an origin key so that the
-/// one `pkey_free` call covers both. The crate transcribes both halves; the four `ENGINE_finish`
-/// calls are each handed a NULL because `ENGINE` is Phase 13's and this crate registers no engine.
+/// one `pkey_free` call covers both. After that it releases the key's `engine` and `pmeth_engine`
+/// functional references; this is the single release for the reference `pkey_set_type` and
+/// `EVP_PKEY_set1_engine` take.
 ///
 /// The `ameth == NULL && legacy_cache_pkey.ptr != NULL` arm is unreachable on every path this
 /// crate can enter — a legacy cache key is only ever made by [`evp_pkey_get_legacy`], which first
@@ -619,9 +620,11 @@ pub(crate) unsafe fn evp_pkey_free_legacy(x: *mut EvpPkey) {
     // SAFETY: `x` is live per the contract.
     unsafe {
         let mut ameth = (*x).ameth;
-        /* The re-find arm: `ameth == NULL && legacy_cache_pkey.ptr != NULL`. */
+        /* The re-find arm: `ameth == NULL && legacy_cache_pkey.ptr != NULL`. The engine slot is
+         * captured so its functional reference can be released below, as the authority does. */
+        let mut tmpe: *mut Engine = ptr::null_mut();
         if ameth.is_null() && !(*x).legacy_cache_pkey.is_null() {
-            ameth = crate::evp::pkey_asn1::EVP_PKEY_asn1_find(ptr::null_mut(), (*x).type_)
+            ameth = crate::evp::pkey_asn1::EVP_PKEY_asn1_find(ptr::addr_of_mut!(tmpe), (*x).type_)
                 as *mut EvpPkeyAsn1Method;
         }
 
@@ -638,6 +641,18 @@ pub(crate) unsafe fn evp_pkey_free_legacy(x: *mut EvpPkey) {
             }
             (*x).pkey = ptr::null_mut();
         }
+
+        /* `ENGINE_finish(tmpe); ENGINE_finish(x->engine); x->engine = NULL;
+         *  ENGINE_finish(x->pmeth_engine); x->pmeth_engine = NULL;` */
+        crate::engine::eng_init::ENGINE_finish(tmpe.cast::<crate::engine::eng_lib::Engine>());
+        crate::engine::eng_init::ENGINE_finish(
+            (*x).engine.cast::<crate::engine::eng_lib::Engine>(),
+        );
+        (*x).engine = ptr::null_mut();
+        crate::engine::eng_init::ENGINE_finish(
+            (*x).pmeth_engine.cast::<crate::engine::eng_lib::Engine>(),
+        );
+        (*x).pmeth_engine = ptr::null_mut();
     }
 }
 
@@ -683,34 +698,38 @@ pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
 /// The ameth lookup and the provider path. A `str` is resolved with `EVP_PKEY_asn1_find_str` and a
 /// non-`NONE` type with `EVP_PKEY_asn1_find`; a method found with `keymgmt == NULL` makes the key a
 /// **legacy origin** key whose `type_` is the method's own `pkey_id`, and no method with a
-/// `keymgmt` is an unsupported-algorithm refusal. The `ENGINE **eptr` half of the authority's calls
-/// is absent because `ENGINE` is Phase 13's, and the two `ENGINE_finish` pairs collapse to nothing
-/// for the same reason — the crate registers no engine, so the authority's own arm would hand them
-/// NULLs and answer identically.
+/// `keymgmt` is an unsupported-algorithm refusal. A non-NULL `e` is a legacy engine the key adopts:
+/// the assignment releases the key's previous `engine`/`pmeth_engine` references and its final
+/// `ENGINE_init` stores the new functional reference, which `evp_pkey_free_legacy` releases.
 ///
 /// Three things that look like details and are not:
 ///
 ///   * `ossl_assert(x)` under `NDEBUG` is `(x) != 0`, which is the identity on a boolean, so the
 ///     authority's opening guard is `if (!C)` — a **refusal**, not a no-op: a caller supplying both
-///     a legacy type and a provider method gets `ERR_R_INTERNAL_ERROR` and a 0 return. Both clauses
-///     are unsatisifiable here — there is no `ENGINE` in this crate and every caller passes
-///     `EVP_PKEY_NONE` — so the guard is deliberately not transcribed. That is a documented
-///     simplification, not a released-build behaviour (`docs/DECISIONS.md` D167);
+///     a legacy type and a provider method, or an engine and a provider method, gets
+///     `ERR_R_INTERNAL_ERROR` and a 0 return. The guard is transcribed (`P_LIB_1551`);
 ///   * `free_it` is true when the key is **assigned**, in either half, and it releases the key data
 ///     *before* the new type is looked up: reassigning is destructive even if the new type turns
 ///     out not to exist;
 ///   * the `up_ref` is taken **after** the "unsupported" refusal, so a failed call takes nothing.
 ///
 /// # Safety
-/// `pkey` must be NULL or live; `keymgmt` must be NULL or live; `str` must be NULL or NUL-terminated
-/// readable for `len` bytes when `len` is not `-1`.
+/// `pkey` must be NULL or live; `e` NULL or a live engine; `keymgmt` must be NULL or live; `str`
+/// must be NULL or NUL-terminated readable for `len` bytes when `len` is not `-1`.
 unsafe fn pkey_set_type(
     pkey: *mut EvpPkey,
+    e: *mut crate::engine::eng_lib::Engine,
     type_: c_int,
     str_: *const c_char,
     len: c_int,
     keymgmt: *mut EvpKeyMgmt,
 ) -> c_int {
+    if (type_ != EVP_PKEY_NONE && !keymgmt.is_null()) || (!e.is_null() && !keymgmt.is_null()) {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_1551) };
+        return 0;
+    }
+
     if !pkey.is_null() {
         // SAFETY: `pkey` is live.
         let free_it = unsafe { !(*pkey).pkey.is_null() || !(*pkey).keydata.is_null() };
@@ -726,20 +745,51 @@ unsafe fn pkey_set_type(
         } {
             return 1;
         }
+
+        /* `ENGINE_finish(pkey->engine); pkey->engine = NULL;
+         *  ENGINE_finish(pkey->pmeth_engine); pkey->pmeth_engine = NULL;` */
+        // SAFETY: `pkey` is live and both slots are NULL or a functional reference it holds.
+        unsafe {
+            crate::engine::eng_init::ENGINE_finish(
+                (*pkey).engine.cast::<crate::engine::eng_lib::Engine>(),
+            );
+            (*pkey).engine = ptr::null_mut();
+            crate::engine::eng_init::ENGINE_finish(
+                (*pkey)
+                    .pmeth_engine
+                    .cast::<crate::engine::eng_lib::Engine>(),
+            );
+            (*pkey).pmeth_engine = ptr::null_mut();
+        }
     }
 
-    /* The ameth lookup. The authority's `ENGINE **eptr` is a NULL slot here: `EVP_PKEY_asn1_find`
-     * and `_find_str` are handed a NULL `pe`, which is what their own engine arm would answer with. */
+    /* The ameth lookup. `eptr` is the authority's `(e == NULL) ? &e : NULL`: a non-NULL engine is
+     * not a source of an alternative method here, and a NULL one lets the lookup select a default
+     * engine (which this crate's table does not publish, so `tmpe` stays NULL and the finish below
+     * is a no-op). */
+    let mut tmpe: *mut Engine = ptr::null_mut();
+    let eptr: *mut *mut Engine = if e.is_null() {
+        ptr::addr_of_mut!(tmpe)
+    } else {
+        ptr::null_mut()
+    };
     // SAFETY: no preconditions; both lookups search this crate's own tables.
     let ameth = unsafe {
         if !str_.is_null() {
-            crate::evp::pkey_asn1::EVP_PKEY_asn1_find_str(ptr::null_mut(), str_, len)
+            crate::evp::pkey_asn1::EVP_PKEY_asn1_find_str(eptr, str_, len)
         } else if type_ != EVP_PKEY_NONE {
-            crate::evp::pkey_asn1::EVP_PKEY_asn1_find(ptr::null_mut(), type_)
+            crate::evp::pkey_asn1::EVP_PKEY_asn1_find(eptr, type_)
         } else {
             ptr::null()
         }
     };
+    if pkey.is_null() && !eptr.is_null() {
+        /* `if (pkey == NULL && eptr != NULL) ENGINE_finish(e);` */
+        // SAFETY: `tmpe` is NULL or the functional reference the lookup handed back.
+        unsafe {
+            crate::engine::eng_init::ENGINE_finish(tmpe.cast::<crate::engine::eng_lib::Engine>())
+        };
+    }
 
     /* The authority's `check`: no method and no keymgmt is a refusal. The guard above it refuses
      * with `ERR_R_INTERNAL_ERROR` and is unreachable here; see this function's doc comment (D167). */
@@ -778,6 +828,19 @@ unsafe fn pkey_set_type(
             } else {
                 (*pkey).type_ = EVP_PKEY_KEYMGMT;
             }
+        }
+
+        /* `if (eptr == NULL && e != NULL && !ENGINE_init(e)) { ERR_raise(...INITIALIZATION_ERROR);
+         * return 0; } pkey->engine = e;` — the key adopts the caller's engine. */
+        if !e.is_null() {
+            // SAFETY: `e` is NULL or a live engine per the contract.
+            if unsafe { crate::engine::eng_init::ENGINE_init(e) } == 0 {
+                // SAFETY: a compile-time-constant site (`p_lib.c:1641`).
+                unsafe { raise_site(&err_sites::P_LIB_1641) };
+                return 0;
+            }
+            // SAFETY: `pkey` is live.
+            unsafe { (*pkey).engine = e.cast::<Engine>() };
         }
     }
     1
@@ -822,7 +885,7 @@ pub unsafe extern "C" fn EVP_PKEY_set_type_by_keymgmt(
     }
 
     // SAFETY: `pkey` is live and `keymgmt` is live.
-    unsafe { pkey_set_type(pkey, EVP_PKEY_NONE, found[0], -1, keymgmt) }
+    unsafe { pkey_set_type(pkey, ptr::null_mut(), EVP_PKEY_NONE, found[0], -1, keymgmt) }
 }
 
 /// `static void find_ameth(const char *name, void *data)` — the visitor
@@ -2455,43 +2518,31 @@ pub unsafe extern "C" fn EVP_PKEY_get_raw_public_key(
 /// The four `EVP_PKEY_new_raw_*` constructors' shared body. What it produces is decided by two
 /// things, and the first is the one a reader has to be told rather than left to infer.
 ///
-/// **The engine block (`p_lib.c:432-445`) answers `ameth = NULL` for every input in this build.**
-/// The authority writes
+/// **The engine block (`p_lib.c:432-445`) is still reduced to `ameth = NULL`.** The authority,
+/// when `e == NULL`, asks the ASN.1 table for a method and for a default engine (`tmpe`) and
+/// discards the method when no engine answered. This crate writes the reduction: it does not
+/// consult `tmpe` and it leaves `ameth` NULL, so the provider branch is tried first when `e` is
+/// NULL. That is a recorded divergence (§17): for a type with both a provider and a legacy method
+/// the authority builds a legacy key and this crate may build a provider key. It is not a silent
+/// safety claim and it is listed in the S19 reduction census.
 ///
-/// ```text
-/// if (e == NULL) {
-///     ENGINE *tmpe = NULL;
-///     if (strtype != NULL)       ameth = EVP_PKEY_asn1_find_str(&tmpe, strtype, -1);
-///     else if (nidtype != EVP_PKEY_NONE) ameth = EVP_PKEY_asn1_find(&tmpe, nidtype);
-///     if (tmpe == NULL) ameth = NULL;
-///     ENGINE_finish(tmpe);
-/// }
-/// ```
-///
-/// and `tmpe` is NULL on every path: `EVP_PKEY_asn1_find_str` and `EVP_PKEY_asn1_find` set `*pe` from
-/// the **engine registry** — which is empty, because no ENGINE can be obtained in this crate
-/// (`ENGINE` is Phase 13) — so the method one of them may return is **discarded** by the next line.
-/// That is the same shape `docs/DECISIONS.md` D181 sanctions for `EVP_PKEY_get0_asn1` ("the crate
-/// writes the same `*pe = NULL` and the answers are identical"), and the same rule D167 records for
-/// a macro read as code: transcribe the *answer*, name the mechanism at the site. So the block is
-/// written as the single `let ameth = null` below, and `e == NULL && ameth == NULL` — the condition
-/// of the provider branch — is true for every call this crate can make. `ENGINE_finish(NULL)` is
-/// the no-op the authority's own line is handed.
+/// **A non-NULL `e` is adopted.** The provider branch is skipped (`e.is_null()` is false) and the
+/// legacy half passes `e` to `pkey_set_type`, which takes the functional reference and stores it in
+/// `pkey->engine`; `evp_pkey_free_legacy` releases it. Before S19 that argument was ignored.
 ///
 /// The second is the **name**: `strtype` for the two `_ex` spellings, and `OBJ_nid2sn(nidtype)` for
 /// the two that take a legacy type. The two are different strings for the same key type and must
 /// not be conflated, which is why the arms of `RT-EVP-PKEY` drive both.
 ///
 /// The legacy half below — `EVP_PKEY_new`, `pkey_set_type`, the `ossl_assert(ameth != NULL)` gate
-/// and the two `set_priv_key`/`set_pub_key` arms — is transcribed in full and is **unreachable**:
-/// it is entered only when the context exists and `EVP_PKEY_fromdata_init` refuses, and
-/// `int_ctx_new` always sets both `keytype` and `keymgmt` on a context it returns, so the init
-/// cannot refuse. Each site names that, and each callback arm names the stratum that would fill it
-/// (`EVP_PKEY_ASN1_METHOD`'s two setters are Phase 8's objects).
+/// and the two `set_priv_key`/`set_pub_key` arms — is transcribed in full. It is reached when a
+/// non-NULL engine was supplied, and when the provider branch refused. The ``ossl_assert`` gate is
+/// a released-build refusal (D167), and the two callback arms are `EVP_PKEY_ASN1_METHOD`'s own
+/// setters.
 ///
 /// # Safety
 /// `libctx` NULL or live; `strtype` NULL or NUL-terminated; `propq` NULL or NUL-terminated;
-/// `key` NULL or readable for `len` bytes; `e` must be NULL.
+/// `key` NULL or readable for `len` bytes; `e` NULL or a live engine.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn new_raw_key_int(
     libctx: *mut c_void,
@@ -2507,10 +2558,9 @@ unsafe fn new_raw_key_int(
     let mut ctx: *mut EvpPkeyCtx = ptr::null_mut();
     let mut result = 0;
 
-    /* The engine block, as the answer it produces; see this function's doc comment. The condition
-     * below is the authority's own `e == NULL && ameth == NULL`, written with both operands so that
-     * the reader can see which one the engine block refuses to make true; `e == NULL` is the only
-     * value this crate can pass. */
+    /* The reduced engine lookup (see this function's doc comment). `ameth` is NULL by the
+     * reduction; a non-NULL `e` still skips the provider branch below and is adopted by
+     * `pkey_set_type`. */
     let ameth: *const EvpPkeyAsn1Method = ptr::null();
 
     if e.is_null() && ameth.is_null() {
@@ -2591,7 +2641,17 @@ unsafe fn new_raw_key_int(
          * finds the method the name or type names, and raises `EVP_R_UNSUPPORTED_ALGORITHM` for a
          * name no method carries. */
         // SAFETY: `pkey` is live; `strtype` is NULL or NUL-terminated.
-        if unsafe { pkey_set_type(pkey, nidtype, strtype, -1, ptr::null_mut()) } != 0 {
+        if unsafe {
+            pkey_set_type(
+                pkey,
+                e.cast::<crate::engine::eng_lib::Engine>(),
+                nidtype,
+                strtype,
+                -1,
+                ptr::null_mut(),
+            )
+        } != 0
+        {
             // SAFETY: `pkey` is live.
             let ameth = unsafe { (*pkey).ameth };
             /* `if (!ossl_assert(pkey->ameth != NULL)) goto err;` -- under `NDEBUG` that is
@@ -3251,7 +3311,16 @@ pub unsafe extern "C" fn EVP_PKEY_get0(pkey: *const EvpPkey) -> *mut c_void {
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_set_type(pkey: *mut EvpPkey, type_: c_int) -> c_int {
     // SAFETY: `pkey` is NULL or live per the contract.
-    unsafe { pkey_set_type(pkey, type_, ptr::null(), -1, ptr::null_mut()) }
+    unsafe {
+        pkey_set_type(
+            pkey,
+            ptr::null_mut(),
+            type_,
+            ptr::null(),
+            -1,
+            ptr::null_mut(),
+        )
+    }
 }
 
 /// `int EVP_PKEY_set_type_str(EVP_PKEY *pkey, const char *str, int len)` —
@@ -3271,7 +3340,16 @@ pub unsafe extern "C" fn EVP_PKEY_set_type_str(
     len: c_int,
 ) -> c_int {
     // SAFETY: `pkey` is NULL or live and `str_` is NULL or NUL-terminated per the contract.
-    unsafe { pkey_set_type(pkey, EVP_PKEY_NONE, str_, len, ptr::null_mut()) }
+    unsafe {
+        pkey_set_type(
+            pkey,
+            ptr::null_mut(),
+            EVP_PKEY_NONE,
+            str_,
+            len,
+            ptr::null_mut(),
+        )
+    }
 }
 
 /// `static EVP_PKEY *new_cmac_key_int(const unsigned char *priv, size_t len,
@@ -3289,12 +3367,14 @@ pub unsafe extern "C" fn EVP_PKEY_set_type_str(
 ///     unless the caller supplies one, and a build with no CMAC provider answers NULL with nothing
 ///     on the error queue.
 ///
-/// `e` is Phase 13's `ENGINE`; it is always NULL here, so the authority's `engine_id` is NULL and
-/// the fifth parameter slot is never filled.
+/// A non-NULL `e` contributes `OSSL_ALG_PARAM_ENGINE` (`ENGINE_get_id(e)`, a borrowed string) as the
+/// fourth parameter, exactly as the authority does. The engine is **not** adopted here: this
+/// function only forwards its identifier into the provider's `fromdata` call, so no functional
+/// reference is taken or released.
 ///
 /// # Safety
 /// `priv_` NULL or readable for `len`; `cipher_name` NULL or NUL-terminated; `cipher` NULL or live;
-/// `libctx` NULL or live; `propq` NULL or NUL-terminated.
+/// `libctx` NULL or live; `propq` NULL or NUL-terminated; `e` NULL or a live engine.
 unsafe fn new_cmac_key_int(
     priv_: *const u8,
     len: usize,
@@ -3308,8 +3388,13 @@ unsafe fn new_cmac_key_int(
     let mut params: [OsslParam; 5] = [crate::params::END; 5];
     let mut pkey: *mut EvpPkey = ptr::null_mut();
 
-    /* Phase 13: `const char *engine_id = e != NULL ? ENGINE_get_id(e) : NULL;`. */
-    let _ = e;
+    /* `const char *engine_id = e != NULL ? ENGINE_get_id(e) : NULL;` */
+    let engine_id = if e.is_null() {
+        ptr::null()
+    } else {
+        // SAFETY: `e` is non-NULL and live per the contract.
+        unsafe { crate::engine::eng_lib::ENGINE_get_id(e.cast::<crate::engine::eng_lib::Engine>()) }
+    };
 
     if !cipher.is_null() {
         // SAFETY: `cipher` is live per the contract.
@@ -3356,7 +3441,16 @@ unsafe fn new_cmac_key_int(
                 OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_PROPERTIES, propq.cast_mut(), 0);
             n += 1;
         }
-        /* Phase 13: the `OSSL_PKEY_PARAM_ENGINE` slot, which needs `ENGINE_get_id`. */
+        /* `if (engine_id != NULL) *p++ = OSSL_PARAM_construct_utf8_string(
+         *      OSSL_PKEY_PARAM_ENGINE, (char *)engine_id, 0);` */
+        if !engine_id.is_null() {
+            params[n] = OSSL_PARAM_construct_utf8_string(
+                crate::provider::util::OSSL_ALG_PARAM_ENGINE,
+                engine_id.cast_mut(),
+                0,
+            );
+            n += 1;
+        }
         params[n] = OSSL_PARAM_construct_end();
     }
 
@@ -3387,8 +3481,7 @@ unsafe fn new_cmac_key_int(
 /// drives this entry point observes exactly that.
 ///
 /// # Safety
-/// `e` is Phase 13's `ENGINE` and must be NULL; `priv` NULL or readable for `len`; `cipher` NULL or
-/// live.
+/// `e` NULL or a live engine; `priv` NULL or readable for `len`; `cipher` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_new_CMAC_key(
     e: *mut Engine,
@@ -5623,3 +5716,54 @@ mod tests {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(EvpPkey => zero_state_sweep_evp_pkey);
+
+#[cfg(test)]
+mod engine_adoption_tests {
+    use super::*;
+    use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+
+    /// **`EVP_PKEY_new_raw_private_key` adopts its engine argument.** `pkey_set_type` takes the
+    /// functional reference and stores it in `pkey->engine`; `EVP_PKEY_free` (through
+    /// `evp_pkey_free_legacy`) releases it. Before S19 the argument was ignored, so
+    /// `EVP_PKEY_get0_engine` answered NULL and the engine's structural reference stayed at one.
+    #[test]
+    fn evp_pkey_new_raw_private_key_adopts_the_engine() {
+        use crate::evp::p_lib::EVP_PKEY_get0_engine;
+        use crate::evp::pkey_asn1::Engine as PkeyEngine;
+        use crate::evp::pkey_ctx::EVP_PKEY_X25519;
+
+        // SAFETY: every pointer below is a value this test constructed and keeps alive until its
+        // matching release; the engine is not registered in the global table.
+        unsafe {
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(
+                ENGINE_set_id(engine, c"unit-test-rawkey-engine".as_ptr()),
+                1
+            );
+            assert_eq!(
+                ENGINE_set_name(engine, c"unit test rawkey engine".as_ptr()),
+                1
+            );
+
+            let priv_key = [0x11u8; 32];
+            let pkey = EVP_PKEY_new_raw_private_key(
+                EVP_PKEY_X25519,
+                engine.cast::<PkeyEngine>(),
+                priv_key.as_ptr(),
+                priv_key.len(),
+            );
+            assert!(!pkey.is_null());
+            assert_eq!(
+                EVP_PKEY_get0_engine(pkey),
+                engine,
+                "the constructor must store the caller's engine"
+            );
+
+            // `EVP_PKEY_free` releases the functional reference; the test's own structural one
+            // remains and `ENGINE_free` drops it.
+            EVP_PKEY_free(pkey);
+            assert_eq!(ENGINE_free(engine), 1);
+        }
+    }
+}

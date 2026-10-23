@@ -21,17 +21,19 @@
 //! module, so the constructor and the table land together, and `ec_key.c` and this module are
 //! one commit by §1 step 7 of the integration plan.
 //!
-//! ## The `ENGINE` block, and the reduction the crate's RSA layer already records
+//! ## The `ENGINE` block
 //!
 //! `ossl_ec_key_new_method_int` and `EC_KEY_set_method` each carry an
 //! `#if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)` block that calls
 //! `ENGINE_init`, `ENGINE_get_default_EC`, `ENGINE_get_EC` and `ENGINE_finish`. `OPENSSL_NO_ENGINE`
-//! is not defined on this profile, so the authority compiles the block; this crate has no engine
-//! registry and nothing in it can build an `ENGINE`, so the block is **reduced to the one effect
-//! it has when the registry is empty** — `ret->engine` is NULL and the method is the default —
-//! exactly as `src/rsa/object.rs` records for `rsa_new_intern`. Every one of those four engine
-//! calls is named here rather than silently dropped, and the reduction is a recorded one rather
-//! than a compiled-out `#ifdef` arm.
+//! is not defined on this profile, so the authority compiles the block and this module transcribes
+//! it. The engine registry and the four calls are landed in `src/engine/`; an earlier revision
+//! reduced the block to "`ret->engine` is NULL" on the assumption that no caller could build an
+//! `ENGINE`, but `EC_KEY_new_method(engine)` is a public constructor and a custom
+//! `EC_KEY_METHOD` is exactly how an application-backed key supplies its private operation. That
+//! reduction was the same class of defect as the RSA one S18 repaired, so it is gone: the
+//! constructor now adopts the engine and `EC_KEY_free`/`EC_KEY_set_method`/`EC_KEY_copy` release
+//! the functional reference exactly once.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -50,7 +52,7 @@ use crate::ec::{
     EcKeySetPrivateFn, EcKeySetPublicFn, EcKeySignFn, EcKeySignSetupFn, EcKeySignSigFn,
     EcKeyVerifyFn, EcKeyVerifySigFn, EcPoint, EC_KEY_METHOD_DYNAMIC, POINT_CONVERSION_UNCOMPRESSED,
 };
-use crate::evp::pkey_asn1::Engine;
+use crate::engine::eng_lib::Engine;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{CRYPTO_new_ex_data, CRYPTO_EX_INDEX_EC_KEY};
@@ -310,8 +312,8 @@ pub unsafe extern "C" fn EC_KEY_get_method(key: *const EcKey) -> *const EcKeyMet
 /// The outgoing table's `finish` runs before the new table is stored, and the new table's `init`
 /// decides the answer: a table with no `init` reports success without touching the key.
 ///
-/// The authority's engine block (`:69-72`) calls `ENGINE_finish(key->engine)` and clears
-/// `key->engine`; it is reduced to the clear, for the reason the module documentation gives.
+/// The authority's engine block (`:69-72`) releases the outgoing engine's functional reference
+/// with `ENGINE_finish(key->engine)` and clears `key->engine`; both statements are transcribed.
 ///
 /// # Safety
 ///
@@ -325,8 +327,10 @@ pub unsafe extern "C" fn EC_KEY_set_method(key: *mut EcKey, meth: *const EcKeyMe
             finish(key);
         }
 
-        // The `#if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)` arm's two statements,
-        // reduced to the clear: the crate can build no `ENGINE` to finish.
+        // The `#if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)` arm's two statements:
+        // the outgoing engine's functional reference is released exactly once, then cleared.
+        // SAFETY: `key` is live and `engine` is NULL or the functional reference it holds.
+        crate::engine::eng_init::ENGINE_finish((*key).engine);
         (*key).engine = ptr::null_mut();
 
         (*key).meth = meth;
@@ -341,14 +345,15 @@ pub unsafe extern "C" fn EC_KEY_set_method(key: *mut EcKey, meth: *const EcKeyMe
 /// `EC_KEY *ossl_ec_key_new_method_int(OSSL_LIB_CTX *libctx, const char *propq,
 /// ENGINE *engine)` — `crypto/ec/ec_kmeth.c:80-139`. The unit's one internal.
 ///
-/// The authority's engine argument and its whole engine block are reduced to nothing here (the
-/// doc comment on [`EC_KEY_set_method`] and the module documentation give the reason), so
-/// `engine` is ignored and `ret->engine` is NULL. On the no-engine path the table comes from
+/// `engine` is honoured exactly as the authority honours it: a non-NULL argument takes a
+/// functional reference through `ENGINE_init` and supplies the table, while NULL consults
+/// `ENGINE_get_default_EC()`. A selected engine without an `EC_KEY_METHOD` is
+/// `EC_KMETH_104`/`EC_KMETH_113`. On the no-engine path the table comes from
 /// [`EC_KEY_get_default_method`], `version` is 1, `conv_form` is
 /// [`POINT_CONVERSION_UNCOMPRESSED`], `CRYPTO_new_ex_data` runs against
 /// `CRYPTO_EX_INDEX_EC_KEY`, and the table's `init` — when it has one — decides the answer. A
 /// failure on any of those paths answers `EC_KEY_free(ret)`, which is `ec_key.c`'s and therefore
-/// a reference this session resolves by name.
+/// a reference this session resolves by name; it also releases any functional reference taken.
 ///
 /// `CRYPTO_NEW_REF(&ret->references, 1)` is the header's fallback arm on this profile — a plain
 /// store of 1 that cannot fail — so it is a `Relaxed` store and the untaken branch is named in
@@ -356,13 +361,13 @@ pub unsafe extern "C" fn EC_KEY_set_method(key: *mut EcKey, meth: *const EcKeyMe
 ///
 /// # Safety
 ///
-/// `engine` is ignored; `libctx` is NULL or a live library context; `propq` is NULL or a
-/// NUL-terminated string.
+/// `engine` is NULL or a live engine the caller keeps alive for this call; `libctx` is NULL or a
+/// live library context; `propq` is NULL or a NUL-terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn ossl_ec_key_new_method_int(
     libctx: *mut c_void,
     propq: *const c_char,
-    _engine: *mut Engine,
+    engine: *mut Engine,
 ) -> *mut EcKey {
     // `OPENSSL_zalloc(sizeof(*ret))` at ec_kmeth.c:83.
     let Some(ret_owner) = OwnedEcKey::zalloc() else {
@@ -386,8 +391,36 @@ pub unsafe extern "C" fn ossl_ec_key_new_method_int(
         }
 
         (*ret).meth = EC_KEY_get_default_method();
-        // The engine block (`:101-117`) is reduced: `ret->engine` stays NULL and the table is the
-        // default one.
+        // `if (engine) { if (!ENGINE_init(engine)) goto err; ret->engine = engine; }
+        //  else ret->engine = ENGINE_get_default_EC();
+        //  if (ret->engine) { ret->meth = ENGINE_get_EC(ret->engine); if NULL goto err; }`
+        // SAFETY: `engine` is NULL or a live engine; `ENGINE_init` takes the functional reference
+        // that `EC_KEY_free`, `EC_KEY_set_method` and `EC_KEY_copy` release.
+        let engine_ref = if engine.is_null() {
+            // The select takes no caller pointer and answers a functional reference (or NULL when
+            // no engine is registered for EC). It is a safe `extern "C"` entry point.
+            crate::engine::tb_eckey::ENGINE_get_default_EC()
+        } else {
+            // SAFETY: `engine` is the caller's live engine.
+            if crate::engine::eng_init::ENGINE_init(engine) == 0 {
+                // SAFETY: a compile-time-constant site (`ec_kmeth.c:104`, ERR_R_ENGINE_LIB).
+                raise_site(&err_sites::EC_KMETH_104);
+                return ptr::null_mut();
+            }
+            engine
+        };
+        (*ret).engine = engine_ref;
+        if !engine_ref.is_null() {
+            // SAFETY: `engine_ref` is the functional reference acquired above.
+            let engine_meth =
+                crate::engine::tb_eckey::ENGINE_get_EC(engine_ref).cast::<EcKeyMethod>();
+            if engine_meth.is_null() {
+                // SAFETY: a compile-time-constant site (`ec_kmeth.c:113`, ERR_R_ENGINE_LIB).
+                raise_site(&err_sites::EC_KMETH_113);
+                return ptr::null_mut();
+            }
+            (*ret).meth = engine_meth;
+        }
 
         (*ret).version = 1;
         (*ret).conv_form = POINT_CONVERSION_UNCOMPRESSED;
@@ -424,7 +457,7 @@ pub unsafe extern "C" fn ossl_ec_key_new_method_int(
 ///
 /// # Safety
 ///
-/// `engine` is ignored, as [`ossl_ec_key_new_method_int`]'s is.
+/// `engine` is NULL or a live engine, forwarded to [`ossl_ec_key_new_method_int`].
 #[no_mangle]
 pub unsafe extern "C" fn EC_KEY_new_method(engine: *mut Engine) -> *mut EcKey {
     // SAFETY: this function's own contract.
@@ -785,6 +818,95 @@ pub unsafe extern "C" fn EC_KEY_METHOD_get_verify(
         }
         if !pverify_sig.is_null() {
             *pverify_sig = (*meth).verify_sig;
+        }
+    }
+}
+
+#[cfg(test)]
+mod engine_adoption_tests {
+    use core::ffi::{c_int, c_uchar, c_uint};
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+
+    static EC_SIGN_CALLED: AtomicUsize = AtomicUsize::new(0);
+
+    /// The engine table's `sign` column. It proves `ECDSA_sign` reached the engine's method rather
+    /// than the default `ECDSA_SIG`-returning path, and writes a recognisable marker.
+    unsafe extern "C" fn engine_test_ec_sign(
+        _type_: c_int,
+        _dgst: *const c_uchar,
+        _dlen: c_int,
+        sig: *mut c_uchar,
+        siglen: *mut c_uint,
+        _kinv: *const crate::bn::bignum::BigNum,
+        _r: *const crate::bn::bignum::BigNum,
+        _eckey: *mut EcKey,
+    ) -> c_int {
+        EC_SIGN_CALLED.fetch_add(1, Ordering::SeqCst);
+        if !sig.is_null() {
+            // SAFETY: the caller provides `ECDSA_size` writable bytes.
+            unsafe { *sig = 0x5a };
+        }
+        if !siglen.is_null() {
+            // SAFETY: `siglen` is the caller's out-parameter.
+            unsafe { *siglen = 1 };
+        }
+        1
+    }
+
+    /// **`EC_KEY_new_method(engine)` adopts the engine's `EC_KEY_METHOD`, and `ECDSA_sign`
+    /// dispatches to it.** Before the constructor honoured the argument, `EC_KEY_get0_engine`
+    /// answered NULL, `EC_KEY_get_method` answered the default table, and the callback below was
+    /// never entered; the test fails at the first assertion.
+    #[test]
+    fn ec_key_new_method_adopts_the_engine_method_and_ecdsa_sign_dispatches_to_it() {
+        use crate::ec::ecdsa::ECDSA_sign;
+        use crate::ec::key::{EC_KEY_free, EC_KEY_get0_engine};
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_eckey::ENGINE_set_EC;
+        use crate::runtime::obj::NID_sha256;
+
+        // SAFETY: every pointer below is a value this test constructed and keeps alive until its
+        // matching release; the engine is not registered in the global table.
+        unsafe {
+            let meth = EC_KEY_METHOD_new(ptr::null());
+            assert!(!meth.is_null());
+            EC_KEY_METHOD_set_sign(meth, Some(engine_test_ec_sign), None, None);
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(ENGINE_set_id(engine, c"unit-test-ec-engine".as_ptr()), 1);
+            assert_eq!(ENGINE_set_name(engine, c"unit test ec engine".as_ptr()), 1);
+            assert_eq!(ENGINE_set_EC(engine, meth as *const c_void), 1);
+
+            let key = EC_KEY_new_method(engine);
+            assert!(!key.is_null());
+            assert_eq!(EC_KEY_get0_engine(key), engine);
+            assert_eq!(EC_KEY_get_method(key), meth as *const EcKeyMethod);
+
+            EC_SIGN_CALLED.store(0, Ordering::SeqCst);
+            let dgst = [0x42u8; 32];
+            let mut sig = [0u8; 8];
+            let mut siglen: c_uint = 0;
+            assert_eq!(
+                ECDSA_sign(
+                    NID_sha256,
+                    dgst.as_ptr(),
+                    dgst.len() as c_int,
+                    sig.as_mut_ptr(),
+                    &mut siglen,
+                    key,
+                ),
+                1
+            );
+            assert_eq!(EC_SIGN_CALLED.load(Ordering::SeqCst), 1);
+            assert_eq!(siglen, 1);
+            assert_eq!(sig[0], 0x5a);
+
+            EC_KEY_free(key);
+            assert_eq!(ENGINE_free(engine), 1);
+            EC_KEY_METHOD_free(meth);
         }
     }
 }

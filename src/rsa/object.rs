@@ -3088,6 +3088,183 @@ mod tests {
             RSA_meth_free(meth);
         }
     }
+
+    /// The call counter for [`engine_test_verify`].
+    static ENGINE_VERIFY_CALLED: core::sync::atomic::AtomicUsize =
+        core::sync::atomic::AtomicUsize::new(0);
+
+    /// A stand-in for a verifying engine's `rsa_verify`: it proves the legacy verify path reached
+    /// the engine's table instead of `rsa_ossl` (which would need a public operation the
+    /// public-only key cannot perform).
+    unsafe extern "C" fn engine_test_verify(
+        _dtype: c_int,
+        _m: *const c_uchar,
+        _m_length: c_uint,
+        _sigbuf: *const c_uchar,
+        _siglen: c_uint,
+        _rsa: *const Rsa,
+    ) -> c_int {
+        ENGINE_VERIFY_CALLED.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    /// **An engine-backed public-only key verifies through the legacy EVP `EVP_PKEY_verify` arm.**
+    /// Before the legacy verify arm existed, a foreign key's context had no algorithm context and
+    /// `EVP_PKEY_verify` answered `-2` without ever calling `pmeth->verify`; the assertion below
+    /// fails on that behaviour.
+    #[test]
+    fn evp_pkey_verify_dispatches_to_the_legacy_method_for_an_engine_key() {
+        use crate::bn::bignum::{BN_new, BN_set_bit, BN_set_word};
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_rsa::ENGINE_set_RSA;
+        use crate::evp::legacy_sha::EVP_sha256;
+        use crate::evp::p_legacy_assign::EVP_PKEY_set1_RSA;
+        use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_new, EvpPkey};
+        use crate::evp::pkey_ctx::{
+            EVP_PKEY_CTX_free, EVP_PKEY_CTX_new, EVP_PKEY_CTX_set_signature_md,
+        };
+        use crate::evp::signature::{EVP_PKEY_verify, EVP_PKEY_verify_init};
+        use crate::rsa::{
+            RSA_meth_free, RSA_meth_new, RSA_meth_set_priv_enc, RSA_meth_set_sign,
+            RSA_meth_set_verify,
+        };
+
+        // SAFETY: every pointer below is a value this test constructed and keeps alive until its
+        // matching release; the engine is not registered in the global table.
+        unsafe {
+            let meth = RSA_meth_new(c"unit-test-engine-verify".as_ptr(), 0);
+            assert!(!meth.is_null());
+            assert_eq!(RSA_meth_set_sign(meth, Some(engine_test_sign)), 1);
+            assert_eq!(RSA_meth_set_priv_enc(meth, Some(engine_test_priv_enc)), 1);
+            assert_eq!(RSA_meth_set_verify(meth, Some(engine_test_verify)), 1);
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(
+                ENGINE_set_id(engine, c"unit-test-engine-verify".as_ptr()),
+                1
+            );
+            assert_eq!(
+                ENGINE_set_name(engine, c"unit test engine verify".as_ptr()),
+                1
+            );
+            assert_eq!(ENGINE_set_RSA(engine, meth as *const c_void), 1);
+
+            let rsa = RSA_new_method(engine);
+            assert!(!rsa.is_null());
+            let n = BN_new();
+            let e = BN_new();
+            assert!(!n.is_null() && !e.is_null());
+            assert_eq!(BN_set_bit(n, 2047), 1);
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(RSA_set0_key(rsa, n, e, core::ptr::null_mut()), 1);
+            RSA_set_flags(rsa, RSA_FLAG_EXT_PKEY);
+
+            let pkey: *mut EvpPkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(EVP_PKEY_set1_RSA(pkey, rsa), 1);
+
+            let ctx = EVP_PKEY_CTX_new(pkey, core::ptr::null_mut());
+            assert!(!ctx.is_null());
+            assert_eq!(EVP_PKEY_verify_init(ctx), 1);
+            assert_eq!(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha256()), 1);
+
+            ENGINE_VERIFY_CALLED.store(0, Ordering::SeqCst);
+            let tbs = [0x42u8; 32];
+            let sig = [0u8; 256];
+            assert_eq!(
+                EVP_PKEY_verify(ctx, sig.as_ptr(), sig.len(), tbs.as_ptr(), tbs.len()),
+                1
+            );
+            assert_eq!(ENGINE_VERIFY_CALLED.load(Ordering::SeqCst), 1);
+
+            EVP_PKEY_CTX_free(ctx);
+            EVP_PKEY_free(pkey);
+            RSA_free(rsa);
+            assert_eq!(ENGINE_free(engine), 1);
+            RSA_meth_free(meth);
+        }
+    }
+
+    /// **The same key verifies through `EVP_DigestVerify`, which is the legacy
+    /// `digest_custom`/`EVP_DigestFinal_ex`/`EVP_PKEY_verify` tail of `EVP_DigestVerifyFinal`.**
+    /// This is the symmetric half of the S18 `EVP_DigestSign` test, and it fails at the init or the
+    /// first verify when either legacy arm is missing.
+    #[test]
+    fn engine_backed_public_key_verifies_through_the_legacy_evp_path() {
+        use crate::bn::bignum::{BN_new, BN_set_bit, BN_set_word};
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_rsa::ENGINE_set_RSA;
+        use crate::evp::digest::{
+            EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_free, EVP_MD_CTX_new,
+        };
+        use crate::evp::legacy_sha::EVP_sha256;
+        use crate::evp::p_legacy_assign::EVP_PKEY_set1_RSA;
+        use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_new, EvpPkey};
+        use crate::evp::pkey_ctx::EvpPkeyCtx;
+        use crate::rsa::{
+            RSA_meth_free, RSA_meth_new, RSA_meth_set_priv_enc, RSA_meth_set_sign,
+            RSA_meth_set_verify,
+        };
+
+        // SAFETY: as in the sibling test.
+        unsafe {
+            let meth = RSA_meth_new(c"unit-test-engine-digestverify".as_ptr(), 0);
+            assert!(!meth.is_null());
+            assert_eq!(RSA_meth_set_sign(meth, Some(engine_test_sign)), 1);
+            assert_eq!(RSA_meth_set_priv_enc(meth, Some(engine_test_priv_enc)), 1);
+            assert_eq!(RSA_meth_set_verify(meth, Some(engine_test_verify)), 1);
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(
+                ENGINE_set_id(engine, c"unit-test-engine-digestverify".as_ptr()),
+                1
+            );
+            assert_eq!(
+                ENGINE_set_name(engine, c"unit test engine digestverify".as_ptr()),
+                1
+            );
+            assert_eq!(ENGINE_set_RSA(engine, meth as *const c_void), 1);
+
+            let rsa = RSA_new_method(engine);
+            assert!(!rsa.is_null());
+            let n = BN_new();
+            let e = BN_new();
+            assert!(!n.is_null() && !e.is_null());
+            assert_eq!(BN_set_bit(n, 2047), 1);
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(RSA_set0_key(rsa, n, e, core::ptr::null_mut()), 1);
+            RSA_set_flags(rsa, RSA_FLAG_EXT_PKEY);
+
+            let pkey: *mut EvpPkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(EVP_PKEY_set1_RSA(pkey, rsa), 1);
+
+            let mctx = EVP_MD_CTX_new();
+            assert!(!mctx.is_null());
+            let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
+            assert_eq!(
+                EVP_DigestVerifyInit(mctx, &mut pctx, EVP_sha256(), core::ptr::null_mut(), pkey,),
+                1
+            );
+
+            ENGINE_VERIFY_CALLED.store(0, Ordering::SeqCst);
+            let tbs = [0x42u8; 32];
+            let sig = [0u8; 256];
+            assert_eq!(
+                EVP_DigestVerify(mctx, sig.as_ptr(), sig.len(), tbs.as_ptr(), tbs.len()),
+                1
+            );
+            assert_eq!(ENGINE_VERIFY_CALLED.load(Ordering::SeqCst), 1);
+
+            EVP_MD_CTX_free(mctx);
+            EVP_PKEY_free(pkey);
+            RSA_free(rsa);
+            assert_eq!(ENGINE_free(engine), 1);
+            RSA_meth_free(meth);
+        }
+    }
 }
 
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.

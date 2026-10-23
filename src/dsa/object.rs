@@ -14,23 +14,17 @@
 //! before its five member functions' addresses do. D329 named the cycle for DH, D331 closed it, and
 //! this slice closes it for DSA, which is why [`crate::dsa::ossl`] exists in the same commit.
 //!
-//! ## One reachable-answer reduction, and it is the one D331 recorded for DH
+//! ## The `ENGINE_*` block, transcribed
 //!
-//! **`ENGINE_*`.** `DSA_set_method` and `DSA_free` call `ENGINE_finish(dsa->engine)` (`:126`,
-//! `:216`); `dsa_new_intern` calls `ENGINE_init`, `ENGINE_get_default_DSA` and `ENGINE_get_DSA`
-//! (`:156`, `:161`, `:163`). None of the five is in this crate. The authority's own comment on
-//! `DSA_set_method` — "The caller is specifically setting a method, so it's not up to us to deal
-//! with which ENGINE it comes from" — is the shape of the reduction: with no engine registry,
-//! `ENGINE_get_default_DSA()` selects from an empty table and answers NULL (`tb_dsa.c`), so
-//! `dsa->engine` is NULL on every state this crate can reach and `ENGINE_finish(NULL)` returns 1
-//! without touching anything (`eng_init.c:108-111`). The two `finish` calls are therefore omitted
-//! with the `dsa->engine = NULL;` assignment kept where the authority writes it, which is
-//! `src/rsa/object.rs`'s established reduction and D313/D331's argument. Its observable half is
-//! that `DSA_get0_engine` answers NULL for every object the crate can build, and `RT-DSA` asserts
-//! it. The two `ERR_R_ENGINE_LIB` raise sites inside that block (`:158`, `:167`) are therefore
-//! unreachable and no `raise_site` names them; the generated `err_sites::DSA_LIB_158`/`_167`
-//! coordinates are still emitted by the lexical scan and still carried in `err_sites::ALL`,
-//! exactly as D330 records for the two FIPS-only FFC sites and D331 for `DH_LIB_100`/`_109`.
+//! `DSA_set_method` and `DSA_free` call `ENGINE_finish(dsa->engine)` (`:117`, `:228`);
+//! `dsa_new_intern` calls `ENGINE_init`, `ENGINE_get_default_DSA` and `ENGINE_get_DSA`
+//! (`:157`, `:163`, `:165`). All five are landed in `src/engine/`, and `DSA_new_method(engine)` is
+//! a public constructor an application-backed key uses to supply a custom `DSA_METHOD`. An earlier
+//! revision reduced the block to "`dsa->engine` is NULL" on the assumption that no caller could
+//! build an `ENGINE`; that is the same defect class S18 repaired for RSA, so the constructor now
+//! adopts the engine, `DSA_free`/`DSA_set_method` release its functional reference exactly once, and
+//! `DSA_get0_engine` returns it. The two `ERR_R_ENGINE_LIB` sites (`DSA_LIB_158`/`DSA_LIB_167`) are
+//! live again.
 //!
 //! ## One internal was withheld until D351, and it was the same blocker `DH_KDF_X9_42` named
 //!
@@ -83,7 +77,7 @@ use core::sync::atomic::Ordering;
 
 use crate::bn::bignum::{BN_clear_free, BN_dup, BN_free, BN_num_bits, BN_security_bits, BigNum};
 use crate::dh::object::{ossl_dh_get0_params, DH_free, DH_new, DH_set0_key};
-use crate::evp::pkey_asn1::Engine;
+use crate::engine::eng_lib::Engine;
 use crate::ffc::params::{
     ossl_ffc_params_cleanup, ossl_ffc_params_copy, ossl_ffc_params_get0_pqg, ossl_ffc_params_init,
     ossl_ffc_params_set0_pqg,
@@ -128,13 +122,13 @@ pub unsafe extern "C" fn DSA_new() -> *mut Dsa {
 
 /// `DSA *DSA_new_method(ENGINE *engine)` — `dsa_lib.c:190-193`.
 ///
-/// **The engine argument is ignored**, which is the constructor's reduction record: the crate has
-/// no `ENGINE` to hand `ENGINE_init`, so `DSA_new_method(NULL)` is this function's whole reachable
-/// surface.
+/// `engine` is honoured exactly as the authority honours it: a non-NULL argument takes a
+/// functional reference through `ENGINE_init` and supplies the `DSA_METHOD`, while NULL consults
+/// `ENGINE_get_default_DSA()`.
 ///
 /// # Safety
 ///
-/// `engine` is NULL and is ignored.
+/// `engine` is NULL or a live engine the caller keeps alive for this call.
 #[no_mangle]
 pub unsafe extern "C" fn DSA_new_method(engine: *mut Engine) -> *mut Dsa {
     // SAFETY: `engine` is not read; the library context is NULL as the authority passes it.
@@ -164,8 +158,9 @@ pub(crate) unsafe fn ossl_dsa_new(libctx: *mut c_void) -> *mut Dsa {
 ///
 /// # Safety
 ///
-/// `engine` is NULL and is ignored; `libctx` is NULL or a live library context.
-unsafe fn dsa_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dsa {
+/// `engine` is NULL or a live engine the caller keeps alive for this call; `libctx` is NULL or a
+/// live library context.
+unsafe fn dsa_new_intern(engine: *mut Engine, libctx: *mut c_void) -> *mut Dsa {
     // `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)`. The window between the
     // allocation and the point where the block is a valid `Dsa` is a `RawCtx`: its `Drop` releases
     // the block alone, so a refusal before validation never runs a destructor.
@@ -203,14 +198,43 @@ unsafe fn dsa_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dsa 
         // SAFETY: `ret` is this call's own allocation.
         unsafe { (*ret).meth = meth };
 
-        // `#if !defined(FIPS_MODULE) && !defined(OPENSSL_NO_ENGINE)` — compiled here, and reduced:
-        // the engine lookup answers NULL, so the block's whole reachable effect is the assignment
-        // below. The `ret->flags = ret->meth->flags & ~DSA_FLAG_NON_FIPS_ALLOW;` the authority
-        // writes first is the "early default init" and is kept.
+        // `#if !defined(FIPS_MODULE) && !defined(OPENSSL_NO_ENGINE)` — compiled here. The
+        // `ret->flags = ret->meth->flags & ~DSA_FLAG_NON_FIPS_ALLOW;` the authority writes first
+        // is the "early default init".
         // SAFETY: `meth` is the table the getter answered, read exactly as the authority reads it.
         unsafe { (*ret).flags = (*meth).flags & !DSA_FLAG_NON_FIPS_ALLOW };
-        // SAFETY: `ret` is this call's own allocation; the engine is NULL on every reachable state.
-        unsafe { (*ret).engine = ptr::null_mut() };
+        // `if (engine) { if (!ENGINE_init(engine)) goto err; ret->engine = engine; }
+        //  else ret->engine = ENGINE_get_default_DSA();
+        //  if (ret->engine) { ret->meth = ENGINE_get_DSA(ret->engine); if NULL goto err; }`
+        // SAFETY: `engine` is NULL or a live engine; `ENGINE_init` takes the functional reference
+        // that `DSA_free`/`DSA_set_method` release.
+        let engine_ref = if engine.is_null() {
+            // The select takes no caller pointer and answers a functional reference (or NULL when
+            // no engine is registered for DSA). It is a safe `extern "C"` entry point.
+            crate::engine::tb_dsa::ENGINE_get_default_DSA()
+        } else {
+            // SAFETY: `engine` is the caller's live engine.
+            if unsafe { crate::engine::eng_init::ENGINE_init(engine) } == 0 {
+                // SAFETY: a compile-time-constant site (`dsa_lib.c:158`, ERR_R_ENGINE_LIB).
+                unsafe { raise_site(&err_sites::DSA_LIB_158) };
+                break 'build false;
+            }
+            engine
+        };
+        // SAFETY: `ret` is this call's own allocation; `engine_ref` is the functional reference.
+        unsafe { (*ret).engine = engine_ref };
+        if !engine_ref.is_null() {
+            // SAFETY: `engine_ref` is the functional reference acquired above.
+            let engine_meth =
+                unsafe { crate::engine::tb_dsa::ENGINE_get_DSA(engine_ref) }.cast::<DsaMethod>();
+            if engine_meth.is_null() {
+                // SAFETY: a compile-time-constant site (`dsa_lib.c:167`, ERR_R_ENGINE_LIB).
+                unsafe { raise_site(&err_sites::DSA_LIB_167) };
+                break 'build false;
+            }
+            // SAFETY: `ret` is this call's own allocation.
+            unsafe { (*ret).meth = engine_meth };
+        }
 
         // The second assignment, and the one that matters when an engine replaced the table.
         // SAFETY: `ret` is this call's own allocation and `meth` its own member.
@@ -278,8 +302,10 @@ unsafe impl CtxDestroy for Dsa {
             }
         }
 
-        // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every
-        // state this crate can reach. See the module documentation.
+        // The authority's `ENGINE_finish(r->engine)`: NULL unless the constructor adopted an
+        // engine, in which case this is the functional reference's single release.
+        // SAFETY: `ptr` is live and `engine` is NULL or the functional reference this object took.
+        unsafe { crate::engine::eng_init::ENGINE_finish((*ptr).engine) };
 
         // SAFETY: `ptr` is live and `ex_data` is a field of it.
         unsafe {
@@ -520,8 +546,8 @@ pub unsafe extern "C" fn DSA_set_flags(d: *mut Dsa, flags: c_int) {
 
 /// `ENGINE *DSA_get0_engine(DSA *d)` — `dsa_lib.c:97-100`.
 ///
-/// **NULL for every object this crate can build**, because there is no engine registry to attach
-/// one; that is the observable half of the constructor's reduction and `RT-DSA` asserts it.
+/// The engine the constructor adopted, or NULL for a key built without one. `DSA_new_method(engine)`
+/// and `DSA_new()` (when a default DSA engine is registered) answer non-NULL.
 ///
 /// # Safety
 ///
@@ -534,9 +560,9 @@ pub unsafe extern "C" fn DSA_get0_engine(d: *mut Dsa) -> *mut Engine {
 
 /// `int DSA_set_method(DSA *dsa, const DSA_METHOD *meth)` — `dsa_lib.c:102-122`.
 ///
-/// **Always answers 1, and the old method is shut down before the new one is installed.** See this
-/// module's reduction note for the omitted `ENGINE_finish`; the `dsa->engine = NULL;` assignment
-/// the authority writes beside it is kept.
+/// **Always answers 1, and the old method is shut down before the new one is installed.** The
+/// outgoing engine's functional reference is released with `ENGINE_finish(dsa->engine)` and the slot
+/// cleared, exactly as the authority writes it.
 ///
 /// # Safety
 ///
@@ -550,8 +576,10 @@ pub unsafe extern "C" fn DSA_set_method(dsa: *mut Dsa, meth: *const DsaMethod) -
         // SAFETY: `finish` is that table's own destructor for this object.
         unsafe { finish(dsa) };
     }
-    // The authority's `ENGINE_finish(dsa->engine)` is omitted: `dsa->engine` is NULL on every state
-    // this crate can reach and `ENGINE_finish(NULL)` returns 1 without touching anything.
+    // The authority's `ENGINE_finish(dsa->engine)` — the single release of the functional
+    // reference the constructor took when it adopted an engine.
+    // SAFETY: `dsa` is live and `engine` is NULL or the functional reference it holds.
+    unsafe { crate::engine::eng_init::ENGINE_finish((*dsa).engine) };
     // SAFETY: `dsa` is live per the contract.
     unsafe { (*dsa).engine = ptr::null_mut() };
     // SAFETY: `dsa` is live per the contract.
@@ -1168,3 +1196,66 @@ mod adv_probe {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(Dsa => zero_state_sweep_dsa);
+
+#[cfg(test)]
+mod engine_adoption_tests {
+    use core::ffi::c_int;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+
+    static DSA_SIGN_CALLED: AtomicUsize = AtomicUsize::new(0);
+
+    /// The engine table's `dsa_do_sign` column. It proves `DSA_do_sign` reached the engine's method
+    /// and returns a real (empty) `DSA_SIG` so the caller can release it normally.
+    unsafe extern "C" fn engine_test_dsa_sign(
+        _dgst: *const core::ffi::c_uchar,
+        _dlen: c_int,
+        _dsa: *mut Dsa,
+    ) -> *mut crate::dsa::DsaSig {
+        DSA_SIGN_CALLED.fetch_add(1, Ordering::SeqCst);
+        // SAFETY: no caller pointer is read.
+        unsafe { crate::dsa::sign::DSA_SIG_new() }
+    }
+
+    /// **`DSA_new_method(engine)` adopts the engine's `DSA_METHOD`, and `DSA_do_sign` dispatches
+    /// to it.** Before the constructor honoured the argument, `DSA_get0_engine` answered NULL,
+    /// `DSA_get_method` answered the default table, and the callback below was never entered.
+    #[test]
+    fn dsa_new_method_adopts_the_engine_method_and_dsa_do_sign_dispatches_to_it() {
+        use crate::dsa::sign::{DSA_SIG_free, DSA_do_sign};
+        use crate::dsa::{DSA_meth_free, DSA_meth_new, DSA_meth_set_sign};
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_dsa::ENGINE_set_DSA;
+
+        // SAFETY: every pointer below is a value this test constructed and keeps alive until its
+        // matching release; the engine is not registered in the global table.
+        unsafe {
+            let meth = DSA_meth_new(c"unit-test-dsa-engine".as_ptr(), 0);
+            assert!(!meth.is_null());
+            assert_eq!(DSA_meth_set_sign(meth, Some(engine_test_dsa_sign)), 1);
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(ENGINE_set_id(engine, c"unit-test-dsa-engine".as_ptr()), 1);
+            assert_eq!(ENGINE_set_name(engine, c"unit test dsa engine".as_ptr()), 1);
+            assert_eq!(ENGINE_set_DSA(engine, meth as *const c_void), 1);
+
+            let dsa = DSA_new_method(engine);
+            assert!(!dsa.is_null());
+            assert_eq!(DSA_get0_engine(dsa), engine);
+            assert_eq!(DSA_get_method(dsa), meth as *const DsaMethod);
+
+            DSA_SIGN_CALLED.store(0, Ordering::SeqCst);
+            let dgst = [0x42u8; 32];
+            let sig = DSA_do_sign(dgst.as_ptr(), dgst.len() as c_int, dsa);
+            assert!(!sig.is_null());
+            assert_eq!(DSA_SIGN_CALLED.load(Ordering::SeqCst), 1);
+            DSA_SIG_free(sig);
+
+            DSA_free(dsa);
+            assert_eq!(ENGINE_free(engine), 1);
+            DSA_meth_free(meth);
+        }
+    }
+}
