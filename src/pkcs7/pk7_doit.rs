@@ -69,7 +69,7 @@ use crate::runtime::bio::{
     BIO_write, Bio, BIO_CTRL_INFO, BIO_C_GET_CIPHER_CTX, BIO_C_GET_CIPHER_STATUS, BIO_C_GET_MD_CTX,
     BIO_C_SET_BUF_MEM_EOF_RETURN, BIO_C_SET_MD, BIO_FLAGS_MEM_RDONLY, BIO_TYPE_MD, BIO_TYPE_MEM,
 };
-use crate::runtime::err::err_sites;
+use crate::runtime::err::err_sites::{self, ErrSite};
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::OPENSSL_cleanse;
 use crate::runtime::mem_coords::SeamFile;
@@ -101,6 +101,28 @@ const EVP_MAX_KEY_LENGTH: usize = 64;
 const EVP_MAX_IV_LENGTH: usize = 16;
 /// `X509_PURPOSE_SMIME_SIGN` — `include/openssl/x509v3.h:769`.
 const X509_PURPOSE_SMIME_SIGN: c_int = 4;
+/// `ERR_LIB_PKCS7` — `include/openssl/err.h.in:98`.
+const ERR_LIB_PKCS7: c_int = 33;
+/// `ERR_R_PASSED_INVALID_ARGUMENT` — `include/openssl/err.h.in:360`, `262 | ERR_RFLAG_COMMON`
+/// (`ERR_RFLAG_COMMON` is `0x2 << ERR_RFLAGS_OFFSET`, and `ERR_RFLAGS_OFFSET` is 18).
+const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 524550;
+
+/// The refusal this conversion adds to `PKCS7_dataInit` when a cipher reports a length that does
+/// not fit the authority's fixed stack buffers.
+///
+/// The authority has no such site. `pk7_doit.c:325` hands `EVP_CIPHER_get_iv_length()` to
+/// `RAND_bytes_ex` with `iv` declared `unsigned char iv[EVP_MAX_IV_LENGTH]` (`:312`), and the
+/// second `EVP_CipherInit_ex` below is handed the same buffer; the key buffer has the same shape
+/// at `EVP_MAX_KEY_LENGTH`. The line names the authority operation this conversion declines:
+/// `RAND_bytes_ex` is where the IV length would have been written past the buffer.
+const PKCS7_DOIT_CIPHER_LENGTH_REFUSED: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_doit.c",
+    line: 325,
+    func: c"PKCS7_dataInit",
+    lib: ERR_LIB_PKCS7,
+    reason: ERR_R_PASSED_INVALID_ARGUMENT,
+    dynamic_reason: false,
+};
 
 extern "C" {
     /// `int memcmp(const void *, const void *, size_t)`.
@@ -300,6 +322,8 @@ unsafe fn pkcs7_bio_add_digest(
         unsafe { raise_site(&err_sites::PKCS7_DOIT_103) };
         return 0;
     }
+    #[cfg(test)]
+    test_hooks::note_filter_alloc(btmp);
     let mut name = [0 as c_char; OSSL_MAX_NAME_SIZE];
     // SAFETY: `alg` is live; the buffer and OID are the caller's.
     unsafe {
@@ -328,6 +352,8 @@ unsafe fn pkcs7_bio_add_digest(
     if md.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PKCS7_DOIT_119) };
+        #[cfg(test)]
+        test_hooks::note_filter_free(btmp);
         // SAFETY: `btmp` is live and owned here.
         unsafe { BIO_free(btmp) };
         return 0;
@@ -339,6 +365,8 @@ unsafe fn pkcs7_bio_add_digest(
         // SAFETY: `btmp` is live and owned here; `fetched` is this unit's.
         unsafe {
             EVP_MD_free(fetched);
+            #[cfg(test)]
+            test_hooks::note_filter_free(btmp);
             BIO_free(btmp);
         }
         return 0;
@@ -353,6 +381,8 @@ unsafe fn pkcs7_bio_add_digest(
     } else if unsafe { BIO_push(*pbio, btmp) }.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PKCS7_DOIT_133) };
+        #[cfg(test)]
+        test_hooks::note_filter_free(btmp);
         // SAFETY: `btmp` is live and owned here.
         unsafe { BIO_free(btmp) };
         return 0;
@@ -487,6 +517,139 @@ unsafe fn pkcs7_decrypt_rinfo(
     1
 }
 
+/// The filter chain `PKCS7_dataInit` is building.
+///
+/// The authority keeps the head in a bare `BIO *` and releases it at the function's single `err:`
+/// label; each early return in between is an obligation to jump there. This owner makes that
+/// release a `Drop`, so every path -- success excluded -- releases the chain exactly once. The
+/// success path transfers the head to the caller with [`Self::into_raw`].
+///
+/// The owner is a link, not a container: it never copies or re-links an element, and a chain head
+/// may be adopted only when this frame holds the only reference to every element in it.
+struct OwnedChain(*mut Bio);
+
+impl OwnedChain {
+    /// The empty chain, the authority's `out = NULL`.
+    fn empty() -> Self {
+        Self(ptr::null_mut())
+    }
+
+    /// Adopt a chain head this frame owns.
+    ///
+    /// # Safety
+    /// `head` is NULL or the head of a live BIO chain on which this frame owns the one reference
+    /// per element it will release. The chain must not be linked to, or owned by, anything else:
+    /// `Drop` releases every element, so a shared head would be released twice.
+    unsafe fn adopt(head: *mut Bio) -> Self {
+        Self(head)
+    }
+
+    fn head(&self) -> *mut Bio {
+        self.0
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_null()
+    }
+
+    /// The `BIO **` slot `pkcs7_bio_add_digest` writes a new head through. The callee either
+    /// leaves the slot unchanged or stores a head it transferred to this owner.
+    fn slot(&mut self) -> *mut *mut Bio {
+        core::ptr::addr_of_mut!(self.0)
+    }
+
+    /// Link an owned chain after this one, or adopt it when this one is empty.
+    fn absorb(&mut self, next: OwnedChain) {
+        if self.0.is_null() {
+            self.0 = next.into_raw();
+        } else {
+            // SAFETY: both operands are heads of live, disjoint chains this frame owns, so the
+            // link `BIO_push` makes joins two chains into one without creating a second owner.
+            unsafe { BIO_push(self.0, next.into_raw()) };
+        }
+    }
+
+    /// Hand the chain head to the caller; `Drop` no longer releases it.
+    fn into_raw(self) -> *mut Bio {
+        let head = self.0;
+        core::mem::forget(self);
+        head
+    }
+}
+
+impl Drop for OwnedChain {
+    fn drop(&mut self) {
+        if self.0.is_null() {
+            return;
+        }
+        #[cfg(test)]
+        test_hooks::note_chain_release(self.0);
+        // SAFETY: per `adopt`, `self.0` is the head of a live chain this owner holds
+        // exclusively; `BIO_free_all` is the authority's own chain release (`pk7_doit.c:411`).
+        unsafe { BIO_free_all(self.0) };
+    }
+}
+
+/// Address-identity observation for the two S27 obligations. Thread-local, so concurrent tests
+/// cannot see each other's records, and compiled out of every non-test build.
+#[cfg(test)]
+mod test_hooks {
+    use core::cell::{Cell, RefCell};
+
+    use crate::runtime::bio::Bio;
+
+    thread_local! {
+        static FILTER_ALLOCS: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+        static FILTER_FREES: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+        static PRE_FIX_IV_OVERFLOW: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// Record a filter BIO this function just constructed and now owns.
+    pub(super) fn note_filter_alloc(bio: *mut Bio) {
+        FILTER_ALLOCS.with(|l| l.borrow_mut().push(bio as usize));
+    }
+
+    /// Record one release of exactly this address.
+    pub(super) fn note_filter_free(bio: *mut Bio) {
+        FILTER_FREES.with(|l| l.borrow_mut().push(bio as usize));
+    }
+
+    /// Record each element of a chain that is about to be released, before the release. A second
+    /// record of the same address is a double release; a missing one is a leak.
+    pub(super) fn note_chain_release(head: *mut Bio) {
+        let mut current = head;
+        while !current.is_null() {
+            note_filter_free(current);
+            // SAFETY: `head` is the head of a live chain the owner is about to release, so every
+            // link read here is live until that release.
+            current = unsafe { crate::runtime::bio::BIO_next(current) };
+        }
+    }
+
+    /// The negative-control canary: the pre-fix code would have written an IV longer than the
+    /// fixed stack buffer. Fires only when the refusal is reached with `ivlen > EVP_MAX_IV_LENGTH`.
+    pub(super) fn note_pre_fix_iv_overflow() {
+        PRE_FIX_IV_OVERFLOW.with(|c| c.set(true));
+    }
+
+    pub(super) fn pre_fix_iv_overflow_fired() -> bool {
+        PRE_FIX_IV_OVERFLOW.with(Cell::get)
+    }
+
+    pub(super) fn reset() {
+        FILTER_ALLOCS.with(|l| l.borrow_mut().clear());
+        FILTER_FREES.with(|l| l.borrow_mut().clear());
+        PRE_FIX_IV_OVERFLOW.with(|c| c.set(false));
+    }
+
+    pub(super) fn take() -> (Vec<usize>, Vec<usize>) {
+        (
+            FILTER_ALLOCS.with(|l| core::mem::take(&mut *l.borrow_mut())),
+            FILTER_FREES.with(|l| core::mem::take(&mut *l.borrow_mut())),
+        )
+    }
+}
+
 /// `BIO *PKCS7_dataInit(PKCS7 *p7, BIO *bio)` — `pk7_doit.c:225-416`.
 ///
 /// # Safety
@@ -512,8 +675,13 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
         return ptr::null_mut();
     }
 
-    let mut out: *mut Bio = ptr::null_mut();
-    let btmp: *mut Bio;
+    let mut out = OwnedChain::empty();
+    // The content tail this frame creates when the caller passes no `bio`. Until it is linked
+    // into `out` it is this frame's to release; on success `out` absorbs it.
+    let mut tail: Option<OwnedChain> = None;
+    // `bio` is borrowed from the caller when non-NULL and becomes owned by `tail` when NULL.
+    let caller_supplied = !bio.is_null();
+    let mut bio = bio;
     let mut xa: *mut crate::asn1::x_algor::X509Algor = ptr::null_mut();
     let fetched_cipher: *mut EvpCipher;
     let cipher: *const EvpCipher;
@@ -522,7 +690,6 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
     let mut rsk: *mut OpenSslStack = ptr::null_mut();
     let mut xalg: *mut crate::asn1::x_algor::X509Algor = ptr::null_mut();
     let mut os: *mut Asn1String = ptr::null_mut();
-    let mut bio = bio;
 
     // SAFETY: `p7` is live.
     let i = unsafe { OBJ_obj2nid((*p7).type_) };
@@ -593,9 +760,9 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
     while k < n {
         // SAFETY: `md_sk` is a live stack and `k` is in range.
         let alg = unsafe { OPENSSL_sk_value(md_sk, k) }.cast::<crate::asn1::x_algor::X509Algor>();
-        // SAFETY: `out` is null or live; `alg`/`p7_ctx` are live.
-        if unsafe { pkcs7_bio_add_digest(&mut out, alg, p7_ctx) } == 0 {
-            // SAFETY: `os` is null or owned here.
+        // SAFETY: `out.slot()` is the out-pointer of a live owner and `alg`/`p7_ctx` are live.
+        if unsafe { pkcs7_bio_add_digest(out.slot(), alg, p7_ctx) } == 0 {
+            // SAFETY: `os` is null or owned here; `out` releases the chain it built on drop.
             unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
             return ptr::null_mut();
         }
@@ -603,9 +770,9 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
     }
 
     if !xa.is_null() {
-        // SAFETY: `out` is null or live; `xa`/`p7_ctx` are live.
-        if unsafe { pkcs7_bio_add_digest(&mut out, xa, p7_ctx) } == 0 {
-            // SAFETY: `os` is null or owned here.
+        // SAFETY: as above; `xa` is live.
+        if unsafe { pkcs7_bio_add_digest(out.slot(), xa, p7_ctx) } == 0 {
+            // SAFETY: `os` is null or owned here; `out` releases the chain it built on drop.
             unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
             return ptr::null_mut();
         }
@@ -614,15 +781,19 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
     if !evp_cipher.is_null() {
         let mut key = [0 as c_uchar; EVP_MAX_KEY_LENGTH];
         let mut iv = [0 as c_uchar; EVP_MAX_IV_LENGTH];
-        // SAFETY: no preconditions.
-        btmp = unsafe { BIO_new(BIO_f_cipher()) };
-        if btmp.is_null() {
+        // SAFETY: `BIO_new` has no preconditions. The fresh cipher filter is this frame's and
+        // stays owned by `cipher_bio` until the success path links it into `out`.
+        let cipher_bio = unsafe { OwnedChain::adopt(BIO_new(BIO_f_cipher())) };
+        if cipher_bio.is_empty() {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::PKCS7_DOIT_317) };
-            // SAFETY: `os` is null or owned here.
+            // SAFETY: `os` is null or owned here; `out` releases the chain it built on drop.
             unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
             return ptr::null_mut();
         }
+        #[cfg(test)]
+        test_hooks::note_filter_alloc(cipher_bio.head());
+        let btmp = cipher_bio.head();
         let mut ctx: *mut EvpCipherCtx = ptr::null_mut();
         // SAFETY: `btmp` is live; `ctx` is writable.
         unsafe { bio_get_cipher_ctx(btmp, &mut ctx) };
@@ -630,18 +801,39 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
         let keylen = unsafe { EVP_CIPHER_get_key_length(evp_cipher) };
         // SAFETY: `evp_cipher` is live.
         let ivlen = unsafe { EVP_CIPHER_get_iv_length(evp_cipher) };
+        // The two stack buffers above are the authority's fixed sizes, but these lengths come
+        // from a cipher object the caller selected: a `METH` method may set any `iv_len` /
+        // `key_len` (`EVP_CIPHER_meth_set_iv_length`), and a provider's `ivlen`/`keylen`
+        // parameters are unbounded `size_t` values cached into an `int` by
+        // `evp_cipher_cache_constants`. `RAND_bytes_ex` and `EVP_CIPHER_CTX_rand_key` write
+        // exactly the reported lengths, so a length that does not fit is refused instead of
+        // written past the buffer. Non-positive lengths are the authority's own "no IV" /
+        // unusable-key cases and fall through to the checks the authority already makes.
+        if ivlen > 0 && ivlen as usize > EVP_MAX_IV_LENGTH {
+            #[cfg(test)]
+            test_hooks::note_pre_fix_iv_overflow();
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_site(&PKCS7_DOIT_CIPHER_LENGTH_REFUSED) };
+            // SAFETY: `os` is null or owned here; both chain owners release on drop.
+            unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
+            return ptr::null_mut();
+        }
+        if keylen > 0 && keylen as usize > EVP_MAX_KEY_LENGTH {
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_site(&PKCS7_DOIT_CIPHER_LENGTH_REFUSED) };
+            // SAFETY: `os` is null or owned here; both chain owners release on drop.
+            unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
+            return ptr::null_mut();
+        }
         // SAFETY: `xalg`/`evp_cipher` are live.
         unsafe {
             (*xalg).algorithm = crate::runtime::obj::OBJ_nid2obj(EVP_CIPHER_get_type(evp_cipher))
         };
         if ivlen > 0 {
-            // SAFETY: `libctx` is the object's; the buffer is `ivlen` bytes.
+            // SAFETY: `libctx` is the object's; `ivlen` was just checked against `iv`.
             if unsafe { RAND_bytes_ex(libctx, iv.as_mut_ptr(), ivlen as usize, 0) } <= 0 {
-                // SAFETY: `os` is null or owned here; `btmp` is owned here.
-                unsafe {
-                    crate::asn1::string::ASN1_OCTET_STRING_free(os);
-                    BIO_free_all(btmp);
-                }
+                // SAFETY: `os` is null or owned here; both chain owners release on drop.
+                unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
                 return ptr::null_mut();
             }
         }
@@ -657,24 +849,20 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
         if unsafe { EVP_CipherInit_ex(ctx, cipher, ptr::null_mut(), ptr::null(), ptr::null(), 1) }
             <= 0
         {
-            // SAFETY: `os`/`fetched_cipher`/`btmp` are owned here.
+            // SAFETY: `os`/`fetched_cipher` are owned here; both chain owners release on drop.
             unsafe {
                 crate::asn1::string::ASN1_OCTET_STRING_free(os);
                 EVP_CIPHER_free(fetched_cipher);
-                BIO_free_all(btmp);
             }
             return ptr::null_mut();
         }
         // SAFETY: `fetched_cipher` is owned here.
         unsafe { EVP_CIPHER_free(fetched_cipher) };
 
-        // SAFETY: `ctx` is live; the buffer is `keylen` bytes.
+        // SAFETY: `ctx` is live; `key` was checked against `keylen` above.
         if unsafe { EVP_CIPHER_CTX_rand_key(ctx, key.as_mut_ptr()) } <= 0 {
-            // SAFETY: `os`/`btmp` are owned here.
-            unsafe {
-                crate::asn1::string::ASN1_OCTET_STRING_free(os);
-                BIO_free_all(btmp);
-            }
+            // SAFETY: `os` is null or owned here; both chain owners release on drop.
+            unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
             return ptr::null_mut();
         }
         // SAFETY: `ctx` is live.
@@ -689,11 +877,8 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
             )
         } <= 0
         {
-            // SAFETY: `os`/`btmp` are owned here.
-            unsafe {
-                crate::asn1::string::ASN1_OCTET_STRING_free(os);
-                BIO_free_all(btmp);
-            }
+            // SAFETY: `os` is null or owned here; both chain owners release on drop.
+            unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
             return ptr::null_mut();
         }
 
@@ -702,21 +887,21 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
             unsafe {
                 if (*xalg).parameter.is_null() {
                     (*xalg).parameter = crate::asn1::a_type::ASN1_TYPE_new();
-                    if (*xalg).parameter.is_null() {
-                        crate::asn1::string::ASN1_OCTET_STRING_free(os);
-                        BIO_free_all(btmp);
-                        return ptr::null_mut();
-                    }
                 }
+            }
+            // SAFETY: `xalg` is live.
+            if unsafe { (*xalg).parameter }.is_null() {
+                // SAFETY: `os` is null or owned here; both chain owners release on drop.
+                unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
+                return ptr::null_mut();
             }
             // SAFETY: `ctx`/`xalg` are live.
             if unsafe { EVP_CIPHER_param_to_asn1(ctx, (*xalg).parameter) } <= 0 {
-                // SAFETY: `xalg` is live.
+                // SAFETY: `xalg` is live; `os` is null or owned here.
                 unsafe {
                     crate::asn1::a_type::ASN1_TYPE_free((*xalg).parameter);
                     (*xalg).parameter = ptr::null_mut();
                     crate::asn1::string::ASN1_OCTET_STRING_free(os);
-                    BIO_free_all(btmp);
                 }
                 return ptr::null_mut();
             }
@@ -728,13 +913,10 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
         while ri_i < rn {
             // SAFETY: `rsk` is a live stack and `ri_i` is in range.
             let ri = unsafe { OPENSSL_sk_value(rsk, ri_i) }.cast::<Pkcs7RecipInfo>();
-            // SAFETY: `ri` is live; `key` is the random key.
+            // SAFETY: `ri` is live; `key` is the random key `keylen` bytes long.
             if unsafe { pkcs7_encode_rinfo(ri, key.as_mut_ptr(), keylen) } <= 0 {
-                // SAFETY: `os`/`btmp` are owned here.
-                unsafe {
-                    crate::asn1::string::ASN1_OCTET_STRING_free(os);
-                    BIO_free_all(btmp);
-                }
+                // SAFETY: `os` is null or owned here; both chain owners release on drop.
+                unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
                 return ptr::null_mut();
             }
             ri_i += 1;
@@ -742,63 +924,75 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
         // SAFETY: `key` is `keylen` bytes.
         unsafe { OPENSSL_cleanse(key.as_mut_ptr().cast(), keylen as usize) };
 
-        if out.is_null() {
-            out = btmp;
-        } else {
-            // SAFETY: `out`/`btmp` are live.
-            unsafe { BIO_push(out, btmp) };
-        }
+        // The cipher filter is this frame's; linking it into `out` transfers it to the caller.
+        out.absorb(cipher_bio);
     }
 
     if bio.is_null() {
         // SAFETY: `p7` is live.
         if pkcs7_is_detached(p7) {
-            // SAFETY: no preconditions.
-            bio = unsafe { BIO_new(BIO_s_null()) };
+            // SAFETY: `BIO_new` has no preconditions; the fresh sink is this frame's.
+            tail = Some(unsafe { OwnedChain::adopt(BIO_new(BIO_s_null())) });
         } else if !os.is_null()
             // SAFETY: `os` is live.
             && unsafe { (*os).length } > 0
         {
-            // SAFETY: no preconditions.
-            bio = unsafe { BIO_new(BIO_s_mem()) };
-            if !bio.is_null() {
-                // SAFETY: `bio` is live.
-                unsafe {
-                    bio_set_mem_eof_return(bio, 0);
-                    if BIO_write(bio, (*os).data.cast(), (*os).length) != (*os).length {
-                        BIO_free_all(bio);
-                        bio = ptr::null_mut();
-                    }
+            // SAFETY: `BIO_new` has no preconditions; the fresh memory BIO is this frame's.
+            let mem = unsafe { OwnedChain::adopt(BIO_new(BIO_s_mem())) };
+            if !mem.is_empty() {
+                // SAFETY: `mem.head()` is a live memory BIO; `os` is live and its data is
+                // `length` readable bytes. The BIO takes its own copy.
+                let (written, os_len) = unsafe {
+                    bio_set_mem_eof_return(mem.head(), 0);
+                    (
+                        BIO_write(mem.head(), (*os).data.cast(), (*os).length),
+                        (*os).length,
+                    )
+                };
+                if written != os_len {
+                    // `mem` releases the failed sink. With no tail the null test below returns
+                    // NULL, which is the authority's `BIO_free_all(bio); bio = NULL;`.
+                    drop(mem);
+                } else {
+                    tail = Some(mem);
                 }
             }
         } else {
-            // SAFETY: no preconditions.
-            bio = unsafe { BIO_new(BIO_s_mem()) };
-            if bio.is_null() {
-                // SAFETY: `os` is null or owned here.
+            // SAFETY: `BIO_new` has no preconditions; the fresh memory BIO is this frame's.
+            let mem = unsafe { OwnedChain::adopt(BIO_new(BIO_s_mem())) };
+            if !mem.is_empty() {
+                // SAFETY: `mem.head()` is a live memory BIO.
+                unsafe { bio_set_mem_eof_return(mem.head(), 0) };
+            }
+            tail = Some(mem);
+        }
+        match tail.as_ref().map(OwnedChain::head) {
+            Some(head) if !head.is_null() => bio = head,
+            _ => {
+                // SAFETY: `os` is null or owned here; `out` releases the chain it built on drop.
                 unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
                 return ptr::null_mut();
             }
-            // SAFETY: `bio` is live.
-            unsafe { bio_set_mem_eof_return(bio, 0) };
-        }
-        if bio.is_null() {
-            // SAFETY: `os` is null or owned here.
-            unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
-            return ptr::null_mut();
         }
     }
-    // SAFETY: `out` is null or live; `bio` is live.
-    if !out.is_null() {
-        // SAFETY: `out`/`bio` are live.
-        unsafe { BIO_push(out, bio) };
-    } else {
-        out = bio;
+    if let Some(tail) = tail.take() {
+        // The content sink is this frame's; linking it into `out` transfers it to the caller.
+        out.absorb(tail);
+    } else if caller_supplied {
+        if out.is_empty() {
+            // With no filters the caller's chain is the result, unchanged and still borrowed.
+            // SAFETY: `os` is null or owned here.
+            unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
+            return bio;
+        }
+        // SAFETY: `out.head()` is the head of a live chain this frame owns; `bio` is the
+        // caller's live chain, not linked to it.
+        unsafe { BIO_push(out.head(), bio) };
     }
 
     // SAFETY: `os` is null or owned here.
     unsafe { crate::asn1::string::ASN1_OCTET_STRING_free(os) };
-    out
+    out.into_raw()
 }
 
 /// `pkcs7_cmp_ri(PKCS7_RECIP_INFO *ri, X509 *pcert)` — `pk7_doit.c:418-427`.
@@ -2246,4 +2440,230 @@ unsafe fn add_attribute(
     // SAFETY: `*sk` is a live stack; `attr` is fresh.
     unsafe { OPENSSL_sk_set(*sk, i, attr.cast()) };
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::x_algor::{X509_ALGOR_new, X509_ALGOR_set0};
+    use crate::evp::cipher::{
+        EVP_CIPHER_meth_free, EVP_CIPHER_meth_new, EVP_CIPHER_meth_set_iv_length, EvpCipher,
+    };
+    use crate::pkcs7::pk7_asn1::{PKCS7_free, PKCS7_new};
+    use crate::pkcs7::pk7_lib::{PKCS7_set_cipher, PKCS7_set_type};
+    use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
+    use crate::runtime::obj::{
+        NID_aes_128_cbc, NID_pkcs7_enveloped, NID_pkcs7_signed, NID_sha256, OBJ_txt2obj,
+    };
+
+    /// A `METH` cipher with the given type and IV length.
+    ///
+    /// This is the public path by which a cipher can report a length the authority's fixed
+    /// `unsigned char iv[EVP_MAX_IV_LENGTH]` cannot hold: `EVP_CIPHER_meth_set_iv_length` stores
+    /// whatever the caller passes, and `EVP_CIPHER_get_iv_length` returns it unchecked. The type
+    /// must not be `NID_undef`, because `PKCS7_set_cipher` refuses that.
+    ///
+    /// # Safety
+    /// The answer is a fresh method this caller owns and must release with
+    /// `EVP_CIPHER_meth_free`.
+    unsafe fn meth_cipher(nid: c_int, ivlen: c_int) -> *mut EvpCipher {
+        // SAFETY: no preconditions; the constructor allocates and writes its fields.
+        let cipher = unsafe { EVP_CIPHER_meth_new(nid, 16, 16) };
+        assert!(!cipher.is_null(), "the method allocation succeeds");
+        // SAFETY: `cipher` is this caller's live method.
+        assert_eq!(
+            unsafe { EVP_CIPHER_meth_set_iv_length(cipher, ivlen) },
+            1,
+            "a fresh method has no IV length yet"
+        );
+        cipher
+    }
+
+    /// A minimal enveloped `PKCS7` carrying `cipher`.
+    ///
+    /// # Safety
+    /// `cipher` is live for the answer's lifetime. The answer must be released with
+    /// `PKCS7_free`; it does not own the cipher.
+    unsafe fn enveloped_with(cipher: *const EvpCipher) -> *mut Pkcs7 {
+        // SAFETY: no preconditions.
+        let p7 = PKCS7_new();
+        assert!(!p7.is_null(), "the PKCS7 allocation succeeds");
+        // SAFETY: `p7` is this caller's live object.
+        unsafe {
+            assert_eq!(PKCS7_set_type(p7, NID_pkcs7_enveloped), 1);
+            assert_eq!(PKCS7_set_cipher(p7, cipher), 1);
+        }
+        p7
+    }
+
+    /// Assert that every filter this frame allocated was released exactly once, by address.
+    fn assert_each_filter_released_once(allocs: &[usize], frees: &[usize]) {
+        for addr in allocs {
+            assert_eq!(
+                frees.iter().filter(|free| **free == *addr).count(),
+                1,
+                "filter {addr:#x} must be released exactly once, frees = {frees:x?}"
+            );
+        }
+    }
+
+    /// Obligation 1: `PKCS7_dataInit` writes the IV into `[u8; EVP_MAX_IV_LENGTH]`, and the
+    /// length is whatever the cipher reports. A longer IV is refused before `RAND_bytes_ex` can
+    /// write past the buffer, with the authority's failure shape (NULL and one error raised).
+    #[test]
+    fn pk7_doit_iv_longer_than_the_fixed_buffer_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+        test_hooks::reset();
+
+        let oversized = (EVP_MAX_IV_LENGTH + 16) as c_int;
+        // SAFETY: every object is this test's own and each call's preconditions hold by
+        // construction; the cipher outlives the p7, which does not own it.
+        unsafe {
+            let cipher = meth_cipher(NID_aes_128_cbc, oversized);
+            let p7 = enveloped_with(cipher);
+
+            let out = PKCS7_dataInit(p7, ptr::null_mut());
+            assert!(
+                out.is_null(),
+                "an IV of {oversized} bytes must not be written into {} bytes",
+                EVP_MAX_IV_LENGTH
+            );
+            assert_ne!(ERR_peek_error(), 0, "the refusal raises an error");
+            assert_eq!(
+                ERR_peek_error() & 0x7f_ffff,
+                (ERR_R_PASSED_INVALID_ARGUMENT as core::ffi::c_ulong) & 0x7f_ffff,
+                "the refusal raises ERR_R_PASSED_INVALID_ARGUMENT"
+            );
+            assert!(
+                test_hooks::pre_fix_iv_overflow_fired(),
+                "the canary records the pre-fix out-of-bounds write condition"
+            );
+
+            let (allocs, frees) = test_hooks::take();
+            assert_eq!(allocs.len(), 1, "one cipher filter was constructed");
+            assert_each_filter_released_once(&allocs, &frees);
+
+            PKCS7_free(p7);
+            EVP_CIPHER_meth_free(cipher);
+        }
+        ERR_clear_error();
+    }
+
+    /// Obligation 1, negative control (§16): the canary fires on the pre-fix condition -- the
+    /// authority's `RAND_bytes_ex` at `pk7_doit.c:325` would have written an over-long IV into
+    /// the fixed stack buffer -- and does not fire for an IV that fits.
+    #[test]
+    fn pk7_doit_pre_fix_iv_overflow_negative_control() {
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+        test_hooks::reset();
+
+        let oversized = (EVP_MAX_IV_LENGTH + 16) as c_int;
+        println!(
+            "pk7_doit canary: pre-fix RAND_bytes_ex would write {oversized} bytes into a {} byte stack buffer",
+            EVP_MAX_IV_LENGTH
+        );
+
+        // SAFETY: as in the refusal test; each object is released before the next is made.
+        unsafe {
+            let cipher = meth_cipher(NID_aes_128_cbc, oversized);
+            let p7 = enveloped_with(cipher);
+            assert!(PKCS7_dataInit(p7, ptr::null_mut()).is_null());
+            assert!(
+                test_hooks::pre_fix_iv_overflow_fired(),
+                "the canary fires on the pre-fix condition"
+            );
+            println!("pk7_doit canary: fired = true (oversized IV refusal reached)");
+            PKCS7_free(p7);
+            EVP_CIPHER_meth_free(cipher);
+
+            // Selectivity: the same construction with an IV that fits must not fire it. The
+            // result is either a chain (freed here) or NULL with an error this test clears; the
+            // observation under test is only that the canary stays quiet.
+            test_hooks::reset();
+            let fitting = meth_cipher(NID_aes_128_cbc, EVP_MAX_IV_LENGTH as c_int);
+            let p7 = enveloped_with(fitting);
+            let out = PKCS7_dataInit(p7, ptr::null_mut());
+            assert!(
+                !test_hooks::pre_fix_iv_overflow_fired(),
+                "an IV that fits must not trip the canary"
+            );
+            println!(
+                "pk7_doit canary: fired = false for a {} byte IV (result: {})",
+                EVP_MAX_IV_LENGTH,
+                if out.is_null() { "NULL" } else { "chain" }
+            );
+            if !out.is_null() {
+                BIO_free_all(out);
+            }
+            PKCS7_free(p7);
+            EVP_CIPHER_meth_free(fitting);
+        }
+        ERR_clear_error();
+    }
+
+    /// Obligation 2: a failure part-way through the digest-filter loop must release the filter
+    /// already in the chain. The second algorithm names an OID no digest provider answers, so
+    /// `pkcs7_bio_add_digest` fails after the first filter is linked. Observation is by address:
+    /// one allocation and one release for each of the two constructed filters.
+    #[test]
+    fn pk7_doit_failed_digest_chain_releases_every_filter_once() {
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+        test_hooks::reset();
+
+        // SAFETY: every object is this test's own; the stack takes ownership of the algorithms
+        // and the p7's item layer releases them.
+        unsafe {
+            let p7 = PKCS7_new();
+            assert!(!p7.is_null(), "the PKCS7 allocation succeeds");
+            assert_eq!(PKCS7_set_type(p7, NID_pkcs7_signed), 1);
+            let sign = (*p7).d.sign;
+            assert!(!sign.is_null());
+            let md_algs = (*sign).md_algs;
+            assert!(
+                !md_algs.is_null(),
+                "the signed arm starts with an empty stack"
+            );
+
+            let sha256 = X509_ALGOR_new();
+            assert_eq!(
+                X509_ALGOR_set0(
+                    sha256,
+                    crate::runtime::obj::OBJ_nid2obj(NID_sha256),
+                    crate::asn1::layout::V_ASN1_UNDEF,
+                    ptr::null_mut(),
+                ),
+                1,
+                "the first algorithm is well formed"
+            );
+            let unknown = X509_ALGOR_new();
+            let unknown_oid = OBJ_txt2obj(c"1.2.3.4.5.6.7.8".as_ptr(), 0);
+            assert!(!unknown_oid.is_null());
+            assert_eq!(
+                X509_ALGOR_set0(
+                    unknown,
+                    unknown_oid,
+                    crate::asn1::layout::V_ASN1_UNDEF,
+                    ptr::null_mut(),
+                ),
+                1,
+                "the second algorithm names an unknown digest"
+            );
+            assert!(OPENSSL_sk_push(md_algs, sha256.cast()) > 0);
+            assert!(OPENSSL_sk_push(md_algs, unknown.cast()) > 0);
+
+            let out = PKCS7_dataInit(p7, ptr::null_mut());
+            assert!(out.is_null(), "an unknown digest must fail the chain");
+            assert_ne!(ERR_peek_error(), 0, "the failure raises an error");
+
+            let (allocs, frees) = test_hooks::take();
+            assert_eq!(allocs.len(), 2, "one digester per algorithm");
+            assert_each_filter_released_once(&allocs, &frees);
+
+            PKCS7_free(p7);
+        }
+        ERR_clear_error();
+    }
 }
