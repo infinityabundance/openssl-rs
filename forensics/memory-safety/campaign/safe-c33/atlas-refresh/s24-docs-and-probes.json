@@ -1,0 +1,139 @@
+{
+  "schema": "openssl-rs/safe-c33/batch-closure/v1",
+  "kind": "s24-docs-and-probes",
+  "subphase": "S24",
+  "title": "Resolve the observed assurance-probe failures and regenerate the status documentation from generated data",
+  "generated_at_utc": "2026-10-23T08:10:00Z",
+  "source": {
+    "branch": "integrate/safe-c33",
+    "head": "7206fac7e",
+    "head_subject": "Merge stage/p25/uninit-class",
+    "working_tree": "S24 edits are uncommitted (this subagent does not commit or push). The only production-adjacent edits are #[cfg(test)] probe assertions in src/dsa/object.rs and src/dh/object.rs.",
+    "out_of_scope_dirty_file": "forensics/downstream/build-link-atlas.json was modified at 08:04 UTC by the concurrent/previous S23 build-link measurement (court/tmp/s23-build-link3.log: with_recipe=191 no_recipe=809, linked=185). S24 did not write, revert or claim it."
+  },
+  "venue": {
+    "container": "docker/openssl-rs-court.sh exec",
+    "commands": "one heavy command at a time; CARGO_BUILD_JOBS=4; CARGO_TARGET_DIR=/work/court/target; TMPDIR=/work/court/tmp",
+    "host_free_before": "75 GB available"
+  },
+  "failures": [
+    {
+      "id": "S24-PROBE-DSA",
+      "name": "dsa::object::adv_probe::dsa_method_init_failure_runs_partial_cleanup",
+      "observed_before": "thread 'dsa::object::adv_probe::dsa_method_init_failure_runs_partial_cleanup' panicked at src/dsa/object.rs:1154:9: assertion `left == right` failed: the partial cleanup must release the context block and every seam-visible member; left: 3; right: 2",
+      "cause": "The probe counted every CRYPTO_free in the measurement window. The authority's failing method init also raises an error site; formatting and storing that entry allocates and releases a transient 1-byte block at the (NULL, 0) coordinate. The window therefore contained three releases: the 200-byte Dsa block, the 56-byte seam-visible lock, and the transient error-queue block. Instrumented events confirmed the sizes (200, 56, 1) before this was concluded.",
+      "disposition": "PROBE_ASSERTION_CORRECTED. No production code changed. The probe now records the context and its lock by address while the object is live (fail_init reads (*dsa).lock) and asserts that each is released exactly once; adv_alloc::assert_no_double_free() remains. The window-wide total was removed because it never described an ownership requirement.",
+      "pass_line": "test dsa::object::adv_probe::dsa_method_init_failure_runs_partial_cleanup ... ok",
+      "result_line": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2097 filtered out"
+    },
+    {
+      "id": "S24-PROBE-DH",
+      "name": "dh::object::adv_probe::dh_method_init_failure_runs_partial_cleanup",
+      "observed_before": "thread 'dh::object::adv_probe::dh_method_init_failure_runs_partial_cleanup' panicked at src/dh/object.rs:1021:9: assertion `left == right` failed: the partial cleanup must release the context block and every seam-visible member; left: 3; right: 2",
+      "cause": "Same class as S24-PROBE-DSA: the transient error-queue formatting release was counted as an object member. No Dh member was released twice, and no member was leaked.",
+      "disposition": "PROBE_ASSERTION_CORRECTED. The same address-identity assertion replaces the window-wide total; no production code changed.",
+      "pass_line": "test dh::object::adv_probe::dh_method_init_failure_runs_partial_cleanup ... ok",
+      "result_line": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2097 filtered out"
+    },
+    {
+      "id": "S24-PROBE-ML-DSA",
+      "name": "ml_dsa::tests::keygen_without_retain_seed_releases_a_secure_seed_through_the_secure_heap",
+      "observed_before": "Not reproducible at 7206fac7e. The probe passed in the full 41-probe harness and 10/10 isolated repetitions. The historical CI failure recorded in s21-batch-checkpoint.json was the routine initialisation assertion ml_dsa::poly::tests::a_vector_allocation_round_trips_and_frees_once (left: 223, right: 0 at src/ml_dsa/poly.rs:836), which asserted that OPENSSL_malloc_array zero-initialises. S21 corrected that assertion; S22 made initialisation structural in PolyBlock (NonNull<MaybeUninit<Poly>>, zeroed in both allocator arms before into_raw).",
+      "disposition": "NO_CHANGE_REQUIRED. The ML-DSA security-heap probe and the ml_dsa initialisation tests pass at the current candidate. Recorded honestly as not reproducible rather than silently fixed.",
+      "pass_line": "test ml_dsa::tests::keygen_without_retain_seed_releases_a_secure_seed_through_the_secure_heap ... ok",
+      "repetitions": "10/10 isolated runs passed",
+      "module_result": "test result: ok. 29 passed; 0 failed; 1 ignored; 0 measured; 2068 filtered out"
+    }
+  ],
+  "probe_court": {
+    "command": "bash scripts/adv-probe.sh",
+    "result": "adv-probe: all 41 probes passed",
+    "log": "court/tmp/adv-s24.log",
+    "note": "Every probe ran in its own process with OPENSSL_RS_ADV_PROBE=1, --ignored --exact --test-threads=1. No probe was ignored, deleted or weakened."
+  },
+  "documentation": {
+    "initial_check": {
+      "command": "python3 forensics/tools/render_docs.py --check",
+      "result": "render_docs: clean — all generated blocks match their evidence",
+      "finding": "The blocks were consistent with stale data sources. The drift was in the evidence inputs (CAMPAIGN-STATUS.json still ended at S21; test-baseline.json had no observed total; the atlas reuse flag was not rendered), not in the renderer."
+    },
+    "check_after_data_update": {
+      "command": "python3 forensics/tools/render_docs.py --check",
+      "exit": 1,
+      "result": "DRIFT: README.md: readme-achievements, readme-l7-families, readme-memory-safety\nDRIFT: forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md: status-current-evidence, status-subphase-outcomes"
+    },
+    "write": {
+      "command": "python3 forensics/tools/render_docs.py --write",
+      "result": "wrote README.md (readme-achievements, readme-l7-families, readme-memory-safety)\nwrote forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md (status-current-evidence, status-mechanisms, status-subphase-outcomes, status-reduction-census)"
+    },
+    "final_check": {
+      "command": "python3 forensics/tools/render_docs.py --check",
+      "exit": 0,
+      "result": "render_docs: clean — all generated blocks match their evidence"
+    },
+    "status_render": {
+      "command": "python3 forensics/tools/render_status.py",
+      "result": "wrote forensics/STATUS.md",
+      "note": "The regenerated file is byte-identical to the committed copy (git reports no change)."
+    },
+    "generated_figures": {
+      "cohort_l7_functional": "33 / 33",
+      "corpus_l7_functional": "157 / 1000",
+      "corpus_loaded": 166,
+      "corpus_failed": 8,
+      "corpus_not_attempted": 834,
+      "evidence_reuse": "165 of 166 measured families carried forward; mode committed-rows-carried-forward; candidate_identity_match=false; all 33 cohort rows are carried forward",
+      "mechanisms_safety_discharged": 6,
+      "files": "877 (92 ZERO_UNSAFE, 18 BOUNDARY_COVERED, 761 PARTIAL, 6 TEST_ONLY, 0 unaccounted)",
+      "safe_compatible": "0 / 33",
+      "boundary_seal": "NOT_RUN / NOT_RUN",
+      "open_implementation_downstream_families": "0 (h2o repaired in S18; charybdis and fastd are ENVIRONMENT; seven HARNESS and one FIXTURE)",
+      "tests": "2,048 passed / 0 failed / 44 ignored at c911ca629 (full-run floor); 2,098 total observed on the S22 tree, full-suite pass NOT_RUN",
+      "uninitialised_storage": "5 UNSOUND fixed (4 owner-shaped + 1 frame-local) from 32 owner-shaped entries examined; 16 safe-by-construction, 12 misuse-resistant"
+    },
+    "data_sources_changed": [
+      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/test-baseline.json",
+      "forensics/tools/render_docs.py"
+    ]
+  },
+  "release_readiness": {
+    "cargo_fmt": {
+      "command": "cargo fmt --all -- --check",
+      "exit": 0,
+      "result": "no output"
+    },
+    "cargo_check": {
+      "command": "cargo check --lib",
+      "exit": 0,
+      "result": "Checking openssl-rs v0.0.33 (/work)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.48s"
+    },
+    "version": "0.0.33",
+    "metadata": {
+      "description": "Custodian-level native-Rust reconstruction of the OpenSSL 3.x contract",
+      "license": "Apache-2.0 OR MIT",
+      "repository": "https://github.com/infinityabundance/openssl-rs",
+      "homepage": "https://github.com/infinityabundance/openssl-rs",
+      "documentation": "https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md",
+      "keywords": ["openssl", "crypto", "abi", "compatibility", "custodian"],
+      "categories": ["cryptography", "api-bindings"],
+      "publishable": true
+    },
+    "publish": "NOT_RUN by instruction",
+    "full_library_suite": "NOT_RUN by instruction; the S21 BATCH 2,048-test run remains the recorded floor"
+  },
+  "structural": {
+    "production_source_changed": false,
+    "allocator_seam": "unchanged; the probe edit allocates and releases nothing",
+    "repr_c_layouts": "unchanged",
+    "exported_symbols": "unchanged",
+    "unsafe_lints": "unchanged",
+    "no_test_ignored_or_removed": true
+  },
+  "limitations": [
+    "BOUNDARY and SEAL remain NOT_RUN for the S16-S24 cluster.",
+    "No full library suite and no cargo clippy --all-targets were run in S24; the S21 BATCH evidence remains the recorded floor.",
+    "The ML-DSA initialization failure reported by integration CI was not reproducible at 7206fac7e; the S21/S22 history is recorded rather than claiming a new fix.",
+    "forensics/downstream/build-link-atlas.json is dirty from a concurrent S23 measurement and is not part of S24."
+  ]
+}
