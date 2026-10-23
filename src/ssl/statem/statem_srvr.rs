@@ -29,10 +29,15 @@
 //!
 //! * **The message bodies past the ServerHello are the boundary.**
 //!   `tls_process_client_hello` is reduced to the fresh-connection fields the
-//!   ServerHello reads (the session cache, resumption, the `CLIENTHELLO_MSG`
-//!   extension framework and the `SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION` check
-//!   are not modelled), and `tls_construct_server_hello` stops before `ssl_derive`
-//!   (the key schedule).
+//!   ServerHello reads (the session cache, resumption, and
+//!   `SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION` check are not fully modelled). Its
+//!   extension block now has a two-phase, state-preserving parser:
+//!   `parse_client_hello_extensions` produces a borrowed `ParsedExtensions`
+//!   without touching the connection, and `commit_client_hello` publishes it once,
+//!   after the application callback. The reduced collection still does not model
+//!   custom extensions, context-inappropriate-extension rejection, OCSP responder
+//!   DER, or the `psk_ke`/HRR paths; those remain named residual boundaries.
+//!   `tls_construct_server_hello` stops before `ssl_derive` (the key schedule).
 //! * **The DTLS arms are unreachable.** Every object this crate builds is a TLS
 //!   method, so `SSL_CONNECTION_IS_DTLS` is false at every reachable entry and the
 //!   `d1->cookie_verified` / `DTLS_ST_SW_HELLO_VERIFY_REQUEST` arm is not taken.
@@ -147,10 +152,19 @@ const SSL_X509_LOOKUP: c_int = 4;
 /// `SSL_NOTHING` — `ssl.h:932` (1), the idle `rwstate`.
 const SSL_NOTHING: c_int = 1;
 /// `SSL_AD_ILLEGAL_PARAMETER` — `ssl3.h` (47).
-#[allow(dead_code)]
 const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
+/// `SSL_AD_PROTOCOL_VERSION` — `ssl3.h` (70).
+const SSL_AD_PROTOCOL_VERSION: c_int = 70;
+/// `TLS13_AD_MISSING_EXTENSION` — `tls1.h` (109).
+const TLS13_AD_MISSING_EXTENSION: c_int = 109;
 /// `SSL_R_LENGTH_MISMATCH` — `sslerr.h:163` (159).
 const SSL_R_LENGTH_MISMATCH: c_int = 159;
+/// `SSL_R_LENGTH_TOO_SHORT` — `sslerr.h` (160).
+const SSL_R_LENGTH_TOO_SHORT: c_int = 160;
+/// `SSL_R_POST_HANDSHAKE_AUTH_ENCODING_ERR` — `sslerr.h` (278).
+const SSL_R_POST_HANDSHAKE_AUTH_ENCODING_ERR: c_int = 278;
+/// `SSL_R_MISSING_PSK_KEX_MODES_EXTENSION` — `sslerr.h` (310).
+const SSL_R_MISSING_PSK_KEX_MODES_EXTENSION: c_int = 310;
 /// `SSL3_MT_SERVER_KEY_EXCHANGE` — `ssl3.h` (12).
 const SSL3_MT_SERVER_KEY_EXCHANGE: c_int = 12;
 /// `SSL3_MT_SERVER_HELLO_DONE` — `ssl3.h` (14).
@@ -985,19 +999,6 @@ impl<'a> SliceCursor<'a> {
         Some(out)
     }
 
-    /// Consume `n` bytes when present, otherwise consume the remainder and answer `None`.
-    /// This mirrors the authority's `PACKET_remaining` readers, which leave an over-long
-    /// field as an empty value rather than rejecting the message.
-    pub(crate) fn take_or_rest(&mut self, n: usize) -> Option<&'a [u8]> {
-        match self.take(n) {
-            Some(s) => Some(s),
-            None => {
-                self.pos = self.bytes.len();
-                None
-            }
-        }
-    }
-
     pub(crate) fn take_u8(&mut self) -> Option<u8> {
         self.take(1).map(|b| b[0])
     }
@@ -1404,408 +1405,710 @@ const TLSEXT_TYPE_PSK_KEX_MODES: u16 = 45;
 /// `TLSEXT_KEX_MODE_FLAG_KE_DHE` — `tls1.h` (`psk_dhe_ke`).
 const TLSEXT_KEX_MODE_FLAG_KE_DHE: u8 = 1;
 
+/// A fatal ClientHello parse failure: the authority's alert and error reason. Producing one of
+/// these never touches the connection. The caller raises it through [`ossl_statem_fatal`], which
+/// moves the state machine to `MSG_FLOW_ERROR` (the authority's termination), so a rejected hello
+/// is explicitly poisoned rather than left partly initialised.
+#[derive(Clone, Copy)]
+struct HelloReject {
+    alert: c_int,
+    reason: c_int,
+}
+
+impl HelloReject {
+    /// `PACKET_get_net_2` on the legacy version (`statem_srvr.c:1549`).
+    const DECODE_LENGTH_TOO_SHORT: Self = Self {
+        alert: SSL_AD_DECODE_ERROR,
+        reason: SSL_R_LENGTH_TOO_SHORT,
+    };
+    /// The regular-ClientHello body framing (`statem_srvr.c:1621-1658`).
+    const DECODE_LENGTH_MISMATCH: Self = Self {
+        alert: SSL_AD_DECODE_ERROR,
+        reason: SSL_R_LENGTH_MISMATCH,
+    };
+    /// `tls_collect_extensions` refusing an extension header/body (`extensions.c:...`).
+    const DECODE_BAD_EXTENSION: Self = Self {
+        alert: SSL_AD_DECODE_ERROR,
+        reason: SSL_R_BAD_EXTENSION,
+    };
+    /// `tls_collect_extensions` refusing a duplicate recognised extension or a non-final
+    /// `pre_shared_key` (`extensions.c`: `SSL_AD_ILLEGAL_PARAMETER`, `SSL_R_BAD_EXTENSION`).
+    const ILLEGAL_BAD_EXTENSION: Self = Self {
+        alert: SSL_AD_ILLEGAL_PARAMETER,
+        reason: SSL_R_BAD_EXTENSION,
+    };
+    /// `tls_parse_ctos_server_name` refusing an over-long or NUL-containing name.
+    const UNRECOGNIZED_BAD_EXTENSION: Self = Self {
+        alert: SSL_AD_UNRECOGNIZED_NAME,
+        reason: SSL_R_BAD_EXTENSION,
+    };
+    /// `tls_parse_ctos_post_handshake_auth` with a non-empty body.
+    const DECODE_PHA_ENCODING: Self = Self {
+        alert: SSL_AD_DECODE_ERROR,
+        reason: SSL_R_POST_HANDSHAKE_AUTH_ENCODING_ERR,
+    };
+    /// `ssl_choose_server_version` returning `SSL_R_LENGTH_MISMATCH` (`statem_lib.c:2188`,
+    /// raised by the caller with `SSL_AD_PROTOCOL_VERSION`).
+    const PROTOCOL_LENGTH_MISMATCH: Self = Self {
+        alert: SSL_AD_PROTOCOL_VERSION,
+        reason: SSL_R_LENGTH_MISMATCH,
+    };
+    /// `ssl_choose_server_version` finding no usable version in the offered list.
+    const PROTOCOL_UNSUPPORTED: Self = Self {
+        alert: SSL_AD_PROTOCOL_VERSION,
+        reason: SSL_R_UNSUPPORTED_PROTOCOL,
+    };
+    /// `final_psk`: a `pre_shared_key` offer without `psk_key_exchange_modes`.
+    const MISSING_PSK_KEX_MODES: Self = Self {
+        alert: TLS13_AD_MISSING_EXTENSION,
+        reason: SSL_R_MISSING_PSK_KEX_MODES_EXTENSION,
+    };
+    /// An allocation refused inside the commit step; the authority's `SSL_AD_INTERNAL_ERROR`.
+    const INTERNAL: Self = Self {
+        alert: SSL_AD_INTERNAL_ERROR,
+        reason: ERR_R_INTERNAL_ERROR,
+    };
+    /// The caller handed this reader a message that is not a ClientHello.
+    const UNEXPECTED: Self = Self {
+        alert: SSL_AD_UNEXPECTED_MESSAGE,
+        reason: SSL_R_UNEXPECTED_MESSAGE,
+    };
+}
+
+/// The complete extension set of one ClientHello, parsed into plain Rust values that borrow the
+/// handshake message.
+///
+/// This is the state-preserving representation the boundary needs: [`parse_client_hello_extensions`]
+/// is a **safe** function that never dereferences or writes an `Ssl`, so a hello that fails part way
+/// through the walk cannot publish a partial set into the connection. [`commit_client_hello`] is the
+/// only writer of the extension-derived state, and it runs only after the whole block and the
+/// application's ClientHello callback have succeeded. Every field is a validated slice or a
+/// bounded count derived from [`SliceCursor`], so no reference over the handshake input can claim
+/// a length the input does not contain.
+struct ParsedExtensions<'a> {
+    /// A TLS1.3 version was offered (`supported_versions`).
+    wants_tls13: bool,
+    /// The `supported_versions` extension was present (so the selected version must be in it).
+    saw_supported_versions: bool,
+    /// TLS1.2 was offered in `supported_versions`.
+    offered_tls12: bool,
+    /// `supported_groups` entries, in wire order, bounded by the reduced selection buffer.
+    groups: [u16; 32],
+    group_cnt: usize,
+    /// The selected `key_share` group id and its encoded public key.
+    keyshare_group: u16,
+    client_share: &'a [u8],
+    /// The first `pre_shared_key` identity, its obfuscated-ticket-age-stripped ticket bytes, and
+    /// the binder to compare (when the binders vector was structurally present).
+    psk_identity: &'a [u8],
+    psk_binder: Option<&'a [u8]>,
+    psk_binderoffset: usize,
+    /// `pre_shared_key` was offered behind a `psk_dhe_ke` mode.
+    saw_psk: bool,
+    psk_kex_dhe: bool,
+    /// The `session_ticket` extension was present.
+    ticket_ext_present: bool,
+    /// The accepted SNI name (no interior NUL, at most `TLSEXT_MAXLEN_HOST_NAME` bytes).
+    sni_hostname: Option<&'a [u8]>,
+    /// The offered ALPN protocol list (`ProtocolNameList` body, length prefix stripped).
+    alpn: Option<&'a [u8]>,
+    /// The OCSP status type the hello requested, or `NOTHING` for an unknown/absent request.
+    status_type: Option<c_int>,
+    /// `post_handshake_auth` was present with an empty body.
+    post_handshake_auth: bool,
+    /// The validated `signature_algorithms` scheme bytes.
+    sigalgs: Option<&'a [u8]>,
+}
+
+impl<'a> ParsedExtensions<'a> {
+    fn empty() -> Self {
+        Self {
+            wants_tls13: false,
+            saw_supported_versions: false,
+            offered_tls12: false,
+            groups: [0u16; 32],
+            group_cnt: 0,
+            keyshare_group: 0,
+            client_share: &[],
+            psk_identity: &[],
+            psk_binder: None,
+            psk_binderoffset: 0,
+            saw_psk: false,
+            psk_kex_dhe: false,
+            ticket_ext_present: false,
+            sni_hostname: None,
+            alpn: None,
+            status_type: None,
+            post_handshake_auth: false,
+            sigalgs: None,
+        }
+    }
+}
+
+/// The built-in extension types the authority's `ext_defs` table recognises in a default build
+/// (`extensions.c`). `tls_collect_extensions` refuses a second occurrence of a *recognised* type
+/// with `SSL_AD_ILLEGAL_PARAMETER` / `SSL_R_BAD_EXTENSION`; unknown types may repeat. Custom
+/// extensions (`SSL_CTX_add_custom_ext`) are not modelled by this reduced server, so a duplicate
+/// custom type remains undetected (a recorded boundary).
+const KNOWN_CLIENT_HELLO_EXTENSIONS: [u16; 29] = [
+    0xff01, // renegotiate
+    0,      // server_name
+    1,      // max_fragment_length
+    12,     // srp
+    11,     // ec_point_formats
+    10,     // supported_groups
+    35,     // session_ticket
+    5,      // status_request
+    13172,  // next_proto_neg
+    16,     // application_layer_protocol_negotiation
+    14,     // use_srtp
+    22,     // encrypt_then_mac
+    18,     // signed_certificate_timestamp
+    23,     // extended_master_secret
+    50,     // signature_algorithms_cert
+    49,     // post_handshake_auth
+    19,     // client_cert_type
+    20,     // server_cert_type
+    13,     // signature_algorithms
+    43,     // supported_versions
+    45,     // psk_key_exchange_modes
+    51,     // key_share
+    44,     // cookie
+    64387,  // cryptopro_bug
+    27,     // compress_certificate
+    42,     // early_data
+    47,     // certificate_authorities
+    21,     // padding
+    41,     // pre_shared_key
+];
+
+/// The bit `tls_collect_extensions` uses to detect a duplicate of `etype`, when recognised.
+fn extension_seen_bit(etype: u16) -> Option<u32> {
+    KNOWN_CLIENT_HELLO_EXTENSIONS
+        .iter()
+        .position(|&t| t == etype)
+        .map(|i| i as u32)
+}
+
+fn extension_was_seen(seen: u64, etype: u16) -> bool {
+    extension_seen_bit(etype).is_some_and(|i| seen & (1u64 << i) != 0)
+}
+
+/// Parse a ClientHello extension block into [`ParsedExtensions`].
+///
+/// Safe by construction: every read goes through [`SliceCursor`], so the function can only answer
+/// `Ok` with slices that lie wholly inside `exts`, or `Err` with the authority's alert/reason. It
+/// writes nothing outside its own locals, which is what makes a later failure unable to publish a
+/// partial extension set. `exts_at` is the block's offset within the ClientHello body (used for the
+/// `pre_shared_key` binder transcript offset).
+fn parse_client_hello_extensions<'a>(
+    exts: &'a [u8],
+    exts_at: usize,
+) -> Result<ParsedExtensions<'a>, HelloReject> {
+    // Collection pass (`tls_collect_extensions`): every header must frame a body inside the block,
+    // no recognised type may repeat, and `pre_shared_key` must be the last extension. This runs
+    // before any body parser, as the authority's collect/parse split does.
+    let mut seen: u64 = 0;
+    let mut collect = SliceCursor::new(exts);
+    while collect.remaining() > 0 {
+        let etype = collect
+            .take_u16()
+            .ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+        let elen = collect
+            .take_u16()
+            .ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+        let _ = collect
+            .take(elen)
+            .ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+        if let Some(bit) = extension_seen_bit(etype) {
+            if seen & (1u64 << bit) != 0 {
+                return Err(HelloReject::ILLEGAL_BAD_EXTENSION);
+            }
+            seen |= 1u64 << bit;
+        }
+        if etype == TLSEXT_TYPE_PSK && collect.remaining() != 0 {
+            return Err(HelloReject::ILLEGAL_BAD_EXTENSION);
+        }
+    }
+
+    // Body pass. Each arm mirrors the authority parser named in its comment and answers that
+    // parser's exact alert/reason. Nothing here touches the connection.
+    let mut p = ParsedExtensions::empty();
+    let mut walk = SliceCursor::new(exts);
+    while walk.remaining() > 0 {
+        let etype = walk.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+        let elen = walk.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+        let body_at = walk.pos();
+        let eb = walk.take(elen).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+        match etype {
+            TLSEXT_TYPE_SERVERNAME => {
+                // `tls_parse_ctos_server_name` (`extensions_srvr.c:105-175`): exactly one
+                // `host_name` entry, no interior NUL, at most 255 bytes.
+                let mut c = SliceCursor::new(eb);
+                let list_len = c.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                if list_len == 0 {
+                    return Err(HelloReject::DECODE_BAD_EXTENSION);
+                }
+                let list = c.take(list_len).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                let mut name = SliceCursor::new(list);
+                let name_type = name.take_u8().ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                if name_type != TLSEXT_NAMETYPE_HOST_NAME {
+                    return Err(HelloReject::DECODE_BAD_EXTENSION);
+                }
+                let nlen = name.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                let host = name.take(nlen).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                if nlen > TLSEXT_MAXLEN_HOST_NAME || host.contains(&0) {
+                    return Err(HelloReject::UNRECOGNIZED_BAD_EXTENSION);
+                }
+                p.sni_hostname = Some(host);
+            }
+            TLSEXT_TYPE_STATUS_REQUEST => {
+                // `tls_parse_ctos_status_request` (`extensions_srvr.c:332-430`). The reduced
+                // server validates the framing only; the responder-id DER and request-extension
+                // DER are not retained (a recorded reduction).
+                let status_type = *eb.first().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as c_int;
+                if status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP {
+                    p.status_type = Some(crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING);
+                } else {
+                    let mut c = SliceCursor::new(eb);
+                    let _ = c.take_u8();
+                    let ids_len = c.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                    let _ids = c.take(ids_len).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                    let req_len = c.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                    let _req = c.take(req_len).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                    if c.remaining() != 0 {
+                        return Err(HelloReject::DECODE_BAD_EXTENSION);
+                    }
+                    p.status_type = Some(crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP);
+                }
+            }
+            TLSEXT_TYPE_SUPPORTED_VERSIONS => {
+                // `ssl_choose_server_version` (`statem_lib.c:2179-2240`): `list_len(1)` then
+                // whole `version(2)` entries. A declared list past the body or a half version is
+                // `SSL_R_LENGTH_MISMATCH`; an empty list is `SSL_R_UNSUPPORTED_PROTOCOL`. Both
+                // are raised with `SSL_AD_PROTOCOL_VERSION` by the call site.
+                let mut c = SliceCursor::new(eb);
+                let list_len = c.take_u8().ok_or(HelloReject::PROTOCOL_LENGTH_MISMATCH)? as usize;
+                let list = c
+                    .take(list_len)
+                    .ok_or(HelloReject::PROTOCOL_LENGTH_MISMATCH)?;
+                if list.is_empty() {
+                    return Err(HelloReject::PROTOCOL_UNSUPPORTED);
+                }
+                if !list.len().is_multiple_of(2) {
+                    return Err(HelloReject::PROTOCOL_LENGTH_MISMATCH);
+                }
+                p.saw_supported_versions = true;
+                for pair in list.as_chunks::<2>().0 {
+                    let v = u16::from_be_bytes(*pair);
+                    if v == TLS1_3_VERSION as u16 {
+                        p.wants_tls13 = true;
+                    }
+                    if v == TLS1_2_VERSION as u16 {
+                        p.offered_tls12 = true;
+                    }
+                }
+            }
+            TLSEXT_TYPE_SUPPORTED_GROUPS => {
+                // `tls_parse_ctos_supported_groups` (`extensions_srvr.c:1215-1240`): a non-empty,
+                // even-length `NamedGroupList`. The reduced selection buffer keeps the first 32
+                // entries (a recorded reduction).
+                let mut c = SliceCursor::new(eb);
+                let list_len = c.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                if list_len == 0 || !list_len.is_multiple_of(2) {
+                    return Err(HelloReject::DECODE_BAD_EXTENSION);
+                }
+                let list = c.take(list_len).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                for pair in list.as_chunks::<2>().0 {
+                    if p.group_cnt < p.groups.len() {
+                        p.groups[p.group_cnt] = u16::from_be_bytes(*pair);
+                        p.group_cnt += 1;
+                    }
+                }
+            }
+            TLSEXT_TYPE_ALPN => {
+                // `tls_parse_ctos_alpn` (`extensions_srvr.c:455-486`): a `ProtocolNameList`
+                // with at least one non-empty 1-byte-length protocol.
+                let mut c = SliceCursor::new(eb);
+                let list_len = c.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                if list_len < 2 {
+                    return Err(HelloReject::DECODE_BAD_EXTENSION);
+                }
+                let list = c.take(list_len).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                let mut protos = SliceCursor::new(list);
+                while protos.remaining() > 0 {
+                    let plen = protos.take_u8().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                    if plen == 0 {
+                        return Err(HelloReject::DECODE_BAD_EXTENSION);
+                    }
+                    let _ = protos.take(plen).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                }
+                p.alpn = Some(list);
+            }
+            TLSEXT_TYPE_SESSION_TICKET => {
+                // `tls_parse_ctos_session_ticket`: presence alone arms the issue-on-miss path.
+                p.ticket_ext_present = true;
+            }
+            TLSEXT_TYPE_POST_HANDSHAKE_AUTH => {
+                // `tls_parse_ctos_post_handshake_auth` (`extensions_srvr.c:1549-1565`): empty
+                // body, else its own encoding reason.
+                if !eb.is_empty() {
+                    return Err(HelloReject::DECODE_PHA_ENCODING);
+                }
+                p.post_handshake_auth = true;
+            }
+            TLSEXT_TYPE_KEY_SHARE => {
+                // `tls_parse_ctos_key_share`/`extract_keyshares` (`extensions_srvr.c:...`): the
+                // body is a length-prefixed list of `group(2) || key<2>`, each key non-empty.
+                // A truncated header, an absent key, or a list overrunning the body is
+                // `SSL_R_LENGTH_MISMATCH` (not a silent skip). The reduced server can only
+                // complete an X25519 exchange and keeps the first X25519 share; the authority's
+                // group-priority selection is a recorded reduction.
+                let mut c = SliceCursor::new(eb);
+                let list_len = c.take_u16().ok_or(HelloReject::DECODE_LENGTH_MISMATCH)? as usize;
+                let list = c
+                    .take(list_len)
+                    .ok_or(HelloReject::DECODE_LENGTH_MISMATCH)?;
+                let mut shares = SliceCursor::new(list);
+                while shares.remaining() > 0 {
+                    let group = shares
+                        .take_u16()
+                        .ok_or(HelloReject::DECODE_LENGTH_MISMATCH)?;
+                    let klen = shares
+                        .take_u16()
+                        .ok_or(HelloReject::DECODE_LENGTH_MISMATCH)?
+                        as usize;
+                    if klen == 0 {
+                        return Err(HelloReject::DECODE_LENGTH_MISMATCH);
+                    }
+                    let key = shares
+                        .take(klen)
+                        .ok_or(HelloReject::DECODE_LENGTH_MISMATCH)?;
+                    if p.keyshare_group == 0
+                        && group == crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519
+                        && klen == 32
+                    {
+                        p.keyshare_group = group;
+                        p.client_share = key;
+                    }
+                }
+            }
+            TLSEXT_TYPE_SIG_ALGS => {
+                // `tls_parse_ctos_sig_algs`/`tls1_save_peer_sigalgs`: a non-empty, even-length
+                // vector that fits the body.
+                p.sigalgs = Some(
+                    crate::ssl::t1_lib::tls1_peer_sigalgs(eb)
+                        .ok_or(HelloReject::DECODE_BAD_EXTENSION)?,
+                );
+            }
+            TLSEXT_TYPE_PSK_KEX_MODES => {
+                // `tls_parse_ctos_psk_kex_modes` (`extensions_srvr.c:573-590`): a length-prefixed
+                // non-empty mode list.
+                let mut c = SliceCursor::new(eb);
+                let n = c.take_u8().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                if n == 0 {
+                    return Err(HelloReject::DECODE_BAD_EXTENSION);
+                }
+                let modes = c.take(n).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                p.psk_kex_dhe = modes.contains(&TLSEXT_KEX_MODE_FLAG_KE_DHE);
+            }
+            TLSEXT_TYPE_PSK => {
+                // `tls_parse_ctos_psk` (`extensions_srvr.c:1306-1460`) returns immediately when
+                // no recognised key-exchange mode was offered, so the body is only inspected
+                // behind a `psk_dhe_ke` offer. Every identity is `identity<2> || age(4)`; the
+                // authority walks the whole vector, and the reduced server resumes from the first
+                // identity only. The binders vector is recorded structurally; its count and the
+                // binder length against the negotiated hash are only checkable once a ticket
+                // resolves (`tls_parse_ctos_psk` returns before reading binders otherwise).
+                if p.psk_kex_dhe {
+                    let mut c = SliceCursor::new(eb);
+                    let ids_len = c.take_u16().ok_or(HelloReject::DECODE_BAD_EXTENSION)? as usize;
+                    let ids = c.take(ids_len).ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                    let mut identities = SliceCursor::new(ids);
+                    let mut first_identity: &[u8] = &[];
+                    let mut identity_count = 0usize;
+                    while identities.remaining() > 0 {
+                        let idlen = identities
+                            .take_u16()
+                            .ok_or(HelloReject::DECODE_BAD_EXTENSION)?
+                            as usize;
+                        let id = identities
+                            .take(idlen)
+                            .ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                        let _age = identities
+                            .take(4)
+                            .ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                        if identity_count == 0 {
+                            first_identity = id;
+                        }
+                        identity_count += 1;
+                    }
+                    let binders = match c.take_u16() {
+                        Some(n) => c.take(n as usize),
+                        None => None,
+                    };
+                    p.psk_binder = binders.and_then(|b| {
+                        let mut bc = SliceCursor::new(b);
+                        let n = bc.take_u8()? as usize;
+                        if n == 0 {
+                            return None;
+                        }
+                        bc.take(n)
+                    });
+                    if identity_count > 0 {
+                        // A present but zero-length identity reaches the ticket lookup, whose
+                        // empty result `tls_parse_ctos_psk` refuses as `SSL_R_BAD_EXTENSION`
+                        // (the default stateless ticket path; external `psk_find_session_cb`
+                        // PSKs are not modelled by this reduced server).
+                        if first_identity.is_empty() {
+                            return Err(HelloReject::DECODE_BAD_EXTENSION);
+                        }
+                        p.psk_identity = first_identity;
+                        p.psk_binderoffset = 4usize
+                            .checked_add(exts_at)
+                            .and_then(|v| v.checked_add(body_at))
+                            .and_then(|v| v.checked_add(2))
+                            .and_then(|v| v.checked_add(ids_len))
+                            .ok_or(HelloReject::DECODE_BAD_EXTENSION)?;
+                        p.saw_psk = true;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // `final_psk` (`extensions.c`): a `pre_shared_key` offer without a
+    // `psk_key_exchange_modes` extension is a missing-extension failure. This runs after the
+    // parsers, as the authority's finalisers do.
+    if extension_was_seen(seen, TLSEXT_TYPE_PSK)
+        && !extension_was_seen(seen, TLSEXT_TYPE_PSK_KEX_MODES)
+    {
+        return Err(HelloReject::MISSING_PSK_KEX_MODES);
+    }
+
+    Ok(p)
+}
+
+/// Publish a fully parsed ClientHello into the connection.
+///
+/// This is the only writer of the extension-derived state. It runs after the whole extension
+/// block and the application's ClientHello callback have succeeded, so a rejected hello leaves
+/// the connection's pre-parse state in place (and, on a fatal rejection, the state machine is
+/// explicitly poisoned by [`ossl_statem_fatal`]).
+///
+/// The two owned copies are allocated before anything is installed; a refused allocation returns
+/// `Err(INTERNAL)` with both handles dropped and no member replaced.
+///
+/// # Safety
+///
+/// `s` is a live connection. `random` is exactly the 32 bytes the framing parser accepted,
+/// `session_id` is at most `SSL_MAX_SSL_SESSION_ID_LENGTH` bytes, and `parsed` borrows a handshake
+/// message that outlives this call.
+unsafe fn commit_client_hello(
+    s: *mut Ssl,
+    session_id: &[u8],
+    random: &[u8],
+    parsed: &ParsedExtensions<'_>,
+) -> Result<(), HelloReject> {
+    let host = match parsed.sni_hostname {
+        Some(host) => {
+            // SAFETY: `host` is readable for `host.len()` bytes inside the handshake message; the
+            // seam answers a NUL-terminated copy this call owns.
+            let Some(dup) = (unsafe {
+                OwnedCStr::strndup(host.as_ptr().cast(), host.len(), SeamFile::NULL, 0)
+            }) else {
+                return Err(HelloReject::INTERNAL);
+            };
+            Some(dup)
+        }
+        None => None,
+    };
+    let alpn = match parsed.alpn {
+        Some(list) => {
+            // SAFETY: `list` is readable for `list.len()` bytes.
+            let Some(dup) =
+                (unsafe { OwnedBuf::new_memdup(list.as_ptr(), list.len(), SeamFile::NULL, 0) })
+            else {
+                return Err(HelloReject::INTERNAL);
+            };
+            Some((dup, list.len()))
+        }
+        None => None,
+    };
+
+    // `tls_parse_ctos_sig_algs` stores the vector on the connection. It runs before the
+    // infallible stores below, so a refusal cannot leave SNI/ALPN installed.
+    if let Some(schemes) = parsed.sigalgs {
+        // SAFETY: `s` is live; `schemes` is the validated vector inside the handshake message.
+        if unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs_raw(s, schemes) } == 0 {
+            return Err(HelloReject::INTERNAL);
+        }
+    }
+
+    // SAFETY: `s` is live; `random` is exactly the 32-byte member's extent and `session_id` was
+    // bounds-checked by the framing parser before this call.
+    unsafe {
+        (*s).client_random.copy_from_slice(random);
+        (&mut (*s).tmp_session_id)[..session_id.len()].copy_from_slice(session_id);
+        (*s).tmp_session_id_len = session_id.len();
+    }
+
+    // SAFETY: `s` is live and each member currently obeys its member-buffer invariant, so the
+    // handle releases the object's own single block exactly once.
+    unsafe {
+        // `init_server_name`/`tls_parse_ctos_server_name`: release the incumbent and install the
+        // accepted name as a NUL-terminated copy.
+        let mut slot = (*s).ext_hostname_slot();
+        let empty = slot.clear(SeamFile::NULL, 0);
+        if let Some(dup) = host {
+            empty.store(dup);
+        }
+
+        // `init_alpn`/`tls_parse_ctos_alpn`: the offered list is reset on every ClientHello and
+        // stored when the extension was present.
+        let mut alpn_slot = (*s).s3_alpn_proposed_slot();
+        alpn_slot.clear(core::ptr::null(), 0);
+        if let Some((dup, len)) = alpn {
+            // SAFETY: `dup` owns a live block of `len` bytes; `into_raw` transfers that ownership
+            // to the object, whose destructor is the block's single release.
+            alpn_slot.store(dup.into_raw(), len);
+        }
+
+        // `init_status_request` resets the server's status type on every ClientHello.
+        (*s).ext_status_type = parsed
+            .status_type
+            .unwrap_or(crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING);
+        // `init_post_handshake_auth`/`tls_parse_ctos_post_handshake_auth`.
+        (*s).post_handshake_auth = if parsed.post_handshake_auth {
+            SSL_PHA_EXT_RECEIVED
+        } else {
+            0 // SSL_PHA_NONE
+        };
+    }
+    Ok(())
+}
+
 /// `static MSG_PROCESS_RETURN tls_process_client_hello(...)` — `statem_srvr.c:1648-1859`, reduced to
 /// the fields the ServerHello reads: the client random and session id, the offered cipher list
 /// (`ssl3_choose_cipher`), and the `supported_versions`/`key_share` extensions.
 ///
-/// The extension framework's `tls_collect_extensions`/`tls_parse_all_extensions` walk, the session
-/// cache, the resumption path and the `OPENSSL_zalloc`'d `CLIENTHELLO_MSG` are not modelled; the
-/// reachable fresh-connection fields are read directly from the handshake message. A ClientHello
-/// that omits `supported_groups` would be a fatal error in the authority
-/// (`SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION`, `extensions_srvr.c:867`); the reduced form does not
-/// check that here, and the module header names it.
+/// The extension framework is modelled in two phases. `tls_collect_extensions`' framing,
+/// duplicate-recognised-extension and `pre_shared_key`-must-be-last rules are replayed by
+/// [`parse_client_hello_extensions`], which is a **safe** function over the handshake bytes: it
+/// produces [`ParsedExtensions`] and never touches the connection, so a hello that fails part way
+/// through the walk cannot publish a partial set. The remaining reductions are named at the arms
+/// (custom extensions, context-inappropriate-extension rejection, OCSP responder DER, the
+/// `SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION` and `psk_ke`/HRR paths). The session cache and the
+/// resumption path are reduced as before; the `OPENSSL_zalloc`'d `CLIENTHELLO_MSG` is replaced by
+/// the two plain fields the callback reads.
 ///
-/// The application's `SSL_CTX_set_client_hello_cb` callback is invoked after the extension walk and
+/// The application's `SSL_CTX_set_client_hello_cb` callback is invoked after the extension parse and
 /// before `final_server_name`/the cipher choice, with a reduced `CLIENTHELLO_MSG` published on
 /// `s->clienthello` for its duration (`statem_srvr.c:1881-1893`). This is the path HAProxy uses to
 /// switch the connection to the certificate's `SSL_CTX` (`SSL_set_SSL_CTX`); a `SSL_CLIENT_HELLO_RETRY`
 /// return is a recorded boundary (the reduced synchronous driver cannot resume a half-processed
 /// hello).
 ///
+/// The parse is split into two phases. [`parse_client_hello_extensions`] is a safe function over
+/// the handshake bytes that produces [`ParsedExtensions`]; it never touches the connection, so a
+/// hello that fails part way through the walk cannot publish a partial extension set. Only after
+/// the whole block and the callback have succeeded does [`commit_client_hello`] install the
+/// extension-derived members, once. Every failure goes through one rejection path that raises the
+/// authority's alert and reason and moves the state machine to `MSG_FLOW_ERROR`, so a rejected
+/// hello is explicitly poisoned (the authority terminates the connection with the same fatal
+/// alert) instead of being retried with half-parsed state.
+///
 /// # Safety
 /// `s` must be a live connection; `hs` must be the handshake message (`type || len || body`).
 pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
-    if hs.len() < 4 || hs[0] != SSL3_MT_CLIENT_HELLO_BODY {
-        return 0;
+    // Every rejection goes through this closure, so the connection is always explicitly poisoned
+    // (`MSG_FLOW_ERROR`) rather than left partly mutated. `s` is live per this function's contract.
+    let reject = move |r: HelloReject| -> c_int {
+        // SAFETY: `s` is the live connection this function was handed; `ossl_statem_fatal` only
+        // touches that connection and the current thread's error queue.
+        unsafe { ossl_statem_fatal(s, r.alert, r.reason) };
+        0
+    };
+
+    // Handshake framing. The driver has already checked the type (`tls13_server_drive`), so a
+    // mismatch here is a caller-contract violation; an over-long body is the record layer's
+    // failure. Either way the connection is poisoned rather than left reusable.
+    if hs.len() < 4 {
+        return reject(HelloReject::DECODE_LENGTH_TOO_SHORT);
+    }
+    if hs[0] != SSL3_MT_CLIENT_HELLO_BODY {
+        return reject(HelloReject::UNEXPECTED);
     }
     let hs_len = ((hs[1] as usize) << 16) | ((hs[2] as usize) << 8) | hs[3] as usize;
-    if 4 + hs_len > hs.len() {
-        return 0;
+    let Some(body_end) = 4usize.checked_add(hs_len) else {
+        return reject(HelloReject::DECODE_LENGTH_MISMATCH);
+    };
+    if body_end > hs.len() {
+        return reject(HelloReject::DECODE_LENGTH_MISMATCH);
     }
-    let body = &hs[4..4 + hs_len];
+    let body = &hs[4..body_end];
 
+    // Body framing (`statem_srvr.c:1611-1658`). Every field is read through the checked cursor; a
+    // truncated or over-long vector is the authority's `SSL_R_LENGTH_MISMATCH`.
     let mut cur = SliceCursor::new(body);
-    // legacy_version (2) + random (32).
-    let Some(legacy) = cur.take(2) else {
-        return 0;
+    let legacy = match cur.take(2) {
+        Some(v) => v,
+        None => return reject(HelloReject::DECODE_LENGTH_TOO_SHORT),
     };
     let legacy_version = ((legacy[0] as c_int) << 8) | legacy[1] as c_int;
-    let Some(random) = cur.take(32) else {
-        return 0;
+    let random = match cur.take(32) {
+        Some(v) => v,
+        None => return reject(HelloReject::DECODE_LENGTH_MISMATCH),
     };
-    // SAFETY: `random` is a 32-byte slice; `client_random` is a 32-byte array.
-    unsafe { (*s).client_random.copy_from_slice(random) };
     // session_id (1 + n): the TLSv1.3 ServerHello echoes it (`statem_srvr.c:2064-2068`).
-    let Some(sid_len) = cur.take_u8() else {
-        return 0;
+    let session_id = match cur.take_u8().and_then(|n| cur.take(n as usize)) {
+        Some(v) => v,
+        None => return reject(HelloReject::DECODE_LENGTH_MISMATCH),
     };
-    let Some(session_id) = cur.take(sid_len as usize) else {
-        return 0;
-    };
-    // The authority rejects an id longer than `SSL_MAX_SSL_SESSION_ID_LENGTH` rather than
-    // truncating it. A regular TLS ClientHello (our path) is not an SSLv2-compatible record
-    // (`clienthello->isv2 = RECORD_LAYER_is_sslv2_record(...)`, `statem_srvr.c:1682`), so it
-    // takes the `else` arm at `statem_srvr.c:1776-1781`: `PACKET_copy_all` into the 32-byte
-    // buffer fails and the authority raises `SSL_AD_DECODE_ERROR` / `SSL_R_LENGTH_MISMATCH`.
-    // The reduced reader previously clamped to 32; it now matches that arm.
+    // `PACKET_copy_all` into the 32-byte buffer fails for a longer id, which the authority raises
+    // as `SSL_AD_DECODE_ERROR` / `SSL_R_LENGTH_MISMATCH` (`statem_srvr.c:1621-1626`).
     if session_id.len() > crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH {
-        // SAFETY: `s` is live.
-        unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
-        return 0;
-    }
-    // SAFETY: `s` is live; `session_id` has exactly `tmp_session_id`'s (32-byte) capacity or less.
-    unsafe {
-        (&mut (*s).tmp_session_id)[..session_id.len()].copy_from_slice(session_id);
-        (*s).tmp_session_id_len = session_id.len();
+        return reject(HelloReject::DECODE_LENGTH_MISMATCH);
     }
     // cipher_suites (2 + n).
-    let Some(cip_len) = cur.take_u16() else {
-        return 0;
+    let clnt_ciphers = match cur.take_u16().and_then(|n| cur.take(n as usize)) {
+        Some(v) => v,
+        None => return reject(HelloReject::DECODE_LENGTH_MISMATCH),
     };
-    let Some(clnt_ciphers) = cur.take(cip_len as usize) else {
-        return 0;
+    // compression_methods (1 + n).
+    let compressions = match cur.take_u8().and_then(|n| cur.take(n as usize)) {
+        Some(v) => v,
+        None => return reject(HelloReject::DECODE_LENGTH_MISMATCH),
     };
-    // compression_methods (1 + n). A body that ends inside the vector leaves the list empty,
-    // exactly as the previous `p + comp_len <= body.len()` reader did, and the extension
-    // reader then sees the truncated remainder (so no extensions are parsed).
-    let Some(comp_len) = cur.take_u8() else {
-        return 0;
-    };
-    let compressions: &[u8] = cur.take_or_rest(comp_len as usize).unwrap_or(&[]);
-    // extensions (2 + n), if present. `exts_at` records the sub-slice's offset within `body`, so
-    // the binder transcript offset below needs no pointer-to-integer subtraction.
+    // extensions (2 + n). The authority treats an absent vector (no trailing bytes) as empty and
+    // refuses a truncated length word or trailing bytes after the vector with `LENGTH_MISMATCH`.
     let mut exts_at = 0usize;
-    let exts: &[u8] = match cur.take_u16() {
-        Some(ext_len) => {
-            let at = cur.pos();
-            let Some(exts) = cur.take(ext_len as usize) else {
-                return 0;
-            };
-            exts_at = at;
-            exts
+    let exts: &[u8] = if cur.remaining() == 0 {
+        &[]
+    } else {
+        let ext_len = match cur.take_u16() {
+            Some(v) => v as usize,
+            None => return reject(HelloReject::DECODE_LENGTH_MISMATCH),
+        };
+        let at = cur.pos();
+        let exts = match cur.take(ext_len) {
+            Some(v) => v,
+            None => return reject(HelloReject::DECODE_LENGTH_MISMATCH),
+        };
+        if cur.remaining() != 0 {
+            return reject(HelloReject::DECODE_LENGTH_MISMATCH);
         }
-        None => &[],
+        exts_at = at;
+        exts
     };
 
-    // Choose the server version and the key-exchange group from the extensions.
-    let mut wants_tls13 = false;
-    let mut sup_versions = [0u16; 8];
-    let mut sup_versions_cnt = 0usize;
-    let mut clnt_groups = [0u16; 32];
-    let mut clnt_group_cnt = 0usize;
-    let mut saw_keyshare_group: u16 = 0;
-    let mut client_share: &[u8] = &[];
-    // The `pre_shared_key` extension (`tls_parse_ctos_psk`, `extensions_srvr.c:1310`): the first
-    // identity's ticket bytes and binder, and the byte offset of the `binders` vector within the
-    // ClientHello message (the binder transcript ends there).
-    let mut psk_identity: &[u8] = &[];
-    let mut psk_binder: &[u8] = &[];
-    let mut psk_binderoffset: usize = 0;
-    let mut saw_psk = false;
-    let mut psk_kex_dhe = false;
-    let mut sni_sent = false;
-    // `tls_get_ticket_from_client` (`t1_lib.c:2996-3010`): `ticket_expected` is only armed when
-    // the ClientHello actually carries the `session_ticket` extension. The previous unconditional
-    // arm made the server announce and issue a ticket to a client that had disabled them
-    // (`s_client -no_ticket`), which is the unsolicited-extension defect.
-    let mut ticket_ext_present = false;
-    let mut walk = SliceCursor::new(exts);
-    while walk.remaining() >= 4 {
-        // `remaining() >= 4` makes the type and length reads infallible; the body read is the
-        // one bounds check that decides acceptance, and it answers `None` rather than reading
-        // past the extension block.
-        let (Some(etype_bytes), Some(elen_bytes)) = (walk.take(2), walk.take(2)) else {
-            return 0;
-        };
-        let etype = u16::from_be_bytes([etype_bytes[0], etype_bytes[1]]);
-        let elen = u16::from_be_bytes([elen_bytes[0], elen_bytes[1]]) as usize;
-        let ext_body_off = walk.pos();
-        let Some(eb) = walk.take(elen) else {
-            return 0;
-        };
-        if etype == TLSEXT_TYPE_SERVERNAME {
-            // `tls_parse_ctos_server_name` (`extensions_srvr.c:100-175`): a
-            // `ServerNameList` (2-byte length) holding one `host_name` entry
-            // (`type(1) || len(2) || name`). Other name types and a NUL byte are refused; the
-            // accepted name is stored as the connection's temporary SNI, exactly as the authority
-            // stores it before `final_server_name` runs.
-            if eb.len() < 2 {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
-            if list_len == 0 || 2 + list_len > eb.len() || eb.len() < 5 {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            let name_type = eb[2];
-            let nlen = ((eb[3] as usize) << 8) | eb[4] as usize;
-            if name_type != TLSEXT_NAMETYPE_HOST_NAME || 5 + nlen > eb.len() {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            if nlen > TLSEXT_MAXLEN_HOST_NAME || eb[5..5 + nlen].contains(&0) {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_UNRECOGNIZED_NAME, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            // SAFETY: `s` is live; `eb[5..5 + nlen]` holds `nlen` readable bytes with no
-            // interior NUL, so `CRYPTO_strndup` copies exactly `nlen` bytes and appends the
-            // terminator, and the `ext_hostname` member obeys the member-buffer invariant.
-            unsafe {
-                let mut slot = (*s).ext_hostname_slot();
-                let empty = slot.clear(SeamFile::NULL, 0);
-                let Some(dup) =
-                    OwnedCStr::strndup(eb[5..5 + nlen].as_ptr().cast(), nlen, SeamFile::NULL, 0)
-                else {
-                    ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
-                    return 0;
-                };
-                empty.store(dup);
-            }
-            sni_sent = true;
-        }
-        if etype == TLSEXT_TYPE_STATUS_REQUEST {
-            // `tls_parse_ctos_status_request` (`extensions_srvr.c:329-424`):
-            // `status_type(1) || responder_id_list<2> || request_extensions<2>`. The responder-id
-            // and extension bodies are validated for length but not retained: the reduced server
-            // only needs the status type for `tls_handle_status_request`.
-            if eb.is_empty() {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            let status_type = eb[0] as c_int;
-            if status_type != crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP {
-                // Unknown type: the authority resets it to nothing and ignores the extension.
-                // SAFETY: `s` is live.
-                unsafe { (*s).ext_status_type = crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING };
-            } else {
-                if eb.len() < 5 {
-                    // SAFETY: `s` is live.
-                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                    return 0;
-                }
-                let ids_len = ((eb[1] as usize) << 8) | eb[2] as usize;
-                let exts_at = 3 + ids_len;
-                if exts_at + 2 > eb.len() {
-                    // SAFETY: `s` is live.
-                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                    return 0;
-                }
-                let req_len = ((eb[exts_at] as usize) << 8) | eb[exts_at + 1] as usize;
-                if exts_at + 2 + req_len != eb.len() {
-                    // SAFETY: `s` is live.
-                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                    return 0;
-                }
-                // SAFETY: `s` is live.
-                unsafe { (*s).ext_status_type = crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_OCSP };
-            }
-        }
-        if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS && eb.len() >= 3 {
-            // The body is `list_len || (version_hi || version_lo)...`. The declared list may
-            // overrun the extension; the walk stops at the shorter of the two, as the
-            // authority's `PACKET_remaining` loop does.
-            let list_len = eb[0] as usize;
-            let end = 1 + list_len.min(eb.len() - 1);
-            let mut versions = SliceCursor::new(&eb[1..end]);
-            while let Some(v) = versions.take_u16() {
-                if sup_versions_cnt < sup_versions.len() {
-                    sup_versions[sup_versions_cnt] = v;
-                    sup_versions_cnt += 1;
-                }
-                if v == TLS1_3_VERSION as u16 {
-                    // `tls_parse_ctos_supported_versions` records the request; the version itself
-                    // is resolved after the whole extension walk (`tls_early_post_process_client_hello`).
-                    wants_tls13 = true;
-                }
-            }
-        }
-        if etype == TLSEXT_TYPE_SUPPORTED_GROUPS && eb.len() >= 2 {
-            // `tls_parse_ctos_supported_groups` (`extensions_srvr.c`): the `NamedGroupList`.
-            let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
-            let end = (2 + list_len).min(eb.len());
-            let mut groups = SliceCursor::new(&eb[2..end]);
-            while clnt_group_cnt < clnt_groups.len() {
-                let Some(g) = groups.take_u16() else {
-                    break;
-                };
-                clnt_groups[clnt_group_cnt] = g;
-                clnt_group_cnt += 1;
-            }
-        }
-        if etype == TLSEXT_TYPE_ALPN {
-            // `tls_parse_ctos_alpn` (`extensions_srvr.c:451-480`): a
-            // `ProtocolNameList` (2-byte length) of 1-byte-length, non-empty protocols. The client's
-            // list is copied onto the connection for `final_alpn` (`tls_handle_alpn`).
-            if eb.len() < 2 {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
-            if list_len < 2 || 2 + list_len > eb.len() {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            let list = &eb[2..2 + list_len];
-            let mut q = 0usize;
-            let mut ok = true;
-            while q < list.len() {
-                let plen = list[q] as usize;
-                if plen == 0 || q + 1 + plen > list.len() {
-                    ok = false;
-                    break;
-                }
-                q += 1 + plen;
-            }
-            if !ok {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            // SAFETY: `s` is live; `list` is `list_len` readable bytes and the `s3_alpn_proposed`
-            // member obeys the member-buffer invariant.
-            unsafe {
-                use crate::runtime::mem::CRYPTO_memdup;
-                let mut slot = (*s).s3_alpn_proposed_slot();
-                slot.clear(core::ptr::null(), 0);
-                let dup = CRYPTO_memdup(list.as_ptr().cast(), list.len(), core::ptr::null(), 0)
-                    .cast::<u8>();
-                if dup.is_null() {
-                    ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
-                    return 0;
-                }
-                slot.store(dup, list.len());
-            }
-        }
-        if etype == TLSEXT_TYPE_SESSION_TICKET {
-            // `tls_parse_ctos_session_ticket` (`extensions_srvr.c`): presence alone arms the
-            // issue-on-miss path; the stateful ticket reduction keys resumption by session id.
-            ticket_ext_present = true;
-        }
-        if etype == TLSEXT_TYPE_POST_HANDSHAKE_AUTH {
-            // `tls_parse_ctos_post_handshake_auth` (`extensions_srvr.c:1565-1579`): the extension
-            // body must be empty, and its presence records that the client will answer a
-            // post-handshake CertificateRequest (`s->post_handshake_auth = SSL_PHA_EXT_RECEIVED`).
-            if elen != 0 {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-            // SAFETY: `s` is live.
-            unsafe { (*s).post_handshake_auth = SSL_PHA_EXT_RECEIVED };
-        }
-        if etype == TLSEXT_TYPE_KEY_SHARE && eb.len() >= 2 {
-            // `KeyShareClientHello { KeyShareEntry client_shares<0..2^16-1>; }` — the body begins
-            // with a two-byte list length (`extensions_srvr.c:857`, RFC 8446 §4.2.8). The reduced
-            // server can only complete an `X25519` exchange, so it selects the `X25519` entry
-            // wherever it appears in the list (the authority sends X25519MLKEM768 first, then
-            // X25519). The declared list length bounds where an entry may *start*; an entry's
-            // key may still run to the end of the extension, as the authority's reader allows.
-            let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
-            let list_end = (2 + list_len).min(eb.len());
-            let mut shares = SliceCursor::new(eb);
-            let _ = shares.take(2); // the list length word, already read
-            while shares.pos() + 4 <= list_end {
-                let (Some(g_bytes), Some(klen_bytes)) = (shares.take(2), shares.take(2)) else {
-                    break;
-                };
-                let g = u16::from_be_bytes([g_bytes[0], g_bytes[1]]);
-                let klen = u16::from_be_bytes([klen_bytes[0], klen_bytes[1]]) as usize;
-                let Some(key) = shares.take(klen) else {
-                    break;
-                };
-                if g == crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519 && klen == 32 {
-                    saw_keyshare_group = g;
-                    client_share = key;
-                    break;
-                }
-            }
-        }
-        if etype == TLSEXT_TYPE_SIG_ALGS {
-            // `tls_parse_ctos_sig_algs` (`extensions_srvr.c:303-320`): the body is
-            // `supported_signature_algorithms<2..2^16-2>`. The authority refuses a missing,
-            // empty or truncated vector with `SSL_R_BAD_EXTENSION`, and saves the rest for
-            // `tls_choose_sigalg`. The saved list is re-read by the certificate-verify
-            // constructor, so it lives on the connection rather than in this frame.
-            // SAFETY: `s` is live; `eb` is the extension body.
-            if unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs(s, eb) } == 0 {
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            }
-        }
-        if etype == TLSEXT_TYPE_PSK_KEX_MODES && !eb.is_empty() {
-            // `tls_parse_ctos_psk_kex_modes` (`extensions_srvr.c:568`): `PskKeyExchangeModes` is
-            // `ke_modes<1..255>`; only `psk_dhe_ke` is honoured (a `psk_ke`-only offer is a
-            // recorded boundary).
-            let list_len = eb[0] as usize;
-            for &mode in eb[1..].iter().take(list_len) {
-                if mode == TLSEXT_KEX_MODE_FLAG_KE_DHE {
-                    psk_kex_dhe = true;
-                }
-            }
-        }
-        if etype == TLSEXT_TYPE_PSK && eb.len() >= 2 {
-            // `tls_parse_ctos_psk` (`extensions_srvr.c:1310`): the body is
-            // `identities<2>(identity<2> || obfuscated_ticket_age(4)) || binders<2>(binder<1>)`.
-            let mut psk = SliceCursor::new(eb);
-            let ids_len = psk.take_u16().unwrap_or(0) as usize;
-            let ids = psk.take(ids_len);
-            let binders_len = psk.take_u16();
-            let (Some(ids), Some(blen)) = (ids, binders_len) else {
-                // The identities vector runs past the extension, or no binders vector follows
-                // it: the authority refuses the whole extension here.
-                // SAFETY: `s` is live.
-                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                return 0;
-            };
-            let blen = blen as usize;
-            if let Some(bvec) = psk.take(blen) {
-                if ids.len() >= 2 && blen >= 1 {
-                    let idlen = ((ids[0] as usize) << 8) | ids[1] as usize;
-                    if idlen != 0 && 2 + idlen + 4 <= ids.len() {
-                        let binder_len = bvec[0] as usize;
-                        if binder_len != 0 && binder_len < bvec.len() {
-                            psk_identity = &ids[2..2 + idlen];
-                            psk_binder = &bvec[1..1 + binder_len];
-                            // Absolute offset of the `binders` vector within the ClientHello
-                            // message (the binder transcript ends at the vector's own length
-                            // prefix): the 4-byte handshake header, then the extension block,
-                            // then this extension, then the vector. The operands are offsets
-                            // into the same `hs` slice, so the sum is checked rather than
-                            // assumed.
-                            let Some(abs) = 4usize
-                                .checked_add(exts_at)
-                                .and_then(|v| v.checked_add(ext_body_off))
-                                .and_then(|v| v.checked_add(ids_len + 2))
-                            else {
-                                return 0;
-                            };
-                            psk_binderoffset = abs;
-                            saw_psk = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // Parse the complete block into plain values. Nothing is published until the whole block has
+    // been accepted *and* the application's callback has succeeded (see `commit_client_hello`).
+    let parsed = match parse_client_hello_extensions(exts, exts_at) {
+        Ok(p) => p,
+        Err(r) => return reject(r),
+    };
 
     // `tls_parse_ctos_supported_versions`/the legacy-version fallback (`statem_srvr.c`): the
     // highest version both sides support. Absent a TLS1.3 `supported_versions` offer, the legacy
@@ -1827,7 +2130,7 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         return 0;
     }
     let mut session_version = legacy_version;
-    if wants_tls13 && smax >= TLS1_3_VERSION {
+    if parsed.wants_tls13 && smax >= TLS1_3_VERSION {
         session_version = TLS1_3_VERSION;
     }
     if session_version > smax {
@@ -1841,9 +2144,17 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         return 0;
     }
     // A `supported_versions` offer restricts the server to a version the client listed
-    // (`tls_parse_ctos_supported_versions`, `extensions_srvr.c`).
-    if sup_versions_cnt > 0 && !sup_versions[..sup_versions_cnt].contains(&(session_version as u16))
-    {
+    // (`ssl_choose_server_version`, `statem_lib.c:2181-2240`). The reduced server keeps two
+    // version flags instead of the authority's `best_vers`, so a list longer than the old
+    // eight-entry buffer still answers correctly.
+    let offered = if session_version == TLS1_3_VERSION {
+        parsed.wants_tls13
+    } else if session_version == TLS1_2_VERSION {
+        parsed.offered_tls12
+    } else {
+        false
+    };
+    if parsed.saw_supported_versions && !offered {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_UNSUPPORTED_PROTOCOL) };
         return 0;
@@ -1889,9 +2200,9 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             }
         }
         // SAFETY: `s` is live; `session_id` is the ClientHello's session-id slice and
-        // `ticket_ext_present` records the extension walk above.
+        // `parsed.ticket_ext_present` records the extension walk above.
         let prev = unsafe {
-            crate::ssl::ssl_sess::ssl_get_prev_session(s, session_id, ticket_ext_present)
+            crate::ssl::ssl_sess::ssl_get_prev_session(s, session_id, parsed.ticket_ext_present)
         };
         if prev < 0 {
             return 0;
@@ -1934,9 +2245,13 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     // stateless ticket decrypts and whose binder verifies selects the resumed session. The ticket
     // is the authority's encrypted `i2d_SSL_SESSION` (`tls_decrypt_ticket`, `t1_lib.c:3041`). A
     // `psk_ke`-only offer is a recorded boundary and falls back to a full handshake.
-    if session_version == TLS1_3_VERSION && saw_psk && psk_kex_dhe && !psk_identity.is_empty() {
-        // SAFETY: `s` is live; `psk_identity` is the ticket bytes.
-        let looked = unsafe { tls13_decrypt_ticket(s, psk_identity) };
+    if session_version == TLS1_3_VERSION
+        && parsed.saw_psk
+        && parsed.psk_kex_dhe
+        && !parsed.psk_identity.is_empty()
+    {
+        // SAFETY: `s` is live; `parsed.psk_identity` is the ticket bytes.
+        let looked = unsafe { tls13_decrypt_ticket(s, parsed.psk_identity) };
         if !looked.is_null() {
             // SAFETY: `looked` is a live, reference-owning session.
             unsafe {
@@ -1948,17 +2263,33 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 let mut ok = kind >= 0 && psk_len > 0 && (*looked).ssl_version == TLS1_3_VERSION;
                 if ok {
                     let md = crate::ssl::tls13_enc::tls13_md_for_kind(kind);
+                    let md_size = crate::ssl::tls13_enc::tls13_md_size(kind);
                     let mut calc = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
                     let psk = &(&(*looked).master_key)[..psk_len];
+                    // `tls_parse_ctos_psk` (`extensions_srvr.c:1439-1453`) reads the binders
+                    // vector only once a ticket resolved, then requires the binder to be exactly
+                    // `hashsize` bytes. A missing/short binder is a fatal `SSL_R_BAD_EXTENSION`
+                    // there; here it must also be refused *before* the constant-time compare, which
+                    // reads exactly `md_size` bytes. The binder transcript offset is an invariant of
+                    // this parse (it is bounded by `hs`), checked defensively.
+                    let Some(binder) = parsed.psk_binder else {
+                        crate::ssl::ssl_sess::SSL_SESSION_free(looked);
+                        return reject(HelloReject::DECODE_BAD_EXTENSION);
+                    };
+                    if md_size == 0 || binder.len() != md_size || parsed.psk_binderoffset > hs.len()
+                    {
+                        crate::ssl::ssl_sess::SSL_SESSION_free(looked);
+                        return reject(HelloReject::DECODE_BAD_EXTENSION);
+                    }
                     // `tls_psk_do_binder(..., sign=0, ...)` (`extensions_srvr.c:1523`).
                     if crate::ssl::tls13_enc::tls13_psk_do_binder(
                         md,
                         hs.as_ptr(),
-                        psk_binderoffset,
+                        parsed.psk_binderoffset,
                         psk,
                         calc.as_mut_ptr(),
                         false,
-                        psk_binder.as_ptr(),
+                        binder,
                     ) == 0
                     {
                         ok = false;
@@ -1992,9 +2323,9 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     // not intersect (a group overlap with no matching key share would send a HelloRetryRequest; the
     // reduced server accepts the client's X25519 share instead, a named boundary).
     if session_version == TLS1_3_VERSION
-        && clnt_group_cnt > 0
-        // SAFETY: `s` is live; `clnt_groups[..clnt_group_cnt]` is readable.
-        && unsafe { tls12_choose_group(s, &clnt_groups[..clnt_group_cnt]) } == 0
+        && parsed.group_cnt > 0
+        // SAFETY: `s` is live; `parsed.groups[..parsed.group_cnt]` is readable.
+        && unsafe { tls12_choose_group(s, &parsed.groups[..parsed.group_cnt]) } == 0
     {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_NO_SUITABLE_KEY_SHARE) };
@@ -2004,8 +2335,9 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     // `tls_early_post_process_client_hello`'s ClientHello callback (`statem_srvr.c:1881-1893`):
     // give the application's `SSL_CTX_set_client_hello_cb` a chance to inspect the message and
     // switch the connection's context before the version/cipher choice. The authority publishes
-    // `s->clienthello` (with the parsed extension array) for the duration; the reduced readers walk
-    // the raw block in place.
+    // `s->clienthello` (with the collected, unparsed extension array) for the duration; this
+    // callback sees the raw block and none of the extension-derived members, which are committed
+    // only after it returns.
     {
         // SAFETY: `s` is live; `body` holds the parsed ClientHello for the duration of this call.
         let ctx = unsafe { (*s).ctx };
@@ -2018,7 +2350,7 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         if let Some(cb) = cb {
             let mut chmsg = crate::ssl::ssl_lib::ClientHelloMsg {
                 isv2: 0,
-                legacy_version: ((body[0] as c_uint) << 8) | body[1] as c_uint,
+                legacy_version: legacy_version as c_uint,
                 random: [0u8; 32],
                 session_id_len: session_id.len(),
                 session_id: [0u8; crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH],
@@ -2029,8 +2361,8 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 extensions: exts.as_ptr(),
                 extensions_len: exts.len(),
             };
-            // SAFETY: `body` holds at least 34 bytes (checked above).
-            chmsg.random.copy_from_slice(&body[2..34]);
+            // `random` is exactly the 32 bytes the framing parser accepted.
+            chmsg.random.copy_from_slice(random);
             let n = session_id.len().min(chmsg.session_id.len());
             chmsg.session_id[..n].copy_from_slice(&session_id[..n]);
             // SAFETY: `ctx` is live; the argument is the one the setter stored.
@@ -2067,8 +2399,17 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     // `tls_parse_all_extensions(..., fin=1)` runs the `server_name` finalisation before the cipher
     // is chosen (`statem_srvr.c:2124`, `extensions.c:938-1040`); nginx's `ngx_http_ssl_servername`
     // is reached from here.
+    //
+    // The whole extension block parsed and the callback succeeded, so this is the single point that
+    // publishes the extension-derived members. A failure here is an allocation refusal, which the
+    // rejection path poisons like any other fatal ClientHello error.
+    // SAFETY: `s` is live; `session_id`/`random` are the framing parser's slices and `parsed`
+    // borrows `hs`, which outlives this call.
+    if let Err(r) = unsafe { commit_client_hello(s, session_id, random, &parsed) } {
+        return reject(r);
+    }
     // SAFETY: `s` is live.
-    if unsafe { final_server_name(s, sni_sent) } == 0 {
+    if unsafe { final_server_name(s, parsed.sni_hostname.is_some()) } == 0 {
         return 0;
     }
 
@@ -2189,12 +2530,12 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     unsafe {
         (*s).pending_cipher = chosen;
         (*s).group_id = if session_version == TLS1_3_VERSION {
-            saw_keyshare_group
+            parsed.keyshare_group
         } else {
             // `tls_parse_ctos_supported_groups`'s selection (`extensions_srvr.c`): the first server
             // group the client also offered. The reduced TLS1.2 path only completes an X25519
             // exchange, so a connection with no common X25519 group fails at the ServerKeyExchange.
-            tls12_choose_group(s, &clnt_groups[..clnt_group_cnt])
+            tls12_choose_group(s, &parsed.groups[..parsed.group_cnt])
         };
     }
 
@@ -2257,15 +2598,15 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             return 0;
         }
     }
-    if saw_keyshare_group == crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519
-        && client_share.len() == 32
+    if parsed.keyshare_group == crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519
+        && parsed.client_share.len() == 32
     {
-        // SAFETY: `s` is live; `client_share` is 32 readable bytes.
+        // SAFETY: `s` is live; `parsed.client_share` is 32 readable bytes.
         let peer = unsafe {
             crate::ssl::tls13_enc::tls13_pkey_from_share(
                 s,
-                client_share.as_ptr(),
-                client_share.len(),
+                parsed.client_share.as_ptr(),
+                parsed.client_share.len(),
             )
         };
         if peer.is_null() {
@@ -8840,6 +9181,51 @@ mod client_hello_parse_tests {
         frame_client_hello(&body)
     }
 
+    /// The fixed ClientHello fields plus a caller-supplied `tail` emitted verbatim, so a test can
+    /// truncate the extension-length field itself (which the helper above always writes).
+    fn client_hello_body_with_tail(session_id: &[u8], suites: &[u8], tail: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&[0x03, 0x03]);
+        body.extend_from_slice(&[0x5a; 32]);
+        body.push(session_id.len() as u8);
+        body.extend_from_slice(session_id);
+        body.extend_from_slice(&(suites.len() as u16).to_be_bytes());
+        body.extend_from_slice(suites);
+        body.extend_from_slice(&[1, 0]); // compression_methods: null only
+        body.extend_from_slice(tail);
+        frame_client_hello(&body)
+    }
+
+    /// `psk_key_exchange_modes` carrying one `psk_dhe_ke` mode.
+    fn psk_kex_dhe_ext() -> Vec<u8> {
+        ext(TLSEXT_TYPE_PSK_KEX_MODES, &[1, TLSEXT_KEX_MODE_FLAG_KE_DHE])
+    }
+
+    /// A `pre_shared_key` body from exact wire pieces (`identities` already includes each entry's
+    /// 2-byte length and 4-byte age; `binders` its 1-byte lengths).
+    fn psk_ext_raw(identity_bytes: &[u8], binder_bytes: &[u8]) -> Vec<u8> {
+        let mut body = (identity_bytes.len() as u16).to_be_bytes().to_vec();
+        body.extend_from_slice(identity_bytes);
+        body.extend_from_slice(&(binder_bytes.len() as u16).to_be_bytes());
+        body.extend_from_slice(binder_bytes);
+        ext(TLSEXT_TYPE_PSK, &body)
+    }
+
+    /// One identity entry: `identity<2> || obfuscated_ticket_age(4)`.
+    fn psk_identity_entry(id: &[u8]) -> Vec<u8> {
+        let mut out = (id.len() as u16).to_be_bytes().to_vec();
+        out.extend_from_slice(id);
+        out.extend_from_slice(&[0u8; 4]);
+        out
+    }
+
+    /// One binder: `binder<1>`.
+    fn psk_binder_entry(binder: &[u8]) -> Vec<u8> {
+        let mut out = vec![binder.len() as u8];
+        out.extend_from_slice(binder);
+        out
+    }
+
     /// `ExtensionType(2) || ExtensionData<2> || body`.
     fn ext(etype: u16, body: &[u8]) -> Vec<u8> {
         let mut out = etype.to_be_bytes().to_vec();
@@ -8918,6 +9304,38 @@ mod client_hello_parse_tests {
             reasons.push((e & 0x7f_ffff) as c_int);
         }
         reasons
+    }
+
+    /// Attach a memory write side, run one ClientHello, and require the authority's exact fatal
+    /// alert and error reason. A fatal rejection must also leave the state machine explicitly
+    /// poisoned (`MSG_FLOW_ERROR`), which is what the authority's `ossl_statem_fatal` does.
+    fn assert_rejected(s: *mut Ssl, hs: &[u8], reason: c_int, alert: c_int) {
+        attach_wbio(s);
+        ERR_clear_error();
+        // SAFETY: `s` is live and `hs` is a complete handshake message.
+        let r = unsafe { tls_process_client_hello(s, hs) };
+        assert_eq!(r, 0, "the malformed ClientHello must be rejected");
+        assert_eq!(
+            error_reasons(),
+            vec![reason],
+            "the authority's reason must be the only one raised"
+        );
+        let wire = wbio_bytes(s);
+        assert!(
+            wire.len() >= 2,
+            "the fatal alert must reach the write side: {wire:?}"
+        );
+        assert_eq!(
+            &wire[wire.len() - 2..],
+            &[2, alert as u8],
+            "fatal (2) alert {alert}"
+        );
+        // SAFETY: `s` is live.
+        assert_ne!(
+            unsafe { ossl_statem_in_error(s) },
+            0,
+            "a fatal rejection must poison the state machine"
+        );
     }
 
     fn frame_client_hello(body: &[u8]) -> Vec<u8> {
@@ -9108,22 +9526,19 @@ mod client_hello_parse_tests {
         assert_eq!(error_reasons(), vec![SSL_R_UNSUPPORTED_PROTOCOL]);
     }
 
+    /// `tls_collect_extensions` (`extensions.c`) refuses a second occurrence of a recognised
+    /// extension with `SSL_AD_ILLEGAL_PARAMETER` / `SSL_R_BAD_EXTENSION` (the client may not send
+    /// the same extension twice). The reduced reader previously walked both; it now matches the
+    /// authority's rejection.
     #[test]
-    fn duplicate_supported_versions_is_accepted() {
+    fn duplicate_supported_versions_is_rejected_like_the_authority() {
         let _g = crate::test_support::lock_global_state();
         let srv = tls13_server();
         let mut exts = supported_versions_ext(&[0x0303]);
         exts.extend_from_slice(&supported_versions_ext(&[0x0304]));
         exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
         let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
-        assert_eq!(
-            // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
-            unsafe { tls_process_client_hello(srv.s, &hs) },
-            1,
-            "both occurrences are walked; the TLS1.3 offer wins"
-        );
-        // SAFETY: `srv.s` is live.
-        assert_eq!(unsafe { (*srv.s).version }, TLS1_3_VERSION);
+        assert_rejected(srv.s, &hs, SSL_R_BAD_EXTENSION, SSL_AD_ILLEGAL_PARAMETER);
     }
 
     #[test]
@@ -9144,6 +9559,8 @@ mod client_hello_parse_tests {
         }
     }
 
+    /// `tls_collect_extensions` refuses an extension header/body that runs past the block with
+    /// `SSL_AD_DECODE_ERROR` / `SSL_R_BAD_EXTENSION`.
     #[test]
     fn extension_body_overrunning_the_block_is_rejected() {
         let _g = crate::test_support::lock_global_state();
@@ -9154,50 +9571,96 @@ mod client_hello_parse_tests {
         exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
         exts.extend_from_slice(&[0x00, 51, 0x00, 0x08, 0xaa, 0xbb, 0xcc, 0xdd]);
         let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
-        assert_eq!(
-            // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
-            unsafe { tls_process_client_hello(srv.s, &hs) },
-            0,
-            "an extension body that overruns the block must be refused"
-        );
+        assert_rejected(srv.s, &hs, SSL_R_BAD_EXTENSION, SSL_AD_DECODE_ERROR);
     }
 
+    /// A single trailing byte cannot frame the 2-byte extensions-length field: the regular
+    /// ClientHello body parser refuses it with `SSL_R_LENGTH_MISMATCH` (`statem_srvr.c:1653-1658`).
     #[test]
-    fn truncated_extension_header_is_accepted_as_no_extensions() {
-        let _g = crate::test_support::lock_global_state();
-        let srv = server_with_version_range(0x0303, TLS1_3_VERSION);
-        // One stray byte cannot hold a four-byte extension header; the walk stops cleanly and
-        // the legacy version governs.
-        let exts = [0x00];
-        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
-        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
-        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 0);
-        // SAFETY: `srv.s` is live.
-        assert_eq!(unsafe { (*srv.s).version }, 0x0303);
-    }
-
-    #[test]
-    fn oversized_supported_versions_list_is_clamped_not_read_past() {
+    fn truncated_extension_length_is_length_mismatch() {
         let _g = crate::test_support::lock_global_state();
         let srv = tls13_server();
-        // The declared list is 200 bytes but only one version follows; the walk stops at the
-        // extension body's end, exactly as the previous `min` bound did.
+        let hs = client_hello_body_with_tail(
+            &[0x11; 32],
+            &TLS_AES_128_GCM_SHA256.to_be_bytes(),
+            &[0x00],
+        );
+        assert_rejected(srv.s, &hs, SSL_R_LENGTH_MISMATCH, SSL_AD_DECODE_ERROR);
+    }
+
+    /// An extension vector whose declared length exceeds the remaining body is the same
+    /// `LENGTH_MISMATCH` refusal (`PACKET_get_length_prefixed_2` fails).
+    #[test]
+    fn extension_length_exceeding_the_body_is_length_mismatch() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let hs = client_hello_body_with_tail(
+            &[0x11; 32],
+            &TLS_AES_128_GCM_SHA256.to_be_bytes(),
+            &[0x00, 0x10, 0xaa, 0xbb],
+        );
+        assert_rejected(srv.s, &hs, SSL_R_LENGTH_MISMATCH, SSL_AD_DECODE_ERROR);
+    }
+
+    /// A declared extension vector followed by trailing bytes is also refused by the body parser
+    /// (`PACKET_remaining(pkt) != 0`).
+    #[test]
+    fn trailing_bytes_after_the_extension_vector_are_length_mismatch() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let hs = client_hello_body_with_tail(
+            &[0x11; 32],
+            &TLS_AES_128_GCM_SHA256.to_be_bytes(),
+            &[0x00, 0x00, 0xff],
+        );
+        assert_rejected(srv.s, &hs, SSL_R_LENGTH_MISMATCH, SSL_AD_DECODE_ERROR);
+    }
+
+    /// One byte inside an otherwise framed extension vector cannot hold an extension header, so
+    /// `tls_collect_extensions` refuses it rather than stopping the walk cleanly.
+    #[test]
+    fn truncated_extension_header_is_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let exts = [0x00];
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(srv.s, &hs, SSL_R_BAD_EXTENSION, SSL_AD_DECODE_ERROR);
+    }
+
+    /// `ssl_choose_server_version` reads `supported_versions` as `list_len(1) || version(2)...`;
+    /// a declared list past the extension body is `SSL_R_LENGTH_MISMATCH`, raised with
+    /// `SSL_AD_PROTOCOL_VERSION` by the caller (`statem_lib.c:2181-2240`).
+    #[test]
+    fn oversized_supported_versions_list_is_length_mismatch() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        // The declared list is 200 bytes but only one version follows.
         let body = [200u8, 0x03, 0x04];
         let mut exts = ext(TLSEXT_TYPE_SUPPORTED_VERSIONS, &body);
         exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
         let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
-        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
-        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
-        // SAFETY: `srv.s` is live.
-        assert_eq!(unsafe { (*srv.s).version }, TLS1_3_VERSION);
+        assert_rejected(srv.s, &hs, SSL_R_LENGTH_MISMATCH, SSL_AD_PROTOCOL_VERSION);
     }
 
+    /// `tls_parse_ctos_supported_groups` requires a non-empty, even-length list; the previous
+    /// reader accepted an empty one.
     #[test]
-    fn key_share_entry_overrunning_the_body_stops_the_walk() {
+    fn zero_length_supported_groups_is_bad_extension() {
         let _g = crate::test_support::lock_global_state();
         let srv = tls13_server();
-        // One entry declaring a 32-byte key but supplying none: the entry is dropped, and the
-        // `supported_groups` selection alone remains (no key share, so no group is recorded).
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_SUPPORTED_GROUPS, &[0x00, 0x00]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(srv.s, &hs, SSL_R_BAD_EXTENSION, SSL_AD_DECODE_ERROR);
+    }
+
+    /// `tls_parse_ctos_key_share`/`extract_keyshares` refuse a truncated entry with
+    /// `SSL_R_LENGTH_MISMATCH`; the previous reader silently dropped it.
+    #[test]
+    fn truncated_key_share_entry_is_length_mismatch() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        // One entry declaring a 32-byte key but supplying none.
         let mut body = 6u16.to_be_bytes().to_vec();
         body.extend_from_slice(&X25519_GROUP.to_be_bytes());
         body.extend_from_slice(&32u16.to_be_bytes());
@@ -9205,12 +9668,211 @@ mod client_hello_parse_tests {
         exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
         exts.extend_from_slice(&ext(TLSEXT_TYPE_KEY_SHARE, &body));
         let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
-        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
-        assert_eq!(unsafe { tls_process_client_hello(srv.s, &hs) }, 1);
+        assert_rejected(srv.s, &hs, SSL_R_LENGTH_MISMATCH, SSL_AD_DECODE_ERROR);
         // SAFETY: `srv.s` is live.
         unsafe {
             assert_eq!((*srv.s).group_id, 0);
             assert!((*srv.s).peer_tmp.is_null());
+        }
+    }
+
+    /// `tls_parse_ctos_server_name` refuses a name longer than `TLSEXT_MAXLEN_host_name` with
+    /// `SSL_AD_UNRECOGNIZED_NAME` / `SSL_R_BAD_EXTENSION`, and a rejected hello must not publish
+    /// the name.
+    #[test]
+    fn oversized_sni_is_unrecognized_name_and_not_published() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let host = vec![b'a'; 256];
+        let mut body = 259u16.to_be_bytes().to_vec(); // list_len = 1 + 2 + 256
+        body.push(0); // host_name
+        body.extend_from_slice(&256u16.to_be_bytes());
+        body.extend_from_slice(&host);
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_SERVERNAME, &body));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(srv.s, &hs, SSL_R_BAD_EXTENSION, SSL_AD_UNRECOGNIZED_NAME);
+        // SAFETY: `srv.s` is live; the rejected name must not be published.
+        unsafe { assert!((*srv.s).ext_hostname().is_null()) };
+    }
+
+    /// `tls_parse_ctos_alpn` refuses a zero-length protocol name with
+    /// `SSL_AD_DECODE_ERROR` / `SSL_R_BAD_EXTENSION`, and nothing is copied onto the connection.
+    #[test]
+    fn alpn_with_a_zero_length_protocol_name_is_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        // list_len = 3: "h", then a zero-length entry.
+        let body = [0u8, 3, 1, b'h', 0];
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_ALPN, &body));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(srv.s, &hs, SSL_R_BAD_EXTENSION, SSL_AD_DECODE_ERROR);
+        // SAFETY: `srv.s` is live.
+        unsafe { assert_eq!((*srv.s).s3_alpn_proposed(), (core::ptr::null(), 0)) };
+    }
+
+    /// `tls_parse_ctos_psk` walks every identity as `identity<2> || age(4)`; a truncated entry is
+    /// `SSL_AD_DECODE_ERROR` / `SSL_R_BAD_EXTENSION`.
+    #[test]
+    fn psk_identity_with_a_truncated_entry_is_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut identities = psk_identity_entry(b"ticket");
+        // A second entry declares a five-byte identity but supplies only its first byte and no
+        // obfuscated-ticket-age at all.
+        identities.extend_from_slice(&[0x00, 0x05, 0x42]);
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&psk_kex_dhe_ext());
+        exts.extend_from_slice(&psk_ext_raw(&identities, &[]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(srv.s, &hs, SSL_R_BAD_EXTENSION, SSL_AD_DECODE_ERROR);
+    }
+
+    /// A binder-count mismatch is only checked after a ticket resolves
+    /// (`tls_parse_ctos_psk`, `extensions_srvr.c:1439-1453`: `if (sess == NULL) return 1;` precedes
+    /// the binders walk). With no matching ticket both this reader and the authority accept the
+    /// hello; the mismatch is not a parse error at collect time.
+    #[test]
+    fn psk_binder_count_mismatch_is_not_checked_without_a_resolved_ticket() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut identities = psk_identity_entry(b"a");
+        identities.extend_from_slice(&psk_identity_entry(b"b"));
+        // Two identities, one binder.
+        let binders = psk_binder_entry(&[0xcc; 32]);
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&psk_kex_dhe_ext());
+        exts.extend_from_slice(&psk_ext_raw(&identities, &binders));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        ERR_clear_error();
+        // SAFETY: `srv.s` is live and `hs` is a complete handshake message.
+        let r = unsafe { tls_process_client_hello(srv.s, &hs) };
+        assert_eq!(
+            r, 1,
+            "without a resolved ticket the authority never reads the binders vector"
+        );
+        assert!(
+            error_reasons().is_empty(),
+            "the mismatch must not raise an error without a resolved ticket"
+        );
+    }
+
+    /// A present but zero-length PSK identity reaches the (stateless) ticket lookup, which
+    /// reports an empty ticket; `tls_parse_ctos_psk` refuses that as `SSL_R_BAD_EXTENSION`.
+    #[test]
+    fn zero_length_psk_identity_is_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let identities = psk_identity_entry(b"");
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&psk_kex_dhe_ext());
+        exts.extend_from_slice(&psk_ext_raw(&identities, &psk_binder_entry(&[0xaa; 32])));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(srv.s, &hs, SSL_R_BAD_EXTENSION, SSL_AD_DECODE_ERROR);
+    }
+
+    /// `final_psk` (`extensions.c`): a `pre_shared_key` offer without
+    /// `psk_key_exchange_modes` is `TLS13_AD_MISSING_EXTENSION` / `SSL_R_MISSING_PSK_KEX_MODES_EXTENSION`.
+    #[test]
+    fn psk_without_psk_kex_modes_is_missing_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let identities = psk_identity_entry(b"t");
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&psk_ext_raw(&identities, &psk_binder_entry(&[0xaa; 32])));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(
+            srv.s,
+            &hs,
+            SSL_R_MISSING_PSK_KEX_MODES_EXTENSION,
+            TLS13_AD_MISSING_EXTENSION,
+        );
+    }
+
+    /// `tls_parse_ctos_post_handshake_auth` has its own encoding reason, not `SSL_R_BAD_EXTENSION`.
+    #[test]
+    fn non_empty_post_handshake_auth_uses_its_own_reason() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_POST_HANDSHAKE_AUTH, &[0x00]));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(
+            srv.s,
+            &hs,
+            SSL_R_POST_HANDSHAKE_AUTH_ENCODING_ERR,
+            SSL_AD_DECODE_ERROR,
+        );
+    }
+
+    /// State preservation: a hello whose first extensions parse cleanly but whose last extension
+    /// is malformed must publish nothing. Before the two-phase parse the SNI and ALPN were
+    /// installed as the walk reached them, so this input left a rejected connection holding
+    /// attacker-chosen extension state.
+    #[test]
+    fn rejected_hello_publishes_no_extension_state() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let mut sni = 12u16.to_be_bytes().to_vec(); // list_len = 1 + 2 + 9
+        sni.push(0);
+        sni.extend_from_slice(&9u16.to_be_bytes());
+        sni.extend_from_slice(b"a.example");
+        let alpn = [0u8, 3, 2, b'h', b'2'];
+        let mut key_share = 6u16.to_be_bytes().to_vec();
+        key_share.extend_from_slice(&X25519_GROUP.to_be_bytes());
+        key_share.extend_from_slice(&32u16.to_be_bytes());
+        let mut exts = supported_versions_ext(&[0x0304]);
+        exts.extend_from_slice(&supported_groups_ext(&[X25519_GROUP]));
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_SERVERNAME, &sni));
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_ALPN, &alpn));
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_KEY_SHARE, &key_share));
+        let hs = client_hello_with_exts(&[0x11; 32], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts);
+        assert_rejected(srv.s, &hs, SSL_R_LENGTH_MISMATCH, SSL_AD_DECODE_ERROR);
+        // SAFETY: `srv.s` is live. Every extension-derived member is still at its construction
+        // value, and the session id/client random were not copied either.
+        unsafe {
+            assert!((*srv.s).ext_hostname().is_null(), "SNI leaked");
+            assert_eq!((*srv.s).s3_alpn_proposed(), (core::ptr::null(), 0));
+            assert_eq!((*srv.s).post_handshake_auth, 0);
+            assert_eq!(
+                (*srv.s).ext_status_type,
+                crate::ssl::ssl_lib::TLSEXT_STATUSTYPE_NOTHING
+            );
+            assert_eq!((*srv.s).tmp_session_id_len, 0);
+            assert_eq!((*srv.s).client_random, [0u8; 32]);
+        }
+    }
+
+    /// Negative control (test-only): the pre-fix walk wrote the SNI into the connection as soon as
+    /// it saw the extension, so the same rejected hello left a name installed. This reproduces
+    /// that write directly and asserts the state check used above detects it; the real parser's
+    /// clean result is asserted by `rejected_hello_publishes_no_extension_state`.
+    #[test]
+    fn negative_control_pre_fix_partial_publication_is_detected() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        let host = b"canary.example";
+        // SAFETY: `srv.s` is live; the block is the connection's own member buffer and the copy is
+        // readable for `host.len()` bytes. This is the exact write the pre-fix walk performed
+        // before it discovered the following malformed extension.
+        unsafe {
+            let dup = OwnedCStr::strndup(host.as_ptr().cast(), host.len(), SeamFile::NULL, 0)
+                .expect("the canary copy must be allocatable");
+            let mut slot = (*srv.s).ext_hostname_slot();
+            let empty = slot.clear(SeamFile::NULL, 0);
+            empty.store(dup);
+            assert!(
+                !(*srv.s).ext_hostname().is_null(),
+                "canary fired: the pre-fix order publishes SNI on a hello that is then rejected"
+            );
         }
     }
 

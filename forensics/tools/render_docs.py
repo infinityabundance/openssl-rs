@@ -250,10 +250,13 @@ def publish_identity(refresh: Path, root: Path, version: str) -> dict:
         raise RenderError("no PUBLISHED receipt under atlas-refresh/")
     latest = max(published, key=lambda r: (r.get("date", ""), r.get("version", "")))
     verification = latest.get("registry_verification") or {}
+    artefacts = latest.get("artefacts") or {}
     return {
         "version": latest.get("version", version),
         "date": latest.get("date", ""),
         "checksum": verification.get("checksum_prefix", ""),
+        "libcrypto": str(artefacts.get("libcrypto.so.3", ""))[:8],
+        "libssl": str(artefacts.get("libssl.so.3", ""))[:8],
         "source": f"atlas-refresh/publish-{latest.get('version', version)}.json",
     }
 
@@ -478,7 +481,7 @@ class Evidence:
         bits = []
         if self.candidate["commit"]:
             bits.append(f"candidate commit `{self.candidate['commit']}`")
-        bits.append(f"crate version `{self.version}`")
+        bits.append(f"working-tree crate version `{self.version}` (**not published**)")
         bits.extend(
             f"`{name}` sha256 `{digest}`" for name, digest in self.candidate["libs"]
         )
@@ -579,9 +582,14 @@ class Evidence:
                 "| **Known gaps** | " + (gap_bits or "none recorded") + " | "
                 f"`{STATUS_S}` (`known_gaps`) |",
                 "| **Release** | "
-                f"**{self.publish['version']}** on crates.io ({self.publish['date']}), "
-                f"checksum `{self.publish['checksum']}…` | "
-                f"`{self.publish['source']}` |",
+                f"**Published: {self.publish['version']}** on crates.io "
+                f"({self.publish['date']}), checksum `{self.publish['checksum']}…`, "
+                f"artefacts `libcrypto.so.3` `{self.publish['libcrypto']}…` / "
+                f"`libssl.so.3` `{self.publish['libssl']}…`. **Working tree: "
+                f"{self.version} — not published.** This evidence is bound to the "
+                f"{self.version} tree, not to the published {self.publish['version']} "
+                "crate. | "
+                f"`{self.publish['source']}`; `Cargo.toml` |",
                 "",
                 reuse_text,
             ]
@@ -804,10 +812,19 @@ class Evidence:
                 "|---|---|---|",
                 f"| candidate identity | {self.identity_text()} | "
                 f"`{ATLAS_S}` (`body.candidate_identity`); `Cargo.toml` |",
-                "| version / release | "
-                f"**{self.publish['version']}** published to crates.io "
-                f"({self.publish['date']}, checksum `{self.publish['checksum']}…`) | "
-                f"`Cargo.toml`; `{self.publish['source']}` |",
+                "| working-tree version | "
+                f"**{self.version}** — **not published** | `Cargo.toml` |",
+                "| published release | "
+                f"**{self.publish['version']}** on crates.io ({self.publish['date']}, "
+                f"checksum `{self.publish['checksum']}…`), artefacts "
+                f"`libcrypto.so.3` `{self.publish['libcrypto']}…` / "
+                f"`libssl.so.3` `{self.publish['libssl']}…` | "
+                f"`{self.publish['source']}` |",
+                "| evidence binding | the evidence in this table is bound to the "
+                f"**{self.version} tree**, not to the published "
+                f"{self.publish['version']} crate; downstream rows are carried forward "
+                "from their recorded candidate identity | this document; "
+                f"`{ATLAS_S}` (`body.evidence_reuse`) |",
                 test_row(self.tests, "library tests", verb="passed"),
                 "| cohort | "
                 f"**{self.consumers['l7_functional']}/{self.consumers['families_total']}** "
