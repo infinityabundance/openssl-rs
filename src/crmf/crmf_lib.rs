@@ -60,7 +60,7 @@ use crate::x509::x509_cmp::ossl_x509_check_private_key;
 use crate::x509::x509_lu::{X509Store, X509_STORE_get0_param, X509_STORE_set_purpose};
 use crate::x509::x509_vpm::X509_VERIFY_PARAM_get_purpose;
 use crate::x509::x_exten::X509_EXTENSION_free;
-use crate::x509::x_name::{X509Name, X509_NAME_set};
+use crate::x509::x_name::{X509Name, X509_NAME_dup, X509_NAME_set};
 use crate::x509::x_pubkey::{
     X509Pubkey, X509_PUBKEY_dup, X509_PUBKEY_get0, X509_PUBKEY_get0_param,
 };
@@ -761,11 +761,14 @@ pub unsafe extern "C" fn OSSL_CRMF_CERTID_gen(
     // SAFETY: `cid` is live and its `issuer` is a fresh `GENERAL_NAME` from the item layer.
     unsafe {
         let gn = (*cid).issuer.cast::<GeneralName>();
-        if X509_NAME_set(&mut (*gn).d.directoryName, issuer) == 0 {
+        // The duplicate is built first so a failed allocation leaves `gn` untouched, then
+        // installed through the audited writer, which sets `GEN_DIRNAME` and the arm together.
+        let dn = X509_NAME_dup(issuer);
+        if dn.is_null() {
             OSSL_CRMF_CERTID_free(cid);
             return ptr::null_mut();
         }
-        (*gn).type_ = GEN_DIRNAME;
+        (*gn).set_directory_name(dn);
         ASN1_INTEGER_free((*cid).serial_number);
         (*cid).serial_number = ASN1_INTEGER_dup(serial);
         if (*cid).serial_number.is_null() {

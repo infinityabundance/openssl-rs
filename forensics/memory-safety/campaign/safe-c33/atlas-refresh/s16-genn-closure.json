@@ -1,0 +1,175 @@
+{
+  "task_id": "S16-GENN",
+  "title": "Close the GENERAL_NAME union representation mechanism (single-writer constructor family + selector-guarded readers)",
+  "phase": 25,
+  "stage_branch": "integrate/safe-c33 (subagent did not commit)",
+  "source_identity": {
+    "parent_sha": "febdf3f3db60db70715044bd800e6f82f182f868",
+    "result_sha": null,
+    "tree_dirty_at_capture": true,
+    "note": "The subagent does not commit; the gate ran against the uncommitted working tree on top of febdf3f3d.",
+    "dirty_files": [
+      "src/cmp/cmp_vfy.rs",
+      "src/crmf/crmf_lib.rs",
+      "src/ess/ess_lib.rs",
+      "src/ocsp/ocsp_cl.rs",
+      "src/ocsp/ocsp_ext.rs",
+      "src/ts/ts_rsp_sign.rs",
+      "src/x509/v3_akid.rs",
+      "src/x509/v3_genn.rs",
+      "src/x509/v3_ncons.rs",
+      "src/x509/v3_san.rs"
+    ]
+  },
+  "authority_contract": "crypto/x509/v3_genn.c GENERAL_NAME set0/get0/cmp/free/dup plus the ASN1_CHOICE item layout; include/openssl/x509v3.h:172-193; ABI: struct GENERAL_NAME_st is int type followed by a union of pointer arms, all arms alias the same 8-byte slot.",
+  "inventory": {
+    "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s16-genn-inventory.md",
+    "inside_v3_genn_reads_via_as_ref": 7,
+    "inside_v3_genn_single_writer": 1,
+    "inside_v3_genn_test_only_reads": 1,
+    "outside_writes_before": 19,
+    "outside_writes_after": 0,
+    "outside_reference_forming_reads_before": 3,
+    "outside_reference_forming_reads_after": 0,
+    "outside_raw_pointer_reads_before": 24,
+    "outside_raw_pointer_reads_after": 20,
+    "outside_unguarded_reads_before": 2,
+    "outside_unguarded_reads_after": 0,
+    "outside_caller_contract_only_accessors_before": 5,
+    "outside_caller_contract_only_accessors_after": 0,
+    "excluded_other_unions": "PKCS7/CMS/SIV d fields share the name but are different structs"
+  },
+  "ownership_before": "Every module wrote and read GeneralName::d directly. Construction order varied (arm then selector, selector then arm, in-place X509_NAME_set through &mut d.directoryName, addr_of_mut! on d.directoryName). Two reads (cmp_vfy cert_acceptable, check_msg_find_cert) and five v3_san accessor helpers read the arm without checking the selector, relying on an undocumented caller obligation.",
+  "ownership_after": "One audited writer, GeneralName::install (safe, pub(crate)), clears the slot and writes the selector and arm together. Typed setters (set_other_name, set_ia5, set_x400, set_directory_name, set_edi_party_name, set_ip_address, set_registered_id) are the only outside entry points and reject a selector that does not name their arm. GENERAL_NAME_set0_value dispatches to those setters; unhandled selectors still normalise to a cleared slot. One selector-checked reader, GeneralName::as_ref, backs the typed accessors (other_name, ia5, x400, directory_name, edi_party_name, ip_address, registered_id) and arm_ptr. Every accessor answers None/NULL on a selector mismatch; no reference is formed for an unnamed arm.",
+  "mechanisms": [
+    {
+      "name": "GENERAL_NAME selected-arm representation",
+      "before": "HIDDEN",
+      "after": "SAFETY_DISCHARGED (scoped to selector/arm pairing)",
+      "eliminated": [
+        "19 direct d.<arm> writes outside v3_genn.rs (now 0)",
+        "2 unguarded arm reads in cmp_vfy.rs (now selector-guarded accessor calls)",
+        "5 v3_san accessor helpers whose only guarantee was an undocumented caller contract (now self-guarding)",
+        "3 read/write sites that formed a Rust place over d.<arm> via deref or &mut (now 0)"
+      ],
+      "relocated": [
+        "the union write coordination into GeneralName::install (one switch, one slot write plus selector)",
+        "the union read coordination into GeneralName::as_ref and the typed accessors (one switch, discriminant checked before any reference)",
+        "the build-then-publish sequence in a2i_GENERAL_NAME into a local arm followed by one install call"
+      ],
+      "hidden": 0
+    }
+  ],
+  "unsafe_ops": {
+    "removed": [
+      "19 direct union-arm writes/reads outside v3_genn.rs were replaced by safe method calls on the audited family (the unsafe pointer work around them remains, and is unchanged)"
+    ],
+    "retained": [
+      "20 raw-pointer-only arm reads outside v3_genn.rs: cmp_hdr 1, cmp_server 1, cmp_vfy 1, crmf 1, ess 1, ocsp_vfy 1, ts_rsp_verify 1, v3_ncons 1, v3_purp 2, v3_utl 6, x509_acert 1, x509_vfy 2, x_crl 1. Each is preceded by an explicit type_==GEN_* / match type_ check and a SAFETY comment stating the discriminant and pointee contract.",
+      "GeneralName::as_ref / arm_ptr and the 7 typed accessors: the single unsafe read boundary (each has a # Safety section).",
+      "GeneralName::install and the typed setters are safe; they perform no read and no release."
+    ],
+    "introduced": [
+      "7 new unsafe blocks inside the typed accessors (non-test unsafe blocks 41 -> 48); each is a single `unsafe { self.as_ref() }` call with a SAFETY comment and no new proof obligation beyond as_ref's existing contract",
+      "no new extern symbol, no changed exported signature, no new #[no_mangle] function (28 before, 28 after); unsafe fn count 6 -> 13 (the 7 accessors, each with # Safety)"
+    ]
+  },
+  "boundary": "GeneralName::install (writer) and GeneralName::as_ref (reader) are the two halves of the representation boundary. They exist because the C ABI fixes the layout as an untagged union selected by an int; the selector is the only discriminator.",
+  "obligations": {
+    "discharged": [
+      "In-crate construction: every arm write now establishes the matching selector in the same call (install).",
+      "Decoder provenance: d2i_GENERAL_NAME already refuses an out-of-range selector and a NULL selected arm.",
+      "Read side: every reference-forming accessor proves the discriminant before forming a reference and returns None on mismatch.",
+      "Destructor: ASN1_item_free's CHOICE arm reads the selector and releases only the selected in-range alternative; out-of-range and NULL arms release nothing (verified in src/asn1/fre.rs and by tests).",
+      "Comparison: GENERAL_NAME_cmp returns -1 for a selector mismatch, an unhandled selector, or a NULL arm before any arm-specific comparison; X.400 compares only through ASN1_STRING_cmp."
+    ],
+    "retained": [
+      "ABI precondition (external): a C caller of GENERAL_NAME_set0_value must pass a live value of the arm that type_ names. A wrong-type pairing cannot be detected at read time because every arm aliases the same 8-byte slot; it remains the caller's UB, stated in the function's # Safety.",
+      "GENERAL_NAME_set0_value does not release the previous arm (authority behaviour). Callers that replace an arm own the old one.",
+      "The 20 retained raw reads rely on the enclosing selector check; the pointee-validity part is owned by the value's builder/decoder/ABI contract.",
+      "a2i_GENERAL_NAME and i2d/dup still require the ABI pairing precondition to hold for a value received from C."
+    ],
+    "introduced": [
+      "None beyond the typed accessors' documented `self`-liveness and pointee-validity precondition, which is the same obligation as_ref already carried."
+    ]
+  },
+  "compatibility_delta": [
+    {
+      "class": "known-vulnerability mechanism eliminated (AGENTS.md 17)",
+      "change": "set0_value for an unhandled selector clears the union and records the selector; the authority leaves the previous bytes in d (CVE-2023-0286 residue). This behaviour predates S16 and is retained.",
+      "observed": "an_unknown_selector_is_unreadable_and_safe_to_free: selector 99 leaves d.ia5 NULL and the un-adopted IA5 string is untouched."
+    },
+    {
+      "class": "UB in the C authority not reproduced (AGENTS.md 17)",
+      "change": "crmf OSSL_CRMF_CERTID_gen and ocsp OCSP_request_set1_name now duplicate the name first and install it on success, instead of X509_NAME_set on the raw union slot. On allocation failure the previous arm is untouched; the authority's unconditional wrong-type free cannot occur. These items are freshly allocated, so the success path is identical.",
+      "observed": "cargo check + clippy clean; focused tests pass."
+    },
+    {
+      "class": "failure-path residue not reproduced (AGENTS.md 17)",
+      "change": "a2i_GENERAL_NAME builds the arm in a local and installs it only after it is fully valid. A failed build no longer stages a partial arm in a caller-supplied out GENERAL_NAME; the partial arm is released here. Successful builds are unchanged.",
+      "observed": "focused genn tests pass; no existing v3_san test asserted the old failure residue."
+    }
+  ],
+  "safety_checks": {
+    "focused_tests": "cargo test --lib -- --test-threads=4 genn: 13 passed, 0 failed, 0 ignored, 2059 filtered out",
+    "new_tests": [
+      "genn_each_arm_round_trips_through_the_typed_constructor_and_reader",
+      "genn_selector_mismatch_returns_none_and_forms_no_reference",
+      "genn_failed_construction_leaves_nothing_to_free",
+      "genn_cmp_is_openssl_compatible_for_same_and_cross_arm_pairs",
+      "genn_canary_guarded_accessor_refuses_selector_arm_mismatch"
+    ],
+    "canary": {
+      "test": "x509::v3_genn::tests::genn_canary_guarded_accessor_refuses_selector_arm_mismatch",
+      "cfg": "#[cfg(test)] only (inside mod tests)",
+      "observed_output": "genn canary fired: guarded directory_name() = None; unguarded d.directoryName = 0x7f1e20000d40 == IA5 arm 0x7f1e20000d40",
+      "result": "ok; the guarded accessor answers None while the pre-conversion unguarded read yields the IA5 arm's address typed as X509_NAME *"
+    },
+    "miri": "NOT_RUN (BOUNDARY/SEAL gate)",
+    "asan": "NOT_RUN (BOUNDARY/SEAL gate)",
+    "full_library_suite": "NOT_RUN by instruction (FAST gate only)"
+  },
+  "gates": [
+    {
+      "command": "cargo fmt --all -- --check",
+      "exit": 0,
+      "tail": "(no output)"
+    },
+    {
+      "command": "cargo check --lib",
+      "exit": 0,
+      "tail": "Compiling openssl-rs v0.0.33 (/work)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.83s"
+    },
+    {
+      "command": "cargo test --lib -- --test-threads=4 genn",
+      "exit": 0,
+      "tail": "running 13 tests\n...\ntest result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 2059 filtered out; finished in 0.00s"
+    },
+    {
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "exit": 0,
+      "tail": "Compiling openssl-rs v0.0.33 (/work)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 17.47s"
+    }
+  ],
+  "structural_guards": {
+    "repr_c": "GeneralName and GeneralNameValue still #[repr(C)]; the layout asserts (union 8 bytes, GeneralName 16 bytes, type_ offset 0, d offset 8) still compile.",
+    "exports": "No diff in the #[no_mangle] name set before vs after (28 entries). No exported signature changed.",
+    "allocator_seam": "No file under src/runtime/mem*, src/runtime/mem_coords*, or src/runtime/malloc* changed."
+  },
+  "sites_not_closed": [],
+  "residuals": [
+    {
+      "item": "20 raw-pointer-only reads remain outside v3_genn.rs",
+      "disposition": "Retained with an explicit local discriminant check and a SAFETY comment. They form no Rust reference. This is the intended boundary, not an unclosed write."
+    },
+    {
+      "item": "C ABI wrong-type pairing",
+      "disposition": "Retained external precondition; documented. Not detectable post hoc because all arms alias one slot."
+    },
+    {
+      "item": "Miri/ASan/BOUNDARY and SEAL gates",
+      "disposition": "NOT_RUN at FAST level; must be run at the BOUNDARY/SEAL gate."
+    }
+  ],
+  "graduation": "SAFETY_DISCHARGED (scoped to the GENERAL_NAME selector/arm representation mechanism), with the retained external ABI precondition enumerated above. hidden = 0."
+}
