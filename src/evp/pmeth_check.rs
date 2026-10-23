@@ -35,18 +35,23 @@
 //! `EVP_PKEY_check` is `EVP_PKEY_pairwise_check` under another name — it is **not** a seventh
 //! behaviour, and it is not even a wrapper with its own body.
 //!
-//! ## The legacy half is unreachable here, and saying why is the point
+//! ## The legacy half is live, and the pmeth half is checked first
 //!
-//! After `try_provided_check` answers `-1`, each wrapper consults `pkey->ameth` and `ctx->pmeth`.
-//! In this crate both are absent — `EVP_PKEY_ASN1_METHOD` and `EVP_PKEY_METHOD` are Phase 8's
-//! (D163, D165) — so the legacy arm cannot be taken. The two refusals that remain are transcribed
-//! at their own recorded sites: `EVP_R_NO_KEY_SET` when the context has no key, and
-//! `EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` from the `not_supported` label.
+//! After `try_provided_check` answers `-1`, each wrapper with a legacy half consults, in the
+//! authority's order (`pmeth_check.c:67-84`, `:113-129`, `:178-195`): `evp_pkey_is_legacy`'s type
+//! test (`pkey->type == EVP_PKEY_NONE` is `not_supported`), then `ctx->pmeth-><check>` if the method
+//! publishes it, then `pkey->ameth->pkey_<check>` if the type's method publishes that. Either
+//! callback's return value is the answer; only when neither is published is the `not_supported`
+//! refusal (`-2`) taken.
 //!
-//! The `pkey->type == EVP_PKEY_NONE` test *is* written, because it is what distinguishes a key that
-//! was never typed from one that has a legacy method — and a provider key is typed
-//! `EVP_PKEY_KEYMGMT`, so the test is false for it. Reading it as dead because "there are no legacy
-//! keys here" would be the same mistake D168 records from the other direction.
+//! That half was previously recorded as unreachable because "both objects are Phase 8's". Both have
+//! landed: `EVP_PKEY_ASN1_METHOD` is populated by `pkey_set_type` for every legacy type, and a
+//! legacy context (keymgmt == NULL, which `int_ctx_new` refuses to build without a pmeth) carries
+//! its `EVP_PKEY_METHOD`. The four checks therefore answered `-2` for every legacy key, including the
+//! EC and DH keys whose methods publish real checks.
+//!
+//! `EVP_PKEY_private_check` genuinely has no legacy half — the authority raises the refusal after
+//! `try_provided_check` returns `-1` — so its `-2` is the authority's answer and not a gap.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -137,10 +142,33 @@ unsafe fn evp_pkey_public_check_combined(ctx: *mut EvpPkeyCtx, checktype: c_int)
         return -2;
     }
 
-    /* The legacy half: `ctx->pmeth->public_check` and then `pkey->ameth->pkey_public_check`. Both
-     * objects are Phase 8's, and a context that agreed to the legacy half would be one whose
-     * `keymgmt` is NULL — which is exactly the case that returned -1 above and cannot be built in
-     * this crate. So this arm is unreachable here and answers as the `not_supported` label does. */
+    /* The legacy half, in the authority's order: a customised public check on the context's method
+     * first, then the type's own default. A context with `keymgmt == NULL` always has a `pmeth`
+     * (`int_ctx_new` refuses one with neither), so the two dereferences below are guarded by that
+     * invariant and the checks are for safety rather than behaviour. */
+    // SAFETY: `ctx` is live.
+    let pmeth = unsafe { (*ctx).pmeth };
+    if !pmeth.is_null() {
+        // SAFETY: `pmeth` is the live method this context was built with.
+        if let Some(f) = unsafe { (*pmeth).public_check } {
+            // SAFETY: the method's own public-key check, handed the live key.
+            return unsafe { f(pkey) };
+        }
+    }
+    // SAFETY: `pkey` is live.
+    let ameth = unsafe { (*pkey).ameth };
+    /* The built-in check callbacks dereference the legacy union; a typed-but-unassigned key has
+     * none and the authority would crash there (§17: UB is not reproduced). With no key material
+     * there is no check to run, so the `not_supported` refusal below is the answer. */
+    // SAFETY: `pkey` is live; this is the legacy origin union.
+    let unassigned = unsafe { (*pkey).pkey }.is_null();
+    if !ameth.is_null() && !unassigned {
+        // SAFETY: `ameth` is the method `pkey_set_type` installed for this key.
+        if let Some(f) = unsafe { (*ameth).pkey_public_check } {
+            // SAFETY: the type's own default public-key check, handed the live key.
+            return unsafe { f(pkey) };
+        }
+    }
     // SAFETY: a compile-time-constant site.
     unsafe { raise_site(&err_sites::PMETH_CHECK_78) };
     -2
@@ -193,7 +221,29 @@ unsafe fn evp_pkey_param_check_combined(ctx: *mut EvpPkeyCtx, checktype: c_int) 
         return -2;
     }
 
-    /* The legacy half, unreachable for the reason given on `evp_pkey_public_check_combined`. */
+    /* The legacy half, as `evp_pkey_public_check_combined`'s: `ctx->pmeth->param_check`, then
+     * `pkey->ameth->pkey_param_check`. */
+    // SAFETY: `ctx` is live.
+    let pmeth = unsafe { (*ctx).pmeth };
+    if !pmeth.is_null() {
+        // SAFETY: `pmeth` is the live method this context was built with.
+        if let Some(f) = unsafe { (*pmeth).param_check } {
+            // SAFETY: the method's own parameter check, handed the live key.
+            return unsafe { f(pkey) };
+        }
+    }
+    // SAFETY: `pkey` is live.
+    let ameth = unsafe { (*pkey).ameth };
+    /* As `evp_pkey_public_check_combined`: no union member is no check to run. */
+    // SAFETY: `pkey` is live; this is the legacy origin union.
+    let unassigned = unsafe { (*pkey).pkey }.is_null();
+    if !ameth.is_null() && !unassigned {
+        // SAFETY: `ameth` is the method `pkey_set_type` installed for this key.
+        if let Some(f) = unsafe { (*ameth).pkey_param_check } {
+            // SAFETY: the type's own default parameter check, handed the live key.
+            return unsafe { f(pkey) };
+        }
+    }
     // SAFETY: a compile-time-constant site.
     unsafe { raise_site(&err_sites::PMETH_CHECK_124) };
     -2
@@ -301,9 +351,166 @@ pub unsafe extern "C" fn EVP_PKEY_pairwise_check(ctx: *mut EvpPkeyCtx) -> c_int 
         return -2;
     }
 
-    /* The legacy half: `ctx->pmeth->check` then `pkey->ameth->pkey_check`, unreachable for the
-     * reason given on `evp_pkey_public_check_combined`. */
+    /* The legacy half, as `evp_pkey_public_check_combined`'s: `ctx->pmeth->check`, then
+     * `pkey->ameth->pkey_check`. */
+    // SAFETY: `ctx` is live.
+    let pmeth = unsafe { (*ctx).pmeth };
+    if !pmeth.is_null() {
+        // SAFETY: `pmeth` is the live method this context was built with.
+        if let Some(f) = unsafe { (*pmeth).check } {
+            // SAFETY: the method's own pairwise check, handed the live key.
+            return unsafe { f(pkey) };
+        }
+    }
+    // SAFETY: `pkey` is live.
+    let ameth = unsafe { (*pkey).ameth };
+    /* As `evp_pkey_public_check_combined`: no union member is no check to run. */
+    // SAFETY: `pkey` is live; this is the legacy origin union.
+    let unassigned = unsafe { (*pkey).pkey }.is_null();
+    if !ameth.is_null() && !unassigned {
+        // SAFETY: `ameth` is the method `pkey_set_type` installed for this key.
+        if let Some(f) = unsafe { (*ameth).pkey_check } {
+            // SAFETY: the type's own default pairwise check, handed the live key.
+            return unsafe { f(pkey) };
+        }
+    }
     // SAFETY: a compile-time-constant site.
     unsafe { raise_site(&err_sites::PMETH_CHECK_194) };
     -2
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::ec::key::{EC_KEY_generate_key, EC_KEY_new_by_curve_name};
+    use crate::evp::pkey::{EVP_PKEY_assign, EVP_PKEY_free, EVP_PKEY_new};
+    use crate::evp::pkey_ctx::{EvpPkeyMethod, EVP_PKEY_EC, EVP_PKEY_RSA};
+    use crate::runtime::obj::NID_X9_62_prime256v1;
+
+    /// A context with no `keymgmt` and no `pmeth` is a legacy context for `try_provided_check`
+    /// (`evp_pkey_ctx_is_legacy` is `keymgmt == NULL`). `int_ctx_new` refuses to build one with
+    /// neither a method nor a `keymgmt`, so this shape reaches the ameth arm only in a test — which
+    /// is exactly the arm under test.
+    ///
+    /// # Safety
+    /// `pkey` must be live and outlive the returned value; the block is never freed.
+    unsafe fn legacy_ctx(pkey: *mut crate::evp::pkey::EvpPkey) -> EvpPkeyCtx {
+        // SAFETY: every field is a scalar, a raw pointer or an `Option` of a function pointer, so the
+        // all-zero bit pattern is a valid `EvpPkeyCtx`.
+        let mut ctx: EvpPkeyCtx = unsafe { core::mem::zeroed() };
+        ctx.pkey = pkey;
+        ctx
+    }
+
+    /// A generated legacy EC key: the ameth publishes `pkey_check`, `pkey_public_check` and
+    /// `pkey_param_check`, so all three wrappers run a real check instead of answering `-2`.
+    #[test]
+    fn evp_pkey_checks_dispatch_to_the_legacy_ameth() {
+        // SAFETY: the key owns the EC_KEY transferred to it; the stack context never frees anything.
+        unsafe {
+            let ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!ec.is_null());
+            assert_eq!(EC_KEY_generate_key(ec), 1);
+            let pkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(EVP_PKEY_assign(pkey, EVP_PKEY_EC, ec.cast()), 1);
+            let mut ctx = legacy_ctx(pkey);
+            let ctx = ptr::addr_of_mut!(ctx);
+
+            assert_eq!(
+                EVP_PKEY_public_check(ctx),
+                1,
+                "the legacy public check runs and accepts a generated key"
+            );
+            assert_eq!(EVP_PKEY_public_check_quick(ctx), 1);
+            assert_eq!(
+                EVP_PKEY_param_check(ctx),
+                1,
+                "the legacy parameter check runs"
+            );
+            assert_eq!(EVP_PKEY_param_check_quick(ctx), 1);
+            assert_eq!(
+                EVP_PKEY_pairwise_check(ctx),
+                1,
+                "the legacy pairwise check runs"
+            );
+            assert_eq!(EVP_PKEY_check(ctx), 1);
+
+            /* Negative: `EVP_PKEY_private_check` has no legacy half in the authority either. */
+            assert_eq!(EVP_PKEY_private_check(ctx), -2);
+            crate::runtime::err::ERR_clear_error();
+
+            EVP_PKEY_free(pkey);
+        }
+    }
+
+    /// The other refusals stay refusals: a key with no type is `not_supported`, a method without the
+    /// callback is `not_supported`, and an incomplete EC key makes the legacy check answer `0`
+    /// rather than `-2`.
+    #[test]
+    fn evp_pkey_checks_keep_their_unsupported_answers() {
+        // SAFETY: every object below is this test's own.
+        unsafe {
+            /* A typed key whose EC object has a group but no public point: `EC_KEY_check_key`
+             * answers 0, which is a real answer and not the -2 refusal. */
+            let ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!ec.is_null());
+            let pkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(EVP_PKEY_assign(pkey, EVP_PKEY_EC, ec.cast()), 1);
+            let mut ctx = legacy_ctx(pkey);
+            let ctx = ptr::addr_of_mut!(ctx);
+            crate::runtime::err::ERR_clear_error();
+            assert_eq!(EVP_PKEY_pairwise_check(ctx), 0);
+            crate::runtime::err::ERR_clear_error();
+            EVP_PKEY_free(pkey);
+
+            /* A blank key is `EVP_PKEY_NONE` and takes `not_supported` before any ameth is read. */
+            let blank = EVP_PKEY_new();
+            assert!(!blank.is_null());
+            let mut ctx = legacy_ctx(blank);
+            let ctx = ptr::addr_of_mut!(ctx);
+            crate::runtime::err::ERR_clear_error();
+            assert_eq!(EVP_PKEY_public_check(ctx), -2);
+            crate::runtime::err::ERR_clear_error();
+            EVP_PKEY_free(blank);
+        }
+    }
+
+    static PMETH_CHECKS: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(0);
+
+    unsafe extern "C" fn counting_check(_pkey: *mut crate::evp::pkey::EvpPkey) -> c_int {
+        PMETH_CHECKS.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+        1
+    }
+
+    /// `ctx->pmeth->check` is consulted **before** `pkey->ameth->pkey_check` (`pmeth_check.c:184-190`).
+    /// The standard methods publish no `check`, so this needs a method of the test's own — which is
+    /// exactly the boundary the authority defines.
+    #[test]
+    fn evp_pkey_pairwise_check_runs_the_context_methods_check_first() {
+        // SAFETY: the method and the RSA object are live for the whole test.
+        unsafe {
+            let mut meth: EvpPkeyMethod = core::mem::zeroed();
+            meth.pkey_id = EVP_PKEY_RSA;
+            meth.check = Some(counting_check);
+
+            let pkey = EVP_PKEY_new();
+            let rsa = crate::rsa::object::RSA_new();
+            assert!(!pkey.is_null() && !rsa.is_null());
+            assert_eq!(EVP_PKEY_assign(pkey, EVP_PKEY_RSA, rsa.cast()), 1);
+
+            let mut ctx = legacy_ctx(pkey);
+            ctx.pmeth = ptr::addr_of!(meth);
+            PMETH_CHECKS.store(0, core::sync::atomic::Ordering::SeqCst);
+            assert_eq!(EVP_PKEY_pairwise_check(ptr::addr_of_mut!(ctx)), 1);
+            assert_eq!(
+                PMETH_CHECKS.load(core::sync::atomic::Ordering::SeqCst),
+                1,
+                "the context's own check must run"
+            );
+            EVP_PKEY_free(pkey);
+        }
+    }
 }
