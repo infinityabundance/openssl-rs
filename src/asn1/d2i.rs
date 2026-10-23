@@ -322,8 +322,13 @@ unsafe fn collect(
                 unsafe { raise_site(&err_sites::TASN_DEC_1123) };
                 return 0;
             }
+            let Some(depth) = depth.checked_add(1) else {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::TASN_DEC_1123) };
+                return 0;
+            };
             // SAFETY: `buf` is ours; the recursion advances `p`.
-            if unsafe { collect(buf, &mut p, plen, ininf != 0, tag, aclass, depth + 1) } == 0 {
+            if unsafe { collect(buf, &mut p, plen, ininf != 0, tag, aclass, depth) } == 0 {
                 return 0;
             }
         } else if plen != 0 {
@@ -334,7 +339,13 @@ unsafe fn collect(
             // SAFETY: as above.
             p = unsafe { p.add(plen as usize) };
         }
-        len -= p as c_long - q as c_long;
+        let Some(used) = cursor_distance(q, p) else {
+            return 0;
+        };
+        let Some(rest) = remaining_after(len, used) else {
+            return 0;
+        };
+        len = rest;
     }
     if inf {
         // SAFETY: a compile-time-constant site.
@@ -404,14 +415,23 @@ unsafe fn check_tlen(
                 (*ctx).plen = plen;
                 (*ctx).pclass = pclass;
                 (*ctx).ptag = ptag;
-                (*ctx).hdrlen = (p as c_long - q as c_long) as c_int;
+                let Some(hdrlen) = cursor_distance(q, p).and_then(|d| c_int::try_from(d).ok())
+                else {
+                    return 0;
+                };
+                (*ctx).hdrlen = hdrlen;
                 (*ctx).valid = 1;
             }
             // A definite length with no error must fit the available data. This
             // check runs *before* the header's error bit is consulted, which is the
             // ordering a reader most easily gets wrong.
             // SAFETY: `ctx` is live.
-            if (i & 0x81) == 0 && unsafe { (*ctx).hdrlen as c_long } + plen > len {
+            let Some(declared) = (unsafe { (*ctx).hdrlen as c_long }).checked_add(plen) else {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::TASN_DEC_1219) };
+                return 0;
+            };
+            if (i & 0x81) == 0 && declared > len {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_1219) };
                 return 0;
@@ -439,7 +459,13 @@ unsafe fn check_tlen(
         }
     }
     if i & 1 != 0 {
-        plen = len - (p as c_long - q as c_long);
+        let Some(used) = cursor_distance(q, p) else {
+            return 0;
+        };
+        let Some(rest) = remaining_after(len, used) else {
+            return 0;
+        };
+        plen = rest;
     }
     if !inf.is_null() {
         // SAFETY: the caller offers a writable slot.
@@ -625,10 +651,25 @@ unsafe fn d2i_ex_primitive(
                 return 0;
             }
             cont = start;
-            len = p as c_long - start as c_long;
+            let Some(used) = cursor_distance(start, p) else {
+                return 0;
+            };
+            let Ok(used) = c_long::try_from(used) else {
+                return 0;
+            };
+            len = used;
         } else {
             cont = start;
-            len = (p as c_long - start as c_long) + plen;
+            let Some(used) = cursor_distance(start, p) else {
+                return 0;
+            };
+            let Ok(used) = c_long::try_from(used) else {
+                return 0;
+            };
+            let Some(full) = used.checked_add(plen) else {
+                return 0;
+            };
+            len = full;
             // SAFETY: `p` is readable for `plen` bytes by the header just read.
             p = unsafe { p.add(plen.max(0) as usize) };
         }
@@ -996,6 +1037,81 @@ fn checked_sum_len(lengths: impl Iterator<Item = usize>) -> Option<usize> {
     Some(total)
 }
 
+/// The number of bytes between two positions of one input buffer.
+///
+/// The decoder moves a cursor through the caller's `len` bytes; a cursor that appears to move
+/// backwards is an overrun, so the distance is checked and answered as `None` rather than
+/// wrapping. Only ever applied to positions inside the same caller buffer.
+fn cursor_distance(from: *const c_uchar, to: *const c_uchar) -> Option<usize> {
+    (to as usize).checked_sub(from as usize)
+}
+
+/// The input length left after a field consumed `advanced` bytes, refusing an overrun.
+fn remaining_after(remaining: c_long, advanced: usize) -> Option<c_long> {
+    c_long::try_from(advanced)
+        .ok()
+        .and_then(|advanced| remaining.checked_sub(advanced))
+}
+
+/// The elements a `SEQUENCE OF`/`SET OF` decode has pushed into the value's stack.
+///
+/// The guard owns exactly the elements this call pushed: any earlier contents were emptied
+/// before the loop, so popping `pushed` entries removes precisely the acquired ones. A failure
+/// return drops the guard, which pops and frees those elements and leaves the stack itself
+/// valid and empty for the value's owner; a success calls [`Self::commit`] to give them to the
+/// stack. Without the guard a failed decode would leave the partial stack for a caller that is
+/// not obliged to free it (the direct `asn1_item_embed_d2i` entry point does not).
+struct PushedElements {
+    sk: *mut OpenSslStack,
+    pushed: c_int,
+    item: *const Asn1Item,
+}
+
+impl PushedElements {
+    /// # Safety
+    /// `sk` must be a live stack that this call has emptied; `item` must be the element item.
+    unsafe fn new(sk: *mut OpenSslStack, item: *const Asn1Item) -> Self {
+        Self {
+            sk,
+            pushed: 0,
+            item,
+        }
+    }
+
+    /// Push one freshly constructed element, taking ownership of it on success.
+    ///
+    /// # Safety
+    /// `value` must be a live value of the element item's type that no one else owns.
+    unsafe fn push(&mut self, value: *mut c_void) -> bool {
+        // SAFETY: `sk` is live per the guard's contract; `value` is this frame's.
+        if unsafe { OPENSSL_sk_push(self.sk, value) } == 0 {
+            // SAFETY: the stack refused `value`, so this is its single release.
+            unsafe { crate::asn1::fre::ASN1_item_free(value, self.item) };
+            return false;
+        }
+        self.pushed += 1;
+        true
+    }
+
+    /// The stack now owns the pushed elements; disarm the failure release.
+    fn commit(mut self) {
+        self.pushed = 0;
+    }
+}
+
+impl Drop for PushedElements {
+    fn drop(&mut self) {
+        while self.pushed > 0 {
+            // SAFETY: `sk` is live and `pushed` counts elements this guard pushed, which are
+            // therefore at the top of the stack.
+            let value = unsafe { OPENSSL_sk_pop(self.sk) };
+            // SAFETY: `value` is the element just popped and owned by this guard.
+            unsafe { crate::asn1::fre::ASN1_item_free(value, self.item) };
+            self.pushed -= 1;
+        }
+    }
+}
+
 /// Join NUL-terminated pieces and append them to the queue's top entry, the way
 /// `ERR_add_error_data(n, ...)` does.
 ///
@@ -1352,12 +1468,16 @@ unsafe fn embed_d2i(
         unsafe { (*aux).asn1_cb }
     };
 
-    if depth + 1 > MAX_CONSTRUCTED_NEST {
+    let Some(depth) = depth.checked_add(1) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::TASN_DEC_222) };
+        return 0;
+    };
+    if depth > MAX_CONSTRUCTED_NEST {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_222) };
         return 0;
     }
-    let depth = depth + 1;
 
     match item.itype {
         ASN1_ITYPE_PRIMITIVE => {
@@ -1585,7 +1705,15 @@ unsafe fn embed_d2i(
                 && (unsafe { (*aux).flags }) & ASN1_AFLG_BROKEN != 0;
             let seq_nolen: c_uchar;
             if broken {
-                len = tmplen - (p as c_long - start as c_long);
+                // The cursor never leaves the declared extent (`check_tlen` bounded it), so an
+                // overrun can only mean a malformed length; refuse instead of wrapping.
+                let Some(used) = cursor_distance(start, p) else {
+                    return err_tail(core::ptr::null(), item);
+                };
+                let Some(rest) = remaining_after(tmplen, used) else {
+                    return err_tail(core::ptr::null(), item);
+                };
+                len = rest;
                 seq_nolen = 1;
             } else {
                 seq_nolen = seq_eoc;
@@ -1659,7 +1787,13 @@ unsafe fn embed_d2i(
                         unsafe { raise_site(&err_sites::TASN_DEC_427) };
                         return err_tail(core::ptr::null(), item);
                     }
-                    len -= p as c_long - q as c_long;
+                    let Some(used) = cursor_distance(q, p) else {
+                        return err_tail(core::ptr::null(), item);
+                    };
+                    let Some(rest) = remaining_after(len, used) else {
+                        return err_tail(core::ptr::null(), item);
+                    };
+                    len = rest;
                     seq_eoc = 0;
                     break;
                 }
@@ -1692,7 +1826,13 @@ unsafe fn embed_d2i(
                     i += 1;
                     continue;
                 }
-                len -= p as c_long - q as c_long;
+                let Some(used) = cursor_distance(q, p) else {
+                    return err_tail(seqtt, item);
+                };
+                let Some(rest) = remaining_after(len, used) else {
+                    return err_tail(seqtt, item);
+                };
+                len = rest;
                 // SAFETY: still inside the item's template array.
                 tt = unsafe { tt.add(1) };
                 i += 1;
@@ -1737,7 +1877,17 @@ unsafe fn embed_d2i(
             // The received bytes are kept, which is what lets a re-encode answer the
             // caller's own bytes rather than a re-derivation.
             // SAFETY: `pval` is a live slot; `*in_` is readable for `p - start` bytes.
-            if unsafe { utl::enc_save(pval, *in_, p as c_long - start as c_long, item) } == 0 {
+            let Some(consumed) = cursor_distance(start, p) else {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::TASN_DEC_507) };
+                return 0;
+            };
+            let Ok(consumed) = c_long::try_from(consumed) else {
+                return 0;
+            };
+            // SAFETY: `pval` is a live slot; `*in_` is readable for the `consumed` bytes just
+            // decoded; `item` is the caller's.
+            if unsafe { utl::enc_save(pval, *in_, consumed, item) } == 0 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_507) };
                 return 0;
@@ -1945,7 +2095,13 @@ unsafe fn template_ex_d2i(
         unsafe { raise_site(&err_sites::TASN_DEC_563) };
         return 0;
     }
-    len -= p as c_long - q as c_long;
+    let Some(used) = cursor_distance(q, p) else {
+        return 0;
+    };
+    let Some(rest) = remaining_after(len, used) else {
+        return 0;
+    };
+    len = rest;
     if exp_eoc != 0 {
         // SAFETY: `p` is readable for `len` bytes and the slot is writable.
         if !unsafe { check_eoc(&mut p, len) } {
@@ -2074,6 +2230,9 @@ unsafe fn template_noexp_d2i(
         }
         // SAFETY: `val` is a live slot holding the caller's stack in this arm.
         let sk = unsafe { *val } as *mut OpenSslStack;
+        // SAFETY: `sk` is live and was emptied above, so every element the guard pushes is one
+        // this call acquired; `sub` is the element item.
+        let mut pushed = unsafe { PushedElements::new(sk, sub) };
 
         while len > 0 {
             let q = p;
@@ -2084,7 +2243,13 @@ unsafe fn template_noexp_d2i(
                     unsafe { raise_site(&err_sites::TASN_DEC_669) };
                     return 0;
                 }
-                len -= p as c_long - q as c_long;
+                let Some(used) = cursor_distance(q, p) else {
+                    return 0;
+                };
+                let Some(rest) = remaining_after(len, used) else {
+                    return 0;
+                };
+                len = rest;
                 sk_eoc = 0;
                 break;
             }
@@ -2113,13 +2278,17 @@ unsafe fn template_noexp_d2i(
                 unsafe { crate::asn1::fre::ASN1_item_free(skfield, sub) };
                 return 0;
             }
-            len -= p as c_long - q as c_long;
-            // SAFETY: `sk` is the caller's live stack and `skfield` is a fresh element.
-            if unsafe { OPENSSL_sk_push(sk, skfield) } == 0 {
+            let Some(used) = cursor_distance(q, p) else {
+                return 0;
+            };
+            let Some(rest) = remaining_after(len, used) else {
+                return 0;
+            };
+            len = rest;
+            // SAFETY: `skfield` is a fresh element of `sub`'s type.
+            if !unsafe { pushed.push(skfield) } {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_688) };
-                // SAFETY: `skfield` is this frame's value and the stack refused it.
-                unsafe { crate::asn1::fre::ASN1_item_free(skfield, sub) };
                 return 0;
             }
         }
@@ -2128,6 +2297,8 @@ unsafe fn template_noexp_d2i(
             unsafe { raise_site(&err_sites::TASN_DEC_694) };
             return 0;
         }
+        // The decode succeeded: the stack owns every pushed element.
+        pushed.commit();
         // SAFETY: the caller's slot is writable.
         unsafe { *in_ = p };
         return 1;
@@ -2249,7 +2420,13 @@ unsafe fn find_end(in_: *mut *const c_uchar, len_in: c_long, inf: bool) -> c_int
             // SAFETY: `p` is readable for `plen` bytes.
             p = unsafe { p.add(plen.max(0) as usize) };
         }
-        len -= p as c_long - q as c_long;
+        let Some(used) = cursor_distance(q, p) else {
+            return 0;
+        };
+        let Some(rest) = remaining_after(len, used) else {
+            return 0;
+        };
+        len = rest;
     }
     if expected_eoc != 0 {
         // SAFETY: a compile-time-constant site.
@@ -2282,5 +2459,163 @@ mod tests {
         assert_eq!(error_buffer_len(0), Some(1));
         assert_eq!(error_buffer_len(usize::MAX - 1), Some(usize::MAX));
         assert_eq!(error_buffer_len(usize::MAX), None);
+    }
+
+    use crate::runtime::stack::OPENSSL_sk_num;
+    use crate::x509::v3_crld::{
+        d2i_CRL_DIST_POINTS, i2d_CRL_DIST_POINTS, CRL_DIST_POINTS_free, CRL_DIST_POINTS_it,
+    };
+
+    /// Two empty `DistributionPoint`s: `SEQUENCE { SEQUENCE {}, SEQUENCE {} }`.
+    const TWO_POINTS: [u8; 6] = [0x30, 0x04, 0x30, 0x00, 0x30, 0x00];
+
+    #[test]
+    fn a_sequence_of_round_trips_byte_exactly() {
+        let _g = crate::test_support::lock_global_state();
+        let mut p = TWO_POINTS.as_ptr();
+        // SAFETY: the value is created and released in this frame.
+        unsafe {
+            let sk = d2i_CRL_DIST_POINTS(core::ptr::null_mut(), &mut p, TWO_POINTS.len() as c_long);
+            assert!(!sk.is_null(), "the two points decode");
+            assert_eq!(p, TWO_POINTS.as_ptr().add(TWO_POINTS.len()));
+            // SAFETY: `sk` is the live stack just decoded.
+            assert_eq!(OPENSSL_sk_num(sk), 2);
+            let mut out = [0u8; 8];
+            let mut cur = out.as_mut_ptr();
+            // SAFETY: `sk` is live; `cur` points at an 8-byte buffer.
+            let n = i2d_CRL_DIST_POINTS(sk, &mut cur);
+            assert_eq!(n as usize, TWO_POINTS.len());
+            assert_eq!(&out[..n as usize], &TWO_POINTS);
+            CRL_DIST_POINTS_free(sk);
+        }
+    }
+
+    #[test]
+    fn every_structural_truncation_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every decoded value is released by `d2i`'s own failure free.
+        unsafe {
+            for cut in 0..TWO_POINTS.len() {
+                let mut p = TWO_POINTS.as_ptr();
+                let sk = d2i_CRL_DIST_POINTS(core::ptr::null_mut(), &mut p, cut as c_long);
+                assert!(sk.is_null(), "a cut at {cut} must be refused");
+                assert_eq!(
+                    p,
+                    TWO_POINTS.as_ptr(),
+                    "a refused decode reports no progress"
+                );
+            }
+            // A declared length longer than the supplied bytes.
+            let over_long = [0x30u8, 0x05, 0x30, 0x00, 0x30, 0x00];
+            let mut p = over_long.as_ptr();
+            assert!(
+                d2i_CRL_DIST_POINTS(core::ptr::null_mut(), &mut p, over_long.len() as c_long)
+                    .is_null()
+            );
+        }
+    }
+
+    #[test]
+    fn the_nesting_depth_guard_refuses_at_the_authority_limit() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: `val` is the decoder's own value, released below when one exists.
+        unsafe {
+            let mut p = TWO_POINTS.as_ptr();
+            let mut val: *mut c_void = core::ptr::null_mut();
+            let rc = asn1_item_embed_d2i(
+                &mut val,
+                &mut p,
+                TWO_POINTS.len() as c_long,
+                CRL_DIST_POINTS_it(),
+                -1,
+                0,
+                false,
+                core::ptr::null_mut(),
+                MAX_CONSTRUCTED_NEST,
+                core::ptr::null_mut(),
+                core::ptr::null(),
+            );
+            assert_eq!(rc, 0);
+            assert!(val.is_null(), "a refused entry creates no value");
+
+            let mut p = TWO_POINTS.as_ptr();
+            let rc = asn1_item_embed_d2i(
+                &mut val,
+                &mut p,
+                TWO_POINTS.len() as c_long,
+                CRL_DIST_POINTS_it(),
+                -1,
+                0,
+                false,
+                core::ptr::null_mut(),
+                MAX_CONSTRUCTED_NEST - 2,
+                core::ptr::null_mut(),
+                core::ptr::null(),
+            );
+            assert_eq!(rc, 1, "one level below the limit still decodes");
+            CRL_DIST_POINTS_free(val as *mut crate::runtime::stack::OpenSslStack);
+        }
+    }
+
+    #[test]
+    fn a_failed_element_releases_exactly_the_pushed_prefix() {
+        let _g = crate::test_support::lock_global_state();
+        // The first point is complete (2 bytes); the second header is truncated.
+        let der = [0x30u8, 0x03, 0x30, 0x00, 0x30];
+        // SAFETY: the direct entry point leaves the value to this frame; it is freed below.
+        unsafe {
+            let mut p = der.as_ptr();
+            let mut val: *mut c_void = core::ptr::null_mut();
+            let rc = asn1_item_embed_d2i(
+                &mut val,
+                &mut p,
+                der.len() as c_long,
+                CRL_DIST_POINTS_it(),
+                -1,
+                0,
+                false,
+                core::ptr::null_mut(),
+                0,
+                core::ptr::null_mut(),
+                core::ptr::null(),
+            );
+            assert_eq!(rc, 0);
+            assert!(
+                !val.is_null(),
+                "the stack itself belongs to the value, not the element guard"
+            );
+            let sk = val as *mut crate::runtime::stack::OpenSslStack;
+            assert_eq!(
+                OPENSSL_sk_num(sk),
+                0,
+                "the element pushed before the failure was released"
+            );
+            CRL_DIST_POINTS_free(sk);
+        }
+    }
+
+    #[test]
+    fn a_seeded_malformed_input_never_panics() {
+        let _g = crate::test_support::lock_global_state();
+        let mut seed = 0x9E37_79B9u32;
+        // SAFETY: any value the decoder accepts is released here.
+        unsafe {
+            for _ in 0..64 {
+                seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                let len = (seed % 40) as usize;
+                let mut bytes = vec![0u8; len];
+                for b in bytes.iter_mut() {
+                    seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                    *b = (seed >> 24) as u8;
+                }
+                let mut p = bytes.as_ptr();
+                let sk = d2i_CRL_DIST_POINTS(core::ptr::null_mut(), &mut p, len as c_long);
+                if !sk.is_null() {
+                    let consumed = p as usize - bytes.as_ptr() as usize;
+                    assert!(consumed <= len, "the cursor stays inside the input");
+                    CRL_DIST_POINTS_free(sk);
+                }
+            }
+        }
     }
 }
