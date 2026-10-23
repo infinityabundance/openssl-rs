@@ -971,12 +971,18 @@ mod adv_probe {
     static FINISH_CTX: AtomicUsize = AtomicUsize::new(0);
     /// How many times the method table's `finish` ran. The failure path must run it exactly once.
     static FINISH_CALLS: AtomicUsize = AtomicUsize::new(0);
+    /// The object's seam-visible lock, recorded while the object is still live so the probe can
+    /// match its release without reading the freed block.
+    static LOCK_CTX: AtomicUsize = AtomicUsize::new(0);
 
     /// `int (*init)(DSA *)` that refuses after the constructor has allocated and populated the
-    /// object. It records the object it was handed and answers 0, reaching `dsa_new_intern`'s
-    /// `err:` label rather than the pre-validation refusal arms.
+    /// object. It records the object it was handed and the lock it owns at that point, then answers
+    /// 0, reaching `dsa_new_intern`'s `err:` label rather than the pre-validation refusal arms.
     unsafe extern "C" fn fail_init(dsa: *mut Dsa) -> c_int {
         INIT_CTX.store(dsa as usize, Ordering::SeqCst);
+        // SAFETY: `dsa` is the live object the constructor allocated and populated before calling
+        // this hook; its `lock` member is readable here and is recorded by address only.
+        LOCK_CTX.store(unsafe { (*dsa).lock as usize }, Ordering::SeqCst);
         0
     }
 
@@ -1066,6 +1072,7 @@ mod adv_probe {
         INIT_CTX.store(0, Ordering::SeqCst);
         FINISH_CTX.store(0, Ordering::SeqCst);
         FINISH_CALLS.store(0, Ordering::SeqCst);
+        LOCK_CTX.store(0, Ordering::SeqCst);
 
         // A hand-built, fully initialised table: every unused slot is NULL/None and `flags` is the
         // authority's zero. It lives on this frame and is uninstalled before this test returns.
@@ -1139,27 +1146,27 @@ mod adv_probe {
                 _ => None,
             })
             .collect();
-        // On the measured target the context's lock is an authority-sized block released through
-        // the CRYPTO seam too, so the partial cleanup emits two releases, exactly as the authority
-        // does. Other targets retain the invisible Box lock and emit one.
-        let expected_releases = if cfg!(all(
-            target_os = "linux",
-            target_arch = "x86_64",
-            target_pointer_width = "64"
-        )) {
-            2
-        } else {
-            1
-        };
-        assert_eq!(
-            freed.len(),
-            expected_releases,
-            "the partial cleanup must release the context block and every seam-visible member"
+        // The failing `init` also raises the authority's error site. Formatting that entry allocates
+        // and releases a transient block at the `(NULL, 0)` coordinate, so counting every release in
+        // the window would count error-queue bookkeeping as if it were an object member. The object's
+        // releases are identified by address instead: the context block and the seam-visible lock
+        // recorded while the object was live. (The earlier form asserted a total of two releases,
+        // which stopped being true when the error path gained that transient allocation; a total
+        // never described the ownership requirement in the first place.)
+        let lock_ctx = LOCK_CTX.load(Ordering::SeqCst);
+        assert_ne!(
+            lock_ctx, 0,
+            "the object must own a seam-visible lock before the method's init runs"
         );
         assert_eq!(
             freed.iter().filter(|p| **p == init_ctx).count(),
             1,
             "the partially built Dsa block must be released exactly once"
+        );
+        assert_eq!(
+            freed.iter().filter(|p| **p == lock_ctx).count(),
+            1,
+            "the context's seam-visible lock must be released exactly once"
         );
         adv_alloc::assert_no_double_free();
 
@@ -1179,15 +1186,30 @@ mod adv_probe {
             1,
             "the restored success path must allocate the Dsa block once"
         );
+        // Record the live object's own lock and address before releasing it, so the releases are
+        // identified by identity rather than by a platform-dependent total.
+        let live_addr = live as usize;
+        // SAFETY: `live` is this probe's own live object.
+        let live_lock = unsafe { (*live).lock as usize };
         // SAFETY: `live` is this probe's own object and holds one reference.
         unsafe { DSA_free(live) };
+        let ev = adv_alloc::events();
+        let freed: Vec<usize> = ev
+            .iter()
+            .filter_map(|e| match e {
+                Ev::Free { p } => Some(*p),
+                _ => None,
+            })
+            .collect();
         assert_eq!(
-            adv_alloc::events()
-                .iter()
-                .filter(|e| matches!(e, Ev::Free { .. }))
-                .count(),
-            expected_releases,
-            "the success path must release the Dsa block and every seam-visible member"
+            freed.iter().filter(|p| **p == live_addr).count(),
+            1,
+            "the success path must release the Dsa block exactly once"
+        );
+        assert_eq!(
+            freed.iter().filter(|p| **p == live_lock).count(),
+            1,
+            "the success path must release the context's seam-visible lock exactly once"
         );
         adv_alloc::assert_no_double_free();
     }
