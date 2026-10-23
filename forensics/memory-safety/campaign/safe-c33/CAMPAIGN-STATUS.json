@@ -407,7 +407,8 @@
       "passed": 11,
       "all_pass": true,
       "artifact": "artifacts/phase2/COURTS.json",
-      "source": "S21 rebuild via forensics/tools/build_phase2.sh"
+      "source": "S32 rebuild via forensics/tools/build_phase2.sh at working-tree version 0.0.35 (11/11)",
+      "candidate_identity": "libcrypto 61373488 / libssl cd24d207"
     },
     "boundary_gate": {
       "state": "NOT_RUN",
@@ -495,10 +496,18 @@
       "source": "forensics/downstream/runtime-functional-atlas.json body.counts.by_subject and body.runs",
       "evidence_reuse": {
         "mode": "committed-rows-carried-forward",
-        "families_reused": 165,
+        "families_reused": 166,
         "measured_families": 166,
         "candidate_identity_match": false,
-        "note": "165 of the 166 measured families are carried forward from a superseded candidate identity; h2o is the only measured family not in the carried-forward set. All 33 Safe-33 cohort families are in that set, so the cohort result is compatibility evidence from an earlier build, not a fresh measurement at the current identity."
+        "note": "All 166 measured families, including all 33 Safe-33 cohort families, are carried forward from the S31 measurement at libcrypto 2b0ff1b6 / libssl f99f7159 (evidence_reuse=null there). The 0.0.35 rebuild has a different binary identity (libcrypto 61373488 / libssl cd24d207) because the crate version participates in the rustc crate metadata; no row is presented as a fresh measurement at the 0.0.35 identity.",
+        "superseded_identity": {
+          "libcrypto_so_3_sha256": "2b0ff1b6b33b3f37c3abc61182f44328b6fdc99d91f7b10c69c0b0b9cc20d3ff",
+          "libssl_so_3_sha256": "f99f7159a7ff7e6f8da95d023a82ddb54339edf20a78890645250b4ef3570803"
+        },
+        "current_identity": {
+          "libcrypto_so_3_sha256": "61373488ceea36d2a8e60c244034da756bd29391aa6a1a695168f83a5d9c6ba6",
+          "libssl_so_3_sha256": "cd24d2075273cc8bb71b0f301163615333f5ef2b7a655dbea1be8ea49b89241d"
+        }
       }
     },
     "note": "The 33 L7 results are differential compatibility evidence, not SAFE_COMPATIBLE graduation. All 33 cohort rows are among the 165 carried-forward rows (`candidate_identity_match=false`), so none is presented as a fresh measurement at the current identity. Each family still needs its whole dependency closure SAFETY_DISCHARGED and current-candidate functional replay."
