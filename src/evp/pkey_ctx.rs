@@ -379,9 +379,9 @@ pub struct EvpPkeyCtx {
     pub(crate) data: *mut c_void,
     /// `unsigned int flag_call_digest_custom : 1` — "Indicator if `digest_custom` needs to be
     /// called". Projected as its four-byte storage, as `EvpPkey`'s `foreign` is, and present so
-    /// `rsa_pubexp`'s offset follows `data`'s by the authority's own sixteen bytes.
-    #[allow(dead_code)]
-    // present for the measured layout; `do_sigver_init`'s `pmeth` arm is its writer
+    /// `rsa_pubexp`'s offset follows `data`'s by the authority's own sixteen bytes. Written by
+    /// `sigver_legacy` and read by `EVP_DigestSignUpdate`/`EVP_DigestVerifyUpdate` and the two
+    /// legacy finalisers.
     pub(crate) flag_call_digest_custom: c_int,
     /// `BIGNUM *rsa_pubexp` — the authority's own comment: *"Used to support taking custody of
     /// memory in the case of a provider being used with the deprecated
@@ -458,11 +458,10 @@ impl EvpPkeyCtx {
     /// `#define evp_pkey_ctx_is_legacy(ctx)` — `include/crypto/evp.h:35`.
     ///
     /// **A header macro, and not what its name suggests**: its body is `((ctx)->keymgmt == NULL)`,
-    /// not `pmeth != NULL`. That distinction is what makes the test *reachable* in this crate, whose
-    /// `pmeth` is always NULL while its `keymgmt` is not always set — so a branch guarded by this
-    /// macro is live here even though the label it jumps to, which builds a legacy `EVP_PKEY_CTX`,
-    /// is not representable at all. `docs/DECISIONS.md` D168 records what reading it by its name
-    /// would have cost.
+    /// not `pmeth != NULL`. The distinction matters because a context can have a `pmeth` and no
+    /// `keymgmt` (every engine/foreign-key context), and a context can have neither. The test is
+    /// live, and `is_legacy()` is what makes `do_sigver_init` take `sigver_legacy` rather than the
+    /// provider path. `docs/DECISIONS.md` D168 records what reading it by its name would have cost.
     pub(crate) fn is_legacy(&self) -> bool {
         self.keymgmt.is_null()
     }
@@ -504,18 +503,19 @@ pub(crate) unsafe fn evp_pkey_ctx_state(ctx: *const EvpPkeyCtx) -> c_int {
 /// `static EVP_PKEY_CTX *int_ctx_new(OSSL_LIB_CTX *libctx, EVP_PKEY *pkey, ENGINE *e,
 /// const char *keytype, const char *propquery, int id)`.
 ///
-/// The **provider path only**, and the parts that are absent are absent for three different reasons
-/// that are worth separating because a reader will meet all three again:
+/// Both the provider and the legacy halves are transcribed. Three clauses are load-bearing:
 ///
-///   * **`ENGINE`** is Phase 13's, so the four `e`-dependent clauses — the engine lookup, the
-///     `ENGINE_init`, the `ENGINE_get_pkey_meth_engine`, and the `ENGINE_finish` on the failure path
-///     — are all unreachable. `e == NULL` is the only call this crate can make, and with it the
-///     authority's own `if (e != NULL)` guards are dead.
-///   * **`EVP_PKEY_METHOD`** is 7.4l's (`evp_pkey_meth_find_added_by_application`, `EVP_PKEY_meth_find`,
-///     and the `pmeth->init` call at the end), so `pmeth` stays NULL and the `app_pmeth == NULL` test
-///     that gates the fetch is always true.
-///   * **`pkey->foreign`** is a legacy attribute and is always 0 here, which is what makes
-///     `keytype = OBJ_nid2sn(id)` reachable for a key whose type is known.
+///   * **`ENGINE`** — an explicit `e` takes the functional reference stored in `ctx->engine`; with
+///     none, the key's `pmeth_engine`/`engine` slot is consulted, then
+///     `ENGINE_get_pkey_meth_engine(id)`. `EVP_PKEY_CTX_new`/`_new_id` forward their argument, and
+///     `EVP_PKEY_CTX_free` releases the reference exactly once. S18 restored this; the earlier
+///     "engine is unreachable" reduction silently removed an engine-backed key's operation.
+///   * **`EVP_PKEY_METHOD`** — a non-foreign key still takes the provider fetch when no engine and
+///     no application method apply, but a **foreign** key (`pkey->foreign`, i.e. an engine- or
+///     application-method-backed low-level key) keeps `EVP_PKEY_meth_find(id)` and never has its
+///     private operation exported to a provider that cannot carry it.
+///   * **`pkey->foreign`** is therefore not constant zero: `EVP_PKEY_set1_RSA` on a public-only,
+///     custom-`RSA_METHOD` key sets it, which is the h2o/neverbleed path S18 repaired.
 ///
 /// What remains is the real shape, and three of its statements are contract:
 ///
