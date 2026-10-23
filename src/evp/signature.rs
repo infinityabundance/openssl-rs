@@ -1862,8 +1862,11 @@ pub unsafe extern "C" fn EVP_PKEY_verify_recover_init_ex2(
 /// nothing else writes the field — and it is written once rather than five times.
 ///
 /// `check_algctx` is `Some(site)` for the three one-shot entry points, whose arm for a NULL
-/// algorithm context is the authority's `goto legacy`: `ctx->pmeth` is Phase 8's and always NULL
-/// here, so that arm answers `OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` and `-2`. It is `None` for
+/// algorithm context is the authority's `goto legacy`. Those entry points now dispatch to the
+/// legacy method *before* this prelude (see `EVP_PKEY_sign`/`EVP_PKEY_verify`), so the arm here is
+/// defensive: it is reached only if a future caller forgets that dispatch, and it answers
+/// `OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` and `-2` as the authority's absent-method arm does.
+/// It is `None` for
 /// the four stream entry points, which read `ctx->op.sig.signature` **without any test at all** —
 /// a stream call on a context whose init refused dereferences a NULL method in the authority, which
 /// is why nothing here walks into that state; the module's boundary note says so rather than
@@ -2125,6 +2128,95 @@ unsafe fn evp_pkey_sign_legacy(
     unsafe { sign(ctx, sig, siglen, tbs, tbslen) }
 }
 
+/// `EVP_PKEY_verify`'s `legacy:` label — `crypto/evp/signature.c:1180-1186`.
+///
+/// The symmetric half of [`evp_pkey_sign_legacy`]: a foreign or engine-backed key keeps its
+/// `EVP_PKEY_METHOD`, so verification must dispatch to `pmeth->verify` instead of a provider. The
+/// authority raises `OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` and answers `-2` when the method or
+/// its callback is absent; it has no `M_check_autoarg` prelude here.
+///
+/// # Safety
+/// `ctx` live with a legacy method; `sig` NULL or `siglen` readable bytes; `tbs` NULL or `tbslen`
+/// readable bytes.
+unsafe fn evp_pkey_verify_legacy(
+    ctx: *mut EvpPkeyCtx,
+    sig: *const u8,
+    siglen: usize,
+    tbs: *const u8,
+    tbslen: usize,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let pmeth = unsafe { (*ctx).pmeth };
+    if pmeth.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SIGNATURE_1182) };
+        return -2;
+    }
+    // SAFETY: `pmeth` is live.
+    let Some(verify) = (unsafe { (*pmeth).verify }) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SIGNATURE_1182) };
+        return -2;
+    };
+    // SAFETY: `verify` is the method's own one-shot verify with these arguments.
+    unsafe { verify(ctx, sig, siglen, tbs, tbslen) }
+}
+
+/// `EVP_PKEY_verify_recover`'s `legacy:` label — `crypto/evp/signature.c:1241-1246`.
+///
+/// `M_check_autoarg` is applied here, as the authority applies it, with the caller's `routlen` in
+/// the sign-side's `siglen` position: a NULL output buffer answers the key size, and a short one
+/// answers 0. A method or callback that is absent answers `-2`.
+///
+/// # Safety
+/// `ctx` live with a legacy method; `rout` NULL or `*routlen` writable; `sig` NULL or `siglen`
+/// readable bytes.
+unsafe fn evp_pkey_verify_recover_legacy(
+    ctx: *mut EvpPkeyCtx,
+    rout: *mut u8,
+    routlen: *mut usize,
+    sig: *const u8,
+    siglen: usize,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let pmeth = unsafe { (*ctx).pmeth };
+    if pmeth.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SIGNATURE_1243) };
+        return -2;
+    }
+    // SAFETY: `pmeth` is live.
+    let Some(recover) = (unsafe { (*pmeth).verify_recover }) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SIGNATURE_1243) };
+        return -2;
+    };
+
+    /* `M_check_autoarg(ctx, rout, routlen, EVP_F_EVP_PKEY_VERIFY_RECOVER)`. */
+    // SAFETY: `pmeth` is live.
+    if (unsafe { (*pmeth).flags } & EVP_PKEY_FLAG_AUTOARGLEN) != 0 {
+        // SAFETY: `ctx` is live and its key is the verified key.
+        let pksize = unsafe { EVP_PKEY_get_size((*ctx).pkey) } as usize;
+        if pksize == 0 {
+            return 0;
+        }
+        if rout.is_null() {
+            if !routlen.is_null() {
+                // SAFETY: `routlen` is the caller's out-parameter.
+                unsafe { *routlen = pksize };
+            }
+            return 1;
+        }
+        // SAFETY: `rout` is non-NULL, so `*routlen` is the caller's buffer length.
+        if unsafe { *routlen } < pksize {
+            return 0;
+        }
+    }
+
+    // SAFETY: `recover` is the method's own one-shot verify with these arguments.
+    unsafe { recover(ctx, rout, routlen, sig, siglen) }
+}
+
 /// `int EVP_PKEY_verify_message_update(EVP_PKEY_CTX *ctx, const unsigned char *in, size_t inlen)`.
 ///
 /// # Safety
@@ -2246,6 +2338,20 @@ pub unsafe extern "C" fn EVP_PKEY_verify(
     tbs: *const u8,
     tbslen: usize,
 ) -> c_int {
+    /* The authority's `if (ctx->op.sig.algctx == NULL) goto legacy;` — a foreign key keeps its
+     * `EVP_PKEY_METHOD`, so verification dispatches to it exactly as signing does. */
+    if !ctx.is_null() {
+        // SAFETY: `ctx` is live on this arm.
+        let op = unsafe { (*ctx).operation };
+        // SAFETY: `ctx` is live.
+        let legacy = (op & (EVP_PKEY_OP_VERIFY | EVP_PKEY_OP_VERIFYMSG)) != 0
+            && unsafe { (*ctx).op_sig_algctx }.is_null();
+        if legacy {
+            // SAFETY: `ctx` is live and armed for verification with no algorithm context.
+            return unsafe { evp_pkey_verify_legacy(ctx, sig, siglen, tbs, tbslen) };
+        }
+    }
+
     // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
     let signature = match unsafe {
         signature_op_prelude(
@@ -2301,6 +2407,19 @@ pub unsafe extern "C" fn EVP_PKEY_verify_recover(
     sig: *const u8,
     siglen: usize,
 ) -> c_int {
+    /* The authority's `if (ctx->op.sig.algctx == NULL) goto legacy;` — see `EVP_PKEY_verify`. */
+    if !ctx.is_null() {
+        // SAFETY: `ctx` is live on this arm.
+        let operation = unsafe { (*ctx).operation };
+        // SAFETY: `ctx` is live.
+        let legacy =
+            operation == EVP_PKEY_OP_VERIFYRECOVER && unsafe { (*ctx).op_sig_algctx }.is_null();
+        if legacy {
+            // SAFETY: `ctx` is live and armed for verification with no algorithm context.
+            return unsafe { evp_pkey_verify_recover_legacy(ctx, rout, routlen, sig, siglen) };
+        }
+    }
+
     // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
     let signature = match unsafe {
         signature_op_prelude(

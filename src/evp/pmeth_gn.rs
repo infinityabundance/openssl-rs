@@ -785,8 +785,9 @@ pub unsafe extern "C" fn EVP_PKEY_export(
 /// this file's, which is the whole of why D173 could not land it and D193's reason for withholding
 /// it does not apply: there is no legacy key here, no `evp_pkey_get_legacy` and no `ameth` read.
 ///
-/// The engine parameter is passed through to `EVP_PKEY_CTX_new_id`, which reads and discards it
-/// (D186), so the crate inherits that call's recorded behaviour rather than introducing one.
+/// The engine parameter is passed through to `EVP_PKEY_CTX_new_id`, which adopts it (S18): the
+/// context takes the functional reference and the engine's `EVP_PKEY_METHOD`, and releases the
+/// reference in `EVP_PKEY_CTX_free`. The older "reads and discards it (D186)" note is superseded.
 ///
 /// # Safety
 /// `e` NULL or a live `ENGINE`; `key` NULL or `keylen` readable bytes.
