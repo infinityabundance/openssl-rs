@@ -30,7 +30,7 @@ marked **carried forward**. Every row names its own machine-readable evidence;
 none of them is a claim of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: crate version `0.0.33`; `libcrypto.so.3` sha256 `77eaf1b5695d51e08ee147e279206f22f4e43e58dc63725bde96d71bf27a9413`; `libssl.so.3` sha256 `d5ad8d903944aefac209f77de76a69774470c6d5a2a58007549384848d5c7903`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: crate version `0.0.34`; `libcrypto.so.3` sha256 `defe179fd0b9e62566e08056eb22280ef1166e61153d4e3c8d533db0b2c38d7e`; `libssl.so.3` sha256 `5066aa3290ef46f1e453fd52e3c91276d043cce3d012e2c945066682ee6e933a`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
@@ -44,7 +44,7 @@ Source identity: crate version `0.0.33`; `libcrypto.so.3` sha256 `77eaf1b5695d51
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S24 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
 | **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` ENVIRONMENT; `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` HARNESS/FIXTURE | `CAMPAIGN-STATUS.json` (`known_gaps`) |
-| **Release** | **0.0.31** on crates.io (2026-10-22), checksum `d574588e…` | `atlas-refresh/publish-0.0.31.json` |
+| **Release** | **0.0.33** on crates.io (2026-10-23), checksum `1230b9fc…` | `atlas-refresh/publish-0.0.33.json` |
 
 Downstream evidence reuse: **165 of 166 measured families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 33/33 of its families in that set.
 <!-- END GENERATED: readme-achievements -->
