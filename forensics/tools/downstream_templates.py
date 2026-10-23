@@ -715,12 +715,17 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
     }
 
 
-def _tls_exchange(port: int, ca: Path, payload: str, *, verify_host: bool) -> dict:
+def _tls_exchange(port: int, ca: Path, payload: str, *, verify_host: bool,
+                 server_hostname: str = "localhost") -> dict:
     try:
         sctx = ssl.create_default_context(cafile=str(ca))
         sctx.check_hostname = verify_host
         with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
-            with sctx.wrap_socket(sock, server_hostname="localhost") as tls:
+            with sctx.wrap_socket(sock, server_hostname=server_hostname) as tls:
+                # The exchange is bounded: a server that keeps the connection open (or a
+                # forked worker that never closes its copy) must not hang the court. The
+                # timeout is evidence-neutral: it only turns a stall into a measured error.
+                tls.settimeout(10)
                 tls.sendall(payload.encode("utf-8"))
                 chunks: list[bytes] = []
                 while True:

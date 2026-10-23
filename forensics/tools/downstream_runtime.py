@@ -90,6 +90,7 @@ import pty
 import re
 import select
 import shutil
+import signal
 import socket
 import ssl
 import struct
@@ -10727,6 +10728,34 @@ def _b16_out(ok: bool, functional: bool, transcript: str, workload: str,
     }
 
 
+def _stop_workload_group(proc: subprocess.Popen) -> tuple[str, str]:
+    """Stop a workload server and its whole process group, with bounded waits.
+
+    A server that forks (shellinaboxd) leaves a child holding the inherited stdout/stderr
+    pipes, so a bare `communicate()` after `kill()` can block forever. Signal the group and
+    bound every wait: a transcript missing a forked child's last bytes is preferable to a
+    hung court, and every result is still recorded honestly.
+    """
+    try:
+        pgid = os.getpgid(proc.pid)
+    except ProcessLookupError:
+        pgid = None
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            if pgid is not None:
+                os.killpg(pgid, sig)
+            else:
+                proc.send_signal(sig)
+        except ProcessLookupError:
+            pass
+        try:
+            out, err = proc.communicate(timeout=5)
+            return out or "", err or ""
+        except subprocess.TimeoutExpired:
+            continue
+    return "", ""
+
+
 def _wl_sscg(ctx: dict) -> dict:
     """sscg mints a CA and a service certificate; the authority verifies the chain."""
     d, prog = ctx["workdir"], str(ctx["program"])
@@ -10764,21 +10793,16 @@ def _wl_shellinabox(ctx: dict) -> dict:
     port = _free_port()
     argv = [str(ctx["program"]), "--localhost-only", "--disable-utmp-logging", "-q",
             "-p", str(port), "-c", str(certdir), "-s", "/:nobody:nogroup:/:/bin/true"]
-    server = subprocess.Popen(argv, cwd=str(d), env=ctx["env"],
+    server = subprocess.Popen(argv, cwd=str(d), env=ctx["env"], start_new_session=True,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         listening = _wait_tcp("127.0.0.1", port, timeout=15)
         good = templates._tls_exchange(port, pki["ca_crt"], "GET / HTTP/1.0\r\n\r\n",
-                                       verify_host=True)
+                                       verify_host=True, server_hostname="127.0.0.1")
         wrong = templates._tls_exchange(port, pki["other_crt"], "GET / HTTP/1.0\r\n\r\n",
-                                        verify_host=True)
+                                        verify_host=True, server_hostname="127.0.0.1")
     finally:
-        server.terminate()
-        try:
-            out, err = server.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            server.kill()
-            out, err = server.communicate()
+        out, err = _stop_workload_group(server)
     served = bool(good.get("ok")) and "ShellInABox" in good.get("data", "")
     ok = bool(listening and served)
     functional = ok and not wrong.get("ok")
@@ -10824,7 +10848,7 @@ def _wl_charybdis(ctx: dict) -> dict:
             str(d / "ircd.log"), "-pidfile", str(d / "ircd.pid")]
     if modules.is_dir():
         argv += ["-modulepath", str(modules)]
-    server = subprocess.Popen(argv, cwd=str(rundir), env=ctx["env"],
+    server = subprocess.Popen(argv, cwd=str(rundir), env=ctx["env"], start_new_session=True,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         listening = _wait_tcp("127.0.0.1", port, timeout=20)
@@ -10833,12 +10857,7 @@ def _wl_charybdis(ctx: dict) -> dict:
         wrong = templates._tls_exchange(port, pki["other_crt"], "NICK fixture\r\n",
                                         verify_host=True)
     finally:
-        server.terminate()
-        try:
-            out, err = server.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            server.kill()
-            out, err = server.communicate()
+        out, err = _stop_workload_group(server)
     greeted = bool(good.get("ok")) and bool(re.search(r"(NOTICE|020|AUTH|001)",
                                                       good.get("data", "")))
     ok = bool(gen["ok"] and listening and greeted)
@@ -10935,7 +10954,7 @@ def _wl_sipp(ctx: dict) -> dict:
                             "-tls_cert", str(pki["srv_crt"]),
                             "-tls_key", str(pki["srv_key"])],
                            cwd=str(d), env=ctx["env"], stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE, text=True)
+                           stderr=subprocess.PIPE, text=True, start_new_session=True)
     try:
         listening = _wait_tcp("127.0.0.1", port, timeout=15)
         good = _run_captured([prog, "127.0.0.1:{}".format(port), "-sn", "uac", "-t", "l1",
@@ -10946,12 +10965,7 @@ def _wl_sipp(ctx: dict) -> dict:
                              "-tls_ca", str(pki["other_crt"])], cwd=d, env=ctx["env"],
                             timeout=30)
     finally:
-        uas.terminate()
-        try:
-            uout, uerr = uas.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            uas.kill()
-            uout, uerr = uas.communicate()
+        uout, uerr = _stop_workload_group(uas)
     good_text = good["stdout"] + good["stderr"]
     ok = bool(listening and "Successful call" in good_text)
     functional = ok and bad["exit_code"] != 0
@@ -11068,6 +11082,7 @@ def _wl_h2o(ctx: dict) -> dict:
         f"      \"/\":\n        file.dir: {root}\naccess-log: /dev/null\n"
         f"error-log: /dev/null\n", encoding="utf-8")
     server = subprocess.Popen([prog, "-c", str(conf)], cwd=str(d), env=ctx["env"],
+                              start_new_session=True,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         listening = _wait_tcp("127.0.0.1", port, timeout=20)
@@ -11076,12 +11091,7 @@ def _wl_h2o(ctx: dict) -> dict:
         wrong = templates._tls_exchange(port, pki["other_crt"], "GET / HTTP/1.0\r\n\r\n",
                                         verify_host=True)
     finally:
-        server.terminate()
-        try:
-            out, err = server.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            server.kill()
-            out, err = server.communicate()
+        out, err = _stop_workload_group(server)
     served = bool(good.get("ok")) and "template-payload" in good.get("data", "")
     ok = bool(listening and served)
     functional = ok and not wrong.get("ok")
@@ -11183,7 +11193,8 @@ def _wl_nghttp2(ctx: dict) -> dict:
     port = _free_port()
     server = subprocess.Popen([str(nghttpd), "-d", str(root), "-v", str(port), str(pki["srv_key"]),
                                str(pki["srv_crt"])], cwd=str(d), env=ctx["env"],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                              start_new_session=True)
     try:
         listening = _wait_tcp("127.0.0.1", port, timeout=20)
         env = dict(ctx["env"], SSL_CERT_FILE=str(pki["ca_crt"]))
@@ -11193,12 +11204,7 @@ def _wl_nghttp2(ctx: dict) -> dict:
         bad = _run_captured([str(prog), "-v", "https://127.0.0.1:{}/fixture.txt".format(port)],
                             cwd=d, env=env_bad, timeout=30)
     finally:
-        server.terminate()
-        try:
-            out, err = server.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            server.kill()
-            out, err = server.communicate()
+        out, err = _stop_workload_group(server)
     good_text = good["stdout"] + good["stderr"]
     ok = bool(gen["ok"] and listening and "template-payload" in good_text)
     functional = ok and bad["exit_code"] != 0
@@ -11396,20 +11402,20 @@ RUNNERS["ima-evm-utils"] = _wl_ima
 # AFFLIB and libshout, the library's admitted signer/streamer; the workload is the loopback
 # exercise implemented by the `_wl_*` runner above.
 _B16_PROGRAMS: dict[str, dict] = {
-    "sscg": {"program": "b/sscg", "launch": ["--version"], "version_re": r"sscg",
+    "sscg": {"program": "b/sscg", "launch": ["--version"], "version_re": r"4\.0\.3",
              "lib_paths": []},
     "shellinabox": {"program": "shellinaboxd", "launch": ["--version"],
                     "version_re": r"shellinabox", "lib_paths": []},
-    "charybdis": {"program": "src/ircd/.libs/charybdis", "launch": ["--version"],
+    "charybdis": {"program": "ircd/.libs/charybdis", "launch": ["--version"],
                   "version_re": r"(?i)(charybdis|ircd)",
-                  "lib_paths": ["src/ircd/.libs", "src/librb/src/.libs"]},
+                  "lib_paths": ["ircd/.libs", "librb/src/.libs"]},
     "afflib": {"program": "tools/.libs/affsign", "launch": ["-v"],
                "version_re": r"affsign version", "lib_paths": ["lib/.libs"]},
-    "httest": {"program": "src/.libs/httest", "launch": ["--version"],
+    "httest": {"program": "src/httest", "launch": ["--version"],
                "version_re": r"httest", "lib_paths": []},
     "sipp": {"program": "b/sipp", "launch": ["-v"], "version_re": r"SIPp v",
              "lib_paths": []},
-    "dma": {"program": "dma", "launch": [], "version_re": r"dma", "lib_paths": []},
+    "dma": {"program": "dma", "launch": ["-q"], "version_re": r"dma", "lib_paths": []},
     "h2o": {"program": "b/h2o", "launch": ["--version"], "version_re": r"h2o version",
             "lib_paths": []},
     "libshout": {"program": "tools/.libs/shout", "launch": ["--help"],
