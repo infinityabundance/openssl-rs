@@ -14,28 +14,17 @@
 //! three member functions' addresses do. D329 named the cycle; this commit lands both halves at
 //! once, which is why [`crate::dh::key`] exists in the same slice.
 //!
-//! ## One reachable-answer reduction, and the second one undone
+//! ## One reduction, and the `ENGINE_*` block
 //!
 //! **1. `ENGINE_*`.** [`DH_set_method`] and [`DH_free`] call `ENGINE_finish(dh->engine)`
 //! (`:43`, `:153`); `dh_new_intern` calls `ENGINE_init`, `ENGINE_get_default_DH` and
-//! `ENGINE_get_DH` (`:99`, `:105`, `:107`). None is in this crate. The authority's comment on
-//! [`DH_set_method`] — "The caller is specifically setting a method, so it's not up to us to deal
-//! with which ENGINE it comes from" — is the shape of the reduction: with no engine registry,
-//! `ENGINE_get_default_DH()` selects from an empty table and answers NULL (`tb_dh.c`), so
-//! `(*dh).engine` is NULL on every state this crate can reach and `ENGINE_finish(NULL)` returns 1
-//! without touching anything (`eng_init.c:108-111`). The two `finish` calls are therefore omitted
-//! with `dh->engine = NULL;` kept where the authority writes it, which is
-//! `src/rsa/object.rs`'s established reduction and D313's argument. Its observable half is that
-//! `DH_get0_engine` answers NULL for every object the crate can build, and the probe asserts it.
-//!
-//! The constructor's three calls reduce one step further: with `ENGINE_get_default_DH()`
-//! answering NULL the `if (ret->engine)` block — the only reader of `ENGINE_get_DH` — is
-//! unreachable, so the whole `#if !defined(FIPS_MODULE) && !defined(OPENSSL_NO_ENGINE)` block
-//! becomes `ret->engine = NULL;` with the two `flags` assignments the authority makes around it
-//! kept. The two `ERR_R_ENGINE_LIB` raise sites the block contains (`:100`, `:109`) are therefore
-//! unreachable on this crate's states and no `raise_site` names them; the generated
-//! `err_sites::DH_LIB_100`/`DH_LIB_109` coordinates are still emitted by the lexical scan and
-//! still carried in `err_sites::ALL`, which is what D330 records for the two FIPS-only FFC sites.
+//! `ENGINE_get_DH` (`:99`, `:105`, `:107`). All five are landed in `src/engine/`, and
+//! `DH_new_method(engine)` is a public constructor an application-backed key uses to supply a
+//! custom `DH_METHOD`. An earlier revision reduced the block to "`dh->engine` is NULL" on the
+//! assumption that no caller could build an `ENGINE`; that is the same defect class S18 repaired
+//! for RSA, so the constructor now adopts the engine, `DH_free`/`DH_set_method` release its
+//! functional reference exactly once, and `DH_get0_engine` returns it. The two `ERR_R_ENGINE_LIB`
+//! raise sites (`DH_LIB_100`/`DH_LIB_109`) are live again.
 //!
 //! **2. `ossl_dh_cache_named_group` — the reduction D329, D330 and D331 recorded, now a
 //! real call.** [`DH_set0_pqg`] calls it (`:242`), and it lives in
@@ -94,7 +83,7 @@ use core::sync::atomic::Ordering;
 
 use crate::bn::bignum::{BN_clear_free, BN_num_bits, BN_security_bits, BigNum};
 use crate::dh::group_params::ossl_dh_cache_named_group;
-use crate::evp::pkey_asn1::Engine;
+use crate::engine::eng_lib::Engine;
 use crate::ffc::params::{
     ossl_ffc_params_cleanup, ossl_ffc_params_get0_pqg, ossl_ffc_params_init,
     ossl_ffc_params_set0_pqg,
@@ -126,9 +115,9 @@ const LINE: c_int = 0;
 
 /// `int DH_set_method(DH *dh, const DH_METHOD *meth)` — `dh_lib.c:32-50`.
 ///
-/// **Always answers 1, and the old method is shut down before the new one is installed.** See this
-/// module's reduction note for the omitted `ENGINE_finish`; the `dh->engine = NULL;` assignment the
-/// authority writes beside it is kept.
+/// **Always answers 1, and the old method is shut down before the new one is installed.** The
+/// outgoing engine's functional reference is released with `ENGINE_finish(dh->engine)` and the slot
+/// cleared, exactly as the authority writes it.
 ///
 /// # Safety
 ///
@@ -142,8 +131,10 @@ pub unsafe extern "C" fn DH_set_method(dh: *mut Dh, meth: *const DhMethod) -> c_
         // SAFETY: `finish` is that table's own destructor for this object.
         unsafe { finish(dh) };
     }
-    // The authority's `ENGINE_finish(dh->engine)` is omitted: `dh->engine` is NULL on every state
-    // this crate can reach and `ENGINE_finish(NULL)` returns 1 without touching anything.
+    // The authority's `ENGINE_finish(dh->engine)` — the single release of the functional
+    // reference the constructor took when it adopted an engine.
+    // SAFETY: `dh` is live and `engine` is NULL or the functional reference it holds.
+    unsafe { crate::engine::eng_init::ENGINE_finish((*dh).engine) };
     // SAFETY: `dh` is live per the contract.
     unsafe { (*dh).engine = ptr::null_mut() };
     // SAFETY: `dh` is live per the contract.
@@ -188,16 +179,17 @@ pub unsafe extern "C" fn DH_new() -> *mut Dh {
 
 /// `DH *DH_new_method(ENGINE *engine)` — `dh_lib.c:63-66`.
 ///
-/// **The engine argument is ignored**, which is what the constructor's reduction note records:
-/// the crate has no `ENGINE` to hand `ENGINE_init`, so `DH_new_method(NULL)` is this function's
-/// whole reachable surface.
+/// `engine` is honoured exactly as the authority honours it: a non-NULL argument takes a
+/// functional reference through `ENGINE_init` and supplies the `DH_METHOD`, while NULL consults
+/// `ENGINE_get_default_DH()`.
 ///
 /// # Safety
 ///
-/// `engine` is NULL and is ignored.
+/// `engine` is NULL or a live engine the caller keeps alive for this call.
 #[no_mangle]
 pub unsafe extern "C" fn DH_new_method(engine: *mut Engine) -> *mut Dh {
-    // SAFETY: `engine` is not read; the library context is NULL as the authority passes it.
+    // SAFETY: `engine` is NULL or live per the contract; the library context is NULL as the
+    // authority passes it.
     unsafe { dh_new_intern(engine, ptr::null_mut()) }
 }
 
@@ -225,8 +217,9 @@ pub(crate) unsafe fn ossl_dh_new_ex(libctx: *mut c_void) -> *mut Dh {
 ///
 /// # Safety
 ///
-/// `engine` is NULL and is ignored; `libctx` is NULL or a live library context.
-unsafe fn dh_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
+/// `engine` is NULL or a live engine the caller keeps alive for this call; `libctx` is NULL or a
+/// live library context.
+unsafe fn dh_new_intern(engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
     // `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)`. The window between the
     // allocation and the point where the block is a valid `Dh` is a `RawCtx`: its `Drop` releases
     // the block alone, so a refusal before validation never runs a destructor.
@@ -265,14 +258,42 @@ unsafe fn dh_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Dh {
         // SAFETY: `ret` is this call's own allocation.
         unsafe { (*ret).meth = meth };
 
-        // `#if !defined(FIPS_MODULE) && !defined(OPENSSL_NO_ENGINE)` — compiled here, and
-        // reduced: the engine lookup answers NULL, so the block's whole reachable effect is the
-        // assignment below. The `ret->flags = ret->meth->flags;` the authority writes first is
-        // the "early default init" and is kept.
+        // `#if !defined(FIPS_MODULE) && !defined(OPENSSL_NO_ENGINE)` — compiled here. The
+        // `ret->flags = ret->meth->flags;` the authority writes first is the "early default init".
         // SAFETY: `meth` is the table the getter answered, read exactly as the authority reads it.
         unsafe { (*ret).flags = (*meth).flags };
-        // SAFETY: `ret` is this call's own allocation; the engine is NULL on every reachable state.
-        unsafe { (*ret).engine = ptr::null_mut() };
+        // `if (engine) { if (!ENGINE_init(engine)) goto err; ret->engine = engine; }
+        //  else ret->engine = ENGINE_get_default_DH();
+        //  if (ret->engine) { ret->meth = ENGINE_get_DH(ret->engine); if NULL goto err; }`
+        // SAFETY: `engine` is NULL or a live engine; `ENGINE_init` takes the functional reference
+        // that `DH_free`/`DH_set_method` release.
+        let engine_ref = if engine.is_null() {
+            // The select takes no caller pointer and answers a functional reference (or NULL when
+            // no engine is registered for DH). It is a safe `extern "C"` entry point.
+            crate::engine::tb_dh::ENGINE_get_default_DH()
+        } else {
+            // SAFETY: `engine` is the caller's live engine.
+            if unsafe { crate::engine::eng_init::ENGINE_init(engine) } == 0 {
+                // SAFETY: a compile-time-constant site (`dh_lib.c:100`, ERR_R_ENGINE_LIB).
+                unsafe { raise_site(&err_sites::DH_LIB_100) };
+                break 'build false;
+            }
+            engine
+        };
+        // SAFETY: `ret` is this call's own allocation; `engine_ref` is the functional reference.
+        unsafe { (*ret).engine = engine_ref };
+        if !engine_ref.is_null() {
+            // SAFETY: `engine_ref` is the functional reference acquired above.
+            let engine_meth =
+                unsafe { crate::engine::tb_dh::ENGINE_get_DH(engine_ref) }.cast::<DhMethod>();
+            if engine_meth.is_null() {
+                // SAFETY: a compile-time-constant site (`dh_lib.c:109`, ERR_R_ENGINE_LIB).
+                unsafe { raise_site(&err_sites::DH_LIB_109) };
+                break 'build false;
+            }
+            // SAFETY: `ret` is this call's own allocation.
+            unsafe { (*ret).meth = engine_meth };
+        }
 
         // The second assignment, and the one that matters when an engine replaced the table.
         // SAFETY: `ret` is this call's own allocation and `meth` its own member.
@@ -340,8 +361,10 @@ unsafe impl CtxDestroy for Dh {
             }
         }
 
-        // The authority's `ENGINE_finish(r->engine)` is omitted: `r->engine` is NULL on every
-        // state this crate can reach. See the module documentation.
+        // The authority's `ENGINE_finish(r->engine)`: NULL unless the constructor adopted an
+        // engine, in which case this is the functional reference's single release.
+        // SAFETY: `ptr` is live and `engine` is NULL or the functional reference this object took.
+        unsafe { crate::engine::eng_init::ENGINE_finish((*ptr).engine) };
 
         // SAFETY: `ptr` is live and `ex_data` is a field of it.
         unsafe {
@@ -368,9 +391,9 @@ unsafe impl CtxDestroy for Dh {
 
 /// `void DH_free(DH *r)` — `dh_lib.c:136-165`.
 ///
-/// NULL is a no-op. The release order is the contract and is transcribed statement for statement;
-/// see the module documentation for the omitted `ENGINE_finish`. `REF_ASSERT_ISNT(i < 0)` is empty
-/// under this profile's `NDEBUG`.
+/// NULL is a no-op. The release order is the contract and is transcribed statement for statement,
+/// including `ENGINE_finish(r->engine)`. `REF_ASSERT_ISNT(i < 0)` is empty under this profile's
+/// `NDEBUG`.
 ///
 /// # Safety
 ///
@@ -753,8 +776,8 @@ pub unsafe extern "C" fn DH_set_flags(dh: *mut Dh, flags: c_int) {
 
 /// `ENGINE *DH_get0_engine(DH *dh)` — `dh_lib.c:322-327`.
 ///
-/// **NULL for every object this crate can build**, because there is no engine registry to attach
-/// one; that is the observable half of the constructor's reduction and `RT-DH` asserts it.
+/// The engine the constructor adopted, or NULL for a key built without one. `DH_new_method(engine)`
+/// and `DH_new()` (when a default DH engine is registered) answer non-NULL.
 ///
 /// # Safety
 ///
@@ -1040,3 +1063,61 @@ mod adv_probe {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(Dh => zero_state_sweep_dh);
+
+#[cfg(test)]
+mod engine_adoption_tests {
+    use core::ffi::c_int;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+
+    static DH_GENERATE_CALLED: AtomicUsize = AtomicUsize::new(0);
+
+    /// The engine table's `generate_key` column. DH has no sign/verify pair, so this is the
+    /// dispatch the constructor's adopted method is observed through.
+    unsafe extern "C" fn engine_test_dh_generate_key(_dh: *mut Dh) -> c_int {
+        DH_GENERATE_CALLED.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    /// **`DH_new_method(engine)` adopts the engine's `DH_METHOD`, and `DH_generate_key` dispatches
+    /// to it.** Before the constructor honoured the argument, `DH_get0_engine` answered NULL,
+    /// `ossl_dh_get_method` answered the default table, and the callback below was never entered.
+    #[test]
+    fn dh_new_method_adopts_the_engine_method_and_dh_generate_key_dispatches_to_it() {
+        use crate::dh::key::DH_generate_key;
+        use crate::dh::{DH_meth_free, DH_meth_new, DH_meth_set_generate_key};
+        use crate::engine::eng_lib::{ENGINE_free, ENGINE_new, ENGINE_set_id, ENGINE_set_name};
+        use crate::engine::tb_dh::ENGINE_set_DH;
+
+        // SAFETY: every pointer below is a value this test constructed and keeps alive until its
+        // matching release; the engine is not registered in the global table.
+        unsafe {
+            let meth = DH_meth_new(c"unit-test-dh-engine".as_ptr(), 0);
+            assert!(!meth.is_null());
+            assert_eq!(
+                DH_meth_set_generate_key(meth, Some(engine_test_dh_generate_key)),
+                1
+            );
+
+            let engine = ENGINE_new();
+            assert!(!engine.is_null());
+            assert_eq!(ENGINE_set_id(engine, c"unit-test-dh-engine".as_ptr()), 1);
+            assert_eq!(ENGINE_set_name(engine, c"unit test dh engine".as_ptr()), 1);
+            assert_eq!(ENGINE_set_DH(engine, meth as *const c_void), 1);
+
+            let dh = DH_new_method(engine);
+            assert!(!dh.is_null());
+            assert_eq!(DH_get0_engine(dh), engine);
+            assert_eq!(ossl_dh_get_method(dh), meth as *const DhMethod);
+
+            DH_GENERATE_CALLED.store(0, Ordering::SeqCst);
+            assert_eq!(DH_generate_key(dh), 1);
+            assert_eq!(DH_GENERATE_CALLED.load(Ordering::SeqCst), 1);
+
+            DH_free(dh);
+            assert_eq!(ENGINE_free(engine), 1);
+            DH_meth_free(meth);
+        }
+    }
+}

@@ -116,7 +116,7 @@ use core::sync::atomic::AtomicI32;
 use crate::bn::bignum::BigNum;
 use crate::bn::ctx::BnCtx;
 use crate::bn::mont::MontCtx;
-use crate::evp::pkey_asn1::Engine;
+use crate::engine::eng_lib::Engine;
 use crate::runtime::ex_data::CryptoExData;
 
 /// `EC_FLAGS_DEFAULT_OCT` — `crypto/ec/ec_local.h:26`. The bit every one of the five
@@ -699,9 +699,10 @@ pub struct EcKey {
     /// `const EC_KEY_METHOD *meth` — borrowed, and what `EC_KEY_get_method` returns.
     pub(crate) meth: *const EcKeyMethod,
     /// `ENGINE *engine` — the declaration's second member, and **not** inside
-    /// `#ifndef FIPS_MODULE` (only `ex_data` is). NULL on every object this crate can
-    /// build, because `ENGINE_get_default_EC` returns NULL without an engine registry and the
-    /// authority's own `ossl_ec_key_new_method_int` leaves it so in that case.
+    /// `#ifndef FIPS_MODULE` (only `ex_data` is). NULL unless the constructor adopted an engine
+    /// (an explicit `EC_KEY_new_method(engine)` argument or `ENGINE_get_default_EC`). When it is
+    /// non-NULL the object holds the engine's functional reference, released by `EC_KEY_free`,
+    /// `EC_KEY_set_method` and `EC_KEY_copy`'s method-change branch.
     pub(crate) engine: *mut Engine,
     /// `int version` — 1 on every object the authority builds.
     pub(crate) version: c_int,

@@ -1,0 +1,266 @@
+{
+  "schema": "openssl-rs/atlas/s19-engine-closure/v1",
+  "kind": "s19-engine-closure",
+  "subphase": "S19",
+  "generated_at_utc": "2026-10-23T00:00:00Z",
+  "source": {
+    "branch": "integrate/safe-c33",
+    "head": "bcbc69d78",
+    "working_tree": "modified, uncommitted (this subagent did not commit or push)",
+    "files_changed": 14,
+    "diffstat": "1136 insertions(+), 254 deletions(-) before the census artifacts"
+  },
+  "constructors_audited": [
+    {
+      "api": "RSA_new_method / rsa_new_intern",
+      "file_line": "src/rsa/object.rs:355-448,565",
+      "before": "engine ignored; RSA_get0_engine NULL; default RSA_METHOD",
+      "after": "engine adopted (ENGINE_init, functional reference stored); ENGINE_get_RSA table; ENGINE_finish in RSA_free/RSA_set_method",
+      "state": "ADOPTED",
+      "subphase": "S18"
+    },
+    {
+      "api": "EC_KEY_new_method / ossl_ec_key_new_method_int",
+      "file_line": "src/ec/kmeth.rs:341-418,429",
+      "before": "engine ignored; ret->engine NULL; default EC_KEY_METHOD",
+      "after": "engine adopted; ENGINE_get_EC table; EC_KMETH_104/113 failures; ENGINE_finish in EC_KEY_free, EC_KEY_set_method, EC_KEY_copy",
+      "state": "FIXED_S19"
+    },
+    {
+      "api": "DSA_new_method / dsa_new_intern",
+      "file_line": "src/dsa/object.rs:129-142,159-257",
+      "before": "engine ignored; dsa->engine NULL; default DSA_METHOD",
+      "after": "engine adopted; ENGINE_get_DSA table; DSA_LIB_158/167 failures; ENGINE_finish in destroy_body and DSA_set_method",
+      "state": "FIXED_S19"
+    },
+    {
+      "api": "DH_new_method / dh_new_intern",
+      "file_line": "src/dh/object.rs:189-202,217-315",
+      "before": "engine ignored; dh->engine NULL; default DH_METHOD",
+      "after": "engine adopted; ENGINE_get_DH table; DH_LIB_100/109 failures; ENGINE_finish in destroy_body and DH_set_method",
+      "state": "FIXED_S19"
+    },
+    {
+      "api": "EVP_PKEY_CTX_new / EVP_PKEY_CTX_new_id",
+      "file_line": "src/evp/pkey_ctx.rs:537-787,803,817",
+      "before": "explicit engine discarded; provider path only; pkey->foreign ignored",
+      "after": "engine forwarded and adopted; ENGINE_get_pkey_meth_engine; foreign key keeps EVP_PKEY_meth_find; pmeth->init runs; ENGINE_finish in free/dup failure",
+      "state": "ADOPTED",
+      "subphase": "S18"
+    },
+    {
+      "api": "EVP_PKEY_new_raw_private_key / _public_key (+ _ex)",
+      "file_line": "src/evp/pkey.rs:2511-2554,2736-2782",
+      "before": "engine ignored (provider branch forced; ameth reduced to NULL)",
+      "after": "non-NULL engine skips the provider branch and is adopted by pkey_set_type (ENGINE_init, pkey->engine); evp_pkey_free_legacy releases it; ameth lookup for e == NULL remains reduced (D03)",
+      "state": "FIXED_S19"
+    },
+    {
+      "api": "EVP_PKEY_new_CMAC_key / new_cmac_key_int",
+      "file_line": "src/evp/pkey.rs:3298-3380,3393",
+      "before": "ENGINE_get_id omitted; OSSL_ALG_PARAM_ENGINE slot never filled",
+      "after": "non-NULL engine contributes OSSL_ALG_PARAM_ENGINE (borrowed id string; no functional reference, matching the authority)",
+      "state": "FIXED_S19"
+    },
+    {
+      "api": "EVP_PKEY_new_mac_key",
+      "file_line": "src/evp/pmeth_gn.rs:793-818",
+      "before": "forwarded to EVP_PKEY_CTX_new_id, which discarded it (D186)",
+      "after": "forwarded to EVP_PKEY_CTX_new_id, which adopts it (S18)",
+      "state": "ADOPTED",
+      "subphase": "S18"
+    },
+    {
+      "api": "EVP_PKEY_set1_engine",
+      "file_line": "src/evp/p_lib.rs:61-90",
+      "before": "already adopted; pmeth_engine released/stored",
+      "after": "unchanged; release was missing from evp_pkey_free_legacy and is now present",
+      "state": "ADOPTED"
+    },
+    {
+      "api": "EVP_DigestSignInit / EVP_DigestVerifyInit (e argument)",
+      "file_line": "src/evp/digest.rs:4463-4497,4993-5040",
+      "before": "engine forwarded to EVP_PKEY_CTX_new only when non-NULL (S18 path)",
+      "after": "unchanged: engine forwarded and adopted there; sigver_legacy now installs the legacy verify arms",
+      "state": "ADOPTED"
+    },
+    {
+      "api": "EVP_DigestInit_ex (impl argument)",
+      "file_line": "src/evp/digest.rs:1781-1798,2125",
+      "before": "non-NULL impl refused at DIGEST_311",
+      "after": "unchanged; recorded as DIVERGENCE D01 (explicit refusal, not silent ignore)",
+      "state": "REJECTED"
+    },
+    {
+      "api": "EVP_CipherInit_ex (impl argument)",
+      "file_line": "src/evp/cipher_ctx.rs:1928-1936,2460",
+      "before": "non-NULL impl refused at EVP_ENC_296; ctx->engine never set",
+      "after": "unchanged; recorded as DIVERGENCE D02 (explicit refusal)",
+      "state": "REJECTED"
+    },
+    {
+      "api": "RSA_PSS_PARAMS-adjacent paths",
+      "file_line": "src/rsa/object.rs (ossl_rsa_set0_pss_params), src/rsa/asn1.rs",
+      "before": "no engine/method argument on these entry points",
+      "after": "no change required",
+      "state": "NOT_APPLICABLE"
+    }
+  ],
+  "legacy_dispatch_arms": {
+    "implemented_s19": [
+      "EVP_PKEY_verify (pmeth->verify)",
+      "EVP_PKEY_verify_recover (pmeth->verify_recover + M_check_autoarg)",
+      "EVP_DigestVerifyUpdate (digest_custom)",
+      "EVP_DigestVerifyFinal (digest_custom/verifyctx/digest + EVP_PKEY_verify)",
+      "EVP_DigestVerify (pmeth->digestverify)",
+      "EVP_DigestSign (pmeth->digestsign; the sibling arm was also missing)",
+      "EVP_PKEY_encrypt (pmeth->encrypt + M_check_autoarg)",
+      "EVP_PKEY_decrypt (pmeth->decrypt + M_check_autoarg)",
+      "evp_pkey_asym_cipher_init legacy label (encrypt_init/decrypt_init)"
+    ],
+    "still_stubbed": [
+      {
+        "arm": "EC/DSA/DH ctrl key-type guards",
+        "reason": "the pmeth field exists and is now reachable; the guard is omitted (census L08-L10). Not repaired in S19 because it is not an ENGINE-adoption arm and the census is the deliverable.",
+        "answer_today": "the control is accepted instead of returning -1"
+      }
+    ]
+  },
+  "destructor_release_audit": {
+    "ec_key_free": "ENGINE_finish added",
+    "ec_key_set_method": "ENGINE_finish added before the clear",
+    "ec_key_copy": "ENGINE_finish(dest->engine) failure check + ENGINE_init(src->engine) on method change",
+    "dsa_free_destroy_body": "ENGINE_finish added",
+    "dsa_set_method": "ENGINE_finish added",
+    "dh_free_destroy_body": "ENGINE_finish added",
+    "dh_set_method": "ENGINE_finish added",
+    "evp_pkey_free_legacy": "ENGINE_finish(tmpe), ENGINE_finish(engine), ENGINE_finish(pmeth_engine), slots cleared",
+    "pkey_set_type": "previous engine/pmeth_engine released; non-NULL e initialised and stored; failure raises P_LIB_1641",
+    "evp_pkey_ctx_free": "unchanged from S18: pmeth->cleanup and ENGINE_finish(ctx->engine) exactly once"
+  },
+  "tests_added": [
+    {
+      "name": "ec::kmeth::engine_adoption_tests::ec_key_new_method_adopts_the_engine_method_and_ecdsa_sign_dispatches_to_it",
+      "proves": "EC_KEY_get0_engine == engine, EC_KEY_get_method == custom table, ECDSA_sign enters the engine callback",
+      "pre_fix_failure": "get0_engine answered NULL and the method was the default table, so the first two assertions fail",
+      "after_fix_line": "test ec::kmeth::engine_adoption_tests::ec_key_new_method_adopts_the_engine_method_and_ecdsa_sign_dispatches_to_it ... ok"
+    },
+    {
+      "name": "dsa::object::engine_adoption_tests::dsa_new_method_adopts_the_engine_method_and_dsa_do_sign_dispatches_to_it",
+      "proves": "DSA_get0_engine == engine, DSA_get_method == custom table, DSA_do_sign enters the engine callback",
+      "pre_fix_failure": "get0_engine answered NULL and the method was the default table",
+      "after_fix_line": "test dsa::object::engine_adoption_tests::dsa_new_method_adopts_the_engine_method_and_dsa_do_sign_dispatches_to_it ... ok"
+    },
+    {
+      "name": "dh::object::engine_adoption_tests::dh_new_method_adopts_the_engine_method_and_dh_generate_key_dispatches_to_it",
+      "proves": "DH_get0_engine == engine, ossl_dh_get_method == custom table, DH_generate_key enters the engine callback",
+      "pre_fix_failure": "get0_engine answered NULL and the method was the default table; DH has no sign/verify pair, so generate_key is the dispatch observed",
+      "after_fix_line": "test dh::object::engine_adoption_tests::dh_new_method_adopts_the_engine_method_and_dh_generate_key_dispatches_to_it ... ok"
+    },
+    {
+      "name": "evp::pkey::engine_adoption_tests::evp_pkey_new_raw_private_key_adopts_the_engine",
+      "proves": "EVP_PKEY_get0_engine returns the caller's engine; EVP_PKEY_free releases the functional reference (ENGINE_free returns 1)",
+      "pre_fix_failure": "the constructor ignored e, so get0_engine answered NULL and the engine structural reference leaked",
+      "after_fix_line": "test evp::pkey::engine_adoption_tests::evp_pkey_new_raw_private_key_adopts_the_engine ... ok"
+    },
+    {
+      "name": "rsa::object::tests::evp_pkey_verify_dispatches_to_the_legacy_method_for_an_engine_key",
+      "proves": "EVP_PKEY_verify on a foreign public-only RSA key calls pmeth->verify -> RSA_verify -> the engine rsa_verify",
+      "pre_fix_failure": "the prelude raised OPERATION_NOT_SUPPORTED and returned -2 before pmeth->verify",
+      "after_fix_line": "test rsa::object::tests::evp_pkey_verify_dispatches_to_the_legacy_method_for_an_engine_key ... ok"
+    },
+    {
+      "name": "rsa::object::tests::engine_backed_public_key_verifies_through_the_legacy_evp_path",
+      "proves": "EVP_DigestVerifyInit/EVP_DigestVerify reach the engine rsa_verify through the legacy digest-verify final",
+      "pre_fix_failure": "EVP_DigestVerifyFinal's legacy label raised M_SIGVER_718 and returned 0",
+      "after_fix_line": "test rsa::object::tests::engine_backed_public_key_verifies_through_the_legacy_evp_path ... ok"
+    }
+  ],
+  "pre_fix_failure_evidence": {
+    "method": "Each assertion is a direct read of the value the pre-fix path returned (NULL engine, default method, or -2 from the stubbed legacy label). The S18 sign test's pre-fix failure was observed by temporarily restoring the pre-fix constructor; the S19 tests were not re-run against a reverted tree in this FAST subphase.",
+    "honesty": "NOT an empirical re-run for the five S19 tests; the failure is logically forced by the pre-fix control flow recorded above."
+  },
+  "gate": {
+    "fmt": "cargo fmt --all -- --check -> FMT_OK",
+    "check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s)",
+    "clippy": "cargo clippy --lib -- -D warnings -> Finished `dev` profile [unoptimized + debuginfo] target(s) (no warnings)",
+    "focused_tests": [
+      "engine_adoption_tests: 4 passed; 0 failed; 0 ignored; 2076 filtered out",
+      "engine_backed_public_key: 2 passed; 0 failed; 0 ignored; 2078 filtered out",
+      "evp_pkey_verify_dispatches: 1 passed; 0 failed; 0 ignored; 2079 filtered out"
+    ],
+    "abi_structural": {
+      "no_mangle_diff_lines": 0,
+      "repr_c_diff_lines": 0,
+      "allocator_seam_files_changed": 0,
+      "method": "git diff HEAD | grep -E '^[+-].*#\\[(no_mangle|repr\\(C\\))\\]'"
+    },
+    "not_run": [
+      "full library suite (FAST gate only; deferred to BATCH)",
+      "adversarial probes (deferred)",
+      "Miri/ASan/Loom on the new legacy arms (deferred to BOUNDARY)",
+      "authority differential for the legacy encrypt/decrypt and verify arms (deferred to BATCH)"
+    ]
+  },
+  "unsafe_blocks_before_after": {
+    "metric": "grep -c 'unsafe {' per file, including doc-comment examples and test code",
+    "files": {
+      "src/ec/key.rs": "58 -> 59",
+      "src/ec/kmeth.rs": "22 -> 25",
+      "src/ec/mod.rs": "2 -> 2",
+      "src/dsa/mod.rs": "46 -> 46",
+      "src/dsa/object.rs": "76 -> 85",
+      "src/dh/mod.rs": "41 -> 41",
+      "src/dh/object.rs": "66 -> 74",
+      "src/evp/asymcipher.rs": "129 -> 143",
+      "src/evp/digest.rs": "665 -> 694",
+      "src/evp/pkey.rs": "457 -> 465",
+      "src/evp/pkey_ctx.rs": "841 -> 841",
+      "src/evp/pmeth_gn.rs": "97 -> 97",
+      "src/evp/signature.rs": "225 -> 245",
+      "src/rsa/object.rs": "175 -> 177"
+    },
+    "new_unsafe_abstractions": "none; every addition is a call site inside an existing private unsafe fn or a test, each with a SAFETY comment (clippy undocumented_unsafe_blocks is clean)",
+    "unsafe_ops_removed": "none",
+    "unsafe_ops_relocated": "none"
+  },
+  "safety_obligations": {
+    "discharged": [
+      "The constructor's engine argument is adopted and its functional reference is released exactly once (EC/DSA/DH/RSA/raw-key).",
+      "The legacy verify/encrypt/decrypt arms dispatch to the method the context was built from; a missing method/callback is an explicit -2.",
+      "pkey_set_type releases the outgoing engine and pmeth_engine references before storing a new type."
+    ],
+    "retained": [
+      "An application-supplied EC_KEY_METHOD/DSA_METHOD/DH_METHOD/EVP_PKEY_METHOD and the ENGINE carrying it must outlive every object built from it (authority contract; standard tables are statics).",
+      "The digest-side and cipher-side engine slots remain unimplemented and non-NULL impl is explicitly refused (D01/D02); an engine-backed digest/cipher is not claimed.",
+      "The legacy-key ameth family (census L01-L11) is open; a `SAFE_COMPATIBLE` graduation for a consumer using legacy `EVP_PKEY`s must not treat the ENGINE class as complete.",
+      "`new_raw_key_int` still reduces the e == NULL ameth lookup (D03); provider-vs-legacy construction order can differ for a type with both.",
+      "No Miri/ASan/negative-control evidence was produced in this FAST-only subphase; no mechanism is SAFETY_DISCHARGED."
+    ],
+    "newly_introduced": "none"
+  },
+  "census": {
+    "artifact_md": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s19-reduction-census.md",
+    "artifact_json": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s19-reduction-census.json",
+    "tally": {
+      "benign": 7,
+      "divergence": 5,
+      "latent_regression": 24,
+      "latent_regression_open": 11,
+      "latent_regression_repaired": 13
+    },
+    "top_open": [
+      "L01 evp_pkey_asn1_ctrl pkey_ctrl arm omitted (score 100)",
+      "L11 EVP_PKEY_get_default_digest_nid/_name symptom of L01 (score 80)",
+      "L02 EVP_PKEY_get_params legacy arm omitted (score 60)",
+      "L03 EVP_PKEY_get_raw_private_key legacy arm omitted (score 48)",
+      "L04 EVP_PKEY_public/private/pairwise_check legacy halves stubbed (score 48)"
+    ]
+  },
+  "non_claims": [
+    "FAST-only: no full suite, probes, Miri, ASan or authority differential.",
+    "The pre-fix failure of the five S19 tests was not empirically re-run against a reverted tree.",
+    "Family counts in the census are estimates, not a per-consumer symbol-use measurement.",
+    "This subagent did not commit or push."
+  ]
+}
