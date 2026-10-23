@@ -44,7 +44,10 @@ my $req = "GET / HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n";
 Net::SSLeay::write($ssl, $req);
 my $data = Net::SSLeay::read($ssl);
 print "tls_payload=" . (defined($data) && index($data, $body) >= 0 ? "ok" : "bad") . "\n";
-my $session = Net::SSLeay::get_session($ssl);
+# get1_session up-refs the session: the first SSL and its CTX are freed before the
+# second connection uses it, so SSL_get_session's uncounted pointer would dangle and
+# SSL_set_session would fail (no resumption).
+my $session = Net::SSLeay::get1_session($ssl);
 Net::SSLeay::shutdown($ssl);
 Net::SSLeay::free($ssl);
 Net::SSLeay::CTX_free($ctx);
@@ -60,6 +63,7 @@ if ($ssl2) {
 } else {
     print "tls_session=bad\n";
 }
+Net::SSLeay::SESSION_free($session);
 
 my ($ctx3, $ssl3, $sock3) = open_tls($other, undef);
 print "tls_unrelated_ca=" . (($ssl3) ? "bad" : "rejected") . "\n";
