@@ -537,6 +537,7 @@ pub(crate) unsafe fn evp_pkey_ctx_state(ctx: *const EvpPkeyCtx) -> c_int {
 unsafe fn int_ctx_new(
     libctx: *mut c_void,
     pkey: *mut EvpPkey,
+    e_arg: *mut Engine,
     keytype: *const c_char,
     propquery: *const c_char,
     id: c_int,
@@ -544,6 +545,14 @@ unsafe fn int_ctx_new(
     let mut id = id;
     let mut keytype = keytype;
     let mut keymgmt: *mut EvpKeyMgmt = ptr::null_mut();
+    /* The legacy half. `pmeth` is the standard or application method a foreign key keeps using
+     * because its private operation lives in an ENGINE `RSA_METHOD` and cannot be exported to a
+     * provider; `app_pmeth` is the authority's separate "an application registered this id" test
+     * that suppresses the provider fetch. `engine` is the functional reference the context holds
+     * for whichever engine supplied the method, released by `EVP_PKEY_CTX_free`. */
+    let mut pmeth: *const EvpPkeyMethod = ptr::null();
+    let mut app_pmeth: *const EvpPkeyMethod = ptr::null();
+    let mut engine: *mut Engine = ptr::null_mut();
 
     if id == -1 {
         // **The legacy-pkey arm is the authority's `id = pkey->type`, and its absence was a real
@@ -580,16 +589,70 @@ unsafe fn int_ctx_new(
     }
 
     if id != -1 {
-        /* `e == NULL` and not foreign, so the authority's `keytype = OBJ_nid2sn(id)` runs for every
-         * key this crate can build; the test that guards it there is a legacy attribute. */
-        keytype = OBJ_nid2sn(id);
-        /* `app_pmeth = pmeth = evp_pkey_meth_find_added_by_application(id)` is 7.4l's, so `app_pmeth`
-         * stays NULL — which is what makes the fetch below unconditional. */
+        // SAFETY: `pkey` is NULL or live per this function's contract.
+        let foreign = !pkey.is_null() && unsafe { (*pkey).foreign } != 0;
+        // SAFETY: `e_arg` is NULL or the live engine the constructor was handed; the fields are
+        // pointers to the same concrete engine object.
+        let mut e: *mut crate::engine::eng_lib::Engine =
+            e_arg.cast::<crate::engine::eng_lib::Engine>();
+        /* `if (e != NULL) keytype = NULL; if (e == NULL && (pkey == NULL || pkey->foreign == 0))
+         * keytype = OBJ_nid2sn(id);` — note the keytype decision uses the *caller's* engine, before
+         * the key's own engine slot is consulted. */
+        if !e.is_null() {
+            keytype = ptr::null();
+        }
+        if e.is_null() && !foreign {
+            keytype = OBJ_nid2sn(id);
+        }
+
+        /* `if (e == NULL && pkey != NULL) e = pkey->pmeth_engine ?: pkey->engine;` */
+        if e.is_null() && !pkey.is_null() {
+            // SAFETY: `pkey` is live per this function's contract; both slots are NULL or an
+            // engine the key holds a functional reference to.
+            let pmeth_engine =
+                unsafe { (*pkey).pmeth_engine }.cast::<crate::engine::eng_lib::Engine>();
+            // SAFETY: as above.
+            let pkey_engine = unsafe { (*pkey).engine }.cast::<crate::engine::eng_lib::Engine>();
+            e = if !pmeth_engine.is_null() {
+                pmeth_engine
+            } else {
+                pkey_engine
+            };
+        }
+
+        if !e.is_null() {
+            // SAFETY: `e` is live; this call takes the functional reference the context holds.
+            if unsafe { crate::engine::eng_init::ENGINE_init(e) } == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::PMETH_LIB_219) };
+                return ptr::null_mut();
+            }
+        } else {
+            /* `e = ENGINE_get_pkey_meth_engine(id)` — a functional reference or NULL. */
+            e = crate::engine::tb_pkmeth::ENGINE_get_pkey_meth_engine(id);
+        }
+
+        if !e.is_null() {
+            // SAFETY: `e` is initialised and live; the answer is the engine's method or NULL.
+            pmeth = unsafe { crate::engine::tb_pkmeth::ENGINE_get_pkey_meth(e, id) };
+            engine = e.cast::<Engine>();
+        } else if foreign {
+            /* The authority's foreign-key arm: a key whose low-level contents may not be
+             * readable (engine- or application-method-backed) stays on the legacy method. This
+             * is the path h2o's neverbleed needs: its RSA holds only `n`/`e` and its private
+             * operation is a custom `RSA_METHOD`, so exporting it to a provider loses the key. */
+            // SAFETY: both tables are this module's own.
+            pmeth = unsafe { EVP_PKEY_meth_find(id) };
+        } else {
+            // SAFETY: both tables are this module's own.
+            app_pmeth = unsafe { evp_pkey_meth_find_added_by_application(id) };
+            pmeth = app_pmeth;
+        }
     }
 
     /* `common:` — fetch a provider implementation when there is no engine, no application-supplied
-     * method and a name. */
-    if !keytype.is_null() {
+     * method and a name. `engine.is_null()` is the authority's `e == NULL`. */
+    if engine.is_null() && !keytype.is_null() && app_pmeth.is_null() {
         // SAFETY: `pkey` is NULL or live per this function's contract.
         let pkey_is_provided = unsafe { !pkey.is_null() && !(*pkey).keymgmt.is_null() };
         if pkey_is_provided {
@@ -630,9 +693,17 @@ unsafe fn int_ctx_new(
         }
     }
 
-    if keymgmt.is_null() {
+    if pmeth.is_null() && keymgmt.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PMETH_LIB_295) };
+        if !engine.is_null() {
+            // SAFETY: `engine` holds the functional reference taken above.
+            unsafe {
+                crate::engine::eng_init::ENGINE_finish(
+                    engine.cast::<crate::engine::eng_lib::Engine>(),
+                )
+            };
+        }
         return ptr::null_mut();
     }
 
@@ -648,6 +719,14 @@ unsafe fn int_ctx_new(
     ) else {
         // SAFETY: `keymgmt` is live and holds the reference taken above.
         unsafe { EVP_KEYMGMT_free(keymgmt) };
+        if !engine.is_null() {
+            // SAFETY: `engine` holds the functional reference taken above.
+            unsafe {
+                crate::engine::eng_init::ENGINE_finish(
+                    engine.cast::<crate::engine::eng_lib::Engine>(),
+                )
+            };
+        }
         return ptr::null_mut();
     };
     if !propquery.is_null() {
@@ -669,6 +748,8 @@ unsafe fn int_ctx_new(
         (*ret.as_ptr()).keytype = keytype;
         (*ret.as_ptr()).keymgmt = keymgmt;
         (*ret.as_ptr()).legacy_keytype = id;
+        (*ret.as_ptr()).engine = engine;
+        (*ret.as_ptr()).pmeth = pmeth;
         (*ret.as_ptr()).operation = EVP_PKEY_OP_UNDEFINED;
     }
 
@@ -685,50 +766,61 @@ unsafe fn int_ctx_new(
         unsafe { (*ret.as_ptr()).pkey = pkey };
     }
 
-    /* `if (pmeth != NULL && pmeth->init != NULL)` is 7.4l's: `pmeth` is always NULL here. */
+    /* `if (pmeth != NULL && pmeth->init != NULL)` — the legacy method's own initialiser, which
+     * allocates the algorithm data `pkey_rsa_sign` and the RSA ctrls read. A failure clears the
+     * slot first (the authority's own line), so the context's release does not run `cleanup` on a
+     * half-built method context. */
+    if !pmeth.is_null() {
+        ret.set_release_line(LINE_FREE_CTX);
+        // SAFETY: `pmeth` is live and `ret` is this call's own object.
+        if let Some(init) = unsafe { (*pmeth).init } {
+            // SAFETY: the method's own initialiser, handed this context as the authority hands it.
+            if unsafe { init(ret.as_ptr()) } <= 0 {
+                // SAFETY: `ret` is live.
+                unsafe { (*ret.as_ptr()).pmeth = ptr::null() };
+                return ptr::null_mut();
+            }
+        }
+    }
+
     ret.into_raw()
 }
 
 /// `EVP_PKEY_CTX *EVP_PKEY_CTX_new(EVP_PKEY *pkey, ENGINE *e)` —
 /// `crypto/evp/pmeth_lib.c:442`.
 ///
-/// `int_ctx_new(NULL, pkey, e, NULL, NULL, -1)` — the authority's own six arguments, three of them
-/// NULL and the id `-1`, which is the "take the method from the key" case. The `-1` is the
+/// `int_ctx_new(NULL, pkey, e, NULL, NULL, -1)` — the authority's own six arguments, three of
+/// them NULL and the id `-1`, which is the "take the method from the key" case. The `-1` is the
 /// authority's and not a stand-in: `int_ctx_new` reads it as "no explicit id" and falls through to
 /// the key's own type.
 ///
-/// `e` **is not forwarded**, because there is no engine: `ENGINE` is Phase 13's, so nothing in this
-/// crate can pass a non-NULL one, and the authority's own `int_ctx_new` reaches the same state with
-/// NULL. See the module doc's note on the engine arm of the two `asn1_find` functions for the same
-/// argument.
+/// **`e` is forwarded.** An explicit engine takes the functional reference and supplies the
+/// method; only when it is NULL is the key's own engine slot consulted.
 ///
 /// # Safety
-/// `pkey` NULL or live; `e` NULL.
+/// `pkey` NULL or live; `e` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_new(pkey: *mut EvpPkey, e: *mut Engine) -> *mut EvpPkeyCtx {
-    /* `e` is read only to be discarded, which is what keeps the signature the authority's. A
-     * non-NULL engine cannot occur: nothing in this crate can construct an `ENGINE`. */
-    let _ = e;
     // SAFETY: the arguments are forwarded under this function's contract.
-    unsafe { int_ctx_new(ptr::null_mut(), pkey, ptr::null(), ptr::null(), -1) }
+    unsafe { int_ctx_new(ptr::null_mut(), pkey, e, ptr::null(), ptr::null(), -1) }
 }
 
-/// `EVP_PKEY_CTX *EVP_PKEY_CTX_new_id(int id, ENGINE *e)` — `crypto/evp/pmeth_lib.c:447`.
+/// `EVP_PKEY_CTX_new_id(int id, ENGINE *e)` — `crypto/evp/pmeth_lib.c:447`.
 ///
 /// `int_ctx_new(NULL, NULL, e, NULL, NULL, id)` — a NULL key and an explicit id, which is the
-/// "build the method from the type" case. The engine arm is absent for the reason `EVP_PKEY_CTX_new`
-/// gives.
+/// "build the method from the type" case. An explicit engine is forwarded and takes the functional
+/// reference exactly as `EVP_PKEY_CTX_new`'s does.
 ///
 /// # Safety
-/// `e` NULL.
+/// `e` NULL or live.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_PKEY_CTX_new_id(id: c_int, e: *mut Engine) -> *mut EvpPkeyCtx {
-    let _ = e;
     // SAFETY: the arguments are forwarded under this function's contract.
     unsafe {
         int_ctx_new(
             ptr::null_mut(),
             ptr::null_mut(),
+            e,
             ptr::null(),
             ptr::null(),
             id,
@@ -749,7 +841,16 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_new_from_name(
 ) -> *mut EvpPkeyCtx {
     // SAFETY: the arguments are forwarded under this function's contract; the `-1` id is the
     // authority's own for this constructor.
-    unsafe { int_ctx_new(libctx, ptr::null_mut(), name, propquery, -1) }
+    unsafe {
+        int_ctx_new(
+            libctx,
+            ptr::null_mut(),
+            ptr::null_mut(),
+            name,
+            propquery,
+            -1,
+        )
+    }
 }
 
 /// `EVP_PKEY_CTX *EVP_PKEY_CTX_new_from_pkey(OSSL_LIB_CTX *libctx, EVP_PKEY *pkey,
@@ -765,7 +866,7 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_new_from_pkey(
 ) -> *mut EvpPkeyCtx {
     // SAFETY: the arguments are forwarded under this function's contract; the NULL `keytype` is
     // what makes the constructor take the key's own method name.
-    unsafe { int_ctx_new(libctx, pkey, ptr::null(), propquery, -1) }
+    unsafe { int_ctx_new(libctx, pkey, ptr::null_mut(), ptr::null(), propquery, -1) }
 }
 
 /// `void evp_pkey_ctx_free_old_ops(EVP_PKEY_CTX *ctx)`.
@@ -1018,6 +1119,15 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_free(ctx: *mut EvpPkeyCtx) {
 unsafe impl CtxDestroy for EvpPkeyCtx {
     unsafe fn destroy_body(ptr: *mut EvpPkeyCtx) {
         // SAFETY: `ptr` is live per the trait contract.
+        let pmeth = unsafe { (*ptr).pmeth };
+        if !pmeth.is_null() {
+            // SAFETY: `pmeth` is the method this context was built from and is live for it.
+            if let Some(cleanup) = unsafe { (*pmeth).cleanup } {
+                // SAFETY: the method's own destructor for the `data` its `init` allocated.
+                unsafe { cleanup(ptr) };
+            }
+        }
+        // SAFETY: `ptr` is live per the trait contract.
         unsafe { evp_pkey_ctx_free_old_ops(ptr) };
         // SAFETY: `ptr` is live.
         unsafe { evp_pkey_ctx_free_all_cached_data(ptr) };
@@ -1040,6 +1150,14 @@ unsafe impl CtxDestroy for EvpPkeyCtx {
             EVP_PKEY_free(pkey);
             EVP_PKEY_free(peerkey);
         }
+        /* The authority's `ENGINE_finish(ctx->engine)`: the functional reference the constructor
+         * took when it adopted an engine-supplied method, or NULL. */
+        // SAFETY: `engine` is NULL or the functional reference this context holds.
+        unsafe {
+            crate::engine::eng_init::ENGINE_finish(
+                (*ptr).engine.cast::<crate::engine::eng_lib::Engine>(),
+            )
+        };
         /* The authority's `BN_free(ctx->rsa_pubexp)`: the deprecated
          * `EVP_PKEY_CTX_set_rsa_keygen_pubexp` hands the caller's `BIGNUM` to the context on
          * success, so the context releases it. NULL for every context that never saw that control.
@@ -1268,41 +1386,76 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
         unsafe { (*rctx.as_ptr()).peerkey = src.peerkey };
     }
 
-    if src.operation == EVP_PKEY_OP_UNDEFINED && !src.pkey.is_null() {
-        let mut tmp_keymgmt = src.keymgmt;
-        // SAFETY: `pkey` is live and `tmp_keymgmt` is live; the out-parameter is a live local.
-        let provkey = unsafe {
-            crate::evp::pkey::evp_pkey_export_to_provider(
-                src.pkey,
-                src.libctx,
-                ptr::addr_of_mut!(tmp_keymgmt),
-                src.propquery,
-            )
-        };
-        if provkey.is_null() {
-            // `rctx` is released by its `Drop` as this frame returns.
-            return ptr::null_mut();
+    if src.pmeth.is_null() {
+        if src.operation == EVP_PKEY_OP_UNDEFINED && !src.pkey.is_null() {
+            let mut tmp_keymgmt = src.keymgmt;
+            // SAFETY: `pkey` is live and `tmp_keymgmt` is live; the out-parameter is a live local.
+            let provkey = unsafe {
+                crate::evp::pkey::evp_pkey_export_to_provider(
+                    src.pkey,
+                    src.libctx,
+                    ptr::addr_of_mut!(tmp_keymgmt),
+                    src.propquery,
+                )
+            };
+            if provkey.is_null() {
+                // `rctx` is released by its `Drop` as this frame returns.
+                return ptr::null_mut();
+            }
+            // SAFETY: `tmp_keymgmt` is live.
+            if unsafe { crate::evp::keymgmt::EVP_KEYMGMT_up_ref(tmp_keymgmt) } == 0 {
+                // `rctx` is released by its `Drop` as this frame returns.
+                return ptr::null_mut();
+            }
+            // SAFETY: `rctx` is live.
+            let previous = unsafe { (*rctx.as_ptr()).keymgmt };
+            // SAFETY: `previous` is NULL or holds the reference taken above.
+            unsafe { EVP_KEYMGMT_free(previous) };
+            // SAFETY: `rctx` is live.
+            unsafe { (*rctx.as_ptr()).keymgmt = tmp_keymgmt };
+            return rctx.into_raw();
         }
-        // SAFETY: `tmp_keymgmt` is live.
-        if unsafe { crate::evp::keymgmt::EVP_KEYMGMT_up_ref(tmp_keymgmt) } == 0 {
-            // `rctx` is released by its `Drop` as this frame returns.
-            return ptr::null_mut();
+        if !src.pkey.is_null() && src.operation == EVP_PKEY_OP_UNDEFINED {
+            return rctx.into_raw();
         }
-        // SAFETY: `rctx` is live.
-        let previous = unsafe { (*rctx.as_ptr()).keymgmt };
-        // SAFETY: `previous` is NULL or holds the reference taken above.
-        unsafe { EVP_KEYMGMT_free(previous) };
-        // SAFETY: `rctx` is live.
-        unsafe { (*rctx.as_ptr()).keymgmt = tmp_keymgmt };
-        return rctx.into_raw();
-    }
-    if !src.pkey.is_null() && src.operation == EVP_PKEY_OP_UNDEFINED {
-        return rctx.into_raw();
+
+        // `pctx->pmeth == NULL` with a live operation is the authority's `err:`.
+        // `rctx` is released by its `Drop` as this frame returns.
+        return ptr::null_mut();
     }
 
-    /* `pctx->pmeth->copy(rctx, pctx)` is 7.4l's. With no `pmeth`, the authority reaches `err:` only
-     * through a legacy context, which this crate cannot construct. */
-    // `rctx` is released by its `Drop` as this frame returns.
+    /* `pctx->pmeth->copy(rctx, pctx)` — the legacy method's own duplicator, which is how the
+     * algorithm data (`pkey_rsa_init`'s block) reaches the copy. The engine's functional
+     * reference is taken for the copy first, as the authority does above the allocation. */
+    if !src.engine.is_null() {
+        // SAFETY: `src.engine` is live and the source context holds a functional reference.
+        if unsafe {
+            crate::engine::eng_init::ENGINE_init(
+                src.engine.cast::<crate::engine::eng_lib::Engine>(),
+            )
+        } == 0
+        {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::PMETH_LIB_459) };
+            // `rctx` is released by its `Drop` as this frame returns.
+            return ptr::null_mut();
+        }
+        // SAFETY: `rctx` is live.
+        unsafe { (*rctx.as_ptr()).engine = src.engine };
+    }
+    // SAFETY: `rctx` is live.
+    unsafe { (*rctx.as_ptr()).pmeth = src.pmeth };
+    // SAFETY: `src.pmeth` is live and is the source context's method.
+    if let Some(copy) = unsafe { (*src.pmeth).copy } {
+        // SAFETY: the method's own duplicator, with the copy and the source it expects.
+        if unsafe { copy(rctx.as_ptr(), pctx) } > 0 {
+            return rctx.into_raw();
+        }
+    }
+    /* A failed copy is `goto err:`: clear the method before `Drop` so the release does not run
+     * `cleanup` on data the duplicator did not finish building. */
+    // SAFETY: `rctx` is live.
+    unsafe { (*rctx.as_ptr()).pmeth = ptr::null() };
     ptr::null_mut()
 }
 
@@ -10608,10 +10761,33 @@ unsafe extern "C" fn evp_pkey_ctx_ctrl_int(
         return unsafe { evp_pkey_ctx_ctrl_to_param(ctx, keytype, optype, cmd, p1, p2) };
     }
 
-    /* `ctx->pmeth == NULL || ctx->pmeth->ctrl == NULL`; see this function's note. */
-    // SAFETY: a compile-time-constant site.
-    unsafe { raise_site(&err_sites::PMETH_LIB_1325) };
-    -2
+    /* `case EVP_PKEY_STATE_UNKNOWN: case EVP_PKEY_STATE_LEGACY:` — the legacy method's own ctrl. */
+    // SAFETY: `ctx` is live.
+    let pmeth = unsafe { (*ctx).pmeth };
+    if pmeth.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PMETH_LIB_1325) };
+        return -2;
+    }
+    // SAFETY: `pmeth` is live and is this context's method.
+    let Some(ctrl) = (unsafe { (*pmeth).ctrl }) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PMETH_LIB_1325) };
+        return -2;
+    };
+    if keytype != -1 {
+        // SAFETY: `pmeth` is live.
+        if unsafe { (*pmeth).pkey_id } != keytype {
+            return -1;
+        }
+    }
+    // SAFETY: `ctrl` is the method's own control callback with these arguments.
+    let ret = unsafe { ctrl(ctx, cmd, p1, p2) };
+    if ret == -2 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PMETH_LIB_1325) };
+    }
+    ret
 }
 
 /// `int EVP_PKEY_CTX_ctrl(EVP_PKEY_CTX *ctx, int keytype, int optype, int cmd, int p1, void *p2)` —
