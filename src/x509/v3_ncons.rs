@@ -93,8 +93,8 @@ use crate::runtime::stack::{
 };
 use crate::x509::v3_conf::X509V3Ctx;
 use crate::x509::v3_genn::{
-    GENERAL_NAME_it, GeneralName, GeneralNameRef, GEN_DIRNAME, GEN_DNS, GEN_EMAIL, GEN_IPADD,
-    GEN_OTHERNAME, GEN_URI,
+    GENERAL_NAME_it, GeneralName, GeneralNameRef, GEN_DNS, GEN_EMAIL, GEN_IPADD, GEN_OTHERNAME,
+    GEN_URI,
 };
 use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_san::{v2i_GENERAL_NAME_ex, GENERAL_NAME_print};
@@ -1380,15 +1380,17 @@ pub unsafe extern "C" fn NAME_CONSTRAINTS_check(x: *mut X509, nc: *mut NameConst
         // SAFETY: an all-zero `GENERAL_NAME` is a valid starting value; each arm is written before
         // it is read.
         let mut gntmp: GeneralName = unsafe { core::mem::zeroed() };
-        gntmp.type_ = GEN_DIRNAME;
-        // SAFETY: the `directoryName` arm is live under this selector.
-        gntmp.d.directoryName = nm;
+        // SAFETY: `nm` is a live `X509_NAME` owned by the certificate; the audited writer
+        // installs it under `GEN_DIRNAME` (borrowed, not adopted).
+        gntmp.set_directory_name(nm);
         // SAFETY: `gntmp` is live; `nc` is live.
         let mut r = unsafe { nc_match(&raw mut gntmp, nc) };
         if r != X509_V_OK {
             return r;
         }
-        gntmp.type_ = GEN_EMAIL;
+        // The next arm reuses the slot; the writer clears the borrowed directory name first so
+        // no stale pointer is ever paired with `GEN_EMAIL`.
+        let _ = gntmp.set_ia5(GEN_EMAIL, ptr::null_mut());
         // Process any email address attributes in subject name.
         let mut i: c_int = -1;
         loop {
@@ -1399,10 +1401,15 @@ pub unsafe extern "C" fn NAME_CONSTRAINTS_check(x: *mut X509, nc: *mut NameConst
             }
             // SAFETY: `i` is a valid entry index returned above.
             let ne = unsafe { X509_NAME_get_entry(nm, i) };
-            // SAFETY: `ne` is a live entry.
-            gntmp.d.ia5 = unsafe { X509_NAME_ENTRY_get_data(ne) };
-            // SAFETY: the `rfc822Name` arm is live under the `GEN_EMAIL` selector.
-            if unsafe { (*gntmp.d.ia5).type_ } != V_ASN1_IA5STRING {
+            // SAFETY: `ne` is a live entry whose data is a live `ASN1_STRING`.
+            let entry = unsafe { X509_NAME_ENTRY_get_data(ne) };
+            // SAFETY: the audited writer installs the borrowed entry under `GEN_EMAIL`.
+            let _ = gntmp.set_ia5(GEN_EMAIL, entry);
+            // SAFETY: the selector is `GEN_EMAIL`, so this is the live IA5 arm.
+            let Some(GeneralNameRef::Ia5(ia5)) = (unsafe { gntmp.as_ref() }) else {
+                return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
+            };
+            if ia5.type_ != V_ASN1_IA5STRING {
                 return X509_V_ERR_UNSUPPORTED_NAME_SYNTAX;
             }
             // SAFETY: `gntmp` is live; `nc` is live.
@@ -1447,9 +1454,9 @@ pub unsafe extern "C" fn NAME_CONSTRAINTS_check_CN(
     stmp.type_ = V_ASN1_IA5STRING;
     // SAFETY: an all-zero `GENERAL_NAME` is a valid starting value; the arm is set below.
     let mut gntmp: GeneralName = unsafe { core::mem::zeroed() };
-    gntmp.type_ = GEN_DNS;
-    // SAFETY: the `dNSName` arm is live under this selector; `stmp` outlives `gntmp` here.
-    gntmp.d.ia5 = &raw mut stmp;
+    // SAFETY: `stmp` outlives `gntmp`; the audited writer installs the borrowed local under
+    // `GEN_DNS`.
+    let _ = gntmp.set_ia5(GEN_DNS, &raw mut stmp);
 
     // Process any commonName attributes in subject name.
     let mut i: c_int = -1;
@@ -1478,10 +1485,16 @@ pub unsafe extern "C" fn NAME_CONSTRAINTS_check_CN(
         };
         // Only process attributes that look like hostnames.
         if idlen != 0 {
-            // SAFETY: `gntmp.d.ia5` names the live `stmp` local, whose fields are writable.
+            // SAFETY: the selector names `GEN_DNS`, so `arm_ptr` is the live `stmp` local
+            // installed above; its fields are writable.
+            let ia5 = unsafe { gntmp.arm_ptr() }.cast::<Asn1String>();
+            if ia5.is_null() {
+                return X509_V_ERR_UNSPECIFIED;
+            }
+            // SAFETY: `ia5` is the live `stmp` local; `idval` is readable for `idlen` bytes.
             unsafe {
-                (*gntmp.d.ia5).length = idlen as c_int;
-                (*gntmp.d.ia5).data = idval.as_ptr();
+                (*ia5).length = idlen as c_int;
+                (*ia5).data = idval.as_ptr();
             }
             // SAFETY: `gntmp` is live and its `dNSName` arm points at `stmp`; `nc` is live.
             let r = unsafe { nc_match(&raw mut gntmp, nc) };
@@ -1565,6 +1578,7 @@ mod tests {
         ASN1_INTEGER_new, ASN1_STRING_free, ASN1_STRING_set, ASN1_STRING_type_new,
     };
     use crate::runtime::obj::{NID_basic_constraints, OBJ_nid2obj};
+    use crate::x509::v3_genn::GEN_DIRNAME;
     use crate::x509::v3_genn::{
         GENERAL_NAME_free, GENERAL_NAME_new, GENERAL_NAME_set0_value, GEN_RID,
     };

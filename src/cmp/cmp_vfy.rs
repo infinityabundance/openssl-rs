@@ -733,13 +733,17 @@ unsafe fn cert_acceptable(
         }
     }
 
-    // SAFETY: `ctx`/`cert`/`msg` are live.
+    // SAFETY: `msg`'s header is live; the selector-guarded accessor forms a reference only
+    // when the sender selects `directoryName`, and answers NULL otherwise.
     let sender_name = unsafe {
-        (*(*msg).header)
-            .sender
-            .cast::<GeneralName>()
-            .as_ref()
-            .map(|g| g.d.directoryName)
+        let sender = (*(*msg).header).sender.cast::<GeneralName>();
+        if sender.is_null() {
+            ptr::null_mut()
+        } else {
+            (*sender).directory_name().map_or(ptr::null_mut(), |n| {
+                n as *const crate::x509::x_name::X509Name as *mut crate::x509::x_name::X509Name
+            })
+        }
     };
     // SAFETY: `ctx`/`cert` are live; the sender name is NULL or live.
     if unsafe {
@@ -749,7 +753,7 @@ unsafe fn cert_acceptable(
             c"cert subject",
             X509_get_subject_name(cert),
             c"sender field",
-            sender_name.unwrap_or(ptr::null_mut()),
+            sender_name,
         )
     } == 0
     {
@@ -1176,8 +1180,19 @@ unsafe fn check_msg_find_cert(ctx: *mut OsslCmpCtx, msg: *const CmpMsg) -> c_int
     }
     /* failed finding a sender cert that verifies the message signature */
     let _ = scrt;
-    // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
-    let sname = unsafe { X509_NAME_oneline((*sender).d.directoryName, ptr::null_mut(), 0) };
+    // SAFETY: `sender` is NULL or live; the guarded accessor answers NULL unless the selector
+    // names the `directoryName` arm.
+    let sender_name = unsafe {
+        if sender.is_null() {
+            ptr::null_mut()
+        } else {
+            (*sender).directory_name().map_or(ptr::null_mut(), |n| {
+                n as *const crate::x509::x_name::X509Name as *mut crate::x509::x_name::X509Name
+            })
+        }
+    };
+    // SAFETY: `sender_name` is NULL or a live directory name; `X509_NAME_oneline` handles NULL.
+    let sname = unsafe { X509_NAME_oneline(sender_name, ptr::null_mut(), 0) };
     // The string is the printer's own; the handle is its single release at the authority's own line.
     // SAFETY: `sname` is NULL or a live C string `X509_NAME_oneline` allocated and no one else owns.
     let sname = unsafe { OwnedBuf::adopt_plain_nullable(sname.cast(), SeamFile::new(FILE), 534) };
