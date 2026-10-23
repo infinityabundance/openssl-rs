@@ -1,0 +1,270 @@
+{
+  "schema": "safe-c33/atlas-refresh/s31/v1",
+  "kind": "s31-downstream-reverify",
+  "subphase": "S31",
+  "branch": "integrate/safe-c33",
+  "source_head": "03ff4327d44f935455becf4d04fc646ef1c8caad",
+  "date": "2026-10-23",
+  "worktree": "no src/ changes by this subphase; the two committed downstream atlases and the Phase-2 install artifacts were rewritten by the measurement (root-in-container, owned by the host user after the bind mount). No commit, no push (subagent).",
+  "purpose": "Re-measure downstream build/link and runtime compatibility with evidence_reuse = null over every loaded family, so the 157-family L7 claim is bound to the exact candidate built at 03ff4327d after the pk7_doit, cms_pwri, statm_srvr and ssl_sess subphases.",
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "2b0ff1b6b33b3f37c3abc61182f44328b6fdc99d91f7b10c69c0b0b9cc20d3ff",
+    "libssl_so_3_sha256": "f99f7159a7ff7e6f8da95d023a82ddb54339edf20a78890645250b4ef3570803",
+    "artifacts_phase2_libs_match_install": true
+  },
+  "previous_identity": {
+    "runtime_atlas": {
+      "libcrypto_so_3_sha256": "defe179fd0b9e62566e08056eb22280ef1166e61153d4e3c8d533db0b2c38d7e",
+      "libssl_so_3_sha256": "5066aa3290ef46f1e453fd52e3c91276d043cce3d012e2c945066682ee6e933a",
+      "evidence_reuse": {
+        "mode": "committed-rows-carried-forward",
+        "families_reused": 165,
+        "candidate_identity_match": false
+      }
+    },
+    "build_link_atlas": {
+      "libcrypto_so_3_sha256": "f4ba3f7369339e396fba2df1ea6907ec50b8729b8d2d65111a0226067cdf69b6",
+      "libssl_so_3_sha256": "862afafada1b30e7bb7f1dc05f7f2aa55c639bcc7b8b88ae5cdfbc526e043f16"
+    },
+    "note": "The pre-run runtime atlas was itself carried forward from an earlier install (165 rows, candidate_identity_match=false), so this is the first full no-reuse binding at the S31 identity."
+  },
+  "build": {
+    "command": "CARGO_BUILD_JOBS=4 CARGO_TARGET_DIR=/work/target bash forensics/tools/build_phase2.sh",
+    "exit_code": 0,
+    "log": "court/tmp/s31-build-candidate.log",
+    "log_sha256": "6f318038a71a455036129a3acab4c7617301fe3bdecb2a05be4fd4ae607d8ab5",
+    "note": "build_phase2.sh is hardwired to /work/target/release; CARGO_TARGET_DIR is set to that same on-disk target (never tmpfs).",
+    "abi_courts": {
+      "all_pass": true,
+      "count": 11,
+      "courts": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "receipt": "artifacts/phase2/COURTS.json",
+      "body_hash": "d4b9e82420753db75260424af6865214a4bcd6384d701d13a757d83fa29b1d53"
+    }
+  },
+  "commands": [
+    "OPENSSL_RS_COURT_IMAGE=openssl-rs-court-expand:1 OPENSSL_RS_COURT_NAME=openssl-rs-court-expand bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:$PATH && export TMPDIR=/work/court/tmp && CARGO_BUILD_JOBS=4 CARGO_TARGET_DIR=/work/target bash forensics/tools/build_phase2.sh'",
+    "same wrapper: CARGO_BUILD_JOBS=4 CARGO_TARGET_DIR=/work/court/target python3 forensics/tools/downstream_build_link.py --measure   (no --only, no --reuse-committed, no --reuse-previous-candidate)",
+    "same wrapper: CARGO_BUILD_JOBS=4 CARGO_TARGET_DIR=/work/court/target python3 forensics/tools/downstream_runtime.py --measure   (no --only, no --reuse-committed, no --reuse-previous-candidate)",
+    "same wrapper: focused TLS1.2 session-id resumption probe (court/s31-probe/probe.c), compiled against artifacts/phase2/install and linked by rpath to the candidate libssl/libcrypto",
+    "host: sha256sum of the install libs, the two atlases and the three logs; python3 per-family delta over the pre-run atlas snapshot"
+  ],
+  "measurement": {
+    "build_link": {
+      "reuse": null,
+      "elapsed_seconds": 3506,
+      "log": "court/tmp/s31-build-link.log",
+      "log_sha256": "86c1adc783620e38aaa7f0b30403de40a8121d58252eea66e1b08aa0dc588cc4",
+      "atlas": "forensics/downstream/build-link-atlas.json",
+      "atlas_sha256": "a3296bd18455dcfdf4471fd20637a7a44ac368eec5145513cd8161262ceb0095",
+      "atlas_body_hash": "193d3604667de85f11c75f425f4b235b53f0d901a8e3e37622d5603621e9cf27",
+      "atlas_candidate_identity_match": true,
+      "summary_lines": [
+        "[downstream-build-link] elapsed=3506s with_recipe=166 no_recipe=834",
+        "authority configured=166 built=166 linked=166 failed=0",
+        "candidate configured=166 built=166 linked=166 failed=0",
+        "candidate_linkage_proven=166 candidate_specific_patch_count=0"
+      ]
+    },
+    "runtime": {
+      "reuse": null,
+      "elapsed_seconds": 4797,
+      "log": "court/tmp/s31-runtime.log",
+      "log_sha256": "ef6646d3f283e353bbe21285aa71efa7e73c01b5c4ca0eedc811e6dbac00a2a5",
+      "atlas": "forensics/downstream/runtime-functional-atlas.json",
+      "atlas_sha256": "795c01f930a2cf3402fe5c10ea7678eb9df04eb754a09aef4187c830d5bab7f3",
+      "atlas_body_hash": "56b372c19e32145950a28d57f1a17bf947e60d06ef619cf711939de9cecfb7ed",
+      "atlas_candidate_identity_match": true,
+      "atlas_evidence_reuse": null,
+      "summary_lines": [
+        "[downstream-runtime] elapsed=4797s with_recipe=166 no_recipe=834",
+        "authority loaded=166 runtime=159 functional=157 failed=8 not_attempted=834",
+        "candidate loaded=166 runtime=159 functional=157 failed=8 not_attempted=834",
+        "candidate_reaches_baseline=166 reaches_linked_baseline=166 below_baseline=0 baseline_not_linked=0 candidate_failures={'acquire-failure': 834, 'runtime-failure': 7, 'functional-failure': 1}"
+      ]
+    }
+  },
+  "counts": {
+    "before": {
+      "loaded": 166,
+      "candidate_l7_functional": 157,
+      "authority_l7_functional": 157,
+      "evidence_basis": "carried-forward: 165 of 166 rows, candidate_identity_match=false"
+    },
+    "after_no_reuse": {
+      "loaded": 166,
+      "candidate_l7_functional": 157,
+      "authority_l7_functional": 157,
+      "candidate_runtime": 159,
+      "candidate_failed": 8,
+      "candidate_reaches_baseline": 166,
+      "candidate_below_baseline": 0,
+      "not_attempted": 834,
+      "evidence_basis": "measured at libcrypto 2b0ff1b6 / libssl f99f7159 with evidence_reuse=null"
+    }
+  },
+  "deltas": {
+    "build_link": {
+      "families_compared": 166,
+      "changed_rows": [],
+      "note": "candidate and authority rows are identical in level to the pre-run atlas (both 166 L4-linked); the pre-run build-link rows were already bound to a different install, so this is the rebinding record."
+    },
+    "runtime": {
+      "families_compared": 166,
+      "lost_l7": [],
+      "gained_l7": [],
+      "changed_rows": [],
+      "regressions": [],
+      "note": "The L7 set is byte-for-byte the same 157 families; no family dropped a level, and every non-L7 family matches its authority level (below_baseline=0)."
+    }
+  },
+  "regressions": [],
+  "non_l7_classification": {
+    "rule": "Authority and candidate rows reproduced the identical level and reason string; a cause is IMPLEMENTATION only if the authority reached a higher level. None did (below_baseline=0).",
+    "families": [
+      {
+        "family": "afflib",
+        "authority_level": "L5-loaded",
+        "candidate_level": "L5-loaded",
+        "reason": "AFFLIB could not create and sign the image",
+        "cause": "HARNESS",
+        "evidence": "both subjects L5; the admitted workload fails identically under authority and candidate"
+      },
+      {
+        "family": "charybdis",
+        "authority_level": "L5-loaded",
+        "candidate_level": "L5-loaded",
+        "reason": "charybdis did not listen or greet over TLS",
+        "cause": "ENVIRONMENT",
+        "evidence": "both subjects L5; charybdis refuses to run as euid 0, and the court container runs as root"
+      },
+      {
+        "family": "dma",
+        "authority_level": "L5-loaded",
+        "candidate_level": "L5-loaded",
+        "reason": "DMA did not deliver the message over TLS",
+        "cause": "HARNESS",
+        "evidence": "both subjects L5; the admitted workload fails identically under authority and candidate"
+      },
+      {
+        "family": "fastd",
+        "authority_level": "L6-runtime",
+        "candidate_level": "L6-runtime",
+        "reason": "fastd's data path requires a TUN interface; the court container has no /dev/net/tun device and no CAP_NET_ADMIN (TUNSETIFF is refused), so the two-peer handshake workload cannot run in this venue",
+        "cause": "ENVIRONMENT",
+        "evidence": "both subjects L6-runtime; no /dev/net/tun in the venue"
+      },
+      {
+        "family": "httest",
+        "authority_level": "L5-loaded",
+        "candidate_level": "L5-loaded",
+        "reason": "httest did not complete the HTTPS request",
+        "cause": "HARNESS",
+        "evidence": "both subjects L5; the admitted workload fails identically under authority and candidate"
+      },
+      {
+        "family": "ima-evm-utils",
+        "authority_level": "L5-loaded",
+        "candidate_level": "L5-loaded",
+        "reason": "evmctl did not sign and verify the fixture",
+        "cause": "FIXTURE",
+        "evidence": "both subjects L5; evmctl does not sign/verify the fixture under the authority either"
+      },
+      {
+        "family": "libshout",
+        "authority_level": "L5-loaded",
+        "candidate_level": "L5-loaded",
+        "reason": "libshout did not stream over TLS",
+        "cause": "HARNESS",
+        "evidence": "both subjects L5; the admitted workload fails identically under authority and candidate"
+      },
+      {
+        "family": "nghttp2",
+        "authority_level": "L6-runtime",
+        "candidate_level": "L6-runtime",
+        "reason": "a client trusting the unrelated CA was not rejected",
+        "cause": "HARNESS",
+        "evidence": "both subjects L6; the positive fetch runs, but the negative leg is not discriminating under the authority either"
+      },
+      {
+        "family": "sipp",
+        "authority_level": "L5-loaded",
+        "candidate_level": "L5-loaded",
+        "reason": "SIPp did not complete the call over TLS",
+        "cause": "HARNESS",
+        "evidence": "both subjects L5; the admitted workload fails identically under authority and candidate"
+      }
+    ],
+    "summary": {
+      "IMPLEMENTATION": [],
+      "SOURCE_UNREACHABLE": [],
+      "HARNESS": ["afflib", "dma", "httest", "libshout", "nghttp2", "sipp"],
+      "ENVIRONMENT": ["charybdis", "fastd"],
+      "FIXTURE": ["ima-evm-utils"]
+    }
+  },
+  "targeted_concern_consumers": {
+    "evidence_basis": "Imported-OpenSSL-symbol fingerprints exist for six deep families (forensics/downstream/usage-fingerprints.json); for the rest the admitted workload description is the evidence. No family workload drives a resumed handshake.",
+    "tls_resumption_and_session_tickets": [
+      {"family": "curl", "grade": "L7-functional", "signal": "imports SSL_set_session, i2d/d2i_SSL_SESSION, SSL_SESSION_free", "workload": "verified TLS1.3 fetch + unrelated-CA reject; a single fresh connection, resumption not driven"},
+      {"family": "haproxy", "grade": "L7-functional", "signal": "imports SSL_session_reused, SSL_set_session, i2d/d2i_SSL_SESSION, SSL_SESSION_get_master_key, SSL_SESSION_get_max_early_data, SSL_SESSION_set1_id(_context)", "workload": "TLS terminator + verified response; two separate s_client connections, resumption not driven"},
+      {"family": "pure-ftpd", "grade": "L7-functional", "signal": "imports SSL_CTX_set_session_id_context, SSL_CTX_set_session_ticket_cb", "workload": "explicit FTPS login over TLS1.3 and TLS1.2; resumption not driven"},
+      {"family": "monit", "grade": "L7-functional", "signal": "imports SSL_CTX_set_session_id_context", "workload": "TLS1.3 and TLS1.2 handshake + HTTP response; resumption not driven"},
+      {"family": "redis", "grade": "L7-functional", "signal": "imports SSL_CTX_set_session_id_context", "workload": "TLS handshake + PING/SET/GET; resumption not driven"}
+    ],
+    "pkcs7": [
+      {"family": "kmod", "grade": "L7-functional", "signal": "atlas note: libkmod signature path uses d2i_PKCS7 / PKCS7_get_signer_info / X509_NAME / OBJ_obj2txt", "workload": "modinfo parses a signed module fixture's appended PKCS#7 + corrupted-signature reject"},
+      {"family": "osslsigncode", "grade": "L7-functional", "signal": "Authenticode is PKCS#7 SignedData (workload-level evidence, not an imported-symbol fingerprint)", "workload": "Authenticode sign of a pristine PE + verified signature + digest mismatch on a modified PE"}
+    ],
+    "cms": [],
+    "smime": [],
+    "notes": [
+      "No admitted downstream workload exercises CMS_*; CMS assurance for this candidate remains the crate-level courts, not a downstream family.",
+      "No admitted downstream workload exercises S/MIME. Mail-adjacent families were measured only over SMTP/IMAP STARTTLS (s-nail, exim, dovecot, fetchmail, libesmtp, ssmtp, opendkim) or SMTP submission (dma, L5 harness failure).",
+      "The session-cache change is therefore covered at the family level only indirectly (server/client handshakes); the dedicated resumption evidence is the S30 crate test and the focused probe below."
+    ]
+  },
+  "focused_probe": {
+    "name": "s31 TLS1.2 session-id resumption through the candidate DSO",
+    "source": "court/s31-probe/probe.c (test-only, outside src/ and outside the atlas)",
+    "build": "cc -O2 probe.c -I artifacts/phase2/install/include -L artifacts/phase2/install/lib -Wl,-rpath,<install>/lib -lssl -lcrypto",
+    "runtime_linkage": "ldd probe -> /work/artifacts/phase2/install/lib/libssl.so.3 and libcrypto.so.3 (not the authority)",
+    "setup": "TLS1.2 max on both sides, SSL_OP_NO_TICKET on both contexts, SSL_SESS_CACHE_SERVER + session id context on a server SSL_CTX that stays alive across two accepts; client uses SSL_get1_session then SSL_set_session",
+    "exit_code": 0,
+    "observed_output": [
+      "client conn1 reused=0 idlen=32 proto=TLSv1.2",
+      "client conn2 reused=1 idlen=32 proto=TLSv1.2",
+      "RESULT PASS client resumed the TLS1.2 session id",
+      "server conn1 reused=0 read=3 notes=1",
+      "server conn2 reused=1 read=3 notes=1"
+    ],
+    "claim": "The candidate distribution DSO resumes a TLS1.2 session id with tickets disabled, on both peers; this exercises the S30 session-cache insert/lookup path end-to-end.",
+    "limits": "One process, loopback, self-signed fixture, no consumer callback re-entrancy and no automatic-flush trigger. It does not substitute for a per-family resumption workload."
+  },
+  "not_measured": [
+    "834 P1000 families with no admitted pristine-source recipe: acquire-failure, unchanged, not claimed.",
+    "CMS: no admitted downstream workload.",
+    "S/MIME: no admitted downstream workload.",
+    "TLS resumption/session tickets per family: no admitted workload drives a resumed handshake; only the focused candidate-DSO probe and the S30 crate test cover it.",
+    "No sanitizer, Miri, TSAN or dudect run in this subphase: this is a downstream compatibility re-measurement (BATCH-level), not a SEAL.",
+    "No new authority deep evidence: the authority levels were measured in the same run and reproduced 157 L7."
+  ],
+  "non_claims": [
+    "A passing row is DROP_IN-equivalence at the measured level, not proof of memory safety, constant-time behaviour or complete ABI parity.",
+    "The 157 L7 families are bound to libcrypto 2b0ff1b6 / libssl f99f7159; any later install invalidates this binding.",
+    "The 11 Phase-2 ABI courts are structural only; every unimplemented symbol is a scaffold that aborts when called."
+  ]
+}

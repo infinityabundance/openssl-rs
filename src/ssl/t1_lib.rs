@@ -796,6 +796,27 @@ pub(crate) fn tls1_nid2group_id(nid: c_int) -> u16 {
     }
 }
 
+/// The scheme bytes of a `signature_algorithms` extension body (`list_len(2) || scheme(2)...`) as
+/// `tls_parse_ctos_sig_algs` accepts them, or `None` when the authority refuses the vector: a body
+/// shorter than the length word, a zero-length vector, a declared vector that runs past the body,
+/// or an empty/odd-length vector. This is the safe, single definition of the acceptance condition
+/// shared by the writer ([`tls1_save_peer_sigalgs`]) and the ClientHello parser, so the parse can
+/// validate without touching the connection.
+pub(crate) fn tls1_peer_sigalgs(body: &[u8]) -> Option<&[u8]> {
+    if body.len() < 2 {
+        return None;
+    }
+    let list_len = u16::from_be_bytes([body[0], body[1]]) as usize;
+    if list_len == 0 {
+        return None;
+    }
+    let schemes = body.get(2..2usize.checked_add(list_len)?)?;
+    if !schemes.len().is_multiple_of(2) {
+        return None;
+    }
+    Some(schemes)
+}
+
 /// `int tls1_save_u16(PACKET *pkt, uint16_t **p, size_t *len)` — `t1_lib.c:3490-3517`, for the
 /// `signature_algorithms` vector `tls_parse_ctos_sig_algs` saves (`extensions_srvr.c:303-320`)
 /// and the client's `CertificateRequest` reader (`statem_clnt.c:2650-2690`, `:2686`).
@@ -810,15 +831,12 @@ pub(crate) fn tls1_nid2group_id(nid: c_int) -> u16 {
 /// # Safety
 /// `s` must be a live connection.
 pub(crate) unsafe fn tls1_save_peer_sigalgs(s: *mut Ssl, body: &[u8]) -> c_int {
-    if body.len() < 2 {
+    let Some(schemes) = tls1_peer_sigalgs(body) else {
         return 0;
-    }
-    let list_len = ((body[0] as usize) << 8) | body[1] as usize;
-    if list_len == 0 || 2 + list_len > body.len() {
-        return 0;
-    }
-    // SAFETY: the declared vector is inside `body`.
-    unsafe { tls1_save_peer_sigalgs_raw(s, &body[2..2 + list_len]) }
+    };
+    // SAFETY: `s` is live per the caller's contract; `schemes` is the validated vector inside
+    // `body`.
+    unsafe { tls1_save_peer_sigalgs_raw(s, schemes) }
 }
 
 /// The scheme bytes of a `signature_algorithms` vector (`list_len(2)` already stripped), saved

@@ -25,6 +25,8 @@ use crate::evp::cipher_ctx::{
 use crate::evp::evp_pbe::EVP_PBE_CipherInit_ex;
 use crate::rand::rand_lib::RAND_bytes_ex;
 
+use crate::runtime::err::err_sites::ErrSite;
+use crate::runtime::err::raise_site;
 use crate::runtime::obj::{NID_id_alg_PWRI_KEK, OBJ_nid2obj, OBJ_obj2nid, OBJ_obj2txt};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::stack::OPENSSL_sk_push;
@@ -39,6 +41,63 @@ const EVP_CIPH_FLAG_AEAD_CIPHER: c_ulong = 0x20_0000;
 const EVP_MAX_IV_LENGTH: usize = 16;
 /// `OSSL_MAX_NAME_SIZE` — `internal/sizes.h:15`.
 const OSSL_MAX_NAME_SIZE: usize = 50;
+/// `ERR_R_PASSED_INVALID_ARGUMENT` — `include/openssl/err.h.in:360`, `262 | ERR_RFLAG_COMMON`
+/// (`ERR_RFLAG_COMMON` is `0x2 << ERR_RFLAGS_OFFSET`, and `ERR_RFLAGS_OFFSET` is 18).
+const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 524550;
+
+/// The refusal this conversion adds to `CMS_add0_recipient_password` when the selected cipher
+/// reports an IV length that does not fit the authority's fixed stack buffer.
+///
+/// The authority has no such site. `cms_pwri.c:52` declares
+/// `unsigned char iv[EVP_MAX_IV_LENGTH]`, and `:107` hands the length returned by
+/// `EVP_CIPHER_CTX_get_iv_length()` to `RAND_bytes_ex`, which writes exactly that many bytes. The
+/// line names the authority operation this conversion declines: `RAND_bytes_ex` is where an
+/// oversized length would have been written past the buffer.
+const CMS_PWRI_IV_REFUSED: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/cms/cms_pwri.c",
+    line: 107,
+    func: c"CMS_add0_recipient_password",
+    lib: super::cms_lib::ERR_LIB_CMS,
+    reason: ERR_R_PASSED_INVALID_ARGUMENT,
+    dynamic_reason: false,
+};
+
+/// Test-only observation for the two S28 input-boundary obligations. Thread-local, so concurrent
+/// tests cannot see each other's records, and compiled out of every non-test build.
+#[cfg(test)]
+mod test_hooks {
+    use core::cell::Cell;
+
+    thread_local! {
+        static PRE_FIX_IV_OVERFLOW: Cell<bool> = const { Cell::new(false) };
+        static PRE_FIX_SHORT_WRAP: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// Record that the refusal was reached with an IV longer than the fixed stack buffer. The
+    /// authority's `RAND_bytes_ex` would have written past it.
+    pub(super) fn note_pre_fix_iv_overflow() {
+        PRE_FIX_IV_OVERFLOW.with(|c| c.set(true));
+    }
+
+    pub(super) fn pre_fix_iv_overflow_fired() -> bool {
+        PRE_FIX_IV_OVERFLOW.with(Cell::get)
+    }
+
+    /// Record that the refusal was reached with fewer than the three bytes the header reads.
+    /// The authority's header writes would have read `in[0..3]` regardless.
+    pub(super) fn note_pre_fix_short_wrap() {
+        PRE_FIX_SHORT_WRAP.with(|c| c.set(true));
+    }
+
+    pub(super) fn pre_fix_short_wrap_fired() -> bool {
+        PRE_FIX_SHORT_WRAP.with(Cell::get)
+    }
+
+    pub(super) fn reset() {
+        PRE_FIX_IV_OVERFLOW.with(|c| c.set(false));
+        PRE_FIX_SHORT_WRAP.with(|c| c.set(false));
+    }
+}
 
 /// `int CMS_RecipientInfo_set0_password(CMS_RecipientInfo *ri, unsigned char *pass,`
 /// `ossl_ssize_t passlen)` — `cms_pwri.c:22-37`.
@@ -235,6 +294,19 @@ pub(crate) unsafe extern "C" fn CMS_add0_recipient_password(
                     super::cms_lib::ERR_R_EVP_LIB,
                 )
             };
+            break 'body;
+        }
+
+        // `iv` above is the authority's fixed `[u8; EVP_MAX_IV_LENGTH]`, but the length comes from
+        // the cipher: `EVP_CIPHER_meth_set_iv_length` accepts any `int`, and a provider's `ivlen`
+        // is an unbounded `size_t` cached into an `int`. `RAND_bytes_ex` and the subsequent
+        // `EVP_EncryptInit_ex` write exactly the reported length, so a length that does not fit is
+        // refused structurally against the buffer instead of assumed to fit.
+        if ivlen as usize > EVP_MAX_IV_LENGTH {
+            #[cfg(test)]
+            test_hooks::note_pre_fix_iv_overflow();
+            // SAFETY: the site is a compile-time constant.
+            unsafe { raise_site(&CMS_PWRI_IV_REFUSED) };
             break 'body;
         }
 
@@ -573,17 +645,39 @@ unsafe fn kek_wrap_key(
     cms_ctx: *const CmsCtx,
 ) -> c_int {
     // SAFETY: `ctx` is live.
-    let blocklen = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) } as usize;
-    let mut olen;
+    let blocklen = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) };
     let mut dummy: c_int = 0;
 
-    if blocklen == 0 {
+    // A negative block size is not usable and, cast to `usize`, would make the round-up below
+    // meaningless. The authority assigns it to `size_t` and then returns 0 through the same
+    // `olen < 2 * blocklen` check; refuse it directly instead.
+    if blocklen <= 0 {
+        return 0;
+    }
+    let blocklen = blocklen as usize;
+
+    // The header below reads `in[0]`, `in[1]` and `in[2]` unconditionally, so a three-byte input
+    // is a precondition of the authority's own body. The round-up does not imply it: with a
+    // four-byte block, `inlen == 2` yields `olen == 8 == 2 * blocklen` and reaches the header.
+    if inlen < 3 {
+        #[cfg(test)]
+        test_hooks::note_pre_fix_short_wrap();
         return 0;
     }
 
     // First decide length of output buffer: header and round up to a multiple of block length.
-    olen = (inlen + 4).div_ceil(blocklen);
-    olen *= blocklen;
+    // `inlen` is caller-supplied (the C ABI's `ec->keylen` is a `size_t`), so the sum and the
+    // scale use checked arithmetic and overflow is the authority's failure (return 0), not a
+    // panic boundary.
+    let Some(rounded) = inlen
+        .checked_add(4)
+        .and_then(|n| n.checked_add(blocklen - 1))
+    else {
+        return 0;
+    };
+    let Some(olen) = (rounded / blocklen).checked_mul(blocklen) else {
+        return 0;
+    };
     if olen < 2 * blocklen {
         return 0;
     }
@@ -592,7 +686,8 @@ unsafe fn kek_wrap_key(
     }
     if !out.is_null() {
         // Set header.
-        // SAFETY: `out`/`input` are writable/readable; `inlen >= 3` follows from `olen`.
+        // SAFETY: `out`/`input` are writable/readable; `inlen >= 3` was checked above, so the
+        // three header reads are in bounds.
         unsafe {
             *out = inlen as c_uchar;
             *out.add(1) = *input ^ 0xFF;
@@ -935,4 +1030,203 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_pwri_crypt(
     unsafe { X509_ALGOR_free(kekalg) };
 
     r
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::evp::cipher::{
+        EVP_CIPHER_meth_free, EVP_CIPHER_meth_new, EVP_CIPHER_meth_set_iv_length, EvpCipher,
+    };
+    use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
+    use crate::runtime::obj::NID_aes_128_cbc;
+
+    /// A `METH` cipher with the given type, block size, key length and IV length.
+    ///
+    /// `EVP_CIPHER_meth_new` is the public path by which both lengths reach the authority
+    /// unchecked: the initialiser stores whatever `iv_len`/`key_len` the caller passes, and the
+    /// legacy init path uses the method in place of a provider cipher.
+    ///
+    /// # Safety
+    /// The answer is a fresh method this caller owns and must release with
+    /// `EVP_CIPHER_meth_free`.
+    unsafe fn meth_cipher(
+        nid: c_int,
+        block_size: c_int,
+        key_len: c_int,
+        iv_len: c_int,
+    ) -> *mut EvpCipher {
+        // SAFETY: no preconditions; the constructor allocates and writes its fields.
+        let cipher = unsafe { EVP_CIPHER_meth_new(nid, block_size, key_len) };
+        assert!(!cipher.is_null(), "the method allocation succeeds");
+        if iv_len != 0 {
+            // SAFETY: `cipher` is this caller's live method.
+            assert_eq!(
+                unsafe { EVP_CIPHER_meth_set_iv_length(cipher, iv_len) },
+                1,
+                "a fresh method has no IV length yet"
+            );
+        }
+        cipher
+    }
+
+    /// Obligation 1: `CMS_add0_recipient_password` holds the authority's fixed
+    /// `[u8; EVP_MAX_IV_LENGTH]`, while the IV length comes from the selected cipher. A longer IV
+    /// is refused before `RAND_bytes_ex` can write past the buffer, with an error raised.
+    #[test]
+    fn cms_pwri_oversized_iv_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+        test_hooks::reset();
+
+        let oversized = (EVP_MAX_IV_LENGTH + 16) as c_int;
+        // SAFETY: every object is this test's own and each call's preconditions hold by
+        // construction; the method outlives the CMS structure, which does not own it.
+        unsafe {
+            let kekciph = meth_cipher(NID_aes_128_cbc, 16, 16, oversized);
+            let cms =
+                crate::cms::cms_env::CMS_EnvelopedData_create(crate::evp::e_aes::EVP_aes_128_cbc());
+            assert!(!cms.is_null(), "the EnvelopedData allocation succeeds");
+            let mut pass = *b"password";
+
+            let ri = CMS_add0_recipient_password(
+                cms,
+                1,
+                0,
+                0,
+                pass.as_mut_ptr(),
+                pass.len() as isize,
+                kekciph.cast(),
+            );
+            assert!(
+                ri.is_null(),
+                "an IV of {oversized} bytes must not be written into {} bytes",
+                EVP_MAX_IV_LENGTH
+            );
+            assert_ne!(ERR_peek_error(), 0, "the refusal raises an error");
+            assert_eq!(
+                ERR_peek_error() & 0x7f_ffff,
+                (ERR_R_PASSED_INVALID_ARGUMENT as c_ulong) & 0x7f_ffff,
+                "the refusal raises ERR_R_PASSED_INVALID_ARGUMENT"
+            );
+            assert!(
+                test_hooks::pre_fix_iv_overflow_fired(),
+                "the canary records the pre-fix out-of-bounds write condition"
+            );
+
+            crate::cms::cms_lib::CMS_ContentInfo_free(cms);
+            EVP_CIPHER_meth_free(kekciph);
+        }
+        ERR_clear_error();
+    }
+
+    /// Obligation 2: `kek_wrap_key` reads `in[0]`, `in[1]` and `in[2]` as the RFC 3211 header.
+    /// The round-up does not imply three readable bytes: with a four-byte block and `inlen == 2`,
+    /// `olen == 8 == 2 * blocklen`, so the pre-fix body reaches the header. The refusal must come
+    /// before any read -- the `NULL` input below would fault on the first `*input`.
+    #[test]
+    fn cms_pwri_short_wrap_input_is_refused_before_any_read() {
+        let _g = crate::test_support::lock_global_state();
+        test_hooks::reset();
+
+        // SAFETY: the method and context are this test's own; `cms_ctx` is never touched because
+        // the refusal precedes every use, and `input` is deliberately NULL to detect a read.
+        unsafe {
+            let cipher = meth_cipher(NID_aes_128_cbc, 4, 16, 0);
+            let ctx = EVP_CIPHER_CTX_new();
+            assert!(!ctx.is_null(), "the context allocation succeeds");
+            assert!(
+                EVP_EncryptInit_ex(ctx, cipher, ptr::null_mut(), ptr::null(), ptr::null()) > 0,
+                "the legacy method initialises"
+            );
+
+            let mut out = [0xA5u8; 8];
+            let mut outlen = 0usize;
+            let rc = kek_wrap_key(
+                out.as_mut_ptr(),
+                &mut outlen,
+                ptr::null(),
+                2,
+                ctx,
+                ptr::null(),
+            );
+            assert_eq!(rc, 0, "a two-byte input is refused");
+            assert_eq!(out, [0xA5u8; 8], "the refusal writes nothing to `out`");
+            assert_eq!(outlen, 0, "the refusal reports no length");
+            assert!(
+                test_hooks::pre_fix_short_wrap_fired(),
+                "the canary records the pre-fix header-read condition"
+            );
+
+            EVP_CIPHER_CTX_free(ctx);
+            EVP_CIPHER_meth_free(cipher);
+        }
+    }
+
+    /// Obligation 2, negative control (§16): the canary fires on the pre-fix condition -- a
+    /// two-byte input with a four-byte block reaches the authority's header -- and stays quiet
+    /// when the input is long enough for the guard.
+    #[test]
+    fn cms_pwri_pre_fix_short_wrap_negative_control() {
+        let _g = crate::test_support::lock_global_state();
+        test_hooks::reset();
+
+        println!(
+            "cms_pwri canary: pre-fix kek_wrap_key would read in[0..3] for inlen = 2 with a 4-byte block (olen = 8 >= 2 * blocklen)"
+        );
+
+        // SAFETY: each method/context pair is this test's own and released before the next is
+        // made. `cms_ctx` is NULL only where the path under test cannot reach it.
+        unsafe {
+            let cipher = meth_cipher(NID_aes_128_cbc, 4, 16, 0);
+            let ctx = EVP_CIPHER_CTX_new();
+            assert!(!ctx.is_null());
+            assert!(EVP_EncryptInit_ex(ctx, cipher, ptr::null_mut(), ptr::null(), ptr::null()) > 0);
+            let mut out = [0u8; 8];
+            let mut outlen = 0usize;
+            assert_eq!(
+                kek_wrap_key(
+                    out.as_mut_ptr(),
+                    &mut outlen,
+                    ptr::null(),
+                    2,
+                    ctx,
+                    ptr::null()
+                ),
+                0
+            );
+            assert!(
+                test_hooks::pre_fix_short_wrap_fired(),
+                "the canary fires on the pre-fix condition"
+            );
+            println!("cms_pwri canary: fired = true (short-input refusal reached)");
+            EVP_CIPHER_CTX_free(ctx);
+            EVP_CIPHER_meth_free(cipher);
+
+            // Selectivity: four bytes is enough for the header, so the guard must not fire.
+            test_hooks::reset();
+            let cipher = meth_cipher(NID_aes_128_cbc, 4, 16, 0);
+            let ctx = EVP_CIPHER_CTX_new();
+            assert!(!ctx.is_null());
+            assert!(EVP_EncryptInit_ex(ctx, cipher, ptr::null_mut(), ptr::null(), ptr::null()) > 0);
+            let input = [0x11u8, 0x22, 0x33, 0x44];
+            let mut out = [0u8; 8];
+            let mut outlen = 0usize;
+            let _ = kek_wrap_key(
+                out.as_mut_ptr(),
+                &mut outlen,
+                input.as_ptr(),
+                input.len(),
+                ctx,
+                ptr::null(),
+            );
+            assert!(
+                !test_hooks::pre_fix_short_wrap_fired(),
+                "an input of three or more bytes must not trip the canary"
+            );
+            println!("cms_pwri canary: fired = false for a four-byte input");
+            EVP_CIPHER_CTX_free(ctx);
+            EVP_CIPHER_meth_free(cipher);
+        }
+    }
 }
