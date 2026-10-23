@@ -166,14 +166,14 @@ unsafe fn ESS_CERT_ID_new_init(cert: *const X509, set_issuer_serial: c_int) -> *
     }
     // SAFETY: `name` is live; `cert` is live.
     unsafe {
-        (*name).type_ = GEN_DIRNAME;
-        (*name).d.directoryName = X509_NAME_dup(X509_get_issuer_name(cert));
-        if (*name).d.directoryName.is_null() {
+        let dn = X509_NAME_dup(X509_get_issuer_name(cert));
+        if dn.is_null() {
             raise_ess(102, c"ESS_CERT_ID_new_init", ERR_R_X509_LIB);
             GENERAL_NAME_free(name);
             ESS_CERT_ID_free(cid);
             return ptr::null_mut();
         }
+        (*name).set_directory_name(dn);
         let is = (*cid).issuer_serial;
         if OPENSSL_sk_push((*is).issuer, name.cast()) == 0 {
             raise_ess(106, c"ESS_CERT_ID_new_init", ERR_R_CRYPTO_LIB);
@@ -293,14 +293,15 @@ unsafe fn ESS_CERT_ID_V2_new_init(
     }
     // SAFETY: `name`, `is` and `cert` are live.
     unsafe {
-        (*name).type_ = GEN_DIRNAME;
-        (*name).d.directoryName = X509_NAME_dup(X509_get_issuer_name(cert));
-        if (*name).d.directoryName.is_null() {
+        let dn = X509_NAME_dup(X509_get_issuer_name(cert));
+        if dn.is_null() {
             raise_ess(227, c"ESS_CERT_ID_V2_new_init", ERR_R_ASN1_LIB);
             GENERAL_NAME_free(name);
             ESS_CERT_ID_V2_free(cid);
             return ptr::null_mut();
         }
+        (*name).set_directory_name(dn);
+        let is = (*cid).issuer_serial;
         if OPENSSL_sk_push((*is).issuer, name.cast()) == 0 {
             raise_ess(231, c"ESS_CERT_ID_V2_new_init", ERR_R_CRYPTO_LIB);
             GENERAL_NAME_free(name);

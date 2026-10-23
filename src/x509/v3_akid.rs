@@ -55,7 +55,7 @@ use crate::x509::v3_akeya::{
     AUTHORITY_KEYID_free, AUTHORITY_KEYID_it, AUTHORITY_KEYID_new, AuthorityKeyid,
 };
 use crate::x509::v3_conf::{X509V3Ctx, X509V3_CTX_TEST};
-use crate::x509::v3_genn::{GENERAL_NAME_free, GENERAL_NAME_new, GeneralName, GEN_DIRNAME};
+use crate::x509::v3_genn::{GENERAL_NAME_free, GENERAL_NAME_new, GeneralName};
 use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_d2i, X509V3_EXT_MULTILINE};
 use crate::x509::v3_san::i2v_GENERAL_NAMES;
 use crate::x509::v3_skid::{i2s_ASN1_OCTET_STRING, ossl_x509_pubkey_hash};
@@ -551,10 +551,9 @@ unsafe extern "C" fn v2i_AUTHORITY_KEYID(
             unsafe { raise_site(&V3_AKID_214) };
             err!();
         }
-        // SAFETY: `gen` is live; the `dirn` arm is the selected one.
+        // SAFETY: `gen` is live; the `dirn` arm is installed with its selector in one step.
         unsafe {
-            (*gen).type_ = GEN_DIRNAME;
-            (*gen).d.directoryName = isname;
+            (*gen).set_directory_name(isname);
         }
     }
 
