@@ -1,0 +1,690 @@
+{
+ "schema": "safe-c33/s33-corpus-batch/v1",
+ "receipt": "s33-corpus-batch",
+ "date": "2026-10-23",
+ "branch": "main",
+ "source_head": "37d375b4e7567ddd2474328638723e781aa150c4",
+ "worktree": "dirty: forensics/tools/downstream_build_link.py, forensics/tools/downstream_runtime.py, the two downstream atlases, the S33 workload/pin files and this receipt; no src/ change",
+ "candidate_identity": {
+  "install_prefix": "artifacts/phase2/install",
+  "libssl_so_3_sha256": "cd24d2075273cc8bb71b0f301163615333f5ef2b7a655dbea1be8ea49b89241d",
+  "libcrypto_so_3_sha256": "61373488ceea36d2a8e60c244034da756bd29391aa6a1a695168f83a5d9c6ba6"
+ },
+ "install_rebuilt": false,
+ "install_note": "the existing artifacts/phase2/install was reused; its libcrypto/libssl digests are recorded above and were not rebuilt by this batch",
+ "selection": {
+  "count": 25,
+  "criterion": "maximise new OpenSSL API surface rather than alphabetical coverage: every family was chosen for a distinct listed surface (CMS/S-MIME, PKCS#12, OCSP, TS/TSP, CMP/CRMF, DTLS, QUIC, legacy ENGINE, raw key APIs, OCSP stapling, policy/name-constraint/CRL verification, session resumption).  Twenty-five P1000 members were selected; no P1000 family with a tractable deterministic TS/TSP, CMP/CRMF or QUIC local workload was found in this batch, so those three surfaces are not represented.",
+  "before": {
+   "with_recipe": 166,
+   "loaded": 166,
+   "l7_functional": 157,
+   "no_recipe": 834
+  },
+  "after": {
+   "with_recipe": 191,
+   "build_link_linked": 190,
+   "loaded": 179,
+   "l7_functional": 169,
+   "no_recipe": 809
+  },
+  "delta": {
+   "with_recipe": 25,
+   "build_link_linked": 24,
+   "loaded": 13,
+   "l7_functional": 12
+  }
+ },
+ "tool_summaries": {
+  "build_link": [
+   "[downstream-build-link] elapsed=21s with_recipe=191 no_recipe=809",
+   "  authority configured=191 built=190 linked=190 failed=1",
+   "  candidate configured=191 built=190 linked=190 failed=1",
+   "  candidate_linkage_proven=190 candidate_specific_patch_count=0",
+   "  check: with_recipe=191 candidate_linked=190 linkage_proven=190 findings=0 control honest=True"
+  ],
+  "runtime": [
+   "[downstream-runtime] elapsed=1s with_recipe=191 no_recipe=809",
+   "  authority loaded=179 runtime=171 functional=169 failed=9 not_attempted=810",
+   "  candidate loaded=179 runtime=171 functional=169 failed=9 not_attempted=810",
+   "  candidate_reaches_baseline=191 reaches_linked_baseline=190 below_baseline=0 baseline_not_linked=1 candidate_failures={'acquire-failure': 809, 'runtime-failure': 7, 'link-failure': 1, 'functional-failure': 2}",
+   "  check: with_recipe=191 cand_loaded=179 cand_functional=169 reaches_baseline=191 findings=0 control honest=True"
+  ]
+ },
+ "evidence_reuse": {
+  "new_families": "all 25 S33 families were measured fresh at the candidate identity above; no row for a new family was reused",
+  "existing_families": "the 166 previously admitted families reuse their committed rows.  Those rows are explicitly marked with `reused_from_candidate_identity` = the earlier install 2b0ff1b6b33b3f37c3abc61182f44328b6fdc99d91f7b10c69c0b0b9cc20d3ff / f99f7159a7ff7e6f8da95d023a82ddb54339edf20a78890645250b4ef3570803.  They are not evidence about the current install."
+ },
+ "families": [
+  {
+   "family": "perl-net-ssleay",
+   "version": "1.92",
+   "url": "https://deb.debian.org/debian/pool/main/libn/libnet-ssleay-perl/libnet-ssleay-perl_1.92.orig.tar.gz",
+   "sha256": "47c2f2b300f2e7162d71d699f633dd6a35b0625a00cbda8c50ac01144a9396a9",
+   "surface": "libssl client: verified handshake, SNI, session object; TLS1.2 DHE/ECDHE",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L5-loaded",
+    "candidate": "L5-loaded"
+   },
+   "classification": "IMPLEMENTATION",
+   "reason": "the workload did not report tls_connect=ok, tls_payload=ok, tls_session=ok, tls_unrelated_ca=rejected"
+  },
+  {
+   "family": "perl-crypt-smime",
+   "version": "0.28",
+   "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-smime-perl/libcrypt-smime-perl_0.28.orig.tar.gz",
+   "sha256": "ca90ecacfef620f8a2f1723c5bc3307a0079c0c6f5170849a9896b20280d1c2d",
+   "surface": "CMS/S-MIME sign/check and encrypt/decrypt",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "perl-crypt-openssl-x509",
+   "version": "1.9.14",
+   "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-x509-perl/libcrypt-openssl-x509-perl_1.9.14.orig.tar.gz",
+   "sha256": "49c575257e6408ad5a89011e5b5800d598f9ccafdf42e71004ed81cb2f44ee7a",
+   "surface": "X.509 parse, extensions, fingerprints, issuer linkage",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "perl-crypt-openssl-rsa",
+   "version": "0.33",
+   "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-rsa-perl/libcrypt-openssl-rsa-perl_0.33.orig.tar.gz",
+   "sha256": "bdbe630f6d6f540325746ad99977272ac8664ff81bd19f0adaba6d6f45efd864",
+   "surface": "raw RSA keygen, PKCS#1 sign/verify, public encrypt/decrypt",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "libcrypt-openssl-ec-perl",
+   "version": "1.32",
+   "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-ec-perl/libcrypt-openssl-ec-perl_1.32.orig.tar.gz",
+   "sha256": "575a6bb6d7694d4a4b73a9125db92b479c9ad2a66f44674ac2fd3c4413a2c19a",
+   "surface": "low-level EC API: P-256 group, point construction/infinity",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "libcrypt-openssl-pkcs10-perl",
+   "version": "0.19",
+   "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-pkcs10-perl/libcrypt-openssl-pkcs10-perl_0.19.orig.tar.gz",
+   "sha256": "3452afd311a79ceece6a9f6e579cb7cd08b2e8ad7e347778557d3c1a1f2bfd57",
+   "surface": "PKCS#10 CSR construction, signing and public-key export",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "perl-crypt-openssl-aes",
+   "version": "0.23",
+   "url": "https://cpan.metacpan.org/authors/id/T/TI/TIMLEGGE/Crypt-OpenSSL-AES-0.23.tar.gz",
+   "sha256": "a70bc89c8d5eabde9b83dec7131b756c247b5c1fb8980f23a42bdd47751d4887",
+   "surface": "AES-256 ECB and CBC encrypt/decrypt",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "perl-crypt-openssl-dsa",
+   "version": "0.20",
+   "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-dsa-perl/libcrypt-openssl-dsa-perl_0.20.orig.tar.gz",
+   "sha256": "e4575d787d44e49b3b59cc39eda2e461fe0606dd0e87d3a9c3df5011b133e702",
+   "surface": "DSA keygen, sign/verify and PEM roundtrip",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "perl-crypt-openssl-bignum",
+   "version": "0.09",
+   "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-bignum-perl/libcrypt-openssl-bignum-perl_0.09.orig.tar.gz",
+   "sha256": "234e72fb8396d45527e6fd45e43759c5c3f3a208cf8f29e6a22161a996fd42dc",
+   "surface": "BN arithmetic, mod_exp and mod_inverse",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "perl-crypt-openssl-random",
+   "version": "0.15",
+   "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-random-perl/libcrypt-openssl-random-perl_0.15.orig.tar.gz",
+   "sha256": "f0876faa1ba3111e39b86aa730c603211eff2905e460c72a57b61e8cf475cef4",
+   "surface": "RAND_bytes and RAND_status",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "php",
+   "version": "8.2.32",
+   "url": "https://deb.debian.org/debian/pool/main/p/php8.2/php8.2_8.2.32.orig.tar.xz",
+   "sha256": "e02aa173c236c12791696254d607da680e6d5516f8f5c2339642de7c4f944bd2",
+   "surface": "PKCS#12 export/read, CMS sign/verify/encrypt/decrypt, X.509 purpose check",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "ruby",
+   "version": "3.1.2",
+   "url": "https://deb.debian.org/debian/pool/main/r/ruby3.1/ruby3.1_3.1.2.orig.tar.xz",
+   "sha256": "350013ef6640f15c42eae48d25c035999dcbb32e4be038d27ad891cb48d685a5",
+   "surface": "PKCS#12, PKCS#7, OCSP request, X.509 store/CRL verify, Ed25519 raw key",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "strongswan",
+   "version": "5.9.8",
+   "url": "https://deb.debian.org/debian/pool/main/s/strongswan/strongswan_5.9.8.orig.tar.bz2",
+   "sha256": "d3303a43c0bd7b75a12b64855e8edcb53696f06190364f26d1533bde1f2e453c",
+   "surface": "PKCS#12/PKCS#7/CRL/X.509 OpenSSL crypto plugin",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "HARNESS",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "dcmtk",
+   "version": "3.6.7",
+   "url": "https://deb.debian.org/debian/pool/main/d/dcmtk/dcmtk_3.6.7.orig.tar.gz",
+   "sha256": "17705dcdb2047d1266bb4e92dbf4aa6d4967819e8e3e94f39b7df697661b4860",
+   "surface": "DICOM CMS signing (dcmsign)",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "FIXTURE",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "coturn",
+   "version": "4.6.3",
+   "url": "https://github.com/coturn/coturn/archive/refs/tags/4.6.3.tar.gz",
+   "sha256": "dc3a529fd9956dc8771752a7169c5ad4c18b9deef3ec96049de30fabf1637704",
+   "surface": "DTLS/TURN server",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "HARNESS",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "poco",
+   "version": "1.11.0",
+   "url": "https://deb.debian.org/debian/pool/main/p/poco/poco_1.11.0.orig.tar.bz2",
+   "sha256": "b08cf73926fa92a6c8f3c712e8fb217d5d0c2fa5248ec0281f251fe1e925d2f1",
+   "surface": "Poco NetSSL TLS transport",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "HARNESS",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "libgit2",
+   "version": "1.5.1",
+   "url": "https://deb.debian.org/debian/pool/main/libg/libgit2/libgit2_1.5.1+ds.orig.tar.xz",
+   "sha256": "96369433500bb528f036c16be9921bd437c098b745f1aaeccb91290815518970",
+   "surface": "HTTPS transport and certificate verification",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "FIXTURE",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "libmongocrypt",
+   "version": "1.7.2",
+   "url": "https://deb.debian.org/debian/pool/main/libm/libmongocrypt/libmongocrypt_1.7.2.orig.tar.gz",
+   "sha256": "a25440a5fa805dc94a4d04aecf91698eebbae23cc045efc96da238f07c85a73f",
+   "surface": "AES-GCM/HMAC/RSA crypto layer",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "FIXTURE",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "libengine-pkcs11-openssl",
+   "version": "0.4.12",
+   "url": "https://deb.debian.org/debian/pool/main/libp/libp11/libp11_0.4.12.orig.tar.gz",
+   "sha256": "1e1a2533b3fcc45fde4da64c9c00261b1047f14c3f911377ebd1b147b3321cfd",
+   "surface": "legacy pkcs11 ENGINE (ENGINE_by_id/dynamic/ctrl)",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "FIXTURE",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "krb5",
+   "version": "1.20.1",
+   "url": "https://deb.debian.org/debian/pool/main/k/krb5/krb5_1.20.1.orig.tar.gz",
+   "sha256": "704aed49b19eb5a7178b34b2873620ec299db08752d6a8574f95d41879ab8851",
+   "surface": "PKINIT / libk5crypto OpenSSL crypto",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "HARNESS",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "postfix",
+   "version": "3.7.11",
+   "url": "https://deb.debian.org/debian/pool/main/p/postfix/postfix_3.7.11.orig.tar.gz",
+   "sha256": "8451fb343692b23cba105b6a194a27a6f32ff21bd2c3bb2fed5ac50d0631deda",
+   "surface": "TLS engine and posttls-finger STARTTLS",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "HARNESS",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "gftp-text",
+   "version": "2.9.1~beta",
+   "url": "https://deb.debian.org/debian/pool/main/g/gftp/gftp_2.9.1~beta.orig.tar.xz",
+   "sha256": "79c727a0c7720e0e49dac4fc760a686d10ff78a496e1e3e644b45d3e76e1eecd",
+   "surface": "FTPS client (AUTH TLS)",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "HARNESS",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  },
+  {
+   "family": "libcpp-httplib0.11",
+   "version": "0.11.4",
+   "url": "https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.11.4.tar.gz",
+   "sha256": "28f76b875a332fb80972c3212980c963f0a7d2e11a8fe94a8ed0d847b9a2256f",
+   "surface": "header-only SSLServer/SSLClient TLS transport",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L7-functional",
+    "candidate": "L7-functional"
+   },
+   "classification": "L7"
+  },
+  {
+   "family": "libcxxtools10",
+   "version": "3.0.0",
+   "url": "https://deb.debian.org/debian/pool/main/c/cxxtools/cxxtools_3.0.0.orig.tar.gz",
+   "sha256": "07b18037fb0983f6292f5c8d53e2369e9e7a9711df2c9ad50838aacbc8c62f7c",
+   "surface": "SSL socket layer (TcpSocket/TcpServer)",
+   "build_link": {
+    "authority": "L2-configured",
+    "candidate": "L2-configured"
+   },
+   "runtime": {
+    "authority": "L2-configured",
+    "candidate": "L2-configured"
+   },
+   "classification": "ENVIRONMENT",
+   "reason": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+  },
+  {
+   "family": "gss-ntlmssp",
+   "version": "1.2.0",
+   "url": "https://deb.debian.org/debian/pool/main/g/gss-ntlmssp/gss-ntlmssp_1.2.0.orig.tar.gz",
+   "sha256": "372cb7f26aca0760c90d245c1039766588650f207f129858cc72a103bf38ba11",
+   "surface": "NTLM GSSAPI MD4/DES/RC4/MD5 via libcrypto",
+   "build_link": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "runtime": {
+    "authority": "L4-linked",
+    "candidate": "L4-linked"
+   },
+   "classification": "HARNESS",
+   "reason": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+  }
+ ],
+ "pins": {
+  "method": "forensics/tools/s33_pin_sources.py fetches every source and aux URL, records HTTP status, final URL, byte count and a SHA-256 it computes, and refuses a digest that disagrees with the recipe",
+  "verified_rows": 148,
+  "unreachable_or_mismatch": 0,
+  "note": "all 148 URLs returned HTTP 200 and matched the authored digest; no URL had to be re-pinned to a GitHub release asset or a Debian snapshot",
+  "aux_added_this_batch": [
+   {
+    "url": "https://deb.debian.org/debian/pool/main/k/krb5/libk5crypto3_1.20.1-2+deb12u5_amd64.deb",
+    "sha256": "7b6e47d15c5c9cdcd456137533d8308aeba608a54cec73b28bd59bfc4b54cf06"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/k/krb5/libkrb5support0_1.20.1-2+deb12u5_amd64.deb",
+    "sha256": "8b9c05f2d8d461a10d657b118f572af5bf8fd6c8f93dcef81e852c5ab0f428ab"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/e/e2fsprogs/libcom-err2_1.47.0-2+b2_amd64.deb",
+    "sha256": "a2bac7015e78fbc0c504df3e441f3a22292f1d2d77f9ccda760057f3690e22f2"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/e/e2fsprogs/comerr-dev_2.1-1.47.0-2+b2_amd64.deb",
+    "sha256": "e72521fd1b8af99ad99e83af7d87926a4c4d7e8238e61846761f7818220a48a2"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/libu/libunistring/libunistring2_1.0-2_amd64.deb",
+    "sha256": "d466bbfe011d764d793c1d9d777cad9c7cf65b938e11598f27408171ad95a951"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/libu/libunistring/libunistring-dev_1.0-2_amd64.deb",
+    "sha256": "df35c1dcc9881de67b4d618fcc1c4e677e3e49d1017aab75aebcf8f9935c508d"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/libx/libxslt/libxslt1.1_1.1.35-1+deb12u4_amd64.deb",
+    "sha256": "5bf795dc6374f744906d39a786024d98b2cb6b885c7776f5dc64eb4092b550a6"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/libx/libxml2/libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+    "sha256": "4460e39dda10a815881374217cde08474747cfa018358cd8612c14b390eff53b"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/libx/libxslt/xsltproc_1.1.35-1+deb12u4_amd64.deb",
+    "sha256": "e251d7f33b02205ce1f6133115ccb399ca7f10635313b1300a976d3eb96320cd"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/libx/libxml2/libxml2-utils_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+    "sha256": "84a26b289dd6075b8334f252bc445023dc64102e557645284fdbc1bebed21a1a"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/d/docbook-xsl/docbook-xsl_1.79.2+dfsg-7_all.deb",
+    "sha256": "b0f710af8f8095ab4749327047ee139dd1dce245eeed2325f148a8fdd1169ab2"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/d/docbook-xml/docbook-xml_4.5-12_all.deb",
+    "sha256": "7c618a4f14a12bbd2659f658e58ea8de7f88b1802e14da2d639c460922d18a69"
+   },
+   {
+    "url": "https://deb.debian.org/debian/pool/main/m/m4/m4_1.4.19-3_amd64.deb",
+    "sha256": "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3"
+   }
+  ]
+ },
+ "recipe_defects_fixed": [
+  {
+   "defect": "_prepare_aux extracted a source-tarball auxiliary with `tar xf <archive> <dir>`, which looks for a member named <dir>",
+   "fix": "extract with `-C <aux-root>`; byte-identical for both subjects"
+  },
+  {
+   "defect": "a development package's .pc symlink could dangle and abort the aux preparation",
+   "fix": "skip a .pc whose target is not in the pinned aux set"
+  },
+  {
+   "defect": "postfix `make makefiles` refused a non-empty LD_LIBRARY_PATH and had no db.h on the OS include path",
+   "fix": "pass -DHAS_DB, clear LD_LIBRARY_PATH for the build, and keep {aux}/usr/bin (m4) on PATH; pin m4"
+  },
+  {
+   "defect": "krb5 artifact named src/clients/kinit/kinit (no direct libcrypto NEEDED) and then a symlink",
+   "fix": "build/link artifact is the regular src/lib/crypto/libk5crypto.so.3.1"
+  },
+  {
+   "defect": "gss-ntlmssp configure required gettext/xsltproc/xmllint/docbook plus libunistring and com_err",
+   "fix": "disable NLS, pin xsltproc/libxml2-utils/docbook-xsl/docbook-xml/libunistring/comerr-dev and generate a minimal XML catalog as a build input"
+  },
+  {
+   "defect": "libgit2 could not find the system http-parser from the pinned aux",
+   "fix": "pass HTTP_PARSER_INCLUDE_DIR/HTTP_PARSER_LIBRARY and the aux include/lib paths to CMake"
+  },
+  {
+   "defect": "libcpp-httplib's no-op make target failed with `No targets`",
+   "fix": "use `make -f /dev/null --eval='all:;@true' all`; the harness is built in pre_build"
+  },
+  {
+   "defect": "Ruby was built without the digest extension that ext/openssl requires",
+   "fix": "--with-ext=openssl,digest"
+  },
+  {
+   "defect": "libcxxtools10 3.0.0 does not compile with GCC 12 (string_view static assertion)",
+   "fix": "not fixed; recorded as ENVIRONMENT (2014 source vs current libstdc++)"
+  }
+ ],
+ "workloads_added": [
+  "forensics/tools/l7_perl_runner.c",
+  "forensics/tools/l7_perl_net_ssleay.pl",
+  "forensics/tools/l7_perl_crypt_smime.pl",
+  "forensics/tools/l7_perl_crypt_openssl_x509.pl",
+  "forensics/tools/l7_perl_crypt_openssl_rsa.pl",
+  "forensics/tools/l7_perl_crypt_openssl_ec.pl",
+  "forensics/tools/l7_perl_crypt_openssl_pkcs10.pl",
+  "forensics/tools/l7_perl_crypt_openssl_aes.pl",
+  "forensics/tools/l7_perl_crypt_openssl_dsa.pl",
+  "forensics/tools/l7_perl_crypt_openssl_bignum.pl",
+  "forensics/tools/l7_perl_crypt_openssl_random.pl",
+  "forensics/tools/l7_php_openssl.php",
+  "forensics/tools/l7_ruby_openssl.rb",
+  "forensics/tools/l7_httplib.cpp (taken from wip/s23-corpus-partial and re-validated)",
+  "forensics/tools/downstream_runtime.py: _wl_php/_wl_ruby/_wl_perl/_wl_httplib and the S33 PROGRAMS/RUNNERS",
+  "forensics/tools/s33_pin_sources.py"
+ ],
+ "implementation_gaps": [
+  {
+   "id": "S33-I1",
+   "family": "perl-net-ssleay",
+   "failing_call": "Net::SSLeay::connect (SSL_connect) on a TLS 1.2 client handshake",
+   "authority_value": "tls_connect=ok; tls_payload=ok; the same fixture and module complete the handshake",
+   "candidate_value": "connect rc=-1; error:0A000094:SSL routines::dh public value length is wrong",
+   "smallest_causal_region": "src/ssl/statem/statem_clnt.rs:2616 tls12_process_server_key_exchange implements only the ECDHE arm and returns 0 for any other ServerKeyExchange frame; the client key-exchange predicate at statem_clnt.rs:228 admits SSL_kDHE.  The reason constant SSL_R_DH_PUBLIC_VALUE_LENGTH_IS_WRONG is declared at src/runtime/err_reasons.rs:2924.",
+   "classification": "IMPLEMENTATION",
+   "evidence": "authority run row and candidate run row in forensics/downstream/runtime-functional-atlas.json; candidate transcript quoted above",
+   "next_action": "queue as a src/ bugfix: either implement the DHE arm of the TLS1.2 client ServerKeyExchange parser or refuse SSL_kDHE before the handshake"
+  }
+ ],
+ "non_l7": [
+  {
+   "family": "coturn",
+   "classification": "HARNESS",
+   "level": "L4-linked"
+  },
+  {
+   "family": "dcmtk",
+   "classification": "FIXTURE",
+   "level": "L4-linked"
+  },
+  {
+   "family": "gftp-text",
+   "classification": "HARNESS",
+   "level": "L4-linked"
+  },
+  {
+   "family": "gss-ntlmssp",
+   "classification": "HARNESS",
+   "level": "L4-linked"
+  },
+  {
+   "family": "krb5",
+   "classification": "HARNESS",
+   "level": "L4-linked"
+  },
+  {
+   "family": "libcxxtools10",
+   "classification": "ENVIRONMENT",
+   "level": "L2-configured"
+  },
+  {
+   "family": "libengine-pkcs11-openssl",
+   "classification": "FIXTURE",
+   "level": "L4-linked"
+  },
+  {
+   "family": "libgit2",
+   "classification": "FIXTURE",
+   "level": "L4-linked"
+  },
+  {
+   "family": "libmongocrypt",
+   "classification": "FIXTURE",
+   "level": "L4-linked"
+  },
+  {
+   "family": "perl-net-ssleay",
+   "classification": "IMPLEMENTATION",
+   "level": "L5-loaded"
+  },
+  {
+   "family": "poco",
+   "classification": "HARNESS",
+   "level": "L4-linked"
+  },
+  {
+   "family": "postfix",
+   "classification": "HARNESS",
+   "level": "L4-linked"
+  },
+  {
+   "family": "strongswan",
+   "classification": "HARNESS",
+   "level": "L4-linked"
+  }
+ ],
+ "not_onboarded": [
+  {
+   "family": "libcxxtools10",
+   "classification": "ENVIRONMENT",
+   "reason": "3.0.0 source fails to compile with GCC 12 / libstdc++ 12: `/usr/include/c++/12/string_view:103:21: error: static assertion failed` in settingswriter.cpp.  This is a 2014 source tree against a current toolchain, not an OpenSSL-side defect; no source patch was applied."
+  }
+ ],
+ "verification": {
+  "fast": "python syntax/compile checks for the touched tools; each new family's build and workload executed in the expansion court",
+  "batch": "`downstream_build_link.py --check` findings=0 control honest=True; `downstream_runtime.py --check` findings=0 control honest=True",
+  "not_run": [
+   "full cargo library suite (no src/ change)",
+   "BOUNDARY/SEAL instruments"
+  ]
+ },
+ "non_claims": [
+  "an L7 row is a local functional workload result, not a safety discharge",
+  "no src/ change was made; the candidate install was not rebuilt",
+  "the 166 pre-existing families' reused rows are bound to the earlier install identity",
+  "TS/TSP, CMP/CRMF and QUIC surfaces are not represented in this batch"
+ ]
+}
