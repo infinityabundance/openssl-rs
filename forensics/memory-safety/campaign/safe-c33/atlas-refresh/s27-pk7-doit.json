@@ -1,0 +1,127 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S27-pk7-doit",
+  "date": "2026-10-23",
+  "worktree": "dirty: src/pkcs7/pk7_doit.rs plus this receipt",
+  "source_identity": {
+    "requested": "integrate/safe-c33 @ 189753034",
+    "checked_out": "main @ b96e396ef (merge of integrate/safe-c33)",
+    "tree_equivalence": "git diff --stat 189753034 b96e396ef is empty, so the edits are against the requested source tree",
+    "authority": "openssl-3.6.4"
+  },
+  "verification_level": "FAST only (fmt, cargo check --lib, filtered tests, clippy --lib -D warnings). No full suite, no probes, no BOUNDARY/SEAL work. BATCH and SEAL remain NOT_RUN.",
+  "files": [
+    "src/pkcs7/pk7_doit.rs"
+  ],
+  "obligations": [
+    {
+      "id": "S27-1",
+      "mechanism": "PKCS7_dataInit writes RAND_bytes_ex(ivlen) into unsigned char iv[EVP_MAX_IV_LENGTH] and hands the same buffer to EVP_CipherInit_ex",
+      "status": "repaired",
+      "reachability": {
+        "not_reachable_from_asn1_alone": "The cipher is PKCS7_ENC_CONTENT.cipher. The item template (src/pkcs7/pk7_asn1.rs:1151-1174) has only content_type, algorithm and enc_data, and has no d2i callback; grep shows the field is written only by PKCS7_set_cipher (src/pkcs7/pk7_lib.rs:1303). A parsed attacker-supplied envelope therefore leaves cipher == NULL and PKCS7_dataInit refuses at the CIPHER_NOT_INITIALIZED arms before the cipher block. OpenSSL-3.6.4 has the same template shape (forensics/authorities/src/openssl-3.6.4/crypto/pkcs7/pk7_asn1.c:198-202), so this is not a conversion-only property.",
+        "reachable_at_the_c_abi": "EVP_CIPHER_get_iv_length returns cipher->iv_len unchecked (src/evp/cipher.rs:1186-1192). A METH cipher built with EVP_CIPHER_meth_new + EVP_CIPHER_meth_set_iv_length can carry any iv_len (src/evp/cipher.rs:1457,1538) and is accepted by PKCS7_set_cipher whenever its nid is not NID_undef (src/pkcs7/pk7_lib.rs:1273-1313). A provider cipher reports ivlen as a size_t that evp_cipher_cache_constants stores as an int with no bound (src/evp/cipher.rs:594-632), so a third-party provider with ivlen > 16 reaches the same write.",
+        "demonstrated": "pk7_doit_iv_longer_than_the_fixed_buffer_is_refused drives a METH AES-128-CBC cipher with iv_len 32 through PKCS7_set_cipher and PKCS7_dataInit. Pre-fix that call reached RAND_bytes_ex(libctx, iv.as_mut_ptr(), 32, 0) with iv: [u8; 16].",
+        "conclusion": "Attacker-reachable when the application selects the cipher from untrusted input (for example name/OID to EVP_CIPHER_fetch) or loads a provider that reports ivlen > 16. Not demonstrated from a parsed PKCS#7 alone; no in-tree cipher definition with iv_len > 16 was found (legacy statics use 0/8/16; provider rows pass ivbits <= 128). The precondition is now structural regardless."
+      },
+      "pre_fix": "if (ivlen > 0) RAND_bytes_ex(libctx, iv, ivlen, 0); with iv declared [c_uchar; 16]; key had the same shape for EVP_CIPHER_CTX_rand_key.",
+      "fix": "After reading keylen/ivlen, refuse ivlen > 0 && ivlen as usize > EVP_MAX_IV_LENGTH and refuse keylen > 0 && keylen as usize > EVP_MAX_KEY_LENGTH. Both raise PKCS7_DOIT_CIPHER_LENGTH_REFUSED (ERR_LIB_PKCS7, ERR_R_PASSED_INVALID_ARGUMENT, authority coordinates crypto/pkcs7/pk7_doit.c:325, the declined RAND_bytes_ex) and return NULL, which is the authority's failure shape for the surrounding block. Non-positive lengths keep the authority's own control flow.",
+      "divergence": "Inputs the authority would write past a stack buffer are refused with NULL + one error instead of executing undefined behaviour (AGENTS.md section 17, UB in the C authority: do not reproduce). Every length that fits is unchanged.",
+      "related_finding": "The same mechanism exists for the key buffer (EVP_CIPHER_CTX_rand_key writes the context's key length into key[EVP_MAX_KEY_LENGTH]); it is guarded in the same check. No dedicated test constructs keylen > 64."
+    },
+    {
+      "id": "S27-2",
+      "mechanism": "BIO filter-chain construction and teardown in PKCS7_dataInit",
+      "status": "repaired",
+      "pre_fix": "The digest chain was a bare `out: *mut Bio`; only the authority's single err: label (which the Rust port has no equivalent of) released it. Eight direct BIO_free_all calls existed, seven of them releasing only the pending btmp/bio and none releasing an already-built `out` chain.",
+      "leak_paths_fixed": [
+        "md_sk digest loop: pkcs7_bio_add_digest fails after earlier digest filters are linked -> `out` leaked.",
+        "xa (digest arm's md) failure -> `out` leaked.",
+        "BIO_new(BIO_f_cipher()) returns NULL -> digest chain `out` leaked.",
+        "RAND_bytes_ex failure -> digest chain `out` leaked (btmp was freed).",
+        "first EVP_CipherInit_ex failure -> digest chain `out` leaked (btmp and fetched cipher were freed).",
+        "EVP_CIPHER_CTX_rand_key failure -> same.",
+        "second EVP_CipherInit_ex failure -> same.",
+        "ASN1_TYPE_new failure for xalg->parameter -> same.",
+        "EVP_CIPHER_param_to_asn1 failure -> same.",
+        "pkcs7_encode_rinfo failure for any recipient -> same.",
+        "BIO_new(BIO_s_null()) / BIO_new(BIO_s_mem()) returning NULL after filters were built -> filters leaked.",
+        "BIO_write short write into the memory sink (the sink was freed, the built filters were not)."
+      ],
+      "fix": "OwnedChain (Drop = BIO_free_all) holds the head of the chain under construction; a second OwnedChain holds the cipher filter until the success path links it into the chain. Every failure return now drops both owners. The success path transfers the head with into_raw after absorbing the content sink and/or linking the caller's chain. The caller-supplied bio is never adopted: it is pushed into the result on success, or returned unchanged when there are no filters.",
+      "ownership_proof": "Each filter is constructed by exactly one BIO_new in this file and is owned either by the local cipher owner or by the chain owner until it is linked (ownership moves, never duplicates). into_raw is the only escape and is reached only after the final link and os release. The authority's err: tail (ASN1_OCTET_STRING_free(os), EVP_CIPHER_free(fetched_cipher), BIO_free_all(out), BIO_free_all(btmp)) is now expressed as guards plus the two explicit frees that are not chain owners."
+    }
+  ],
+  "unsafe_accounting": {
+    "production_unsafe_blocks_textual": {
+      "before": 350,
+      "after": 351,
+      "note": "The count is not the metric. The additions are the owner's two linkage/release operations (BIO_push in absorb, BIO_free_all in Drop, each with a SAFETY contract) and a restructured xalg->parameter read, offset by one deleted compound block."
+    },
+    "test_only_unsafe_blocks": 13,
+    "bio_free_all_expressions_in_PKCS7_dataInit": {
+      "before": 8,
+      "after": 0,
+      "note": "All releases are consolidated into OwnedChain::drop."
+    },
+    "unsafe_operations_removed": [
+      "7 scattered BIO_free_all(btmp) / BIO_free_all(bio) failure-path calls in PKCS7_dataInit",
+      "1 BIO_free_all(bio) short-write call",
+      "1 compound unsafe block for ASN1_TYPE_new + NULL test (restructured into two single-purpose blocks)"
+    ],
+    "unsafe_operations_relocated": [
+      "chain release -> OwnedChain::drop (one site, documented contract)",
+      "chain append -> OwnedChain::absorb (one site)"
+    ],
+    "unsafe_operations_introduced": [
+      "OwnedChain::adopt (unsafe fn, # Safety: exclusive ownership of a live chain, NULL valid)",
+      "OwnedChain::absorb's BIO_push call",
+      "OwnedChain::drop's BIO_free_all call"
+    ],
+    "hidden_obligations": []
+  },
+  "structural_guards": {
+    "no_mangle_diff_lines": 0,
+    "repr_c_diff_lines": 0,
+    "allocator_seam_changes": 0,
+    "note": "git diff -U0 shows no added or removed line containing CRYPTO_, SeamFile, no_mangle or repr(C). No new allocation, allocation size, file or line was introduced."
+  },
+  "tests": {
+    "added": [
+      {
+        "name": "pk7_doit_iv_longer_than_the_fixed_buffer_is_refused",
+        "asserts": "PKCS7_dataInit returns NULL; ERR_R_PASSED_INVALID_ARGUMENT is raised; the canary fired; the one cipher filter allocated was released exactly once by address."
+      },
+      {
+        "name": "pk7_doit_failed_digest_chain_releases_every_filter_once",
+        "asserts": "two algorithms (SHA256 then an unknown OID 1.2.3.4.5.6.7.8); the second add fails; both constructed filters are released exactly once by address."
+      },
+      {
+        "name": "pk7_doit_pre_fix_iv_overflow_negative_control",
+        "asserts": "the cfg(test)-only canary fires on the oversized-IV condition and stays quiet for a fitting 16-byte IV."
+      }
+    ],
+    "observation": "Thread-local test hooks record construction and release addresses ([cfg(test)] test_hooks::note_filter_alloc / note_filter_free / note_chain_release). note_chain_release walks the chain with BIO_next immediately before BIO_free_all, so the record is the exact set of addresses about to be released; a second record of an address is a double release and a missing one is a leak. Compiled out of every non-test build.",
+    "run": "cargo test --lib pk7_doit_ -- --test-threads=4 --nocapture",
+    "result": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2098 filtered out; finished in 0.01s",
+    "canary_output": [
+      "pk7_doit canary: pre-fix RAND_bytes_ex would write 32 bytes into a 16 byte stack buffer",
+      "pk7_doit canary: fired = true (oversized IV refusal reached)",
+      "pk7_doit canary: fired = false for a 16 byte IV (result: chain)"
+    ]
+  },
+  "gate": {
+    "cargo fmt --all -- --check": "FMT_OK (exit 0)",
+    "cargo check --lib": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.22s (no warnings)",
+    "cargo clippy --lib -- -D warnings": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.49s (no diagnostics)",
+    "filtered_tests": "3 passed; 0 failed (see tests.result)",
+    "structural": "0 no_mangle diff lines, 0 repr(C) diff lines, 0 allocator-seam diff lines"
+  },
+  "not_established": [
+    "No in-tree cipher was exhaustively enumerated for iv_len > 16; the claim is limited to the definitions inspected (legacy statics 0/8/16, provider ivbits <= 128) and to the fact that the precondition is now enforced independently of that enumeration.",
+    "Attacker reachability without application cooperation (a parsed PKCS#7 selecting a long-IV cipher) is excluded for this implementation and the authority by the template shape, but a downstream application that maps untrusted input to a fetched cipher is out of this file's scope and was not audited.",
+    "The key-buffer branch of the same guard has no dedicated test.",
+    "secret key material in the stack `key` array is still cleansed only on the success path, as in the authority (OPENSSL_cleanse at the end of the cipher block). Failure paths after EVP_CIPHER_CTX_rand_key still leave the key bytes on the stack; recorded as a retained obligation and not changed in this batch.",
+    "Full library suite, adversarial probes, Miri/ASan and differential courts were not run (FAST gate only)."
+  ]
+}
