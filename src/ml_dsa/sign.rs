@@ -201,10 +201,20 @@ impl<'a> Scratch<'a> {
     /// # Safety
     ///
     /// `ptr` names `len` writable bytes owned by the caller for `'a` (the `OwnedBuf` that outlives
-    /// every partition).
+    /// every partition). The contents are discarded: the constructor zero-initialises the whole
+    /// block before the first partition view exists.
     pub(crate) unsafe fn new(ptr: *mut u8, len: usize) -> Scratch<'a> {
+        // The authority's scratch blob is uninitialised until each helper fills its partition, so
+        // forming a `&mut [u8]` over it would be a reference to uninitialised storage (AGENTS.md
+        // §2). Zeroing the block first makes every partition a valid `u8`/`Poly` view; `Poly` is
+        // `[u32; 256]`, so all-zero is a valid element, and no caller consumes an indeterminate
+        // byte (the authority's own readers would be reading an indeterminate value).
+        // SAFETY: the contract gives `ptr` `len` writable bytes for `'a`; writing through the raw
+        // pointer is defined before any typed view exists.
+        unsafe { core::ptr::write_bytes(ptr, 0, len) };
         Scratch {
-            // SAFETY: the contract gives `ptr` that extent for `'a`.
+            // SAFETY: every byte was initialised by the write above and the block belongs to the
+            // caller for `'a`.
             bytes: unsafe { core::slice::from_raw_parts_mut(ptr, len) },
         }
     }
@@ -921,5 +931,35 @@ pub(crate) unsafe fn ossl_ml_dsa_verify(
         EVP_MD_CTX_free(md_ctx);
         OPENSSL_cleanse(mu.as_mut_ptr().cast(), mu.len());
         ret
+    }
+}
+
+#[cfg(test)]
+mod uninit_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+
+    /// Every partition the cursor hands out is a view over initialised bytes: the block is
+    /// poisoned first, and `Scratch::new` must zero it before `take_bytes`/`take_polys` can form a
+    /// reference (the pre-fix constructor formed the `&mut [u8]` directly, which was undefined).
+    #[test]
+    fn ml_dsa_uninit_scratch_partitions_are_initialised() {
+        let mut blob = vec![0xA5u8; 3 * core::mem::size_of::<Poly>() + 16];
+        // SAFETY: `blob` owns its bytes, is writable for the whole length, and outlives `scratch`.
+        let mut scratch = unsafe { Scratch::new(blob.as_mut_ptr(), blob.len()) };
+
+        let bytes = scratch.take_bytes(16).expect("16 bytes are available");
+        assert!(
+            bytes.iter().all(|&b| b == 0),
+            "a byte partition is initialised before it is borrowed"
+        );
+        let polys = scratch
+            .take_polys(3)
+            .expect("three polynomials are available");
+        assert!(
+            polys.iter().all(|p| p.coeff.iter().all(|&c| c == 0)),
+            "a polynomial partition is initialised before it is borrowed"
+        );
     }
 }

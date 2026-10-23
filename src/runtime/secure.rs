@@ -709,10 +709,51 @@ pub unsafe extern "C" fn CRYPTO_secure_clear_free(
             // observes it.
             unsafe {
                 cleanse(ptr.cast::<u8>(), num);
+                #[cfg(test)]
+                cleanse_probe::record(ptr.cast::<u8>(), num);
                 CRYPTO_free(ptr, file, line);
             }
         }
     })
+}
+
+/// Test-only observation of the plain-path cleansing step above.
+///
+/// The secure-heap path is observed through [`test_arena_bytes`]; this probe covers the documented
+/// fallback used when no heap is initialised, capturing the bytes *after* the cleanse and *before*
+/// the release, so a test never reads freed memory. A dead probe (no heap and no matching release)
+/// leaves [`observed`] as `None`, which a test must not treat as a pass.
+#[cfg(test)]
+pub(crate) mod cleanse_probe {
+    use core::cell::{Cell, RefCell};
+
+    thread_local! {
+        static ARMED: Cell<Option<(usize, usize)>> = const { Cell::new(None) };
+        static OBSERVED: RefCell<Option<Vec<u8>>> = const { RefCell::new(None) };
+    }
+
+    /// Arm the next release whose `(ptr, num)` pair matches; clears any previous capture.
+    pub(crate) fn arm(ptr: *const u8, len: usize) {
+        OBSERVED.with(|observed| *observed.borrow_mut() = None);
+        ARMED.with(|armed| armed.set(Some((ptr as usize, len))));
+    }
+
+    /// The captured bytes, or `None` if the armed release did not run.
+    pub(crate) fn observed() -> Option<Vec<u8>> {
+        OBSERVED.with(|observed| observed.borrow().clone())
+    }
+
+    /// Called by the release seam after the cleanse, before the block is freed.
+    pub(crate) fn record(ptr: *const u8, len: usize) {
+        if ARMED.with(Cell::get) != Some((ptr as usize, len)) {
+            return;
+        }
+        ARMED.with(|armed| armed.set(None));
+        // SAFETY: the caller cleansed `ptr` for `len` bytes immediately before this call, so the
+        // range is live and readable for this copy; the block is not freed until after it returns.
+        let bytes = unsafe { core::slice::from_raw_parts(ptr, len) }.to_vec();
+        OBSERVED.with(|observed| *observed.borrow_mut() = Some(bytes));
+    }
 }
 
 /// `int CRYPTO_secure_allocated(const void *ptr)`
