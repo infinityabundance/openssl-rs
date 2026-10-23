@@ -68,7 +68,14 @@ struct OwnedBuf {
 }
 
 impl OwnedBuf {
-    /// `CRYPTO_malloc(len, file, line)`, or `None` when the allocator answers NULL.
+    /// `CRYPTO_malloc(len, file, line)`, zero-initialised, or `None` when the allocator answers
+    /// NULL.
+    ///
+    /// The authority allocates these conversion buffers with `OPENSSL_malloc` and every writer in
+    /// this unit fills the whole extent before it is read. The owner establishes that initial state
+    /// itself — zero is a valid `u8` and the authority's own empty-string state — so
+    /// [`Self::as_mut_slice`] can never lend a reference over uninitialised storage (AGENTS.md §2).
+    /// The allocation event (same size, `file`, `line`) is unchanged.
     fn new(len: usize, file: SeamFile, line: c_int) -> Option<OwnedBuf> {
         let file = file.as_ptr();
         let raw = unsafe {
@@ -79,6 +86,9 @@ impl OwnedBuf {
         if raw.is_null() {
             return None;
         }
+        // SAFETY: `raw` is a live block of `len` writable bytes this call exclusively owns, and
+        // writing zero through the raw pointer before any typed view exists is defined.
+        unsafe { core::ptr::write_bytes(raw, 0u8, len) };
         Some(OwnedBuf {
             ptr: raw,
             len,
@@ -88,9 +98,13 @@ impl OwnedBuf {
     }
 
     /// The block as a writable slice of exactly the length it was allocated with.
+    ///
+    /// Sound for a safe caller: [`Self::new`] initialises the whole extent before the handle is
+    /// returned, so the slice never covers uninitialised storage.
     fn as_mut_slice(&mut self) -> &mut [u8] {
-        // SAFETY: `self.ptr` is the live block `new` allocated with `self.len` writable bytes, and
-        // this handle is its only owner and lends it exclusively for this borrow.
+        // SAFETY: `self.ptr` is the live, initialised block `new` allocated with `self.len`
+        // writable bytes, and this handle is its only owner and lends it exclusively for this
+        // borrow.
         unsafe { core::slice::from_raw_parts_mut(self.ptr, self.len) }
     }
 
@@ -525,8 +539,21 @@ pub unsafe extern "C" fn d2i_PKCS12_fp(fp: *mut StdioFile, p12: *mut *mut Pkcs12
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
+
     use super::*;
     use crate::runtime::mem::CRYPTO_free;
+
+    /// The owning conversion buffer is safe to borrow immediately: `new` zero-initialises the
+    /// block before any typed view exists, so `as_mut_slice` never covers uninitialised storage.
+    #[test]
+    fn p12_uninit_owning_buffer_exposes_initialised_bytes() {
+        let _guard = crate::test_support::lock_global_state();
+        let mut buf = OwnedBuf::new(16, SeamFile::new(FILE), LINE).expect("16 bytes must allocate");
+        assert_eq!(buf.as_mut_slice(), &[0u8; 16]);
+        buf.as_mut_slice()[3] = 0x5A;
+        assert_eq!(buf.as_mut_slice()[3], 0x5A);
+    }
 
     /// The naive pair round-trips a fixed ASCII string, including the double-NUL tail
     /// `asc2uni` writes and the single NUL `uni2asc` produces.
