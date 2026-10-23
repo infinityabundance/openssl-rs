@@ -5,8 +5,8 @@
     "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
     "candidate_identity": {
       "install_prefix": "artifacts/phase2/install",
-      "libcrypto_so_3_sha256": "01e774b386f35bd917245bc539ad462d2631305a794dfbd0df279e90b17d9f6e",
-      "libssl_so_3_sha256": "43dfcad45f7196d882e8fb583de68bda146c2d537ce30969cdbcc30b9d1f5dca"
+      "libcrypto_so_3_sha256": "77eaf1b5695d51e08ee147e279206f22f4e43e58dc63725bde96d71bf27a9413",
+      "libssl_so_3_sha256": "d5ad8d903944aefac209f77de76a69774470c6d5a2a58007549384848d5c7903"
     },
     "counts": {
       "authority_applicable_level": {
@@ -176674,7 +176674,7 @@
       }
     ]
   },
-  "body_hash": "47bfa13fff2abd55540f1838983c3000f5c5048cc9355d80bdfd792c12bbe574",
+  "body_hash": "8d8375b0930b88d1b62ecada8fc5c7dd6aef2e887a41ddf2760584fea249bea3",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {

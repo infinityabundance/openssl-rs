@@ -178,16 +178,17 @@ pub(crate) const STANDARD_NAME2TYPE: [(c_int, &CStr); 12] = [
 /// `int evp_pkey_name2type(const char *name)`.
 ///
 /// The twelve-name table first, compared with **`OPENSSL_strcasecmp`** — so `"rsa"`, `"Rsa"` and
-/// `"RSA"` are one name — and then the `EVP_PKEY_type` fallback, which is Phase 8's and is the one
-/// line of this function that is not here. See the module documentation: nothing exported can
-/// observe the gap, and the record for it is D163.
+/// `"RSA"` are one name — and then the authority's method-table fallback:
+/// `EVP_PKEY_type(OBJ_sn2nid(name))`, and, when that answers `NID_undef`,
+/// `EVP_PKEY_type(OBJ_ln2nid(name))`. A spelling outside the twelve that the object table knows as
+/// a method's own name — `"rsaEncryption"` — therefore resolves to that method's NID, which is what
+/// a legacy origin key reaching `EVP_PKEY_is_a` observes.
 ///
 /// `name` is **not** guarded against NULL and the authority does not guard it either: the first
 /// thing the body does is hand it to a comparison, so a NULL is the caller's fault on both sides.
 ///
 /// # Safety
 /// `name` must be a NUL-terminated C string.
-#[allow(dead_code)] // no caller until `keymgmt_meth.c`'s `legacy_alg` fill lands, in this subphase
 pub(crate) unsafe fn evp_pkey_name2type(name: *const c_char) -> c_int {
     // SAFETY: `name` is NUL-terminated per the contract.
     let bytes = unsafe { CStr::from_ptr(name) }.to_bytes();
@@ -196,13 +197,17 @@ pub(crate) unsafe fn evp_pkey_name2type(name: *const c_char) -> c_int {
             return id;
         }
     }
-    /* Phase 8: `EVP_PKEY_type(OBJ_sn2nid(name))` and then `EVP_PKEY_type(OBJ_ln2nid(name))`. Both
-     * are absent because `EVP_PKEY_type` seaches a table of method objects that stratum defines.
-     * The two object lookups themselves are available, and they are named here so that the gap is
-     * exactly three lines wide rather than a paragraph: a name that is neither one of the twelve
-     * above nor a provider-published key type answers `NID_undef` today, and will answer a NID once
-     * Phase 8 lands. */
-    let _ = (OBJ_sn2nid, OBJ_ln2nid);
+    // `EVP_PKEY_type(OBJ_sn2nid(name))`, then `EVP_PKEY_type(OBJ_ln2nid(name))`.
+    // SAFETY: `name` is NUL-terminated per the contract; `EVP_PKEY_type` touches no pointer.
+    let type_ = unsafe { EVP_PKEY_type(OBJ_sn2nid(name)) };
+    if type_ != NID_undef {
+        return type_;
+    }
+    // SAFETY: as above.
+    let type_ = unsafe { EVP_PKEY_type(OBJ_ln2nid(name)) };
+    if type_ != NID_undef {
+        return type_;
+    }
     NID_undef
 }
 
@@ -5479,8 +5484,43 @@ mod tests {
         }
     }
 
-    /// The documented gap, asserted so that its size is a test rather than a claim: a name outside
-    /// the twelve answers `NID_undef` today and will answer a NID once Phase 8 lands.
+    /// The method-table fallback: a spelling outside the twelve that the object table knows is
+    /// resolved through `EVP_PKEY_type(OBJ_sn2nid(name))` and, when that answers `NID_undef`,
+    /// `EVP_PKEY_type(OBJ_ln2nid(name))`, exactly as the authority does. `"rsaEncryption"` is
+    /// `NID_rsaEncryption`'s own object name, so a legacy origin key asked
+    /// `EVP_PKEY_is_a(pkey, "rsaEncryption")` must match rather than answer 0.
+    #[test]
+    fn a_method_name_outside_the_table_resolves_through_the_object_lookup() {
+        // SAFETY: every argument is a NUL-terminated constant.
+        unsafe {
+            assert_eq!(
+                evp_pkey_name2type(c"rsaEncryption".as_ptr()),
+                NID_rsaEncryption
+            );
+            // `id-ecPublicKey` is the object table's name for the EC method's NID; the method
+            // table answers the same id, so the fallback is an identity here.
+            assert_eq!(
+                evp_pkey_name2type(c"id-ecPublicKey".as_ptr()),
+                NID_X9_62_id_ecPublicKey
+            );
+        }
+
+        // The reachable form: a legacy origin key (`keymgmt == NULL`) answers `EVP_PKEY_is_a`
+        // from its type, and the long spelling must match it rather than answer 0.
+        // SAFETY: `pkey` is this test's own live object; the name is NUL-terminated.
+        unsafe {
+            let pkey = EVP_PKEY_new();
+            assert!(!pkey.is_null());
+            assert_eq!(EVP_PKEY_set_type(pkey, NID_rsaEncryption), 1);
+            assert!((*pkey).keymgmt.is_null());
+            assert_eq!(EVP_PKEY_is_a(pkey, c"rsaEncryption".as_ptr()), 1);
+            assert_eq!(EVP_PKEY_is_a(pkey, c"no-such-key-type".as_ptr()), 0);
+            EVP_PKEY_free(pkey);
+        }
+    }
+
+    /// A name the twelve-name table does not carry and the object table does not resolve answers
+    /// `NID_undef`.
     #[test]
     fn a_name_outside_the_table_is_the_phase_8_gap() {
         // SAFETY: the argument is a NUL-terminated constant.

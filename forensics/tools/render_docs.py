@@ -55,6 +55,9 @@ BLOCKS = {
     "readme-l7-families": README,
     "readme-memory-safety": README,
     "status-current-evidence": STATUS_DOC,
+    "status-mechanisms": STATUS_DOC,
+    "status-subphase-outcomes": STATUS_DOC,
+    "status-reduction-census": STATUS_DOC,
 }
 
 
@@ -457,6 +460,7 @@ class Evidence:
     # -- blocks ---------------------------------------------------------
     def achievements(self) -> str:
         corpus = self.corpus()
+        reuse = self.atlas.get("body", {}).get("evidence_reuse") or {}
         mechanisms = ", ".join(
             f"{m['id']} {m['mechanism']}".replace("shared reference counting", "refcounting")
             for m in self.mechanisms
@@ -509,6 +513,13 @@ class Evidence:
                 f"**{self.publish['version']}** on crates.io ({self.publish['date']}), "
                 f"checksum `{self.publish['checksum']}…` | "
                 f"`{self.publish['source']}` |",
+                "",
+                "Downstream evidence reuse: "
+                f"**{reuse.get('families_reused', '?')} families carried forward** "
+                f"(`{reuse.get('mode', '?')}`); `candidate_identity_match` = "
+                f"`{reuse.get('candidate_identity_match', '?')}`. A reused row is "
+                "compatibility evidence from the build recorded on that row, not a fresh "
+                "measurement at the identity above.",
             ]
         )
 
@@ -617,6 +628,53 @@ class Evidence:
             ]
         )
 
+    def status_mechanisms(self) -> str:
+        rows = [
+            "| id | mechanism | source | state | evidence |",
+            "|---|---|---|---|---|",
+        ]
+        for m in self.status.get("mechanism_discharges") or []:
+            evidence = ", ".join(f"`{e}`" for e in (m.get("evidence") or []))
+            rows.append(
+                f"| {m.get('id', '?')} | {m.get('mechanism', '?')} | "
+                f"`{m.get('source', '?')}` | {m.get('state', '?')} | {evidence} |"
+            )
+        return "\n".join(rows)
+
+    def status_subphase_outcomes(self) -> str:
+        rows = ["| subphase | outcome | evidence |", "|---|---|---|"]
+        for s in self.status.get("subphase_outcomes") or []:
+            rows.append(
+                f"| {s.get('subphase', '?')} | {s.get('outcome', '?')} | "
+                f"`{s.get('evidence', '?')}` |"
+            )
+        return "\n".join(rows)
+
+    def status_reduction_census(self) -> str:
+        r = self.status.get("reduction_census") or {}
+        if not r:
+            return (
+                "**UNKNOWN** — no reduction census is recorded in "
+                "`CAMPAIGN-STATUS.json`."
+            )
+        return "\n".join(
+            [
+                "| class | count | state |",
+                "|---|---|---|",
+                f"| BENIGN | {r['benign']} | no behaviour removed |",
+                f"| DIVERGENCE | {r['divergence']} | explicit, compatibility "
+                "consequence recorded |",
+                f"| LATENT REGRESSION | {r['latent_regression']} | "
+                f"{r.get('latent_repaired_before_census', '?')} repaired before the "
+                f"census; {r.get('latent_closed_by_s20', '?')} closed by S20; "
+                f"**{r.get('latent_open_now', '?')} open now** |",
+                "",
+                f"Highest-scoring open entry at the census: "
+                f"{r.get('highest_score_open_at_census', '?')}. Source: "
+                f"`{r.get('artifact', '?')}`. {r.get('note', '')}",
+            ]
+        )
+
     def status_evidence(self) -> str:
         corpus = self.corpus()
         mechanisms = ", ".join(m["id"] for m in self.mechanisms)
@@ -661,6 +719,9 @@ class Evidence:
             "readme-l7-families": self.l7_families(),
             "readme-memory-safety": self.memory_safety(),
             "status-current-evidence": self.status_evidence(),
+            "status-mechanisms": self.status_mechanisms(),
+            "status-subphase-outcomes": self.status_subphase_outcomes(),
+            "status-reduction-census": self.status_reduction_census(),
         }
 
 
