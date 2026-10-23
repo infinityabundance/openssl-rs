@@ -1,0 +1,166 @@
+{
+  "receipt": "s29-srvr-clienthello",
+  "date": "2026-10-23",
+  "mechanism": "CLIENTHELLO_EXTENSION_BOUNDARY",
+  "subphase": "S29: server ClientHello extension block — state-preserving parse and single commit",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "46a9b64ab",
+    "source_commits": [],
+    "committed": false,
+    "changed_files": 3,
+    "diffstat": "src/ssl/statem/statem_srvr.rs +1110/-448; src/ssl/t1_lib.rs +26/-8; src/ssl/tls13_enc.rs +56/-6 (working tree; no commit made)",
+    "scope": "tls_process_client_hello's extension block in src/ssl/statem/statem_srvr.rs, plus the shared sig-algs validator (t1_lib.rs) and the binder compare (tls13_enc.rs). Whole-file ZERO_UNSAFE is explicitly out of scope."
+  },
+  "authority": {
+    "source": "openssl-3.5.0 fetched 2026-10-23 (ssl/statem/statem_srvr.c, ssl/statem/extensions.c, ssl/statem/extensions_srvr.c, ssl/statem/statem_lib.c)",
+    "abi": "No #[repr(C)], #[no_mangle]/#[export_name], extern \"C\" signature, exported symbol, or allocator-seam constant changed. 0 diff lines containing repr(C)/no_mangle/export_name; 0 diff lines containing extern \"C\".",
+    "authority_behaviour": [
+      "statem_srvr.c:1621-1658: regular ClientHello body framing failures are SSL_AD_DECODE_ERROR / SSL_R_LENGTH_MISMATCH; a legacy-version read failure is SSL_R_LENGTH_TOO_SHORT.",
+      "extensions.c tls_collect_extensions: extension header/body overrun is SSL_AD_DECODE_ERROR / SSL_R_BAD_EXTENSION; a duplicate recognised extension, or pre_shared_key that is not the last extension, is SSL_AD_ILLEGAL_PARAMETER / SSL_R_BAD_EXTENSION.",
+      "extensions_srvr.c:105-175 tls_parse_ctos_server_name: DECODE_ERROR/BAD_EXTENSION for framing; UNRECOGNIZED_NAME/BAD_EXTENSION for a name longer than TLSEXT_MAXLEN_host_name or containing NUL.",
+      "extensions_srvr.c:455-486 tls_parse_ctos_alpn: DECODE_ERROR/BAD_EXTENSION for a malformed list or a zero-length protocol name.",
+      "extensions_srvr.c:1215-1240 tls_parse_ctos_supported_groups: DECODE_ERROR/BAD_EXTENSION unless the list is non-empty, even-length and inside the body.",
+      "extensions_srvr.c:573-590 tls_parse_ctos_psk_kex_modes: DECODE_ERROR/BAD_EXTENSION unless a non-empty length-prefixed mode list fits the body.",
+      "extensions_srvr.c:1306-1460 tls_parse_ctos_psk: each identity is identity<2>||age(4); structural truncation is DECODE_ERROR/BAD_EXTENSION. The binders vector is read only when sess != NULL; a resolved ticket requires binder length == hashsize (else BAD_EXTENSION).",
+      "extensions_srvr.c:826-900 tls_parse_ctos_key_share / extract_keyshares: a truncated entry or empty key is DECODE_ERROR / SSL_R_LENGTH_MISMATCH.",
+      "statem_lib.c:2179-2240 ssl_choose_server_version: supported_versions is list_len(1)||version(2)...; overrun or a half version is SSL_R_LENGTH_MISMATCH, an empty list SSL_R_UNSUPPORTED_PROTOCOL, both raised with SSL_AD_PROTOCOL_VERSION by the caller.",
+      "extensions.c final_psk: pre_shared_key without psk_key_exchange_modes is TLS13_AD_MISSING_EXTENSION / SSL_R_MISSING_PSK_KEX_MODES_EXTENSION.",
+      "extensions_srvr.c:1549-1565 tls_parse_ctos_post_handshake_auth: DECODE_ERROR / SSL_R_POST_HANDSHAKE_AUTH_ENCODING_ERR."
+    ]
+  },
+  "stop_status": "NO CONFIRMED MEMORY-SAFETY DEFECT REMAINS IN THE REVIEWED SCOPE. One genuine out-of-bounds read existed in the resumption binder path (tls13_psk_do_binder read hashsize bytes through a bare *const u8 supplied from an attacker-length binder) and is fixed. The boundary is OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED: residuals are enumerated below and BOUNDARY/SEAL evidence was not run.",
+  "boundaries": [
+    {
+      "id": "S29-CH-PARSE",
+      "file": "src/ssl/statem/statem_srvr.rs parse_client_hello_extensions",
+      "operation": "ClientHello extension collection and body parsing",
+      "before": "One in-place walk over the raw block wrote s->ext_hostname, s->s3.alpn_proposed, s->ext_status_type, s->post_handshake_auth and s->s3.tmp.peer_sigalgs as each extension was reached; a later malformed extension left those members published on a rejected hello. Lengths were computed by hand (eb[i], 5+nlen, 2+list_len, min(...)) and several truncations silently stopped the walk.",
+      "after": "A two-pass safe function over &[u8]: pass 1 replays tls_collect_extensions (header framing, duplicate recognised type, pre_shared_key last); pass 2 parses each body through SliceCursor into ParsedExtensions, which only borrows the handshake message. The function returns Result<ParsedExtensions, HelloReject> and never touches Ssl.",
+      "mechanism": "ELIMINATED: mid-walk publication; unchecked/manual length arithmetic; silent truncation acceptance.",
+      "hidden": 0,
+      "state": "IMPLEMENTED + FAST-tested (author). Independent review NOT_RUN."
+    },
+    {
+      "id": "S29-CH-COMMIT",
+      "file": "src/ssl/statem/statem_srvr.rs commit_client_hello",
+      "operation": "publication of the parsed extension set into the connection",
+      "before": "No single commit point; five members were written at five different points in the walk.",
+      "after": "One unsafe fn with five unsafe blocks is the only writer: it allocates the SNI C-string and ALPN blob first (OwnedCStr/OwnedBuf, so a failure releases them), stores sigalgs next, copies client_random/session-id, then installs SNI, ALPN, status type and PHA. It runs only after the whole block and the client_hello callback succeed.",
+      "mechanism": "RELOCATED: five publication unsafe blocks into one auditable function; behaviourally atomic on rejected hellos.",
+      "hidden": 0,
+      "state": "IMPLEMENTED + FAST-tested (author)."
+    },
+    {
+      "id": "S29-CH-REJECT",
+      "file": "src/ssl/statem/statem_srvr.rs tls_process_client_hello",
+      "operation": "fatal rejection and state-machine poisoning",
+      "before": "About a dozen framing/extension failures returned 0 with no alert and no MSG_FLOW_ERROR transition; the caller supplied a generic internal error only when reached through the driver.",
+      "after": "Every failure returns through one closure that calls ossl_statem_fatal with the authority's alert/reason, which sets MSG_FLOW_ERROR and writes the fatal alert. A rejected ClientHello is therefore explicitly poisoned, never reusable with partial state (the authority also terminates on every one of these paths).",
+      "mechanism": "ELIMINATED: silent 0 returns. RELOCATED: one unsafe call site for the fatal transition.",
+      "hidden": 0,
+      "state": "IMPLEMENTED + FAST-tested (author)."
+    },
+    {
+      "id": "S29-PSK-BINDER",
+      "file": "src/ssl/tls13_enc.rs tls13_psk_do_binder; src/ssl/statem/statem_srvr.rs resumption arm",
+      "operation": "received TLS1.3 binder compare",
+      "before": "received was *const u8; the function read md_size bytes unconditionally. tls_process_client_hello passed psk_binder.as_ptr() for a binder of any non-zero length. A client with a valid ticket and a 1-byte binder caused an out-of-bounds read past the ClientHello message.",
+      "after": "received is &[u8]; the function requires received.len() == hashsize before the full-length constant-time accumulation. The caller also computes the session cipher's digest size and refuses a resolved-ticket binder whose length differs with the authority's DECODE_ERROR/BAD_EXTENSION, and bounds the binder transcript offset against hs.len().",
+      "mechanism": "ELIMINATED: a received-binder length the input does not contain (the only unsafe deref in the compare now reads the caller's hashsize buffer, with the slice length checked).",
+      "hidden": 0,
+      "state": "FIXED (author) + regression test binder_length_must_match_the_digest_size. Independent review NOT_RUN."
+    }
+  ],
+  "unsafe_ops": {
+    "removed": "17 unsafe blocks in statem_srvr.rs (397 -> 380 for the file; 72 -> 51 in tls_process_client_hello). The extension parse itself contains 0 unsafe blocks.",
+    "retained": "51 blocks in tls_process_client_hello (the pre-existing connection/driver calls and the one fatal-transition closure) + 5 in commit_client_hello. t1_lib.rs's block count is unchanged (validation moved to the safe helper). tls13_enc.rs's block count is unchanged but the compare now dereferences only the writable output buffer.",
+    "introduced": "5 blocks, all in commit_client_hello: two allocation calls (OwnedCStr::strndup, OwnedBuf::new_memdup), one sigalgs store, one member-slot clear/store pair, and the client_random/tmp_session_id copies. Each has a SAFETY contract naming the live connection and the member-buffer/allocator invariant."
+  },
+  "malformed_cases": [
+    {"case": "truncated extension length (one byte where the 2-byte vector length belongs)", "result": "rejected", "alert": "50 decode_error", "reason": "159 length_mismatch", "test": "truncated_extension_length_is_length_mismatch"},
+    {"case": "extension length exceeding the ClientHello body", "result": "rejected", "alert": "50 decode_error", "reason": "159 length_mismatch", "test": "extension_length_exceeding_the_body_is_length_mismatch"},
+    {"case": "trailing bytes after the declared extension vector", "result": "rejected", "alert": "50 decode_error", "reason": "159 length_mismatch", "test": "trailing_bytes_after_the_extension_vector_are_length_mismatch"},
+    {"case": "lone byte inside the extension vector (no room for a header)", "result": "rejected", "alert": "50 decode_error", "reason": "110 bad_extension", "test": "truncated_extension_header_is_bad_extension"},
+    {"case": "duplicate supported_versions", "result": "rejected", "alert": "47 illegal_parameter", "reason": "110 bad_extension", "test": "duplicate_supported_versions_is_rejected_like_the_authority"},
+    {"case": "zero-length supported_groups", "result": "rejected", "alert": "50 decode_error", "reason": "110 bad_extension", "test": "zero_length_supported_groups_is_bad_extension"},
+    {"case": "supported_versions list longer than the extension body", "result": "rejected", "alert": "70 protocol_version", "reason": "159 length_mismatch", "test": "oversized_supported_versions_list_is_length_mismatch"},
+    {"case": "truncated key_share entry (declared 32-byte key absent)", "result": "rejected", "alert": "50 decode_error", "reason": "159 length_mismatch", "test": "truncated_key_share_entry_is_length_mismatch"},
+    {"case": "oversized SNI (256-byte host_name)", "result": "rejected", "alert": "112 unrecognized_name", "reason": "110 bad_extension", "test": "oversized_sni_is_unrecognized_name_and_not_published"},
+    {"case": "ALPN with a zero-length protocol name", "result": "rejected", "alert": "50 decode_error", "reason": "110 bad_extension", "test": "alpn_with_a_zero_length_protocol_name_is_bad_extension"},
+    {"case": "PSK identity vector with a truncated entry (missing age)", "result": "rejected", "alert": "50 decode_error", "reason": "110 bad_extension", "test": "psk_identity_with_a_truncated_entry_is_bad_extension"},
+    {"case": "zero-length PSK identity (one empty identity entry)", "result": "rejected", "alert": "50 decode_error", "reason": "110 bad_extension", "test": "zero_length_psk_identity_is_bad_extension"},
+    {"case": "PSK without psk_key_exchange_modes", "result": "rejected", "alert": "109 missing_extension", "reason": "310 missing_psk_kex_modes_extension", "test": "psk_without_psk_kex_modes_is_missing_extension"},
+    {"case": "PSK identities/binders count mismatch, no resolvable ticket", "result": "accepted (r=1)", "alert": "none", "reason": "none", "test": "psk_binder_count_mismatch_is_not_checked_without_a_resolved_ticket", "note": "Authority behaviour: tls_parse_ctos_psk returns 1 at `if (sess == NULL) return 1;` before reading the binders vector (extensions_srvr.c:1439-1453). The binder count is only checked once a ticket resolves; this no-ticket harness cannot reach that branch, so acceptance is the authority's documented outcome, not a missed rejection. A resolved-ticket binder of the wrong length is now fatal DECODE_ERROR/BAD_EXTENSION (same file, resumption arm)."},
+    {"case": "non-empty post_handshake_auth", "result": "rejected", "alert": "50 decode_error", "reason": "278 post_handshake_auth_encoding_err", "test": "non_empty_post_handshake_auth_uses_its_own_reason"}
+  ],
+  "state_preservation": {
+    "result": "explicitly poisoned; not reusable",
+    "authority": "Every listed parse failure calls SSLfatal, whose ossl_statem_send_fatal sets MSG_FLOW_ERROR and sends the fatal alert; the connection is terminated (ssl/statem/statem.c:147-174). OpenSSL does not retry a ClientHello on the same SSL object after a fatal parse error.",
+    "observed": "assert_rejected checks ossl_statem_in_error(s) != 0 for every malformed case. rejected_hello_publishes_no_extension_state additionally proves no extension-derived member was published before the failure: ext_hostname NULL, s3_alpn_proposed (NULL,0), post_handshake_auth 0, ext_status_type TLSEXT_STATUSTYPE_NOTHING, tmp_session_id_len 0, client_random all-zero.",
+    "test": "rejected_hello_publishes_no_extension_state"
+  },
+  "canary": {
+    "test": "negative_control_pre_fix_partial_publication_is_detected",
+    "description": "Test-only reproduction of the pre-fix walk's SNI write before a later extension failure: the canary installs the hostname through ext_hostname_slot and asserts ext_hostname() is non-NULL ('canary fired: the pre-fix order publishes SNI on a hello that is then rejected'). The real parser on the same malformed input is asserted clean by rejected_hello_publishes_no_extension_state.",
+    "output": "ok (assertion message recorded above)"
+  },
+  "compatibility_corrections": [
+    "Duplicate recognised extensions: was accepted; now SSL_AD_ILLEGAL_PARAMETER / SSL_R_BAD_EXTENSION (extensions.c tls_collect_extensions).",
+    "Truncated/over-long extension vector, trailing bytes after it, and an over-long compression vector: were silently treated as no/partial extensions; now SSL_AD_DECODE_ERROR / SSL_R_LENGTH_MISMATCH (statem_srvr.c:1621-1658).",
+    "supported_versions overrun or half version: was clamped; now SSL_AD_PROTOCOL_VERSION / SSL_R_LENGTH_MISMATCH. Empty list: SSL_AD_PROTOCOL_VERSION / SSL_R_UNSUPPORTED_PROTOCOL.",
+    "zero-length or odd-length supported_groups: was accepted; now SSL_AD_DECODE_ERROR / SSL_R_BAD_EXTENSION.",
+    "truncated key_share entry: was silently dropped; now SSL_AD_DECODE_ERROR / SSL_R_LENGTH_MISMATCH.",
+    "empty/over-long psk_key_exchange_modes: was ignored; now SSL_AD_DECODE_ERROR / SSL_R_BAD_EXTENSION.",
+    "truncated PSK identity entry: was silently ignored; now SSL_AD_DECODE_ERROR / SSL_R_BAD_EXTENSION.",
+    "pre_shared_key without psk_key_exchange_modes: was accepted; now TLS13_AD_MISSING_EXTENSION / SSL_R_MISSING_PSK_KEX_MODES_EXTENSION (extensions.c final_psk).",
+    "non-empty post_handshake_auth: reason was SSL_R_BAD_EXTENSION; now SSL_R_POST_HANDSHAKE_AUTH_ENCODING_ERR.",
+    "All of the above move the reduced reader toward the pinned authority; none is a divergence from OpenSSL. Multi-fault hellos can still report a different first error than the authority because body parsers run in wire order rather than ext_defs order (residual)."
+  ],
+  "safety_checks": {
+    "fmt": "PASS: cargo fmt --all -- --check (no output)",
+    "check": "PASS: cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s)",
+    "clippy": "PASS: cargo clippy --lib -- -D warnings -> Finished `dev` profile [unoptimized + debuginfo] target(s)",
+    "focused_tests": "PASS: cargo test --lib client_hello -- --test-threads=4 -> 35 passed; 0 failed; 0 ignored; 2083 filtered out",
+    "affected_modules": "PASS: ssl::statem::statem_srvr 124 passed / 2 ignored; ssl::tls13_enc 16 passed; sigalgs 7 passed; ssl::ssl_sess 8 passed / 1 ignored (all --test-threads=4)",
+    "structural_guards": "PASS: 0 diff lines containing repr(C)/no_mangle/export_name; 0 diff lines containing extern \"C\"; allocator seam calls use the same SeamFile::NULL/null + line 0 coordinates (only moved, not altered).",
+    "not_run": [
+      "Full library test suite (NOT_RUN: FAST level only, per the subphase gate).",
+      "Miri (Stacked/Tree Borrows) on the commit/parse boundary (NOT_RUN).",
+      "ASan/LSan on the binder path and the commit allocation-failure path (NOT_RUN).",
+      "FRF-Fuzz / differential court against the pinned authority binary (NOT_RUN).",
+      "Independent adversarial review (NOT_RUN; the author wrote this receipt)."
+    ]
+  },
+  "graduation": "OWNERSHIP_RECONSTRUCTED for S29-CH-PARSE/S29-CH-COMMIT/S29-CH-REJECT; the S29-PSK-BINDER defect is FIXED. SAFETY_DISCHARGED is NOT claimed (independent BOUNDARY checks are NOT_RUN, and residuals below remain).",
+  "obligations": {
+    "discharged": [
+      "No safe caller can construct a &[u8] over the extension input longer than the message: parse_client_hello_extensions is safe, uses only SliceCursor, and returns slices that lie inside exts.",
+      "A rejected ClientHello cannot publish a partial extension set: the parse has no connection access and the commit runs only after full success.",
+      "Every rejection raises the authority's alert/reason and enters MSG_FLOW_ERROR.",
+      "A received TLS1.3 binder shorter/longer than the digest size can no longer be read out of bounds."
+    ],
+    "retained": [
+      "commit_client_hello is unsafe and requires s live, random exactly 32 bytes, session_id <= 32 bytes, and parsed borrowing a live message; the sole caller establishes all four.",
+      "The five retained unsafe blocks in the parse function rely on the caller's `s` liveness contract (unchanged from before)."
+    ],
+    "introduced": [
+      "commit_client_hello's allocation-then-install order: an allocation failure leaves the previous member values in place and the state machine poisoned; callers must not resume the connection after Err.",
+      "tls13_psk_do_binder now requires received.len() == hashsize; a caller that cannot establish it gets 0 (no compare) rather than UB."
+    ]
+  },
+  "residuals": [
+    {"finding": "Custom extensions (SSL_CTX_add_custom_ext) are not modelled, so a duplicate custom extension type is not detected.", "disposition": "documented boundary; no reduced-state effect."},
+    {"finding": "Context-inappropriate extension rejection (extensions.c verify_extension) is not modelled, e.g. use_srtp in a TLS ClientHello is ignored rather than ILLEGAL_PARAMETER/BAD_EXTENSION.", "disposition": "documented boundary; compatibility gap."},
+    {"finding": "status_request validates framing only; responder-id DER and request-extension DER are not parsed (pre-existing reduction). The reduced reader also requires the request-extensions vector to end the body where the authority ignores trailing bytes.", "disposition": "documented boundary; compatibility gap."},
+    {"finding": "SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION is not enforced (pre-existing module-header boundary).", "disposition": "documented boundary."},
+    {"finding": "key_share group membership/priority selection and the HelloRetryRequest path are reduced: the first structurally valid X25519 share is kept; authority group-priority and s3.group_id_candidate/HRR are not modelled.", "disposition": "documented boundary."},
+    {"finding": "psk_ke / SSL_OP_ALLOW_NO_DHE_KEX is not modelled; only psk_dhe_ke is honoured.", "disposition": "documented boundary."},
+    {"finding": "Body parsers run in wire order, not the authority's ext_defs order, so a hello with several independent faults can report a different first error.", "disposition": "documented; every single-fault case matches."},
+    {"finding": "supported_groups keeps at most 32 entries (pre-existing selection buffer).", "disposition": "documented; a matching group beyond entry 32 is not selected."},
+    {"finding": "The late version-selection rejects (ssl_get_min_max_version / selected version not 1.2 or 1.3 / not offered) still use SSL_AD_HANDSHAKE_FAILURE rather than the authority's SSL_AD_PROTOCOL_VERSION; the new parse-level supported_versions errors do use 70.", "disposition": "pre-existing divergence, not changed by this batch."},
+    {"finding": "A legacy_version >= TLS1_3 with no supported_versions extension selects TLS1.3 where the authority clamps to TLS1.2.", "disposition": "pre-existing divergence, not changed by this batch."},
+    {"finding": "The authority's init_* resets of extension members run before the ClientHello callback; this reduced server commits after it, which is observably different only for a callback that inspects ext.hostname/alpn/status on a non-fresh connection. The reduced server only reaches this path on fresh connections.", "disposition": "documented; no reachable reduced-state difference today."}
+  ]
+}
