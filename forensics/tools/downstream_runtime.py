@@ -5138,6 +5138,107 @@ def _wl_markers(ctx: dict, markers: list[str], workload: str, timeout: int = 120
     }
 
 
+def _wl_markers_argv(ctx: dict, argv: list[str], markers: list[str], workload: str,
+                     timeout: int = 180) -> dict:
+    """Run a harness with explicit argv and require every named observable marker."""
+    d = ctx["workdir"]
+    res = _run_captured([str(ctx["program"])] + argv, cwd=d, env=ctx["env"], timeout=timeout)
+    text = res["stdout"] + res["stderr"]
+    missing = [m for m in markers if m not in text]
+    ok = bool(res["ok"] and not missing)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else (
+            f"the workload did not report {', '.join(missing)}"),
+        "transcript": _transcript((workload, res)),
+        "workload": workload,
+        "local_only": True,
+    }
+
+
+def _wl_php(ctx: dict) -> dict:
+    """PHP 8.2's openssl extension: PKCS#12, CMS sign/verify/encrypt/decrypt, chain check."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    script = REPO_ROOT / "forensics" / "tools" / "l7_php_openssl.php"
+    return _wl_markers_argv(ctx, [str(script), str(pki["srv_crt"]), str(pki["srv_key"]),
+                                  str(pki["ca_crt"]), str(pki["other_crt"])], [
+        "php_pkcs12_export=ok", "php_pkcs12_read=ok", "php_cms_sign=ok",
+        "php_cms_verify=ok", "php_cms_encrypt=ok", "php_cms_decrypt=ok",
+        "php_x509_checkpurpose=ok", "php_unrelated_ca=rejected"],
+        "PHP 8.2 openssl ext: PKCS#12 roundtrip, CMS sign/verify/encrypt/decrypt and "
+        "X.509 purpose check + unrelated-CA reject")
+
+
+def _wl_ruby(ctx: dict) -> dict:
+    """Ruby 3.1 ext/openssl: PKCS#12, PKCS#7, OCSP, store verify and raw Ed25519 keys."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    script = REPO_ROOT / "forensics" / "tools" / "l7_ruby_openssl.rb"
+    return _wl_markers_argv(ctx, [str(script), str(pki["srv_crt"]), str(pki["srv_key"]),
+                                  str(pki["ca_crt"]), str(pki["other_crt"])], [
+        "ruby_store_verify=ok", "ruby_pkcs12_export=ok", "ruby_pkcs12_read=ok",
+        "ruby_pkcs7_sign=ok", "ruby_pkcs7_verify=ok", "ruby_ocsp_request=ok",
+        "ruby_ed25519_sign=ok", "ruby_ed25519_verify=ok",
+        "ruby_unrelated_ca_rejected=rejected"],
+        "Ruby 3.1 ext/openssl: store verify, PKCS#12, PKCS#7, OCSP request, Ed25519 raw key "
+        "+ unrelated-CA reject")
+
+
+def _wl_perl(ctx: dict) -> dict:
+    """Run one Perl XS module's admitted script through the embedded-Perl harness."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    prog = PROGRAMS[ctx["family"]]
+    script = REPO_ROOT / "forensics" / "tools" / str(prog["script"])
+    argv = [str(script), str(pki["srv_crt"]), str(pki["srv_key"]),
+            str(pki["ca_crt"]), str(pki["other_crt"])]
+    body = "s33-perl-tls-fixture"
+    stop = threading.Event()
+    state: dict = {}
+    thread = None
+    if prog.get("tls_fixture"):
+        argv = [str(script), str(pki["ca_crt"]), str(pki["other_crt"]),
+                str(ctx["port"]), body]
+        thread = _https_fixture(ctx["port"], pki, body, state, stop,
+                               ciphers="ECDHE-RSA-AES128-GCM-SHA256",
+                               max_version=ssl.TLSVersion.TLSv1_2)
+    try:
+        if thread is not None and not _wait_tcp("127.0.0.1", ctx["port"]):
+            return _wl_fail([("tls fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local TLS fixture did not open its port",
+                            "runtime-failure", d)
+        return _wl_markers_argv(ctx, argv, list(prog["markers"]), str(prog["note"]))
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        if thread is not None:
+            thread.join(timeout=2)
+
+
+def _wl_httplib(ctx: dict) -> dict:
+    """cpp-httplib's header-only SSLServer/SSLClient over verified TLS."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    res = _run_captured([str(ctx["program"]), str(pki["srv_crt"]), str(pki["srv_key"]),
+                         str(pki["ca_crt"]), str(pki["other_crt"])],
+                        cwd=d, env=ctx["env"], timeout=120)
+    text = res["stdout"] + res["stderr"]
+    ok = bool(res["ok"] and "S23-PASS" in text)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else "the httplib client did not complete the verified fetch",
+        "transcript": _transcript(("cpp-httplib TLS", res)),
+        "workload": ("cpp-httplib 0.11.4: SSLServer/SSLClient verified fetch + "
+                     "unrelated-CA reject"),
+        "local_only": True,
+    }
+
+
 def _wl_jwt(ctx: dict) -> dict:
     """libjwt's RS256 and ES256 sign/verify/decode with a tampered-signature control."""
     return _wl_markers(ctx, [
@@ -6069,10 +6170,15 @@ def _wl_s_nail(ctx: dict) -> dict:
 
 
 def _https_fixture(port: int, pki: dict, body: str, state: dict,
-                   stop: threading.Event) -> threading.Thread:
+                   stop: threading.Event, *, ciphers: str | None = None,
+                   max_version=None) -> threading.Thread:
     """A minimal loopback HTTPS/1.0 server presenting the fixture server certificate."""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(certfile=str(pki["srv_pem"]))
+    if ciphers is not None:
+        context.set_ciphers(ciphers)
+    if max_version is not None:
+        context.maximum_version = max_version
     listener = socket.socket()
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     listener.bind(("127.0.0.1", port))
@@ -11435,6 +11541,128 @@ RUNNERS.update({
     "h2o": _wl_h2o,
     "libshout": _wl_libshout,
     "nghttp2": _wl_nghttp2,
+})
+
+
+# The S33 corpus batch: CMS/S/MIME, PKCS#12, OCSP, X.509 verification, raw-key,
+# legacy-ENGINE, DTLS and TLS-transport surface.  A Perl XS family runs its admitted
+# script through the embedded-Perl harness linked against the module under test.
+_S33_PERL_COMMON = {
+    "program": ".l7-perl-harness", "launch": ["--version"],
+    "version_re": r"perl-l7-harness", "lib_paths": [],
+    "env": {"PERL5LIB": ("{root}/blib/lib:{root}/blib/arch:"
+                        "{root}/.perl-deps/lib:{root}/.perl-deps/arch")},
+}
+_Perl_cflags = [
+    "-I/usr/lib/x86_64-linux-gnu/perl/5.36/CORE", "-D_REENTRANT", "-D_GNU_SOURCE",
+    "-DDEBIAN", "-fwrapv", "-fno-strict-aliasing", "-pipe", "-D_LARGEFILE_SOURCE",
+    "-D_FILE_OFFSET_BITS=64", "-DL7_NAME=\"perl-l7-harness\"",
+]
+
+
+def _s33_perl_program(family: str, script: str, module_dir: str, module: str,
+                      markers: list[str], note: str, *, tls: bool = False) -> dict:
+    prog = copy.deepcopy(_S33_PERL_COMMON)
+    prog.update({
+        "script": script, "markers": markers, "note": note,
+        "tls_fixture": tls,
+        "harness": {
+            "source": "forensics/tools/l7_perl_runner.c",
+            "cflags": _Perl_cflags + [
+                f"-DL7_SCRIPT_PATH=\"{{repo}}/forensics/tools/{script}\""],
+            "ldflags": [
+                f"-L{{root}}/blib/arch/auto/{module_dir}",
+                f"-Wl,-rpath,{{root}}/blib/arch/auto/{module_dir}",
+                "-Wl,--no-as-needed", f"-l:{module}",
+                "-L/usr/lib/x86_64-linux-gnu",
+                "-Wl,-rpath,/usr/lib/x86_64-linux-gnu",
+                "-Wl,-E", "-l:libperl.so.5.36", "-ldl", "-lm", "-lpthread", "-lc",
+                "-lcrypt"],
+        },
+    })
+    return prog
+
+
+_S33_PROGRAMS: dict[str, dict] = {
+    "perl-net-ssleay": _s33_perl_program(
+        "perl-net-ssleay", "l7_perl_net_ssleay.pl", "Net/SSLeay", "SSLeay.so",
+        ["tls_connect=ok", "tls_payload=ok", "tls_session=ok",
+         "tls_unrelated_ca=rejected"],
+        "Net::SSLeay 1.92: verified TLS handshake, payload and session reuse + "
+        "unrelated-CA reject", tls=True),
+    "perl-crypt-smime": _s33_perl_program(
+        "perl-crypt-smime", "l7_perl_crypt_smime.pl", "Crypt/SMIME", "SMIME.so",
+        ["smime_sign=ok", "smime_check=ok", "smime_encrypt=ok", "smime_roundtrip=ok"],
+        "Crypt::SMIME 0.28: CMS sign/check and encrypt/decrypt (S/MIME)"),
+    "perl-crypt-openssl-x509": _s33_perl_program(
+        "perl-crypt-openssl-x509", "l7_perl_crypt_openssl_x509.pl",
+        "Crypt/OpenSSL/X509", "X509.so",
+        ["x509_parse=ok", "x509_subject=ok", "x509_fingerprint=ok", "x509_pubkey=ok",
+         "x509_checkend=ok", "x509_extensions=ok", "x509_issuer_matches_ca=ok",
+         "x509_unrelated_differs=ok"],
+        "Crypt::OpenSSL::X509 1.9.14: parse, fingerprint, extensions and issuer linkage"),
+    "perl-crypt-openssl-rsa": _s33_perl_program(
+        "perl-crypt-openssl-rsa", "l7_perl_crypt_openssl_rsa.pl",
+        "Crypt/OpenSSL/RSA", "RSA.so",
+        ["rsa_sign=ok", "rsa_verify=ok", "rsa_tamper_rejected=ok", "rsa_encrypt=ok",
+         "rsa_decrypt=ok"],
+        "Crypt::OpenSSL::RSA 0.33: RSA keygen, sign/verify and public encrypt/decrypt"),
+    "libcrypt-openssl-ec-perl": _s33_perl_program(
+        "libcrypt-openssl-ec-perl", "l7_perl_crypt_openssl_ec.pl",
+        "Crypt/OpenSSL/EC", "EC.so",
+        ["ec_group=ok", "ec_point_new=ok", "ec_point_infinity=ok"],
+        "Crypt::OpenSSL::EC 1.32: P-256 group construction and point operations"),
+    "libcrypt-openssl-pkcs10-perl": _s33_perl_program(
+        "libcrypt-openssl-pkcs10-perl", "l7_perl_crypt_openssl_pkcs10.pl",
+        "Crypt/OpenSSL/PKCS10", "PKCS10.so",
+        ["pkcs10_sign=ok", "pkcs10_pubkey=ok", "pkcs10_pubkey_type=ok"],
+        "Crypt::OpenSSL::PKCS10 0.19: CSR construction/signing and public-key export"),
+    "perl-crypt-openssl-aes": _s33_perl_program(
+        "perl-crypt-openssl-aes", "l7_perl_crypt_openssl_aes.pl",
+        "Crypt/OpenSSL/AES", "AES.so",
+        ["aes_encrypt=ok", "aes_roundtrip=ok", "aes_cbc_encrypt=ok",
+         "aes_cbc_roundtrip=ok"],
+        "Crypt::OpenSSL::AES 0.23: AES-256 ECB/CBC encrypt/decrypt roundtrip"),
+    "perl-crypt-openssl-dsa": _s33_perl_program(
+        "perl-crypt-openssl-dsa", "l7_perl_crypt_openssl_dsa.pl",
+        "Crypt/OpenSSL/DSA", "DSA.so",
+        ["dsa_sign=ok", "dsa_verify=ok", "dsa_tamper_rejected=ok",
+         "dsa_pem_roundtrip=ok"],
+        "Crypt::OpenSSL::DSA 0.20: DSA keygen, sign/verify and PEM roundtrip"),
+    "perl-crypt-openssl-bignum": _s33_perl_program(
+        "perl-crypt-openssl-bignum", "l7_perl_crypt_openssl_bignum.pl",
+        "Crypt/OpenSSL/Bignum", "Bignum.so",
+        ["bn_add=ok", "bn_mul=ok", "bn_modexp=ok", "bn_inverse=ok"],
+        "Crypt::OpenSSL::Bignum 0.09: BN add/mul/mod_exp/mod_inverse"),
+    "perl-crypt-openssl-random": _s33_perl_program(
+        "perl-crypt-openssl-random", "l7_perl_crypt_openssl_random.pl",
+        "Crypt/OpenSSL/Random", "Random.so",
+        ["rand_bytes=ok", "rand_differs=ok", "rand_status=ok"],
+        "Crypt::OpenSSL::Random 0.15: RAND_bytes and RAND_status"),
+    "php": {
+        "program": "sapi/cli/php", "launch": ["-v"], "version_re": r"PHP 8\.2",
+        "lib_paths": [],
+        "note": ("PHP 8.2.32 openssl ext: PKCS#12, CMS/PKCS#7, X.509 purpose check"),
+    },
+    "ruby": {
+        "program": "ruby", "launch": ["-v"], "version_re": r"ruby 3\.1",
+        "lib_paths": [],
+        "note": ("Ruby 3.1.2 ext/openssl: PKCS#12, PKCS#7, OCSP, store verify, Ed25519"),
+    },
+    "libcpp-httplib0.11": {
+        "program": ".l7-httplib-harness", "launch": ["--help"],
+        "version_re": r"usage:", "lib_paths": [],
+        "note": "cpp-httplib 0.11.4: SSLServer/SSLClient verified fetch + wrong-CA reject",
+    },
+}
+PROGRAMS.update(_S33_PROGRAMS)
+RUNNERS.update({
+    "perl-net-ssleay": _wl_perl, "perl-crypt-smime": _wl_perl,
+    "perl-crypt-openssl-x509": _wl_perl, "perl-crypt-openssl-rsa": _wl_perl,
+    "libcrypt-openssl-ec-perl": _wl_perl, "libcrypt-openssl-pkcs10-perl": _wl_perl,
+    "perl-crypt-openssl-aes": _wl_perl, "perl-crypt-openssl-dsa": _wl_perl,
+    "perl-crypt-openssl-bignum": _wl_perl, "perl-crypt-openssl-random": _wl_perl,
+    "php": _wl_php, "ruby": _wl_ruby, "libcpp-httplib0.11": _wl_httplib,
 })
 
 
