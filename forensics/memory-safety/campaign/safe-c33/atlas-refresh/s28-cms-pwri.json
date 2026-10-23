@@ -1,0 +1,127 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S28-cms-pwri",
+  "date": "2026-10-23",
+  "worktree": "dirty: src/cms/cms_pwri.rs plus this receipt",
+  "source_identity": {
+    "requested": "integrate/safe-c33 @ f0e29e6cf",
+    "checked_out": "integrate/safe-c33 @ f0e29e6cf (clean before the edits)",
+    "authority": "openssl-3.6.4 (forensics/authorities/src/openssl-3.6.4/crypto/cms/cms_pwri.c)"
+  },
+  "verification_level": "FAST only (fmt, cargo check --lib, filtered tests, clippy --lib -D warnings, structural diff). No full suite, no probes, no BOUNDARY/SEAL work. BATCH and SEAL remain NOT_RUN.",
+  "files": [
+    "src/cms/cms_pwri.rs"
+  ],
+  "obligations": [
+    {
+      "id": "S28-1",
+      "mechanism": "CMS_add0_recipient_password writes RAND_bytes_ex(ivlen) into unsigned char iv[EVP_MAX_IV_LENGTH] and then hands the same buffer to EVP_EncryptInit_ex",
+      "status": "repaired",
+      "pre_fix": "ivlen = EVP_CIPHER_CTX_get_iv_length(ctx); if (ivlen < 0) break; if (ivlen > 0) RAND_bytes_ex(libctx, iv.as_mut_ptr(), ivlen as usize, 0); with iv declared [0u8; EVP_MAX_IV_LENGTH] (16). Only the negative arm was rejected; a length above 16 reached RAND_bytes_ex and EVP_EncryptInit_ex unchecked.",
+      "fix": "After the authority's existing ivlen < 0 arm, refuse ivlen as usize > EVP_MAX_IV_LENGTH (src/cms/cms_pwri.rs:305) and break to the function's err tail (ctx and encalg released, NULL returned). The refusal raises CMS_PWRI_IV_REFUSED (src/cms/cms_pwri.rs:56): ERR_LIB_CMS, ERR_R_PASSED_INVALID_ARGUMENT, authority coordinates crypto/cms/cms_pwri.c:107, the RAND_bytes_ex call the conversion declines. This is the same shape as the landed S27 pk7_doit refusal.",
+      "reachability": {
+        "in_tree": "NOT reachable. grep over src/ finds no Rust caller of CMS_add0_recipient_password (src/cms/cms_pwri.rs:107 defines it; cms_smime.rs uses CMS_RecipientInfo_set0_password instead). The only in-tree route to the setup block is the exported C ABI.",
+        "from_parsed_der_only": "NOT reachable. CMS_EncryptedContentInfo.cipher is at offset 24 of the #[repr(C)] struct (src/cms/cms_asn1.rs:206-218), but CMS_ENCRYPTED_CONTENT_INFO_TT has only three template columns, at offsets 0, 8 and 16 (src/cms/cms_asn1.rs:1291-1313: contentType, contentEncryptionAlgorithm, encryptedContent). A parsed object therefore leaves ec.cipher/ec.key NULL and the NULL-kekciph arm raises CMS_R_NO_CIPHER (src/cms/cms_pwri.rs:141-151) before the IV block.",
+        "reachable_at_the_c_abi": "YES. The exported function takes kekciph: *const c_void (src/cms/cms_pwri.rs:108), and ec.cipher is set by the exported CMS_EnvelopedData_create(cipher) (src/cms/cms_env.rs:489-545 via ossl_cms_EncryptedContent_init at src/cms/cms_enc.rs:534). A METH cipher built by EVP_CIPHER_meth_new carries any block_size/key_len and EVP_CIPHER_meth_set_iv_length stores any int without a bound (src/evp/cipher.rs:1457-1473,1538-1550); a METH cipher is routed to the legacy init path by origin == EVP_ORIG_METH (src/evp/cipher_ctx.rs:1942-1957), so its reported iv_len is what EVP_CIPHER_CTX_get_iv_length returns (src/evp/cipher_ctx.rs:825-889). A provider cipher's ivlen is an unbounded size_t cached into an int (src/evp/cipher_ctx.rs:833-886; src/evp/cipher.rs:1186-1192). Either form reaches the write if an application maps untrusted input to the cipher, or loads a provider reporting ivlen > 16.",
+        "demonstrated": "cms_pwri_oversized_iv_is_refused drives a METH AES-128-CBC method with iv_len 32 through CMS_add0_recipient_password on a CMS_EnvelopedData_create object. Pre-fix that call reached RAND_bytes_ex(libctx, iv.as_mut_ptr(), 32, 0) and EVP_EncryptInit_ex(..., iv) with iv: [u8; 16].",
+        "conclusion": "Not in-tree; reachable only through the C ABI (application-selected METH/provider cipher or a custom provider). No claim of attacker reachability without application cooperation. The precondition is now structural regardless of which cipher definitions exist."
+      },
+      "divergence": "A length the authority would write past a stack buffer is refused before the write, with NULL plus ERR_R_PASSED_INVALID_ARGUMENT (AGENTS.md section 17, UB in the C authority: do not reproduce). Every length that fits keeps the authority's control flow."
+    },
+    {
+      "id": "S28-2",
+      "mechanism": "kek_wrap_key reads in[0], in[1], in[2] as the RFC 3211 header without establishing that three bytes are readable",
+      "status": "repaired",
+      "pre_fix": "The only length guards were blocklen == 0, olen < 2 * blocklen and inlen > 0xFF. The round-up olen = (inlen + 4).div_ceil(blocklen) * blocklen does not imply inlen >= 3: with blocklen == 4 and inlen == 2, olen == 8 == 2 * blocklen, so the header body ran and read two bytes past the input; with blocklen == 1 and inlen == 0 it read one byte past an empty input.",
+      "fix": "Explicit inlen < 3 refusal before the round-up and before any pointer use (src/cms/cms_pwri.rs:662), returning the authority's silent 0. The header SAFETY comment now cites the checked condition (src/cms/cms_pwri.rs:690-692). The round-up now uses checked_add/checked_mul and returns 0 on overflow (src/cms/cms_pwri.rs:672-681), and a non-positive block size is refused before the cast to usize (src/cms/cms_pwri.rs:651-657).",
+      "reachability": {
+        "in_tree": "No caller of kek_wrap_key outside this file (grep src/). Its one caller is the encryption arm of ossl_cms_RecipientInfo_pwri_crypt (src/cms/cms_pwri.rs:936-960), which passes ec.key/ec.keylen. On the encrypt path ec.keylen is set by ossl_cms_EncryptedContent_init_bio from EVP_CIPHER_CTX_get_key_length of the content cipher and refused when that is <= 0 (src/cms/cms_enc.rs:355-365,392-398), and the KEK block length comes from the DER-selected keyEncryptionAlgorithm. With the in-tree ciphers inspected (AES wrap block 8; AES/DES/3DES/Camellia/ARIA/SM4 block 8 or 16) the olen < 2 * blocklen check rejects inlen < 3 before the header, so the in-tree path is not reachable. No exhaustive cipher enumeration was performed.",
+        "reachable_at_the_c_abi": "YES, via a METH/provider KEK cipher whose block size is 1..4 (EVP_CIPHER_meth_new accepts any block_size, src/evp/cipher.rs:1457-1473) combined with a short content key. A content cipher can report key_len 1 or 2, and ossl_cms_EncryptedContent_init_bio only refuses key lengths <= 0 (src/cms/cms_enc.rs:356-365), so an application that supplies both ciphers can reach the header with inlen == 2 and blocklen == 4.",
+        "internal_contract": "Independently of external reachability, the function's own # Safety contract only required `in` readable for `inlen` (src/cms/cms_pwri.rs:636-638). A caller satisfying that contract with inlen < 3 and a 4-byte-block context could drive an out-of-bounds read, which is a soundness defect at the internal boundary. The guard removes it.",
+        "demonstrated": "cms_pwri_short_wrap_input_is_refused_before_any_read calls kek_wrap_key with a live 4-byte-block METH context, inlen == 2 and a NULL input pointer. The guard returns 0 before any `*input`; a regression would fault in the test itself. The output buffer is asserted untouched and outlen stays 0."
+      },
+      "divergence": "Inputs the authority reads past (UB in the C authority) return 0 instead, which is the same result the authority's own length checks return for the neighbouring cases. Inputs of three or more bytes are unchanged."
+    },
+    {
+      "id": "S28-3",
+      "mechanism": "review of the remaining short-input arithmetic in the file (scope check, no change)",
+      "status": "no defect found",
+      "evidence": "kek_unwrap_key requires blocklen >= 4 and inlen >= 2 * blocklen >= 8 before reading raw[1..7], rejects a non-multiple and > INT_MAX, and checks inlen < 4 + raw[0] before the bounded copy (src/cms/cms_pwri.rs:529-630). In the unwrap arm of pwri_crypt, a negative encrypted_key->length becomes a usize allocation request through the seam, which returns None and breaks (src/cms/cms_pwri.rs:941-960); the authority's OPENSSL_malloc fails the same way, so no UB and no semantic change was introduced. This path was not modified."
+    }
+  ],
+  "unsafe_accounting": {
+    "production_unsafe_tokens": {
+      "before": 116,
+      "after": 117,
+      "note": "One new unsafe operation: raise_site(&CMS_PWRI_IV_REFUSED), carrying a SAFETY comment ('the site is a compile-time constant'). The bound checks and the checked arithmetic are safe Rust."
+    },
+    "production_unsafe_blocks": {
+      "before": 110,
+      "after": 111
+    },
+    "test_only_unsafe_tokens": 6,
+    "unsafe_operations_removed": [],
+    "unsafe_operations_relocated": [],
+    "unsafe_operations_introduced": [
+      "raise_site(&CMS_PWRI_IV_REFUSED) at the new refusal"
+    ],
+    "hidden_obligations": []
+  },
+  "structural_guards": {
+    "no_mangle_diff_lines": 0,
+    "no_mangle_count": {
+      "before": 2,
+      "after": 2
+    },
+    "repr_c_diff_lines": 0,
+    "repr_c_count_in_file": {
+      "before": 0,
+      "after": 0
+    },
+    "allocator_seam_changes": 0,
+    "note": "git diff -U0 shows no added or removed line containing CRYPTO_, SeamFile, no_mangle or repr(C). The three SeamFile::new(c\"cms_pwri.c\") sites (lines 557, 942, 979) keep their authority file and line (219, 392, 403). No allocation size changed."
+  },
+  "tests": {
+    "added": [
+      {
+        "name": "cms_pwri_oversized_iv_is_refused",
+        "asserts": "CMS_add0_recipient_password returns NULL for a 32-byte-IV METH cipher; ERR_peek_error is ERR_R_PASSED_INVALID_ARGUMENT; the cfg(test) canary fired."
+      },
+      {
+        "name": "cms_pwri_short_wrap_input_is_refused_before_any_read",
+        "asserts": "kek_wrap_key returns 0 for inlen == 2 with a 4-byte block before touching a NULL input; out is byte-identical; outlen is 0; the canary fired."
+      },
+      {
+        "name": "cms_pwri_pre_fix_short_wrap_negative_control",
+        "asserts": "the canary fires on the pre-fix condition (inlen 2, 4-byte block, olen 8 >= 2 * blocklen) and stays quiet for a four-byte input."
+      }
+    ],
+    "observation": "Thread-local cfg(test) hooks in src/cms/cms_pwri.rs::test_hooks record that the refusal branch was reached with the dangerous condition; compiled out of every non-test build.",
+    "run": "cargo test --lib cms_pwri -- --test-threads=4 --nocapture",
+    "result": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2101 filtered out; finished in 0.00s",
+    "pass_lines": [
+      "test cms::cms_pwri::tests::cms_pwri_oversized_iv_is_refused ... ok",
+      "test cms::cms_pwri::tests::cms_pwri_pre_fix_short_wrap_negative_control ... ok",
+      "test cms::cms_pwri::tests::cms_pwri_short_wrap_input_is_refused_before_any_read ... ok"
+    ],
+    "canary_output": [
+      "cms_pwri canary: pre-fix kek_wrap_key would read in[0..3] for inlen = 2 with a 4-byte block (olen = 8 >= 2 * blocklen)",
+      "cms_pwri canary: fired = true (short-input refusal reached)",
+      "cms_pwri canary: fired = false for a four-byte input"
+    ]
+  },
+  "gate": {
+    "cargo fmt --all -- --check": "FMT_OK (exit 0)",
+    "cargo check --lib": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.55s (no warnings)",
+    "filtered_tests": "3 passed; 0 failed (see tests.result)",
+    "cargo clippy --lib -- -D warnings": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.52s (no diagnostics)",
+    "structural": "0 no_mangle diff lines (2 before, 2 after), 0 repr(C) diff lines (0 before, 0 after), 0 allocator-seam diff lines; SeamFile coordinates unchanged"
+  },
+  "not_established": [
+    "No in-tree cipher was exhaustively enumerated for iv_len > 16 or for block sizes below 5; the in-tree non-reachability statements are limited to the route found by source inspection and the cipher definitions inspected, and the guards are enforced independently of that enumeration.",
+    "Attacker reachability without application cooperation is excluded for the IV path by the C-ABI-only call graph and the DER template shape; a downstream application that maps untrusted input to a fetched or METH cipher is out of this file's scope and was not audited.",
+    "The short-wrap C-ABI route (custom KEK cipher with block size 1..4 plus a 1- or 2-byte content key) is established from the exported setter/init behaviour and a direct internal test, not by driving a full CMS_encrypt with two custom ciphers.",
+    "Full library suite, adversarial probes, Miri/ASan and differential courts were not run (FAST gate only).",
+    "The pre-existing raise_cms helper records file cms_lib.c for all cms_pwri raise sites; the new refusal uses its own ErrSite for that reason, but the existing sites were not changed in this batch."
+  ]
+}
