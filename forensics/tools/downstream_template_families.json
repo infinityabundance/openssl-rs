@@ -306,6 +306,76 @@
         "negative_argv": ["-p", "template-payloX", "-e", "template"],
         "negative": "different"
       }
+    },
+    {
+      "family": "libengine-gost-openssl",
+      "bucket": "gost engine",
+      "version": "3.0.3+git20251212.7f6d61a",
+      "url": "https://deb.debian.org/debian/pool/main/libe/libengine-gost-openssl/libengine-gost-openssl_3.0.3+git20251212.7f6d61a.orig.tar.gz",
+      "sha256": "3363e630d7b73aa79ba00707dd6b9ff5978ea68a7d2704375bdf52bd8f423aa5",
+      "archive": "tar.gz",
+      "build_system": "cmake",
+      "configure": ["-DCMAKE_PREFIX_PATH={prefix}", "-DCMAKE_BUILD_TYPE=Release"],
+      "make": ["-j4"],
+      "artifact": "b/bin/gost.so",
+      "program": "b/bin/gostsum",
+      "launch": ["-h"],
+      "version_re": "gostsum",
+      "workload": {
+        "template": "digest",
+        "argv": ["{payload}"],
+        "expect": "^[0-9a-f]{64}",
+        "negative_argv": ["{tampered}"],
+        "negative": "different"
+      }
+    },
+    {
+      "family": "libfsverity",
+      "bucket": "digest",
+      "version": "1.6",
+      "url": "https://github.com/ebiggers/fsverity-utils/archive/refs/tags/v1.6.tar.gz",
+      "sha256": "c7aa6b17a8a069224321ff94e46fb91a6426828ca78170a879a52cef2597abb7",
+      "archive": "tar.gz",
+      "build_system": "make",
+      "make": ["-j4"],
+      "artifact": "libfsverity.so*",
+      "program": "fsverity",
+      "launch": ["--version"],
+      "version_re": "fsverity",
+      "workload": {
+        "template": "digest",
+        "argv": ["digest", "{payload}"],
+        "expect": "sha256:[0-9a-f]{64}",
+        "negative_argv": ["digest", "{tampered}"],
+        "negative": "different"
+      }
+    },
+    {
+      "family": "monitoring-plugins",
+      "bucket": "HTTP(S) client",
+      "version": "2.4.0",
+      "url": "https://www.monitoring-plugins.org/download/monitoring-plugins-2.4.0.tar.gz",
+      "sha256": "e5dfd4ad8fde0a40da50aab3aff6d9a27020b8f283e332bc4da6ef9914f4028c",
+      "archive": "tar.gz",
+      "build_system": "autotools",
+      "configure": ["--with-openssl={prefix}", "--without-pgsql", "--without-mysql",
+                    "--without-ldap", "--without-dbi", "--without-radius",
+                    "--without-libcurl", "--without-ssh", "--without-snmp",
+                    "--without-nagios-xml", "--disable-nls"],
+      "env_extra": {"CPPFLAGS": "-I{prefix}/include",
+                    "LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+      "make": ["-j4"],
+      "artifact": "plugins/check_http",
+      "program": "plugins/check_http",
+      "launch": ["-V"],
+      "version_re": "check_http",
+      "workload": {
+        "template": "http_client",
+        "argv": ["-S", "-H", "127.0.0.1", "-p", "{port}", "-u", "/",
+                 "-s", "HTTP OK"],
+        "expect": "HTTP OK",
+        "negative": "plaintext"
+      }
     }
   ]
 }

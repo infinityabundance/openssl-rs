@@ -2011,6 +2011,12 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The Phase-25 L7 onboarding batch (b16): ten more consumers, each with its own pristine
+    # source and a deterministic loopback workload.
+    for spec in _L7_ONBOARD_SPECS_E:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     # The declarative template cohort.  Each entry is a small config row (URL + SHA-256 +
     # build-system fields + a bucket workload) rather than a bespoke recipe; the same pristine
     # acquire/configure/make path is used, and `{prefix}` is still the only substitution.
@@ -2026,6 +2032,17 @@ def _build_catalogue() -> tuple[dict, ...]:
         late = _LATE_RECIPE_OVERRIDES.get(rec["family"])
         if late:
             rec.update(late)
+    # The c2 split rows are appended after every parent recipe (and its late override) exists,
+    # so each row is a byte-for-byte copy of the admitted parent build intent.
+    by_family = {rec["family"]: rec for rec in recipes}
+    for new, base, overrides in _L7_SPLIT_RECIPES:
+        rec = copy.deepcopy(by_family[base])
+        rec.update({"family": new, "recipe_id": f"recipe:{new}:{rec['version']}"})
+        rec.update(overrides)
+        recipes.append(rec)
+    ima = copy.deepcopy(_L7_IMA_SPEC)
+    ima["recipe_id"] = f"recipe:ima-evm-utils:{ima['version']}"
+    recipes.append(ima)
     return tuple(recipes)
 
 
@@ -3471,6 +3488,323 @@ _LATE_RECIPE_OVERRIDES: dict[str, dict] = {
         "note": ("libssh 0.10.6 built by CMake against the subject libssl/libcrypto; the admitted "
                  "workload imports a pinned RSA private key and checks its exported public blob"),
     },
+}
+
+# --------------------------------------------------------------------------------------------
+# Phase-25 L7 split-row batch (c2, 2026-10-22).
+#
+# Ten frozen-P1000 families that are package rows of an upstream this venue already builds and
+# already drives with an admitted workload.  Each row is the same pristine archive, the same
+# build intent and the same `{prefix}` substitution as its parent; only the package's own
+# artifact (and, for cyrus-sasl-md5, the mechanism the harness selects) differs.  No candidate
+# is patched and no new source is introduced.  `libfsverity` and `monitoring-plugins` are
+# declared in the template layer's family registry instead, because their workload is a bucket.
+# --------------------------------------------------------------------------------------------
+# The Phase-25 L7 onboarding batch (b16): ten consumers with a deterministic local workload.
+# Same pristine-source/aux seam; each recipe names only the non-OpenSSL packages its own build
+# needs, and the subject prefix remains the only OpenSSL on the link line.
+# --------------------------------------------------------------------------------------------
+
+_B16_AUTOTOOLS_AUX: tuple[dict, ...] = tuple(_ONBOARD_AUTOTOOLS_AUX) + (
+    _aux_deb("libt/libtool", "libltdl-dev_2.4.7-7~deb12u1_amd64.deb",
+             "60ad26b3007d4304a1141649d4e764a27735ff4f1835a62c845d51bd734932b0",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libt/libtool", "libltdl7_2.4.7-7~deb12u1_amd64.deb",
+             "8070b550321d4bd1c298f52f75374898d39112b709026d2ea5362ef1277b775a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("b/bison", "bison_3.8.2+dfsg-1+b1_amd64.deb",
+             "a414afd7519c53bfa33415ba5b951bc8b4906877004c49723ffda50a6033c3e8",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("f/flex", "flex_2.6.4-8_amd64.deb",
+             "6e356fec04533fb809a1d332ac74cd5f10e86841694e2fde69fcb1ef35ecbde5",
+             bin_dirs=("usr/bin",)),
+)
+
+_B16_PCRE_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pcre3", "libpcre3_8.39-15_amd64.deb",
+             "993ea623ce5b42d67f653f2faaa7ef15e7c9d72bfcb93e22a1eaff7aa3532303",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre3", "libpcre3-dev_8.39-15_amd64.deb",
+             "a2bd77ac61b2dbbbc6cac3f7238780a591cf23774f9f0b1fc79d1c07b6d7f0c4",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             bin_dirs=("usr/bin",)),
+)
+
+_B16_NCURSES_AUX: tuple[dict, ...] = (
+    _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
+             "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_B16_SSCG_AUX: tuple[dict, ...] = (
+    _aux_deb("libt/talloc", "libtalloc2_2.4.0-f2_amd64.deb",
+             "2cbba68ca13003a0da794f5bcc44d95d0a191514fdd2d2764858b37215f0867c",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libt/talloc", "libtalloc-dev_2.4.0-f2_amd64.deb",
+             "f2d37c120625bedd410b2d53e1c866855cbabae0138b5b004c6a8cac901c1296",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("p/popt", "libpopt0_1.19+dfsg-1_amd64.deb",
+             "6f94b488255acd996254f775c77ff3956557c61f860a3c9caeaf65457554194f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/popt", "libpopt-dev_1.19+dfsg-1_amd64.deb",
+             "0f1c2bcc8270f6f06a3f351efd43296ad4793fe1daf641b7d9f0428dc7d141a2",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("h/help2man", "help2man_1.49.3_amd64.deb",
+             "9b17251751ee4e813df789ba39c25841b9e26bf44206fd53ce4d34bc2d761eed",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libl/liblocale-gettext-perl",
+             "liblocale-gettext-perl_1.07-5_amd64.deb",
+             "fe524a9de7ed6b2a1465693f12d5f7be2d2d9f6d6e6bf028f17109263e173dc8"),
+)
+
+_B16_UV_AUX: tuple[dict, ...] = (
+    _aux_deb("libu/libuv1", "libuv1_1.44.2-1+deb12u1_amd64.deb",
+             "204f0e13354b44e6d19317887a53dab6f26696e8d95838db970b81f2a393f7fd",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libu/libuv1", "libuv1-dev_1.44.2-1+deb12u1_amd64.deb",
+             "7cf6e1d98c3a39084bd7f62e4769c36a303f7af53f70811ba94edb3f17526a10",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_B16_OGG_AUX: tuple[dict, ...] = (
+    _aux_deb("libo/libogg", "libogg0_1.3.5-3_amd64.deb",
+             "f67acb0477aed0354f411172e37af338f3ac6bd4f3766134a2cf5539884b5a28",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libo/libogg", "libogg-dev_1.3.5-3_amd64.deb",
+             "ece2ef4d087d27b77b6c1a240efdb8b32dc2d19f69f7ce7fbb184c83a132d49c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_B16_NGHTTP2_AUX: tuple[dict, ...] = tuple(_LIBEV_AUX) + (
+    _aux_deb("c/c-ares", "libc-ares2_1.18.1-3_amd64.deb",
+             "087fd5c2ac883202e1786ab45617cdab7f77bc7f060d58cca177ddf6b6c3fa73",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("c/c-ares", "libc-ares-dev_1.18.1-3_amd64.deb",
+             "fd031e01ade61a16e9d71776e6d235c637c0514f88b241a27b5e51af5aa39dc2",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libx/libxml2", "libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "4460e39dda10a815881374217cde08474747cfa018358cd8612c14b390eff53b"),
+    _aux_deb("libx/libxml2", "libxml2-dev_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "e8ceacf656b1720e7a310e1d159439a356bfcb9f5fb0325907f26aa8590e5f70",
+             include_dirs=("usr/include", "usr/include/libxml2"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
+             bin_dirs=("usr/bin",)),
+    _aux_deb("i/icu", "libicu-dev_72.1-3+deb12u1_amd64.deb",
+             "08bd4e3f4bd4fc725cf25e739edf0e7df5ac1826bdac9a7d990eea8f93b2d7a0",
+             include_dirs=("usr/include",)),
+)
+
+_B16_CHARYBDIS_ENV = dict(_ONBOARD_AUTOTOOLS_ENV,
+                          CFLAGS="-include time.h -D_GNU_SOURCE")
+
+_L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
+    {
+        "family": "sscg", "version": "4.0.3",
+        "url": "https://deb.debian.org/debian/pool/main/s/sscg/sscg_4.0.3.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "meson",
+        "sha256": "08123b2c73e41df3a744fa01c7b737942a248e6510ff57f3c19b14fc55fe9bed",
+        "configure": ["b", "--prefix={root}/.l7-install"], "make": [],
+        "artifact": "b/sscg", "launch": ["--version"],
+        "aux_sources": list(_B16_SSCG_AUX),
+        "env_extra": {"PERL5LIB": "{aux}/usr/lib/x86_64-linux-gnu/perl5/5.36"},
+        "note": ("sscg 4.0.3 mints a CA and a service certificate through the subject libcrypto; "
+                 "the admitted workload verifies the chain and an unrelated CA fails"),
+    },
+    {
+        "family": "shellinabox", "version": "2.21+really2.21",
+        "url": ("https://deb.debian.org/debian/pool/main/s/shellinabox/"
+                "shellinabox_2.21+really2.21.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "autotools",
+        "sha256": "2ba4f142181a1e69734a1974afc01af353ea8aaf6840dd41503cb59855b3db80",
+        "configure": ["--prefix={root}/.l7-install", "--enable-ssl",
+                      "--disable-runtime-loading"], "make": [MAKE_JOBS],
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV, LIBS="-lssl -lcrypto"),
+        "aux_sources": list(_B16_AUTOTOOLS_AUX),
+        "artifact": "shellinaboxd", "launch": ["--version"],
+        "note": ("shellinabox 2.21 serves its web terminal over a verified TLS listener; a "
+                 "client trusting an unrelated CA is rejected"),
+    },
+    {
+        "family": "charybdis", "version": "4.1.2",
+        "url": ("https://github.com/atheme/charybdis/archive/refs/tags/"
+                "charybdis-4.1.2.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "a3f4e572877c5a3abdab3af652746c0682f0c41b3f9e3c9866315f5d03f2bb57",
+        "configure": ["--prefix={root}/.l7-install", "--enable-openssl={prefix}"],
+        "make": [MAKE_JOBS],
+        "pre_build": [["sh", "autogen.sh"]],
+        "env_extra": dict(_B16_CHARYBDIS_ENV),
+        "aux_sources": list(_B16_AUTOTOOLS_AUX),
+        "artifact": "src/ircd/.libs/charybdis", "launch": ["--version"],
+        "note": ("charybdis 4.1.2 listens with a TLS listener; the admitted workload completes "
+                 "the IRC greeting over a verified TLS session, and an unrelated CA is refused"),
+    },
+    {
+        "family": "afflib", "version": "3.7.20",
+        "url": "https://deb.debian.org/debian/pool/main/a/afflib/afflib_3.7.20.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "7264d705ff53185f0847c69abdfce072779c0b907257e087a6372c7608108f65",
+        "configure": ["--prefix={root}/.l7-install", "--disable-python"],
+        "make": [MAKE_JOBS],
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "aux_sources": list(_B16_AUTOTOOLS_AUX),
+        "artifact": ".libs/libafflib.so*", "launch": None,
+        "note": ("AFFLIB 3.7.20's affsign signs an AFF image with the subject libcrypto; the "
+                 "admitted workload verifies it and a tampered image no longer verifies"),
+    },
+    {
+        "family": "httest", "version": "2.4.23",
+        "url": "https://deb.debian.org/debian/pool/main/h/httest/httest_2.4.23.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "91906cc7191b5f1b71500fb13d5822ce3b6c9c702c85234e2f5ac2abc7f4ab12",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}"],
+        "make": [MAKE_JOBS],
+        "env_extra": {"CFLAGS": "-fcommon"},
+        "aux_sources": list(_B16_PCRE_AUX),
+        "artifact": "src/.libs/httest", "launch": ["--version"],
+        "note": ("httest 2.4.23 drives an HTTPS request over a verified TLS session with its "
+                 "own CA option; an unrelated CA is refused"),
+    },
+    {
+        "family": "sipp", "version": "3.7.3",
+        "url": "https://github.com/SIPp/sipp/releases/download/v3.7.3/sipp-3.7.3.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "f7cf9ced5e2915c6aa8d88b48a32869ce5bc1f23b0b8da0de4df928db4925bf7",
+        "configure": ["-DUSE_SSL=1", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_C_FLAGS=-I{aux}/usr/include",
+                      "-DCMAKE_CXX_FLAGS=-I{aux}/usr/include -Wno-stringop-overflow "
+                      "-Wno-array-bounds"],
+        "make": [],
+        "aux_sources": list(_B16_NCURSES_AUX),
+        "artifact": "b/sipp", "launch": ["-v"],
+        "note": ("SIPp 3.7.3 completes a SIP call between its own UAS and UAC over verified "
+                 "TLS; an unrelated CA is refused"),
+    },
+    {
+        "family": "dma", "version": "0.14",
+        "url": "https://deb.debian.org/debian/pool/main/d/dma/dma_0.14.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make",
+        "sha256": "a36e77a59dd288a582dbeed7166ac4212e39120323bac75c74d7923e1d7b63e8",
+        "configure": None,
+        "make": [MAKE_JOBS, "YACC=bison -y", "LEX=flex"],
+        "aux_sources": list(_B16_AUTOTOOLS_AUX),
+        "artifact": "dma", "launch": ["-h"],
+        "note": ("DMA 0.14 submits a message to a local SMTPS peer over verified TLS; an "
+                 "unrelated CA is refused and no message is delivered"),
+    },
+    {
+        "family": "h2o", "version": "2.2.6",
+        "url": "https://github.com/h2o/h2o/archive/refs/tags/v2.2.6.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "f8cbc1b530d85ff098f6efc2c3fdbc5e29baffb30614caac59d5c710f7bda201",
+        "configure": ["-DWITH_BUNDLED_SSL=OFF", "-DWITH_MRUBY=OFF",
+                      "-DWITH_PICOTLS=OFF", "-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_C_FLAGS=-I{aux}/usr/include"],
+        "make": [],
+        "aux_sources": list(_B16_UV_AUX),
+        "artifact": "b/h2o", "launch": ["--version"],
+        "note": ("h2o 2.2.6 serves the fixture over a verified TLS listener; a client trusting "
+                 "an unrelated CA is rejected"),
+    },
+    {
+        "family": "libshout", "version": "2.4.6",
+        "url": "https://downloads.xiph.org/releases/libshout/libshout-2.4.6.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "39cbd4f0efdfddc9755d88217e47f8f2d7108fa767f9d58a2ba26a16d8f7c910",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--with-ogg={aux}/usr"],
+        "make": [MAKE_JOBS],
+        "aux_sources": list(_B16_OGG_AUX),
+        "artifact": "src/.libs/libshout.so*", "launch": None,
+        "note": ("libshout 2.4.6 streams to an Icecast source endpoint over verified TLS; a "
+                 "client trusting an unrelated CA is refused"),
+    },
+    {
+        "family": "nghttp2", "version": "1.64.0",
+        "url": ("https://github.com/nghttp2/nghttp2/releases/download/v1.64.0/"
+                "nghttp2-1.64.0.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "20e73f3cf9db3f05988996ac8b3a99ed529f4565ca91a49eb0550498e10621e8",
+        "configure": ["--prefix={root}/.l7-install", "--enable-app", "--with-openssl",
+                      "--with-libxml2", "--with-jansson", "--with-libev",
+                      "--without-libevent-openssl"],
+        "make": [MAKE_JOBS],
+        "pkgconfig_shim": True,
+        "aux_sources": list(_B16_NGHTTP2_AUX),
+        "artifact": "src/.libs/nghttp", "launch": ["--version"],
+        "note": ("nghttp2 1.64.0's nghttp client fetches from its own nghttpd over verified "
+                 "TLS; a client trusting an unrelated CA is refused"),
+    },
+)
+
+_L7_SPLIT_RECIPES: tuple[tuple[str, str, dict], ...] = (
+    ("libcjose0", "cjose", {
+        "artifact": "src/.libs/libcjose.so*",
+        "note": ("the libcjose0 package row of cjose 0.8.1: the same JWS HS256 harness signs, "
+                 "imports and verifies a compact JWS, and rejects a tampered signature and a "
+                 "wrong key"),
+    }),
+    ("libgetdns10", "getdns", {
+        "artifact": "b/libgetdns.so*",
+        "note": ("the libgetdns10 package row of getdns 1.7.3: the same DNS-over-TLS client "
+                 "harness retrieves the fixture A record and rejects an unrelated CA"),
+    }),
+    ("asterisk-srtp", "srtp", {
+        "artifact": "b/libsrtp2.so*",
+        "note": ("the asterisk-srtp package row of libsrtp 2.6.0: the same AES-CM/HMAC "
+                 "protect/unprotect harness rejects a session with the wrong key"),
+    }),
+    ("epic5-lite", "epic5", {
+        "artifact": "source/epic5",
+        "note": ("the epic5-lite package row of epic5 3.0.3: the same IRC-over-TLS client "
+                 "registers and joins the fixture channel and refuses the unrelated CA"),
+    }),
+
+    ("httpd", "apache2-bin", {
+        "artifact": "httpd",
+        "note": ("the httpd package row of Apache 2.4.62: static mod_ssl serves the fixture "
+                 "over verified TLS and an unrelated CA is refused"),
+    }),
+    ("librabbitmq", "rabbitmq-c", {
+        "artifact": "b/librabbitmq/librabbitmq.so*",
+        "note": ("the librabbitmq package row of rabbitmq-c 0.15.0: the same TLS socket "
+                 "harness completes the connection and rejects an unrelated CA"),
+    }),
+)
+
+# ima-evm-utils 1.4 is the only new upstream in this batch: its `evmctl` signs and verifies a
+# file's extended-attribute digest with the subject libcrypto.  The release ships configure.ac
+# only, so the pinned bookworm autotools regenerate `configure` as a build input (never a source
+# edit).  keyutils is the one non-OpenSSL dependency and comes from pinned bookworm packages.
+_L7_IMA_AUX: tuple[dict, ...] = (
+    _aux_deb("k/keyutils", "libkeyutils1_1.6.3-2_amd64.deb",
+             "cfac89e6a7a54ff3c6a4f843310e25efeddaa771baeae470bd98bd588c373563",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("k/keyutils", "libkeyutils-dev_1.6.3-2_amd64.deb",
+             "b26aa6df93bbf977f3b945ea7329cb89cc800b93cc0e4a3542c964f3e387d64a",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_L7_IMA_SPEC: dict = {
+    "family": "ima-evm-utils", "version": "1.4",
+    "url": "https://deb.debian.org/debian/pool/main/i/ima-evm-utils/ima-evm-utils_1.4.orig.tar.gz",
+    "archive": "tar.gz", "build_system": "autotools",
+    "sha256": "fcf85b31d6292051b3679e5f17ffa7f89b6898957aad0f59aa4e9878884b27d1",
+    "configure": ["--disable-tests"], "make": [MAKE_JOBS],
+    "artifact": "src/.libs/evmctl", "launch": ["--version"],
+    "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX) + list(_L7_IMA_AUX),
+    "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+    "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+    "note": ("ima-evm-utils 1.4's evmctl signs a file's IMA digest with the subject libcrypto "
+             "and verifies it; a modified file no longer verifies"),
 }
 
 RECIPES: tuple[dict, ...] = _build_catalogue()
