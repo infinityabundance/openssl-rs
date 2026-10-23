@@ -10706,11 +10706,510 @@ def _wl_ima(ctx: dict) -> dict:
         "reason": None if functional else (
             "evmctl did not sign and verify the fixture" if not ok else
             "a modified file still verified"),
-        "transcript": _transcript([("ima_sign", sign), ("ima_verify", verify),
-                                   ("tampered verify (must fail)", neg)]),
+        "transcript": _transcript(("ima_sign", sign), ("ima_verify", verify),
+                                   ("tampered verify (must fail)", neg)),
         "workload": "evmctl: IMA SHA-256 sign/verify and tampered-file reject",
         "local_only": True,
     }
+
+
+def _b16_out(ok: bool, functional: bool, transcript: str, workload: str,
+             good: str, bad: str) -> dict:
+    """The common result shape for the b16 onboarding workloads."""
+    return {
+        "runtime_ok": ok, "functional_ok": functional,
+        "failure_class": None if functional else (
+            "functional-failure" if ok else "runtime-failure"),
+        "residual": "none" if functional else (
+            "functional-divergence" if ok else "runtime-failure"),
+        "reason": None if functional else (bad if ok else good),
+        "transcript": transcript, "workload": workload, "local_only": True,
+    }
+
+
+def _wl_sscg(ctx: dict) -> dict:
+    """sscg mints a CA and a service certificate; the authority verifies the chain."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    ca, ca_key = d / "ca.crt", d / "ca.key"
+    crt, key = d / "service.crt", d / "service.key"
+    mint = _run_captured([prog, "--quiet", "--force", "--lifetime", "2", "--hostname",
+                          "127.0.0.1", "--subject-alt-name", "IP:127.0.0.1",
+                          "--ca-file", str(ca), "--ca-key-file", str(ca_key),
+                          "--cert-file", str(crt), "--cert-key-file", str(key)],
+                         cwd=d, env=ctx["env"], timeout=120)
+    verify = _ossl(ctx["authority_prefix"], ["verify", "-CAfile", str(ca), str(crt)], cwd=d)
+    neg = _ossl(ctx["authority_prefix"], ["verify", "-CAfile", str(pki["other_crt"]), str(crt)],
+                cwd=d)
+    ok = bool(mint["ok"] and crt.is_file() and key.is_file())
+    verified = ": OK" in (verify["stdout"] + verify["stderr"])
+    refused = neg["exit_code"] != 0
+    functional = ok and verified and refused
+    return _b16_out(ok, functional,
+                    _transcript(("sscg", mint), ("verify", verify),
+                                ("unrelated CA (must fail)", neg)),
+                    "sscg: CA + service certificate minted and chain-verified",
+                    "sscg did not mint the CA and service certificate",
+                    "the unrelated CA did not reject the chain")
+
+
+def _wl_shellinabox(ctx: dict) -> dict:
+    """shellinaboxd serves its web terminal over the fixture TLS listener."""
+    d = ctx["workdir"]
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    certdir = d / "certs"
+    certdir.mkdir(parents=True, exist_ok=True)
+    (certdir / "certificate.pem").write_bytes(pki["srv_crt"].read_bytes()
+                                                + pki["srv_key"].read_bytes())
+    port = _free_port()
+    argv = [str(ctx["program"]), "--localhost-only", "--disable-utmp-logging", "-q",
+            "-p", str(port), "-c", str(certdir), "-s", "/:nobody:nogroup:/:/bin/true"]
+    server = subprocess.Popen(argv, cwd=str(d), env=ctx["env"],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        listening = _wait_tcp("127.0.0.1", port, timeout=15)
+        good = templates._tls_exchange(port, pki["ca_crt"], "GET / HTTP/1.0\r\n\r\n",
+                                       verify_host=True)
+        wrong = templates._tls_exchange(port, pki["other_crt"], "GET / HTTP/1.0\r\n\r\n",
+                                        verify_host=True)
+    finally:
+        server.terminate()
+        try:
+            out, err = server.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            out, err = server.communicate()
+    served = bool(good.get("ok")) and "ShellInABox" in good.get("data", "")
+    ok = bool(listening and served)
+    functional = ok and not wrong.get("ok")
+    return _b16_out(ok, functional,
+                    _transcript(("server", {"exit_code": 0 if listening else 1,
+                                            "stdout": "", "stderr": (err or "")[-1200:]}),
+                                ("client", {"exit_code": 0 if good.get("ok") else 1,
+                                             "stdout": good.get("data", "")[:600],
+                                             "stderr": good.get("error", "")}),
+                                ("unrelated CA (must fail)",
+                                 {"exit_code": 0 if wrong.get("ok") else 1,
+                                  "stdout": wrong.get("data", "")[:200],
+                                  "stderr": wrong.get("error", "")})),
+                    "shellinabox: web terminal served over verified TLS",
+                    "shellinabox did not serve its page over TLS",
+                    "a client trusting the unrelated CA was not rejected")
+
+
+def _wl_charybdis(ctx: dict) -> dict:
+    """charybdis completes its IRC greeting over the fixture TLS listener."""
+    d = ctx["workdir"]
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    dh = d / "dh.pem"
+    gen = _ossl(ctx["authority_prefix"], ["dhparam", "-out", str(dh), "1024"], cwd=d,
+                timeout=120)
+    port = _free_port()
+    conf = d / "ircd.conf"
+    conf.write_text(
+        "serverinfo {\n  name = \"irc.fixture\";\n  sid = \"1AA\";\n"
+        "  description = \"fixture\";\n  network_name = \"fixture\";\n"
+        f"  ssl_cert = \"{pki['srv_crt']}\";\n"
+        f"  ssl_private_key = \"{pki['srv_key']}\";\n"
+        f"  ssl_dh_params = \"{dh}\";\n}};\n"
+        "admin { name = \"fixture\"; description = \"fixture\"; email = \"f@example\"; };\n"
+        "class \"users\" { ping_time = 2 minutes; number_per_ip = 10; max_number = 100; };\n"
+        f"listen {{ host = \"127.0.0.1\"; sslport = {port}; }};\n"
+        "auth { user = \"*@*\"; class = \"users\"; };\n",
+        encoding="utf-8")
+    modules = ctx["root"] / "modules"
+    rundir = d / "run"
+    rundir.mkdir(parents=True, exist_ok=True)
+    argv = [str(ctx["program"]), "-conf", str(conf), "-foreground", "-logfile",
+            str(d / "ircd.log"), "-pidfile", str(d / "ircd.pid")]
+    if modules.is_dir():
+        argv += ["-modulepath", str(modules)]
+    server = subprocess.Popen(argv, cwd=str(rundir), env=ctx["env"],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        listening = _wait_tcp("127.0.0.1", port, timeout=20)
+        good = templates._tls_exchange(port, pki["ca_crt"], "NICK fixture\r\nUSER fixture 0 * :x\r\n",
+                                       verify_host=True)
+        wrong = templates._tls_exchange(port, pki["other_crt"], "NICK fixture\r\n",
+                                        verify_host=True)
+    finally:
+        server.terminate()
+        try:
+            out, err = server.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            out, err = server.communicate()
+    greeted = bool(good.get("ok")) and bool(re.search(r"(NOTICE|020|AUTH|001)",
+                                                      good.get("data", "")))
+    ok = bool(gen["ok"] and listening and greeted)
+    functional = ok and not wrong.get("ok")
+    return _b16_out(ok, functional,
+                    _transcript(("dhparam", gen),
+                                ("server", {"exit_code": 0 if listening else 1,
+                                            "stdout": "", "stderr": (err or "")[-1200:]}),
+                                ("client", {"exit_code": 0 if good.get("ok") else 1,
+                                             "stdout": good.get("data", "")[:600],
+                                             "stderr": good.get("error", "")}),
+                                ("unrelated CA (must fail)",
+                                 {"exit_code": 0 if wrong.get("ok") else 1,
+                                  "stdout": wrong.get("data", "")[:200],
+                                  "stderr": wrong.get("error", "")})),
+                    "charybdis: IRC greeting over verified TLS",
+                    "charybdis did not listen or greet over TLS",
+                    "a client trusting the unrelated CA was not rejected")
+
+
+def _wl_afflib(ctx: dict) -> dict:
+    """AFFLIB signs an AFF image and refuses a tampered one."""
+    d, prog = ctx["workdir"], Path(str(ctx["program"]))
+    convert, verify = prog.with_name("affconvert"), prog.with_name("affverify")
+    payload, img = d / "payload.bin", d / "fixture.aff"
+    payload.write_bytes(b"afflib-fixture-payload\n" * 32)
+    key, crt = d / "sign.key", d / "sign.crt"
+    gen = _ossl(ctx["authority_prefix"], ["req", "-x509", "-newkey", "rsa:2048", "-sha256",
+                                          "-nodes", "-days", "2", "-subj", "/CN=afflib-fixture",
+                                          "-keyout", str(key), "-out", str(crt)], cwd=d)
+    made = _run_captured([str(convert), "-o", str(img), str(payload)], cwd=d, env=ctx["env"],
+                         timeout=120)
+    signed = _run_captured([str(prog), "-k", str(key), "-c", str(crt), str(img)], cwd=d,
+                           env=ctx["env"], timeout=120)
+    good = _run_captured([str(verify), str(img)], cwd=d, env=ctx["env"], timeout=120)
+    tampered = d / "tampered.aff"
+    if img.is_file():
+        blob = bytearray(img.read_bytes())
+        if blob:
+            blob[len(blob) // 2] ^= 0xFF
+        tampered.write_bytes(bytes(blob))
+    bad = _run_captured([str(verify), str(tampered)], cwd=d, env=ctx["env"], timeout=120)
+    ok = bool(gen["ok"] and made["ok"] and signed["ok"] and good["ok"])
+    functional = ok and bad["exit_code"] != 0
+    return _b16_out(ok, functional,
+                    _transcript(("affconvert", made), ("affsign", signed),
+                                ("affverify", good), ("tampered (must fail)", bad)),
+                    "AFFLIB: affsign/affverify over a signed AFF image",
+                    "AFFLIB could not create and sign the image",
+                    "a tampered image still verified")
+
+
+def _wl_httest(ctx: dict) -> dict:
+    """httest performs an HTTPS request with its own CA option."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    port = _free_port()
+
+    def run(ca: Path, name: str) -> dict:
+        script = d / f"{name}.htt"
+        script.write_text(
+            "CLIENT\n"
+            f"_SSL:SET_CA {ca}\n"
+            f"_REQ 127.0.0.1 {port}\n"
+            "_SSL:CONNECT SSL\n"
+            "__GET / HTTP/1.0\n"
+            "__Host: 127.0.0.1\n"
+            "__\n"
+            "_EXPECT . \"template-payload\"\n"
+            "_WAIT\n"
+            "END\n", encoding="utf-8")
+        return _run_captured([prog, "-f", str(script)], cwd=d, env=ctx["env"], timeout=60)
+
+    with templates._HTTPFixture(port, "template-payload", cert=pki["srv_crt"],
+                                 key=pki["srv_key"]):
+        good = run(pki["ca_crt"], "good")
+        bad = run(pki["other_crt"], "bad")
+    ok = good["ok"]
+    functional = ok and bad["exit_code"] != 0
+    return _b16_out(ok, functional,
+                    _transcript(("HTTPS request", good), ("unrelated CA (must fail)", bad)),
+                    "httest: HTTPS request over verified TLS",
+                    "httest did not complete the HTTPS request",
+                    "a request trusting the unrelated CA was not rejected")
+
+
+def _wl_sipp(ctx: dict) -> dict:
+    """SIPp's own UAS and UAC complete a call over verified TLS."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    port = _free_port()
+    uas = subprocess.Popen([prog, "-sn", "uas", "-t", "l1", "-i", "127.0.0.1",
+                            "-p", str(port), "-m", "1", "-timeout", "15s",
+                            "-tls_cert", str(pki["srv_crt"]),
+                            "-tls_key", str(pki["srv_key"])],
+                           cwd=str(d), env=ctx["env"], stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, text=True)
+    try:
+        listening = _wait_tcp("127.0.0.1", port, timeout=15)
+        good = _run_captured([prog, "127.0.0.1:{}".format(port), "-sn", "uac", "-t", "l1",
+                              "-m", "1", "-r", "1", "-timeout", "15s",
+                              "-tls_ca", str(pki["ca_crt"])], cwd=d, env=ctx["env"], timeout=45)
+        bad = _run_captured([prog, "127.0.0.1:{}".format(port), "-sn", "uac", "-t", "l1",
+                             "-m", "1", "-r", "1", "-timeout", "8s",
+                             "-tls_ca", str(pki["other_crt"])], cwd=d, env=ctx["env"],
+                            timeout=30)
+    finally:
+        uas.terminate()
+        try:
+            uout, uerr = uas.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            uas.kill()
+            uout, uerr = uas.communicate()
+    good_text = good["stdout"] + good["stderr"]
+    ok = bool(listening and "Successful call" in good_text)
+    functional = ok and bad["exit_code"] != 0
+    return _b16_out(ok, functional,
+                    _transcript(("UAS", {"exit_code": 0 if listening else 1, "stdout": "",
+                                         "stderr": (uerr or "")[-800:]}),
+                                ("UAC", good), ("unrelated CA (must fail)", bad)),
+                    "SIPp: a SIP call between its own UAS and UAC over verified TLS",
+                    "SIPp did not complete the call over TLS",
+                    "a UAC trusting the unrelated CA was not rejected")
+
+
+def _wl_dma(ctx: dict) -> dict:
+    """DMA submits a message to a local SMTPS peer over verified TLS."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    port = _free_port()
+    spool = d / "spool"
+    spool.mkdir(parents=True, exist_ok=True)
+    confdir = ctx["root"] / "etc"
+    confdir.mkdir(parents=True, exist_ok=True)
+
+    def write_conf(ca: Path) -> None:
+        (confdir / "dma.conf").write_text(
+            f"SMARTHOST 127.0.0.1\nPORT {port}\nSECURETRANSFER\nVERIFYCERT\n"
+            f"NULLCLIENT\nSPOOLDIR {spool}\n", encoding="utf-8")
+        (confdir / "auth.conf").write_text("", encoding="utf-8")
+
+    state = {"data": ""}
+
+    def serve() -> None:
+        listener = socket.socket()
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", port))
+        listener.listen(1)
+        listener.settimeout(20)
+        sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        sctx.load_cert_chain(str(pki["srv_crt"]), str(pki["srv_key"]))
+        try:
+            conn, _ = listener.accept()
+            with conn, sctx.wrap_socket(conn, server_side=True) as tls:
+                stream = tls.makefile("rwb", buffering=0)
+                stream.write(b"220 fixture ESMTP\r\n")
+                while True:
+                    line = stream.readline()
+                    if not line:
+                        break
+                    cmd = line.strip().split(b" ")[0].upper()
+                    if cmd in (b"EHLO", b"HELO"):
+                        stream.write(b"250-fixture\r\n250 SIZE 10240000\r\n")
+                    elif cmd == b"DATA":
+                        stream.write(b"354 go\r\n")
+                        body = b""
+                        while True:
+                            part = stream.readline()
+                            if not part or part == b".\r\n":
+                                break
+                            body += part
+                        state["data"] = body.decode("utf-8", "replace")
+                        stream.write(b"250 queued\r\n")
+                    elif cmd == b"QUIT":
+                        stream.write(b"221 bye\r\n")
+                        break
+                    else:
+                        stream.write(b"250 ok\r\n")
+        except OSError:
+            return
+        finally:
+            listener.close()
+
+    def deliver(ca_name: str) -> tuple[dict, threading.Thread]:
+        thread = threading.Thread(target=serve, daemon=True)
+        thread.start()
+        env = dict(ctx["env"], SSL_CERT_FILE=str(pki["ca_crt" if ca_name == "ca" else "other_crt"]))
+        res = _run_captured([prog, "-f", "sender@example", "-t"], cwd=d, env=env, timeout=30,
+                            stdin_text="To: fixture@example\nSubject: fixture\n\ntemplate-payload\n")
+        thread.join(timeout=25)
+        return res, thread
+
+    write_conf(pki["ca_crt"])
+    good, _ = deliver("ca")
+    good_data = state["data"]
+    # The negative control reuses the same peer with a CA file that did not sign its certificate.
+    state["data"] = ""
+    write_conf(pki["other_crt"])
+    bad, _ = deliver("wrong_ca")
+    ok = bool(good["ok"] and "template-payload" in good_data)
+    functional = ok and not ("template-payload" in state["data"])
+    return _b16_out(ok, functional,
+                    _transcript(("SMTPS session", good),
+                                ("delivered body", {"exit_code": 0, "stdout": good_data[:400],
+                                                     "stderr": ""}),
+                                ("unrelated CA (must fail)", bad),
+                                ("negative delivered body", {"exit_code": 0,
+                                                             "stdout": state["data"][:200],
+                                                             "stderr": ""})),
+                    "DMA: message submitted to a local SMTPS peer over verified TLS",
+                    "DMA did not deliver the message over TLS",
+                    "a message was delivered while trusting the unrelated CA")
+
+
+def _wl_h2o(ctx: dict) -> dict:
+    """h2o serves the fixture over verified TLS."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    root = d / "docroot"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "index.html").write_text("template-payload\n", encoding="utf-8")
+    port = _free_port()
+    conf = d / "h2o.conf"
+    conf.write_text(
+        f"listen:\n  port: {port}\n  ssl:\n    certificate-file: {pki['srv_crt']}\n"
+        f"    key-file: {pki['srv_key']}\nhosts:\n  \"default\":\n    paths:\n"
+        f"      \"/\":\n        file.dir: {root}\naccess-log: /dev/null\n"
+        f"error-log: /dev/null\n", encoding="utf-8")
+    server = subprocess.Popen([prog, "-c", str(conf)], cwd=str(d), env=ctx["env"],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        listening = _wait_tcp("127.0.0.1", port, timeout=20)
+        good = templates._tls_exchange(port, pki["ca_crt"], "GET / HTTP/1.0\r\n\r\n",
+                                       verify_host=True)
+        wrong = templates._tls_exchange(port, pki["other_crt"], "GET / HTTP/1.0\r\n\r\n",
+                                        verify_host=True)
+    finally:
+        server.terminate()
+        try:
+            out, err = server.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            out, err = server.communicate()
+    served = bool(good.get("ok")) and "template-payload" in good.get("data", "")
+    ok = bool(listening and served)
+    functional = ok and not wrong.get("ok")
+    return _b16_out(ok, functional,
+                    _transcript(("server", {"exit_code": 0 if listening else 1, "stdout": "",
+                                            "stderr": (err or "")[-800:]}),
+                                ("client", {"exit_code": 0 if good.get("ok") else 1,
+                                             "stdout": good.get("data", "")[:600],
+                                             "stderr": good.get("error", "")}),
+                                ("unrelated CA (must fail)",
+                                 {"exit_code": 0 if wrong.get("ok") else 1,
+                                  "stdout": wrong.get("data", "")[:200],
+                                  "stderr": wrong.get("error", "")})),
+                    "h2o: fixture served over verified TLS",
+                    "h2o did not serve the fixture over TLS",
+                    "a client trusting the unrelated CA was not rejected")
+
+
+def _wl_libshout(ctx: dict) -> dict:
+    """libshout streams to an Icecast source endpoint over verified TLS."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    payload = d / "audio.raw"
+    payload.write_bytes(b"template-payload\n" * 64)
+    port = _free_port()
+
+    def stream(ca_name: str) -> tuple[dict, str]:
+        got = {"request": ""}
+        listener = socket.socket()
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", port))
+        listener.listen(1)
+        listener.settimeout(20)
+        sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        sctx.load_cert_chain(str(pki["srv_crt"]), str(pki["srv_key"]))
+
+        def serve() -> None:
+            try:
+                conn, _ = listener.accept()
+                with conn, sctx.wrap_socket(conn, server_side=True) as tls:
+                    tls.settimeout(10)
+                    blob = b""
+                    while b"\r\n\r\n" not in blob:
+                        chunk = tls.recv(4096)
+                        if not chunk:
+                            break
+                        blob += chunk
+                    got["request"] = blob.decode("utf-8", "replace")
+                    tls.sendall(b"HTTP/1.0 200 OK\r\n\r\n")
+                    body = b""
+                    while b"template-payload" not in body:
+                        chunk = tls.recv(4096)
+                        if not chunk:
+                            break
+                        body += chunk
+                    got["body"] = body.decode("utf-8", "replace")
+            except OSError:
+                return
+            finally:
+                listener.close()
+
+        thread = threading.Thread(target=serve, daemon=True)
+        thread.start()
+        env = dict(ctx["env"], SSL_CERT_FILE=str(pki["ca_crt" if ca_name == "ca" else "other_crt"]))
+        res = _run_captured([prog, "--format", "mp3", "--host", "127.0.0.1", "--port", str(port),
+                             "--pass", "fixture", "--mount", "/stream", "--tls-mode", "auto",
+                             str(payload)], cwd=d, env=env, timeout=30)
+        thread.join(timeout=25)
+        return res, got.get("request", "") + "\n" + got.get("body", "")
+
+    good, good_data = stream("ca")
+    bad, bad_data = stream("wrong_ca")
+    ok = bool(good["ok"] and "SOURCE" in good_data.upper() and "template-payload" in good_data)
+    functional = ok and "template-payload" not in bad_data
+    return _b16_out(ok, functional,
+                    _transcript(("SOURCE over TLS", good),
+                                ("peer transcript", {"exit_code": 0, "stdout": good_data[:600],
+                                                       "stderr": ""}),
+                                ("unrelated CA (must fail)", bad),
+                                ("negative transcript", {"exit_code": 0,
+                                                          "stdout": bad_data[:200],
+                                                          "stderr": ""})),
+                    "libshout: SOURCE stream to an Icecast peer over verified TLS",
+                    "libshout did not stream over TLS",
+                    "a stream was accepted while trusting the unrelated CA")
+
+
+def _wl_nghttp2(ctx: dict) -> dict:
+    """nghttp fetches from nghttpd over verified TLS."""
+    d, prog = ctx["workdir"], Path(str(ctx["program"]))
+    nghttpd = prog.with_name("nghttpd")
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    root = d / "docroot"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "fixture.txt").write_text("template-payload\n", encoding="utf-8")
+    dh = d / "dh.pem"
+    gen = _ossl(ctx["authority_prefix"], ["dhparam", "-out", str(dh), "1024"], cwd=d,
+                timeout=120)
+    port = _free_port()
+    server = subprocess.Popen([str(nghttpd), "-d", str(root), "-v", str(port), str(pki["srv_key"]),
+                               str(pki["srv_crt"])], cwd=str(d), env=ctx["env"],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        listening = _wait_tcp("127.0.0.1", port, timeout=20)
+        env = dict(ctx["env"], SSL_CERT_FILE=str(pki["ca_crt"]))
+        good = _run_captured([str(prog), "-v", "https://127.0.0.1:{}/fixture.txt".format(port)],
+                             cwd=d, env=env, timeout=45)
+        env_bad = dict(ctx["env"], SSL_CERT_FILE=str(pki["other_crt"]))
+        bad = _run_captured([str(prog), "-v", "https://127.0.0.1:{}/fixture.txt".format(port)],
+                            cwd=d, env=env_bad, timeout=30)
+    finally:
+        server.terminate()
+        try:
+            out, err = server.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            out, err = server.communicate()
+    good_text = good["stdout"] + good["stderr"]
+    ok = bool(gen["ok"] and listening and "template-payload" in good_text)
+    functional = ok and bad["exit_code"] != 0
+    return _b16_out(ok, functional,
+                    _transcript(("dhparam", gen),
+                                ("server", {"exit_code": 0 if listening else 1, "stdout": "",
+                                            "stderr": (err or "")[-800:]}),
+                                ("nghttp", good), ("unrelated CA (must fail)", bad)),
+                    "nghttp2: nghttp fetch from nghttpd over verified TLS",
+                    "nghttp did not fetch the fixture over TLS",
+                    "a client trusting the unrelated CA was not rejected")
 
 
 RUNNERS = {
@@ -10892,6 +11391,45 @@ PROGRAMS["ima-evm-utils"] = {
              "modified file no longer verifies"),
 }
 RUNNERS["ima-evm-utils"] = _wl_ima
+
+# The Phase-25 L7 onboarding batch (b16).  Each program is the family's own executable or, for
+# AFFLIB and libshout, the library's admitted signer/streamer; the workload is the loopback
+# exercise implemented by the `_wl_*` runner above.
+_B16_PROGRAMS: dict[str, dict] = {
+    "sscg": {"program": "b/sscg", "launch": ["--version"], "version_re": r"sscg",
+             "lib_paths": []},
+    "shellinabox": {"program": "shellinaboxd", "launch": ["--version"],
+                    "version_re": r"shellinabox", "lib_paths": []},
+    "charybdis": {"program": "src/ircd/.libs/charybdis", "launch": ["--version"],
+                  "version_re": r"(?i)(charybdis|ircd)",
+                  "lib_paths": ["src/ircd/.libs", "src/librb/src/.libs"]},
+    "afflib": {"program": "tools/.libs/affsign", "launch": ["-v"],
+               "version_re": r"affsign version", "lib_paths": ["lib/.libs"]},
+    "httest": {"program": "src/.libs/httest", "launch": ["--version"],
+               "version_re": r"httest", "lib_paths": []},
+    "sipp": {"program": "b/sipp", "launch": ["-v"], "version_re": r"SIPp v",
+             "lib_paths": []},
+    "dma": {"program": "dma", "launch": [], "version_re": r"dma", "lib_paths": []},
+    "h2o": {"program": "b/h2o", "launch": ["--version"], "version_re": r"h2o version",
+            "lib_paths": []},
+    "libshout": {"program": "tools/.libs/shout", "launch": ["--help"],
+                 "version_re": r"(?i)usage: .*shout", "lib_paths": ["src/.libs"]},
+    "nghttp2": {"program": "src/.libs/nghttp", "launch": ["--version"],
+                "version_re": r"nghttp2", "lib_paths": ["lib/.libs", "src/.libs"]},
+}
+PROGRAMS.update(_B16_PROGRAMS)
+RUNNERS.update({
+    "sscg": _wl_sscg,
+    "shellinabox": _wl_shellinabox,
+    "charybdis": _wl_charybdis,
+    "afflib": _wl_afflib,
+    "httest": _wl_httest,
+    "sipp": _wl_sipp,
+    "dma": _wl_dma,
+    "h2o": _wl_h2o,
+    "libshout": _wl_libshout,
+    "nghttp2": _wl_nghttp2,
+})
 
 
 # --------------------------------------------------------------------------------------------
