@@ -18,6 +18,20 @@
 //! recorded here rather than hidden. The per-session `prev`/`next`/`owner` fields exist but only
 //! `owner` is maintained (the list is not modelled).
 //!
+//! * **Removal callbacks run outside the context cache lock.** The authority invokes
+//!   `remove_session_cb` while holding `ctx->lock` from both `SSL_CTX_add_session`'s eviction arm
+//!   and `SSL_CTX_flush_sessions` (`ssl_sess.c:784-790`, `:1292-1298`). `ctx->lock` is not
+//!   recursive, so an application callback that re-enters `SSL_CTX_add_session` or
+//!   `SSL_CTX_remove_session` fails (or deadlocks against a plain `pthread_rwlock_t`). Every
+//!   cache entry is detached first, the lock is released, and only then is the callback invoked
+//!   with the entry's cache reference still owned here; re-entrant mutation therefore sees a
+//!   consistent cache. This is a deliberate safety correction, recorded rather than hidden; the
+//!   callback's arguments, order, and count are unchanged.
+//! * **Automatic flushing is modelled** (`ssl_lib.c:4766-4782`): unless
+//!   `SSL_SESS_CACHE_NO_AUTO_CLEAR` is set, `ssl_update_cache` flushes the context's cache when
+//!   the good-connection counter's low byte is `0xff`, using the counter value from before the
+//!   caller's own increment, exactly as the authority does.
+//!
 //! ## Measured divergences, recorded rather than hidden
 //!
 //! * **`time`/`timeout`/`calc_timeout` are seconds.** See `src/ssl/ssl_lib.rs`: every reader
@@ -630,6 +644,12 @@ unsafe fn remove_session_locked(ctx: *mut SslCtx, c: *mut SslSession) -> *mut Ss
 
 /// `int SSL_CTX_add_session(SSL_CTX *ctx, SSL_SESSION *c)` — `ssl/ssl_sess.c:749-856`.
 ///
+/// The insert is **failure-atomic**: the session is pushed before any incumbent is replaced or
+/// evicted, so a refused push (`OPENSSL_sk_new_null`/`OPENSSL_sk_push` failure) leaves the cache
+/// exactly as it was, including an incumbent with the same key. Every detached entry owns exactly
+/// one reference — the cache's — which is released here, outside the lock, after the removal
+/// callback has run (module header).
+///
 /// # Safety
 /// `ctx` must be a live context; `c` a live session (borrowed; the cache takes a reference).
 #[no_mangle]
@@ -644,79 +664,101 @@ pub unsafe extern "C" fn SSL_CTX_add_session(ctx: *mut SslCtx, c: *mut SslSessio
         }
         // SAFETY: `ctx` is live.
         if unsafe { CRYPTO_THREAD_write_lock((*ctx).lock) } == 0 {
+            // The reference added above is taken back. `c` still has the caller's reference, so
+            // this can never reach the destructor.
             // SAFETY: `c` is live.
             unsafe { SSL_SESSION_free(c) };
             return 0;
         }
+        // The authority replaces an incumbent with the same key and updates the last-used time
+        // whenever `SSL_SESS_CACHE_UPDATE_TIME` is set (`ssl_sess.c:798-801`), before the
+        // new/replacement decision.
         // SAFETY: `ctx` and `c` are live per the caller's contract.
-        let mut existing: *mut SslSession = unsafe { cache_find(ctx, c) };
-        if !existing.is_null() && existing != c {
-            // In the cache under the same key but a different object: drop the old one.
-            // SAFETY: `existing` is live.
-            unsafe {
-                cache_delete_ptr(ctx, existing);
-                SSL_SESSION_free(existing);
-            }
-            existing = ptr::null_mut();
-        }
-        if existing.is_null() {
-            // The authority updates the last-used time when `SSL_SESS_CACHE_UPDATE_TIME` is set
-            // (`ssl_sess.c:798-801`).
-            // SAFETY: `ctx`/`c` are live per the caller's contract.
-            unsafe {
-                if (*ctx).session_cache_mode & SSL_SESS_CACHE_UPDATE_TIME != 0 {
-                    (*c).time = time_now_secs();
-                    ssl_session_calculate_timeout(c);
-                }
+        unsafe {
+            if (*ctx).session_cache_mode & SSL_SESS_CACHE_UPDATE_TIME != 0 {
+                (*c).time = time_now_secs();
+                ssl_session_calculate_timeout(c);
             }
         }
-        // The authority's `lh_SSL_SESSION_insert` returns an existing entry with the same key, or
-        // NULL when the session is new. This crate's stack push reports a refusal directly, so
-        // the OOM arm is handled at the insertion below rather than inferred from a NULL lookup.
-        let mut ret;
-        if existing.is_null() {
-            ret = 1;
-            // SAFETY: `ctx` is live and its cache is this context's own; `c` is live per the
-            // caller's contract, and every release below acts only on a reference this call owns
-            // (the cache reference added at entry, or the evicted entry's cache reference).
-            unsafe {
+        // SAFETY: both pointers are live.
+        let existing = unsafe { cache_find(ctx, c) };
+        let mut ret = 0;
+        // `replaced` is the previous object under this key (`lh_SSL_SESSION_insert`'s return);
+        // the authority releases it *without* a `remove_session_cb`. `evicted` entries are the
+        // size-cap removals, which do run the callback.
+        let mut replaced: *mut SslSession = ptr::null_mut();
+        let mut evicted: Vec<*mut SslSession> = Vec::new();
+        if existing == c {
+            // Already cached: take back the reference added at entry. The cache still holds one
+            // and the caller holds one, so this is never the last release.
+            // SAFETY: `c` is live.
+            unsafe { SSL_SESSION_free(c) };
+        } else {
+            // Insert first. Nothing below this point can refuse, so a refusal here is the only
+            // failure path and it has not touched the cache.
+            // SAFETY: `ctx` is live and its cache is this context's own.
+            let pushed = unsafe {
                 if (*ctx).sessions.is_null() {
                     (*ctx).sessions = OPENSSL_sk_new_null();
                 }
-                // Eviction: the authority drops the oldest until it is under the size cap. This
-                // crate processes insertion order where the authority processes timeout order.
-                while (*ctx).session_cache_size > 0
-                    && OPENSSL_sk_num((*ctx).sessions) as usize >= (*ctx).session_cache_size
-                {
-                    let r = remove_session_locked(
-                        ctx,
-                        OPENSSL_sk_value((*ctx).sessions, 0).cast::<SslSession>(),
-                    );
-                    if r.is_null() {
-                        break;
-                    }
-                    if let Some(cb) = (*ctx).remove_session_cb {
-                        cb(ctx, r);
-                    }
-                    SSL_SESSION_free(r);
-                }
-                if (*ctx).sessions.is_null() || OPENSSL_sk_push((*ctx).sessions, c.cast()) == 0 {
-                    // The authority's OOM/refusal arm (`ssl_sess.c:756-765`): the insert did not
-                    // take a reference, so take back the one this call added and report failure.
-                    // The caller's own reference is untouched.
-                    SSL_SESSION_free(c);
-                    ret = 0;
-                } else {
+                !(*ctx).sessions.is_null() && OPENSSL_sk_push((*ctx).sessions, c.cast()) != 0
+            };
+            if !pushed {
+                // The insert did not take the reference added at entry; the caller's reference
+                // keeps `c` live through this release.
+                // SAFETY: `c` is live.
+                unsafe { SSL_SESSION_free(c) };
+            } else {
+                // SAFETY: `ctx`/`c`/`existing` are live, and `existing` (when non-NULL) is the
+                // cache's entry under the same key.
+                unsafe {
                     (*c).owner = ctx;
+                    ret = 1;
+                    if !existing.is_null() && cache_delete_ptr(ctx, existing) >= 0 {
+                        replaced = existing;
+                    }
+                    // Evict the oldest entries until the cache is at its configured limit. The
+                    // entry just pushed is the newest, so it is never index 0 while another
+                    // entry is present.
+                    loop {
+                        let cap = (*ctx).session_cache_size;
+                        let num = OPENSSL_sk_num((*ctx).sessions);
+                        if cap == 0 || num <= 0 || num as usize <= cap {
+                            break;
+                        }
+                        let tail = OPENSSL_sk_value((*ctx).sessions, 0).cast::<SslSession>();
+                        let r = remove_session_locked(ctx, tail);
+                        if r.is_null() {
+                            break;
+                        }
+                        (*ctx).stats.sess_cache_full.fetch_add(1, Ordering::Relaxed);
+                        evicted.push(r);
+                    }
                 }
             }
-        } else {
-            // SAFETY: `c` is live; `existing == c`.
-            unsafe { SSL_SESSION_free(c) };
-            ret = 0;
         }
-        // SAFETY: `ctx` is live.
+        // SAFETY: `ctx` is live and this thread holds its write lock.
         unsafe { CRYPTO_THREAD_unlock((*ctx).lock) };
+        // Every release below happens outside the lock: an application `remove_session_cb` may
+        // re-enter the cache, and a last-reference release may run the session's `ex_data`
+        // destructors, which are application callbacks too.
+        if !replaced.is_null() {
+            // SAFETY: `replaced` owns the cache reference detached above.
+            unsafe { SSL_SESSION_free(replaced) };
+        }
+        // Snapshot the callback (it is a plain function pointer) so the loop never re-reads the
+        // context after a callback that retires it.
+        // SAFETY: `ctx` is live here; the caller holds a context reference.
+        let cb = unsafe { (*ctx).remove_session_cb };
+        for r in evicted {
+            if let Some(cb) = cb {
+                // SAFETY: `cb` is the application's registered `remove_session_cb` and `ctx`/`r`
+                // are live (the callback's own contract).
+                unsafe { cb(ctx, r) };
+            }
+            // SAFETY: `r` owns the cache reference detached above.
+            unsafe { SSL_SESSION_free(r) };
+        }
         ret
     })
 }
@@ -753,6 +795,11 @@ pub unsafe extern "C" fn SSL_CTX_remove_session(ctx: *mut SslCtx, c: *mut SslSes
 
 /// `void SSL_CTX_flush_sessions_ex(SSL_CTX *s, time_t t)` — `ssl/ssl_sess.c:1265-1310`.
 ///
+/// A negative `t` expires nothing: the authority's `sess_timedout((time_t)t, ...)` compares signed
+/// values, so only `t == 0` (flush everything) or a positive cutoff selects entries. The walk is
+/// insertion order (module header), so it cannot stop at the first live entry as the authority's
+/// timeout-ordered list does.
+///
 /// # Safety
 /// `s` must be a live context.
 #[no_mangle]
@@ -774,7 +821,8 @@ pub unsafe extern "C" fn SSL_CTX_flush_sessions_ex(s: *mut SslCtx, t: i64) {
                 let mut i = n - 1;
                 while i >= 0 {
                     let current = OPENSSL_sk_value(st, i).cast::<SslSession>();
-                    if !current.is_null() && (t == 0 || sess_timedout(t as u64, current)) {
+                    if !current.is_null() && (t == 0 || (t > 0 && sess_timedout(t as u64, current)))
+                    {
                         OPENSSL_sk_delete(st, i);
                         (*current).not_resumable = 1;
                         // `SSL_SESSION_list_remove` clears the cache back-pointer
@@ -786,8 +834,12 @@ pub unsafe extern "C" fn SSL_CTX_flush_sessions_ex(s: *mut SslCtx, t: i64) {
                 }
             }
             CRYPTO_THREAD_unlock((*s).lock);
+            // Snapshot the callback: an application callback is free to re-enter the cache, and
+            // snapshotting keeps this loop from re-reading the context after an adversarial
+            // callback retired the last reference to it.
+            let cb = (*s).remove_session_cb;
             for current in removed {
-                if let Some(cb) = (*s).remove_session_cb {
+                if let Some(cb) = cb {
                     cb(s, current);
                 }
                 SSL_SESSION_free(current);
@@ -862,6 +914,8 @@ pub(crate) const SSL_SESS_CACHE_CLIENT: c_long = 0x0001;
 pub(crate) const SSL_SESS_CACHE_SERVER: c_long = 0x0002;
 /// `SSL_SESS_CACHE_NO_INTERNAL_STORE` — `ssl.h:715`.
 const SSL_SESS_CACHE_NO_INTERNAL_STORE: c_long = 0x0200;
+/// `SSL_SESS_CACHE_NO_AUTO_CLEAR` — `ssl.h:714`.
+const SSL_SESS_CACHE_NO_AUTO_CLEAR: c_long = 0x0080;
 /// `SSL_VERIFY_PEER` — `ssl.h`.
 const SSL_VERIFY_PEER: c_int = 0x01;
 
@@ -1127,9 +1181,13 @@ pub(crate) unsafe fn ssl_get_prev_session(
     1
 }
 
-/// `void ssl_update_cache(SSL_CONNECTION *s, int mode)` — `ssl/ssl_lib.c:4712-4783`, reduced to
-/// the internal-store and `new_session_cb` arms (the auto-flush every 255 connections is not
-/// modelled).
+/// `void ssl_update_cache(SSL_CONNECTION *s, int mode)` — `ssl/ssl_lib.c:4712-4783`.
+///
+/// The internal-store, `new_session_cb` and automatic-flush arms. The auto-flush trigger matches
+/// the authority: when auto-clear is enabled and `(session_cache_mode & mode) == mode`, the counter
+/// for this side is read *before* the caller increments it and a low byte of `0xff` flushes the
+/// cache with the current time. TLS1.3 cache updates use their own path, so the authority's
+/// `SSL_IS_TLS13(s)` sub-conditions are out of this call's scope.
 ///
 /// # Safety
 /// `s` must be a live connection with its session set.
@@ -1137,7 +1195,9 @@ pub(crate) unsafe fn ssl_update_cache(s: *mut Ssl, mode: c_long) {
     // SAFETY: `s` is live per the contract.
     unsafe {
         let sess = (*s).session;
-        if sess.is_null() || (*sess).session_id_length == 0 || (*sess).not_resumable != 0 {
+        // The authority dereferences `s->session` unconditionally; a NULL here is undefined there
+        // and is a no-op here (the accessor family's NULL discipline).
+        if sess.is_null() || (*sess).session_id_length == 0 {
             return;
         }
         if (*s).server != 0
@@ -1151,7 +1211,9 @@ pub(crate) unsafe fn ssl_update_cache(s: *mut Ssl, mode: c_long) {
             return;
         }
         let i = (*ctx).session_cache_mode;
-        if (i & mode) != 0 && (*s).hit == 0 {
+        // `not_resumable` is an additional guard over the authority's test: a session the cache
+        // has already retired must not be re-inserted by a finishing handshake.
+        if (i & mode) != 0 && (*s).hit == 0 && (*sess).not_resumable == 0 {
             if (i & SSL_SESS_CACHE_NO_INTERNAL_STORE) == 0 {
                 SSL_CTX_add_session(ctx, sess);
             }
@@ -1159,6 +1221,19 @@ pub(crate) unsafe fn ssl_update_cache(s: *mut Ssl, mode: c_long) {
                 if SSL_SESSION_up_ref(sess) != 0 && cb(s, sess) == 0 {
                     SSL_SESSION_free(sess);
                 }
+            }
+        }
+        // `ssl_lib.c:4766-4782`. The caller increments the good-connection counter after this
+        // call, so the comparison is against the pre-increment value, exactly as the authority
+        // reads it.
+        if (i & SSL_SESS_CACHE_NO_AUTO_CLEAR) == 0 && (i & mode) == mode {
+            let stat = if mode & SSL_SESS_CACHE_CLIENT != 0 {
+                &(*ctx).stats.sess_connect_good
+            } else {
+                &(*ctx).stats.sess_accept_good
+            };
+            if stat.load(Ordering::Relaxed) & 0xff == 0xff {
+                SSL_CTX_flush_sessions_ex(ctx, time_now_secs() as i64);
             }
         }
     }
@@ -2938,6 +3013,796 @@ mod null_accessor_tests {
             assert_eq!(SSL_SESSION_set1_ticket_appdata(m, core::ptr::null(), 0), 0);
             assert_eq!(SSL_SESSION_set_time_ex(m, 0), 0);
             assert_eq!(SSL_SESSION_set_timeout(m, 1), 0);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// S30 — session-cache lifecycle
+// ---------------------------------------------------------------------------------------------
+//
+// Bounded, deterministic controls for the ownership model: growth past the configured limit,
+// expiration, re-entrant removal callbacks, address-identified single release, the
+// automatic-flush trigger, and end-to-end TLS1.2 resumption with `SSL_OP_NO_TICKET`.
+#[cfg(test)]
+mod cache_lifecycle_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free, EvpPkey};
+    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_new, BIO_read, BIO_write, Bio};
+    use crate::runtime::ex_data::{CRYPTO_get_ex_new_index, CryptoExData};
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_ciph_table::SSL_OP_NO_TICKET;
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_cipher_list, SSL_CTX_set_options,
+        SSL_CTX_set_verify, SSL_do_handshake, SSL_free, SSL_new, SSL_session_reused,
+        SSL_set_accept_state, SSL_set_bio, SSL_set_connect_state,
+    };
+    use crate::ssl::ssl_rsa::{SSL_CTX_use_PrivateKey, SSL_CTX_use_certificate};
+    use crate::x509::x509_set::{
+        X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
+    };
+    use crate::x509::x509_vfy::X509_gmtime_adj;
+    use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+    use crate::x509::x_all::X509_sign;
+    use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+    use crate::x509::x_x509::{X509_free, X509_new, X509};
+    use core::sync::atomic::AtomicUsize;
+
+    const TLS1_2_VERSION_CODE: c_int = 0x0303;
+    const SSL_CTRL_SET_SESS_CACHE_SIZE: c_int = 42;
+    const SSL_CTRL_SESS_NUMBER: c_int = 20;
+    const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
+    const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
+    const DEFAULT_CACHE_SIZE: c_long = 1024 * 20;
+
+    // --- shared helpers ---------------------------------------------------------------------
+
+    fn cache_len(ctx: *mut SslCtx) -> c_int {
+        // SAFETY: `ctx` is live in every caller; a NULL cache reads as empty.
+        unsafe {
+            if (*ctx).sessions.is_null() {
+                0
+            } else {
+                OPENSSL_sk_num((*ctx).sessions)
+            }
+        }
+    }
+
+    fn session_refs(session: *const SslSession) -> i32 {
+        // SAFETY: `session` is live in every caller.
+        unsafe { (*session).references.load(Ordering::Relaxed) }
+    }
+
+    /// A fresh TLS1.2 session carrying `id`, owned by the caller.
+    fn new_session(id: &[u8]) -> *mut SslSession {
+        assert!(id.len() <= SSL_MAX_SSL_SESSION_ID_LENGTH);
+        // SAFETY: no arguments; the returned session is owned here.
+        let session = unsafe { SSL_SESSION_new() };
+        assert!(!session.is_null(), "SSL_SESSION_new must succeed");
+        // SAFETY: `session` is live and owned here.
+        unsafe {
+            (*session).ssl_version = TLS1_2_VERSION_CODE;
+            (*session).session_id_length = id.len();
+            (&mut (*session).session_id)[..id.len()].copy_from_slice(id);
+        }
+        session
+    }
+
+    /// Whether an entry with `id` is in the context's cache. Uses a stack scratch key, exactly as
+    /// `lookup_sess_in_cache` does, so nothing is inserted or released.
+    fn cache_has(ctx: *mut SslCtx, id: &[u8]) -> bool {
+        // SAFETY: an all-zero `SslSession` is a valid value for every field of this plain-data
+        // type (integers, arrays, raw pointers, `AtomicI32`, a two-pointer ex-data header), and
+        // the scratch key is only read by `session_cmp`.
+        let mut key: SslSession = unsafe { core::mem::zeroed() };
+        key.ssl_version = TLS1_2_VERSION_CODE;
+        key.session_id_length = id.len();
+        key.session_id[..id.len()].copy_from_slice(id);
+        // SAFETY: `ctx` and the scratch key are live.
+        unsafe { !cache_find(ctx, &key).is_null() }
+    }
+
+    // --- growth past the configured limit ---------------------------------------------------
+
+    static EVICT_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static EVICT_LAST: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn record_eviction(_ctx: *mut SslCtx, session: *mut SslSession) {
+        EVICT_CALLS.fetch_add(1, Ordering::Relaxed);
+        EVICT_LAST.store(session as usize, Ordering::Relaxed);
+    }
+
+    #[test]
+    fn ssl_sess_growth_past_limit_evicts_the_oldest_entry() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_SIZE, 2, ptr::null_mut()),
+                DEFAULT_CACHE_SIZE
+            );
+
+            let a = new_session(b"aaaa");
+            let b = new_session(b"bbbb");
+            let c = new_session(b"cccc");
+            assert_eq!(SSL_CTX_add_session(ctx, a), 1);
+            assert_eq!(SSL_CTX_add_session(ctx, b), 1);
+            assert_eq!(cache_len(ctx), 2);
+            assert!(cache_has(ctx, b"aaaa") && cache_has(ctx, b"bbbb"));
+
+            EVICT_CALLS.store(0, Ordering::Relaxed);
+            EVICT_LAST.store(0, Ordering::Relaxed);
+            SSL_CTX_sess_set_remove_cb(ctx, Some(record_eviction));
+            assert_eq!(SSL_CTX_add_session(ctx, c), 1);
+
+            assert_eq!(
+                cache_len(ctx),
+                2,
+                "the cache must stay at its configured size"
+            );
+            assert!(!cache_has(ctx, b"aaaa"), "the oldest entry must be evicted");
+            assert!(cache_has(ctx, b"bbbb") && cache_has(ctx, b"cccc"));
+            assert_eq!(EVICT_CALLS.load(Ordering::Relaxed), 1);
+            assert_eq!(EVICT_LAST.load(Ordering::Relaxed), a as usize);
+            assert_eq!(session_refs(a), 1, "only the caller's reference remains");
+            assert_eq!((*a).owner, ptr::null_mut());
+            assert_eq!((*ctx).stats.sess_cache_full.load(Ordering::Relaxed), 1);
+            assert_eq!(
+                SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_NUMBER, 0, ptr::null_mut()),
+                2
+            );
+
+            SSL_SESSION_free(a);
+            SSL_SESSION_free(b);
+            SSL_SESSION_free(c);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    // --- expiration -------------------------------------------------------------------------
+
+    #[test]
+    fn ssl_sess_expiration_removes_the_session_and_lookup_misses() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = new_session(b"exp1");
+            (*s).time = 1;
+            (*s).timeout = 1;
+            ssl_session_calculate_timeout(s);
+            assert_eq!(SSL_CTX_add_session(ctx, s), 1);
+            assert_eq!(cache_len(ctx), 1);
+
+            // The authority compares signed time values: a negative cutoff expires nothing.
+            SSL_CTX_flush_sessions_ex(ctx, -1);
+            assert_eq!(
+                cache_len(ctx),
+                1,
+                "a negative cutoff must not expire sessions"
+            );
+
+            EVICT_CALLS.store(0, Ordering::Relaxed);
+            EVICT_LAST.store(0, Ordering::Relaxed);
+            SSL_CTX_sess_set_remove_cb(ctx, Some(record_eviction));
+            SSL_CTX_flush_sessions_ex(ctx, time_now_secs() as i64);
+
+            assert_eq!(cache_len(ctx), 0);
+            assert_eq!(EVICT_CALLS.load(Ordering::Relaxed), 1);
+            assert_eq!(EVICT_LAST.load(Ordering::Relaxed), s as usize);
+            assert_eq!(session_refs(s), 1);
+            assert!((*s).owner.is_null());
+
+            // A subsequent lookup by the same id misses.
+            let ssl = SSL_new(ctx);
+            assert!(!ssl.is_null());
+            (*ssl).version = TLS1_2_VERSION_CODE;
+            let miss = lookup_sess_in_cache(ssl, b"exp1");
+            assert!(miss.is_null(), "a flushed session must not be found");
+            assert_eq!((*ctx).stats.sess_miss.load(Ordering::Relaxed), 1);
+
+            SSL_free(ssl);
+            SSL_SESSION_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    // --- a removal callback that re-enters the cache -----------------------------------------
+
+    static CB_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static CB_LOCK_FREE: AtomicUsize = AtomicUsize::new(0);
+    static CB_ADD_RESULT: AtomicI32 = AtomicI32::new(-1);
+    static CB_REMOVE_RESULT: AtomicI32 = AtomicI32::new(-1);
+    static CB_NEW: AtomicUsize = AtomicUsize::new(0);
+    static CB_REMOVE: AtomicUsize = AtomicUsize::new(0);
+    static CB_CTX: AtomicUsize = AtomicUsize::new(0);
+
+    /// True when this thread can take and release `ctx`'s write lock, i.e. no cache lock is held
+    /// by the caller. This is the detector the canary below exercises.
+    fn cache_lock_is_free(ctx: *mut SslCtx) -> bool {
+        // SAFETY: `ctx` is live in every caller and this thread does not already hold the lock in
+        // the fixed flow; if it does, `CRYPTO_THREAD_write_lock` reports it instead of deadlocking.
+        unsafe {
+            if CRYPTO_THREAD_write_lock((*ctx).lock) == 0 {
+                false
+            } else {
+                CRYPTO_THREAD_unlock((*ctx).lock);
+                true
+            }
+        }
+    }
+
+    unsafe extern "C" fn reenter_on_remove(ctx: *mut SslCtx, _session: *mut SslSession) {
+        let call = CB_CALLS.fetch_add(1, Ordering::Relaxed) + 1;
+        CB_CTX.store(ctx as usize, Ordering::Relaxed);
+        if cache_lock_is_free(ctx) {
+            CB_LOCK_FREE.fetch_add(1, Ordering::Relaxed);
+        }
+        // Only the outermost invocation re-enters, so the nested eviction this insert causes
+        // cannot recurse without bound.
+        if call == 1 {
+            let remove = CB_REMOVE.load(Ordering::Relaxed) as *mut SslSession;
+            if !remove.is_null() {
+                // SAFETY: `remove` is a live session owned by the test and `ctx` is the live
+                // context the authority passes to a removal callback.
+                let removed = unsafe { SSL_CTX_remove_session(ctx, remove) };
+                CB_REMOVE_RESULT.store(removed, Ordering::Relaxed);
+            }
+            let new = CB_NEW.load(Ordering::Relaxed) as *mut SslSession;
+            if !new.is_null() {
+                // SAFETY: `new` is a live session owned by the test and `ctx` is the live context
+                // the authority passes to a removal callback.
+                let added = unsafe { SSL_CTX_add_session(ctx, new) };
+                CB_ADD_RESULT.store(added, Ordering::Relaxed);
+            }
+        }
+    }
+
+    #[test]
+    fn ssl_sess_remove_callback_reentrant_insert_does_not_corrupt_the_cache() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_SIZE, 2, ptr::null_mut()),
+                DEFAULT_CACHE_SIZE
+            );
+            let a = new_session(b"r001");
+            let b = new_session(b"r002");
+            let c = new_session(b"r003");
+            let fresh = new_session(b"r004");
+
+            CB_CALLS.store(0, Ordering::Relaxed);
+            CB_LOCK_FREE.store(0, Ordering::Relaxed);
+            CB_ADD_RESULT.store(-1, Ordering::Relaxed);
+            CB_REMOVE_RESULT.store(-1, Ordering::Relaxed);
+            CB_CTX.store(0, Ordering::Relaxed);
+            CB_NEW.store(fresh as usize, Ordering::Relaxed);
+            CB_REMOVE.store(0, Ordering::Relaxed);
+            SSL_CTX_sess_set_remove_cb(ctx, Some(reenter_on_remove));
+
+            assert_eq!(SSL_CTX_add_session(ctx, a), 1);
+            assert_eq!(SSL_CTX_add_session(ctx, b), 1);
+            // Evicts `a`; the callback inserts `fresh`, which evicts `b`.
+            assert_eq!(SSL_CTX_add_session(ctx, c), 1);
+
+            let calls = CB_CALLS.load(Ordering::Relaxed);
+            assert!(
+                calls >= 2,
+                "expected the eviction chain, saw {calls} callbacks"
+            );
+            assert_eq!(
+                CB_ADD_RESULT.load(Ordering::Relaxed),
+                1,
+                "the callback's insert must succeed"
+            );
+            assert_eq!(
+                CB_LOCK_FREE.load(Ordering::Relaxed),
+                calls,
+                "no removal callback may run under the cache lock"
+            );
+            assert_eq!(CB_CTX.load(Ordering::Relaxed), ctx as usize);
+
+            assert_eq!(cache_len(ctx), 2);
+            assert!(cache_has(ctx, b"r003") && cache_has(ctx, b"r004"));
+            assert!(!cache_has(ctx, b"r001") && !cache_has(ctx, b"r002"));
+            assert_eq!((*a).owner, ptr::null_mut());
+            assert_eq!((*b).owner, ptr::null_mut());
+            assert_eq!((*fresh).owner, ctx);
+            assert_eq!(session_refs(a), 1);
+            assert_eq!(session_refs(b), 1);
+            assert_eq!(
+                session_refs(fresh),
+                2,
+                "the frame's reference and the cache's"
+            );
+
+            CB_NEW.store(0, Ordering::Relaxed);
+            SSL_SESSION_free(a);
+            SSL_SESSION_free(b);
+            SSL_SESSION_free(c);
+            SSL_SESSION_free(fresh);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// A removal callback that re-enters with `SSL_CTX_remove_session` and then with
+    /// `SSL_CTX_add_session`: both mutations must succeed and leave a consistent cache.
+    #[test]
+    fn ssl_sess_remove_callback_reentrant_remove_does_not_corrupt_the_cache() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_SIZE, 2, ptr::null_mut()),
+                DEFAULT_CACHE_SIZE
+            );
+            let a = new_session(b"x001");
+            let b = new_session(b"x002");
+            let c = new_session(b"x003");
+            let fresh = new_session(b"x004");
+
+            CB_CALLS.store(0, Ordering::Relaxed);
+            CB_LOCK_FREE.store(0, Ordering::Relaxed);
+            CB_ADD_RESULT.store(-1, Ordering::Relaxed);
+            CB_REMOVE_RESULT.store(-1, Ordering::Relaxed);
+            CB_CTX.store(0, Ordering::Relaxed);
+            CB_NEW.store(fresh as usize, Ordering::Relaxed);
+            CB_REMOVE.store(b as usize, Ordering::Relaxed);
+            SSL_CTX_sess_set_remove_cb(ctx, Some(reenter_on_remove));
+
+            assert_eq!(SSL_CTX_add_session(ctx, a), 1);
+            assert_eq!(SSL_CTX_add_session(ctx, b), 1);
+            // Evicts `a`; the callback removes `b` and inserts `fresh`.
+            assert_eq!(SSL_CTX_add_session(ctx, c), 1);
+
+            let calls = CB_CALLS.load(Ordering::Relaxed);
+            assert_eq!(calls, 2, "the eviction and the callback's own removal");
+            assert_eq!(
+                CB_REMOVE_RESULT.load(Ordering::Relaxed),
+                1,
+                "the callback's remove must succeed"
+            );
+            assert_eq!(
+                CB_ADD_RESULT.load(Ordering::Relaxed),
+                1,
+                "the callback's insert must succeed"
+            );
+            assert_eq!(
+                CB_LOCK_FREE.load(Ordering::Relaxed),
+                calls,
+                "no removal callback may run under the cache lock"
+            );
+            assert_eq!(CB_CTX.load(Ordering::Relaxed), ctx as usize);
+
+            assert_eq!(cache_len(ctx), 2);
+            assert!(cache_has(ctx, b"x003") && cache_has(ctx, b"x004"));
+            assert!(!cache_has(ctx, b"x001") && !cache_has(ctx, b"x002"));
+            assert!((*a).owner.is_null() && (*b).owner.is_null());
+            assert_eq!((*fresh).owner, ctx);
+            assert_eq!(session_refs(a), 1);
+            assert_eq!(session_refs(b), 1);
+            assert_eq!(session_refs(fresh), 2);
+
+            CB_NEW.store(0, Ordering::Relaxed);
+            CB_REMOVE.store(0, Ordering::Relaxed);
+            SSL_SESSION_free(a);
+            SSL_SESSION_free(b);
+            SSL_SESSION_free(c);
+            SSL_SESSION_free(fresh);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// Negative control (§16): the instrument used by the test above must report a held cache lock
+    /// as "not free". The pre-fix code invoked `remove_session_cb` while holding `ctx->lock`; that
+    /// is exactly the state this canary constructs.
+    #[test]
+    fn ssl_sess_canary_detects_a_removal_callback_under_the_cache_lock() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: `ctx` is created and released here.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+
+            // Simulate the pre-fix callback context: this thread holds the write lock.
+            assert_eq!(CRYPTO_THREAD_write_lock((*ctx).lock), 1);
+            let pre_fix = cache_lock_is_free(ctx);
+            assert_eq!(CRYPTO_THREAD_unlock((*ctx).lock), 1);
+            // The fixed flow runs the callback after unlocking.
+            let fixed = cache_lock_is_free(ctx);
+
+            println!(
+                "ssl_sess canary: callback-under-lock probe = {pre_fix} (must be false), \
+                 callback-after-unlock probe = {fixed} (must be true)"
+            );
+            assert!(
+                !pre_fix,
+                "the negative control must fire on the pre-fix callback-under-lock state"
+            );
+            assert!(fixed, "the fixed state must be observed as lock-free");
+
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    // --- released exactly once, by address ---------------------------------------------------
+
+    static RELEASED_TARGET: AtomicUsize = AtomicUsize::new(0);
+    static RELEASED_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn record_release(
+        obj: *mut c_void,
+        _ptr: *mut c_void,
+        _ad: *mut CryptoExData,
+        _idx: c_int,
+        _argl: c_long,
+        _argp: *mut c_void,
+    ) {
+        let target = RELEASED_TARGET.load(Ordering::Relaxed);
+        if target != 0 && obj as usize == target {
+            RELEASED_COUNT.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn ssl_sess_inserted_looked_up_and_removed_session_is_released_exactly_once() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            let idx = CRYPTO_get_ex_new_index(
+                CRYPTO_EX_INDEX_SSL_SESSION,
+                0,
+                ptr::null_mut(),
+                None,
+                None,
+                Some(record_release),
+            );
+            assert!(idx > 0);
+
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = new_session(b"once");
+            assert_eq!(SSL_CTX_add_session(ctx, s), 1);
+            assert_eq!(session_refs(s), 2, "caller plus cache");
+
+            let ssl = SSL_new(ctx);
+            assert!(!ssl.is_null());
+            (*ssl).version = TLS1_2_VERSION_CODE;
+            let got = lookup_sess_in_cache(ssl, b"once");
+            assert_eq!(
+                got, s,
+                "the lookup must answer the cached object by address"
+            );
+            assert_eq!(session_refs(s), 3, "caller, cache and lookup");
+
+            SSL_SESSION_free(s);
+            assert_eq!(session_refs(got), 2);
+            assert_eq!(SSL_CTX_remove_session(ctx, got), 1);
+            assert_eq!(
+                session_refs(got),
+                1,
+                "removal drops only the cache's reference"
+            );
+
+            RELEASED_COUNT.store(0, Ordering::Relaxed);
+            RELEASED_TARGET.store(got as usize, Ordering::Relaxed);
+            SSL_SESSION_free(got);
+            assert_eq!(
+                RELEASED_COUNT.load(Ordering::Relaxed),
+                1,
+                "the block at this address must be released exactly once"
+            );
+            RELEASED_TARGET.store(0, Ordering::Relaxed);
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    // --- automatic flush --------------------------------------------------------------------
+
+    #[test]
+    fn ssl_sess_auto_flush_fires_on_the_authority_counter_value() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                (*ctx).session_cache_mode & SSL_SESS_CACHE_SERVER,
+                SSL_SESS_CACHE_SERVER
+            );
+            let old = new_session(b"old!");
+            (*old).time = 1;
+            (*old).timeout = 1;
+            ssl_session_calculate_timeout(old);
+            assert_eq!(SSL_CTX_add_session(ctx, old), 1);
+
+            let ssl = SSL_new(ctx);
+            assert!(!ssl.is_null());
+            (*ssl).version = TLS1_2_VERSION_CODE;
+            (*ssl).server = 1;
+            (*ssl).hit = 0;
+            (*ssl).verify_mode = 0;
+            // The connection owns this reference; `SSL_free` releases it.
+            let current = new_session(b"cur!");
+            (*ssl).session = current;
+
+            (*ctx).stats.sess_accept_good.store(0xfe, Ordering::Relaxed);
+            ssl_update_cache(ssl, SSL_SESS_CACHE_SERVER);
+            assert_eq!(cache_len(ctx), 2, "0xfe must not trigger the flush");
+            assert_eq!((*old).owner, ctx, "the expired entry is still cached");
+
+            (*ctx).stats.sess_accept_good.store(0xff, Ordering::Relaxed);
+            ssl_update_cache(ssl, SSL_SESS_CACHE_SERVER);
+            assert_eq!(cache_len(ctx), 1, "only the current session remains");
+            assert!((*old).owner.is_null(), "the expired entry must be flushed");
+            assert!(cache_has(ctx, b"cur!"));
+            assert!(!cache_has(ctx, b"old!"));
+            assert_eq!(
+                (*ctx).stats.sess_accept_good.load(Ordering::Relaxed),
+                0xff,
+                "ssl_update_cache must not increment the counter"
+            );
+
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+            SSL_SESSION_free(old);
+        }
+    }
+
+    // --- end-to-end TLS1.2 resumption with SSL_OP_NO_TICKET -----------------------------------
+
+    struct HsPair {
+        c: *mut Ssl,
+        s: *mut Ssl,
+        c_r: *mut Bio,
+        c_w: *mut Bio,
+        s_r: *mut Bio,
+        s_w: *mut Bio,
+    }
+
+    /// A self-signed RSA identity for the server.
+    ///
+    /// # Safety
+    /// The returned objects are owned by the caller.
+    unsafe fn rsa_identity() -> (*mut EvpPkey, *mut X509) {
+        use crate::asn1::layout::MBSTRING_UTF8;
+        use crate::asn1::prim::ASN1_INTEGER_set;
+        // SAFETY: constructors below answer fresh objects owned by this frame.
+        unsafe {
+            let pkey = openssl_rs_evp_pkey_q_keygen(
+                ptr::null_mut(),
+                ptr::null(),
+                c"RSA".as_ptr(),
+                1,
+                2048,
+                ptr::null(),
+            );
+            assert!(!pkey.is_null(), "an RSA key must be generatable");
+            let x = X509_new();
+            let name = X509_NAME_new();
+            assert!(!x.is_null() && !name.is_null());
+            assert_eq!(
+                X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    MBSTRING_UTF8,
+                    c"ssl-sess.test".as_ptr().cast::<u8>(),
+                    13,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(ASN1_INTEGER_set(&mut (*x).cert_info.serialNumber, 1), 1);
+            assert_eq!(X509_set_subject_name(x, name), 1);
+            assert_eq!(X509_set_issuer_name(x, name), 1);
+            (*x).cert_info.validity.notBefore = X509_gmtime_adj(ptr::null_mut(), 0);
+            (*x).cert_info.validity.notAfter = X509_gmtime_adj(ptr::null_mut(), 86_400);
+            assert!(!(*x).cert_info.validity.notBefore.is_null());
+            assert!(!(*x).cert_info.validity.notAfter.is_null());
+            assert_eq!(X509_set_pubkey(x, pkey), 1);
+            assert!(X509_sign(x, pkey, EVP_sha256()) > 0, "signing must succeed");
+            X509_NAME_free(name);
+            (pkey, x)
+        }
+    }
+
+    /// # Safety
+    /// `cctx`/`sctx` are live and outlive the returned pair.
+    unsafe fn new_hs_pair(cctx: *mut SslCtx, sctx: *mut SslCtx) -> HsPair {
+        // SAFETY: every constructor below answers a fresh object owned by this frame.
+        unsafe {
+            let c = SSL_new(cctx);
+            let s = SSL_new(sctx);
+            assert!(!c.is_null() && !s.is_null());
+            SSL_set_connect_state(c);
+            SSL_set_accept_state(s);
+            let c_r = BIO_new(BIO_s_mem());
+            let c_w = BIO_new(BIO_s_mem());
+            let s_r = BIO_new(BIO_s_mem());
+            let s_w = BIO_new(BIO_s_mem());
+            assert!(!c_r.is_null() && !c_w.is_null() && !s_r.is_null() && !s_w.is_null());
+            SSL_set_bio(c, c_r, c_w);
+            SSL_set_bio(s, s_r, s_w);
+            HsPair {
+                c,
+                s,
+                c_r,
+                c_w,
+                s_r,
+                s_w,
+            }
+        }
+    }
+
+    /// # Safety
+    /// `from`/`to` are live memory BIOs.
+    unsafe fn drain(from: *mut Bio, to: *mut Bio) {
+        let mut buf = [0u8; 8192];
+        loop {
+            // SAFETY: `buf` is writable; `from` is live.
+            let n = unsafe { BIO_read(from, buf.as_mut_ptr().cast(), buf.len() as c_int) };
+            if n <= 0 {
+                break;
+            }
+            // SAFETY: `buf[..n]` is readable; `to` is live.
+            let w = unsafe { BIO_write(to, buf.as_ptr().cast(), n) };
+            if w != n {
+                break;
+            }
+        }
+    }
+
+    /// # Safety
+    /// `p` is a live pair from [`new_hs_pair`].
+    unsafe fn drive(p: &HsPair) -> (bool, bool) {
+        let mut client_ok = false;
+        let mut server_ok = false;
+        for _ in 0..128 {
+            // SAFETY: both connections are live for the duration of the pair.
+            let client_ret = unsafe { SSL_do_handshake(p.c) };
+            // SAFETY: both connections are live for the duration of the pair.
+            let server_ret = unsafe { SSL_do_handshake(p.s) };
+            client_ok |= client_ret == 1;
+            server_ok |= server_ret == 1;
+            // SAFETY: the four BIOs are live until `free_hs_pair`.
+            unsafe {
+                drain(p.c_w, p.s_r);
+                drain(p.s_w, p.c_r);
+            }
+            if client_ok && server_ok {
+                break;
+            }
+            // SAFETY: `p.s` is live.
+            if unsafe { crate::ssl::statem::statem::ossl_statem_in_error(p.s) } != 0 {
+                break;
+            }
+        }
+        (client_ok, server_ok)
+    }
+
+    /// # Safety
+    /// `p` is a live pair that has not been freed.
+    unsafe fn free_hs_pair(p: HsPair) {
+        // SAFETY: each connection owns its two BIOs.
+        unsafe {
+            SSL_free(p.c);
+            SSL_free(p.s);
+        }
+    }
+
+    #[test]
+    fn ssl_sess_tls12_resumption_without_tickets_reuses_the_session_id() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            let (pkey, cert) = rsa_identity();
+            let cctx = SSL_CTX_new(TLS_method());
+            let sctx = SSL_CTX_new(TLS_method());
+            assert!(!cctx.is_null() && !sctx.is_null());
+            for ctx in [cctx, sctx] {
+                assert_eq!(
+                    SSL_CTX_ctrl(
+                        ctx,
+                        SSL_CTRL_SET_MIN_PROTO_VERSION,
+                        TLS1_2_VERSION_CODE as c_long,
+                        ptr::null_mut()
+                    ),
+                    1
+                );
+                assert_eq!(
+                    SSL_CTX_ctrl(
+                        ctx,
+                        SSL_CTRL_SET_MAX_PROTO_VERSION,
+                        TLS1_2_VERSION_CODE as c_long,
+                        ptr::null_mut()
+                    ),
+                    1
+                );
+                assert_eq!(
+                    SSL_CTX_set_cipher_list(ctx, c"ECDHE-RSA-AES128-GCM-SHA256".as_ptr()),
+                    1
+                );
+                assert!(SSL_CTX_set_options(ctx, SSL_OP_NO_TICKET) & SSL_OP_NO_TICKET != 0);
+            }
+            SSL_CTX_set_verify(cctx, 0, None);
+            assert_eq!(SSL_CTX_use_certificate(sctx, cert), 1);
+            assert_eq!(SSL_CTX_use_PrivateKey(sctx, pkey), 1);
+            EVP_PKEY_free(pkey);
+            X509_free(cert);
+
+            // Both connections of the first pair stay live until after the resumption: `SSL_free`
+            // on a completed, un-shutdown connection calls `ssl_clear_bad_session`, which removes
+            // its session from the context cache.
+            let first = new_hs_pair(cctx, sctx);
+            let (ok_c1, ok_s1) = drive(&first);
+            assert!(
+                ok_c1 && ok_s1,
+                "the initial TLS1.2 handshake must complete (client={ok_c1}, server={ok_s1})"
+            );
+            let saved = SSL_get1_session(first.c);
+            assert!(!saved.is_null());
+            let mut id_len = 0u32;
+            let id_ptr = SSL_SESSION_get_id(saved, &mut id_len);
+            assert_eq!(
+                id_len, 32,
+                "a ticketless TLS1.2 session carries a full session id"
+            );
+            let first_id = core::slice::from_raw_parts(id_ptr, id_len as usize).to_vec();
+            assert_eq!(
+                SSL_SESSION_has_ticket(saved),
+                0,
+                "SSL_OP_NO_TICKET must suppress the ticket"
+            );
+            assert_eq!(
+                SSL_CTX_ctrl(sctx, SSL_CTRL_SESS_NUMBER, 0, ptr::null_mut()),
+                1,
+                "the server must retain the session in its internal cache"
+            );
+
+            let second = new_hs_pair(cctx, sctx);
+            assert_eq!(SSL_set_session(second.c, saved), 1);
+            let (ok_c2, ok_s2) = drive(&second);
+            assert!(
+                ok_c2 && ok_s2,
+                "the resumed TLS1.2 handshake must complete (client={ok_c2}, server={ok_s2})"
+            );
+            assert_eq!(SSL_session_reused(second.c), 1, "the client must resume");
+            assert_eq!(
+                SSL_session_reused(second.s),
+                1,
+                "the server must resume from its internal cache"
+            );
+            let resumed = SSL_get_session(second.c);
+            assert!(!resumed.is_null());
+            let mut rid_len = 0u32;
+            let rid_ptr = SSL_SESSION_get_id(resumed, &mut rid_len);
+            assert_eq!(rid_len, id_len);
+            assert_eq!(
+                core::slice::from_raw_parts(rid_ptr, rid_len as usize),
+                first_id.as_slice(),
+                "the resumed session must carry the same session id"
+            );
+
+            SSL_SESSION_free(saved);
+            free_hs_pair(second);
+            free_hs_pair(first);
+            SSL_CTX_free(cctx);
+            SSL_CTX_free(sctx);
         }
     }
 }

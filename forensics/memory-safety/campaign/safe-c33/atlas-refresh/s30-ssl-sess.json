@@ -1,0 +1,188 @@
+{
+  "schema": "safe-c33/atlas-refresh/s30/v1",
+  "receipt": "s30-ssl-sess",
+  "subphase": "S30",
+  "branch": "integrate/safe-c33",
+  "source_head": "a15851c46717a570eab10e4acfea2e17e04568b1",
+  "worktree": "dirty: src/ssl/ssl_sess.rs (S30 fixes, tests, canary) plus this receipt; no commit, no push (subagent)",
+  "date": "2026-10-23",
+  "verification_level": "FAST",
+  "scope": "Bounded ownership/compatibility audit of the session-cache lifecycle in src/ssl/ssl_sess.rs: SSL_SESSION refcounts across SSL_CTX_add_session / SSL_CTX_remove_session / SSL_CTX_flush_sessions_ex / SSL_SESSION_free / SSL_set_session, the internal OpenSslStack cache, eviction, expiration, removal-callback re-entrancy, the automatic-flush trigger, and end-to-end TLS1.2 resumption under SSL_OP_NO_TICKET. Authority compared at source level against openssl-3.0.13 ssl/ssl_sess.c and ssl/ssl_lib.c.",
+  "flushing_decision": {
+    "implemented": true,
+    "authority": "ssl/ssl_lib.c:4766-4782 (openssl-3.0.13)",
+    "trigger": "(!(session_cache_mode & SSL_SESS_CACHE_NO_AUTO_CLEAR)) && ((session_cache_mode & mode) == mode) && ((good_counter & 0xff) == 0xff)",
+    "counter": "sess_connect_good for SSL_SESS_CACHE_CLIENT, otherwise sess_accept_good; read before the caller's own post-handshake increment, exactly as the authority reads it inside ssl_update_cache",
+    "action": "SSL_CTX_flush_sessions_ex(ctx, time(NULL))",
+    "error_behaviour": "the flush returns void and has no error arm; a failed write lock makes it a no-op, as in the authority",
+    "post_fix": "src/ssl/ssl_sess.rs:1229-1237",
+    "constant": "SSL_SESS_CACHE_NO_AUTO_CLEAR = 0x0080 at src/ssl/ssl_sess.rs:918",
+    "note": "The authority's early 'session_id_length == 0' return precedes its auto-flush block and is preserved: an empty-id session does not flush."
+  },
+  "defects": [
+    {
+      "id": "S30-D1",
+      "file": "src/ssl/ssl_sess.rs",
+      "lines_pre_fix": "698-702",
+      "line_post_fix": 753,
+      "severity": "high",
+      "class": "application callback invoked under a non-reentrant cache lock (reentrancy edge, AGENTS §21)",
+      "description": "SSL_CTX_add_session's eviction arm called ctx.remove_session_cb while holding ctx.lock. The crate's CRYPTO_THREAD_write_lock reports recursive acquisition as failure (no deadlock), so a callback that re-entered SSL_CTX_add_session or SSL_CTX_remove_session silently failed: the re-entrant insert returned 0 and never mutated the cache. The authority has the same lock-held callback call (ssl_sess.c:784-790); this crate's previous code reproduced it.",
+      "fix": "Detach every entry first, unlock, then invoke the removal callback and release the detached cache reference outside the lock (src/ssl/ssl_sess.rs:740-761). The callback is invoked once per evicted entry with the same arguments and order as before; the callback is snapshotted so the loop never re-reads the context after a callback retires it.",
+      "divergence": "Deliberate safety correction: the callback observes an unlocked, consistent cache where the authority holds ctx->lock. Re-entry now succeeds instead of failing.",
+      "witness": "cache_lifecycle_tests::ssl_sess_remove_callback_reentrant_insert_does_not_corrupt_the_cache (passes; the callback's insert returns 1 and a nested eviction is observed)."
+    },
+    {
+      "id": "S30-D2",
+      "file": "src/ssl/ssl_sess.rs",
+      "lines_pre_fix": "682-708",
+      "line_post_fix": 696,
+      "severity": "high",
+      "class": "non-failure-atomic insert: eviction ran before the push that could refuse",
+      "description": "The old order evicted size-cap entries and then pushed the new session. If OPENSSL_sk_new_null/OPENSSL_sk_push refused, the call returned 0 after having permanently removed live entries, so a refused insert did not leave the cache as it was. The replacement arm likewise released the incumbent before the push could be attempted.",
+      "fix": "Push first; only then replace the incumbent and evict down to session_cache_size (src/ssl/ssl_sess.rs:696-738). A refused push now returns 0 with the cache byte-for-byte unchanged, including an incumbent under the same key.",
+      "witness": "Code-level: the only remaining refusal points (up_ref, lock acquisition, container allocation, sk_push) all precede every cache mutation. The refusal path cannot be forced through the public API without an allocator-failure hook; NOT_RUN as a runtime injection."
+    },
+    {
+      "id": "S30-D3",
+      "file": "src/ssl/ssl_sess.rs",
+      "lines_pre_fix": "656-659 and 701",
+      "line_post_fix": "745-760",
+      "severity": "medium",
+      "class": "last-reference destructor (application ex_data free callbacks) executed under the cache lock",
+      "description": "Both the replaced incumbent's release and each evicted entry's release ran with ctx.lock held. When that release was the last reference, CRYPTO_free_ex_data ran the session's application ex_data destructors under the lock - a second reentrancy edge and a potential deadlock for an ex_data callback that touches the context.",
+      "fix": "All detached cache references are released after unlock (src/ssl/ssl_sess.rs:745-760). The displaced same-key incumbent is released without a removal callback, matching lh_SSL_SESSION_insert's substitution arm.",
+      "witness": "Covered by the same re-entrancy test plus the existing refcount_reentrancy_tests::session_free_reentrancy_is_defined_noop."
+    },
+    {
+      "id": "S30-D4",
+      "file": "src/ssl/ssl_sess.rs",
+      "lines_pre_fix": "663-671",
+      "line_post_fix": "673-682",
+      "severity": "medium",
+      "class": "compatibility: SSL_SESS_CACHE_UPDATE_TIME was applied only to new entries",
+      "description": "The authority updates c->time and recalcs the timeout unconditionally after the same-key decision (ssl_sess.c:798-801), so re-adding an already-cached session refreshes its expiry. The crate only did so when the key was absent, so an already-cached session could expire earlier than in the authority.",
+      "fix": "Apply the UPDATE_TIME update before the already-cached/new decision (src/ssl/ssl_sess.rs:673-682).",
+      "witness": "Code-level authority comparison; no court sets UPDATE_TIME. NOT_RUN as a differential."
+    },
+    {
+      "id": "S30-D5",
+      "file": "src/ssl/ssl_sess.rs",
+      "lines_pre_fix": 777,
+      "line_post_fix": "824-825",
+      "severity": "medium",
+      "class": "compatibility/behavioural: a negative flush cutoff expired every session",
+      "description": "SSL_CTX_flush_sessions(s, t: c_long) with a negative t cast t to u64 for sess_timedout, making it a huge cutoff and flushing the entire cache. The authority compares signed time_t values, so t < 0 expires nothing; only t == 0 flushes everything.",
+      "fix": "Guard the comparison with t > 0 (src/ssl/ssl_sess.rs:824).",
+      "witness": "cache_lifecycle_tests::ssl_sess_expiration_removes_the_session_and_lookup_misses asserts SSL_CTX_flush_sessions_ex(ctx, -1) leaves the cache intact and a positive cutoff removes it."
+    },
+    {
+      "id": "S30-D6",
+      "file": "src/ssl/ssl_sess.rs",
+      "lines_pre_fix": "1130-1132",
+      "line_post_fix": "1229-1237",
+      "severity": "low",
+      "class": "recorded divergence closed: automatic cache flushing was not modelled",
+      "description": "ssl_update_cache documented that the authority's every-255-connections auto-flush was absent, so a long-lived context never expired sessions automatically.",
+      "fix": "Implemented the authority trigger and action (see flushing_decision).",
+      "witness": "cache_lifecycle_tests::ssl_sess_auto_flush_fires_on_the_authority_counter_value (0xfe leaves the expired entry cached; 0xff flushes it while the current session survives)."
+    }
+  ],
+  "defects_found_not_fixed": [
+    {
+      "id": "S30-R1",
+      "file": "src/ssl/ssl_sess.rs",
+      "class": "reduced cache lookup",
+      "detail": "lookup_sess_in_cache ignores SSL_SESS_CACHE_NO_INTERNAL_LOOKUP and the external get_session_cb arm (pre-existing Phase-17 reduction, documented in the function). Outside S30's bounded cache-lifecycle scope; retained and reported."
+    }
+  ],
+  "tests": [
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_growth_past_limit_evicts_the_oldest_entry",
+      "asserts": "cache_size=2, adding a third session evicts the oldest (address), keeps exactly two entries, leaves owner NULL and one reference on the evicted session, increments sess_cache_full, and SSL_CTX_sess_number answers 2",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_expiration_removes_the_session_and_lookup_misses",
+      "asserts": "a negative cutoff expires nothing; a positive cutoff removes the timed-out session, runs the removal callback once with that address, clears owner; a later lookup misses and increments sess_miss",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_remove_callback_reentrant_insert_does_not_corrupt_the_cache",
+      "asserts": "the removal callback observes no held cache lock on every invocation, its re-entrant SSL_CTX_add_session returns 1, the nested eviction runs, and the final cache is exactly {newest, re-entrant insert} with per-session reference counts intact",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_remove_callback_reentrant_remove_does_not_corrupt_the_cache",
+      "asserts": "the removal callback re-enters with SSL_CTX_remove_session (returns 1) and then SSL_CTX_add_session (returns 1); both callbacks run unlocked, and the final cache is exactly {newest, re-entrant insert} with the removed and evicted sessions at one reference and owner NULL",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_inserted_looked_up_and_removed_session_is_released_exactly_once",
+      "asserts": "by address identity: the cache lookup answers the same block, refs go 2 -> 3 -> 2 -> 1, and the session's ex-data free callback records that exact address once",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_auto_flush_fires_on_the_authority_counter_value",
+      "asserts": "0xfe does not flush; 0xff flushes the timed-out cached entry before the current session is counted, leaving the current session; ssl_update_cache does not increment the counter",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_tls12_resumption_without_tickets_reuses_the_session_id",
+      "asserts": "end-to-end memory-BIO TLS1.2 handshake with SSL_OP_NO_TICKET on both contexts: session id is 32 bytes, has_ticket == 0, the server cache holds the session, the second handshake reports SSL_session_reused == 1 on both peers (server resumed from its internal cache), and the resumed client session carries the identical session id",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_canary_detects_a_removal_callback_under_the_cache_lock",
+      "asserts": "the lock probe used by the re-entrancy test reports 'not free' when the caller holds the write lock (the pre-fix callback context) and 'free' after unlock",
+      "result": "ok"
+    }
+  ],
+  "canary": {
+    "kind": "#[cfg(test)]-only negative control (AGENTS §16)",
+    "test": "cache_lifecycle_tests::ssl_sess_canary_detects_a_removal_callback_under_the_cache_lock",
+    "pre_fix_state": "callback invoked while this thread holds ctx->lock",
+    "detector": "cache_lock_is_free(ctx): attempts CRYPTO_THREAD_write_lock(ctx.lock); the crate reports recursive write acquisition as 0 (EDEADLK), so a held lock is observable without deadlocking",
+    "observed_output": "ssl_sess canary: callback-under-lock probe = false (must be false), callback-after-unlock probe = true (must be true)",
+    "pre_fix_consequence": "On the pre-fix code the same detector makes ssl_sess_remove_callback_reentrant_insert_does_not_corrupt_the_cache fail twice: CB_LOCK_FREE != CB_CALLS, and the re-entrant SSL_CTX_add_session returns 0 instead of 1."
+  },
+  "test_run": {
+    "command": "cargo test --lib ssl_sess -- --test-threads=4 --nocapture",
+    "result_line": "test result: ok. 16 passed; 0 failed; 1 ignored; 0 measured; 2109 filtered out; finished in 3.59s",
+    "ignored": "adv_probe::self_aliasing_session_setters_copy_before_clearing (pre-existing, requires OPENSSL_RS_ADV_PROBE=1)"
+  },
+  "unsafe": {
+    "production_before": { "unsafe_blocks": 126, "unsafe_fns": 18, "no_mangle_exports": 65 },
+    "production_after": { "unsafe_blocks": 131, "unsafe_fns": 18, "no_mangle_exports": 65 },
+    "total_file_before": { "unsafe_blocks": 176, "unsafe_fns": 18, "lines": 2943 },
+    "total_file_after": { "unsafe_blocks": 207, "unsafe_fns": 23, "lines": 3808 },
+    "delta_note": "Production adds no unsafe operation: the same up_ref/down_ref, OPENSSL_sk_*, CRYPTO_THREAD_*, remove_session_locked and SSL_SESSION_free calls are regrouped into five new unsafe blocks, each with a SAFETY contract. The remaining +26 blocks and +5 unsafe fns are #[cfg(test)] helpers (memory-BIO handshake harness, callback probes).",
+    "new_unsafe_operations": [],
+    "new_hidden_obligations": []
+  },
+  "gate": {
+    "fmt": "cargo fmt --all -- --check -> FMT_OK",
+    "check": "cargo check --lib -> Finished dev profile",
+    "filtered_tests": "16 passed; 0 failed; 1 ignored",
+    "clippy": "cargo clippy --lib -- -D warnings -> Finished, no warnings",
+    "no_mangle_repr_c_diff_lines": 0,
+    "allocator_seam_diff_lines": 0,
+    "abi": "65 #[no_mangle] exports unchanged; no #[repr(C)] line in this file; SslSession/SslCtx layouts untouched",
+    "cleansing": "CtxDestroy for SslSession still zeroes master_key and session_id and releases every member buffer exactly once; no release arm changed"
+  },
+  "retained_divergences": [
+    "Eviction and flushing walk the OpenSslStack in insertion order; the authority walks a calc_timeout-ordered list. Pre-existing and documented in the module header.",
+    "Removal callbacks run outside ctx->lock here and inside it in the authority (S30-D1). Deliberate safety correction.",
+    "Cache capacity: this crate keeps at most session_cache_size entries (push, then evict while num > size). The authority's lh_insert-then-'while num >= size' sequence leaves at most size-1 entries. The S30 test asserts this crate's capacity of N; the off-by-one is a recorded compatibility divergence, not a claimed parity.",
+    "ssl_update_cache declines to re-cache a session with not_resumable != 0; the authority's ssl_lib.c has no such test.",
+    "lookup_sess_in_cache ignores SSL_SESS_CACHE_NO_INTERNAL_LOOKUP and the external get_session_cb arm.",
+    "TLS1.2 NewSessionTicket remains a stateful cache lookup rather than the authority's stateless encrypted blob (module header)."
+  ],
+  "not_established": [
+    "No authority executable differential was run for eviction order, capacity, callback data or flush timing; the comparison is a source-level reading of openssl-3.0.13.",
+    "The push-refusal failure-atomicity path was verified by code ordering only; no allocator-failure injection was run.",
+    "No ASan, Miri, Loom or concurrency court was run at FAST level.",
+    "Resumption was observed end-to-end inside this crate (SSL_session_reused == 1 on both peers, identical 32-byte session id, has_ticket == 0). No claim of authority resumption parity beyond those observables.",
+    "The container image has no `free`; memory was checked via /proc/meminfo (MemAvailable 82 GiB) before the build. All work ran in docker/openssl-rs-court.sh with CARGO_BUILD_JOBS=4 and --test-threads=4; docker/ was not edited."
+  ]
+}
