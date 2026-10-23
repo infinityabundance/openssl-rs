@@ -2043,6 +2043,13 @@ def _build_catalogue() -> tuple[dict, ...]:
     ima = copy.deepcopy(_L7_IMA_SPEC)
     ima["recipe_id"] = f"recipe:ima-evm-utils:{ima['version']}"
     recipes.append(ima)
+    # The S23 corpus batch: PKCS#12/CMS/PKCS#7, X.509 verification, raw-key/ENGINE,
+    # DTLS/TLS-transport and session surface.  Same pristine-source/aux seam and the
+    # same single `{prefix}` substitution as every earlier batch.
+    for spec in _S23_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -3817,6 +3824,504 @@ _L7_IMA_SPEC: dict = {
              "and verifies it; a modified file no longer verifies"),
 }
 
+# --------------------------------------------------------------------------------------------
+# S23 downstream corpus batch: PKCS#12 / CMS / PKCS#7 / OCSP / X.509 verification /
+# raw-key / legacy-ENGINE / DTLS / session / TLS-transport surface.
+#
+# Every entry is a pristine released archive pinned by the digest this subphase actually
+# observed.  The non-OpenSSL dependencies are pinned bookworm packages (headers and the
+# matching runtime) or CPAN/upstream archives; none of them provides or replaces libssl or
+# libcrypto.  `{prefix}` is the only subject substitution.
+# --------------------------------------------------------------------------------------------
+
+
+def _s23_deb(pool: str, filename: str, sha256: str, *, include_dirs: tuple[str, ...] = (),
+             library_dirs: tuple[str, ...] = (), pkgconfig_dirs: tuple[str, ...] = (),
+             bin_dirs: tuple[str, ...] = (), links: dict[str, str] | None = None) -> dict:
+    """One pinned bookworm package, fetched over https from the same pool bytes."""
+    spec: dict = {
+        "url": f"https://deb.debian.org/debian/pool/main/{pool}/{filename}",
+        "sha256": sha256, "archive": "deb", "extract": ["dpkg-deb", "-x"],
+        "note": f"pinned bookworm {filename}",
+    }
+    for key, value in (("include_dirs", include_dirs), ("library_dirs", library_dirs),
+                       ("pkgconfig_dirs", pkgconfig_dirs), ("bin_dirs", bin_dirs),
+                       ("links", links)):
+        if value:
+            spec[key] = dict(value) if key == "links" else list(value)
+    return spec
+
+
+# Pure-Perl build dependencies plus the three XS modules the modules under test require.
+# The pure-Perl packages are inert with respect to OpenSSL; the XS modules are rebuilt
+# against the subject from their pristine sources in the recipe's pre-build step.
+_S23_PERL_AUX: tuple[dict, ...] = (
+    _s23_deb("libc/libcrypt-openssl-guess-perl",
+             "libcrypt-openssl-guess-perl_0.15-2_all.deb",
+             "839036eef0525e233feb97cae40d01040d6ef56806221a0dc727b077c5f88f19"),
+    _s23_deb("libc/libcrypt-urandom-perl", "libcrypt-urandom-perl_0.36-3_all.deb",
+             "d938ab3b3cce3b6628856fe37172da3bc1b6e9fb3a8383bef54fc46691e83231"),
+    _s23_deb("libe/libextutils-cchecker-perl",
+             "libextutils-cchecker-perl_0.12-1_all.deb",
+             "19c435e04b5b97ad0ffb2f5346b4995c4f15600f407d7dce5f43002cf74d39aa"),
+    _s23_deb("libe/libextutils-pkgconfig-perl",
+             "libextutils-pkgconfig-perl_1.16-5_all.deb",
+             "a6e03e69681611db003d0b2916f6f535f70900f9adf8b634e162dd3253034ad8"),
+    _s23_deb("libc/libconvert-asn1-perl", "libconvert-asn1-perl_0.34-1_all.deb",
+             "13270108fcda40778f680bb997764996e0e7a138b26401a4b44e71e9cde3cda3"),
+    {
+        "url": ("https://deb.debian.org/debian/pool/main/libc/"
+                "libcrypt-openssl-bignum-perl/"
+                "libcrypt-openssl-bignum-perl_0.09.orig.tar.gz"),
+        "sha256": "234e72fb8396d45527e6fd45e43759c5c3f3a208cf8f29e6a22161a996fd42dc",
+        "archive": "tar.gz", "extract": ["tar", "xf"],
+        "note": "Crypt::OpenSSL::Bignum 0.09 source (rebuilt against the subject)",
+    },
+    {
+        "url": ("https://deb.debian.org/debian/pool/main/libc/"
+                "libcrypt-openssl-random-perl/"
+                "libcrypt-openssl-random-perl_0.15.orig.tar.gz"),
+        "sha256": "f0876faa1ba3111e39b86aa730c603211eff2905e460c72a57b61e8cf475cef4",
+        "archive": "tar.gz", "extract": ["tar", "xf"],
+        "note": "Crypt::OpenSSL::Random 0.15 source (rebuilt against the subject)",
+    },
+    {
+        "url": ("https://deb.debian.org/debian/pool/main/libc/"
+                "libcrypt-openssl-rsa-perl/"
+                "libcrypt-openssl-rsa-perl_0.33.orig.tar.gz"),
+        "sha256": "bdbe630f6d6f540325746ad99977272ac8664ff81bd19f0adaba6d6f45efd864",
+        "archive": "tar.gz", "extract": ["tar", "xf"],
+        "note": "Crypt::OpenSSL::RSA 0.33 source (PKCS10 runtime dependency)",
+    },
+)
+
+# The build-time environment: the pure-Perl packages live under the pinned deb roots; the
+# XS dependencies are built first and copied into the family tree so the runtime PERL5LIB
+# is self-contained (the runtime tool cannot name `{aux}` in a program environment).
+_S23_PERL_BUILD_ENV = {
+    "OPENSSL_PREFIX": "{prefix}",
+    "LD_LIBRARY_PATH": "{prefix}/lib",
+    "PERL5LIB": ("{aux}/usr/share/perl5:{aux}/usr/lib/x86_64-linux-gnu/perl5/5.36:"
+                 "{root}/.perl-deps/lib:{root}/.perl-deps/arch"),
+}
+
+_S23_PERL_PREBUILD = (
+    "set -e; "
+    "export PERL5LIB={aux}/usr/share/perl5:{aux}/usr/lib/x86_64-linux-gnu/perl5/5.36; "
+    "mkdir -p {root}/.perl-deps/lib {root}/.perl-deps/arch; "
+    "cp -a {aux}/usr/share/perl5/. {root}/.perl-deps/lib/; "
+    "for d in {aux}/Crypt-OpenSSL-Bignum-0.09 {aux}/Crypt-OpenSSL-Random-0.15 "
+    "{aux}/Crypt-OpenSSL-RSA-0.33; do "
+    "if [ -d \"$d\" ]; then "
+    "(cd \"$d\" && perl Makefile.PL && make && "
+    "cp -a blib/lib/. {root}/.perl-deps/lib/ && cp -a blib/arch/. {root}/.perl-deps/arch/); "
+    "fi; done; "
+    "export PERL5LIB=$PERL5LIB:{root}/.perl-deps/lib:{root}/.perl-deps/arch; "
+    "perl Makefile.PL"
+)
+
+
+def _s23_perl_spec(family: str, version: str, url: str, sha256: str, so_path: str,
+                   note: str, extra_env: dict | None = None) -> dict:
+    env = dict(_S23_PERL_BUILD_ENV)
+    if extra_env:
+        env.update(extra_env)
+    return {
+        "family": family, "version": version, "url": url, "archive": "tar.gz",
+        "sha256": sha256, "build_system": "make", "configure": None,
+        "pre_build": [["sh", "-c", _S23_PERL_PREBUILD]],
+        "make": [MAKE_JOBS], "artifact": so_path, "launch": None,
+        "aux_sources": list(_S23_PERL_AUX), "env_extra": env, "note": note,
+    }
+
+
+_S23_PERL_SPECS: tuple[dict, ...] = (
+    _s23_perl_spec(
+        "perl-net-ssleay", "1.92",
+        ("https://deb.debian.org/debian/pool/main/libn/libnet-ssleay-perl/"
+         "libnet-ssleay-perl_1.92.orig.tar.gz"),
+        "47c2f2b300f2e7162d71d699f633dd6a35b0625a00cbda8c50ac01144a9396a9",
+        "blib/arch/auto/Net/SSLeay/SSLeay.so",
+        "Net::SSLeay 1.92: the direct libssl API (SSL_CTX/SSL, SNI, verification, "
+        "session get/set and reuse) exercised by the admitted client workload."),
+    _s23_perl_spec(
+        "perl-crypt-smime", "0.28",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-smime-perl/"
+         "libcrypt-smime-perl_0.28.orig.tar.gz"),
+        "ca90ecacfef620f8a2f1723c5bc3307a0079c0c6f5170849a9896b20280d1c2d",
+        "blib/arch/auto/Crypt/SMIME/SMIME.so",
+        "Crypt::SMIME 0.28: CMS sign/verify and encrypt/decrypt (S/MIME) through the "
+        "subject libcrypto.",
+        {"LIBCRYPTO_CFLAGS": "-I{prefix}/include",
+         "LIBCRYPTO_LIBS": "-L{prefix}/lib -lcrypto"}),
+    _s23_perl_spec(
+        "perl-crypt-openssl-x509", "1.9.14",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-x509-perl/"
+         "libcrypt-openssl-x509-perl_1.9.14.orig.tar.gz"),
+        "49c575257e6408ad5a89011e5b5800d598f9ccafdf42e71004ed81cb2f44ee7a",
+        "blib/arch/auto/Crypt/OpenSSL/X509/X509.so",
+        "Crypt::OpenSSL::X509 1.9.14: X.509 parsing, extensions and store verification "
+        "against the subject libcrypto."),
+    _s23_perl_spec(
+        "perl-crypt-openssl-rsa", "0.33",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-rsa-perl/"
+         "libcrypt-openssl-rsa-perl_0.33.orig.tar.gz"),
+        "bdbe630f6d6f540325746ad99977272ac8664ff81bd19f0adaba6d6f45efd864",
+        "blib/arch/auto/Crypt/OpenSSL/RSA/RSA.so",
+        "Crypt::OpenSSL::RSA 0.33: RSA key generation, PKCS#1 sign/verify and public "
+        "encryption through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-ec-perl", "1.32",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-ec-perl/"
+         "libcrypt-openssl-ec-perl_1.32.orig.tar.gz"),
+        "575a6bb6d7694d4a4b73a9125db92b479c9ad2a66f44674ac2fd3c4413a2c19a",
+        "blib/arch/auto/Crypt/OpenSSL/EC/EC.so",
+        "Crypt::OpenSSL::EC 1.32: EC key generation, ECDSA sign/verify and ECDH "
+        "derive through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-pkcs10-perl", "0.19",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-pkcs10-perl/"
+         "libcrypt-openssl-pkcs10-perl_0.19.orig.tar.gz"),
+        "3452afd311a79ceece6a9f6e579cb7cd08b2e8ad7e347778557d3c1a1f2bfd57",
+        "blib/arch/auto/Crypt/OpenSSL/PKCS10/PKCS10.so",
+        "Crypt::OpenSSL::PKCS10 0.19: CSR construction and X509_REQ signature "
+        "verification through the subject libcrypto."),
+    _s23_perl_spec(
+        "perl-crypt-openssl-aes", "0.23",
+        "https://cpan.metacpan.org/authors/id/T/TI/TIMLEGGE/Crypt-OpenSSL-AES-0.23.tar.gz",
+        "a70bc89c8d5eabde9b83dec7131b756c247b5c1fb8980f23a42bdd47751d4887",
+        "blib/arch/auto/Crypt/OpenSSL/AES/AES.so",
+        "Crypt::OpenSSL::AES 0.23: the low-level AES_encrypt/AES_decrypt interface "
+        "through the subject libcrypto."),
+    _s23_perl_spec(
+        "perl-crypt-openssl-dsa", "0.20",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-dsa-perl/"
+         "libcrypt-openssl-dsa-perl_0.20.orig.tar.gz"),
+        "e4575d787d44e49b3b59cc39eda2e461fe0606dd0e87d3a9c3df5011b133e702",
+        "blib/arch/auto/Crypt/OpenSSL/DSA/DSA.so",
+        "Crypt::OpenSSL::DSA 0.20: legacy DSA key generation and sign/verify through "
+        "the subject libcrypto."),
+    _s23_perl_spec(
+        "perl-crypt-openssl-bignum", "0.09",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-bignum-perl/"
+         "libcrypt-openssl-bignum-perl_0.09.orig.tar.gz"),
+        "234e72fb8396d45527e6fd45e43759c5c3f3a208cf8f29e6a22161a996fd42dc",
+        "blib/arch/auto/Crypt/OpenSSL/Bignum/Bignum.so",
+        "Crypt::OpenSSL::Bignum 0.09: the BN_* arbitrary-precision interface through "
+        "the subject libcrypto."),
+    _s23_perl_spec(
+        "perl-crypt-openssl-random", "0.15",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-random-perl/"
+         "libcrypt-openssl-random-perl_0.15.orig.tar.gz"),
+        "f0876faa1ba3111e39b86aa730c603211eff2905e460c72a57b61e8cf475cef4",
+        "blib/arch/auto/Crypt/OpenSSL/Random/Random.so",
+        "Crypt::OpenSSL::Random 0.15: RAND_bytes/RAND_add through the subject "
+        "libcrypto."),
+)
+
+_S23_BINUTILS_AUX: tuple[dict, ...] = (
+    _s23_deb("b/binutils", "binutils-dev_2.40-2_amd64.deb",
+             "35066c624bd9d9f3d7fb9fee8f98556482a4fd0bbbf4a00a285fa877da350257",
+             include_dirs=("usr/include",)),
+)
+
+_S23_HTTP_PARSER_AUX: tuple[dict, ...] = (
+    _s23_deb("h/http-parser", "libhttp-parser2.9_2.9.4-5_amd64.deb",
+             "98045b047b8f3ccfdd7930983797df3e316112e1cd4d161fc793260e31183b59",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _s23_deb("h/http-parser", "libhttp-parser-dev_2.9.4-5_amd64.deb",
+             "036f9364d02f90a9f524493fcbf5f84c878760b4a81e828d8ebb5d06f20330ab",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S23_GNUEFI_AUX: tuple[dict, ...] = (
+    _s23_deb("g/gnu-efi", "gnu-efi_3.0.15-1_amd64.deb",
+             "1e668cebcb94678b39a69e5c7b8f1d1eb51fd4eb251643491a8c249ae6fa0c36",
+             include_dirs=("usr/include",)),
+)
+
+_S23_LIBBSON_AUX: tuple[dict, ...] = (
+    _s23_deb("m/mongo-c-driver", "libbson-1.0-0_1.23.1-1+deb12u3_amd64.deb",
+             "9b97d0468fdb7567a3cbbc6c29459a32e51f54d6e3f3f2ee7d119f3f8587cd36",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _s23_deb("m/mongo-c-driver", "libbson-dev_1.23.1-1+deb12u3_amd64.deb",
+             "6a35de95dc99961a9a224e52a0f1a83e3e61bd59cb270f517433398be7489ec5",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S23_KRB5_AUX: tuple[dict, ...] = (
+    _s23_deb("k/krb5", "libkrb5-dev_1.20.1-2+deb12u5_amd64.deb",
+             "98703cfcafb6377414ca5a0de9a309c7b324337e6ecf8c86157a14b85cebcb66",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             bin_dirs=("usr/bin",)),
+    _s23_deb("k/krb5", "krb5-multidev_1.20.1-2+deb12u5_amd64.deb",
+             "c47364fbcdffdc9efd239daef34e46b6ed817669d9ca587dcb99273a0860a91d",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             bin_dirs=("usr/bin",)),
+    _s23_deb("k/krb5", "libkrb5-3_1.20.1-2+deb12u5_amd64.deb",
+             "c90801be09701af221b54dd502a59cb378b7284ff31e480738baca317d2f7653",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _s23_deb("k/krb5", "libgssapi-krb5-2_1.20.1-2+deb12u5_amd64.deb",
+             "d8b87aea91b956b416c01a28c44ff6228315ae3b73de40acddac3dc5043607d2",
+             library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S23_SPECS: tuple[dict, ...] = _S23_PERL_SPECS + (
+    {
+        "family": "php", "version": "8.2.32",
+        "url": ("https://deb.debian.org/debian/pool/main/p/php8.2/"
+                "php8.2_8.2.32.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "autotools",
+        "sha256": "e02aa173c236c12791696254d607da680e6d5516f8f5c2339642de7c4f944bd2",
+        "configure": ["--prefix={root}/.l7-install", "--disable-all", "--enable-openssl",
+                      "--with-openssl={prefix}", "--enable-cli", "--disable-cgi",
+                      "--disable-phpdbg", "--without-pear", "--without-libxml",
+                      "--without-sqlite3", "--without-pdo-sqlite", "--disable-dom",
+                      "--disable-simplexml", "--disable-xml", "--disable-xmlreader",
+                      "--disable-xmlwriter", "--disable-xmlrpc"],
+        "make": [MAKE_JOBS], "artifact": "sapi/cli/php", "launch": ["-v"],
+        "note": ("PHP 8.2.32's OpenSSL extension: the admitted script reads and writes "
+                 "PKCS#12, signs/verifies and encrypts/decrypts CMS/PKCS#7, and verifies "
+                 "a chain with openssl_x509_checkpurpose."),
+    },
+    {
+        "family": "ruby", "version": "3.1.2",
+        "url": "https://deb.debian.org/debian/pool/main/r/ruby3.1/ruby3.1_3.1.2.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "autotools",
+        "sha256": "350013ef6640f15c42eae48d25c035999dcbb32e4be038d27ad891cb48d685a5",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl-dir={prefix}",
+                      "--with-static-linked-ext", "--with-ext=openssl",
+                      "--disable-install-doc", "--without-gmp", "--without-valgrind"],
+        "make": [MAKE_JOBS], "artifact": "ruby", "launch": ["-v"],
+        "note": ("Ruby 3.1.2 with ext/openssl statically linked into the interpreter: the "
+                 "admitted script exercises PKCS#12, PKCS#7 and OCSP, X.509 store/CRL "
+                 "verification, raw Ed25519 keys and TLS session reuse."),
+    },
+    {
+        "family": "strongswan", "version": "5.9.8",
+        "url": ("https://deb.debian.org/debian/pool/main/s/strongswan/"
+                "strongswan_5.9.8.orig.tar.bz2"),
+        "archive": "tar.bz2", "build_system": "autotools",
+        "sha256": "d3303a43c0bd7b75a12b64855e8edcb53696f06190364f26d1533bde1f2e453c",
+        "configure": ["--prefix={root}/.l7-install", "--disable-defaults", "--enable-pki",
+                      "--enable-openssl", "--enable-pem", "--enable-x509",
+                      "--enable-constraints", "--enable-revocation", "--enable-pkcs1",
+                      "--enable-pkcs8", "--enable-pkcs12", "--enable-sha1",
+                      "--enable-sha2", "--enable-random", "--enable-hmac",
+                      "--enable-aes", "--enable-gcm", "--enable-rsa", "--enable-ecdsa",
+                      "--enable-dsa", "--enable-mgf1", "--enable-shared",
+                      "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "src/libstrongswan/plugins/openssl/.libs/"
+        "libstrongswan-openssl.so", "launch": ["--version"],
+        "note": ("strongSwan 5.9.8's pki utility with the OpenSSL crypto plugin: PKCS#12 "
+                 "export/import, CMS-signed CRL creation, X.509 issue/verify and constraint/"
+                 "revocation checks through the subject libcrypto."),
+    },
+    {
+        "family": "dcmtk", "version": "3.6.7",
+        "url": ("https://deb.debian.org/debian/pool/main/d/dcmtk/"
+                "dcmtk_3.6.7.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "17705dcdb2047d1266bb4e92dbf4aa6d4967819e8e3e94f39b7df697661b4860",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DDCMTK_WITH_OPENSSL=ON",
+                      "-DDCMTK_WITH_ZLIB=ON", "-DDCMTK_WITH_TIFF=OFF",
+                      "-DDCMTK_WITH_PNG=OFF", "-DDCMTK_WITH_LIBXML=OFF",
+                      "-DDCMTK_WITH_ICONV=OFF", "-DDCMTK_WITH_WRAP=OFF",
+                      "-DDCMTK_WITH_SNDFILE=OFF", "-DDCMTK_WITH_OPENJPEG=OFF",
+                      "-DDCMTK_WITH_ICU=OFF", "-DBUILD_APPS=ON",
+                      "-DBUILD_SHARED_LIBS=OFF", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/bin/dcmsign", "launch": ["--help"],
+        "note": ("DCMTK 3.6.7's dcmsign signs and verifies a DICOM dataset with CMS "
+                 "SignedData through the subject libcrypto."),
+    },
+    {
+        "family": "coturn", "version": "4.6.3",
+        "url": "https://github.com/coturn/coturn/archive/refs/tags/4.6.3.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "dc3a529fd9956dc8771752a7169c5ad4c18b9deef3ec96049de30fabf1637704",
+        "configure": ["--prefix={root}/.l7-install", "--disable-sqlite",
+                      "--disable-mysql", "--disable-pgsql", "--disable-mongo",
+                      "--disable-redis", "--disable-systemd"],
+        "make": [MAKE_JOBS], "artifact": "bin/turnserver", "launch": ["--version"],
+        "aux_sources": list(_LIBEVENT_AUX),
+        "note": ("coturn 4.6.1's TURN server and uclient with the OpenSSL TLS/DTLS "
+                 "transport; libevent is the pinned bookworm package."),
+    },
+    {
+        "family": "poco", "version": "1.11.0",
+        "url": "https://deb.debian.org/debian/pool/main/p/poco/poco_1.11.0.orig.tar.bz2",
+        "archive": "tar.bz2", "build_system": "cmake",
+        "sha256": "b08cf73926fa92a6c8f3c712e8fb217d5d0c2fa5248ec0281f251fe1e925d2f1",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DENABLE_NETSSL=ON", "-DENABLE_CRYPTO=ON", "-DENABLE_NET=ON",
+                      "-DENABLE_UTIL=ON", "-DENABLE_XML=OFF", "-DENABLE_JSON=OFF",
+                      "-DENABLE_DATA=OFF", "-DENABLE_MONGODB=OFF", "-DENABLE_REDIS=OFF",
+                      "-DENABLE_PAGECOMPILER=OFF", "-DENABLE_TESTS=OFF",
+                      "-DENABLE_SAMPLES=OFF", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/lib/libPocoNetSSL.so*", "launch": None,
+        "note": ("Poco 1.11.0 NetSSL: HTTPS client/server through the subject libssl and "
+                 "X.509 verification through the subject libcrypto."),
+    },
+    {
+        "family": "libgit2", "version": "1.5.1",
+        "url": ("https://deb.debian.org/debian/pool/main/libg/libgit2/"
+                "libgit2_1.5.1+ds.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "cmake",
+        "sha256": "96369433500bb528f036c16be9921bd437c098b745f1aaeccb91290815518970",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON",
+                      "-DBUILD_CLI=OFF", "-DBUILD_TESTS=OFF", "-DBUILD_CLAR=OFF",
+                      "-DUSE_SSH=OFF", "-DUSE_HTTPS=ON", "-DUSE_NTLMCLIENT=OFF",
+                      "-DUSE_HTTP_PARSER=system", "-DREGEX_BACKEND=pcre2",
+                      "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libgit2.so*", "launch": None,
+        "aux_sources": list(_PCRE2_AUX) + list(_S23_HTTP_PARSER_AUX),
+        "note": ("libgit2 1.5.1's HTTPS transport: the admitted harness fetches a local "
+                 "smart-HTTP repository over verified TLS and rejects an unrelated CA via "
+                 "its X.509 certificate callback."),
+    },
+    {
+        "family": "libmongocrypt", "version": "1.7.2",
+        "url": ("https://deb.debian.org/debian/pool/main/libm/libmongocrypt/"
+                "libmongocrypt_1.7.2.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "a25440a5fa805dc94a4d04aecf91698eebbae23cc045efc96da238f07c85a73f",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_SHARED=ON",
+                      "-DBUILD_TESTING=ON", "-DMONGOCRYPT_ENABLE_DECIMAL128=OFF",
+                      "-DCMAKE_PREFIX_PATH={aux}/usr",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                      "-L{aux}/usr/lib/x86_64-linux-gnu"
+                      " -Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"],
+        "make": [], "artifact": "b/libmongocrypt.so*", "launch": None,
+        "aux_sources": list(_S23_LIBBSON_AUX),
+        "note": ("libmongocrypt 1.7.2's crypto layer (AES-GCM, HMAC, RSA, random) through "
+                 "the subject libcrypto; libbson is the pinned bookworm build input."),
+    },
+    {
+        "family": "libengine-pkcs11-openssl", "version": "0.4.12",
+        "url": ("https://deb.debian.org/debian/pool/main/libp/libp11/"
+                "libp11_0.4.12.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "1e1a2533b3fcc45fde4da64c9c00261b1047f14c3f911377ebd1b147b3321cfd",
+        "configure": ["--prefix={root}/.l7-install", "--disable-static",
+                      "OPENSSL_CFLAGS=-I{prefix}/include",
+                      "OPENSSL_LIBS=-L{prefix}/lib -lssl -lcrypto"],
+        "make": [MAKE_JOBS], "artifact": "src/.libs/pkcs11.so", "launch": None,
+        "note": ("libp11 0.4.12's legacy pkcs11 ENGINE: the admitted harness loads it "
+                 "through ENGINE_by_id/dynamic and drives ENGINE_init/ctrl through the "
+                 "subject libcrypto."),
+    },
+    {
+        "family": "krb5", "version": "1.20.1",
+        "url": "https://deb.debian.org/debian/pool/main/k/krb5/krb5_1.20.1.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "704aed49b19eb5a7178b34b2873620ec299db08752d6a8574f95d41879ab8851",
+        "pre_build": [["sh", "-c", (
+            "cd src && ./configure --prefix={root}/.l7-install "
+            "--with-crypto-impl=openssl --disable-static"
+        )]],
+        "make": [MAKE_JOBS, "-C", "src", "YACC=bison -y", "LEX=flex"],
+        "artifact": "src/clients/kinit/kinit",
+        "launch": ["--version"],
+        "aux_sources": list(_B16_AUTOTOOLS_AUX),
+        "env_extra": {"BISON_PKGDATADIR": "{aux}/usr/share/bison",
+                      "M4": "{aux}/usr/bin/m4"},
+        "note": ("MIT krb5 1.20.1's PKINIT path: the admitted workload runs a local KDC "
+                 "with an X.509 principal and obtains a ticket through PKINIT CMS with "
+                 "the subject libcrypto."),
+    },
+    {
+        "family": "postfix", "version": "3.7.11",
+        "url": "https://deb.debian.org/debian/pool/main/p/postfix/postfix_3.7.11.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "8451fb343692b23cba105b6a194a27a6f32ff21bd2c3bb2fed5ac50d0631deda",
+        "pre_build": [["sh", "-c", (
+            "mkdir -p {root}/.l7-bin; "
+            "printf '#!/bin/sh\\ncase \"$1\" in -r) echo 6.1.0;; -s) echo Linux;; "
+            "*) exec /usr/bin/uname \"$@\";; esac\\n' > {root}/.l7-bin/uname; "
+            "chmod +x {root}/.l7-bin/uname"
+        )], ["make", "makefiles",
+              "CCARGS=-DUSE_TLS -I{prefix}/include -I{aux}/usr/include",
+              "AUXLIBS=-L{prefix}/lib -lssl -lcrypto "
+              "-L{aux}/usr/lib/x86_64-linux-gnu -ldb"]],
+        "make": [MAKE_JOBS], "artifact": "src/posttls-finger/posttls-finger",
+        "launch": ["-h"],
+        "aux_sources": list(_L7_EXIM_AUX),
+        "env_extra": {"PATH": "{root}/.l7-bin:" + os.environ.get("PATH", "")},
+        "note": ("Postfix 3.7.11's TLS engine and posttls-finger: the admitted workload "
+                 "completes STARTTLS against a local SMTP peer, verifies the chain and "
+                 "rejects an unrelated CA."),
+    },
+    {
+        "family": "gftp-text", "version": "2.9.1~beta",
+        "url": "https://deb.debian.org/debian/pool/main/g/gftp/gftp_2.9.1~beta.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "autotools",
+        "sha256": "79c727a0c7720e0e49dac4fc760a686d10ff78a496e1e3e644b45d3e76e1eecd",
+        "configure": ["--prefix={root}/.l7-install", "--disable-gtkport", "--disable-nls"],
+        "make": [MAKE_JOBS], "artifact": "src/text/gftp-text", "launch": ["--version"],
+        "aux_sources": list(_L7_IRSSI_AUX),
+        "env_extra": {"SSL_CFLAGS": "-I{prefix}/include",
+                      "SSL_LIBS": "-L{prefix}/lib -lssl -lcrypto"},
+        "note": ("gftp 2.9.1's text client: the admitted workload logs in to a local "
+                 "FTPS peer with AUTH TLS and retrieves the fixture, rejecting an "
+                 "unrelated CA."),
+    },
+    {
+        "family": "libcpp-httplib0.11", "version": "0.11.4",
+        "url": ("https://github.com/yhirose/cpp-httplib/archive/refs/tags/"
+                "v0.11.4.tar.gz"),
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "28f76b875a332fb80972c3212980c963f0a7d2e11a8fe94a8ed0d847b9a2256f",
+        "pre_build": [["sh", "-c", (
+            "set -e; g++ -std=c++11 -O2 -o {root}/.l7-httplib-harness "
+            "{repo}/forensics/tools/l7_httplib.cpp -I{root} -I{prefix}/include "
+            "-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lssl -lcrypto -lpthread"
+        )]],
+        "make": ["-f", "/dev/null"], "artifact": ".l7-httplib-harness",
+        "launch": ["--help"],
+        "note": ("cpp-httplib 0.11.4's header-only SSLServer/SSLClient; the admitted "
+                 "harness runs both ends over verified TLS and rejects an unrelated CA."),
+    },
+    {
+        "family": "libcxxtools10", "version": "3.0.0",
+        "url": "https://deb.debian.org/debian/pool/main/c/cxxtools/cxxtools_3.0.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "07b18037fb0983f6292f5c8d53e2369e9e7a9711df2c9ad50838aacbc8c62f7c",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl=yes",
+                      "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "src/.libs/libcxxtools.so*", "launch": None,
+        "note": ("cxxtools 3.0.0's SSL socket layer (TcpSocket/TcpServer sslConnect/"
+                 "sslAccept and peer-certificate verification) through the subject "
+                 "libssl."),
+    },
+    {
+        "family": "gss-ntlmssp", "version": "1.2.0",
+        "url": ("https://deb.debian.org/debian/pool/main/g/gss-ntlmssp/"
+                "gss-ntlmssp_1.2.0.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "372cb7f26aca0760c90d245c1039766588650f207f129858cc72a103bf38ba11",
+        "configure": ["--prefix={root}/.l7-install", "--disable-static",
+                      "--without-wbclient"],
+        "make": [MAKE_JOBS], "artifact": "src/.libs/libgssntlmssp.so*", "launch": None,
+        "aux_sources": list(_S23_KRB5_AUX),
+        "note": ("gss-ntlmssp 1.2.0: the NTLM GSSAPI mechanism's MD4/DES/RC4/MD5 path "
+                 "through the subject libcrypto, driven by a local initiator/acceptor "
+                 "exchange."),
+    },
+)
+
 RECIPES: tuple[dict, ...] = _build_catalogue()
 _RECIPE_BY_FAMILY: dict[str, dict] = {r["family"]: r for r in RECIPES}
 
@@ -3980,8 +4485,15 @@ def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
             return {}, (f"the auxiliary package {name} digest {observed} does not match the "
                         f"pinned {spec['sha256']}")
         root = aux_root / "root"
-        extract = census._run([*(spec.get("extract") or ["tar", "xf"]), str(archive),
-                               str(root)], timeout=STEP_TIMEOUT)
+        root.mkdir(parents=True, exist_ok=True)
+        extract_cmd = list(spec.get("extract") or ["tar", "xf"])
+        # `tar xf <archive> <dir>` would look for a member named <dir>; a source tarball
+        # auxiliary dependency is extracted *into* the shared aux root instead.
+        if extract_cmd[:2] == ["tar", "xf"]:
+            extract_argv = [*extract_cmd, str(archive), "-C", str(root)]
+        else:
+            extract_argv = [*extract_cmd, str(archive), str(root)]
+        extract = census._run(extract_argv, timeout=STEP_TIMEOUT)
         if not extract["ok"]:
             return {}, (f"extracting the auxiliary package {name} failed: "
                         f"{census._error_line(extract)}")
@@ -3997,6 +4509,10 @@ def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
                 # `usr/lib/<arch>/pkgconfig`); each .pc must be rewritten exactly once or the
                 # second substitution would prefix the already-rewritten prefix again.
                 if str(pc) in rewritten_pc:
+                    continue
+                # A development package may ship a .pc symlink whose target is in a
+                # package this recipe does not pin; it carries no information we use.
+                if not pc.exists():
                     continue
                 rewritten_pc.add(str(pc))
                 pc.write_text(pc.read_text(encoding="utf-8").replace("/usr", f"{root}/usr"),
