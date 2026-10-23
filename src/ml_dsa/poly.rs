@@ -118,8 +118,25 @@ impl<'a> VectorBuf<'a> {
 /// element-count product once, releases the block if a future early return appears between the
 /// allocator call and publication, and makes the secure arm's release the cleansing one. `into_raw`
 /// is the single transfer into the member slot.
+///
+/// ## Allocated storage is not a `Poly` until this owner has initialised it
+///
+/// `OPENSSL_malloc_array` returns storage, not values: nothing in the allocator establishes that a
+/// `Poly` is valid there. The owner therefore keeps the block as `NonNull<MaybeUninit<Poly>>` — a
+/// state from which no `Poly` reference can be formed — and zero-initialises the whole extent in
+/// the constructor, before [`Self::into_raw`] can publish it. Zero is a valid and meaningful value
+/// for this element type: `Poly` is `#[repr(C)] { coeff: [u32; 256] }`, every bit pattern is a
+/// valid `Poly`, and the authority's own `poly_zero`/`vector_zero` (`ml_dsa_poly.h:18-22`,
+/// `ml_dsa_vector.h:66-70`) writes exactly this all-zero polynomial before a coefficient is read.
+///
+/// The authority's `vector_alloc` deliberately leaves the block uninitialised and initialises at
+/// the caller's first fill; initialising here instead is a deliberate safety improvement with no
+/// observable behavioural change (no reader consumes an indeterminate coefficient — that would be
+/// undefined in the authority too). It is what makes `Vector::as_slice`/`as_mut_slice` sound
+/// immediately after `alloc`, instead of requiring callers to form a reference over uninitialised
+/// storage merely to zero it (AGENTS.md §2).
 struct PolyBlock {
-    ptr: ptr::NonNull<Poly>,
+    ptr: ptr::NonNull<core::mem::MaybeUninit<Poly>>,
     bytes: usize,
     file: *const c_char,
     line: c_int,
@@ -127,13 +144,14 @@ struct PolyBlock {
 }
 
 impl PolyBlock {
-    /// `OPENSSL_malloc_array(count, sizeof(POLY))`.
+    /// `OPENSSL_malloc_array(count, sizeof(POLY))`, initialised to `count` zero polynomials.
     fn malloc(count: usize, file: *const c_char, line: c_int) -> Option<PolyBlock> {
         let elem = core::mem::size_of::<Poly>();
         let bytes = count.checked_mul(elem);
         // SAFETY: `file` is NULL or a valid NUL-terminated coordinate; the array allocator checks
         // the product itself and raises the authority's overflow error there.
-        let raw = unsafe { CRYPTO_malloc_array(count, elem, file, line) }.cast::<Poly>();
+        let raw = unsafe { CRYPTO_malloc_array(count, elem, file, line) }
+            .cast::<core::mem::MaybeUninit<Poly>>();
         let ptr = ptr::NonNull::new(raw)?;
         let Some(bytes) = bytes else {
             // The allocator should already have refused; release if it did not, so an overflowing
@@ -142,39 +160,60 @@ impl PolyBlock {
             unsafe { CRYPTO_free(raw.cast(), file, line) };
             return None;
         };
-        Some(PolyBlock {
+        let block = PolyBlock {
             ptr,
             bytes,
             file,
             line,
             secure: false,
-        })
+        };
+        block.initialise_zeroed(count);
+        Some(block)
     }
 
-    /// `OPENSSL_secure_malloc_array(count, sizeof(POLY))`.
+    /// `OPENSSL_secure_malloc_array(count, sizeof(POLY))`, initialised to `count` zero
+    /// polynomials.
     fn secure_malloc(count: usize, file: *const c_char, line: c_int) -> Option<PolyBlock> {
         let elem = core::mem::size_of::<Poly>();
         let bytes = count.checked_mul(elem);
         // SAFETY: as in `malloc`; the secure array allocator checks the product too.
-        let raw = unsafe { CRYPTO_secure_malloc_array(count, elem, file, line) }.cast::<Poly>();
+        let raw = unsafe { CRYPTO_secure_malloc_array(count, elem, file, line) }
+            .cast::<core::mem::MaybeUninit<Poly>>();
         let ptr = ptr::NonNull::new(raw)?;
         let Some(bytes) = bytes else {
             // SAFETY: `raw` is a live secure block this call owns; the release cleanses it.
             unsafe { CRYPTO_secure_clear_free(raw.cast(), 0, file, line) };
             return None;
         };
-        Some(PolyBlock {
+        let block = PolyBlock {
             ptr,
             bytes,
             file,
             line,
             secure: true,
-        })
+        };
+        block.initialise_zeroed(count);
+        Some(block)
     }
 
-    /// Transfer the block into a `Vector` member slot.
+    /// Write `count` all-zero `Poly` values into the block, making every element a valid `Poly`.
+    ///
+    /// This is the only transition out of `MaybeUninit`, and it runs in both constructors before
+    /// the handle is returned, so a `PolyBlock` never names uninitialised storage at a point where
+    /// another function can observe it.
+    fn initialise_zeroed(&self, count: usize) {
+        // SAFETY: `self.ptr` is the exclusively owned, writable block of `count`
+        // `MaybeUninit<Poly>` elements this handle allocated. Writing zero bytes through a raw
+        // pointer to `MaybeUninit` is defined; zero is a valid `Poly` (see the type's note), so
+        // every element is initialised afterwards.
+        unsafe { ptr::write_bytes(self.ptr.as_ptr(), 0u8, count) };
+    }
+
+    /// The validated transition: transfer the now-initialised block into a `Vector` member slot.
     fn into_raw(self) -> *mut Poly {
-        let p = self.ptr.as_ptr();
+        // `MaybeUninit<Poly>` and `Poly` have the same layout, and both constructors initialised
+        // every element, so the cast preserves the provenance and extent of a valid `Poly` block.
+        let p = self.ptr.as_ptr().cast::<Poly>();
         core::mem::forget(self);
         p
     }
@@ -333,6 +372,11 @@ impl Vector {
     ///
     /// Returns 1 on success and 0 on allocation failure, as the C does.
     ///
+    /// On success every one of the `num_polys` polynomials is initialised (all-zero, the value
+    /// `vector_zero` would write), so [`Self::as_slice`]/[`Self::as_mut_slice`] are valid
+    /// immediately. The authority leaves the block uninitialised until its caller fills it; this
+    /// owner establishes the invariant itself so no typed borrow can precede initialisation.
+    ///
     /// # Safety
     /// `file` must be a NUL-terminated C string, and `self` must not already own a block (the
     /// authority's `vector_alloc` precondition); an incumbent would be leaked exactly as in the C.
@@ -354,6 +398,10 @@ impl Vector {
     }
 
     /// `vector_secure_alloc(v, num_polys)` — `ml_dsa_vector.h:42-49`, `OPENSSL_secure_malloc_array`.
+    ///
+    /// As [`Self::alloc`], a successful call publishes `num_polys` initialised (all-zero)
+    /// polynomials; the block stays the authority's secure allocation and its release still
+    /// cleanses.
     ///
     /// # Safety
     /// `file` must be a NUL-terminated C string, and `self` must not already own a block (the
@@ -405,6 +453,9 @@ impl Vector {
     }
 
     /// The `num_poly` polynomials this vector names.
+    ///
+    /// `alloc`/`secure_alloc` initialise every element they publish, so a vector this module
+    /// constructed has no partially initialised borrow window.
     ///
     /// # Safety
     /// `poly` must name at least `num_poly` initialised polynomials.
@@ -817,7 +868,7 @@ pub(crate) const POLY_MODULUS: u32 = ML_DSA_Q;
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::panic, clippy::unwrap_used)]
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
 
@@ -870,6 +921,122 @@ mod tests {
         // SAFETY: the checked product refuses before any slice is formed, so the pointer is never
         // read.
         assert!(unsafe { matrix_as_slice(&m) }.is_empty());
+    }
+
+    /// A freshly allocated vector is immediately safe to read: every polynomial the owner
+    /// published is initialised, so no caller has to form a reference over uninitialised storage
+    /// just to zero it (the S21-O1 defect).
+    #[test]
+    fn ml_dsa_uninit_a_fresh_vector_is_safe_to_read() {
+        let _g = crate::test_support::lock_global_state();
+        for n in [1usize, 4] {
+            let mut v = Vector::empty();
+            // SAFETY: `v` is empty and NULL is the allocator's default coordinate.
+            assert_eq!(unsafe { v.alloc(n, ptr::null(), 0) }, 1);
+            assert_eq!(v.num_poly, n);
+            // SAFETY: `alloc` establishes the postcondition that every element is initialised.
+            unsafe {
+                let s = v.as_slice();
+                assert_eq!(s.len(), n);
+                for p in s {
+                    assert_eq!(p.coeff, [0u32; ML_DSA_NUM_POLY_COEFFICIENTS]);
+                }
+                // The same borrow is writable and defined.
+                let m = v.as_mut_slice();
+                m[n - 1].coeff[0] = 0x1234_5678;
+                assert_eq!(v.as_slice()[n - 1].coeff[0], 0x1234_5678);
+            }
+            // SAFETY: the block came from `alloc` and is released exactly once here.
+            unsafe { v.free(ptr::null(), 0) };
+            assert!(v.poly.is_null() && v.num_poly == 0);
+        }
+    }
+
+    /// The secret-bearing arm keeps both obligations: the owner releases the secure block and the
+    /// release cleanses it. With no secure heap initialised, `CRYPTO_secure_clear_free` takes its
+    /// documented plain fallback (cleanse `num` bytes, then free); the release seam's test-only
+    /// probe captures the bytes *after* the cleanse and *before* the free, so this never reads
+    /// freed memory.
+    #[test]
+    fn ml_dsa_uninit_a_secure_vector_is_cleansed_on_release() {
+        use crate::runtime::secure::cleanse_probe;
+
+        let _g = crate::test_support::lock_global_state();
+        // No heap: make sure a previous test's heap (if any) is torn down. `done` refuses while
+        // anything is live, and the probe below then reports `None` rather than a false pass.
+        let _ = crate::runtime::secure::CRYPTO_secure_malloc_done();
+
+        let n = 3usize;
+        let bytes = n * core::mem::size_of::<Poly>();
+        let mut v = Vector::empty();
+        // SAFETY: `v` is empty and NULL is the allocator's default coordinate.
+        assert_eq!(unsafe { v.secure_alloc(n, ptr::null(), 0) }, 1);
+        // SAFETY: `secure_alloc` initialises every element it publishes.
+        unsafe {
+            for p in v.as_mut_slice() {
+                p.coeff = [0xA5A5_A5A5; ML_DSA_NUM_POLY_COEFFICIENTS];
+            }
+        }
+
+        cleanse_probe::arm(v.poly.cast::<u8>(), bytes);
+        // SAFETY: the block came from `secure_alloc`; this is its single cleansing release.
+        unsafe { v.secure_free(n, ptr::null(), 0) };
+        assert_eq!(v.num_poly, 0);
+
+        let observed = cleanse_probe::observed()
+            .expect("the secure release must take the cleansing path (the probe must fire)");
+        assert_eq!(observed.len(), bytes);
+        assert!(
+            observed.iter().all(|&b| b == 0),
+            "the secure release must cleanse the secret polynomials"
+        );
+    }
+
+    /// Negative control for the S21-O1 defect class, test-only (the module is `#[cfg(test)]`).
+    ///
+    /// The pre-fix `Vector::alloc` published the raw `OPENSSL_malloc_array` block without
+    /// establishing any `Poly` value, and `as_slice` then observed whatever bytes were there. The
+    /// canary models that block's contents with a sentinel and reads it through the pre-fix shape,
+    /// then shows the new owner publishes zeros over the same seam allocation instead: the
+    /// uninitialised state is no longer reachable from the type.
+    #[test]
+    fn ml_dsa_uninit_canary_the_prefix_shape_exposed_allocator_contents() {
+        let _g = crate::test_support::lock_global_state();
+        let n = 2usize;
+        let elem = core::mem::size_of::<Poly>();
+
+        // Pre-fix shape: allocate on the same seam, publish it, borrow it. The sentinel stands in
+        // for the indeterminate contents `OPENSSL_malloc_array` leaves behind.
+        // SAFETY: `file` is NULL and the seam answers a live block of `n * elem` bytes.
+        let raw = unsafe { CRYPTO_malloc_array(n, elem, ptr::null(), 0) }.cast::<Poly>();
+        assert!(!raw.is_null());
+        // SAFETY: `raw` owns `n * elem` writable bytes.
+        unsafe { ptr::write_bytes(raw.cast::<u8>(), 0xA5, n * elem) };
+        // SAFETY: the pre-fix accessor contract was the claim under test; this models its shape
+        // over a block the owner never initialised.
+        let prefix = unsafe { core::slice::from_raw_parts(raw, n) };
+        assert!(
+            prefix.iter().all(|p| p.coeff[0] == 0xA5A5_A5A5),
+            "the pre-fix shape exposes bytes the owner never initialised"
+        );
+        // SAFETY: `raw` is this test's block, released once.
+        unsafe { CRYPTO_free(raw.cast(), ptr::null(), 0) };
+
+        // New design: the same seam allocation is initialised by the owner before publication, so
+        // the same borrow observes defined values.
+        let mut v = Vector::empty();
+        // SAFETY: `v` is empty and NULL is the allocator's default coordinate.
+        assert_eq!(unsafe { v.alloc(n, ptr::null(), 0) }, 1);
+        // SAFETY: `alloc` initialises every element it publishes.
+        unsafe {
+            let s = v.as_slice();
+            assert_eq!(s.len(), n);
+            assert!(
+                s.iter().all(|p| p.coeff.iter().all(|&c| c == 0)),
+                "the owner must publish initialised storage"
+            );
+            v.free(ptr::null(), 0);
+        }
     }
 }
 
