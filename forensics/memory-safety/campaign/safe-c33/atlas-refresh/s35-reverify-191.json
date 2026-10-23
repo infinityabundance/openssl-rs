@@ -1,0 +1,154 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S35-REVERIFY-191",
+  "date": "2026-10-23",
+  "branch": "integrate/safe-c33",
+  "source_identity": {
+    "head": "1a101b60318a9ccfa042a6df702cf99f7bd54f71",
+    "head_subject": "Merge stage/p25/dhe-client",
+    "authority": "openssl-3.6.4-production (forensics/authorities/prefix/openssl-3.6.4-production)",
+    "candidate_identity": {
+      "install_prefix": "artifacts/phase2/install",
+      "libssl_so_3_sha256": "b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6",
+      "libcrypto_so_3_sha256": "64dec4c7f276ff7970b4d75488cad6fa66d8d95502d2b58b19a4b7a89e119aa7"
+    },
+    "atlases": {
+      "build_link_sha256": "5c08280f532347c29a06bf4d7e5b9c1c7ef67cead780fff4ac69f4c4c05df932",
+      "runtime_functional_sha256": "33ed16c2847917f9df0947e542ede7d666f7e9771e2b453e2e2ac1bbae8ced69"
+    }
+  },
+  "worktree": {
+    "src_changed": false,
+    "docker_changed": false,
+    "tracked_changes": [
+      "forensics/tools/l7_perl_net_ssleay.pl (fixture defect fix; +5/-1)",
+      "forensics/downstream/build-link-atlas.json",
+      "forensics/downstream/runtime-functional-atlas.json",
+      "artifacts/phase2/* (rebuilt candidate install, implemented-surface.json)"
+    ],
+    "not_committed": true
+  },
+  "task_a_fixture_decision": {
+    "marker": "perl-net-ssleay tls_session=ok",
+    "what_it_tests": "TLS1.2 session resumption: a second connect with SSL_set_session must report SSL_session_reused()==1",
+    "verdict": "the workload was wrong; the marker is a real contract and the authority passes it once the workload is correct",
+    "root_cause": [
+      "The workload took the session with Net::SSLeay::get_session (SSL_get_session, an uncounted alias) and then freed the owning SSL and SSL_CTX before reusing it.",
+      "With the first connection freed, the session pointer dangles; SSL_set_session returns 0 and the second handshake is a full handshake, so session_reused is 0 under the authority as well.",
+      "Measured directly: authority diag run printed 'set_session rc=0' and tls_session=bad; keeping the first connection live or switching to get1_session printed 'set_session rc=1' and tls_session=ok."
+    ],
+    "fixture_capability_control": {
+      "purpose": "exclude the Python TLS fixture as the cause",
+      "command": "authority openssl s_client -tls1_2 -sess_out/-sess_in against the same loopback SSLContext TLS1.2 fixture (_https_fixture semantics)",
+      "result": "first: New, TLSv1.2, Cipher is ECDHE-RSA-AES128-GCM-SHA256; second: Reused, TLSv1.2, Cipher is ECDHE-RSA-AES128-GCM-SHA256",
+      "conclusion": "the fixture supports TLS1.2 session-ticket resumption; the defect was in the workload"
+    },
+    "fix": "forensics/tools/l7_perl_net_ssleay.pl now uses Net::SSLeay::get1_session (SSL_get1_session, counted reference) and releases it with Net::SSLeay::SESSION_free after the second connect",
+    "post_fix_transcripts": {
+      "authority": ["tls_connect=ok", "tls_payload=ok", "tls_session=ok", "tls_unrelated_ca=rejected"],
+      "candidate_rebuilt": ["tls_connect=ok", "tls_payload=ok", "tls_session=ok", "tls_unrelated_ca=rejected"],
+      "stderr": "connect rc=-1 error:0A000086:SSL routines::certificate verify failed is the expected unrelated-CA negative control, printed by the script, not a failure"
+    },
+    "marker_changed": false,
+    "family_after": "L7-functional under both subjects (was L5-loaded under both)"
+  },
+  "task_b_rebuild_and_abi": {
+    "command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh (court container; the script pins /work/target/release, so CARGO_TARGET_DIR was not overridden)",
+    "install_rebuilt": true,
+    "abi_courts": {
+      "count": 11,
+      "all_pass": true,
+      "names": ["ABI-SYMBOL", "ABI-VERSION", "ABI-DYNAMIC", "ABI-LAYOUT", "ABI-LINK", "ABI-LOAD", "ABI-CONSTANTS", "ABI-MATRIX", "ABI-SUBSTITUTION", "ABI-INSTALL-LAYOUT", "libcrypto-contamination"],
+      "receipt": "artifacts/phase2/COURTS.json all_pass=True"
+    }
+  },
+  "task_b_measurement": {
+    "evidence_reuse": null,
+    "commands": [
+      "python3 forensics/tools/downstream_build_link.py --measure",
+      "python3 forensics/tools/downstream_runtime.py --measure"
+    ],
+    "tool_summary_build_link": [
+      "[downstream-build-link] elapsed=4011s with_recipe=191 no_recipe=809",
+      "  authority configured=191 built=190 linked=190 failed=1",
+      "  candidate configured=191 built=190 linked=190 failed=1",
+      "  candidate_linkage_proven=190 candidate_specific_patch_count=0"
+    ],
+    "tool_summary_runtime": [
+      "[downstream-runtime] elapsed=4864s with_recipe=191 no_recipe=809",
+      "  authority loaded=179 runtime=172 functional=170 failed=8 not_attempted=810",
+      "  candidate loaded=179 runtime=171 functional=169 failed=9 not_attempted=810",
+      "  candidate_reaches_baseline=190 reaches_linked_baseline=189 below_baseline=1 baseline_not_linked=1 candidate_failures={'acquire-failure': 809, 'runtime-failure': 7, 'link-failure': 1, 'functional-failure': 2}"
+    ],
+    "checks": {
+      "runtime_check": "with_recipe=191 cand_loaded=179 cand_functional=169 reaches_baseline=190 findings=0 control honest=True",
+      "build_link_check": "with_recipe=191 candidate_linked=190 linkage_proven=190 findings=0 control honest=True"
+    },
+    "atlases_candidate_identity_set": true,
+    "atlases_evidence_reuse_null": true
+  },
+  "before_after": {
+    "baseline_note": "the committed pre-S35 runtime atlas carried evidence_reuse.mode=committed-rows-carried-forward with 187 of 191 families reused from an older candidate identity (libcrypto 2b0ff1b6 / libssl f99f7159); its 169/169 functional rows were therefore inherited, not current-candidate measurements",
+    "before": {
+      "authority": {"loaded": 179, "runtime": 171, "functional": 169, "failed": 9},
+      "candidate": {"loaded": 179, "runtime": 171, "functional": 169, "failed": 9},
+      "candidate_below_baseline": 0
+    },
+    "after": {
+      "authority": {"loaded": 179, "runtime": 172, "functional": 170, "failed": 8},
+      "candidate": {"loaded": 179, "runtime": 171, "functional": 169, "failed": 9},
+      "candidate_below_baseline": 1,
+      "candidate_levels": {"L7-functional": 169, "L6-runtime": 2, "L5-loaded": 8, "L4-linked": 11, "L2-configured": 1, "L0-catalogued": 809}
+    },
+    "composition_changed": "the candidate's 169 L7 families are the same count as before but not the same set: perl-net-ssleay rose L5->L7 while partclone fell L7->L5",
+    "cohort_33": "33/33 at L7-functional under the candidate (verified against the state.json cohort list)"
+  },
+  "regressions": [
+    {
+      "family": "partclone",
+      "subject": "candidate",
+      "old_grade": "L7-functional",
+      "new_grade": "L5-loaded",
+      "authority_also_dropped": false,
+      "authority_this_run": "L7-functional",
+      "failure_class": "functional-failure",
+      "failing_call": "partclone -r -C -s image.pcl -o {scratch}/restored.img -> partclone.c,open_target,1684: open .../restored.img error(2) (ENOENT); authority opens the same target successfully",
+      "second_mode": "in other candidate samples the restore succeeds but the corrupted-image control is not detected ('partclone did not detect the corrupted image block')",
+      "causal_region_in_src": "none: the failure is not caused by the candidate library",
+      "evidence": {
+        "matrix": "10 iterations per combination of {authority,candidate} partclone binary x {authority,candidate} libcrypto/libssl prefix",
+        "results": [
+          "candidate binary + candidate libs: 9 ok, 1 ENOENT",
+          "candidate binary + authority libs: 9 ok, 1 ENOENT",
+          "authority binary + authority libs: 7 ok, 3 ENOENT",
+          "authority binary + candidate libs: 10 ok"
+        ],
+        "conclusion": "failure frequency does not track the crypto library: the authority binary fails with authority libs and passes with candidate libs. The defect is in the fixture/consumer, not in src/."
+      },
+      "root_cause": [
+        "partclone-0.3.27 src/partclone.c open_target() calls stat(target,&st_dev) and, when the target regular file does not exist, tests S_ISBLK(st_dev.st_mode) on the uninitialised struct stat. When the stack contents look like a block device, O_CREAT is not added and open() returns ENOENT.",
+        "The workload relies on partclone creating restored.img and flips the middle byte of the image for the corrupted-block control; whether that byte falls inside a CRC-covered block is not guaranteed, so the negative control is also nondeterministic.",
+        "Both are consumer/workload defects reachable independently of OpenSSL (partclone links libcrypto only; the failing call touches no OpenSSL symbol)."
+      ],
+      "action": "not repaired in S35 (no src/ edit; the workload was left unchanged so the atlas records the measured result). Recommended follow-up: pre-create the restore target and pass --overwrite, and corrupt a byte inside the block stream, then re-measure."
+    }
+  ],
+  "tls_heavy_families_candidate": {
+    "L7-functional": ["apache2-bin", "curl", "curl-minimal", "dovecot", "elinks", "exim", "haproxy", "httpd", "libssh", "lighttpd", "lynx", "mosquitto", "nginx", "openssh", "openssh-client", "openssh-server", "openvpn", "perl-net-ssleay", "proftpd", "redis", "s-nail", "squid", "stunnel", "vsftpd", "w3m"],
+    "L4-linked": ["krb5", "postfix"]
+  },
+  "not_measured_or_open": [
+    "No BOUNDARY or SEAL evidence was generated (no Miri, ASan, dudect/ctgrind, FFI negative controls, or FFI caller-closure audit).",
+    "The 809 families with no admitted recipe remain acquire-failure/no-recipe rows, unchanged and unmeasured.",
+    "11 L4-linked, 2 L6-runtime and 8 L5-loaded families remain below L7; their reasons are in the atlas (krb5/postfix/coturn/dcmtk/gftp-text/gss-ntlmssp/libengine-pkcs11-openssl/libgit2/libmongocrypt/poco/strongswan: no admitted workload; fastd: no TUN; nghttp2: TLS client did not reject the unrelated CA; afflib/charybdis/dma/httest/ima-evm-utils/libshout/sipp/partclone: workload functional failures).",
+    "The partclone grade is one sample of a flaky fixture; the recorded L5 row is honest for this run but is not a stable candidate property.",
+    "Source acquisition used the network (Debian pool) as in prior batches; all 191 pinned digests were re-verified by the build/link tool.",
+    "The candidate install was rebuilt but the crate's own library test suite, fmt and clippy were not re-run in S35 (no src/ change was made).",
+    "The perl-net-ssleay resumption is observed through the module's SSL_session_reused() result; no independent key-material comparison was made for the candidate client."
+  ],
+  "non_claims": [
+    "No family graduates to SAFE_COMPATIBLE in S35.",
+    "A fresh candidate-bound L7 count is not safety or cryptographic evidence (AGENTS.md §8).",
+    "The 169 L7 count is not a claim that the corpus is stable: one family (partclone) is fixture-flaky and one (perl-net-ssleay) is newly fixed."
+  ]
+}
