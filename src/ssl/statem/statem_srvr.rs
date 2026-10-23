@@ -3777,8 +3777,14 @@ pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Opt
     Some((scheme, siglen))
 }
 
-/// Verify `sig` over `data` with `pkey` for the TLS1.2 `sigalg` (`0x0401` RSA-PKCS1-SHA256,
-/// `0x0403` ECDSA-SHA256, `0x0503` ECDSA-SHA384, `0x0603` ECDSA-SHA512).
+/// Verify `sig` over `data` with `pkey` for the TLS1.2 `sigalg`.
+///
+/// The scheme names its digest (`sigalg_lookup_tbl[]`, `t1_lib.c:1964-2142`) and its signature
+/// family: ECDSA (`0x0403`/`0x0503`/`0x0603`), DSA (`0x0402`/`0x0502`/`0x0602`), RSA PKCS#1
+/// (`0x0401`/`0x0501`/`0x0601`), and RSA-PSS (`rsa_pss_rsae` `0x0804`-`0x0806`, `rsa_pss_pss`
+/// `0x0809`-`0x080b`). The PSS schemes select PSS padding with an MGF1 digest and salt length
+/// equal to the signature digest, exactly as `tls12_check_peer_sigalg` does. An unknown scheme is
+/// refused rather than verified with a guessed digest.
 ///
 /// # Safety
 /// `pkey` is live; `data`/`sig` are readable.
@@ -3791,12 +3797,45 @@ pub(crate) unsafe fn tls12_verify(
     use crate::evp::digest::{EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_new};
     use crate::evp::legacy_sha::{EVP_sha256, EVP_sha384, EVP_sha512};
     use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
-    // The scheme names its digest (`sigalg_lookup_tbl[]`, `t1_lib.c:1964-2142`); an unknown scheme
-    // is refused rather than verified with a guessed digest.
-    let md = match sigalg {
-        0x0401 | 0x0403 => EVP_sha256(),
-        0x0503 => EVP_sha384(),
-        0x0603 => EVP_sha512(),
+    use crate::rsa::ctrl::{
+        EVP_PKEY_CTX_set_rsa_mgf1_md, EVP_PKEY_CTX_set_rsa_padding,
+        EVP_PKEY_CTX_set_rsa_pss_saltlen,
+    };
+    // `RSA_PKCS1_PSS_PADDING` — `include/openssl/rsa.h:321`; `RSA_PSS_SALTLEN_DIGEST` —
+    // `include/openssl/rsa.h:138`.
+    const RSA_PKCS1_PSS_PADDING: c_int = 6;
+    const RSA_PSS_SALTLEN_DIGEST: c_int = -1;
+    let (md, pss) = match sigalg {
+        // rsa_pkcs1_sha256/384/512.
+        0x0401 | 0x0501 | 0x0601 => (
+            if sigalg == 0x0401 {
+                EVP_sha256()
+            } else if sigalg == 0x0501 {
+                EVP_sha384()
+            } else {
+                EVP_sha512()
+            },
+            false,
+        ),
+        // dsa_sha256/384/512.
+        0x0402 | 0x0502 | 0x0602 => (
+            if sigalg == 0x0402 {
+                EVP_sha256()
+            } else if sigalg == 0x0502 {
+                EVP_sha384()
+            } else {
+                EVP_sha512()
+            },
+            false,
+        ),
+        // ecdsa_secp256r1_sha256 / ecdsa_secp384r1_sha384 / ecdsa_secp521r1_sha512.
+        0x0403 => (EVP_sha256(), false),
+        0x0503 => (EVP_sha384(), false),
+        0x0603 => (EVP_sha512(), false),
+        // rsa_pss_rsae_* and rsa_pss_pss_*.
+        0x0804 | 0x0809 => (EVP_sha256(), true),
+        0x0805 | 0x080a => (EVP_sha384(), true),
+        0x0806 | 0x080b => (EVP_sha512(), true),
         _ => return false,
     };
     // SAFETY: `EVP_MD_CTX_new` is the matching constructor: it answered the whole, aligned
@@ -3814,9 +3853,18 @@ pub(crate) unsafe fn tls12_verify(
     let mut ok = false;
     // SAFETY: `mctx`/`pkey` are live.
     unsafe {
-        if EVP_DigestVerifyInit(mctx, &mut pctx, md, core::ptr::null_mut(), pkey) > 0
+        let init_ok = EVP_DigestVerifyInit(mctx, &mut pctx, md, core::ptr::null_mut(), pkey) > 0
             && !pctx.is_null()
-            && EVP_PKEY_CTX_set_signature_md(pctx, md) > 0
+            && EVP_PKEY_CTX_set_signature_md(pctx, md) > 0;
+        let params_ok = if pss {
+            EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) > 0
+                && EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, RSA_PSS_SALTLEN_DIGEST) > 0
+                && EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, md) > 0
+        } else {
+            true
+        };
+        if init_ok
+            && params_ok
             && EVP_DigestVerify(mctx, sig.as_ptr(), sig.len(), data.as_ptr(), data.len()) == 1
         {
             ok = true;
@@ -7599,6 +7647,12 @@ mod tls12_group_tests {
     #[test]
     fn tls12_handshake_x448() {
         assert_group_handshake(o::NID_X448);
+    }
+
+    /// The DHE work must not change the ECDHE flight: the same X25519 pair still completes.
+    #[test]
+    fn tls12_dhe_ecdhe_handshake_unchanged() {
+        assert_group_handshake(o::NID_X25519);
     }
 
     // --- ECDSA scheme selection -------------------------------------------------------------
