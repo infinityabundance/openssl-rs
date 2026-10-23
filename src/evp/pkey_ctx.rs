@@ -82,6 +82,19 @@ use core::ptr;
 use crate::asn1::a_type::{d2i_ASN1_TYPE, i2d_ASN1_TYPE};
 use crate::asn1::layout::Asn1Type;
 use crate::bn::bignum::{BN_bn2nativepad, BN_free, BN_num_bits, BigNum};
+use crate::bn::ctx::{BN_CTX_free, BN_CTX_get, BN_CTX_new_ex};
+use crate::dh::group_params::DH_get_nid;
+use crate::dh::key::ossl_dh_key2buf;
+use crate::dh::object::{DH_get0_g, DH_get0_p, DH_get0_priv_key, DH_get0_pub_key, DH_get0_q};
+use crate::dsa::object::{DSA_get0_g, DSA_get0_p, DSA_get0_pub_key, DSA_get0_q};
+use crate::ec::key::{
+    ossl_ec_key_get_libctx, EC_KEY_decoded_from_explicit_params, EC_KEY_get0_group,
+    EC_KEY_get0_private_key, EC_KEY_get0_public_key,
+};
+use crate::ec::lib::{EC_GROUP_get_curve_name, EC_POINT_get_affine_coordinates};
+use crate::ec::oct::EC_POINT_point2buf;
+use crate::ec::support::OSSL_EC_curve_nid2name;
+use crate::ec::POINT_CONVERSION_COMPRESSED;
 use crate::evp::asymcipher::{EVP_ASYM_CIPHER_get0_provider, EvpAsymCipher};
 use crate::evp::cipher::{EVP_CIPHER_get0_name, EvpCipher};
 use crate::evp::cipher_ctx::X509Algor;
@@ -97,16 +110,19 @@ use crate::evp::legacy_evp::{
     evp_get_cipherbyname_ex, evp_get_digestbyname_ex, EVP_get_digestbyname,
 };
 use crate::evp::mac::OSSL_MAC_PARAM_SIZE;
+use crate::evp::p_legacy_assign::{EVP_PKEY_get0_EC_KEY, EVP_PKEY_get0_RSA};
 use crate::evp::pbe::{
     OSSL_KDF_PARAM_PASSWORD, OSSL_KDF_PARAM_SALT, OSSL_KDF_PARAM_SCRYPT_MAXMEM,
     OSSL_KDF_PARAM_SCRYPT_N, OSSL_KDF_PARAM_SCRYPT_P, OSSL_KDF_PARAM_SCRYPT_R,
 };
 use crate::evp::pkey::{
-    evp_pkey_is_provided, evp_pkey_name2type, evp_pkey_type2name, EVP_PKEY_free, EVP_PKEY_up_ref,
-    EvpPkey, OSSL_PKEY_PARAM_PRIV_KEY, OSSL_PKEY_PARAM_PUB_KEY,
+    evp_pkey_is_provided, evp_pkey_name2type, evp_pkey_type2name, EVP_PKEY_free, EVP_PKEY_get0_DH,
+    EVP_PKEY_get0_DSA, EVP_PKEY_get_base_id, EVP_PKEY_up_ref, EvpPkey, OSSL_PKEY_PARAM_PRIV_KEY,
+    OSSL_PKEY_PARAM_PUB_KEY,
 };
 use crate::evp::pkey_asn1::Engine;
 use crate::evp::signature::{EVP_SIGNATURE_get0_provider, EvpSignature};
+use crate::ffc::dh::{ossl_ffc_named_group_get_name, ossl_ffc_uid_to_dh_named_group};
 use crate::params::from_text::OSSL_PARAM_allocate_from_text;
 use crate::params::{
     OSSL_PARAM_construct_BN, OSSL_PARAM_construct_end, OSSL_PARAM_construct_int,
@@ -123,7 +139,13 @@ use crate::params::{
     OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_PTR, OSSL_PARAM_UTF8_STRING,
 };
 use crate::provider::{ossl_provider_ctx, OsslProvider};
+use crate::rsa::object::{
+    RSA_get0_d, RSA_get0_dmp1, RSA_get0_dmq1, RSA_get0_e, RSA_get0_iqmp,
+    RSA_get0_multi_prime_crt_params, RSA_get0_multi_prime_factors, RSA_get0_n, RSA_get0_p,
+    RSA_get0_q, RSA_get_multi_prime_extra_count,
+};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
+use crate::runtime::bio::sys::strncmp;
 use crate::runtime::bio::sys::{strcmp, strlen, strtol};
 use crate::runtime::err::raise_site_data;
 use crate::runtime::err::{err_sites, raise_site};
@@ -6254,50 +6276,38 @@ pub(crate) unsafe extern "C" fn fix_hkdf_mode(
 }
 
 // ---------------------------------------------------------------------------------------------
-// The payload getters — slice (3) of `ctrl_params_translate.c`, and the one part of it this crate
-// cannot finish
+// The payload getters — slice (3) of `ctrl_params_translate.c`
 //
-// **What these functions are for, and why nothing here runs.** They exist so that a *legacy*
-// `EVP_PKEY` — a key built through a C API like `EVP_PKEY_assign_RSA`, carrying its key material in
-// `pkey->pkey.ptr` rather than in a provider's keydata — can answer provider-style
-// `EVP_PKEY_get_params` questions about that material. The whole of `EVP_PKEY_TRANSLATIONS` below is
-// read by exactly one function, `evp_pkey_setget_params_to_ctrl`, which is called by exactly one,
-// `evp_pkey_get_params_to_ctrl`, whose only caller in the authority is `EVP_PKEY_get_params`'s
-// `#ifndef FIPS_MODULE` legacy arm — reached when `evp_pkey_is_legacy(pk)` holds, i.e. when
-// `pk->type != EVP_PKEY_NONE && pk->keymgmt == NULL`.
+// **What these functions are for.** They let a *legacy* `EVP_PKEY` — a key built through a C API
+// like `EVP_PKEY_assign_RSA`, carrying its key material in `pkey->pkey.ptr` rather than in a
+// provider's keydata — answer provider-style `EVP_PKEY_get_params` questions about that material.
+// The whole of `EVP_PKEY_TRANSLATIONS` below is read by `evp_pkey_setget_params_to_ctrl`, called by
+// `evp_pkey_get_params_to_ctrl`, whose caller is `EVP_PKEY_get_params`'s `#ifndef FIPS_MODULE`
+// legacy arm — reached when `evp_pkey_is_legacy(pk)` holds (`type != EVP_PKEY_NONE &&
+// keymgmt == NULL`).
 //
-// That state cannot be entered in this crate. `src/evp/pkey.rs`'s module note records why: the legacy
-// block of `struct evp_pkey_st` is deliberately absent, so an `EVP_PKEY` here is always provider-side
-// or blank, and the crate's own `EVP_PKEY_get_params` has no legacy arm to take. So the four
-// functions on this axis — `evp_pkey_setget_params_to_ctrl`, `evp_pkey_get_params_to_ctrl`, and the
-// lookups and tables above them — are written and have no caller until that arm lands. **One
-// `#[allow(dead_code)]` covers the whole of it**, on `evp_pkey_get_params_to_ctrl`, which is the end
-// of the chain: a reader who wonders why the thirteen getters below carry no allow of their own will
-// find the answer there rather than a trail of them.
-//
-// **The dispatch is the part that cannot be written, and it is one line per function in the
-// authority.** Every getter binds `EVP_PKEY *pkey = ctx->p2`, resets `ctx->p2`, and then switches on
-// `EVP_PKEY_get_base_id(pkey)` to pick the key out of the legacy union with `EVP_PKEY_get0_DH`,
-// `_get0_DSA`, `_get0_EC_KEY` or `_get0_RSA` before reading a member of it with `DH_get0_p`,
-// `RSA_get0_n`, `EC_KEY_get0_group` and their siblings. **None of those ten functions exists in this
-// crate**, and none can: they are the accessors of the legacy union, which is exactly the structure
-// `src/evp/pkey.rs` does not have. There is no honest stand-in — a helper answering NULL would be a
-// placeholder pretending to be an accessor — so each getter keeps everything that *is* expressible
-// around the dispatch and the dispatch itself is the absence each site names.
-//
-// What that leaves is stated per function and is consistent: where the authority's own behaviour for
-// "I looked and there is nothing there" is a value, that value is answered; where the authority would
-// have *raised* because the key's type was unsupported, the crate does not raise, because it cannot
-// read the type and inventing the error would put a message on the queue that a caller of a
-// *supported* key would never see in the authority. Nothing here fabricates key material.
+// **The dispatch was previously recorded as impossible, and the premise was false.** The note here
+// said the legacy union accessors did not exist, so every getter stopped before its `switch`. The
+// ASN.1 method table made legacy origin keys reachable (S19 census L02) and the accessors
+// (`EVP_PKEY_get0_DH`/`_DSA`/`_RSA`/`_EC_KEY`, `DH_get0_*`, `DSA_get0_*`, `RSA_get0_*`,
+// `EC_KEY_get0_*`) have all landed, so each getter below is now the authority's switch, including
+// its `EVP_R_UNSUPPORTED_KEY_TYPE` refusals. Without the dispatch, `EVP_PKEY_get_params` on a
+// legacy key would answer a wrong negative for every parameter rather than the translated value.
 // ---------------------------------------------------------------------------------------------
+
+/// `crypto/evp/ctrl_params_translate.c` is the translation unit for the one payload buffer
+/// [`get_payload_public_key`] allocates and releases (`OPENSSL_free(buf)` at line 1654).
+const FILE_CTRL_PARAMS_TRANSLATE: *const c_char =
+    c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c".as_ptr();
+/// `__LINE__` of that release, `ctrl_params_translate.c:1654`.
+const LINE_FREE_PAYLOAD_BUF: c_int = 1654;
 
 /// `static int get_payload_group_name(...)` — `crypto/evp/ctrl_params_translate.c:1515`.
 ///
 /// The named group of a DH or EC key, and the one getter whose miss is **not** an error: the
 /// authority's closing comment says an unknown group is quietly ignored "to match the behaviour on
-/// the provider side", and that is a `1` — the parameter was answered, with nothing. So the
-/// dispatch's absence here leaves `ctx->p2` NULL and reaches the authority's own ignore path.
+/// the provider side", and that is a `1` — the parameter was answered, with nothing. An unsupported
+/// key type is the `default:` arm and is `EVP_R_UNSUPPORTED_KEY_TYPE` plus `0`.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `p2` the `EVP_PKEY *` the table's caller passed.
@@ -6306,17 +6316,53 @@ pub(crate) unsafe extern "C" fn get_payload_group_name(
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
 ) -> c_int {
-    /* The authority binds `EVP_PKEY *pkey = ctx->p2` and dispatches on
-     * `EVP_PKEY_get_base_id(pkey)` here; see this section's note. */
+    // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
     // SAFETY: `ctx` is live.
     unsafe { (*ctx).p2 = ptr::null_mut() };
 
-    /* Still NULL: the authority's "unknown group", which is ignored rather than reported. */
+    // SAFETY: `pkey` is the live key the table's caller passed.
+    match unsafe { EVP_PKEY_get_base_id(pkey) } {
+        EVP_PKEY_DH => {
+            // SAFETY: `pkey` is live.
+            let dh = unsafe { EVP_PKEY_get0_DH(pkey) };
+            // SAFETY: `dh` is NULL or live.
+            let uid = unsafe { DH_get_nid(dh) };
+            if uid != NID_undef {
+                // SAFETY: the registry lookup takes a numeric id.
+                let group = unsafe { ossl_ffc_uid_to_dh_named_group(uid) };
+                // SAFETY: `group` is NULL or live.
+                unsafe { (*ctx).p2 = ossl_ffc_named_group_get_name(group).cast_mut().cast() };
+            }
+        }
+        EVP_PKEY_EC => {
+            // SAFETY: `pkey` is live.
+            let eckey = unsafe { EVP_PKEY_get0_EC_KEY(pkey) };
+            // SAFETY: `eckey` is NULL or live.
+            let grp = unsafe { EC_KEY_get0_group(eckey) };
+            let mut nid = NID_undef;
+            // SAFETY: `grp` is NULL or live.
+            if !grp.is_null() {
+                // SAFETY: `grp` is live.
+                nid = unsafe { EC_GROUP_get_curve_name(grp) };
+            }
+            if nid != NID_undef {
+                // SAFETY: `nid` names a curve.
+                unsafe { (*ctx).p2 = OSSL_EC_curve_nid2name(nid).cast_mut().cast() };
+            }
+        }
+        _ => {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1547) };
+            return 0;
+        }
+    }
+
+    /* Quietly ignoring unknown groups matches the provider side. */
     // SAFETY: `ctx` is live.
     if unsafe { (*ctx).p2 }.is_null() {
         return 1;
     }
-
     // SAFETY: `ctx` is live and `p2` is a NUL-terminated group name.
     unsafe { (*ctx).p1 = strlen((*ctx).p2.cast::<c_char>()) as c_int };
     // SAFETY: `translation` and `ctx` are as the contract states.
@@ -6325,12 +6371,9 @@ pub(crate) unsafe extern "C" fn get_payload_group_name(
 
 /// `static int get_payload_private_key(...)` — `crypto/evp/ctrl_params_translate.c:1562`.
 ///
-/// The key's private value as a BIGNUM, and the first of the two getters with a data-type guard that
-/// runs **before** the dispatch and is therefore expressible: the answer is a BIGNUM, so anything but
-/// `OSSL_PARAM_UNSIGNED_INTEGER` is a quiet 0 rather than an error. The dispatch after it is the
-/// absence this section records, and with no dispatch there is no BIGNUM to hand
-/// `default_fixup_args` — calling it with a NULL `p2` would have it answer from `p1` instead, which
-/// is a wrong success rather than a refusal — so the answer is 0.
+/// The key's private value as a BIGNUM. The data-type guard runs **before** the dispatch; the
+/// dispatch picks the key with `EVP_PKEY_get0_DH`/`_EC_KEY` and reads `DH_get0_priv_key` /
+/// `EC_KEY_get0_private_key`; an unsupported type raises `EVP_R_UNSUPPORTED_KEY_TYPE`.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6340,6 +6383,8 @@ pub(crate) unsafe extern "C" fn get_payload_private_key(
     ctx: *mut XlatCtx,
 ) -> c_int {
     // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
+    // SAFETY: `ctx` is live.
     unsafe { (*ctx).p2 = ptr::null_mut() };
 
     // SAFETY: `params` is the caller's element.
@@ -6347,25 +6392,39 @@ pub(crate) unsafe extern "C" fn get_payload_private_key(
         return 0;
     }
 
-    /* The authority switches on `EVP_PKEY_get_base_id(pkey)` to pick the key out with
-     * `EVP_PKEY_get0_DH`/`EVP_PKEY_get0_EC_KEY` and then reads `DH_get0_priv_key`/
-     * `EC_KEY_get0_private_key`; see this section's note. No BIGNUM is fetched and `p2` stays NULL,
-     * so there is nothing for `default_fixup_args` to write. */
-    let _ = (state, translation);
-    0
+    // SAFETY: `pkey` is the live key the table's caller passed.
+    match unsafe { EVP_PKEY_get_base_id(pkey) } {
+        EVP_PKEY_DH => {
+            // SAFETY: `pkey` is live.
+            let dh = unsafe { EVP_PKEY_get0_DH(pkey) };
+            // SAFETY: `dh` is NULL or live.
+            unsafe { (*ctx).p2 = DH_get0_priv_key(dh).cast_mut().cast() };
+        }
+        EVP_PKEY_EC => {
+            // SAFETY: `pkey` is live.
+            let ec = unsafe { EVP_PKEY_get0_EC_KEY(pkey) };
+            // SAFETY: `ec` is NULL or live.
+            unsafe { (*ctx).p2 = EC_KEY_get0_private_key(ec).cast_mut().cast() };
+        }
+        _ => {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1588) };
+            return 0;
+        }
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states.
+    unsafe { default_fixup_args(state, translation, ctx) }
 }
 
 /// `static int get_payload_public_key(...)` — `crypto/evp/ctrl_params_translate.c:1595`.
 ///
 /// The public key, and the one getter that answers **two different data types**: an octet string for
-/// DH and EC (the encoded point or the padded public value) and an unsigned integer for DH and DSA.
-/// It is the reason `OSSL_PKEY_PARAM_PUB_KEY`'s table row carries `param_data_type = 0` — the "let
-/// the fixup decide" value this file's `default_fixup_args` documents. `buf` is allocated by the EC
-/// and DH arms and freed after the fixup either way, on the success and the failure path alike.
-///
-/// With the dispatch absent there is no arm to enter and no buffer to free, so the answer is 0; the
-/// authority's own `default:` arm would have raised `EVP_R_UNSUPPORTED_KEY_TYPE` here, and the crate
-/// deliberately does not, for the reason this section's note gives.
+/// DH and EC (the padded public value or the compressed point) and an unsigned integer for DH and
+/// DSA. It is the reason `OSSL_PKEY_PARAM_PUB_KEY`'s table row carries `param_data_type = 0` — the
+/// "let the fixup decide" value this file's `default_fixup_args` documents. `buf` is allocated by
+/// the EC and DH arms and freed after the fixup either way, on the success and the failure path
+/// alike; the `default:` arm returns before the allocation and does not free.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6375,13 +6434,96 @@ pub(crate) unsafe extern "C" fn get_payload_public_key(
     ctx: *mut XlatCtx,
 ) -> c_int {
     // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
+    let mut buf: *mut c_uchar = ptr::null_mut();
+    // SAFETY: `ctx` is live.
     unsafe { (*ctx).p2 = ptr::null_mut() };
 
-    /* The authority switches on `EVP_PKEY_get_base_id(pkey)` here and fills `buf`/`p2`/`sz` from
-     * `ossl_dh_key2buf`, `DH_get0_pub_key`, `DSA_get0_pub_key` or `EC_POINT_point2buf`; see this
-     * section's note. */
-    let _ = (state, translation);
-    0
+    // SAFETY: `pkey` is the live key the table's caller passed.
+    match unsafe { EVP_PKEY_get_base_id(pkey) } {
+        EVP_PKEY_DHX | EVP_PKEY_DH => {
+            // SAFETY: `params` is the caller's element.
+            match unsafe { (*(*ctx).params).data_type } {
+                OSSL_PARAM_OCTET_STRING => {
+                    // SAFETY: `pkey` is live; `buf` is this frame's writable out-parameter.
+                    unsafe {
+                        (*ctx).sz =
+                            ossl_dh_key2buf(EVP_PKEY_get0_DH(pkey), ptr::addr_of_mut!(buf), 0, 1);
+                        (*ctx).p2 = buf.cast();
+                    }
+                }
+                OSSL_PARAM_UNSIGNED_INTEGER => {
+                    // SAFETY: `pkey` is live.
+                    unsafe {
+                        (*ctx).p2 = DH_get0_pub_key(EVP_PKEY_get0_DH(pkey)).cast_mut().cast();
+                    }
+                }
+                _ => return 0,
+            }
+        }
+        EVP_PKEY_DSA => {
+            // SAFETY: `params` is the caller's element.
+            if unsafe { (*(*ctx).params).data_type } != OSSL_PARAM_UNSIGNED_INTEGER {
+                return 0;
+            }
+            // SAFETY: `pkey` is live.
+            unsafe { (*ctx).p2 = DSA_get0_pub_key(EVP_PKEY_get0_DSA(pkey)).cast_mut().cast() };
+        }
+        EVP_PKEY_EC => {
+            // SAFETY: `params` is the caller's element.
+            if unsafe { (*(*ctx).params).data_type } != OSSL_PARAM_OCTET_STRING {
+                return 0;
+            }
+            // SAFETY: `pkey` is live.
+            let eckey = unsafe { EVP_PKEY_get0_EC_KEY(pkey) };
+            // SAFETY: `eckey` is NULL or live.
+            let bnctx = unsafe { BN_CTX_new_ex(ossl_ec_key_get_libctx(eckey)) };
+            // SAFETY: `eckey` is NULL or live.
+            let ecg = unsafe { EC_KEY_get0_group(eckey) };
+            // SAFETY: `eckey` is NULL or live.
+            let point = unsafe { EC_KEY_get0_public_key(eckey) };
+            if bnctx.is_null() {
+                return 0;
+            }
+            /* `EC_POINT_point2oct` checks the point but dereferences the group's method, so a key
+             * with no group is UB in the authority (which passes it straight through). There is no
+             * point to export in either case, so answer 0. */
+            if ecg.is_null() || point.is_null() {
+                // SAFETY: `bnctx` is live.
+                unsafe { BN_CTX_free(bnctx) };
+                return 0;
+            }
+            // SAFETY: `ecg`/`point` are live and `buf` is this frame's out-parameter.
+            unsafe {
+                (*ctx).sz = EC_POINT_point2buf(
+                    ecg,
+                    point,
+                    POINT_CONVERSION_COMPRESSED,
+                    ptr::addr_of_mut!(buf),
+                    bnctx,
+                );
+                (*ctx).p2 = buf.cast();
+                BN_CTX_free(bnctx);
+            }
+        }
+        _ => {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1649) };
+            return 0;
+        }
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states.
+    let ret = unsafe { default_fixup_args(state, translation, ctx) };
+    // SAFETY: `buf` is NULL or the block this call allocated above.
+    unsafe {
+        CRYPTO_free(
+            buf.cast(),
+            FILE_CTRL_PARAMS_TRANSLATE,
+            LINE_FREE_PAYLOAD_BUF,
+        )
+    };
+    ret
 }
 
 /// `static int get_payload_public_key_ec(...)` — `crypto/evp/ctrl_params_translate.c:1658`.
@@ -6393,9 +6535,9 @@ pub(crate) unsafe extern "C" fn get_payload_public_key(
 /// parameter's own key name against `"qx"`/`"qy"` **for two characters**, which is the authority's
 /// spelling and is enough because the two keys differ in their second byte.
 ///
-/// The whole of it is inside `#ifndef OPENSSL_NO_EC` in the authority, with an `#else` that raises
-/// and returns 0; this build has EC, so the `#ifndef` arm is the one transcribed — as an absence,
-/// for the reason this section's note gives.
+/// This build has `OPENSSL_NO_EC` undefined, so the `#ifndef OPENSSL_NO_EC` arm is transcribed; the
+/// `#else` arm's `EVP_R_UNSUPPORTED_KEY_TYPE` is the answer a build without EC would give and is not
+/// reachable here.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6405,13 +6547,85 @@ pub(crate) unsafe extern "C" fn get_payload_public_key_ec(
     ctx: *mut XlatCtx,
 ) -> c_int {
     // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
+    // SAFETY: `ctx` is live.
     unsafe { (*ctx).p2 = ptr::null_mut() };
 
-    /* The authority reads the key with `EVP_PKEY_get0_EC_KEY`, its group with `EC_KEY_get0_group`,
-     * its point with `EC_KEY_get0_public_key`, and the two coordinates with
-     * `EC_POINT_get_affine_coordinates`; see this section's note. */
-    let _ = (state, translation);
-    0
+    // SAFETY: `pkey` is live.
+    let eckey = unsafe { EVP_PKEY_get0_EC_KEY(pkey) };
+    if eckey.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1675) };
+        return 0;
+    }
+
+    // SAFETY: `eckey` is live.
+    let bnctx = unsafe { BN_CTX_new_ex(ossl_ec_key_get_libctx(eckey)) };
+    if bnctx.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `eckey` is live.
+    let point = unsafe { EC_KEY_get0_public_key(eckey) };
+    // SAFETY: `eckey` is live.
+    let ecg = unsafe { EC_KEY_get0_group(eckey) };
+
+    /* `EC_POINT_get_affine_coordinates` dereferences the group, so a key with no group is UB in the
+     * authority. There are no coordinates to read, so answer 0. */
+    if ecg.is_null() || point.is_null() {
+        // SAFETY: `bnctx` is live.
+        unsafe { BN_CTX_free(bnctx) };
+        return 0;
+    }
+
+    let mut ret = 0;
+    // SAFETY: `params` is the caller's element.
+    if unsafe { (*(*ctx).params).data_type } != OSSL_PARAM_UNSIGNED_INTEGER {
+        // SAFETY: `bnctx` is live.
+        unsafe { BN_CTX_free(bnctx) };
+        return ret;
+    }
+
+    // SAFETY: `bnctx` is live.
+    let x = unsafe { BN_CTX_get(bnctx) };
+    // SAFETY: `bnctx` is live.
+    let y = unsafe { BN_CTX_get(bnctx) };
+    if y.is_null() {
+        // SAFETY: `bnctx` is live.
+        unsafe { BN_CTX_free(bnctx) };
+        return ret;
+    }
+
+    // SAFETY: `ecg`/`point` are live, `x`/`y` are this context's BIGNUMs.
+    if unsafe { EC_POINT_get_affine_coordinates(ecg, point, x, y, bnctx) } == 0 {
+        // SAFETY: `bnctx` is live.
+        unsafe { BN_CTX_free(bnctx) };
+        return ret;
+    }
+
+    // SAFETY: `params` is the caller's element and its key is NUL-terminated.
+    let key = unsafe { (*(*ctx).params).key };
+    // SAFETY: `key` and both literals are NUL-terminated reads of at most two bytes.
+    let is_x = unsafe { strncmp(key, OSSL_PKEY_PARAM_EC_PUB_X, 2) } == 0;
+    // SAFETY: as above.
+    let is_y = unsafe { strncmp(key, OSSL_PKEY_PARAM_EC_PUB_Y, 2) } == 0;
+    if is_x {
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).p2 = x.cast() };
+    } else if is_y {
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).p2 = y.cast() };
+    } else {
+        // SAFETY: `bnctx` is live.
+        unsafe { BN_CTX_free(bnctx) };
+        return ret;
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states.
+    ret = unsafe { default_fixup_args(state, translation, ctx) };
+    // SAFETY: `bnctx` is live.
+    unsafe { BN_CTX_free(bnctx) };
+    ret
 }
 
 /// `static int get_payload_bn(...)` — `crypto/evp/ctrl_params_translate.c:1716`.
@@ -6446,11 +6660,10 @@ pub(crate) unsafe extern "C" fn get_payload_bn(
 
 /// `static int get_dh_dsa_payload_p(...)` — `crypto/evp/ctrl_params_translate.c:1729`.
 ///
-/// The FFC modulus, shared by DH and DSA. Note that the authority's `default:` arm raises and then
-/// **falls through** to `get_payload_bn(state, translation, ctx, NULL)` — the two statements are not
-/// alternatives, and since a NULL BIGNUM is a quiet 0 the raise is the only thing the default case
-/// adds. The crate has neither the raise nor the dispatch, so the whole function is
-/// `get_payload_bn(..., NULL)`, which is 0.
+/// The FFC modulus, shared by DH and DSA. The authority's `default:` arm raises `EVP_R_UNSUPPORTED_KEY_TYPE`
+/// and then **falls through** to `get_payload_bn(state, translation, ctx, NULL)` — the two statements
+/// are not alternatives, and since a NULL BIGNUM is a quiet 0 the raise is the only thing the default
+/// case adds.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6459,20 +6672,34 @@ pub(crate) unsafe extern "C" fn get_dh_dsa_payload_p(
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
 ) -> c_int {
-    /* The authority picks the modulus with `EVP_PKEY_get0_DH`/`DH_get0_p` or
-     * `EVP_PKEY_get0_DSA`/`DSA_get0_p` after a `EVP_PKEY_get_base_id` switch; see this section's
-     * note. */
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL is the contract's own
-    // "no BIGNUM" and answers 0 without touching `ctx`.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    let mut bn: *const BigNum = ptr::null();
+    // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
+
+    // SAFETY: `pkey` is the live key the table's caller passed.
+    match unsafe { EVP_PKEY_get_base_id(pkey) } {
+        EVP_PKEY_DH => {
+            // SAFETY: `pkey` is live.
+            bn = unsafe { DH_get0_p(EVP_PKEY_get0_DH(pkey)) };
+        }
+        EVP_PKEY_DSA => {
+            // SAFETY: `pkey` is live.
+            bn = unsafe { DSA_get0_p(EVP_PKEY_get0_DSA(pkey)) };
+        }
+        _ => {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1748) };
+        }
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
 }
 
 /// `static int get_dh_dsa_payload_q(...)` — `crypto/evp/ctrl_params_translate.c:1754`.
 ///
 /// The subgroup order. This one has **no `default:` arm at all** — a key that is neither DH nor DSA
-/// leaves `bn` NULL and reaches the shared tail, which is 0 — so the crate's transcription is not
-/// merely the same answer as the authority's, it is the same control flow with the two DH/DSA arms
-/// removed.
+/// leaves `bn` NULL and reaches the shared tail, which is 0.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6481,8 +6708,25 @@ pub(crate) unsafe extern "C" fn get_dh_dsa_payload_q(
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
 ) -> c_int {
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL answers 0.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    let mut bn: *const BigNum = ptr::null();
+    // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
+
+    // SAFETY: `pkey` is the live key the table's caller passed.
+    match unsafe { EVP_PKEY_get_base_id(pkey) } {
+        EVP_PKEY_DH => {
+            // SAFETY: `pkey` is live.
+            bn = unsafe { DH_get0_q(EVP_PKEY_get0_DH(pkey)) };
+        }
+        EVP_PKEY_DSA => {
+            // SAFETY: `pkey` is live.
+            bn = unsafe { DSA_get0_q(EVP_PKEY_get0_DSA(pkey)) };
+        }
+        _ => {}
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
 }
 
 /// `static int get_dh_dsa_payload_g(...)` — `crypto/evp/ctrl_params_translate.c:1776`.
@@ -6497,8 +6741,25 @@ pub(crate) unsafe extern "C" fn get_dh_dsa_payload_g(
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
 ) -> c_int {
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL answers 0.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    let mut bn: *const BigNum = ptr::null();
+    // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
+
+    // SAFETY: `pkey` is the live key the table's caller passed.
+    match unsafe { EVP_PKEY_get_base_id(pkey) } {
+        EVP_PKEY_DH => {
+            // SAFETY: `pkey` is live.
+            bn = unsafe { DH_get0_g(EVP_PKEY_get0_DH(pkey)) };
+        }
+        EVP_PKEY_DSA => {
+            // SAFETY: `pkey` is live.
+            bn = unsafe { DSA_get0_g(EVP_PKEY_get0_DSA(pkey)) };
+        }
+        _ => {}
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
 }
 
 /// `static int get_payload_int(...)` — `crypto/evp/ctrl_params_translate.c:1798`.
@@ -6510,7 +6771,6 @@ pub(crate) unsafe extern "C" fn get_dh_dsa_payload_g(
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
-#[allow(dead_code)] // read only by `get_ec_decoded_from_explicit_params`, whose EC arm is absent
 pub(crate) unsafe extern "C" fn get_payload_int(
     state: XlatState,
     translation: *const XlatEntry,
@@ -6535,10 +6795,9 @@ pub(crate) unsafe extern "C" fn get_payload_int(
 /// `crypto/evp/ctrl_params_translate.c:1811`.
 ///
 /// A three-valued answer — 1 for a key decoded from explicit parameters, 0 for one that was not, and
-/// `EVP_R_INVALID_KEY` for a negative answer from the provider — so unlike the other integer getters
-/// it cannot answer a default when it cannot tell: the authority's `val` starts at 0 and only the EC
-/// arm ever writes it. Answering `get_payload_int(..., 0)` here would be a *plausible* answer that no
-/// key in this crate was measured for, so the crate answers 0 without calling it.
+/// `EVP_R_INVALID_KEY` for a negative answer from the underlying accessor — so unlike the other
+/// integer getters it cannot answer a default when it cannot tell. The `default:` arm raises
+/// `EVP_R_UNSUPPORTED_KEY_TYPE` and answers 0 rather than inventing a value.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6547,19 +6806,35 @@ pub(crate) unsafe extern "C" fn get_ec_decoded_from_explicit_params(
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
 ) -> c_int {
-    /* The authority switches on `EVP_PKEY_base_id(pkey)` and reads the answer with
-     * `EC_KEY_decoded_from_explicit_params`; see this section's note. */
-    let _ = (state, translation, ctx);
-    0
+    // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
+
+    // SAFETY: `pkey` is the live key the table's caller passed.
+    match unsafe { EVP_PKEY_get_base_id(pkey) } {
+        EVP_PKEY_EC => {
+            // SAFETY: `pkey` is live.
+            let val = unsafe { EC_KEY_decoded_from_explicit_params(EVP_PKEY_get0_EC_KEY(pkey)) };
+            if val < 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1823) };
+                return 0;
+            }
+            // SAFETY: `translation` and `ctx` are as the contract states.
+            unsafe { get_payload_int(state, translation, ctx, val) }
+        }
+        _ => {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1829) };
+            0
+        }
+    }
 }
 
 /// `static int get_rsa_payload_n(...)` — `crypto/evp/ctrl_params_translate.c:1836`.
 ///
 /// The modulus, and the first of the seven getters that guard on the key's type being RSA **or**
 /// RSA-PSS: the two share a key representation, so a PSS key's parameters are reachable through this
-/// table. The guard and the `RSA_get0_n` behind it are one absence here, and it is a *harmless* one:
-/// the guard's refusal and the shared tail's refusal are both 0, so the crate reaches the same answer
-/// by the shorter route.
+/// table. A key of any other type answers 0 without reading its union.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6568,8 +6843,14 @@ pub(crate) unsafe extern "C" fn get_rsa_payload_n(
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
 ) -> c_int {
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL answers 0.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    // SAFETY: `ctx` is live per the contract.
+    if !unsafe { rsa_payload_key(ctx) } {
+        return 0;
+    }
+    // SAFETY: `ctx` is live and the base-id guard above established the key is RSA/RSA-PSS.
+    let bn = unsafe { RSA_get0_n(EVP_PKEY_get0_RSA((*ctx).p2.cast::<EvpPkey>())) };
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
 }
 
 /// `static int get_rsa_payload_e(...)` — `crypto/evp/ctrl_params_translate.c:1850`.
@@ -6583,16 +6864,19 @@ pub(crate) unsafe extern "C" fn get_rsa_payload_e(
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
 ) -> c_int {
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL answers 0.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    // SAFETY: `ctx` is live per the contract.
+    if !unsafe { rsa_payload_key(ctx) } {
+        return 0;
+    }
+    // SAFETY: `ctx` is live and the base-id guard above established the key is RSA/RSA-PSS.
+    let bn = unsafe { RSA_get0_e(EVP_PKEY_get0_RSA((*ctx).p2.cast::<EvpPkey>())) };
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
 }
 
 /// `static int get_rsa_payload_d(...)` — `crypto/evp/ctrl_params_translate.c:1864`.
 ///
-/// The private exponent. Unlike the two above it, the crate's answer here is the *only* answer: the
-/// authority's `EVP_PKEY_get0_RSA` would find a key for an RSA-typed `pkey`, so a transcription
-/// without it is a gap and not an equivalence. It is a gap with no observable consequence, because
-/// the caller that would reach it cannot exist; the section's note says so.
+/// The private exponent, with the same RSA/RSA-PSS guard as its two siblings.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6601,20 +6885,46 @@ pub(crate) unsafe extern "C" fn get_rsa_payload_d(
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
 ) -> c_int {
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL answers 0.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    // SAFETY: `ctx` is live per the contract.
+    if !unsafe { rsa_payload_key(ctx) } {
+        return 0;
+    }
+    // SAFETY: `ctx` is live and the base-id guard above established the key is RSA/RSA-PSS.
+    let bn = unsafe { RSA_get0_d(EVP_PKEY_get0_RSA((*ctx).p2.cast::<EvpPkey>())) };
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
+}
+
+/// The `EVP_PKEY_get_base_id(ctx->p2)` RSA-or-RSA-PSS guard shared by the thirty RSA payload
+/// instantiations and the three named getters.
+///
+/// The authority repeats it inside each `IMPL_GET_RSA_PAYLOAD_*` expansion and in the three named
+/// getters. Every call site of the three base functions below is one of those instantiations, so this
+/// crate hoists the (identical) guard into the bases as well; the observable answer — 0 without
+/// reading the key — is the authority's answer for every reachable call.
+///
+/// # Safety
+/// `ctx` live with `p2` the `EVP_PKEY *` the table's caller passed.
+unsafe fn rsa_payload_key(ctx: *mut XlatCtx) -> bool {
+    // SAFETY: `ctx` is live per the contract.
+    let pkey = unsafe { (*ctx).p2 }.cast::<EvpPkey>();
+    // SAFETY: `pkey` is the live key the table's caller passed.
+    let base = unsafe { EVP_PKEY_get_base_id(pkey) };
+    base == EVP_PKEY_RSA || base == EVP_PKEY_RSA_PSS
 }
 
 /// `static int get_rsa_payload_factor(...)` — `crypto/evp/ctrl_params_translate.c:1878`.
 ///
-/// One prime, by index: 0 is `RSA_get0_p`, 1 is `RSA_get0_q`, and 2..12 are the multi-prime
-/// `RSA_get0_multi_prime_factors` array under a bounds test against
-/// `RSA_get_multi_prime_extra_count`. The two plain cases have **no** bounds test at all, which is
-/// deliberate and asymmetric with the exponent and coefficient functions below.
+/// One prime, by index: 0 is `RSA_get0_p`, 1 is `RSA_get0_q`, and 2..12 are the multi-prime array
+/// under a bounds test against `RSA_get_multi_prime_extra_count`. The two plain cases have **no**
+/// bounds test at all, which is deliberate and asymmetric with the exponent and coefficient
+/// functions below.
 ///
-/// The whole switch is the absence: it is five RSA accessors and a ten-element array, and with none
-/// of them present there is no factor to return. `get_payload_bn` is handed NULL, which is the
-/// authority's own answer for "this index has no factor".
+/// The authority's `const BIGNUM *factors[10]` is the `RSA_MAX_PRIME_NUM`-sized stack array it hands
+/// the accessor, which fills `pnum` entries. The extra `pnum <= 10` test is a safety guard on an
+/// invariant the RSA object maintains (`RSA_set0_multi_prime_params` caps the count); a value beyond
+/// it would overflow the authority's own stack array, so refusing is the only sound answer and no
+/// valid key can observe it.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with `params` pointing at the caller's element.
@@ -6624,11 +6934,39 @@ pub(crate) unsafe extern "C" fn get_rsa_payload_factor(
     ctx: *mut XlatCtx,
     factornum: usize,
 ) -> c_int {
-    /* The authority's `switch (factornum)` reads `RSA_get0_p`, `RSA_get0_q` and
-     * `RSA_get0_multi_prime_factors` off `EVP_PKEY_get0_RSA(ctx->p2)`; see this section's note. */
-    let _ = factornum;
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL answers 0.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    // SAFETY: `ctx` is live per the contract.
+    if !unsafe { rsa_payload_key(ctx) } {
+        return 0;
+    }
+    // SAFETY: `ctx` is live and the guard above established the key is RSA/RSA-PSS.
+    let r = unsafe { EVP_PKEY_get0_RSA((*ctx).p2.cast::<EvpPkey>()) };
+    let mut bn: *const BigNum = ptr::null();
+
+    match factornum {
+        0 => {
+            // SAFETY: `r` is live.
+            bn = unsafe { RSA_get0_p(r) };
+        }
+        1 => {
+            // SAFETY: `r` is live.
+            bn = unsafe { RSA_get0_q(r) };
+        }
+        _ => {
+            // SAFETY: `r` is live.
+            let pnum = unsafe { RSA_get_multi_prime_extra_count(r) };
+            let mut factors: [*const BigNum; 10] = [ptr::null(); 10];
+            if pnum <= 10 && factornum - 2 < pnum as usize {
+                // SAFETY: `r` is live and `factors` has room for `pnum` pointers.
+                if unsafe { RSA_get0_multi_prime_factors(r, factors.as_mut_ptr()) } != 0 {
+                    // SAFETY: the accessor filled the first `pnum` entries and the index is < pnum.
+                    bn = unsafe { *factors.get_unchecked(factornum - 2) };
+                }
+            }
+        }
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
 }
 
 /// `static int get_rsa_payload_exponent(...)` — `crypto/evp/ctrl_params_translate.c:1906`.
@@ -6646,9 +6984,43 @@ pub(crate) unsafe extern "C" fn get_rsa_payload_exponent(
     ctx: *mut XlatCtx,
     exponentnum: usize,
 ) -> c_int {
-    let _ = exponentnum;
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL answers 0.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    // SAFETY: `ctx` is live per the contract.
+    if !unsafe { rsa_payload_key(ctx) } {
+        return 0;
+    }
+    // SAFETY: `ctx` is live and the guard above established the key is RSA/RSA-PSS.
+    let r = unsafe { EVP_PKEY_get0_RSA((*ctx).p2.cast::<EvpPkey>()) };
+    let mut bn: *const BigNum = ptr::null();
+
+    match exponentnum {
+        0 => {
+            // SAFETY: `r` is live.
+            bn = unsafe { RSA_get0_dmp1(r) };
+        }
+        1 => {
+            // SAFETY: `r` is live.
+            bn = unsafe { RSA_get0_dmq1(r) };
+        }
+        _ => {
+            // SAFETY: `r` is live.
+            let pnum = unsafe { RSA_get_multi_prime_extra_count(r) };
+            let mut exps: [*const BigNum; 10] = [ptr::null(); 10];
+            let mut coeffs: [*const BigNum; 10] = [ptr::null(); 10];
+            if pnum <= 10 && exponentnum - 2 < pnum as usize {
+                // SAFETY: `r` is live and both arrays have room for `pnum` pointers.
+                if unsafe {
+                    RSA_get0_multi_prime_crt_params(r, exps.as_mut_ptr(), coeffs.as_mut_ptr())
+                } != 0
+                {
+                    // SAFETY: the accessor filled `exps` and the index is < pnum.
+                    bn = unsafe { *exps.get_unchecked(exponentnum - 2) };
+                }
+            }
+        }
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
 }
 
 /// `static int get_rsa_payload_coefficient(...)` — `crypto/evp/ctrl_params_translate.c:1934`.
@@ -6667,9 +7039,35 @@ pub(crate) unsafe extern "C" fn get_rsa_payload_coefficient(
     ctx: *mut XlatCtx,
     coefficientnum: usize,
 ) -> c_int {
-    let _ = coefficientnum;
-    // SAFETY: `translation` and `ctx` are as the contract states; NULL answers 0.
-    unsafe { get_payload_bn(state, translation, ctx, ptr::null()) }
+    // SAFETY: `ctx` is live per the contract.
+    if !unsafe { rsa_payload_key(ctx) } {
+        return 0;
+    }
+    // SAFETY: `ctx` is live and the guard above established the key is RSA/RSA-PSS.
+    let r = unsafe { EVP_PKEY_get0_RSA((*ctx).p2.cast::<EvpPkey>()) };
+    let mut bn: *const BigNum = ptr::null();
+
+    if coefficientnum == 0 {
+        // SAFETY: `r` is live.
+        bn = unsafe { RSA_get0_iqmp(r) };
+    } else {
+        // SAFETY: `r` is live.
+        let pnum = unsafe { RSA_get_multi_prime_extra_count(r) };
+        let mut exps: [*const BigNum; 10] = [ptr::null(); 10];
+        let mut coeffs: [*const BigNum; 10] = [ptr::null(); 10];
+        if pnum <= 10 && coefficientnum - 1 < pnum as usize {
+            // SAFETY: `r` is live and both arrays have room for `pnum` pointers.
+            if unsafe { RSA_get0_multi_prime_crt_params(r, exps.as_mut_ptr(), coeffs.as_mut_ptr()) }
+                != 0
+            {
+                // SAFETY: the accessor filled `coeffs` and the index is < pnum.
+                bn = unsafe { *coeffs.get_unchecked(coefficientnum - 1) };
+            }
+        }
+    }
+
+    // SAFETY: `translation` and `ctx` are as the contract states; `bn` is NULL or live.
+    unsafe { get_payload_bn(state, translation, ctx, bn) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -6719,11 +7117,12 @@ pub(crate) unsafe extern "C" fn get_rsa_payload_coefficient(
 //               n - 1);                                                 \
 //       }
 //
-// The guard in each body is the same absence the base functions carry — `EVP_PKEY_get_base_id` does
-// not exist here — and it is *not* reproduced per function: it can only ever answer 0, which is what
-// the base function answers anyway, so thirty copies of it would be thirty copies of a fact already
-// stated. What is left of each body is the tail call, and that is the one line each instantiation
-// below has, with the macro's `n - 1` already evaluated: `f1` passes 0, `f10` passes 9.
+// The guard in each body is the RSA/RSA-PSS base-id test, and this crate hoists it into
+// `rsa_payload_key` (called by the three base functions and the three named getters) rather than
+// repeating it thirty times: every base-function call site is an instantiation, so the answer — 0
+// without reading the key — is identical. What is left of each body is the tail call, and that is the
+// one line each instantiation below has, with the macro's `n - 1` already evaluated: `f1` passes 0,
+// `f10` passes 9.
 // ---------------------------------------------------------------------------------------------
 
 /// `get_rsa_payload_f1` — `IMPL_GET_RSA_PAYLOAD_FACTOR(1)`, `ctrl_params_translate.c:1990`.
@@ -9439,9 +9838,7 @@ pub(crate) unsafe extern "C" fn evp_pkey_ctx_get_params_to_ctrl(
 /// unhandled parameter. The second one is why only `OSSL_ACTION_GET` may be asked for here, which is
 /// the whole of what makes this table's rows all `GET`.
 ///
-/// **It has no caller in this crate**, and the reason is measured rather than wished: its only caller
-/// is `evp_pkey_get_params_to_ctrl` below, whose only caller in the authority is `EVP_PKEY_get_params`
-/// on a legacy key — a state this crate cannot enter, as the payload-getter section above records.
+/// Its caller is `evp_pkey_get_params_to_ctrl` below, which `EVP_PKEY_get_params`'s legacy arm calls.
 ///
 /// # Safety
 /// `pkey` live or NULL; `params` NULL or a NULL-key-terminated array.
@@ -9512,21 +9909,28 @@ unsafe extern "C" fn evp_pkey_setget_params_to_ctrl(
 /// `int evp_pkey_get_params_to_ctrl(const EVP_PKEY *pkey, OSSL_PARAM *params)` —
 /// `crypto/evp/ctrl_params_translate.c:2972`.
 ///
-/// **This is the root of the only dead chain in the file, and the single allow below is the whole of
-/// its cost.** Its only caller is `EVP_PKEY_get_params` on a legacy key, a state this crate cannot
-/// enter; keeping the allow *here* is what makes every other item on that axis — `EVP_PKEY_TRANSLATIONS`,
-/// the thirteen payload getters, the twenty-nine RSA instantiations and the thirty
-/// `OSSL_PKEY_PARAM_RSA_*` keys they name — reachable rather than dead, so the file carries one allow
-/// for the chain instead of forty-five. A reader who wonders why those payload getters have no
-/// `#[allow(dead_code)]` of their own has the answer in the one place it applies.
+/// The key-side entry point, and the live caller is `EVP_PKEY_get_params`'s legacy arm in
+/// `src/evp/pkey.rs`. Keeping the whole translation axis reachable through this one item is why the
+/// payload getters, `EVP_PKEY_TRANSLATIONS` and the thirty RSA instantiations need no allows of their
+/// own.
 ///
 /// # Safety
 /// `pkey` live or NULL; `params` NULL or a NULL-key-terminated array.
-#[allow(dead_code)] // first live caller is `EVP_PKEY_get_params`'s legacy arm in `src/evp/pkey.rs`
 pub(crate) unsafe extern "C" fn evp_pkey_get_params_to_ctrl(
     pkey: *const EvpPkey,
     params: *mut OsslParam,
 ) -> c_int {
+    /* The payload getters below read the legacy union through `EVP_PKEY_get0_*` and the key-type
+     * accessors, all of which require a live union member. A typed-but-unassigned key
+     * (`EVP_PKEY_set_type` with no assign) has none, and the authority dereferences NULL there —
+     * UB, which §17 says not to reproduce. There is no key material to answer from, so the
+     * conservative refusal is 0. */
+    if !pkey.is_null()
+        // SAFETY: `pkey` is live per the contract.
+        && unsafe { (*pkey).pkey }.is_null()
+    {
+        return 0;
+    }
     // SAFETY: `pkey` and `params` are as the contract states.
     unsafe { evp_pkey_setget_params_to_ctrl(pkey, XlatAction::Get, params) }
 }

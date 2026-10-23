@@ -16,12 +16,11 @@
 //! `evp_pkey_ctx_set_params_strict`). The seventh, `set_dsa_paramgen_md`, is an
 //! `EVP_PKEY_CTX_ctrl` wrapper and the authority's own comment says so.
 //!
-//! **The key-type arm of the gate is unreachable here, and it reads `pmeth` rather than
-//! `legacy_keytype`.** The authority's guard is `ctx->pmeth != NULL && ctx->pmeth->pkey_id !=
-//! EVP_PKEY_DSA` — note that it is **not** gated on `evp_pkey_ctx_is_legacy`, unlike the DH pair.
-//! This crate's `EvpPkeyCtx` does not carry `pmeth` at all, so the first clause is false for every
-//! context and the guard refuses nothing — the reduction `src/rsa/ctrl.rs` records for
-//! `RSA_pkey_ctx_ctrl`'s own `pmeth`-shaped guard, applied to the form that tests `pmeth` directly.
+//! **The key-type arm of the gate is live.** The authority's guard is `ctx->pmeth != NULL &&
+//! ctx->pmeth->pkey_id != EVP_PKEY_DSA` — note that it is **not** gated on
+//! `evp_pkey_ctx_is_legacy`, unlike the DH pair. A legacy context (engine-backed or foreign) carries
+//! its `EVP_PKEY_METHOD`, so a mismatched-key context is now refused `-1` rather than silently
+//! accepted (S19 census L10).
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -43,11 +42,9 @@ use crate::runtime::err::raise_site;
 /// `static int dsa_paramgen_check(EVP_PKEY_CTX *ctx)` — `dsa_ctrl.c:17-23`.
 ///
 /// The parameter-generation gate shared by all seven controls. `-2` with
-/// `EVP_R_COMMAND_NOT_SUPPORTED` for a NULL context or one whose operation is not a generation one.
-/// The authority's second clause tests `ctx->pmeth` **directly** rather than through
-/// `evp_pkey_ctx_is_legacy`, and this crate's `EvpPkeyCtx` has no `pmeth` — so it is always NULL and
-/// the `!= NULL` clause is false, which is why the key-type refusal is not written (this module's
-/// header).
+/// `EVP_R_COMMAND_NOT_SUPPORTED` for a NULL context or one whose operation is not a generation one,
+/// and `-1` when the context has a method whose key type is not DSA. The authority's second clause
+/// tests `ctx->pmeth` **directly** rather than through `evp_pkey_ctx_is_legacy`.
 ///
 /// # Safety
 /// `ctx` NULL or live.
@@ -59,9 +56,15 @@ unsafe fn dsa_paramgen_check(ctx: *mut EvpPkeyCtx) -> c_int {
         /* Uses the same return values as `EVP_PKEY_CTX_ctrl`. */
         return -2;
     }
-    /* `if (ctx->pmeth != NULL && ctx->pmeth->pkey_id != EVP_PKEY_DSA) return -1;` — unreachable:
-     * `ctx->pmeth` is absent from this crate's `EvpPkeyCtx`, so the first clause is false for every
-     * context and the `&&` never evaluates the `pkey_id` test. */
+    /* `if (ctx->pmeth != NULL && ctx->pmeth->pkey_id != EVP_PKEY_DSA) return -1;` */
+    // SAFETY: `ctx` is live.
+    let pmeth = unsafe { (*ctx).pmeth };
+    if !pmeth.is_null() {
+        // SAFETY: `pmeth` is the live method this context was built with.
+        if unsafe { (*pmeth).pkey_id } != EVP_PKEY_DSA {
+            return -1;
+        }
+    }
     1
 }
 
@@ -342,5 +345,35 @@ mod tests {
         }
         assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
         crate::runtime::err::ERR_clear_error();
+    }
+
+    /// S19 L10. `dsa_paramgen_check` refuses (`-1`) a context whose method is not DSA
+    /// (`dsa_ctrl.c:21-22`). Unlike the DH pair this test is **not** guarded by
+    /// `evp_pkey_ctx_is_legacy`, so any context carrying a non-DSA method is refused; a legacy
+    /// engine/foreign context carries one. Before this fix the guard was absent entirely.
+    #[test]
+    // The method's id is only read through the context's raw `pmeth`, which the lint cannot see.
+    #[allow(unused_assignments)]
+    fn the_legacy_key_type_guard_refuses_a_non_dsa_context() {
+        use crate::evp::pkey_ctx::{EvpPkeyMethod, EVP_PKEY_DH};
+
+        // SAFETY: the method and the context are stack locals; nothing is transferred or freed.
+        unsafe {
+            let mut meth: EvpPkeyMethod = core::mem::zeroed();
+            let mut ctx: EvpPkeyCtx = core::mem::zeroed();
+            ctx.operation = EVP_PKEY_OP_PARAMGEN;
+            ctx.pmeth = core::ptr::addr_of!(meth);
+
+            meth.pkey_id = EVP_PKEY_DH;
+            assert_eq!(
+                EVP_PKEY_CTX_set_dsa_paramgen_gindex(core::ptr::addr_of_mut!(ctx), 5),
+                -1,
+                "a context of another key type is the authority's -1"
+            );
+            assert_eq!(dsa_paramgen_check(core::ptr::addr_of_mut!(ctx)), -1);
+
+            meth.pkey_id = EVP_PKEY_DSA;
+            assert_eq!(dsa_paramgen_check(core::ptr::addr_of_mut!(ctx)), 1);
+        }
     }
 }

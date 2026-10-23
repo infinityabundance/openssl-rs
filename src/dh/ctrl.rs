@@ -29,15 +29,15 @@
 //!      shared refusal structure: a NULL context or the wrong operation is `-2` with
 //!      `EVP_R_COMMAND_NOT_SUPPORTED`, and a *legacy* context of the wrong key type is `-1`.
 //!
-//! **The legacy key-type arm of both gates is unreachable here, and that is the `pmeth` reduction
-//! rather than an omission.** The authority's guard is `evp_pkey_ctx_is_legacy(ctx) &&
-//! ctx->pmeth->pkey_id != EVP_PKEY_DH && ctx->pmeth->pkey_id != EVP_PKEY_DHX`. `evp_pkey_ctx_is_legacy`
-//! is `keymgmt == NULL` (`src/evp/pkey_ctx.rs` records that reading it by its name would be wrong),
-//! and `int_ctx_new` refuses to return a context with a NULL `keymgmt` at all — so the first clause
-//! is false for every context this crate can build and the `&&` never reaches `ctx->pmeth`, which
-//! this crate's `EvpPkeyCtx` does not carry anyway. It is the same reduction `src/rsa/ctrl.rs` makes
-//! for `RSA_pkey_ctx_ctrl`'s guard, seen from the other side: there the absent `pmeth` was a clause
-//! of a conjunction, here it is a clause the short-circuit protects.
+//! **The legacy key-type arm of both gates is live, and it is the authority's own refusal.** The
+//! guard is `evp_pkey_ctx_is_legacy(ctx) && ctx->pmeth->pkey_id != EVP_PKEY_DH &&
+//! ctx->pmeth->pkey_id != EVP_PKEY_DHX`. `evp_pkey_ctx_is_legacy` is `keymgmt == NULL`; an
+//! engine-backed or foreign context has no `keymgmt` and keeps its `EVP_PKEY_METHOD`, so the arm can
+//! fire and answers `-1`. It was previously omitted on the premise that no such context could be
+//! built; S18's engine adoption made that false (S19 census L09). The authority dereferences
+//! `ctx->pmeth` without a NULL test, relying on `int_ctx_new`'s "a context with a NULL `keymgmt`
+//! always has a `pmeth`" invariant; the transcription checks it first, which is observationally the
+//! same for every context either library can build and avoids UB if the invariant ever breaks.
 //!
 //! **What the court can and cannot drive, said here rather than discovered.** Every one of the
 //! twenty is reachable with a NULL context and answers a refusal whose error coordinate is
@@ -90,8 +90,7 @@ const LINE_FREE_LABEL: c_int = 315;
 ///
 /// The parameter-generation gate shared by the six `set_dh_paramgen_*` controls. Two refusals:
 /// `-2` with `EVP_R_COMMAND_NOT_SUPPORTED` for a NULL context or one whose operation is not a
-/// generation one, and `-1` for a legacy context of the wrong key type — which this crate cannot
-/// reach (this module's header).
+/// generation one, and `-1` for a legacy context of the wrong key type.
 ///
 /// # Safety
 /// `ctx` NULL or live.
@@ -104,11 +103,19 @@ unsafe fn dh_paramgen_check(ctx: *mut EvpPkeyCtx) -> c_int {
         return -2;
     }
     /* `if (evp_pkey_ctx_is_legacy(ctx) && ctx->pmeth->pkey_id != EVP_PKEY_DH
-     *  && ctx->pmeth->pkey_id != EVP_PKEY_DHX) return -1;` — the authority's key-type guard, and
-     * its first clause is false for every context that reaches here: `evp_pkey_ctx_is_legacy` is
-     * `keymgmt == NULL` and `int_ctx_new` never returns a context with a NULL `keymgmt`. The
-     * remaining clauses read `ctx->pmeth`, absent from this crate's `EvpPkeyCtx`, and the
-     * short-circuit means they are never evaluated. */
+     *  && ctx->pmeth->pkey_id != EVP_PKEY_DHX) return -1;` */
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).is_legacy() } {
+        // SAFETY: `ctx` is live.
+        let pmeth = unsafe { (*ctx).pmeth };
+        if !pmeth.is_null() {
+            // SAFETY: `pmeth` is the live method this context was built with.
+            let id = unsafe { (*pmeth).pkey_id };
+            if id != EVP_PKEY_DH && id != EVP_PKEY_DHX {
+                return -1;
+            }
+        }
+    }
     1
 }
 
@@ -128,7 +135,19 @@ unsafe fn dh_param_derive_check(ctx: *mut EvpPkeyCtx) -> c_int {
         /* Uses the same return values as `EVP_PKEY_CTX_ctrl`. */
         return -2;
     }
-    /* The legacy key-type guard is unreachable here for the reason `dh_paramgen_check` gives. */
+    /* The same legacy key-type guard as `dh_paramgen_check`, at the derive operation. */
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).is_legacy() } {
+        // SAFETY: `ctx` is live.
+        let pmeth = unsafe { (*ctx).pmeth };
+        if !pmeth.is_null() {
+            // SAFETY: `pmeth` is the live method this context was built with.
+            let id = unsafe { (*pmeth).pkey_id };
+            if id != EVP_PKEY_DH && id != EVP_PKEY_DHX {
+                return -1;
+            }
+        }
+    }
     1
 }
 
@@ -861,5 +880,44 @@ mod tests {
         // refusal, so the queue is non-empty.
         assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
         crate::runtime::err::ERR_clear_error();
+    }
+
+    /// S19 L09. Both gates refuse (`-1`) a **legacy** context whose method is neither DH nor DHX
+    /// (`dh_ctrl.c:25-28`, `:40-43`), and accept both DH ids. A legacy context (engine/foreign) has
+    /// `keymgmt == NULL` and keeps its `EVP_PKEY_METHOD`, so the arm is reachable; before this fix a
+    /// DH control on a mismatched-key context was silently accepted.
+    #[test]
+    // The method's id is only read through the context's raw `pmeth`, which the lint cannot see.
+    #[allow(unused_assignments)]
+    fn the_legacy_key_type_guard_refuses_a_non_dh_context() {
+        use crate::evp::pkey_ctx::{EvpPkeyMethod, EVP_PKEY_DSA};
+
+        // SAFETY: the method and the context are stack locals; nothing is transferred or freed.
+        unsafe {
+            let mut meth: EvpPkeyMethod = core::mem::zeroed();
+            meth.pkey_id = EVP_PKEY_DSA;
+            let mut ctx: EvpPkeyCtx = core::mem::zeroed();
+            ctx.pmeth = core::ptr::addr_of!(meth);
+
+            ctx.operation = EVP_PKEY_OP_PARAMGEN;
+            assert_eq!(
+                EVP_PKEY_CTX_set_dh_paramgen_gindex(core::ptr::addr_of_mut!(ctx), 5),
+                -1,
+                "a legacy context of another key type is the authority's -1"
+            );
+            assert_eq!(dh_paramgen_check(core::ptr::addr_of_mut!(ctx)), -1);
+
+            ctx.operation = EVP_PKEY_OP_DERIVE;
+            assert_eq!(dh_param_derive_check(core::ptr::addr_of_mut!(ctx)), -1);
+
+            /* Both DH ids pass the pair of gates. */
+            for id in [EVP_PKEY_DH, EVP_PKEY_DHX] {
+                meth.pkey_id = id;
+                ctx.operation = EVP_PKEY_OP_PARAMGEN;
+                assert_eq!(dh_paramgen_check(core::ptr::addr_of_mut!(ctx)), 1);
+                ctx.operation = EVP_PKEY_OP_DERIVE;
+                assert_eq!(dh_param_derive_check(core::ptr::addr_of_mut!(ctx)), 1);
+            }
+        }
     }
 }
