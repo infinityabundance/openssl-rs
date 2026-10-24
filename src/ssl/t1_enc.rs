@@ -100,6 +100,10 @@ fn cipher_for_id(id: u16) -> Option<(&'static [u8], usize, usize, c_int)> {
         // (`0x009c`) and `TLS_RSA_WITH_AES_256_GCM_SHA384` (`0x009d`).
         0x009c => Some((b"AES-128-GCM\0", 16, 16, 0)),
         0x009d => Some((b"AES-256-GCM\0", 32, 16, 1)),
+        // Ephemeral DH with the same AEADs: `TLS_DHE_RSA_WITH_AES_128_GCM_SHA256` (`0x009e`),
+        // `..._256_GCM_SHA384` (`0x009f`), and the DHE-DSS twins (`0x00a2`, `0x00a3`).
+        0x009e | 0x00a2 => Some((b"AES-128-GCM\0", 16, 16, 0)),
+        0x009f | 0x00a3 => Some((b"AES-256-GCM\0", 32, 16, 1)),
         _ => None,
     }
 }
@@ -270,9 +274,13 @@ unsafe fn tls12_prf(
 }
 
 /// `tls1_generate_master_secret(SSL_CONNECTION *s, unsigned char *out, unsigned char *pms,
-/// size_t pmslen, ...)` — `ssl/t1_enc.c:267-275`: `master = PRF(pms, "master secret",
-/// client_random || server_random, 48)`. The extended-master-secret arm is not taken (the reduced
-/// ServerHello does not echo `extended_master_secret`).
+/// size_t pmslen, ...)` — `ssl/t1_enc.c:365-412`.
+///
+/// The `SSL_SESS_FLAG_EXTMS` arm is RFC 7627's extended master secret:
+/// `master = PRF(pms, "extended master secret", session_hash, 48)`, where `session_hash` is the
+/// handshake hash through the ClientKeyExchange. The legacy arm is
+/// `PRF(pms, "master secret", client_random || server_random, 48)`. The caller writes the
+/// ClientKeyExchange before deriving, so the transcript is at the authority's freeze point.
 ///
 /// # Safety
 /// `s` is live; `pms` readable for `pmslen`.
@@ -283,24 +291,48 @@ pub(crate) unsafe fn tls12_derive_master_secret(
 ) -> c_int {
     // SAFETY: `s` is live.
     let md_kind = unsafe { (*s).tls12_md_kind };
+    // The RFC 7627 arm is selected by the session flag the ServerHello's
+    // `extended_master_secret` extension sets (`tls_parse_stoc_ems`, `extensions_clnt.c:1818`).
+    // SAFETY: `s` is live; a non-NULL `session` is the connection's own.
+    let extms = unsafe {
+        !(*s).session.is_null()
+            && ((*(*s).session).flags & crate::ssl::ssl_lib::SSL_SESS_FLAG_EXTMS) != 0
+    };
     let mut seed = [0u8; 64];
     // SAFETY: `s` is live; the randoms are 32-byte arrays; `pms` is readable for `pmslen`.
     let r = unsafe {
-        seed[..32].copy_from_slice(&(*s).client_random);
-        seed[32..].copy_from_slice(&(*s).server_random);
         let pms: &[u8] = if pmslen == 0 {
             &[]
         } else {
             core::slice::from_raw_parts(pms, pmslen)
         };
         let master = &mut (*s).tls12_master_secret;
-        tls12_prf(
-            md_kind,
-            pms,
-            b"master secret",
-            &seed,
-            &mut master[..SSL_MAX_MASTER_KEY_LENGTH],
-        )
+        if extms {
+            let mut hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+            if crate::ssl::tls13_enc::transcript_hash(s, hash.as_mut_ptr(), core::ptr::null_mut())
+                == 0
+            {
+                return 0;
+            }
+            let hashlen = (*s).hs_md_len;
+            tls12_prf(
+                md_kind,
+                pms,
+                b"extended master secret",
+                &hash[..hashlen],
+                &mut master[..SSL_MAX_MASTER_KEY_LENGTH],
+            )
+        } else {
+            seed[..32].copy_from_slice(&(*s).client_random);
+            seed[32..].copy_from_slice(&(*s).server_random);
+            tls12_prf(
+                md_kind,
+                pms,
+                b"master secret",
+                &seed,
+                &mut master[..SSL_MAX_MASTER_KEY_LENGTH],
+            )
+        }
     };
     // `ssl_generate_master_secret` (`s3_lib.c:5327`) writes into `s->session->master_key`; the
     // handshake session carries the secret so a TLS1.2 ticket can resume from it.
