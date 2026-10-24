@@ -135,15 +135,39 @@ const HKDF_LABEL_MAX: usize = 2 + 1 + u8::MAX as usize + 1 + u8::MAX as usize;
 /// The largest `HKDF-Expand` HMAC input: `T(i-1) | info | i`.
 const HKDF_EXPAND_INPUT_MAX: usize = HASH_MAX + HKDF_LABEL_MAX + 1;
 
-/// A fixed scratch block whose contents are cleansed when it leaves scope.
+/// A fixed block of secret-bearing key-schedule state whose contents are
+/// cleansed when it leaves scope.
 ///
-/// [`hkdf_expand`] has several early returns (a failed HMAC, an over-long input);
-/// wrapping the `T(i-1)` state and the HMAC input here wipes them on every path,
-/// matching the authority's `OPENSSL_cleanse(prev, sizeof(prev))` and extending it
-/// to the input buffer the authority does not hold. The crate's cleaned-free
-/// instrument (`ssl::adv_alloc`) observes heap releases, so it cannot see this
-/// stack block; the wipe is structural (volatile stores plus a compiler fence).
+/// This is the single owner for every stack copy of key-schedule material:
+/// HKDF scratch (`T(i-1)` and the HMAC input), the early/binder/finished
+/// intermediates, traffic keys and IVs, transcript hashes, and the hex line the
+/// keylog callback receives. `Drop` is the only release, so every early return
+/// (a failed HMAC, an over-long label, an uninitialised transcript) wipes the
+/// material, matching and extending the authority's `OPENSSL_cleanse` calls.
+///
+/// The crate's cleaned-free instrument (`ssl::adv_alloc`) observes heap
+/// releases, so it cannot see this stack block; the wipe is structural (volatile
+/// stores plus a compiler fence).
 struct CleansedBlock<const N: usize>([u8; N]);
+
+// Test-only observation of the cleanse hook: `(drops, drops that held a
+// non-zero byte)`. Thread-local, because the test harness runs one test per
+// thread; a failure-path test can therefore attribute the events to itself.
+#[cfg(test)]
+std::thread_local! {
+    static CLEANSE_EVENTS: core::cell::Cell<(usize, usize)> =
+        const { core::cell::Cell::new((0, 0)) };
+}
+
+#[cfg(test)]
+fn reset_cleanse_events() {
+    CLEANSE_EVENTS.with(|cell| cell.set((0, 0)));
+}
+
+#[cfg(test)]
+fn cleanse_events() -> (usize, usize) {
+    CLEANSE_EVENTS.with(core::cell::Cell::get)
+}
 
 impl<const N: usize> CleansedBlock<N> {
     fn new() -> Self {
@@ -157,10 +181,26 @@ impl<const N: usize> CleansedBlock<N> {
     fn as_mut_slice(&mut self) -> &mut [u8] {
         &mut self.0
     }
+
+    fn as_ptr(&self) -> *const u8 {
+        self.0.as_ptr()
+    }
+
+    fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.0.as_mut_ptr()
+    }
 }
 
 impl<const N: usize> Drop for CleansedBlock<N> {
     fn drop(&mut self) {
+        #[cfg(test)]
+        {
+            let non_zero = self.0.iter().any(|&byte| byte != 0);
+            CLEANSE_EVENTS.with(|cell| {
+                let (drops, non_zero_drops) = cell.get();
+                cell.set((drops + 1, non_zero_drops + usize::from(non_zero)));
+            });
+        }
         // SAFETY: `self.0` is a live array of exactly `N` writable bytes.
         unsafe { crate::runtime::mem::cleanse(self.0.as_mut_ptr(), N) }
     }
@@ -234,26 +274,36 @@ fn encode_hkdf_label(
 
 /// `int HKDF_Extract(...)` — `hkdf.c:1044-1057`: `PRK = HMAC-Hash(salt, IKM)`.
 ///
+/// `salt`, `ikm` and `out` are slices, so their extents are the actual buffers;
+/// `out` must hold the digest. The only FFI precondition is that `md` is live.
+///
 /// # Safety
-/// `md` is live; `salt`/`ikm` are readable for their lengths; `out` is writable for the md size.
-unsafe fn hkdf_extract(
-    md: *const EvpMd,
-    salt: *const u8,
-    salt_len: usize,
-    ikm: *const u8,
-    ikm_len: usize,
-    out: *mut u8,
-) -> c_int {
+/// `md` is live; `out` does not overlap `salt` or `ikm`.
+unsafe fn hkdf_extract(md: *const EvpMd, salt: &[u8], ikm: &[u8], out: &mut [u8]) -> c_int {
+    // SAFETY: `md` is live per this function's contract.
+    let sz = unsafe { EVP_MD_get_size(md) };
+    if sz <= 0 {
+        return 0;
+    }
+    let hash_len = sz as usize;
+    if hash_len > HASH_MAX || out.len() < hash_len {
+        return 0;
+    }
+    // `HMAC` takes the key length as `int`.
+    if salt.len() > c_int::MAX as usize {
+        return 0;
+    }
     let mut l: c_uint = 0;
-    // SAFETY: the arguments are the caller's under this function's contract.
+    // SAFETY: `md` is live; `salt`/`ikm` are slices for their lengths; `out` is
+    // writable for at least the digest size (checked above).
     let r = unsafe {
         HMAC(
             md,
-            salt.cast(),
-            salt_len as c_int,
-            ikm.cast(),
-            ikm_len,
-            out.cast(),
+            salt.as_ptr().cast(),
+            salt.len() as c_int,
+            ikm.as_ptr().cast(),
+            ikm.len(),
+            out.as_mut_ptr().cast(),
             &mut l,
         )
     };
@@ -336,40 +386,13 @@ unsafe fn hkdf_expand(md: *const EvpMd, prk: &[u8], info: &[u8], out: &mut [u8])
 
 /// `static int prov_tls13_hkdf_expand(...)` — `hkdf.c:1212-1246`, the `HkdfLabel` it packs.
 ///
-/// # Safety
-/// `md` is live; `secret` readable for `secret_len`; `context` readable for `context_len` when
-/// non-NULL; `out` writable for `out_len`.
-#[allow(clippy::too_many_arguments)] // mirrors `prov_tls13_hkdf_expand`'s signature exactly
-pub(crate) unsafe fn hkdf_expand_label(
-    md: *const EvpMd,
-    secret: *const u8,
-    secret_len: usize,
-    label: &[u8],
-    context: *const u8,
-    context_len: usize,
-    out: *mut u8,
-    out_len: usize,
-) -> c_int {
-    // SAFETY: every pointer is the caller's under this function's contract; a NULL
-    // context is only read when `context_len == 0`, which selects the empty slice.
-    unsafe {
-        let secret = core::slice::from_raw_parts(secret, secret_len);
-        let context: &[u8] = if context_len == 0 {
-            &[]
-        } else {
-            core::slice::from_raw_parts(context, context_len)
-        };
-        let out = core::slice::from_raw_parts_mut(out, out_len);
-        hkdf_expand_label_bytes(md, secret, label, context, out)
-    }
-}
-
-/// The label construction and expand over slices; the only FFI precondition is
+/// Every buffer is a Rust slice, so the output extent is the caller's actual
+/// buffer rather than a separately asserted length. The only FFI precondition is
 /// that `md` is live.
 ///
 /// # Safety
-/// `md` is live.
-unsafe fn hkdf_expand_label_bytes(
+/// `md` is live; `out` does not overlap `secret` or `context`.
+unsafe fn hkdf_expand_label(
     md: *const EvpMd,
     secret: &[u8],
     label: &[u8],
@@ -388,7 +411,8 @@ unsafe fn hkdf_expand_label_bytes(
 /// `int tls13_derive_secret` — the `"derived"`/traffic-secret expand (`tls13_enc.c:348-375`).
 ///
 /// # Safety
-/// `md` is live; `hash` and `out` must be the digest length.
+/// `md` is live; `hash` and `out` must be the digest length and `out` must not overlap `secret` or
+/// `hash`.
 unsafe fn derive_secret(
     md: *const EvpMd,
     secret: &[u8],
@@ -407,88 +431,65 @@ unsafe fn derive_secret(
         return 0;
     }
     // SAFETY: `md` is live; the lengths were just checked.
-    unsafe { hkdf_expand_label_bytes(md, secret, label, hash, out) }
+    unsafe { hkdf_expand_label(md, secret, label, hash, out) }
 }
 
 /// `static int tls13_derive_key(...)` — `tls13_enc.c:122-131`: the `"key"` label.
 ///
 /// # Safety
-/// The arguments are the caller's.
-unsafe fn tls13_derive_key(
-    md: *const EvpMd,
-    secret: *const u8,
-    secret_len: usize,
-    key: *mut u8,
-    key_len: usize,
-) -> c_int {
-    // SAFETY: the arguments are the caller's.
-    unsafe { hkdf_expand_label(md, secret, secret_len, b"key", ptr::null(), 0, key, key_len) }
+/// `md` is live.
+unsafe fn tls13_derive_key(md: *const EvpMd, secret: &[u8], key: &mut [u8]) -> c_int {
+    // SAFETY: `md` is live per this function's contract.
+    unsafe { hkdf_expand_label(md, secret, b"key", &[], key) }
 }
 
 /// `static int tls13_derive_iv(...)` — `tls13_enc.c:137-146`: the `"iv"` label.
 ///
 /// # Safety
-/// The arguments are the caller's.
-unsafe fn tls13_derive_iv(
-    md: *const EvpMd,
-    secret: *const u8,
-    secret_len: usize,
-    iv: *mut u8,
-    iv_len: usize,
-) -> c_int {
-    // SAFETY: the arguments are the caller's.
-    unsafe { hkdf_expand_label(md, secret, secret_len, b"iv", ptr::null(), 0, iv, iv_len) }
+/// `md` is live.
+unsafe fn tls13_derive_iv(md: *const EvpMd, secret: &[u8], iv: &mut [u8]) -> c_int {
+    // SAFETY: `md` is live per this function's contract.
+    unsafe { hkdf_expand_label(md, secret, b"iv", &[], iv) }
 }
 
 /// `static int tls13_derive_finishedkey(...)` — `tls13_enc.c:148-157`.
 ///
 /// # Safety
-/// The arguments are the caller's.
-unsafe fn tls13_derive_finishedkey(
-    md: *const EvpMd,
-    secret: *const u8,
-    secret_len: usize,
-    fin: *mut u8,
-    fin_len: usize,
-) -> c_int {
-    // SAFETY: the arguments are the caller's.
-    unsafe {
-        hkdf_expand_label(
-            md,
-            secret,
-            secret_len,
-            b"finished",
-            ptr::null(),
-            0,
-            fin,
-            fin_len,
-        )
+/// `md` is live.
+unsafe fn tls13_derive_finishedkey(md: *const EvpMd, secret: &[u8], fin: &mut [u8]) -> c_int {
+    // SAFETY: `md` is live.
+    let sz = unsafe { EVP_MD_get_size(md) };
+    if sz <= 0 || fin.len() != sz as usize {
+        return 0;
     }
+    // SAFETY: `md` is live per this function's contract.
+    unsafe { hkdf_expand_label(md, secret, b"finished", &[], fin) }
 }
 
 /// `Hash("")` — the empty transcript hash `tls13_generate_secret` uses as the `"derived"` context.
 ///
 /// # Safety
-/// `md` is live; `out` writable for the md size; `out_len` writable.
-unsafe fn hash_empty(md: *const EvpMd, out: *mut u8, out_len: *mut usize) -> c_int {
+/// `md` is live.
+unsafe fn hash_empty(md: *const EvpMd, out: &mut [u8]) -> c_int {
+    // SAFETY: `md` is live.
+    let sz = unsafe { EVP_MD_get_size(md) };
+    if sz <= 0 || out.len() < sz as usize {
+        return 0;
+    }
     // SAFETY: no preconditions.
     let ctx = EVP_MD_CTX_new();
     if ctx.is_null() {
         return 0;
     }
-    // SAFETY: `ctx` is live.
+    // SAFETY: `ctx` is live; `out` holds the digest.
     let r = unsafe {
         let mut l: c_uint = 0;
         let r = EVP_DigestInit_ex(ctx, md, ptr::null_mut());
-        let r = if r > 0 {
-            EVP_DigestFinal_ex(ctx, out.cast(), &mut l)
+        if r > 0 {
+            EVP_DigestFinal_ex(ctx, out.as_mut_ptr(), &mut l)
         } else {
             r
-        };
-        if r > 0 && !out_len.is_null() {
-            *out_len = l as usize;
         }
-        r
     };
     // SAFETY: `ctx` is this frame's.
     unsafe { EVP_MD_CTX_free(ctx) };
@@ -502,12 +503,13 @@ unsafe fn hash_empty(md: *const EvpMd, out: *mut u8, out_len: *mut usize) -> c_i
 /// given.
 ///
 /// # Safety
-/// `s` is live; the optional slices are readable; `out` writable for the md size.
+/// `s` is live; the optional slices are readable; `out` holds the digest length and does not
+/// overlap `prevsecret` or `insecret`.
 pub(crate) unsafe fn tls13_generate_secret(
     s: *mut Ssl,
     prevsecret: Option<&[u8]>,
     insecret: Option<&[u8]>,
-    out: *mut u8,
+    out: &mut [u8],
 ) -> c_int {
     // SAFETY: `s` is live.
     let md = handshake_md(s);
@@ -520,12 +522,13 @@ pub(crate) unsafe fn tls13_generate_secret(
 /// `extensions.c:1519`).
 ///
 /// # Safety
-/// `md` is live; the optional slices are readable; `out` writable for the md size.
+/// `md` is live; the optional slices are readable; `out` holds the digest length and does not
+/// overlap `prevsecret` or `insecret`.
 pub(crate) unsafe fn tls13_generate_secret_md(
     md: *const EvpMd,
     prevsecret: Option<&[u8]>,
     insecret: Option<&[u8]>,
-    out: *mut u8,
+    out: &mut [u8],
 ) -> c_int {
     // SAFETY: `md` is live.
     let sz = unsafe { EVP_MD_get_size(md) };
@@ -533,70 +536,85 @@ pub(crate) unsafe fn tls13_generate_secret_md(
         return 0;
     }
     let hash_len = sz as usize;
+    if hash_len > HASH_MAX || out.len() < hash_len {
+        return 0;
+    }
     let zeros = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    let mut salt = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    let salt_ptr: *const u8;
-    if let Some(prev) = prevsecret {
-        let mut empty_hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+    let mut salt = CleansedBlock::<HASH_MAX>::new();
+    let salt: &[u8] = if let Some(prev) = prevsecret {
+        let mut empty_hash = CleansedBlock::<HASH_MAX>::new();
         // SAFETY: `md` is live; the buffers are this frame's.
-        if unsafe { hash_empty(md, empty_hash.as_mut_ptr(), ptr::null_mut()) } == 0 {
+        if unsafe { hash_empty(md, empty_hash.as_mut_slice()) } == 0 {
             return 0;
         }
-        // SAFETY: `prev` is readable; `salt` is writable.
+        // SAFETY: `md` is live; `prev` is readable; `salt` is writable for the hash length.
         if unsafe {
             derive_secret(
                 md,
                 prev,
                 b"derived",
-                &empty_hash[..hash_len],
-                &mut salt[..hash_len],
+                &empty_hash.as_slice()[..hash_len],
+                &mut salt.as_mut_slice()[..hash_len],
             )
         } == 0
         {
             return 0;
         }
-        salt_ptr = salt.as_ptr();
+        &salt.as_slice()[..hash_len]
     } else {
-        salt_ptr = zeros.as_ptr();
-    }
-    let (ikm_ptr, ikm_len) = match insecret {
-        Some(ins) => (ins.as_ptr(), ins.len()),
-        None => (zeros.as_ptr(), hash_len),
+        &zeros[..hash_len]
     };
-    // SAFETY: all pointers are live per the branches above.
-    unsafe { hkdf_extract(md, salt_ptr, hash_len, ikm_ptr, ikm_len, out) }
+    let ikm: &[u8] = match insecret {
+        Some(ins) => ins,
+        None => &zeros[..hash_len],
+    };
+    // SAFETY: `md` is live; `salt`/`ikm`/`out` are initialised for their lengths.
+    unsafe { hkdf_extract(md, salt, ikm, out) }
 }
 
 /// `int ssl_gensecret(...)` — `s3_lib.c:5448-5471` for a fresh connection: the early secret from
 /// the zero IKM, then the handshake secret from the shared secret.
 ///
 /// # Safety
-/// `s` is live; `pms` readable for `pms_len`.
+/// `s` is live; `pms` readable for `pms.len()`.
 pub(crate) unsafe fn tls13_generate_handshake_secret(s: *mut Ssl, pms: &[u8]) -> c_int {
-    // SAFETY: `s` is live; the early-secret field is writable.
-    let early = unsafe { (*s).early_secret.as_mut_ptr() };
+    // SAFETY: `s` is live; `hs_md_len` is the negotiated hash length.
+    let hash_len = unsafe { (*s).hs_md_len };
+    if hash_len == 0 || hash_len > HASH_MAX {
+        return 0;
+    }
     // A selected resumption PSK replaces the zero early-secret IKM (`extensions.c:1519`); an empty
-    // `psk_secret_len` keeps the fresh-handshake behaviour.
+    // `psk_secret_len` keeps the fresh-handshake behaviour. Both the length and the field are
+    // checked before the slice is derived.
     // SAFETY: `s` is live.
     let psk_len = unsafe { (*s).psk_secret_len };
     let psk_slice: Option<&[u8]> = if psk_len > 0 {
-        // SAFETY: `psk_secret` is `psk_secret_len` initialised bytes when the length is non-zero.
-        Some(unsafe { core::slice::from_raw_parts((*s).psk_secret.as_ptr(), psk_len) })
+        // SAFETY: `s` is live; the slice is a checked prefix of the connection's field.
+        unsafe { (*s).psk_secret.get(..psk_len) }
     } else {
         None
     };
-    // SAFETY: `s` is live; the buffers are the connection's.
-    if unsafe { tls13_generate_secret(s, None, psk_slice, early) } == 0 {
+    // SAFETY: `s` is live; the buffers are checked prefixes of the connection's fields.
+    if unsafe {
+        tls13_generate_secret(
+            s,
+            None,
+            psk_slice,
+            &mut (&mut (*s).early_secret)[..hash_len],
+        )
+    } == 0
+    {
         return 0;
     }
-    // SAFETY: `s` is live; the handshake-secret field is writable.
-    let handshake = unsafe { (*s).handshake_secret.as_mut_ptr() };
-    // SAFETY: `s` is live; `hs_md_len` is the negotiated hash length.
-    let early_len = unsafe { (*s).hs_md_len };
-    // SAFETY: `early` is `early_len` initialised bytes (the freshly generated early secret).
-    let early_slice = unsafe { core::slice::from_raw_parts(early, early_len) };
-    // SAFETY: `s` is live; `pms` is the caller's.
-    unsafe { tls13_generate_secret(s, Some(early_slice), Some(pms), handshake) }
+    // SAFETY: `s` is live; `early_secret` and `handshake_secret` are distinct fields.
+    unsafe {
+        tls13_generate_secret(
+            s,
+            Some(&(&(*s).early_secret)[..hash_len]),
+            Some(pms),
+            &mut (&mut (*s).handshake_secret)[..hash_len],
+        )
+    }
 }
 
 /// `int tls13_generate_master_secret(...)` — `tls13_enc.c:246-261`.
@@ -606,12 +624,18 @@ pub(crate) unsafe fn tls13_generate_handshake_secret(s: *mut Ssl, pms: &[u8]) ->
 pub(crate) unsafe fn tls13_generate_master_secret(s: *mut Ssl) -> c_int {
     // SAFETY: `s` is live; `hs_md_len` is the negotiated hash length.
     let hs_len = unsafe { (*s).hs_md_len };
-    // SAFETY: `handshake_secret` is `hs_len` initialised bytes.
-    let hs = unsafe { core::slice::from_raw_parts((*s).handshake_secret.as_ptr(), hs_len) };
-    // SAFETY: `s` is live; the master-secret field is writable.
-    let master = unsafe { (*s).master_secret.as_mut_ptr() };
-    // SAFETY: `s` is live; `hs` is the connection's; `master` writable.
-    unsafe { tls13_generate_secret(s, Some(hs), None, master) }
+    if hs_len == 0 || hs_len > HASH_MAX {
+        return 0;
+    }
+    // SAFETY: `s` is live; both slices are checked prefixes of distinct fields.
+    unsafe {
+        tls13_generate_secret(
+            s,
+            Some(&(&(*s).handshake_secret)[..hs_len]),
+            None,
+            &mut (&mut (*s).master_secret)[..hs_len],
+        )
+    }
 }
 
 /// `ssl_handshake_md(s)->md_size` — the negotiated transcript hash length. (Retained for the
@@ -791,36 +815,40 @@ pub(crate) unsafe fn tls13_derive_handshake_traffic(s: *mut Ssl) -> c_int {
     unsafe {
         let md = handshake_md(s);
         let hash_len = (*s).hs_md_len;
-        let mut hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+        if hash_len == 0 || hash_len > HASH_MAX {
+            return 0;
+        }
+        let mut hash = CleansedBlock::<HASH_MAX>::new();
         if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
             return 0;
         }
-        let Some(hash) = hash.get(..hash_len) else {
+        let hash = hash.as_slice();
+        let Some(traffic_hash) = (*s).handshake_traffic_hash.get_mut(..hash_len) else {
             return 0;
         };
-        ptr::copy_nonoverlapping(
-            hash.as_ptr(),
-            (*s).handshake_traffic_hash.as_mut_ptr(),
-            hash_len,
-        );
-        let hs = core::slice::from_raw_parts((*s).handshake_secret.as_ptr(), hash_len);
+        traffic_hash.copy_from_slice(&hash[..hash_len]);
+        let hs = &(&(*s).handshake_secret)[..hash_len];
         let Some(out) = (*s).client_hs_traffic.get_mut(..hash_len) else {
             return 0;
         };
-        if derive_secret(md, hs, b"c hs traffic", hash, out) == 0 {
+        if derive_secret(md, hs, b"c hs traffic", &hash[..hash_len], out) == 0 {
             return 0;
         }
         let Some(out) = (*s).server_hs_traffic.get_mut(..hash_len) else {
             return 0;
         };
-        derive_secret(md, hs, b"s hs traffic", hash, out);
+        derive_secret(md, hs, b"s hs traffic", &hash[..hash_len], out);
         // `ssl_log_secret` for the two handshake traffic secrets (`tls13_enc.c:718-722`).
-        {
-            let c = core::slice::from_raw_parts((*s).client_hs_traffic.as_ptr(), hash_len);
-            let sv = core::slice::from_raw_parts((*s).server_hs_traffic.as_ptr(), hash_len);
-            ssl_log_secret(s, b"CLIENT_HANDSHAKE_TRAFFIC_SECRET", c);
-            ssl_log_secret(s, b"SERVER_HANDSHAKE_TRAFFIC_SECRET", sv);
-        }
+        ssl_log_secret(
+            s,
+            b"CLIENT_HANDSHAKE_TRAFFIC_SECRET",
+            &(&(*s).client_hs_traffic)[..hash_len],
+        );
+        ssl_log_secret(
+            s,
+            b"SERVER_HANDSHAKE_TRAFFIC_SECRET",
+            &(&(*s).server_hs_traffic)[..hash_len],
+        );
         1
     }
 }
@@ -836,46 +864,54 @@ pub(crate) unsafe fn tls13_derive_application_traffic(s: *mut Ssl) -> c_int {
     unsafe {
         let md = handshake_md(s);
         let hash_len = (*s).hs_md_len;
-        let mut hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+        if hash_len == 0 || hash_len > HASH_MAX {
+            return 0;
+        }
+        let mut hash = CleansedBlock::<HASH_MAX>::new();
         if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
             return 0;
         }
-        let Some(hash) = hash.get(..hash_len) else {
+        let hash = hash.as_slice();
+        let Some(finished_hash) = (*s).server_finished_hash.get_mut(..hash_len) else {
             return 0;
         };
-        ptr::copy_nonoverlapping(
-            hash.as_ptr(),
-            (*s).server_finished_hash.as_mut_ptr(),
-            hash_len,
-        );
+        finished_hash.copy_from_slice(&hash[..hash_len]);
         if tls13_generate_master_secret(s) == 0 {
             return 0;
         }
-        let ms = core::slice::from_raw_parts((*s).master_secret.as_ptr(), hash_len);
+        let ms = &(&(*s).master_secret)[..hash_len];
         let Some(out) = (*s).client_app_traffic.get_mut(..hash_len) else {
             return 0;
         };
-        if derive_secret(md, ms, b"c ap traffic", hash, out) == 0 {
+        if derive_secret(md, ms, b"c ap traffic", &hash[..hash_len], out) == 0 {
             return 0;
         }
         let Some(out) = (*s).server_app_traffic.get_mut(..hash_len) else {
             return 0;
         };
-        derive_secret(md, ms, b"s ap traffic", hash, out);
+        derive_secret(md, ms, b"s ap traffic", &hash[..hash_len], out);
         // `ssl_log_secret` for the two application traffic secrets and the exporter secret
         // (`tls13_enc.c:712-724`).
+        ssl_log_secret(
+            s,
+            b"CLIENT_TRAFFIC_SECRET_0",
+            &(&(*s).client_app_traffic)[..hash_len],
+        );
+        ssl_log_secret(
+            s,
+            b"SERVER_TRAFFIC_SECRET_0",
+            &(&(*s).server_app_traffic)[..hash_len],
+        );
+        let mut exporter = CleansedBlock::<HASH_MAX>::new();
+        if derive_secret(
+            md,
+            ms,
+            b"exp master",
+            &hash[..hash_len],
+            &mut exporter.as_mut_slice()[..hash_len],
+        ) != 0
         {
-            let c = core::slice::from_raw_parts((*s).client_app_traffic.as_ptr(), hash_len);
-            let sv = core::slice::from_raw_parts((*s).server_app_traffic.as_ptr(), hash_len);
-            ssl_log_secret(s, b"CLIENT_TRAFFIC_SECRET_0", c);
-            ssl_log_secret(s, b"SERVER_TRAFFIC_SECRET_0", sv);
-            let mut exporter = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-            let Some(out) = exporter.get_mut(..hash_len) else {
-                return 0;
-            };
-            if derive_secret(md, ms, b"exp master", hash, out) != 0 {
-                ssl_log_secret(s, b"EXPORTER_SECRET", &exporter[..hash_len]);
-            }
+            ssl_log_secret(s, b"EXPORTER_SECRET", &exporter.as_slice()[..hash_len]);
         }
         1
     }
@@ -895,18 +931,19 @@ pub(crate) unsafe fn tls13_derive_resumption_master_secret(s: *mut Ssl) -> c_int
     unsafe {
         let md = handshake_md(s);
         let hash_len = (*s).hs_md_len;
-        let mut hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+        if hash_len == 0 || hash_len > HASH_MAX {
+            return 0;
+        }
+        let mut hash = CleansedBlock::<HASH_MAX>::new();
         if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
             return 0;
         }
-        let Some(hash) = hash.get(..hash_len) else {
-            return 0;
-        };
-        let ms = core::slice::from_raw_parts((*s).master_secret.as_ptr(), hash_len);
+        let hash = hash.as_slice();
+        let ms = &(&(*s).master_secret)[..hash_len];
         let Some(out) = (*s).resumption_master_secret.get_mut(..hash_len) else {
             return 0;
         };
-        derive_secret(md, ms, b"res master", hash, out)
+        derive_secret(md, ms, b"res master", &hash[..hash_len], out)
     }
 }
 
@@ -949,21 +986,21 @@ pub(crate) fn tls13_md_size(kind: c_int) -> usize {
 /// arm: derive the early secret from the session's PSK, the `"res binder"` binder key, and its
 /// finished key, then HMAC `Hash(ClientHello up to the binders)` (`extensions.c:1519-1627`).
 ///
-/// When `sign` is false (`binderout == NULL` on the caller's side) the received binder is compared
-/// in constant time; here the caller supplies the receive slice to compare, and its length must
-/// equal the digest size (a received binder of any other length is refused rather than read past).
-/// `msgstart` is the ClientHello message start and `binderoffset` the byte offset of the `binders`
-/// vector.
+/// When `sign` is false the received binder is compared in constant time; here the caller supplies
+/// the receive slice to compare. Both the received binder and the output buffer must be exactly the
+/// digest size, and that is checked *before* any secret is derived or any byte is read, so a binder
+/// of any other length cannot be read past its slice or drive the key schedule.
+///
+/// `transcript` is the ClientHello bytes before the `binders` vector (`msgstart[..binderoffset]` in
+/// `extensions.c:1574-1591`); its extent is the slice length, not a separately asserted offset.
 ///
 /// # Safety
-/// `md` is live; `msgstart` readable for `binderoffset`; `psk` readable; `binder` readable and
-/// writable for the md size.
+/// `md` is live.
 pub(crate) unsafe fn tls13_psk_do_binder(
     md: *const EvpMd,
-    msgstart: *const u8,
-    binderoffset: usize,
+    transcript: &[u8],
     psk: &[u8],
-    binder: *mut u8,
+    binder: &mut [u8],
     sign: bool,
     received: &[u8],
 ) -> c_int {
@@ -973,46 +1010,53 @@ pub(crate) unsafe fn tls13_psk_do_binder(
         return 0;
     }
     let hashsize = sz as usize;
+    if hashsize > HASH_MAX || binder.len() != hashsize {
+        return 0;
+    }
+    // `tls_parse_ctos_psk` requires `PACKET_remaining(&binder) == hashsize`
+    // (`extensions_srvr.c:1441-1448`). Refusing here, before the derivation, is what keeps a short
+    // received binder from ever being read.
+    if !sign && received.len() != hashsize {
+        return 0;
+    }
     // `tls13_generate_secret(s, md, NULL, sess->master_key, sess->master_key_length, early)`.
-    let mut early = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: buffers are this frame's; `psk` is the caller's.
-    if unsafe { tls13_generate_secret_md(md, None, Some(psk), early.as_mut_ptr()) } == 0 {
+    let mut early = CleansedBlock::<HASH_MAX>::new();
+    // SAFETY: `md` is live; `psk` is the caller's slice; the output is the digest-sized prefix.
+    if unsafe {
+        tls13_generate_secret_md(md, None, Some(psk), &mut early.as_mut_slice()[..hashsize])
+    } == 0
+    {
         return 0;
     }
     // `hash = Hash("")` (`extensions.c:1526-1533`).
-    let mut empty_hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: `md` is live; the buffers are this frame's.
-    if unsafe { hash_empty(md, empty_hash.as_mut_ptr(), ptr::null_mut()) } == 0 {
+    let mut empty_hash = CleansedBlock::<HASH_MAX>::new();
+    // SAFETY: `md` is live; the buffer is this frame's.
+    if unsafe { hash_empty(md, empty_hash.as_mut_slice()) } == 0 {
         return 0;
     }
     // `binderkey = HKDF-Expand-Label(early_secret, "res binder", hash, hashsize)`.
-    let mut binderkey = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: the arguments are this frame's.
+    let mut binderkey = CleansedBlock::<HASH_MAX>::new();
+    // SAFETY: `md` is live; every buffer is this frame's with its actual extent.
     if unsafe {
         hkdf_expand_label(
             md,
-            early.as_ptr(),
-            hashsize,
+            &early.as_slice()[..hashsize],
             b"res binder",
-            empty_hash.as_ptr(),
-            hashsize,
-            binderkey.as_mut_ptr(),
-            hashsize,
+            &empty_hash.as_slice()[..hashsize],
+            &mut binderkey.as_mut_slice()[..hashsize],
         )
     } == 0
     {
         return 0;
     }
     // `finishedkey = HKDF-Expand-Label(binderkey, "finished", "", hashsize)`.
-    let mut finishedkey = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: the arguments are this frame's.
+    let mut finishedkey = CleansedBlock::<HASH_MAX>::new();
+    // SAFETY: `md` is live; every buffer is this frame's with its actual extent.
     if unsafe {
         tls13_derive_finishedkey(
             md,
-            binderkey.as_ptr(),
-            hashsize,
-            finishedkey.as_mut_ptr(),
-            hashsize,
+            &binderkey.as_slice()[..hashsize],
+            &mut finishedkey.as_mut_slice()[..hashsize],
         )
     } == 0
     {
@@ -1024,12 +1068,12 @@ pub(crate) unsafe fn tls13_psk_do_binder(
     if ctx.is_null() {
         return 0;
     }
-    let mut th = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: `ctx` is this frame's; `msgstart`/`binderoffset` are the caller's.
+    let mut th = CleansedBlock::<HASH_MAX>::new();
+    // SAFETY: `ctx` is this frame's; `transcript` is the caller's slice.
     let ok = unsafe {
         let mut r = EVP_DigestInit_ex(ctx, md, ptr::null_mut()) > 0;
-        if r && binderoffset != 0 {
-            r = EVP_DigestUpdate(ctx, msgstart.cast(), binderoffset) > 0;
+        if r && !transcript.is_empty() {
+            r = EVP_DigestUpdate(ctx, transcript.as_ptr().cast(), transcript.len()) > 0;
         }
         if r {
             let mut l: c_uint = 0;
@@ -1042,8 +1086,9 @@ pub(crate) unsafe fn tls13_psk_do_binder(
     if !ok {
         return 0;
     }
-    // `binder = HMAC(finishedkey, hash)` (`extensions.c:1610-1627`).
-    // SAFETY: `md`/`finishedkey`/`th` are live for the hash length; `binder` is writable.
+    // `binder = HMAC(finishedkey, hash)` (`extensions.c:1610-1627`). `binder.len() == hashsize`
+    // was established above, so the HMAC output cannot leave the caller's slice.
+    // SAFETY: `md`/`finishedkey`/`th` are live for the hash length; `binder` is writable for it.
     let ret = unsafe {
         HMAC(
             md,
@@ -1051,7 +1096,7 @@ pub(crate) unsafe fn tls13_psk_do_binder(
             hashsize as c_int,
             th.as_ptr(),
             hashsize,
-            binder,
+            binder.as_mut_ptr(),
             ptr::null_mut(),
         )
     };
@@ -1059,18 +1104,11 @@ pub(crate) unsafe fn tls13_psk_do_binder(
         return 0;
     }
     if !sign {
-        // `tls_parse_ctos_psk` has already required `PACKET_remaining(&binder) == hashsize`
-        // (`extensions_srvr.c:1441-1448`); this makes the precondition explicit, so a short binder
-        // can never be read past its slice.
-        if received.len() != hashsize {
-            return 0;
-        }
-        // Constant-time compare against the received binder (`extensions.c:1628-1636`).
+        // Constant-time compare against the received binder (`extensions.c:1628-1636`). Both
+        // lengths equal `hashsize`, so every index is in range; the accumulation stays full-length.
         let mut diff = 0u8;
-        for (i, &received_byte) in received.iter().enumerate() {
-            // SAFETY: `received.len() == hashsize` (checked above) and `binder` is the caller's
-            // `hashsize`-byte writable buffer, so `i < hashsize`.
-            diff |= unsafe { *binder.add(i) } ^ received_byte;
+        for (&computed, &received_byte) in binder.iter().zip(received) {
+            diff |= computed ^ received_byte;
         }
         if diff != 0 {
             return 0;
@@ -1085,23 +1123,24 @@ pub(crate) unsafe fn tls13_psk_do_binder(
 /// [`derive_secret`].
 ///
 /// # Safety
-/// `s` is live with a derived resumption master secret; `out` writable for the hash length.
-pub(crate) unsafe fn tls13_ticket_psk(s: *mut Ssl, nonce: &[u8], out: *mut u8) -> c_int {
+/// `s` is live with a derived resumption master secret; `out` holds the hash length.
+pub(crate) unsafe fn tls13_ticket_psk(s: *mut Ssl, nonce: &[u8], out: &mut [u8]) -> c_int {
     // SAFETY: `s` is live.
     let md = handshake_md(s);
     // SAFETY: `s` is live.
     let hash_len = unsafe { (*s).hs_md_len };
-    // SAFETY: the resumption secret is `hash_len` bytes; `out` is `hash_len` writable.
+    if hash_len == 0 || hash_len > HASH_MAX || out.len() != hash_len {
+        return 0;
+    }
+    // SAFETY: `md` is live; the secret is a checked prefix of the connection's field; `nonce` and
+    // `out` are the caller's slices of their actual extents.
     unsafe {
         hkdf_expand_label(
             md,
-            (*s).resumption_master_secret.as_ptr(),
-            hash_len,
+            &(&(*s).resumption_master_secret)[..hash_len],
             b"resumption",
-            nonce.as_ptr(),
-            nonce.len(),
+            nonce,
             out,
-            hash_len,
         )
     }
 }
@@ -1125,7 +1164,10 @@ unsafe fn ssl_log_secret(s: *mut Ssl, label: &[u8], secret: &[u8]) {
     let Some(cb) = (unsafe { (*ctx).keylog_callback }) else {
         return;
     };
-    let mut out = [0u8; 256];
+    // The formatted line contains the secret in hexadecimal; it is a cleansed owner so the bytes
+    // are wiped after the callback returns, on the no-callback path too.
+    let mut line = CleansedBlock::<256>::new();
+    let out = line.as_mut_slice();
     let mut n = 0usize;
     let hex = b"0123456789abcdef";
     for &b in label {
@@ -1169,65 +1211,48 @@ unsafe fn ssl_log_secret(s: *mut Ssl, label: &[u8], secret: &[u8]) {
 /// current transcript hash. Returns the verify-data length (0 on error).
 ///
 /// # Safety
-/// `s` is live; `secret` readable for the hash length; `out` writable for the md size.
-pub(crate) unsafe fn tls13_finished_mac(s: *mut Ssl, secret: *const u8, out: *mut u8) -> usize {
+/// `s` is live; `secret` is the hash-length secret; `out` holds the digest length.
+pub(crate) unsafe fn tls13_finished_mac(s: *mut Ssl, secret: &[u8], out: &mut [u8]) -> usize {
     // SAFETY: `s` is live.
     unsafe {
         let md = handshake_md(s);
         let hash_len = (*s).hs_md_len;
-        let mut finsecret = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-        if tls13_derive_finishedkey(md, secret, hash_len, finsecret.as_mut_ptr(), hash_len) == 0 {
+        if hash_len == 0 || hash_len > HASH_MAX || secret.len() != hash_len || out.len() < hash_len
+        {
             return 0;
         }
-        let mut hash = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+        let mut finsecret = CleansedBlock::<HASH_MAX>::new();
+        if tls13_derive_finishedkey(md, secret, &mut finsecret.as_mut_slice()[..hash_len]) == 0 {
+            return 0;
+        }
+        let mut hash = CleansedBlock::<HASH_MAX>::new();
         if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
             return 0;
         }
         let mut l: c_uint = 0;
+        // SAFETY: `md` is live; `finsecret`/`hash` are the digest-sized prefixes; `out` is writable
+        // for at least `hash_len` bytes (checked above).
         let r = HMAC(
             md,
             finsecret.as_ptr().cast(),
             hash_len as c_int,
             hash.as_ptr(),
             hash_len,
-            out.cast(),
+            out.as_mut_ptr().cast(),
             &mut l,
         );
         if r.is_null() {
             return 0;
         }
-        l as usize
+        let n = l as usize;
+        if n > out.len() {
+            return 0;
+        }
+        n
     }
 }
 
 // --- installing keys -----------------------------------------------------------------------
-
-/// The `(secret, key, iv)` a `tls13_change_cipher_state` selector names.
-///
-/// # Safety
-/// `s` is live.
-unsafe fn select_secret(s: *mut Ssl, which: c_int) -> (*const u8, bool) {
-    // SAFETY: `s` is live.
-    unsafe {
-        let hs = (which & SSL3_CC_HANDSHAKE) != 0;
-        // `(CLIENT && WRITE) || (SERVER && READ)` uses the client's secret direction, exactly as
-        // `tls13_change_cipher_state` chooses (`tls13_enc.c:514-516`, `:642`).
-        let client = (((which & SSL3_CC_CLIENT) != 0) && ((which & SSL3_CC_WRITE) != 0))
-            || (((which & SSL3_CC_SERVER) != 0) && ((which & SSL3_CC_READ) != 0));
-        let base = if hs {
-            if client {
-                (*s).client_hs_traffic.as_ptr()
-            } else {
-                (*s).server_hs_traffic.as_ptr()
-            }
-        } else if client {
-            (*s).client_app_traffic.as_ptr()
-        } else {
-            (*s).server_app_traffic.as_ptr()
-        };
-        (base, (which & SSL3_CC_READ) != 0)
-    }
-}
 
 /// `int tls13_change_cipher_state(SSL_CONNECTION *s, int which)` — `tls13_enc.c:474-769`, the
 /// install half: derive the traffic key/IV (`derive_secret_key_and_iv`, `:348`) and arm the read
@@ -1239,46 +1264,65 @@ unsafe fn select_secret(s: *mut Ssl, which: c_int) -> (*const u8, bool) {
 pub(crate) unsafe fn tls13_change_cipher_state(s: *mut Ssl, which: c_int, cipher_id: u16) -> c_int {
     // SAFETY: `s` is live.
     unsafe {
-        let (secret, is_read) = select_secret(s, which);
         let md = handshake_md(s);
         let hash_len = (*s).hs_md_len;
         let key_len = (*s).cipher_key_len;
         let iv_len = (*s).cipher_iv_len;
-        let mut key = [0u8; 32];
-        let mut iv = [0u8; 16];
-        if key_len == 0 || iv_len == 0 || key_len > key.len() || iv_len > iv.len() {
+        let hs = (which & SSL3_CC_HANDSHAKE) != 0;
+        // `(CLIENT && WRITE) || (SERVER && READ)` uses the client's secret direction, exactly as
+        // `tls13_change_cipher_state` chooses (`tls13_enc.c:514-516`, `:642`).
+        let client = (((which & SSL3_CC_CLIENT) != 0) && ((which & SSL3_CC_WRITE) != 0))
+            || (((which & SSL3_CC_SERVER) != 0) && ((which & SSL3_CC_READ) != 0));
+        let is_read = (which & SSL3_CC_READ) != 0;
+        if hash_len == 0 || hash_len > HASH_MAX {
             return 0;
         }
-        if tls13_derive_key(md, secret, hash_len, key.as_mut_ptr(), key_len) == 0
-            || tls13_derive_iv(md, secret, hash_len, iv.as_mut_ptr(), iv_len) == 0
+        let mut key = CleansedBlock::<32>::new();
+        let mut iv = CleansedBlock::<16>::new();
+        if key_len == 0
+            || iv_len == 0
+            || key_len > key.as_slice().len()
+            || iv_len > iv.as_slice().len()
+        {
+            return 0;
+        }
+        let secret: &[u8] = if hs {
+            if client {
+                &(&(*s).client_hs_traffic)[..hash_len]
+            } else {
+                &(&(*s).server_hs_traffic)[..hash_len]
+            }
+        } else if client {
+            &(&(*s).client_app_traffic)[..hash_len]
+        } else {
+            &(&(*s).server_app_traffic)[..hash_len]
+        };
+        if tls13_derive_key(md, secret, &mut key.as_mut_slice()[..key_len]) == 0
+            || tls13_derive_iv(md, secret, &mut iv.as_mut_slice()[..iv_len]) == 0
         {
             return 0;
         }
         let _ = cipher_id;
         if is_read {
-            ptr::copy_nonoverlapping(
-                key.as_ptr(),
-                core::ptr::addr_of_mut!((*s).dec_key).cast::<u8>(),
-                key_len,
-            );
-            ptr::copy_nonoverlapping(
-                iv.as_ptr(),
-                core::ptr::addr_of_mut!((*s).dec_iv).cast::<u8>(),
-                iv_len,
-            );
+            let Some(dst) = (*s).dec_key.get_mut(..key_len) else {
+                return 0;
+            };
+            dst.copy_from_slice(&key.as_slice()[..key_len]);
+            let Some(dst) = (*s).dec_iv.get_mut(..iv_len) else {
+                return 0;
+            };
+            dst.copy_from_slice(&iv.as_slice()[..iv_len]);
             (*s).dec_seq = 0;
             (*s).dec_active = 1;
         } else {
-            ptr::copy_nonoverlapping(
-                key.as_ptr(),
-                core::ptr::addr_of_mut!((*s).enc_key).cast::<u8>(),
-                key_len,
-            );
-            ptr::copy_nonoverlapping(
-                iv.as_ptr(),
-                core::ptr::addr_of_mut!((*s).enc_iv).cast::<u8>(),
-                iv_len,
-            );
+            let Some(dst) = (*s).enc_key.get_mut(..key_len) else {
+                return 0;
+            };
+            dst.copy_from_slice(&key.as_slice()[..key_len]);
+            let Some(dst) = (*s).enc_iv.get_mut(..iv_len) else {
+                return 0;
+            };
+            dst.copy_from_slice(&iv.as_slice()[..iv_len]);
             (*s).enc_seq = 0;
             (*s).enc_active = 1;
         }
@@ -1402,12 +1446,73 @@ fn make_nonce(iv: &[u8; 16], iv_len: usize, seq: u64) -> Option<[u8; 16]> {
     Some(nonce)
 }
 
+/// A caller-supplied writable record region.
+///
+/// The record layer hands this function a raw pointer and a capacity, not an
+/// initialised slice. `new` is the one unsafe construction; every subsequent
+/// write is bounds-checked against the capacity, so no typed slice is ever formed
+/// over memory the caller has not written and no offset can leave the region.
+struct OutRegion {
+    ptr: *mut u8,
+    len: usize,
+}
+
+impl OutRegion {
+    /// # Safety
+    /// `ptr` is writable for `len` bytes (or `len == 0`), and the region does not
+    /// overlap any buffer read by the caller of this function.
+    unsafe fn new(ptr: *mut u8, len: usize) -> Option<Self> {
+        if len != 0 && ptr.is_null() {
+            return None;
+        }
+        Some(Self { ptr, len })
+    }
+
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    /// Copy `bytes` into the checked offset. False is a refusal, never a partial
+    /// write.
+    fn write(&mut self, offset: usize, bytes: &[u8]) -> bool {
+        let Some(end) = offset.checked_add(bytes.len()) else {
+            return false;
+        };
+        if end > self.len {
+            return false;
+        }
+        // SAFETY: `offset..end` is inside the caller's writable region (`new`'s
+        // contract, checked above); `bytes` is a distinct readable slice.
+        unsafe {
+            core::ptr::copy_nonoverlapping(bytes.as_ptr(), self.ptr.add(offset), bytes.len())
+        };
+        true
+    }
+
+    /// The checked start of a `len`-byte writable sub-region, for the AEAD
+    /// output. Passing the pointer to an FFI call is safe because the extent was
+    /// checked against the caller's capacity.
+    fn slot(&self, offset: usize, len: usize) -> Option<*mut u8> {
+        let end = offset.checked_add(len)?;
+        if end > self.len {
+            return None;
+        }
+        // SAFETY: `offset..end` is inside the caller's writable region.
+        Some(unsafe { self.ptr.add(offset) })
+    }
+
+    fn as_ptr(&self) -> *mut u8 {
+        self.ptr
+    }
+}
+
 /// `tls13_enc` (`ssl/record/methods/tls13_meth.c`): seal `plain || content_type` under the write
 /// key. `out` receives the full record (`type || version || length || ciphertext || tag`); the
 /// return is its total length, or -1.
 ///
 /// # Safety
-/// `s` is live; `plain` readable for `len`; `out` writable for `len + 1 + tag + 5`.
+/// `s` is live; `plain` readable for `len`; `out` writable for `len + 1 + tag + 5` and distinct
+/// from `plain`.
 pub(crate) unsafe fn tls13_encrypt_record(
     s: *mut Ssl,
     content_type: u8,
@@ -1415,8 +1520,8 @@ pub(crate) unsafe fn tls13_encrypt_record(
     len: usize,
     out: *mut u8,
 ) -> isize {
-    // SAFETY: `s` is live; `plain` is readable for `len`; `out` is writable for
-    // `5 + rec_len`, which is checked before any slice is formed.
+    // SAFETY: `s` is live; `plain` is readable for `len`; `out` is writable for the computed
+    // `out_len`, which is checked before the region is constructed.
     unsafe {
         let tag_len = (*s).cipher_tag_len;
         let iv_len = (*s).cipher_iv_len;
@@ -1437,10 +1542,14 @@ pub(crate) unsafe fn tls13_encrypt_record(
         let Some(out_len) = 5usize.checked_add(rec_len) else {
             return -1;
         };
-        let out = core::slice::from_raw_parts_mut(out, out_len);
+        // SAFETY: `out` is the caller's region, writable for `out_len` per the contract.
+        let Some(mut out) = OutRegion::new(out, out_len) else {
+            return -1;
+        };
         let plain: &[u8] = if len == 0 {
             &[]
         } else {
+            // SAFETY: `plain` is readable for `len` per the contract, and `len != 0`.
             core::slice::from_raw_parts(plain, len)
         };
         // Header: `type || version || length`, the AEAD AAD (`tls13_enc`). The outer record version
@@ -1452,7 +1561,9 @@ pub(crate) unsafe fn tls13_encrypt_record(
             (rec_len >> 8) as u8,
             rec_len as u8,
         ];
-        out[..hdr.len()].copy_from_slice(&hdr);
+        if !out.write(0, &hdr) {
+            return -1;
+        }
         // Inner plaintext: content then the real content type. The block is heap-allocated through
         // the crate's allocator seam: a record-sized stack array would put a frame larger than
         // radsecproxy's whole 32 KiB accept thread on every handshake/application write. It is a
@@ -1460,10 +1571,15 @@ pub(crate) unsafe fn tls13_encrypt_record(
         let Some(inner_block) = OwnedBuf::new_cleansed(inner_len, SeamFile::NULL, 0) else {
             return -1;
         };
-        // SAFETY: the block is allocated for `inner_len` bytes and fully initialised below.
-        let inner = core::slice::from_raw_parts_mut(inner_block.as_ptr(), inner_len);
-        inner[..len].copy_from_slice(plain);
-        inner[len] = content_type;
+        // The block is raw allocator memory. Write it in full before forming the slice the cipher
+        // reads, so no reference ever covers an uninitialised byte.
+        // SAFETY (outer block): the block is allocated for `inner_len` bytes; `len + 1 == inner_len`.
+        if len != 0 {
+            core::ptr::copy_nonoverlapping(plain.as_ptr(), inner_block.as_ptr(), len);
+        }
+        *inner_block.as_ptr().add(len) = content_type;
+        // SAFETY (outer block): every byte of the block was just initialised.
+        let inner: &[u8] = core::slice::from_raw_parts(inner_block.as_ptr(), inner_len);
 
         // SAFETY: no preconditions.
         let ctx = EVP_CIPHER_CTX_new();
@@ -1501,14 +1617,13 @@ pub(crate) unsafe fn tls13_encrypt_record(
                 hdr.as_ptr(),
                 hdr.len() as c_int,
             );
+            let Some(body_ptr) = out.slot(5, inner_len) else {
+                // SAFETY (outer block): `ctx` is this frame's.
+                EVP_CIPHER_CTX_free(ctx);
+                return -1;
+            };
             let body = if aad == 1 {
-                EVP_EncryptUpdate(
-                    ctx,
-                    out[5..5 + inner_len].as_mut_ptr(),
-                    &mut l,
-                    inner.as_ptr(),
-                    inner_len as c_int,
-                )
+                EVP_EncryptUpdate(ctx, body_ptr, &mut l, inner.as_ptr(), inner_len as c_int)
             } else {
                 0
             };
@@ -1520,27 +1635,31 @@ pub(crate) unsafe fn tls13_encrypt_record(
             };
             let mut fl: c_int = 0;
             let fin = if body == 1 && outl <= inner_len {
-                EVP_EncryptFinal_ex(ctx, out[5 + outl..].as_mut_ptr(), &mut fl)
+                // SAFETY (outer block): `body_ptr + outl` is within (or one past) the
+                // `inner_len`-byte ciphertext slot; the AEAD final writes no plaintext bytes.
+                EVP_EncryptFinal_ex(ctx, body_ptr.add(outl), &mut fl)
             } else {
                 0
             };
             if fin == 1 && fl > 0 {
                 outl = outl.saturating_add(fl as usize);
             }
-            let tag = if body == 1 && fin == 1 && outl <= inner_len {
-                match out.get_mut(5 + outl..5 + outl + tag_len) {
+            // The published record has exactly `inner_len` ciphertext bytes followed by the tag;
+            // a shorter update would leave a gap of uninitialised caller memory inside the record.
+            let tag = if body == 1 && fin == 1 && outl == inner_len {
+                match out.slot(5 + outl, tag_len) {
                     Some(slot) => EVP_CIPHER_CTX_ctrl(
                         ctx,
                         EVP_CTRL_AEAD_GET_TAG,
                         tag_len as c_int,
-                        slot.as_mut_ptr().cast(),
+                        slot.cast(),
                     ),
                     None => 0,
                 }
             } else {
                 0
             };
-            if body == 1 && fin == 1 && tag == 1 {
+            if body == 1 && fin == 1 && outl == inner_len && tag == 1 {
                 (*s).enc_seq += 1;
                 ok = true;
             }
@@ -1549,11 +1668,27 @@ pub(crate) unsafe fn tls13_encrypt_record(
         // SAFETY: `ctx` is this frame's.
         EVP_CIPHER_CTX_free(ctx);
         if ok {
-            out_len as isize
+            out.len() as isize
         } else {
             -1
         }
     }
+}
+
+/// Strip the TLS 1.3 record padding and return `(content_len, inner_content_type)`.
+///
+/// The inner plaintext is `content || type || zeros*`; the type is the last non-zero byte.
+/// Returning `Option` makes both extents structural: an all-zero plaintext has no type, and on
+/// success `content_len < plain.len()`, so `plain[content_len]` is the in-range type byte.
+fn strip_record_padding(plain: &[u8]) -> Option<(usize, u8)> {
+    let mut pos = plain.len();
+    while pos > 0 && plain[pos - 1] == 0 {
+        pos -= 1;
+    }
+    if pos == 0 {
+        return None;
+    }
+    Some((pos - 1, plain[pos - 1]))
 }
 
 /// `tls13_dec` (`ssl/record/methods/tls13_meth.c`): open the record `hdr || ct` under the read
@@ -1561,7 +1696,8 @@ pub(crate) unsafe fn tls13_encrypt_record(
 /// content length, or -1.
 ///
 /// # Safety
-/// `s` is live; `ct` readable for `ct_len`; `out` writable for `out_cap`; `content_type` writable.
+/// `s` is live; `ct` readable for `ct_len`; `out` writable for `out_cap` and distinct from `ct`;
+/// `content_type` writable.
 pub(crate) unsafe fn tls13_decrypt_record(
     s: *mut Ssl,
     hdr: &[u8; 5],
@@ -1589,6 +1725,7 @@ pub(crate) unsafe fn tls13_decrypt_record(
         let ct: &[u8] = if ct_len == 0 {
             &[]
         } else {
+            // SAFETY: `ct` is readable for `ct_len` per the contract, and `ct_len != 0`.
             core::slice::from_raw_parts(ct, ct_len)
         };
         let (body_ct, tag) = ct.split_at(ct_body_len);
@@ -1599,8 +1736,9 @@ pub(crate) unsafe fn tls13_decrypt_record(
         let Some(plain_block) = OwnedBuf::new_cleansed(plain_cap, SeamFile::NULL, 0) else {
             return -1;
         };
-        // SAFETY: the block is allocated for `plain_cap >= ct_body_len` writable bytes.
-        let plain = core::slice::from_raw_parts_mut(plain_block.as_ptr(), plain_cap);
+        // The block stays a raw writable region until the AEAD has authenticated it. A typed slice
+        // over the whole capacity would cover uninitialised allocator bytes.
+        let plain_ptr = plain_block.as_ptr();
         // SAFETY: no preconditions.
         let ctx = EVP_CIPHER_CTX_new();
         if ctx.is_null() {
@@ -1641,7 +1779,7 @@ pub(crate) unsafe fn tls13_decrypt_record(
             let body = if aad == 1 {
                 EVP_DecryptUpdate(
                     ctx,
-                    plain.as_mut_ptr(),
+                    plain_ptr,
                     &mut l,
                     body_ct.as_ptr(),
                     ct_body_len as c_int,
@@ -1652,10 +1790,10 @@ pub(crate) unsafe fn tls13_decrypt_record(
             // A reported length past the plaintext block is refused rather than used as an
             // offset into it or into `out`.
             outl = match usize::try_from(l) {
-                Ok(n) if n <= plain.len() => n,
+                Ok(n) if n <= plain_cap => n,
                 _ => usize::MAX,
             };
-            let tagset = if body == 1 && outl <= plain.len() {
+            let tagset = if body == 1 && outl <= plain_cap {
                 EVP_CIPHER_CTX_ctrl(
                     ctx,
                     EVP_CTRL_AEAD_SET_TAG,
@@ -1666,15 +1804,19 @@ pub(crate) unsafe fn tls13_decrypt_record(
                 0
             };
             let mut fl: c_int = 0;
-            let fin = if body == 1 && tagset == 1 && outl <= plain.len() {
-                EVP_DecryptFinal_ex(ctx, plain[outl..].as_mut_ptr(), &mut fl)
+            let fin = if body == 1 && tagset == 1 && outl <= plain_cap {
+                // SAFETY (outer block): `plain_ptr + outl` is within (or one past) the
+                // `plain_cap`-byte region; the AEAD final writes no plaintext bytes.
+                EVP_DecryptFinal_ex(ctx, plain_ptr.add(outl), &mut fl)
             } else {
                 0
             };
             if fin == 1 && fl > 0 {
                 outl = outl.saturating_add(fl as usize);
             }
-            if body == 1 && fin == 1 && outl <= plain.len() {
+            // An AEAD plaintext is exactly the ciphertext body length; a shorter or longer
+            // reported extent is refused before the padding walk reads it.
+            if body == 1 && fin == 1 && outl == ct_body_len {
                 ok = true;
             }
         }
@@ -1683,17 +1825,13 @@ pub(crate) unsafe fn tls13_decrypt_record(
         if !ok {
             return -1;
         }
-        // Strip the record padding and read the inner content type: the last non-zero byte.
-        // `pos` only ever moves within the `outl` initialised plaintext prefix.
-        let mut pos = outl.min(plain.len());
-        while pos > 0 && plain[pos - 1] == 0 {
-            pos -= 1;
-        }
-        if pos == 0 {
+        // Only the authenticated prefix is initialised; deriving the slice here keeps every read
+        // inside bytes the cipher wrote.
+        // SAFETY: the AEAD wrote `outl == ct_body_len <= plain_cap` bytes of the block.
+        let plain: &[u8] = core::slice::from_raw_parts(plain_ptr, outl);
+        let Some((content_len, inner_type)) = strip_record_padding(plain) else {
             return -1;
-        }
-        let inner_type = plain[pos - 1];
-        let content_len = pos - 1;
+        };
         if content_len > out_cap {
             return -1;
         }
@@ -1734,19 +1872,27 @@ pub(crate) unsafe fn write_handshake_message(
     let Some(msg_block) = OwnedBuf::new(17000, SeamFile::NULL, 0) else {
         return 0;
     };
-    let msg = msg_block.as_ptr();
-    // SAFETY: `msg` is writable for 17000 bytes (`total` was checked against that bound above)
-    // and every byte below is written before it is read.
-    unsafe {
-        *msg = mtype;
-        *msg.add(1) = (body_len >> 16) as u8;
-        *msg.add(2) = (body_len >> 8) as u8;
-        *msg.add(3) = body_len as u8;
+    // SAFETY: the block is writable for 17000 bytes and `total <= 17000` was checked above.
+    let Some(mut msg) = (unsafe { OutRegion::new(msg_block.as_ptr(), 17000) }) else {
+        return 0;
+    };
+    let header = [
+        mtype,
+        (body_len >> 16) as u8,
+        (body_len >> 8) as u8,
+        body_len as u8,
+    ];
+    if !msg.write(0, &header) {
+        return 0;
     }
     if body_len != 0 {
-        // SAFETY: `body` is readable for `body_len` per the contract; `msg + 4` is writable.
-        unsafe { ptr::copy_nonoverlapping(body, msg.add(4), body_len) };
+        // SAFETY: `body` is readable for `body_len` per the contract.
+        let body: &[u8] = unsafe { core::slice::from_raw_parts(body, body_len) };
+        if !msg.write(4, body) {
+            return 0;
+        }
     }
+    let msg = msg.as_ptr();
     // SAFETY: `s` is live; `msg` is `total` initialised bytes.
     let r = unsafe {
         crate::ssl::record::rec_layer_s3::ssl3_write_bytes(s, SSL3_RT_HANDSHAKE, msg, total)
@@ -1784,11 +1930,17 @@ pub(crate) unsafe fn write_handshake_message(
 pub(crate) unsafe fn tls13_construct_finished(s: *mut Ssl, secret: *const u8) -> c_int {
     // `SSL3_MT_FINISHED` — `ssl3.h` (20).
     const SSL3_MT_FINISHED: u8 = 20;
-    let mut out = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: `s` is live; `out` is writable for `out.len()` bytes; the callee reports how many
-    // it initialised.
-    let n = unsafe { tls13_finished_mac(s, secret, out.as_mut_ptr()) };
-    let Some(verify_data) = out.get(..n).filter(|data| !data.is_empty()) else {
+    // SAFETY: `s` is live; `hs_md_len` is the negotiated hash length.
+    let hash_len = unsafe { (*s).hs_md_len };
+    if hash_len == 0 || hash_len > HASH_MAX {
+        return 0;
+    }
+    // SAFETY: `secret` is readable for the hash length per the contract.
+    let secret: &[u8] = unsafe { core::slice::from_raw_parts(secret, hash_len) };
+    let mut out = CleansedBlock::<HASH_MAX>::new();
+    // SAFETY: `s` is live; `out` is the hash-sized writable prefix.
+    let n = unsafe { tls13_finished_mac(s, secret, out.as_mut_slice()) };
+    let Some(verify_data) = out.as_slice().get(..n).filter(|data| !data.is_empty()) else {
         return 0;
     };
     // Refuse before writing if the verify_data cannot be recorded for `SSL_get_finished`.
@@ -1828,11 +1980,17 @@ pub(crate) unsafe fn tls13_process_finished(s: *mut Ssl, msg: &[u8], secret: *co
         return 0;
     }
     let body = &msg[4..4 + blen];
-    let mut expected = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    // SAFETY: `s` is live; `expected` is writable for `expected.len()` bytes; the callee reports
-    // how many it initialised.
-    let n = unsafe { tls13_finished_mac(s, secret, expected.as_mut_ptr()) };
-    let Some(verify_data) = expected.get(..n).filter(|data| !data.is_empty()) else {
+    // SAFETY: `s` is live; `hs_md_len` is the negotiated hash length.
+    let hash_len = unsafe { (*s).hs_md_len };
+    if hash_len == 0 || hash_len > HASH_MAX {
+        return 0;
+    }
+    // SAFETY: `secret` is readable for the hash length per the contract.
+    let secret: &[u8] = unsafe { core::slice::from_raw_parts(secret, hash_len) };
+    let mut expected = CleansedBlock::<HASH_MAX>::new();
+    // SAFETY: `s` is live; `expected` is the hash-sized writable prefix.
+    let n = unsafe { tls13_finished_mac(s, secret, expected.as_mut_slice()) };
+    let Some(verify_data) = expected.as_slice().get(..n).filter(|data| !data.is_empty()) else {
         return 0;
     };
     if verify_data.len() != body.len() {
@@ -1892,18 +2050,7 @@ mod tests {
     fn expand_label(secret: &[u8], label: &[u8], context: &[u8], out: &mut [u8]) -> c_int {
         // SAFETY: `EVP_sha256()` returns a live static method table; the buffers are
         // the caller's slices for their full lengths.
-        unsafe {
-            hkdf_expand_label(
-                EVP_sha256(),
-                secret.as_ptr(),
-                secret.len(),
-                label,
-                context.as_ptr(),
-                context.len(),
-                out.as_mut_ptr(),
-                out.len(),
-            )
-        }
+        unsafe { hkdf_expand_label(EVP_sha256(), secret, label, context, out) }
     }
 
     /// Test-only safe wrapper for Derive-Secret under SHA-256.
@@ -2306,28 +2453,216 @@ mod tests {
         );
     }
 
-    /// The received binder must be exactly the digest size. The pre-fix signature took a bare
-    /// `*const u8` and read `hashsize` bytes unconditionally, so a short binder from a client with
-    /// a valid ticket was an out-of-bounds read. The slice parameter and its length check are the
-    /// repair; this test is the regression control.
+    /// A record whose decrypted inner plaintext has no non-zero content type (the
+    /// zero-length-content case where `tls13_encrypt_record` sees content type 0) must be
+    /// refused: `strip_record_padding` returns `None` and no plaintext is published.
     #[test]
-    fn binder_length_must_match_the_digest_size() {
+    fn tls13_enc_truncated_inner_plaintext_is_refused() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        // Content type 0 makes the inner plaintext a single zero byte, i.e. entirely padding.
+        let rec = seal_record(&key, &iv, 0, &[], 0);
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..], 16384);
+        assert_eq!(opened.rc, -1, "an inner plaintext with no type is refused");
+        assert_eq!(
+            opened.seq, 0,
+            "a refused record does not advance the sequence"
+        );
+        assert!(
+            opened.out.iter().all(|b| *b == 0),
+            "no plaintext on refusal"
+        );
+    }
+
+    /// A ciphertext shorter than the mandated tag is refused before decryption.
+    #[test]
+    fn tls13_enc_truncated_ciphertext_is_refused() {
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        let rec = hex(APP_RECORD);
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..5 + 15], 16384);
+        assert_eq!(opened.rc, -1);
+        assert_eq!(opened.seq, 0);
+    }
+
+    /// Padding removal is a pure checked function: it either answers `None` (all padding) or a
+    /// `content_len` strictly inside the plaintext with `plain[content_len]` the content type.
+    /// The record path uses those facts, and an output buffer shorter than `content_len` is
+    /// refused without writing.
+    #[test]
+    fn tls13_enc_padding_removal_cannot_yield_an_out_of_range_type_or_length() {
+        assert_eq!(strip_record_padding(&[]), None);
+        assert_eq!(strip_record_padding(&[0, 0, 0]), None, "all padding");
+        assert_eq!(strip_record_padding(&[1, 2, 3, 23]), Some((3, 23)));
+        assert_eq!(
+            strip_record_padding(&[1, 2, 3, 23, 0, 0]),
+            Some((3, 23)),
+            "trailing padding is stripped"
+        );
+        for plain in [
+            vec![0xaa],
+            vec![0xaa, 0x11, 0, 0],
+            vec![0u8; 64],
+            (0u8..=255).collect::<Vec<_>>(),
+        ] {
+            if let Some((content_len, inner_type)) = strip_record_padding(&plain) {
+                assert!(content_len < plain.len());
+                assert_eq!(plain[content_len], inner_type);
+            }
+        }
+
+        let key = hex(APP_KEY);
+        let iv = hex(APP_IV);
+        // `plain` ends with the inner type and `content_type = 0` supplies one padding byte:
+        // the record's inner plaintext is `hello || 0x17 || 0x00`.
+        let rec = seal_record(&key, &iv, 0, b"hello\x17", 0);
+        let hdr = hdr_of(&rec);
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..], 16384);
+        assert_eq!(opened.rc, 5);
+        assert_eq!(&opened.out[..5], b"hello");
+        assert_eq!(opened.content_type, 0x17, "the in-range type after padding");
+        assert_eq!(opened.seq, 1);
+
+        // The same record with a one-byte-short output buffer is refused, and the sequence does
+        // not advance: padding removal cannot turn into an out-of-range copy.
+        let opened = open_record(&key, &iv, 0, &hdr, &rec[5..], 4);
+        assert_eq!(opened.rc, -1);
+        assert_eq!(opened.seq, 0);
+        assert_eq!(
+            opened.out,
+            vec![0u8; 4],
+            "nothing copied into a short buffer"
+        );
+    }
+
+    /// The received binder must be exactly the digest size, and that check precedes the
+    /// derivation and the compare. The pre-fix signature took a bare `*const u8` and read
+    /// `hashsize` bytes unconditionally, so a short binder from a client with a valid ticket was
+    /// an out-of-bounds read. The slice parameter and its top-of-function length check are the
+    /// repair; this test is the S29 regression control.
+    #[test]
+    fn tls13_enc_binder_length_must_match_the_digest_size() {
         let md = EVP_sha256();
         let psk = [0x11u8; 32];
-        let msg = [0u8; 4];
+        let transcript = [0u8; 4];
         let mut calc = [0u8; 32];
+        // Sign a well-formed binder, then verify it: the exact-length path still works.
+        // SAFETY: `md` is the live SHA-256 method table; every buffer is a live slice.
+        assert_eq!(
+            unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut calc, true, &[]) },
+            1
+        );
+        assert_ne!(calc, [0u8; 32], "the binder derivation produced a value");
+        let mut check = [0u8; 32];
+        // SAFETY: as above.
+        assert_eq!(
+            unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut check, false, &calc) },
+            1
+        );
+
+        // A short binder is refused before any output is written (the pre-fix read past the
+        // 31-byte input is the defect this controls).
+        let mut untouched = [0u8; 32];
         let short = [0u8; 31];
-        // SAFETY: `md` is the live SHA-256 method table; `msg` is readable for `binderoffset` (0);
-        // `calc` is writable for the digest size; `short` is a live slice.
-        let r = unsafe {
-            tls13_psk_do_binder(md, msg.as_ptr(), 0, &psk, calc.as_mut_ptr(), false, &short)
-        };
-        assert_eq!(r, 0, "a 31-byte binder must be refused, not read as 32");
+        // SAFETY: `md` is live; `short` is a 31-byte slice the callee must not read past.
+        assert_eq!(
+            unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut untouched, false, &short) },
+            0
+        );
+        assert_eq!(
+            untouched, [0u8; 32],
+            "refused before the binder was computed"
+        );
+        // A long binder is refused too.
         let long = [0u8; 33];
         // SAFETY: as above.
+        assert_eq!(
+            unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut check, false, &long) },
+            0
+        );
+        // An empty binder is the shortest invalid case.
+        // SAFETY: as above.
+        assert_eq!(
+            unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut check, false, &[]) },
+            0
+        );
+    }
+
+    /// The failure path after a finished key has been derived (the transcript context is absent)
+    /// still drops every intermediate secret through the cleansing owner. The hook observes the
+    /// drops on this test thread, not freed memory.
+    #[test]
+    fn tls13_enc_failure_path_cleanses_intermediate_secrets() {
+        reset_cleanse_events();
+        let secret = [0xA5u8; 32];
+        let mut out = [0u8; HASH_MAX];
+        // SAFETY: `s` is a live zeroed connection owned here; `hs_md_ctx` stays NULL so
+        // `transcript_hash` fails after `finsecret` has been derived.
+        unsafe {
+            let s = crate::ssl::adv_alloc::zeroed_ssl();
+            assert!(!s.is_null(), "a zeroed Ssl block must be allocatable");
+            (*s).hs_md_len = 32;
+            assert_eq!(
+                tls13_finished_mac(s, &secret, &mut out),
+                0,
+                "the missing transcript context fails the finished MAC"
+            );
+            assert_eq!(out, [0u8; HASH_MAX], "no verify data on failure");
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+        let (drops, non_zero_drops) = cleanse_events();
+        assert!(drops > 0, "the failure path dropped a cleansed block");
+        assert!(
+            non_zero_drops > 0,
+            "an intermediate secret was non-zero when it was cleansed"
+        );
+        std::println!(
+            "tls13_enc cleanse hook: {drops} block(s) cleansed on the failure path, \
+             {non_zero_drops} of them held secret bytes"
+        );
+    }
+
+    /// Negative control (`#[cfg(test)]` only): the pre-fix binder compare read `hashsize` bytes
+    /// from a bare pointer without consulting the received length. The control models that rule
+    /// and fails if it does not expose the out-of-bounds read; the same input is then given to
+    /// the converted function, which refuses it.
+    #[test]
+    fn tls13_enc_canary_pre_fix_binder_read_past_input() {
+        // Pre-fix: `for (i = 0; i < hashsize; i++) *ptr.add(i)` with no length check.
+        fn pre_fix_reads_past_input(hashsize: usize, received_len: usize) -> bool {
+            hashsize > received_len
+        }
+        // Post-fix: any length other than the digest size is refused first.
+        fn post_fix_refuses(hashsize: usize, received_len: usize) -> bool {
+            hashsize != received_len
+        }
+        let hashsize = 32;
+        let short = 1;
+        assert!(
+            pre_fix_reads_past_input(hashsize, short),
+            "canary fired: the pre-fix binder compare reads {hashsize} bytes from a \
+             {short}-byte input"
+        );
+        assert!(post_fix_refuses(hashsize, short));
+
+        let mut calc = [0u8; 32];
+        // SAFETY: `EVP_sha256()` is live; the short input is a live slice.
         let r = unsafe {
-            tls13_psk_do_binder(md, msg.as_ptr(), 0, &psk, calc.as_mut_ptr(), false, &long)
+            tls13_psk_do_binder(
+                EVP_sha256(),
+                &[],
+                &[0x11u8; 32],
+                &mut calc,
+                false,
+                &[0u8; 1],
+            )
         };
-        assert_eq!(r, 0, "a 33-byte binder must be refused");
+        assert_eq!(r, 0, "the converted function refuses the same input");
+        std::println!(
+            "tls13_enc canary: pre-fix binder compare read {hashsize} bytes from a {short}-byte \
+             input (out of bounds); post-fix refuses before any read"
+        );
     }
 }
