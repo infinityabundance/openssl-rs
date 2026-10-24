@@ -1,0 +1,130 @@
+{
+  "receipt": "s40-gcm-output",
+  "date": "2026-10-24",
+  "mechanism": "PROVIDER_GCM_CALLER_OUTPUT_BOUNDARY",
+  "subphase": "S40: src/provider/cipher_gcm.rs output-boundary conversion (getivgen + gcm_tls_cipher), not a whole-file push",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "3e3f35545",
+    "committed": false,
+    "changed_files": 1,
+    "diffstat": "src/provider/cipher_gcm.rs +250/-14 (production +44/-14, tests +206)",
+    "pattern_followed": "src/ssl/record/rec_layer_s3.rs (stage/p25/rec-layer, d2440bb64): never form a typed slice over caller-supplied writable output; write through a raw pointer and publish only what was written."
+  },
+  "authority": {
+    "source": "OpenSSL 3.5.9 providers/implementations/ciphers/ciphercommon_gcm.c (getivgen :121-135, setivinv :139-148, gcm_tls_cipher :549-608). C signatures take unsigned char *out; the EVP/provider ABI promises writable storage, never initialised values.",
+    "abi": "No #[no_mangle], #[export_name], #[repr(C)], extern \"C\" signature, exported symbol or allocator-seam constant changed. Diff lines containing no_mangle/repr(C)/export_name/extern \"C\": 0. Diff lines touching the allocator seam: 0.",
+    "authority_behaviour": [
+      "getivgen: setiv(ctx->iv, ivlen) first; normalise olen (0 or >ivlen means ivlen); memcpy(out, iv + ivlen - olen, olen); ctr64_inc(iv + ivlen - 8); iv_state = IV_STATE_COPIED; return 1. All preserved.",
+      "gcm_tls_cipher: refuse unless out == in and len >= explicit_iv(8) + tag(16); encrypt increments tls_enc_records (FIPS A.5); explicit IV generated at out[0..8] on encrypt or read from out[0..8] on decrypt; in/out advance by 8, len loses 24; tag = out + len on encrypt (write) and in + len on decrypt (read); on decrypt failure OPENSSL_cleanse(out, len). All preserved.",
+      "The authority operates entirely through raw unsigned char pointers; it never requires the caller's output slots to hold initialised bytes."
+    ]
+  },
+  "caller_inventory": {
+    "getivgen": [
+      {
+        "caller": "ossl_gcm_get_ctx_params (OSSL_CIPHER_PARAM_AEAD_TLS1_GET_IV_GEN / tlsivgen)",
+        "buffer": "(*p).data, the application's output buffer supplied through OSSL_PARAM_construct_octet_string in evp/cipher_ctx.rs EVP_CTRL_GCM_IV_GEN",
+        "nature": "output only; the caller declares data_size writable bytes, not initialised bytes"
+      },
+      {
+        "caller": "gcm_tls_cipher (encrypting arm)",
+        "buffer": "out[0..EXPLICIT_IV_LEN] of the TLS record",
+        "nature": "output only; the record's explicit-IV slot may be uninitialised on entry (the C authority writes it here)"
+      }
+    ],
+    "gcm_tls_cipher": [
+      {
+        "caller": "gcm_cipher_internal (only caller; line 1244, when ctx->tls_aad_len != UNINITIALISED_SIZET)",
+        "buffer": "forwards out, in_, len from the provider cipher-update dispatch"
+      },
+      {
+        "caller": "ossl_gcm_cipher -> AES/ARIA/SM4 GCM _FUNCTIONS tables -> EVP cupdate (EVP_EncryptUpdate/EVP_DecryptUpdate)",
+        "buffer": "application pointers. EVP_EncryptUpdate passes out/in through unchanged (cipher_ctx.rs:3821-3834); outsize is inl for the streaming GCM mode. EVP_CTRL_AEAD_TLS1_AAD is the TLS-record convention, and the authority requires out == in.",
+        "nature": "in-place record; the plaintext/ciphertext region is initialised by the caller or by receipt, while the explicit-IV and tag slots are outputs on encryption"
+      },
+      {
+        "caller": "tests in this module (tls_seal/tls_open and the new gcm_out_* tests)",
+        "buffer": "frame-owned Vec/MaybeUninit records, in place"
+      },
+      {
+        "caller": "ossl_gcm_stream_update / ossl_gcm_stream_final",
+        "note": "reach gcm_cipher_internal but stream_final passes in_ = NULL and len = 0, so gcm_tls_cipher's in_.is_null() guard refuses before any record work"
+      }
+    ]
+  },
+  "site_1_getivgen": {
+    "location": "src/provider/cipher_gcm.rs getivgen",
+    "verdict": "UNSOUND BEFORE: core::slice::from_raw_parts_mut(out, olen) formed a &mut [u8] over caller-writable memory. Both callers treat the destination as output-only; neither the C authority nor the provider ABI requires initialised u8 values there. The olen bytes are only written (copied from ctx->iv), but reference validity requires the whole extent to be initialised.",
+    "change": "The destination stays a raw pointer. When olen != 0, core::ptr::copy_nonoverlapping(src.as_ptr(), out, olen) writes exactly the bytes the authority's memcpy writes. No reference is formed over out. The source is the checked sub-slice of ctx->iv (initialised).",
+    "state_transitions_preserved": "setiv(ctx->iv, ivlen) before the copy; olen normalisation unchanged; ctr64_inc on ctx->iv[ivlen-8..] unchanged; iv_state = IV_STATE_COPIED unchanged. The new contract additionally states out must not overlap ctx->iv (the authority's memcpy has the same requirement).",
+    "evidence": "getivgen has exactly two callers (enumerated above); both pass output-only storage. The authority is a raw memcpy. The conversion eliminates the extra validity requirement the C code never had."
+  },
+  "site_2_gcm_tls_cipher": {
+    "location": "src/provider/cipher_gcm.rs gcm_tls_cipher",
+    "verdict": "THE ALIASING IS SOUND, THE WHOLE-RECORD SLICE WAS NOT. (a) Same allocation: the function refuses unless out == in_ (cast_mut), so every accepted call is in place; the C authority has the identical guard. (b) Initialised region covers everything READ: on encrypt, the explicit-IV slot is written by getivgen before use, the plaintext (8..len-16) is caller-initialised, and the tag slot is written, never read; on decrypt, the whole record is the received record and is initialised, so the explicit IV, ciphertext and received tag are all initialised. (c) Overlapping mutable references: split_at_mut produced disjoint mutable sub-slices, so two live &mut references to the same bytes were never created. The defect is narrower and real: from_raw_parts_mut(out, len) required all len bytes to be valid initialised u8 values at construction time, while on the encrypting path the explicit-IV slot and the tag slot are output-only and the provider ABI does not require them initialised. This is not an analogy: it is a legitimate in-place caller (the authority's own TLS record usage) whose output slots are uninitialised.",
+    "change": "The record stays a raw writable region. getivgen/setivinv receive out directly. payload = out.add(8) and tag_slot = payload.add(payload_len), both bounded by the already-checked len >= 24. A single raw pointer (payload) is passed as both the input and the output of the hardware one-shot, and tag_slot is its tag pointer, exactly the authority's in += 8 / out += 8 / tag arithmetic. The authentication failure cleanse writes payload_len bytes at payload. No typed reference is formed over the record anywhere in the function.",
+    "tag_and_cleanse": "Unchanged: the one-shot still calls CRYPTO_gcm128_finish with the full ctx->taglen on decryption (the constant-time full-length comparison lives there), the tag pointer is the same address as the authority's, and OPENSSL_cleanse still covers exactly payload_len bytes on decryption failure before the error tail.",
+    "evidence": "Callers enumerated above; in-place is enforced by the function itself, not assumed. The new gcm_out_in_place_record_encrypts_and_decrypts_at_one_address test leaves the explicit-IV and tag slots as MaybeUninit, encrypts in place, and decrypts the result back to the plaintext."
+  },
+  "unsafe_ops": {
+    "before_after": "cipher_gcm.rs total unsafe blocks 66 -> 70. Production 47 -> 47; #[cfg(test)] 19 -> 23. unsafe fn declarations 39 -> 39.",
+    "eliminated": "2 whole-extent typed-slice constructions over caller-writable memory (getivgen: from_raw_parts_mut(out, olen); gcm_tls_cipher: from_raw_parts_mut(out, len) plus the split_at_mut views that depended on it).",
+    "relocated": "Production unsafe work is now 3 explicit raw operations, all inside the existing function-level unsafe blocks: core::ptr::copy_nonoverlapping in getivgen, and two ptr::add computations in gcm_tls_cipher. Each carries a SAFETY comment stating extent and initialisation. The hardware one-shot call keeps its existing raw-pointer contract.",
+    "new_abstractions": "none",
+    "hidden": 0
+  },
+  "obligations": {
+    "discharged": [
+      "getivgen never reads its caller's output before writing it, and publishes exactly olen bytes (ivlen when olen is 0).",
+      "gcm_tls_cipher forms no reference over the record; every byte it reads is initialised on both directions, while write-only output slots may be uninitialised.",
+      "The in-place precondition out == in_ is enforced by the function, not assumed.",
+      "The tag slot address, the payload extent, the cleanse extent and the IV state transitions are unchanged from the authority."
+    ],
+    "retained": [
+      "The provider ABI hands raw writable pointers; the caller's obligation to initialise the plaintext (encrypt) or supply a received record (decrypt) is documented on getivgen and gcm_tls_cipher, and cannot be type-enforced at this ABI.",
+      "Non-overlap of out with ctx/ctx->buf and of getivgen's out with ctx->iv is a documented precondition, matching the C memcpy/one-shot requirements; no current caller violates it."
+    ],
+    "introduced": [],
+    "hidden": 0
+  },
+  "compatibility_delta": "No behaviour change intended. The explicit-IV bytes written, the invocation-field increment, payload/tag offsets, plen, tls_enc_records accounting, iv_state = IV_STATE_FINISHED and tls_aad_len reset, authentication refusal and the decryption-failure cleanse are all unchanged. Tests: the 13 pre-existing GCM tests plus the 5 new ones pass.",
+  "safety_checks": {
+    "cargo_fmt": "cargo fmt --all -- --check -> FMT_OK",
+    "cargo_check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.06s",
+    "cargo_clippy": "cargo clippy --lib -- -D warnings -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.26s (clean)",
+    "filtered_tests": "cargo test --lib gcm -- --test-threads=4 -> test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 2125 filtered out; finished in 0.02s",
+    "test_names": [
+      "provider::cipher_gcm::tests::gcm_out_getivgen_uninitialised_output_is_written_before_read ... ok",
+      "provider::cipher_gcm::tests::gcm_out_getivgen_publishes_exactly_the_iv_length ... ok",
+      "provider::cipher_gcm::tests::gcm_out_in_place_record_encrypts_and_decrypts_at_one_address ... ok",
+      "provider::cipher_gcm::tests::gcm_out_tampered_tag_is_rejected_and_leaves_no_plaintext ... ok",
+      "provider::cipher_gcm::tests::gcm_out_canary_pre_fix_whole_record_slice_requires_uninitialised_bytes ... ok"
+    ],
+    "canary": "gcm_out canary: pre-fix whole-record slice required 29 initialised bytes, 24 were uninitialised (explicit-IV 8 + tag 16); post-fix publishes 0 uninitialised byte(s) because it forms no typed reference over the record",
+    "structural_guards": "no_mangle/repr(C)/export_name/extern \"C\" diff lines: 0; allocator-seam diff lines: 0",
+    "miri": "NOT_RUN (BOUNDARY instrument)",
+    "asan": "NOT_RUN",
+    "full_library_suite": "NOT_RUN (FAST only for this subphase, as instructed)",
+    "negative_control": "Modelled against a shadow initialisation map, like the S39 rec_layer control; it demonstrates the pre-fix rule requires 24 uninitialised bytes and the post-fix rule publishes 0. It is not a runtime UB detector: only Miri would observe the pre-fix construction."
+  },
+  "graduation": "OWNERSHIP_RECONSTRUCTED (both boundaries). Not SAFETY_DISCHARGED: Miri/ASan and independent review are NOT_RUN, and the caller-initialisation/non-overlap conditions remain documented ABI preconditions rather than type-enforced ones.",
+  "residuals": [
+    {
+      "id": "S40-R1",
+      "finding": "The negative control models the pre-fix validity rule against a shadow map; normal execution cannot observe a reference formed over uninitialised memory.",
+      "disposition": "Miri over gcm_out_in_place_record_encrypts_and_decrypts_at_one_address and gcm_out_getivgen_uninitialised_output_is_written_before_read is the instrument that would discharge this; NOT_RUN."
+    },
+    {
+      "id": "S40-R2",
+      "finding": "An external C caller that passes out == in with an uninitialised plaintext region (rather than only output slots) would still violate the contract; the provider ABI cannot enforce it.",
+      "disposition": "Documented in the gcm_tls_cipher # Safety contract; no current caller does this (the crate's own SSL stack uses the generic AEAD path, not the TLS-AAD arm)."
+    },
+    {
+      "id": "S40-R3",
+      "finding": "Constant-time tag comparison was not re-measured; gcm_tls_cipher's contribution is unchanged and still passes the full ctx->taglen to CRYPTO_gcm128_finish.",
+      "disposition": "No change made; source-level preservation only. Timing evidence remains NOT_RUN for this subphase."
+    }
+  ]
+}
