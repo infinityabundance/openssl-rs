@@ -70,23 +70,33 @@
 //! ## Cursor bounds
 //!
 //! The decode path moves a [`Cursor`] through the caller's input. A cursor is
-//! created only from the caller's `(pointer, len)` contract or from a checked
-//! split of another cursor, and every advance/take refuses to move past its
-//! remaining count. Two historical over-read paths call `asn1_check_tlen` with a
-//! NULL cache (which skips the `TOO_LONG` pre-check) and then use the declared
-//! length directly: the constructed-string collector and the indefinite-length
-//! walk. Both now bound the declared extent with the cursor before reading.
+//! created only at an exported entry point from that caller's `(pointer, len)`
+//! contract, or from a checked split of another cursor, and every
+//! advance/take/limit refuses to move past its remaining count. The same cursor is
+//! then threaded through the interior: `embed_d2i`, the two template functions,
+//! `mstring_d2i` and `d2i_ex_primitive` all take `&mut Cursor`, so no interior
+//! function re-derives an input extent from a separate pointer and length. The only
+//! raw `(pointer, length)` pairs left inside are the two genuine ABI hooks (an
+//! `EXTERN` item's `asn1_ex_d2i` and a primitive's `prim_c2i`), each derived from
+//! the cursor at exactly one site. Two historical over-read paths call
+//! `asn1_check_tlen` with a NULL cache (which skips the `TOO_LONG` pre-check) and
+//! then use the declared length directly: the constructed-string collector and the
+//! indefinite-length walk. Both now bound the declared extent with the cursor
+//! before reading.
 //!
 //! ## Ownership
 //!
 //! The two transient blocks this decoder allocates are owned handles whose `Drop`
 //! is their only release. [`Collected`] (the constructed-string collector) grows
-//! through `CRYPTO_realloc`, hands its block to the content codec through
-//! `take_raw`, and reclaims it with `adopt` when the codec leaves it unconsumed;
-//! its tail and error-path frees are the handle's. The joined error string in
-//! `add_error_data` is an [`OwnedBlock`]. Both stay `CRYPTO_*` allocations through
-//! this file's own `__FILE__`, so an installed `CRYPTO_set_mem_functions` hook
-//! observes them exactly as it observes the authority's.
+//! through `CRYPTO_realloc` and hands its block to the content codec through
+//! `take_raw`; from that moment [`ContentHandoff`] owns it, releasing it unless the
+//! codec clears the `free_cont` flag. The handoff guard is what makes the
+//! ownership single-owner **across unwinding** too: the pre-fix code reclaimed the
+//! block only on a normal return from the codec, so a panic in between leaked it.
+//! The joined error string in `add_error_data` is an [`OwnedBlock`]. Both stay
+//! `CRYPTO_*` allocations through this file's own `__FILE__`, so an installed
+//! `CRYPTO_set_mem_functions` hook observes them exactly as it observes the
+//! authority's.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -316,20 +326,6 @@ impl Collected {
         data
     }
 
-    /// Reclaim a buffer `take_raw` gave up, for release by `Drop`.
-    ///
-    /// # Safety
-    ///
-    /// `data` is NULL or a block a previous `take_raw` on this frame gave up and
-    /// `Drop` has not released.
-    unsafe fn adopt(data: *mut u8) -> Collected {
-        Collected {
-            data,
-            len: 0,
-            cap: 0,
-        }
-    }
-
     /// `BUF_MEM_grow_clean(&buf, len + 1)` followed by `buf.data[len] = 0`.
     ///
     /// The authority appends a NUL after a collected string's content. It is not
@@ -375,6 +371,54 @@ impl Drop for Collected {
         }
     }
 }
+
+/// The collected buffer while the content codec decides whether to take it.
+///
+/// `Collected::take_raw` gives up the collector's ownership; this guard is the
+/// owner from that point until the codec returns. The codec clears `free_cont`
+/// when it takes the block (the authority's `char *free_cont` protocol), so:
+///
+/// * a codec that took the block leaves the flag clear and `Drop` does nothing;
+/// * a codec that left the block, or any unwind out of the codec, leaves the flag
+///   set and `Drop` releases the block through the seam exactly once.
+///
+/// The flag is a `c_char`, not a `bool`: the flag is handed to the caller's
+/// `prim_c2i` hook as a `char *`, and a hook is allowed by that ABI to store any
+/// byte. Reading an arbitrary byte through `bool` would be an invalid-value read.
+struct ContentHandoff {
+    data: *mut u8,
+    free_cont: c_char,
+}
+
+impl ContentHandoff {
+    fn new(data: *mut u8, free_cont: c_char) -> Self {
+        Self { data, free_cont }
+    }
+
+    /// The flag slot handed to the content codec.
+    fn flag(&mut self) -> &mut c_char {
+        &mut self.free_cont
+    }
+}
+
+impl Drop for ContentHandoff {
+    fn drop(&mut self) {
+        if self.free_cont != 0 && !self.data.is_null() {
+            // SAFETY: `data` is the block `Collected::take_raw` gave up in this
+            // frame, the codec did not take it (the flag is still set), and this
+            // `Drop` is its single release through the seam that allocated it.
+            unsafe { CRYPTO_free(self.data.cast::<c_void>(), FILE.as_ptr(), LINE) };
+            // Test-only observation point for the negative control: it records that
+            // the guard, rather than a normal-return adopter, released the block.
+            #[cfg(test)]
+            HANDOFF_RELEASES.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+        }
+    }
+}
+
+/// How many handed blocks [`ContentHandoff`] released; read only by the canary.
+#[cfg(test)]
+static HANDOFF_RELEASES: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(0);
 
 /// `asn1_collect` — concatenate the content octets of successive elements.
 ///
@@ -564,7 +608,11 @@ unsafe fn check_tlen(
             }
             // A definite length with no error must fit the available data. This
             // check runs *before* the header's error bit is consulted, which is the
-            // ordering a reader most easily gets wrong.
+            // ordering a reader most easily gets wrong. The sum is checked because the
+            // authority raises TOO_LONG for an unrepresentable `hdrlen + plen` even
+            // when the error/indefinite bit would skip the length comparison; replacing
+            // it with the cursor-relative comparison alone would report
+            // BAD_OBJECT_HEADER for that input instead.
             let Some(declared) = (hdrlen as c_long).checked_add(plen) else {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_1219) };
@@ -629,15 +677,14 @@ unsafe fn check_tlen(
 ///
 /// # Safety
 ///
-/// `pval` must be a live slot. `in_` must point to a slot holding a readable
-/// pointer to `inlen` bytes. `it` must be a live item with no templates and no
-/// primitive hooks — the shapes [`embed_d2i`] admits. `ctx` must be null or a
-/// live cache.
+/// `pval` must be a live slot. `cur` is the caller's bounded input cursor; this
+/// function works on a copy and commits its advance only on success. `it` must be
+/// a live item with no templates and no primitive hooks — the shapes [`embed_d2i`]
+/// admits. `ctx` must be null or a live cache.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn d2i_ex_primitive(
     pval: *mut *mut Asn1String,
-    in_: *mut *const c_uchar,
-    inlen: c_long,
+    out: &mut Cursor,
     it: &Asn1Item,
     tag: c_int,
     aclass: c_int,
@@ -652,10 +699,9 @@ unsafe fn d2i_ex_primitive(
         return 0;
     }
 
-    // The caller's `(pointer, len)` contract becomes one structurally bounded
-    // cursor; every position the decoder later visits is derived from it.
-    // SAFETY: the caller guarantees `*in_` is readable for `inlen` bytes.
-    let mut cur = unsafe { Cursor::new(*in_, inlen.max(0)) };
+    // Work on a copy: a failed or absent decode must report no progress, so the
+    // caller's cursor is committed only on the success path below.
+    let mut cur = *out;
 
     let mut utype: c_int;
     let mut tag = tag;
@@ -755,7 +801,7 @@ unsafe fn d2i_ex_primitive(
     }
 
     let mut buf = Collected::new();
-    let mut free_cont = false;
+    let mut free_cont: c_char = 0;
     let cont: *const u8;
     let len: c_long;
     if utype == V_ASN1_SEQUENCE || utype == V_ASN1_SET || utype == V_ASN1_OTHER {
@@ -808,7 +854,7 @@ unsafe fn d2i_ex_primitive(
         }
         // The collected buffer becomes the content, and ownership of it passes to
         // the content codec.
-        free_cont = true;
+        free_cont = 1;
         // A definite element is confined to its declared content extent; an
         // indefinite one runs to its EOC within the rest of this cursor.
         let mut content = if inf != 0 {
@@ -853,25 +899,19 @@ unsafe fn d2i_ex_primitive(
         }
     }
 
-    // The block's ownership passes through `free_cont`: the content codec clears it
-    // when it takes the buffer. Take the block off the handle before the call so its
-    // `Drop` cannot release a block the codec now owns, and reclaim it below when the
-    // codec leaves it unconsumed -- on both the failure and the success path -- so
-    // the handle's `Drop` remains the only release.
+    // The block's ownership passes to `ContentHandoff`; the content codec clears
+    // `free_cont` when it takes the buffer. The guard is constructed before the
+    // call, so the block is released exactly once even if the codec unwinds.
     let handed = buf.take_raw();
+    let mut handoff = ContentHandoff::new(handed, free_cont);
     // SAFETY: `pval` is a live slot; `cont` is readable for `len` bytes; `it` is
     // live and the caller owns it.
-    let ok = unsafe { ex_c2i(pval, cont, len, utype, &mut free_cont, it) };
-    if free_cont {
-        // SAFETY: `handed` is the block `take_raw` gave up and the codec did not take;
-        // it is not used again, so `Drop` releases it through the seam.
-        drop(unsafe { Collected::adopt(handed) });
-    }
+    let ok = unsafe { ex_c2i(pval, cont, len, utype, handoff.flag(), it) };
     if ok == 0 {
         return 0;
     }
     // SAFETY: the caller's slot is writable and the content has been consumed.
-    unsafe { *in_ = cur.ptr() };
+    *out = cur;
     1
 }
 
@@ -883,8 +923,11 @@ unsafe fn d2i_ex_primitive(
 /// # Safety
 ///
 /// `pval` must be a live slot. `cont` must be readable for `len` bytes, and when
-/// `*free_cont` is set it must be an allocation this crate's allocator made. `it`
-/// must be live; for a `V_ASN1_ANY` item `pval` must hold null or a live
+/// `*free_cont` is non-zero it must be an allocation this crate's allocator made.
+/// The flag is the authority's `char *free_cont`: a content codec clears it when it
+/// takes the block. It is a `c_char` rather than a `bool` because a caller's
+/// `prim_c2i` hook receives it as a `char *` and may store any byte.
+/// `it` must be live; for a `V_ASN1_ANY` item `pval` must hold null or a live
 /// `ASN1_TYPE`.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn ex_c2i(
@@ -892,7 +935,7 @@ unsafe fn ex_c2i(
     cont: *const c_uchar,
     len: c_long,
     utype: c_int,
-    free_cont: &mut bool,
+    free_cont: &mut c_char,
     it: &Asn1Item,
 ) -> c_int {
     let ilen = len as c_int;
@@ -913,14 +956,7 @@ unsafe fn ex_c2i(
                 // SAFETY: the hook is the caller's, with the authority's
                 // signature; every pointer is the caller's own or this frame's.
                 return unsafe {
-                    prim_c2i(
-                        pval.cast(),
-                        cont,
-                        ilen,
-                        utype,
-                        (free_cont as *mut bool).cast(),
-                        it,
-                    )
+                    prim_c2i(pval.cast(), cont, ilen, utype, free_cont as *mut c_char, it)
                 };
             }
             // SAFETY: a compile-time-constant site.
@@ -1100,7 +1136,7 @@ unsafe fn ex_c2i(
                     unsafe { (*existing).type_ = utype };
                     existing
                 };
-                if *free_cont {
+                if *free_cont != 0 {
                     // The collected buffer becomes the string's storage and ownership
                     // moves with it, so the caller must not free it: the flag is
                     // cleared here, which is what the authority does by taking a
@@ -1108,7 +1144,7 @@ unsafe fn ex_c2i(
                     // SAFETY: `stmp` is live and uniquely owned; `cont` is the buffer
                     // this frame owns and hands over by this call.
                     unsafe { ASN1_STRING_set0(stmp, cont as *mut c_void, ilen) };
-                    *free_cont = false;
+                    *free_cont = 0;
                 // SAFETY: `stmp` is live; `cont` is readable for `ilen` bytes.
                 } else if unsafe { ASN1_STRING_set(stmp, cont.cast::<c_void>(), ilen) } == 0 {
                     // SAFETY: a compile-time-constant site.
@@ -1179,22 +1215,6 @@ fn checked_sum_len(lengths: impl Iterator<Item = usize>) -> Option<usize> {
         total = total.checked_add(n)?;
     }
     Some(total)
-}
-
-/// The number of bytes between two positions of one input buffer.
-///
-/// The decoder moves a cursor through the caller's `len` bytes; a cursor that appears to move
-/// backwards is an overrun, so the distance is checked and answered as `None` rather than
-/// wrapping. Only ever applied to positions inside the same caller buffer.
-fn cursor_distance(from: *const c_uchar, to: *const c_uchar) -> Option<usize> {
-    (to as usize).checked_sub(from as usize)
-}
-
-/// The input length left after a field consumed `advanced` bytes, refusing an overrun.
-fn remaining_after(remaining: c_long, advanced: usize) -> Option<c_long> {
-    c_long::try_from(advanced)
-        .ok()
-        .and_then(|advanced| remaining.checked_sub(advanced))
 }
 
 /// The elements a `SEQUENCE OF`/`SET OF` decode has pushed into the value's stack.
@@ -1362,12 +1382,15 @@ pub(crate) unsafe fn item_d2i(
         pclass: 0,
         hdrlen: 0,
     };
-    // SAFETY: `pval` is a live slot, and `pp`/`it` are the caller's.
+    // SAFETY: `pp` points to a slot holding a readable pointer to `len` bytes per
+    // the caller's contract; `len.max(0)` is the only length the cursor is built
+    // with, and `embed_d2i` refuses a non-positive input length before using it.
+    let mut cur = unsafe { Cursor::new(*pp, len.max(0)) };
+    // SAFETY: `pval` is a live slot, and `cur`/`it` are the caller's.
     let rv = unsafe {
         item_ex_d2i_intern(
             pval.cast::<*mut c_void>(),
-            pp,
-            len,
+            &mut cur,
             it,
             -1,
             0,
@@ -1380,6 +1403,9 @@ pub(crate) unsafe fn item_d2i(
     if rv <= 0 {
         return core::ptr::null_mut();
     }
+    // SAFETY: `pp` is a live slot and the decode succeeded; publish the progress it
+    // made, exactly as the authority writes the caller's `*in`.
+    unsafe { *pp = cur.ptr() };
     // SAFETY: `pval` is a live slot.
     unsafe { *pval }
 }
@@ -1393,13 +1419,13 @@ pub(crate) unsafe fn item_d2i(
 ///
 /// # Safety
 ///
-/// `pval` must be a live slot. `pp` must point to a slot holding a readable pointer to
-/// `len` bytes. `it` must be a live item. `ctx` must be null or a live cache.
+/// `pval` must be a live slot. `cur` is the call's single bounded input cursor;
+/// a failed or absent decode leaves it unchanged. `it` must be a live item. `ctx`
+/// must be null or a live cache.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn item_ex_d2i_intern(
     pval: *mut *mut c_void,
-    in_: *mut *const c_uchar,
-    len: c_long,
+    cur: &mut Cursor,
     it: *const Asn1Item,
     tag: c_int,
     aclass: c_int,
@@ -1414,7 +1440,7 @@ unsafe fn item_ex_d2i_intern(
         return 0;
     }
     // SAFETY: the caller's contract.
-    let rv = unsafe { embed_d2i(pval, in_, len, it, tag, aclass, opt, ctx, 0, libctx, propq) };
+    let rv = unsafe { embed_d2i(pval, cur, it, tag, aclass, opt, ctx, 0, libctx, propq) };
     if rv <= 0 {
         // The authority calls the exported `ASN1_item_ex_free` here, which is
         // `ossl_asn1_item_embed_free(pval, it, 0)` — the value's storage is the
@@ -1446,12 +1472,15 @@ pub unsafe extern "C" fn ASN1_item_ex_d2i(
     ctx: *mut Asn1Tlc,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `in_` points to a slot holding a readable pointer to `len` bytes,
+        // per the caller's contract. The cursor is derived here once and every
+        // interior decoder shares it.
+        let mut cur = unsafe { Cursor::new(*in_, len.max(0)) };
         // SAFETY: the caller's contract.
-        unsafe {
+        let rv = unsafe {
             item_ex_d2i_intern(
                 pval,
-                in_,
-                len,
+                &mut cur,
                 it,
                 tag,
                 aclass,
@@ -1460,7 +1489,13 @@ pub unsafe extern "C" fn ASN1_item_ex_d2i(
                 core::ptr::null_mut(),
                 core::ptr::null(),
             )
+        };
+        if rv > 0 {
+            // SAFETY: `in_` is the caller's live slot; the decode succeeded, so the
+            // progress is the one the authority publishes.
+            unsafe { *in_ = cur.ptr() };
         }
+        rv
     })
 }
 
@@ -1510,10 +1545,16 @@ pub unsafe extern "C" fn ASN1_item_d2i_ex(
             pclass: 0,
             hdrlen: 0,
         };
+        // SAFETY: `in_` points to a slot holding a readable pointer to `len` bytes,
+        // per the caller's contract.
+        let mut cur = unsafe { Cursor::new(*in_, len.max(0)) };
         // SAFETY: `slot` is a live slot; the rest is the caller's contract.
-        if unsafe { item_ex_d2i_intern(slot, in_, len, it, -1, 0, false, &mut ctx, libctx, propq) }
-            > 0
-        {
+        let rv = unsafe {
+            item_ex_d2i_intern(slot, &mut cur, it, -1, 0, false, &mut ctx, libctx, propq)
+        };
+        if rv > 0 {
+            // SAFETY: `in_` is the caller's live slot; the decode succeeded.
+            unsafe { *in_ = cur.ptr() };
             // SAFETY: `slot` is a live slot.
             return unsafe { *slot };
         }
@@ -1550,12 +1591,20 @@ pub(crate) unsafe fn asn1_item_embed_d2i(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> c_int {
+    // SAFETY: `in_` points to a slot holding a readable pointer to `len` bytes, per
+    // the caller's contract; this boundary derives the one cursor the dispatch uses.
+    let mut cur = unsafe { Cursor::new(*in_, len.max(0)) };
     // SAFETY: the caller's contract.
-    unsafe {
+    let rv = unsafe {
         embed_d2i(
-            pval, in_, len, it, tag, aclass, opt, ctx, depth, libctx, propq,
+            pval, &mut cur, it, tag, aclass, opt, ctx, depth, libctx, propq,
         )
+    };
+    if rv > 0 {
+        // SAFETY: `in_` is the caller's live slot; the decode succeeded.
+        unsafe { *in_ = cur.ptr() };
     }
+    rv
 }
 
 /// `asn1_item_embed_d2i` — the dispatch, in full.
@@ -1576,8 +1625,7 @@ pub(crate) unsafe fn asn1_item_embed_d2i(
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn embed_d2i(
     pval: *mut *mut c_void,
-    in_: *mut *const c_uchar,
-    len: c_long,
+    out: &mut Cursor,
     it: *const Asn1Item,
     tag: c_int,
     aclass: c_int,
@@ -1592,7 +1640,7 @@ unsafe fn embed_d2i(
         unsafe { raise_site(&err_sites::TASN_DEC_208) };
         return 0;
     }
-    if len <= 0 {
+    if out.is_empty() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_212) };
         return 0;
@@ -1630,8 +1678,7 @@ unsafe fn embed_d2i(
                 unsafe {
                     d2i_ex_primitive(
                         pval.cast::<*mut Asn1String>(),
-                        in_,
-                        len,
+                        out,
                         item,
                         tag,
                         aclass,
@@ -1649,17 +1696,7 @@ unsafe fn embed_d2i(
                 }
                 // SAFETY: the caller's contract.
                 unsafe {
-                    template_ex_d2i(
-                        pval,
-                        in_,
-                        len,
-                        item.templates,
-                        false,
-                        ctx,
-                        depth,
-                        libctx,
-                        propq,
-                    )
+                    template_ex_d2i(pval, out, item.templates, false, ctx, depth, libctx, propq)
                 }
             }
         }
@@ -1671,7 +1708,7 @@ unsafe fn embed_d2i(
                 return 0;
             }
             // SAFETY: the caller's contract.
-            unsafe { mstring_d2i(pval, in_, len, item, opt, ctx) }
+            unsafe { mstring_d2i(pval, out, item, opt, ctx) }
         }
 
         ASN1_ITYPE_EXTERN => {
@@ -1681,12 +1718,20 @@ unsafe fn embed_d2i(
             }
             // SAFETY: for an `EXTERN` item `funcs` is its `ASN1_EXTERN_FUNCS`.
             let ef = unsafe { &*ef };
-            if let Some(f) = ef.asn1_ex_d2i_ex {
+            // This is a genuine ABI edge: the hook's signature is the authority's
+            // `(ASN1_VALUE **, const unsigned char **, long, ...)`. The pointer and
+            // length are derived from the one cursor here, and the hook's answer is
+            // folded back through `advance_to`, so an over-advance cannot escape the
+            // caller's input. A hook that reports absent (-1) or failure leaves the
+            // cursor untouched, so "no progress on failure" still holds.
+            let mut p = out.ptr();
+            let len = out.remaining();
+            let r = if let Some(f) = ef.asn1_ex_d2i_ex {
                 // SAFETY: the hook is the caller's, with the authority's signature.
                 unsafe {
                     f(
                         pval,
-                        in_,
+                        &mut p,
                         len,
                         it,
                         tag,
@@ -1699,10 +1744,16 @@ unsafe fn embed_d2i(
                 }
             } else if let Some(f) = ef.asn1_ex_d2i {
                 // SAFETY: as above.
-                unsafe { f(pval, in_, len, it, tag, aclass, c_char::from(opt), ctx) }
+                unsafe { f(pval, &mut p, len, it, tag, aclass, c_char::from(opt), ctx) }
             } else {
-                0
+                return 0;
+            };
+            if r > 0 && out.advance_to(p).is_none() {
+                // The hook advanced outside the extent it was given; refusing is the
+                // only structurally sound answer.
+                return 0;
             }
+            r
         }
 
         ASN1_ITYPE_CHOICE => {
@@ -1745,8 +1796,10 @@ unsafe fn embed_d2i(
                     return 0;
                 }
             }
-            // SAFETY: the caller's slot is readable.
-            let mut p = unsafe { *in_ };
+            // The alternatives are tried in order against one local cursor; a
+            // sub-decoder commits only on success, so an absent alternative leaves it
+            // exactly where it started.
+            let mut local = *out;
             let mut i: c_long = 0;
             let mut tt = item.templates;
             while i < item.tcount {
@@ -1758,7 +1811,7 @@ unsafe fn embed_d2i(
                 // distinguishable from a malformed one.
                 // SAFETY: the caller's contract.
                 let ret = unsafe {
-                    template_ex_d2i(field, &mut p, len, tt, true, ctx, depth, libctx, propq)
+                    template_ex_d2i(field, &mut local, tt, true, ctx, depth, libctx, propq)
                 };
                 if ret == -1 {
                     // SAFETY: still inside the item's template array.
@@ -1799,17 +1852,17 @@ unsafe fn embed_d2i(
                     return 0;
                 }
             }
-            // SAFETY: the caller's slot is writable.
-            unsafe { *in_ = p };
+            *out = local;
             1
         }
 
         ASN1_ITYPE_NDEF_SEQUENCE | ASN1_ITYPE_SEQUENCE => {
-            // SAFETY: the caller's slot is readable.
-            let mut p = unsafe { *in_ };
-            let start = p;
-            let tmplen = len;
-            let mut len = len;
+            // One local cursor for this value. `content` is the bounded extent every
+            // field sees: a definite value is narrowed to exactly its declared length,
+            // while an indefinite (or BROKEN) value runs to the rest of the cursor.
+            let start = *out;
+            let mut local = *out;
+            let mut len: c_long = 0;
             let mut tag = tag;
             let mut aclass = aclass;
             if tag == -1 {
@@ -1818,9 +1871,7 @@ unsafe fn embed_d2i(
             }
             let mut seq_eoc: c_uchar = 0;
             let mut cst: c_uchar = 0;
-            // SAFETY: `p` is readable for `len` bytes; the outputs are local slots.
-            let mut hdr = unsafe { Cursor::new(p, len) };
-            // SAFETY: `hdr` is a cursor over the caller's input; the outputs are
+            // SAFETY: `local` is a cursor over the caller's input; the outputs are
             // local slots.
             let ret = unsafe {
                 check_tlen(
@@ -1829,7 +1880,7 @@ unsafe fn embed_d2i(
                     core::ptr::null_mut(),
                     &mut seq_eoc,
                     &mut cst,
-                    &mut hdr,
+                    &mut local,
                     tag,
                     aclass,
                     opt,
@@ -1844,32 +1895,30 @@ unsafe fn embed_d2i(
             if ret == -1 {
                 return -1;
             }
-            p = hdr.ptr();
             // `ASN1_AFLG_BROKEN` is for a buggy peer whose declared length cannot be
-            // trusted, so the length is taken as "the rest of the input" instead.
+            // trusted, so the extent is taken as "the rest of the input" instead.
             let broken = !aux.is_null()
                 // SAFETY: `aux` is non-null on this branch and is the item's own block.
                 && (unsafe { (*aux).flags }) & ASN1_AFLG_BROKEN != 0;
-            let seq_nolen: c_uchar;
-            if broken {
-                // The cursor never leaves the declared extent (`check_tlen` bounded it), so an
-                // overrun can only mean a malformed length; refuse instead of wrapping.
-                let Some(used) = cursor_distance(start, p) else {
-                    return err_tail(core::ptr::null(), item);
-                };
-                let Some(rest) = remaining_after(tmplen, used) else {
-                    return err_tail(core::ptr::null(), item);
-                };
-                len = rest;
-                seq_nolen = 1;
-            } else {
-                seq_nolen = seq_eoc;
-            }
+            let hdr_indefinite = seq_eoc != 0;
+            let seq_nolen: c_uchar = if broken { 1 } else { seq_eoc };
             if cst == 0 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_387) };
                 return err_tail(core::ptr::null(), item);
             }
+            // `limit` refuses a declared length the input does not hold (including a
+            // stale cached header), and every subsequent field advance is relative to
+            // this cursor, so the value's extent is structural rather than re-derived
+            // by pointer subtraction.
+            let mut content = if broken || hdr_indefinite {
+                local
+            } else {
+                match local.limit(len) {
+                    Some(content) => content,
+                    None => return err_tail(core::ptr::null(), item),
+                }
+            };
             // SAFETY: `pval` is a live slot.
             let has_value = !unsafe { *pval }.is_null();
             if !has_value
@@ -1923,26 +1972,18 @@ unsafe fn embed_d2i(
                 }
                 // SAFETY: `seqtt` is live and `*pval` is the enclosing value.
                 let field = unsafe { utl::get_field_ptr(pval, &*seqtt) };
-                if len == 0 {
+                if content.is_empty() {
                     break;
                 }
-                let q = p;
-                // SAFETY: `p` is readable for `len` bytes.
-                let mut eoc = unsafe { Cursor::new(p, len) };
+                // The probe is made on a copy, so a non-marker leaves `content` alone.
+                let mut eoc = content;
                 if check_eoc(&mut eoc) {
-                    p = eoc.ptr();
+                    content = eoc;
                     if seq_eoc == 0 {
                         // SAFETY: a compile-time-constant site.
                         unsafe { raise_site(&err_sites::TASN_DEC_427) };
                         return err_tail(core::ptr::null(), item);
                     }
-                    let Some(used) = cursor_distance(q, p) else {
-                        return err_tail(core::ptr::null(), item);
-                    };
-                    let Some(rest) = remaining_after(len, used) else {
-                        return err_tail(core::ptr::null(), item);
-                    };
-                    len = rest;
                     seq_eoc = 0;
                     break;
                 }
@@ -1957,7 +1998,7 @@ unsafe fn embed_d2i(
                 };
                 // SAFETY: as above.
                 let ret = unsafe {
-                    template_ex_d2i(field, &mut p, len, seqtt, isopt, ctx, depth, libctx, propq)
+                    template_ex_d2i(field, &mut content, seqtt, isopt, ctx, depth, libctx, propq)
                 };
                 if ret == 0 {
                     // A real parse error in the field. The authority's `goto err` names
@@ -1967,7 +2008,8 @@ unsafe fn embed_d2i(
                     // which `RT-ASN1-TEMPLATE` is what caught.
                     return err_tail(seqtt, item);
                 } else if ret == -1 {
-                    // OPTIONAL and absent: free and zero the field and move on.
+                    // OPTIONAL and absent: free and zero the field and move on. The field
+                    // decoder left `content` exactly where it was.
                     // SAFETY: the field's own template governs it.
                     unsafe { crate::asn1::fre::template_free(field, seqtt) };
                     // SAFETY: still inside the item's template array.
@@ -1975,28 +2017,30 @@ unsafe fn embed_d2i(
                     i += 1;
                     continue;
                 }
-                let Some(used) = cursor_distance(q, p) else {
-                    return err_tail(seqtt, item);
-                };
-                let Some(rest) = remaining_after(len, used) else {
-                    return err_tail(seqtt, item);
-                };
-                len = rest;
                 // SAFETY: still inside the item's template array.
                 tt = unsafe { tt.add(1) };
                 i += 1;
             }
-            // SAFETY: `p` is readable for `len` bytes.
-            let mut eoc = unsafe { Cursor::new(p, len) };
-            if seq_eoc != 0 && !check_eoc(&mut eoc) {
-                // SAFETY: a compile-time-constant site.
-                unsafe { raise_site(&err_sites::TASN_DEC_466) };
-                return err_tail(core::ptr::null(), item);
+            if seq_eoc != 0 {
+                let mut eoc = content;
+                if !check_eoc(&mut eoc) {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::TASN_DEC_466) };
+                    return err_tail(core::ptr::null(), item);
+                }
+                content = eoc;
             }
-            p = eoc.ptr();
-            if seq_nolen == 0 && len != 0 {
+            if seq_nolen == 0 && !content.is_empty() {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_471) };
+                return err_tail(core::ptr::null(), item);
+            }
+            // Commit the value's extent: an indefinite or BROKEN value ends where its
+            // content cursor ended; a definite value is advanced by exactly the length
+            // `limit` already proved fits.
+            if hdr_indefinite || seq_nolen != 0 {
+                local = content;
+            } else if local.advance(len).is_none() {
                 return err_tail(core::ptr::null(), item);
             }
 
@@ -2026,19 +2070,17 @@ unsafe fn embed_d2i(
             }
 
             // The received bytes are kept, which is what lets a re-encode answer the
-            // caller's own bytes rather than a re-derivation.
-            // SAFETY: `pval` is a live slot; `*in_` is readable for `p - start` bytes.
-            let Some(consumed) = cursor_distance(start, p) else {
+            // caller's own bytes rather than a re-derivation. The consumed count comes
+            // from the cursor pair, so it cannot wrap and is bounded by the input.
+            let Some(consumed) = local.consumed_since(start) else {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_507) };
                 return 0;
             };
-            let Ok(consumed) = c_long::try_from(consumed) else {
-                return 0;
-            };
-            // SAFETY: `pval` is a live slot; `*in_` is readable for the `consumed` bytes just
-            // decoded; `item` is the caller's.
-            if unsafe { utl::enc_save(pval, *in_, consumed, item) } == 0 {
+            // SAFETY: `pval` is a live slot; `start.ptr()` is readable for `consumed`
+            // bytes (the cursor only ever moves forward within its own extent); `item`
+            // is the caller's.
+            if unsafe { utl::enc_save(pval, start.ptr(), consumed, item) } == 0 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_507) };
                 return 0;
@@ -2051,8 +2093,7 @@ unsafe fn embed_d2i(
                     return 0;
                 }
             }
-            // SAFETY: the caller's slot is writable.
-            unsafe { *in_ = p };
+            *out = local;
             1
         }
 
@@ -2074,26 +2115,22 @@ unsafe fn embed_d2i(
 /// As [`item_ex_d2i_intern`]; `it` must be a live `MSTRING` item.
 unsafe fn mstring_d2i(
     pval: *mut *mut c_void,
-    in_: *mut *const c_uchar,
-    len: c_long,
+    cur: &mut Cursor,
     it: &Asn1Item,
     opt: bool,
     ctx: *mut Asn1Tlc,
 ) -> c_int {
-    // SAFETY: the caller's slot is readable.
-    let p = unsafe { *in_ };
+    // The probe is a copy: the decoder below must re-read the header from the
+    // caller's *unadvanced* position exactly as the authority does.
+    let mut probe = *cur;
     let mut otag: c_int = 0;
     let mut oclass: c_uchar = 0;
     // `check_tlen` is passed `opt = 1` here even though its tag argument is -1: with a
     // negative expected tag the comparison is skipped and `opt` cannot be consulted, so
     // the value is inert, and it is passed as the authority passes it rather than as it
     // happens to matter.
-    // SAFETY: `p` is readable for `len` bytes; the outputs are local slots and `ctx` is
-    // the caller's cache. The probe does not advance `p`: the decoder re-reads the
-    // header from the caller's unadvanced slot.
-    let mut probe = unsafe { Cursor::new(p, len) };
     // SAFETY: `probe` is a cursor over the caller's input; the outputs are local
-    // slots.
+    // slots and `ctx` is the caller's cache. The probe does not advance `cur`.
     let ret = unsafe {
         check_tlen(
             core::ptr::null_mut(),
@@ -2135,20 +2172,9 @@ unsafe fn mstring_d2i(
         return err_tail(core::ptr::null(), it);
     }
     // The tag read from the encoding becomes the decoder's starting `utype`, and the
-    // decoder re-reads the header from the caller's *unadvanced* slot.
+    // decoder re-reads the header from the caller's *unadvanced* cursor.
     // SAFETY: the caller's contract passes through unchanged.
-    unsafe {
-        d2i_ex_primitive(
-            pval.cast::<*mut Asn1String>(),
-            in_,
-            len,
-            it,
-            otag,
-            0,
-            false,
-            ctx,
-        )
-    }
+    unsafe { d2i_ex_primitive(pval.cast::<*mut Asn1String>(), cur, it, otag, 0, false, ctx) }
 }
 
 /// The authority's `err:` tail: name the failing field when there is one, then the item.
@@ -2180,13 +2206,12 @@ fn err_tail(errtt: *const Asn1Template, item: &Asn1Item) -> c_int {
 ///
 /// # Safety
 ///
-/// `val` must be a live field slot; `in_` must point to a slot holding a readable
-/// pointer to `inlen` bytes; `tt` must be a live template.
+/// `val` must be a live field slot; `cur` is the caller's bounded input cursor and
+/// is advanced only on success; `tt` must be a live template.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn template_ex_d2i(
     val: *mut *mut c_void,
-    in_: *mut *const c_uchar,
-    inlen: c_long,
+    cur: &mut Cursor,
     tt: *const Asn1Template,
     opt: bool,
     ctx: *mut Asn1Tlc,
@@ -2200,20 +2225,19 @@ unsafe fn template_ex_d2i(
     // SAFETY: `tt` is live.
     let t = unsafe { &*tt };
     let aclass = (t.flags & ASN1_TFLG_TAG_CLASS) as c_int;
-    // SAFETY: the caller's slot is readable.
-    let mut p = unsafe { *in_ };
 
     if t.flags & ASN1_TFLG_EXPTAG == 0 {
         // SAFETY: the caller's contract.
-        return unsafe { template_noexp_d2i(val, in_, inlen, tt, opt, ctx, depth, libctx, propq) };
+        return unsafe { template_noexp_d2i(val, cur, tt, opt, ctx, depth, libctx, propq) };
     }
 
     let mut len: c_long = 0;
     let mut exp_eoc: c_uchar = 0;
     let mut cst: c_uchar = 0;
-    // SAFETY: `p` is readable for `inlen` bytes; the outputs are local slots.
-    let mut hdr = unsafe { Cursor::new(p, inlen) };
-    // SAFETY: `hdr` is a cursor over the caller's input; the outputs are local
+    // Work on a copy: an absent or failed wrapper must leave the caller's cursor
+    // exactly where it was.
+    let mut local = *cur;
+    // SAFETY: `local` is a cursor over the caller's input; the outputs are local
     // slots.
     let ret = unsafe {
         check_tlen(
@@ -2222,7 +2246,7 @@ unsafe fn template_ex_d2i(
             core::ptr::null_mut(),
             &mut exp_eoc,
             &mut cst,
-            &mut hdr,
+            &mut local,
             t.tag as c_int,
             aclass,
             opt,
@@ -2237,44 +2261,48 @@ unsafe fn template_ex_d2i(
     if ret == -1 {
         return -1;
     }
-    p = hdr.ptr();
-    let q = p;
     if cst == 0 {
         // An explicit tag must be constructed; a primitive one cannot hold a field.
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_556) };
         return 0;
     }
+    let hdr_indefinite = exp_eoc != 0;
+    // The field is confined to the wrapper's declared content, or to the rest of
+    // the cursor for an indefinite wrapper, exactly as the authority passes `len`.
+    let mut content = if hdr_indefinite {
+        local
+    } else {
+        match local.limit(len) {
+            Some(content) => content,
+            None => return 0,
+        }
+    };
     // The field has been found, so it is no longer OPTIONAL.
     // SAFETY: the caller's contract.
-    if unsafe { template_noexp_d2i(val, &mut p, len, tt, false, ctx, depth, libctx, propq) } == 0 {
+    if unsafe { template_noexp_d2i(val, &mut content, tt, false, ctx, depth, libctx, propq) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_563) };
         return 0;
     }
-    let Some(used) = cursor_distance(q, p) else {
-        return 0;
-    };
-    let Some(rest) = remaining_after(len, used) else {
-        return 0;
-    };
-    len = rest;
-    if exp_eoc != 0 {
-        // SAFETY: `p` is readable for `len` bytes.
-        let mut eoc = unsafe { Cursor::new(p, len) };
-        if !check_eoc(&mut eoc) {
+    if hdr_indefinite {
+        if !check_eoc(&mut content) {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::TASN_DEC_571) };
             return 0;
         }
-        p = eoc.ptr();
-    } else if len != 0 {
-        // SAFETY: a compile-time-constant site.
-        unsafe { raise_site(&err_sites::TASN_DEC_579) };
-        return 0;
+        local = content;
+    } else {
+        if !content.is_empty() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::TASN_DEC_579) };
+            return 0;
+        }
+        if local.advance(len).is_none() {
+            return 0;
+        }
     }
-    // SAFETY: the caller's slot is writable.
-    unsafe { *in_ = p };
+    *cur = local;
     1
 }
 
@@ -2288,8 +2316,7 @@ unsafe fn template_ex_d2i(
 #[allow(unused_assignments)] // the authority's `len -= p - q` before its EOC `break` is dead
 unsafe fn template_noexp_d2i(
     val: *mut *mut c_void,
-    in_: *mut *const c_uchar,
-    len_in: c_long,
+    cur: &mut Cursor,
     tt: *const Asn1Template,
     opt: bool,
     ctx: *mut Asn1Tlc,
@@ -2303,9 +2330,8 @@ unsafe fn template_noexp_d2i(
     // SAFETY: `tt` is live.
     let t = unsafe { &*tt };
     let aclass = (t.flags & ASN1_TFLG_TAG_CLASS) as c_int;
-    // SAFETY: the caller's slot is readable.
-    let mut p = unsafe { *in_ };
-    let mut len = len_in;
+    // A local cursor: an absent or failed field must report no progress.
+    let mut local = *cur;
 
     // An embedded field's value *is* the field's storage, so the address of the caller's
     // slot becomes the value the item machinery is handed: `tval` holds it and the decode
@@ -2336,9 +2362,8 @@ unsafe fn template_noexp_d2i(
             (V_ASN1_SEQUENCE, V_ASN1_UNIVERSAL)
         };
         let mut sk_eoc: c_uchar = 0;
-        // SAFETY: `p` is readable for `len` bytes; the outputs are local slots.
-        let mut hdr = unsafe { Cursor::new(p, len) };
-        // SAFETY: `hdr` is a cursor over the caller's input; the outputs are local
+        let mut len: c_long = 0;
+        // SAFETY: `local` is a cursor over the caller's input; the outputs are local
         // slots.
         let ret = unsafe {
             check_tlen(
@@ -2347,7 +2372,7 @@ unsafe fn template_noexp_d2i(
                 core::ptr::null_mut(),
                 &mut sk_eoc,
                 core::ptr::null_mut(),
-                &mut hdr,
+                &mut local,
                 sktag,
                 skaclass,
                 opt,
@@ -2362,7 +2387,18 @@ unsafe fn template_noexp_d2i(
         if ret == -1 {
             return -1;
         }
-        p = hdr.ptr();
+        let hdr_indefinite = sk_eoc != 0;
+        // Each element is confined to the field's declared content (or to the rest
+        // of the cursor when the field is indefinite), which is exactly the `len`
+        // the authority passes to each element decode.
+        let mut content = if hdr_indefinite {
+            local
+        } else {
+            match local.limit(len) {
+                Some(content) => content,
+                None => return 0,
+            }
+        };
         // SAFETY: `val` is a live slot.
         let existing = unsafe { *val };
         if existing.is_null() {
@@ -2396,24 +2432,16 @@ unsafe fn template_noexp_d2i(
         // this call acquired; `sub` is the element item.
         let mut pushed = unsafe { PushedElements::new(sk, sub) };
 
-        while len > 0 {
-            let q = p;
-            // SAFETY: `p` is readable for `len` bytes.
-            let mut eoc = unsafe { Cursor::new(p, len) };
+        while !content.is_empty() {
+            // The probe is made on a copy, so a non-marker leaves `content` alone.
+            let mut eoc = content;
             if check_eoc(&mut eoc) {
-                p = eoc.ptr();
+                content = eoc;
                 if sk_eoc == 0 {
                     // SAFETY: a compile-time-constant site.
                     unsafe { raise_site(&err_sites::TASN_DEC_669) };
                     return 0;
                 }
-                let Some(used) = cursor_distance(q, p) else {
-                    return 0;
-                };
-                let Some(rest) = remaining_after(len, used) else {
-                    return 0;
-                };
-                len = rest;
                 sk_eoc = 0;
                 break;
             }
@@ -2422,8 +2450,7 @@ unsafe fn template_noexp_d2i(
             let r = unsafe {
                 embed_d2i(
                     &mut skfield,
-                    &mut p,
-                    len,
+                    &mut content,
                     sub,
                     -1,
                     0,
@@ -2442,13 +2469,6 @@ unsafe fn template_noexp_d2i(
                 unsafe { crate::asn1::fre::ASN1_item_free(skfield, sub) };
                 return 0;
             }
-            let Some(used) = cursor_distance(q, p) else {
-                return 0;
-            };
-            let Some(rest) = remaining_after(len, used) else {
-                return 0;
-            };
-            len = rest;
             // SAFETY: `skfield` is a fresh element of `sub`'s type.
             if !unsafe { pushed.push(skfield) } {
                 // SAFETY: a compile-time-constant site.
@@ -2463,8 +2483,12 @@ unsafe fn template_noexp_d2i(
         }
         // The decode succeeded: the stack owns every pushed element.
         pushed.commit();
-        // SAFETY: the caller's slot is writable.
-        unsafe { *in_ = p };
+        if hdr_indefinite {
+            local = content;
+        } else if local.advance(len).is_none() {
+            return 0;
+        }
+        *cur = local;
         return 1;
     }
 
@@ -2480,8 +2504,7 @@ unsafe fn template_noexp_d2i(
         let r = unsafe {
             embed_d2i(
                 val,
-                &mut p,
-                len,
+                &mut local,
                 sub,
                 t.tag as c_int,
                 aclass,
@@ -2501,7 +2524,7 @@ unsafe fn template_noexp_d2i(
     } else {
         // The field's own tag is the underlying type's.
         // SAFETY: the caller's contract.
-        let r = unsafe { embed_d2i(val, &mut p, len, sub, -1, 0, opt, ctx, depth, libctx, propq) };
+        let r = unsafe { embed_d2i(val, &mut local, sub, -1, 0, opt, ctx, depth, libctx, propq) };
         if r == 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::TASN_DEC_712) };
@@ -2512,8 +2535,7 @@ unsafe fn template_noexp_d2i(
     if ret == -1 {
         return -1;
     }
-    // SAFETY: the caller's slot is writable.
-    unsafe { *in_ = p };
+    *cur = local;
     1
 }
 
@@ -2759,11 +2781,15 @@ mod tests {
             // Above `INT_MAX`, in the authority's `long`. On an ILP32 target such a
             // length is not representable, so only the header-boundary arms above
             // apply there.
+            // Above `INT_MAX`, in the authority's `long`. On an ILP32 target such a
+            // length is not representable, so only the header-boundary arms above
+            // apply there.
+            #[allow(irrefutable_let_patterns)]
             let Ok(huge) = c_long::try_from(c_int::MAX as i64 + 1) else {
                 return;
             };
             let mut slot: *mut Asn1String = core::ptr::null_mut();
-            let mut free_cont = false;
+            let mut free_cont: c_char = 0;
             let item = &*crate::asn1::items::ASN1_OCTET_STRING_it();
             let rc = ex_c2i(
                 &mut slot,
@@ -2798,6 +2824,54 @@ mod tests {
             assert!(obj.is_null());
             assert_eq!(cur, octets.as_ptr(), "a refused codec reads no content");
         }
+    }
+
+    /// C1 ordering: an unrepresentable `hdrlen + plen` must still report the
+    /// authority's TOO_LONG, not BAD_OBJECT_HEADER. A 64-bit `c_long::MAX` length
+    /// sets the 0x80 bit in `ASN1_get_object`, and `check_tlen`'s checked sum runs
+    /// before the header-error branch (`tasn_dec.c:1219`). The direct call isolates
+    /// the site; a full decode would append a nested-ASN1 error after it.
+    #[test]
+    fn d2i_check_tlen_unrepresentable_sum_keeps_too_long() {
+        let _g = crate::test_support::lock_global_state();
+        let huge_header = [0x04u8, 0x88, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        let mut ctx = Asn1Tlc {
+            valid: 0,
+            ret: 0,
+            plen: 0,
+            ptag: 0,
+            pclass: 0,
+            hdrlen: 0,
+        };
+        // SAFETY: `huge_header` is readable for its ten bytes, the length passed is
+        // its own length, and the cursor is local to this test.
+        let mut cur = unsafe { Cursor::new(huge_header.as_ptr(), huge_header.len() as c_long) };
+        let mut plen: c_long = 0;
+        let mut inf: c_uchar = 0;
+        let mut cst: c_uchar = 0;
+        ERR_clear_error();
+        // SAFETY: `cur` is a cursor over the ten-byte header; the outputs are local
+        // slots and `ctx` is a live cache.
+        let rc = unsafe {
+            check_tlen(
+                &mut plen,
+                core::ptr::null_mut(),
+                core::ptr::null_mut(),
+                &mut inf,
+                &mut cst,
+                &mut cur,
+                V_ASN1_OCTET_STRING,
+                V_ASN1_UNIVERSAL,
+                false,
+                &mut ctx,
+            )
+        };
+        assert_eq!(rc, 0, "the unrepresentable length is refused");
+        assert_eq!(
+            peek_last_reason(),
+            ASN1_R_TOO_LONG as core::ffi::c_ulong,
+            "the checked sum keeps the authority's TOO_LONG reason"
+        );
     }
 
     /// A failed re-decode releases the caller's previous value and nulls the slot:
@@ -3022,5 +3096,248 @@ mod tests {
                 }
             }
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // S51 — partial-object ownership, the handed block, and the reader audit
+    // -----------------------------------------------------------------------
+
+    use crate::asn1::der::ASN1_get_object;
+    use crate::runtime::err::err_reasons::ASN1_R_TOO_LONG;
+    use crate::runtime::err::{peek_last_reason, ERR_clear_error};
+
+    /// A decode that pushes several elements and then fails must leave the stack
+    /// empty. The assertion is on the value the caller still owns (the stack
+    /// itself) and on its element count, not on a count of releases in some
+    /// window: after the guard fires, no element address is reachable from the
+    /// stack at all.
+    #[test]
+    fn d2i_sequence_of_failure_after_several_elements_owns_nothing() {
+        let _g = crate::test_support::lock_global_state();
+        // SEQUENCE { SEQ {}, SEQ {}, SEQ {}, SEQ(truncated) }
+        let der = [0x30u8, 0x07, 0x30, 0x00, 0x30, 0x00, 0x30, 0x00, 0x30];
+        // SAFETY: the direct entry leaves the (partially built) value to this frame.
+        unsafe {
+            let mut p = der.as_ptr();
+            let mut val: *mut c_void = core::ptr::null_mut();
+            let rc = asn1_item_embed_d2i(
+                &mut val,
+                &mut p,
+                der.len() as c_long,
+                CRL_DIST_POINTS_it(),
+                -1,
+                0,
+                false,
+                core::ptr::null_mut(),
+                0,
+                core::ptr::null_mut(),
+                core::ptr::null(),
+            );
+            assert_eq!(rc, 0, "the fourth element is truncated");
+            assert_eq!(p, der.as_ptr(), "a refused decode reports no progress");
+            assert!(
+                !val.is_null(),
+                "the stack itself belongs to the caller, not to the element guard"
+            );
+            let sk = val as *mut crate::runtime::stack::OpenSslStack;
+            assert_eq!(
+                OPENSSL_sk_num(sk),
+                0,
+                "every element pushed before the failure is gone"
+            );
+            CRL_DIST_POINTS_free(sk);
+        }
+    }
+
+    /// A synthetic `SEQUENCE` whose aux block stores the received encoding
+    /// (`ASN1_AFLG_ENCODING`) and whose decode callback refuses the POST phase.
+    /// The decode therefore reaches `enc_save` (the cache is assigned), and only
+    /// then fails. The wrapper's contract is that the value is released and the
+    /// slot nulled, so no live value can point at the released cache.
+    ///
+    /// The value is exactly one `ASN1_ENCODING` at offset 0, so no test-local
+    /// layout attribute is needed: the item's `size` is the encoding's own size and
+    /// the allocator's block is read back as that type.
+    static POST_SEEN: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+    static POST_FAILS: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+    static POST_VALUE: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(0);
+    static POST_CACHE: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(0);
+
+    /// Records the value and its assigned cache at POST, and optionally refuses.
+    ///
+    /// # Safety
+    ///
+    /// Called by the item machinery with the authority's callback signature; at
+    /// POST `*pval` is a live value of the item's type.
+    unsafe extern "C" fn record_post(
+        op: c_int,
+        pval: *mut *mut c_void,
+        _it: *const Asn1Item,
+        _arg: *mut c_void,
+    ) -> c_int {
+        if op == ASN1_OP_D2I_POST {
+            // SAFETY: at POST the caller's slot holds a live value of the item's
+            // type, whose first field is the `ASN1_ENCODING` the aux names.
+            let value = unsafe { *pval };
+            if !value.is_null() {
+                // SAFETY: `value` is a live zeroed block of `Asn1Encoding`'s size,
+                // whose first (only) field is the encoding the aux names.
+                let cache = unsafe { (*value.cast::<Asn1Encoding>()).enc };
+                POST_VALUE.store(value as usize, core::sync::atomic::Ordering::SeqCst);
+                POST_CACHE.store(cache as usize, core::sync::atomic::Ordering::SeqCst);
+                POST_SEEN.store(true, core::sync::atomic::Ordering::SeqCst);
+            }
+            if POST_FAILS.load(core::sync::atomic::Ordering::SeqCst) {
+                return 0;
+            }
+        }
+        1
+    }
+
+    fn encoded_item(aux: &Asn1Aux) -> Asn1Item {
+        Asn1Item {
+            itype: ASN1_ITYPE_SEQUENCE,
+            utype: 0,
+            templates: core::ptr::null(),
+            tcount: 0,
+            funcs: (aux as *const Asn1Aux).cast::<c_void>(),
+            size: core::mem::size_of::<Asn1Encoding>() as c_long,
+            sname: c"EncodedValue".as_ptr(),
+        }
+    }
+
+    #[test]
+    fn d2i_nested_encoded_template_failure_leaves_no_cached_value() {
+        let _g = crate::test_support::lock_global_state();
+        use core::sync::atomic::Ordering;
+        POST_SEEN.store(false, Ordering::SeqCst);
+        POST_FAILS.store(true, Ordering::SeqCst);
+        POST_VALUE.store(0, Ordering::SeqCst);
+        POST_CACHE.store(0, Ordering::SeqCst);
+
+        let aux = Asn1Aux {
+            app_data: core::ptr::null_mut(),
+            flags: ASN1_AFLG_ENCODING,
+            ref_offset: 0,
+            ref_lock: 0,
+            asn1_cb: Some(record_post),
+            enc_offset: 0,
+            asn1_const_cb: None,
+        };
+        let item = encoded_item(&aux);
+        let der = [0x30u8, 0x00];
+
+        // SAFETY: the wrapper frees the value on failure and nulls the slot; the
+        // callback only reads the live value it is handed.
+        unsafe {
+            let mut p = der.as_ptr();
+            let first = ASN1_item_d2i(core::ptr::null_mut(), &mut p, der.len() as c_long, &item);
+            assert!(first.is_null(), "the POST failure refuses the decode");
+            assert_eq!(p, der.as_ptr(), "a refused decode reports no progress");
+            assert!(
+                POST_SEEN.load(Ordering::SeqCst),
+                "the failure happens after the cached encoding was assigned"
+            );
+            assert_ne!(POST_VALUE.load(Ordering::SeqCst), 0);
+            assert_ne!(
+                POST_CACHE.load(Ordering::SeqCst),
+                0,
+                "enc_save assigned the cache before the POST failure"
+            );
+        }
+
+        // A second decode with the callback accepting POST must succeed from a
+        // clean slot: nothing from the failed attempt is reachable through it.
+        POST_FAILS.store(false, Ordering::SeqCst);
+        // SAFETY: the fresh value is released below through its own item.
+        unsafe {
+            let mut p = der.as_ptr();
+            let second = ASN1_item_d2i(core::ptr::null_mut(), &mut p, der.len() as c_long, &item);
+            assert!(!second.is_null(), "the retry decodes");
+            let value = second.cast::<Asn1Encoding>();
+            // SAFETY: `second` is a live zeroed block of `Asn1Encoding`'s size that
+            // `enc_save` has just filled in.
+            assert!(!(*value).enc.is_null());
+            assert_eq!((*value).len, 2);
+            assert_eq!((*value).modified, 0);
+            ASN1_item_free(second, &item);
+        }
+    }
+
+    /// `ASN1_get_object` as a reader: a header that claims more than `omax` must
+    /// raise the authority's `TOO_LONG`, set the recovery bit, and still publish a
+    /// pointer at the end of the header — inside the readable extent — so the
+    /// caller can stop safely. The pointer is then usable for a real header.
+    #[test]
+    fn d2i_asn1_get_object_header_beyond_omax_reports_too_long() {
+        let _g = crate::test_support::lock_global_state();
+        // OCTET STRING claiming 5 bytes, with only 3 content bytes present.
+        let der = [0x04u8, 0x05, 0x04, 0x00, 0x41];
+        let mut p = der.as_ptr();
+        let mut len: c_long = 0;
+        let mut tag: c_int = 0;
+        let mut class: c_int = 0;
+        ERR_clear_error();
+        // SAFETY: `p` points into `der`, which is readable for all five bytes.
+        let ret = unsafe { ASN1_get_object(&mut p, &mut len, &mut tag, &mut class, 5) };
+        assert_ne!(ret & 0x80, 0, "the too-long bit is set");
+        assert_eq!(len, 5, "the declared length is reported");
+        assert_eq!(tag, V_ASN1_OCTET_STRING);
+        // SAFETY: the header is two bytes and the pointer is inside `der`.
+        assert_eq!(p, unsafe { der.as_ptr().add(2) });
+        assert_eq!(
+            peek_last_reason(),
+            ASN1_R_TOO_LONG as core::ffi::c_ulong,
+            "the authority's TOO_LONG reason"
+        );
+
+        // The published pointer is usable: the next two bytes form a valid header.
+        let mut q = p;
+        let mut len2: c_long = -1;
+        let mut tag2: c_int = 0;
+        let mut class2: c_int = 0;
+        // SAFETY: `q` points three bytes before the end of `der`.
+        let ret2 = unsafe { ASN1_get_object(&mut q, &mut len2, &mut tag2, &mut class2, 3) };
+        assert_eq!(
+            ret2 & 0x80,
+            0,
+            "the truncation is not a header failure here"
+        );
+        assert_eq!(tag2, V_ASN1_OCTET_STRING);
+        assert_eq!(len2, 0);
+        // SAFETY: the second header is two bytes.
+        assert_eq!(q, unsafe { der.as_ptr().add(4) });
+    }
+
+    /// Negative control, test-only. It models the pre-fix handoff: `take_raw`
+    /// cleared the owner and the adopter ran only on a normal return, so an unwind
+    /// out of the content codec left the block owned by nobody. The guard is now
+    /// the owner, and its `Drop` releases the block during unwinding.
+    #[test]
+    #[allow(clippy::panic)] // the test deliberately unwinds to model the pre-fix handoff
+    fn d2i_canary_pre_fix_take_raw_handoff_would_leak_on_unwind() {
+        let _g = crate::test_support::lock_global_state();
+        use core::sync::atomic::Ordering;
+        HANDOFF_RELEASES.store(0, Ordering::SeqCst);
+        // SAFETY: the seam answers NULL or a four-byte block this frame owns; the
+        // guard takes ownership of the non-null answer below and is its single release.
+        let block =
+            unsafe { crate::runtime::mem::CRYPTO_malloc(4, FILE.as_ptr(), LINE).cast::<u8>() };
+        assert!(!block.is_null(), "the test allocator refused four bytes");
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _handoff = ContentHandoff::new(block, 1);
+            panic!("d2i canary: modeled unwind after take_raw");
+        }));
+        assert!(result.is_err(), "the modeled codec unwound");
+        assert_eq!(
+            HANDOFF_RELEASES.load(Ordering::SeqCst),
+            1,
+            "the guard releases the handed block during unwinding; the pre-fix raw \
+             handoff was owned by nobody"
+        );
+        eprintln!(
+            "d2i canary: pre-fix take_raw+panic leaked the collected block; post-fix \
+             ContentHandoff released it during unwind (releases=1)"
+        );
     }
 }
