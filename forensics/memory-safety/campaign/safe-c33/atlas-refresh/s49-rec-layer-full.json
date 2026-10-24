@@ -1,0 +1,181 @@
+{
+  "receipt": "s49-rec-layer-full",
+  "date": "2026-10-24",
+  "subphase": "S49: whole-file ownership reconstruction of ssl/record/rec_layer_s3.rs (Wave A)",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "main",
+    "base_head": "765083ff8",
+    "committed": false,
+    "changed_files": 1,
+    "diffstat": "src/ssl/record/rec_layer_s3.rs +1144/-562 (production reconstruction and tests; working tree, no commit)",
+    "supersedes_scope_of": "s39-rec-layer.json remains valid for the output-buffer initialisation boundary; this batch extends it, it does not undo it."
+  },
+  "authority": {
+    "source": "OpenSSL 3.5.0 ssl/record/rec_layer_s3.c and ssl/record/methods/tls_common.c (both read for this batch). C contract: ssl3_read_bytes returns <=0 for retry/terminal, ssl3_read_internal returns 0 for EOF/close/fatal-alert, BIO_read of 0 is EOF and of -1 with BIO_FLAGS_READ is a retry, MAX_EMPTY_RECORDS=32, *recvd_type is assigned before the len==0 arm.",
+    "abi": "No #[no_mangle], #[export_name], #[repr(C)], extern \"C\" signature, exported symbol or allocator-seam constant changed. no_mangle count 4 (unchanged); diff lines with extern \"C\"/repr(C)/export_name: 0; WRITE_BUF_FILE/WRITE_BUF_LINE values and the ssl3_buffer.c:124 site unchanged.",
+    "authority_behaviour": [
+      "rec_layer_s3.c:612-944: the record reader returns the body length; alert decoding reads only that body.",
+      "A short BIO read is a retry with the partial header/body retained.",
+      "rec_layer_s3.c:669-672: a declared length beyond the record buffer is a fatal record overflow, detected from the header before the body is read.",
+      "tls_common.c tls_default_read_n / tls_get_more_records: a partial record keeps rstate=READ_BODY and packet_length; a completed zero-length record is SUCCESS with length 0 and is skipped; MAX_EMPTY_RECORDS bounds the skip loop.",
+      "ossl_tls_handle_rlayer_return: RETRY -> rwstate=SSL_READING, EOF -> 0 (fatal unless SSL_OP_IGNORE_UNEXPECTED_EOF)."
+    ]
+  },
+  "boundary": {
+    "id": "S49-RL-CONN",
+    "file": "src/ssl/record/rec_layer_s3.rs",
+    "reconstructed": "One `&mut Ssl` per entry point; the connection's record state is reached only through the contracted seam items listed below. The algorithm (accumulation, framing, alert decisions, retry classification, assembly compaction) is safe Rust over the reference; no raw field-offset arithmetic remains in it.",
+    "ss_l_fields_consumed": [
+      "read accumulators: rec_hdr, rec_hdr_len, rec_body, rec_body_len",
+      "handshake assembly: rd_msg_buf, rd_msg_len, rd_msg_off",
+      "record path selection: version, enc_active, dec_active, hand_state, renegotiate, hello_retry_request, cipher_iv_len, cipher_tag_len",
+      "transport/error state: rbio, wbio, rwstate, options, shutdown, warn_alert, alert_count, fatal_alert, wpend_tot, rstate",
+      "read-buffer settings: default_read_buf_len, rlayer_default_read_buf_len"
+    ],
+    "entry_points_back_into_ssl": [
+      "ssl3_write_bytes",
+      "ssl3_read_bytes",
+      "tls13_next_handshake_message",
+      "record_layer_write_pending",
+      "record_layer_read_pending",
+      "SSL_CTX_set_default_read_buffer_len",
+      "SSL_set_default_read_buffer_len",
+      "SSL_rstate_string_long",
+      "SSL_rstate_string"
+    ],
+    "contracted_seam": [
+      "OutBuf::from_raw (unsafe fn; caller region proof) and its safe write/set_written/written",
+      "Sink (External region or checked AssemblyTail index) and Sink::slot (unsafe fn)",
+      "Scratch (single owner of the write scratch) and Scratch::region",
+      "bio_flags, ssl3_write_all, send_flush",
+      "accumulate's two BIO_read calls",
+      "decrypt's two AEAD sink calls",
+      "fatal, send_fatal (the state-machine transition)",
+      "raise_alert_received's ERR calls",
+      "the four exported C ABI field reads/writes"
+    ],
+    "hidden": 0
+  },
+  "unsafe_ops": {
+    "before_after": "rec_layer_s3.rs `unsafe {` blocks 78 -> 54 total; production 59 -> 30; #[cfg(test)] 19 -> 24 (new fixtures/canary only). Production `unsafe fn` 12 -> 7: the five entry points plus OutBuf::from_raw and Sink::slot; the four unsafe extern \"C\" exports are unchanged.",
+    "eliminated": [
+      "Typed-slice construction over caller-supplied capacity: 0 remain (the S39 forms are replaced by OutBuf's written-length ledger).",
+      "Direct `(*s).field` reads/writes and raw offset arithmetic in the algorithm: the retry/completion/alert/framing code no longer contains any unsafe block.",
+      "Unchecked `rd_msg_len -= consumed` -> checked_sub; `rd_msg_off = off + len` -> checked_add; the write fragment's `off + chunk` -> checked_add; every body/header region from checked get_mut.",
+      "The raw int status where 0 meant a completed empty record and EOF: ReadStatus variants make the confusion unrepresentable."
+    ],
+    "relocated": [
+      "3 entry-point `&mut *s` reborrows",
+      "2 caller/output region constructions (OutBuf) + 2 caller-input slice constructions",
+      "2 BIO_read calls, 1 BIO_write, 1 BIO_ctrl, 1 BIO flag read",
+      "2 AEAD sink calls + 1 Sink slot derivation",
+      "2 ERR calls and 2 state-machine transitions",
+      "2 OutBuf copy/publish operations",
+      "1 wpend_tot read and 4 exported C field accesses"
+    ],
+    "contract_coverage": "All 30 production blocks carry a `SAFETY:` contract; `undocumented_unsafe_blocks = deny` and `unsafe_op_in_unsafe_fn = deny` are unchanged, so `cargo clippy --lib -D warnings` is the mechanical evidence."
+  },
+  "retry_state": {
+    "type": "ReadStatus { Complete { record_type, len }, WouldBlock, Fatal, Eof, FatalEof, Failed }",
+    "invariant": "Only Complete carries a length; ssl3_read_bytes maps WouldBlock/Fatal/Failed -> -1 and Eof/FatalEof -> 0, preserving the authority's return values, but no error or retry value can be consumed as bytes.",
+    "assembly": "AssemblyStep { Deliver{off,len}, NeedMore{used}, Refuse } with rd_msg_len/rd_msg_off normalised against the buffer first; a completed empty handshake record is Complete{len:0}, skipped and the loop continues (MAX_EMPTY_RECORDS=32), instead of the pre-fix -1 retry.",
+    "compatibility_note": "A zero-length record now also reports its content type (authority assigns *recvd_type before its len==0 arm); the return value remains 0."
+  },
+  "buffer_ownership": {
+    "inline": "rec_hdr, rec_body and rd_msg_buf are inline fields of Ssl. The Ssl block is the single owner; their lifecycle is the connection's and their single release is SSL_free (outside this file). No failure path frees, replaces or moves them; the test asserts address and extent identity across the overflow and invalid-alert paths.",
+    "heap": "The write scratch has exactly one owner per write (Scratch, wrapping OwnedBuf at the ssl3_buffer.c:124 seam). Its Drop is the only release, on success and on every encoder/BIO failure return; observed by address in the test.",
+    "accumulators": "rec_hdr_len/rec_body_len/rd_msg_len/rd_msg_off are re-validated against their buffers on every use; a stale or corrupted value is a refusal, never an out-of-range slice."
+  },
+  "tests": {
+    "new": [
+      "rec_layer_partial_body_then_remainder_completes_once",
+      "rec_layer_unterminated_record_is_not_delivered_as_complete",
+      "rec_layer_over_long_record_is_refused_without_consuming_its_body",
+      "rec_layer_empty_record_before_a_message_is_not_a_retry",
+      "rec_layer_failure_paths_release_record_buffers_once",
+      "rec_layer_canary_pre_fix_retry_is_confused_with_completion"
+    ],
+    "extended": [
+      "rec_layer_fragmented_handshake_message_reassembles (empty handshake records and an empty first record added to the S39 fragmentation case; not duplicated)"
+    ],
+    "pre_fix_failure_evidence": {
+      "test": "rec_layer_empty_record_before_a_message_is_not_a_retry",
+      "method": "The test was inserted unchanged into the HEAD version of the file and run before the reconstruction.",
+      "observed": "FAILED. 0 passed; 1 failed. panicked ... assertion `left == right` failed: the empty record is skipped, not reported as a retry; left: -1; right: 5"
+    },
+    "pass_lines": [
+      "cargo test --lib rec_layer: test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 2134 filtered out",
+      "cargo test --lib ssl::record: test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 2134 filtered out",
+      "cargo test --lib tls13_enc: test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 2141 filtered out",
+      "cargo test --lib t1_enc: test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 2149 filtered out",
+      "cargo test --lib statem: test result: ok. 183 passed; 0 failed; 5 ignored; 0 measured; 1969 filtered out; finished in 82.23s"
+    ],
+    "canary_output": [
+      "rec_layer canary: pre-fix c_int 0 -> retry=true; post-fix Complete{len:0} -> retry=false",
+      "rec_layer canary: pre-fix published 16 bytes of which 0 were initialised (first uninitialised index Some(0)); post-fix publishes 0 byte(s)"
+    ]
+  },
+  "gate": {
+    "cargo_fmt": "cargo fmt --all -- --check -> FMT_OK",
+    "cargo_check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.13s (0 warnings)",
+    "cargo_clippy": "cargo clippy --lib -- -D warnings -> Finished `dev` profile in 5.82s (clean)",
+    "filtered_tests": "23 + 23 + 16 + 8 + 183 passed; 0 failed; 5 pre-existing ignored (see tests.pass_lines)",
+    "structural_guards": "no_mangle: 4 (unchanged); repr(C)/export_name/extern \"C\" diff lines: 0; allocator-seam constants and allocation site unchanged.",
+    "full_library_suite": "NOT_RUN (FAST schedule; the baseline floor remains a separate BATCH gate).",
+    "miri": "NOT_RUN.",
+    "asan": "NOT_RUN.",
+    "independent_review": "NOT_RUN."
+  },
+  "obligations": {
+    "discharged": [
+      "No typed slice is formed over caller-supplied writable memory; publication is bounded by OutBuf's written ledger.",
+      "A partial read is WouldBlock and never a Complete; a fatal/EOF outcome carries no length.",
+      "A completed zero-length handshake record no longer stalls assembly behind a retry (pre-fix failure recorded).",
+      "Every offset, capacity and subtraction on the path is checked; an out-of-range accumulator is refused.",
+      "The write scratch is released exactly once on every return path (RAII, observed by address).",
+      "The connection's inline record buffers are never freed, replaced or moved by a failure path (observed by address identity).",
+      "Both entry points now state the BIO-callback non-reentrancy precondition they already relied on."
+    ],
+    "retained": [
+      "`&mut *s` is formed from the C ABI pointer: liveness/exclusive ownership is the caller's contract, not a type invariant.",
+      "OutBuf::from_raw's writable extent and non-overlap are caller obligations.",
+      "Sink::slot hands a raw writable region derived from the connection; the internal call structure (index, not pointer, crosses into read_record) is what prevents a second alias, not the type system.",
+      "BIO_read/BIO_write and the AEAD sinks require their own liveness/extent contracts; the connection invariant covers them but a hostile in-crate `Ssl` construction could violate it.",
+      "The write scratch allocation-failure path is a plain -1; no failure-injection court was run (the allocator latch is one-way)."
+    ],
+    "introduced": [
+      "MAX_EMPTY_RECORDS=32 for consecutive empty handshake records: on exceeding it the reader returns -1 (no progress) instead of the authority's fatal SSL_R_RECORD_TOO_SMALL, to avoid adding a new error coordinate in this batch. Recorded as a deliberate divergence."
+    ],
+    "hidden": 0
+  },
+  "compatibility_delta": "No intended change to the TLS 1.2 and 1.3 record formats, short-read/WANT_READ behaviour, alert handling, AEAD tag path, error codes or coordinates. Two deliberate, documented deltas: (1) a completed zero-length record now reports recvd_type (return stays 0), matching the authority; (2) a completed empty handshake record no longer returns -1 from the assembly reader (it is skipped, as tls_common.c does). Divergence from the authority: MAX_EMPTY_RECORDS exhaustion returns -1 rather than raising SSL_R_RECORD_TOO_SMALL.",
+  "graduation": "OWNERSHIP_RECONSTRUCTED",
+  "residuals": [
+    {
+      "id": "S49-R1",
+      "finding": "Miri (Stacked and Tree Borrows), ASan and Loom were not run. The `&mut Ssl` reborrows, the raw regions in Sink::slot and the WriteScratch region are argued from the call structure, not measured.",
+      "disposition": "BOUNDARY instrument; NOT_RUN. Blocks SAFETY_DISCHARGED."
+    },
+    {
+      "id": "S49-R2",
+      "finding": "The BIO-callback non-reentrancy obligation is external: a custom BIO method that re-enters this connection would invalidate the `&mut Ssl`. It is now stated on every entry point (it was implicit before).",
+      "disposition": "Documented caller obligation; the authority makes the same assumption. Not type-enforceable at the C ABI."
+    },
+    {
+      "id": "S49-R3",
+      "finding": "The exactly-once release test observes the scratch owner directly and the connection buffers by address identity; it does not inject a real allocation failure through an encrypted write (the allocator latch is one-way and a full TLS1.3 cipher fixture is out of scope for FAST).",
+      "disposition": "Release is by RAII over a single owner, so the property is structural; allocation-failure injection NOT_RUN."
+    },
+    {
+      "id": "S49-R4",
+      "finding": "Sink::slot returns a raw writable region into rd_msg_buf; the AEAD sink writes through it while reading rec_body. The two are disjoint fields and the callee's contract is unchanged, but aliasing has not been model-checked.",
+      "disposition": "Retained; Miri is the named instrument (NOT_RUN)."
+    },
+    {
+      "id": "S49-R5",
+      "finding": "The full library suite, negative-control canary under a real detector, and independent review were not run at this schedule.",
+      "disposition": "BATCH/SEAL gates; NOT_RUN."
+    }
+  ]
+}
