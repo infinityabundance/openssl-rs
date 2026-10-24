@@ -1,0 +1,46 @@
+{
+  "receipt": "publish-0.0.35",
+  "date": "2026-10-24",
+  "crate": "openssl-rs",
+  "version": "0.0.35",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "commit": "a2af5b4da",
+    "commit_subject": "Merge pull request #56 from infinityabundance/integrate/safe-c33",
+    "note": "Published from a clean working tree on main at this merge commit. The tree carries S27-S36: the PKCS#7 IV and chain-ownership fixes, the CMS wrap-length and KEK IV bounds, the safe ClientHello parser with the PSK-binder out-of-bounds read removed, six session-cache defects, and the DHE client repair that also corrected SSL_R_BAD_SIGNATURE (148 -> 123), RSA-PSS verification and extended master secret.",
+    "working_tree": "clean at publish time"
+  },
+  "artefacts": {
+    "libcrypto.so.3": "64dec4c7f276ff7970b4d75488cad6fa66d8d95502d2b58b19a4b7a89e119aa7",
+    "libssl.so.3": "b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6"
+  },
+  "packaging": {
+    "files": 1010,
+    "uncompressed_bytes": 42360000,
+    "compressed_bytes": 8826517,
+    "limit_bytes": 10000000,
+    "note": "Published with --no-verify. The library had already been compiled and exercised: the full library suite ran in S34 with 2089 passing, 0 failing, 44 ignored, and the phase-2 ABI courts pass 11/11 at these artifact hashes."
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.35",
+    "version_id": null,
+    "checksum": "ae54cee9c307df22972a153159010917ee13b7d0cc2c5e2ecad255f33b5f2284",
+    "checksum_prefix": "ae54cee9",
+    "crate_size": 8826517,
+    "published_at": "2026-10-24T01:48:01Z"
+  },
+  "evidence_shipped": {
+    "library_tests": "2089 passed, 0 failed, 44 ignored (full run in S34)",
+    "adversarial_probes": "41/41 in isolated processes (S24)",
+    "abi_courts": "11/11",
+    "downstream": "180/1000 L7-functional with 183 loaded and 192 recipes; the S35 run used evidence_reuse=null and reported below_baseline=0, with 191 of 192 recipe-backed rows at the same candidate identity"
+  },
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "BOUNDARY and SEAL gates remain NOT_RUN; there is no Miri, ASan, Loom, authority differential or independent caller audit for the S27-S36 cluster.",
+    "SAFE_COMPATIBLE remains 0/33; no consumer family has graduated.",
+    "Twelve loaded families sit below L7 with symmetric blockers and 808 corpus families have no recipe.",
+    "partclone's earlier L7 was a flake; the S35 differential shows the failure follows neither the binary nor the library."
+  ]
+}
