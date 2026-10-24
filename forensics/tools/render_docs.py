@@ -614,8 +614,8 @@ class Evidence:
             )
             reuse_text = (
                 "Downstream evidence reuse: "
-                f"**{reuse['reused']} of {corpus['loaded']} measured families carried "
-                f"forward** (`{reuse['mode']}`); `candidate_identity_match` = "
+                f"**{reuse['reused']} of {corpus['recipes']} recipe-backed families "
+                f"carried forward** (`{reuse['mode']}`); `candidate_identity_match` = "
                 "`false`. A carried-forward row is compatibility evidence from the "
                 "build recorded on that row, not a fresh measurement at the identity "
                 f"above. The Safe-33 cohort has {cohort_reused}/{len(cohort)} of its "
@@ -628,7 +628,8 @@ class Evidence:
             else (
                 "no carried-forward rows (full no-reuse measurement)"
                 if reuse["match"]
-                else f"{reuse['reused']} of {corpus['loaded']} measured rows carried forward"
+                else f"{reuse['reused']} of {corpus['recipes']} recipe-backed rows carried "
+                     "forward"
             )
         )
         gap_bits = "; ".join(
@@ -1022,8 +1023,13 @@ class Evidence:
                     if reuse.get("full")
                     else (
                         f"{reuse['reused']} of {corpus['recipes']} recipe-backed "
-                        "families reuse committed rows at the same identity "
-                        f"(`{reuse['mode']}`); `candidate_identity_match` = "
+                        + (
+                            "families reuse committed rows at the same identity "
+                            if reuse["match"]
+                            else "families are carried forward from the superseded "
+                                 "identity "
+                        )
+                        + f"(`{reuse['mode']}`); `candidate_identity_match` = "
                         f"`{str(reuse['match']).lower()}` | same atlas, "
                         "`body.evidence_reuse` |"
                     )
