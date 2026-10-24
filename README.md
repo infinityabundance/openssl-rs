@@ -30,7 +30,7 @@ committed measurements were reused at that same identity. Every row names its
 own machine-readable evidence; none of them is a claim of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: working-tree crate version `0.0.35` (**not published**); `libcrypto.so.3` sha256 `64dec4c7f276ff7970b4d75488cad6fa66d8d95502d2b58b19a4b7a89e119aa7`; `libssl.so.3` sha256 `b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: crate version `0.0.35` (**published** 2026-10-24, checksum `ae54cee9…`); `libcrypto.so.3` sha256 `64dec4c7f276ff7970b4d75488cad6fa66d8d95502d2b58b19a4b7a89e119aa7`; `libssl.so.3` sha256 `b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
@@ -44,7 +44,7 @@ Source identity: working-tree crate version `0.0.35` (**not published**); `libcr
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S36 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
 | **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` ENVIRONMENT; `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 8 HARNESS + 1 FIXTURE; `DOWNSTREAM-BELOW-L7` 12 FAMILIES; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 808 UNMEASURED | `CAMPAIGN-STATUS.json` (`known_gaps`) |
-| **Release** | **Published: 0.0.34** on crates.io (2026-10-23), checksum `e1f553b3…`, artefacts `libcrypto.so.3` `defe179f…` / `libssl.so.3` `5066aa32…`. **Working tree: 0.0.35 — not published.** This evidence is bound to the 0.0.35 tree, not to the published 0.0.34 crate. | `atlas-refresh/publish-0.0.34.json`; `Cargo.toml` |
+| **Release** | **Published: 0.0.35** on crates.io (2026-10-24), checksum `ae54cee9…`, artefacts `libcrypto.so.3` `64dec4c7…` / `libssl.so.3` `b258b12f…`. This evidence is bound to the 0.0.35 tree, which is the published 0.0.35 crate. 0.0.34 remains the previous release. | `atlas-refresh/publish-0.0.35.json`; `Cargo.toml` |
 
 Downstream evidence reuse: **191 of 192 recipe-backed families reuse committed rows at the same candidate identity** (`committed-rows`, `candidate_identity_match=true`); 1 family was newly measured in the latest batch. A reused row is still a measurement at the identity above, but it was not re-run in that batch. The Safe-33 cohort has 33/33 of its families in the reused set.
 <!-- END GENERATED: readme-achievements -->
