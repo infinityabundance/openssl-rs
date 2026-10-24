@@ -248,7 +248,7 @@ def test_row(tests: dict, label: str, verb: str = "passing") -> str:
     return f"| {label} | {result} | {evidence} |"
 
 
-def publish_identity(refresh: Path, root: Path, version: str) -> dict:
+def publish_identity(refresh: Path, root: Path, version: str, candidate: dict) -> dict:
     receipts = [load_json(p) for p in refresh.glob(PUBLISH_GLOB)]
     published = [r for r in receipts if r.get("status") == "PUBLISHED"]
     if not published:
@@ -261,6 +261,14 @@ def publish_identity(refresh: Path, root: Path, version: str) -> dict:
     verification = latest.get("registry_verification") or {}
     artefacts = latest.get("artefacts") or {}
     published_version = latest.get("version", version)
+    # A version string is not an identity: the working tree can carry a
+    # published version number while containing later source changes.  Call
+    # the tree the published crate only when every candidate library hash is
+    # the hash recorded in the publish receipt.
+    same_artefacts = all(
+        str(artefacts.get(name) or "") == digest
+        for name, digest in candidate.get("libs") or []
+    )
     return {
         "version": published_version,
         "date": latest.get("date", ""),
@@ -268,7 +276,7 @@ def publish_identity(refresh: Path, root: Path, version: str) -> dict:
         "libcrypto": str(artefacts.get("libcrypto.so.3", ""))[:8],
         "libssl": str(artefacts.get("libssl.so.3", ""))[:8],
         "source": f"atlas-refresh/publish-{published_version}.json",
-        "is_candidate": published_version == version,
+        "is_candidate": published_version == version and same_artefacts,
         "previous": (previous or {}).get("version", ""),
     }
 
@@ -440,7 +448,7 @@ class Evidence:
         self.families = family_names(self.atlas)
         self.partition = census_partition(self.census, self.delta)
         self.tests = test_baseline(root, self.candidate)
-        self.publish = publish_identity(refresh, root, self.version)
+        self.publish = publish_identity(refresh, root, self.version, self.candidate)
         self.boundaries = boundary_evidence(self.sweeps, self.status)
         self.stop_defects = stop_class_defects(self.sweeps)
         self.mechanisms = [
@@ -455,12 +463,27 @@ class Evidence:
         self.known_gaps = self.status.get("known_gaps") or []
 
     def evidence_reuse(self) -> dict:
-        """The atlas's carried-forward disclosure, with the names as a set."""
+        """The atlas's carried-forward disclosure, with the names as a set.
+
+        ``body.evidence_reuse = null`` is the atlas's record of a full
+        no-reuse run: every row was measured for this candidate, so there is
+        nothing carried forward.  It is not the same state as a reuse block
+        whose rows belong to a superseded identity.
+        """
+        if not self.reuse:
+            return {
+                "mode": "no-reuse",
+                "reused": 0,
+                "match": True,
+                "names": set(),
+                "full": True,
+            }
         return {
             "mode": str(self.reuse.get("mode", "unknown")),
             "reused": int(self.reuse.get("families_reused", 0) or 0),
             "match": bool(self.reuse.get("candidate_identity_match", False)),
             "names": set(self.reuse.get("reused_families") or []),
+            "full": False,
         }
 
     def gate_state(self, key: str) -> str:
@@ -526,7 +549,8 @@ class Evidence:
             )
         else:
             bits.append(
-                f"working-tree crate version `{self.version}` (**not published**)"
+                f"working-tree crate version `{self.version}` (**not published "
+                "at this candidate identity**)"
             )
         bits.extend(
             f"`{name}` sha256 `{digest}`" for name, digest in self.candidate["libs"]
@@ -548,7 +572,17 @@ class Evidence:
         cohort_reused = len(cohort & reuse["names"])
         if reuse["match"]:
             freshness = "measured at the identity above"
-            if reuse["reused"]:
+            if reuse.get("full"):
+                freshness = (
+                    "measured at the identity above in a **full no-reuse run** "
+                    "(`evidence_reuse = null`)"
+                )
+                reuse_text = (
+                    "Downstream evidence reuse: **no carried-forward rows** "
+                    "(`evidence_reuse = null`); every recipe-backed row was measured "
+                    "at the candidate identity above."
+                )
+            elif reuse["reused"]:
                 newly = corpus["recipes"] - reuse["reused"]
                 freshness = (
                     "measured at the identity above; "
@@ -590,8 +624,12 @@ class Evidence:
         reuse_cell = (
             f"{reuse['reused']} of {corpus['recipes']} rows reuse committed "
             "measurements at the same identity"
-            if reuse["match"]
-            else f"{reuse['reused']} of {corpus['loaded']} measured rows carried forward"
+            if reuse["match"] and not reuse.get("full")
+            else (
+                "no carried-forward rows (full no-reuse measurement)"
+                if reuse["match"]
+                else f"{reuse['reused']} of {corpus['loaded']} measured rows carried forward"
+            )
         )
         gap_bits = "; ".join(
             f"`{g.get('id', '?')}` {g.get('status', '?')}" for g in self.known_gaps
@@ -647,7 +685,7 @@ class Evidence:
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
                 "— no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation "
                 "control, authority differential, full forensic regeneration or held-out "
-                "compatibility for the S16–S36 cluster | "
+                "compatibility for the S16–S42 cluster | "
                 f"`{STATUS_S}` (`gates.boundary_gate`, `gates.seal_gate`) |",
                 "| **Allocator / ABI invariants** | "
                 f"**preserved** — recorded invariant planes: {invariants or 'none recorded'} | "
@@ -674,20 +712,21 @@ class Evidence:
             f"artefacts `libcrypto.so.3` `{self.publish['libcrypto']}…` / "
             f"`libssl.so.3` `{self.publish['libssl']}…`."
         )
+        previous = (
+            f" {self.publish['previous']} remains the previous release."
+            if self.publish["previous"]
+            else ""
+        )
         if self.publish["is_candidate"]:
-            previous = (
-                f" {self.publish['previous']} remains the previous release."
-                if self.publish["previous"]
-                else ""
-            )
             return (
                 f"{published} This evidence is bound to the {self.version} tree, "
                 f"which is the published {self.publish['version']} crate.{previous}"
             )
         return (
-            f"{published} **Working tree: {self.version} — not published.** This "
-            f"evidence is bound to the {self.version} tree, not to the published "
-            f"{self.publish['version']} crate."
+            f"{published} **Working tree: {self.version} — not the published "
+            "artefact.** This evidence is bound to the "
+            f"{self.version} tree, not to the published "
+            f"{self.publish['version']} crate.{previous}"
         )
 
     def l7_families(self) -> str:
@@ -701,7 +740,9 @@ class Evidence:
             for name in self.families
         )
         not_carried = sorted(set(self.families) - reuse["names"])
-        if reuse["match"]:
+        if reuse.get("full"):
+            uncovered = ""
+        elif reuse["match"]:
             uncovered = (
                 f" Newly measured in the latest batch: "
                 f"{', '.join(f'`{n}`' for n in not_carried)}."
@@ -716,7 +757,13 @@ class Evidence:
                 if not_carried
                 else ""
             )
-        if reuse["match"]:
+        if reuse.get("full"):
+            freshness = (
+                "**Freshness:** `evidence_reuse = null`; all "
+                f"{len(self.families)} listed rows were measured at the candidate "
+                "identity above in the latest full no-reuse run."
+            )
+        elif reuse["match"]:
             freshness = (
                 "**Freshness:** `candidate_identity_match=true`; "
                 f"{len(carried)} of {len(self.families)} listed rows reuse committed "
@@ -851,7 +898,7 @@ class Evidence:
                 "| **Not discharged** | " + not_discharged + " |",
                 "| **BOUNDARY / SEAL gates** | "
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
-                "— the S16–S36 cluster has no independent caller/dependency-closure audit, "
+                "— the S16–S42 cluster has no independent caller/dependency-closure audit, "
                 "Miri/ASan/Loom/mutation control, authority differential, full forensic "
                 "regeneration or held-out compatibility. |",
                 "| **Known gaps** | " + (gap_bits or "none recorded") + " |",
@@ -929,7 +976,8 @@ class Evidence:
                     f"`{self.publish['checksum']}…`) | `Cargo.toml`; "
                     f"`{self.publish['source']}` |"
                     if self.publish["is_candidate"]
-                    else f"**{self.version}** — **not published** | `Cargo.toml` |"
+                    else f"**{self.version}** — **not published at this candidate "
+                    "identity** | `Cargo.toml` |"
                 ),
                 "| published release | "
                 f"**{self.publish['version']}** on crates.io ({self.publish['date']}, "
@@ -967,10 +1015,19 @@ class Evidence:
                 f"({corpus['no_recipe']} with no recipe) | "
                 f"`{ATLAS_S}` (`body.counts.by_subject`); `{BUILD_LINK_S}` |",
                 "| downstream evidence reuse | "
-                f"{reuse['reused']} of {corpus['recipes']} recipe-backed families reuse "
-                f"committed rows at the same identity (`{reuse['mode']}`); "
-                f"`candidate_identity_match` = `{str(reuse['match']).lower()}` | "
-                "same atlas, `body.evidence_reuse` |",
+                + (
+                    "no carried-forward rows (`evidence_reuse = null`); all "
+                    f"{corpus['recipes']} recipe-backed families were measured at this "
+                    "candidate identity | same atlas, `body.evidence_reuse` |"
+                    if reuse.get("full")
+                    else (
+                        f"{reuse['reused']} of {corpus['recipes']} recipe-backed "
+                        "families reuse committed rows at the same identity "
+                        f"(`{reuse['mode']}`); `candidate_identity_match` = "
+                        f"`{str(reuse['match']).lower()}` | same atlas, "
+                        "`body.evidence_reuse` |"
+                    )
+                ),
                 "| `SAFE_COMPATIBLE` consumers | "
                 f"**{self.consumers['safe_compatible']}/{self.consumers['families_total']}** | "
                 f"`{STATUS_S}` (`consumers`) |",
