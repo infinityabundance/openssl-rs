@@ -4078,7 +4078,11 @@ pub(crate) unsafe fn tls13_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -
         (*sess).ext_tick_age_add = age_add;
         // `tls13_hkdf_expand(... resumption_master_secret, "resumption", nonce,`
         // `                  s->session->master_key, hashlen, 1)` (`statem_clnt.c:2891-2898`).
-        if crate::ssl::tls13_enc::tls13_ticket_psk(s, nonce, (*sess).master_key.as_mut_ptr()) == 0 {
+        let hash_len = (*s).hs_md_len;
+        let Some(out) = (*sess).master_key.get_mut(..hash_len) else {
+            return 0;
+        };
+        if crate::ssl::tls13_enc::tls13_ticket_psk(s, nonce, out) == 0 {
             return 0;
         }
         (*sess).master_key_length = (*s).hs_md_len;
