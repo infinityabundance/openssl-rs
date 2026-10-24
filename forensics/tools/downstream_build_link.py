@@ -2052,6 +2052,10 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    for spec in _S36_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -4289,7 +4293,9 @@ _S23_SPECS: tuple[dict, ...] = _S23_PERL_SPECS + (
         "archive": "tar.gz", "build_system": "make", "configure": None,
         "sha256": "8451fb343692b23cba105b6a194a27a6f32ff21bd2c3bb2fed5ac50d0631deda",
         "pre_build": [["sh", "-c", (
-            "mkdir -p {root}/.l7-bin; "
+            "mkdir -p {root}/.l7-bin {root}/.s36-postfix; "
+            "printf 'mail_owner = daemon\\ndefault_privs = mail\\nsetgid_group = nogroup\\n"
+            "smtp_tls_security_level = verify\\n' > {root}/.s36-postfix/main.cf; "
             "printf '#!/bin/sh\\ncase \"$1\" in -r) echo 6.1.0;; -s) echo Linux;; "
             "*) exec /usr/bin/uname \"$@\";; esac\\n' > {root}/.l7-bin/uname; "
             "chmod +x {root}/.l7-bin/uname"
@@ -4373,6 +4379,29 @@ _S23_SPECS: tuple[dict, ...] = _S23_PERL_SPECS + (
     },
 )
 
+
+_S36_SPECS: tuple[dict, ...] = (
+    {
+        # S36: a mail client whose own S/MIME implementation is linked against the
+        # subject libssl/libcrypto (mutt's classic S/MIME uses PKCS#7/CMS through
+        # OpenSSL; the admitted workload drives its SMTPS submission path over a
+        # verified TLS session).
+        "family": "mutt", "version": "2.2.13",
+        "url": "https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}",
+                      "--enable-imap", "--enable-pop", "--enable-smtp",
+                      "--enable-smime", "--disable-gpgme", "--disable-doc",
+                      "--disable-nls", "--without-sasl"],
+        "make": [MAKE_JOBS], "artifact": "mutt", "launch": ["-v"],
+        "aux_sources": list(_B16_NCURSES_AUX),
+        "note": ("Mutt 2.2.13's SMTP-over-TLS submission path and its classic S/MIME "
+                 "PKCS#7/CMS implementation through the subject libssl/libcrypto; the "
+                 "admitted workload submits a message to a local SMTPS peer and rejects "
+                 "an unrelated CA."),
+    },
+)
 
 RECIPES: tuple[dict, ...] = _build_catalogue()
 _RECIPE_BY_FAMILY: dict[str, dict] = {r["family"]: r for r in RECIPES}
