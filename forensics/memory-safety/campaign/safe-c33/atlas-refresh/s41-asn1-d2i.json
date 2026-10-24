@@ -1,0 +1,151 @@
+{
+  "receipt": "s41-asn1-d2i",
+  "date": "2026-10-24",
+  "subphase": "S41: src/asn1/d2i.rs cursor, length and decoded-ownership boundaries (focused conversion, not a whole-file ZERO_UNSAFE push); ASN1_get_object in src/asn1/der.rs audited as a reader only",
+  "mechanism": "ASN1_D2I_CURSOR_AND_CONTENT_EXTENT",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "678528a56",
+    "committed": false,
+    "changed_files": 1,
+    "diffstat": "src/asn1/d2i.rs +571/-181",
+    "scope": "d2i.rs only; der.rs read and audited, not converted"
+  },
+  "authority": {
+    "source": "OpenSSL 3.6.4 crypto/asn1/tasn_dec.c (asn1_collect, asn1_check_tlen, asn1_d2i_ex_primitive, asn1_find_end, asn1_item_embed_d2i, asn1_template_ex_d2i, asn1_template_noexp_d2i) and crypto/asn1/asn1_lib.c ASN1_get_object",
+    "abi": "No #[no_mangle], #[export_name], #[repr(C)], extern \"C\" signature, exported symbol or allocator-seam constant changed. Diff lines containing no_mangle/repr(C)/export_name/extern \"C\": 0. Diff lines touching CRYPTO_* seam calls: 0. FILE/LINE unchanged (crypto/asn1/tasn_dec.c, 0).",
+    "behaviour": "Header ordering preserved: the cached-branch TOO_LONG test (hdrlen + plen <= len, checked_add) still runs before the header error bit; a constructed string is still collected; indefinite values still walk to their own EOC; the decoded value is still published only on success."
+  },
+  "inventory": {
+    "method": "Every cursor advance, length computation, slice/reference formation and ownership transfer in d2i.rs was classified before editing. 'structural' means the representation cannot hold an out-of-bounds position; 'checked' means a guard at that site (usually cursor_distance/remaining_after or checked_add) refuses it.",
+    "structural_after": 13,
+    "checked_only_after": 8,
+    "entries": [
+      {"id": "A1", "site": "check_eoc two-byte probe", "kind": "advance/read", "before": "raw *p, p.add(1), p.add(2) after a caller-supplied len >= 2", "after": "Cursor::read_u8 on a copy; no advance unless both bytes are 00", "status": "structural"},
+      {"id": "A2", "site": "collect primitive element content", "kind": "advance/slice", "before": "collect_data(p, plen) then p.add(plen); check_tlen with ctx == NULL does not bound plen", "after": "cur.take(plen) refuses the extent before append reads it", "status": "structural", "defect": "pre-fix out-of-bounds read when the nested declared length exceeded the remaining input"},
+      {"id": "A3", "site": "collect constructed element recursion", "kind": "advance/extent", "before": "recursive collect(&mut p, plen) with an unbounded plen", "after": "cur.limit(plen) for definite, rest-of-cursor for indefinite", "status": "structural"},
+      {"id": "A4", "site": "collect loop remaining accounting", "kind": "length", "before": "cursor_distance(q, p) + remaining_after(len, used)", "after": "Cursor::remaining() carries the count", "status": "structural"},
+      {"id": "A5", "site": "check_tlen cached header advance", "kind": "advance", "before": "p.add((*ctx).hdrlen)", "after": "cur.advance(hdrlen), refused if the cache does not fit", "status": "structural"},
+      {"id": "A6", "site": "check_tlen uncached header advance", "kind": "advance", "before": "ASN1_get_object writes p; distance later", "after": "cur.advance_to(p) refuses a position outside the cursor", "status": "structural"},
+      {"id": "A7", "site": "check_tlen indefinite content length", "kind": "length", "before": "len - cursor_distance(q, p)", "after": "cur.remaining() after the header advance", "status": "structural"},
+      {"id": "A8", "site": "d2i_ex_primitive SEQUENCE/SET/OTHER definite content", "kind": "advance/extent", "before": "p.add(plen.max(0)); len = hdrlen + plen", "after": "cur.advance(plen) then consumed_since(start)", "status": "structural"},
+      {"id": "A9", "site": "d2i_ex_primitive SEQUENCE/SET/OTHER indefinite walk", "kind": "advance/extent", "before": "find_end(&mut p, plen, true); p - start", "after": "find_end(&mut cur, true); consumed_since(start)", "status": "structural"},
+      {"id": "A10", "site": "d2i_ex_primitive constructed string", "kind": "advance/extent", "before": "collect(&mut q, plen); p = q", "after": "content cursor limited to plen (definite) or rest (indefinite)", "status": "structural"},
+      {"id": "A11", "site": "d2i_ex_primitive primitive content", "kind": "advance/slice", "before": "cont = p; len = plen; p.add(plen) after ex_c2i", "after": "cur.advance(plen) proves the extent before ex_c2i reads cont", "status": "structural"},
+      {"id": "A12", "site": "find_end nested definite element", "kind": "advance", "before": "p.add(plen.max(0)); distance checked afterwards", "after": "cur.advance(plen) before any read", "status": "structural", "defect": "pre-fix out-of-bounds pointer arithmetic for an overlong nested element"},
+      {"id": "A13", "site": "find_end EOC accounting", "kind": "length", "before": "len -= 2; remaining_after(len, used)", "after": "check_eoc consumes through the cursor", "status": "structural"},
+      {"id": "C1", "site": "check_tlen hdrlen + plen", "kind": "length", "before": "checked_add; TOO_LONG ordering", "after": "unchanged checked_add; checked-at-site by design", "status": "checked"},
+      {"id": "C2", "site": "embed_d2i field/template advance", "kind": "length", "before": "cursor_distance + remaining_after", "after": "unchanged checked subtraction (sub-decoders still take *mut *const u8 + c_long)", "status": "checked", "sites": 5},
+      {"id": "C3", "site": "template_ex_d2i explicit wrapper advance", "kind": "length", "before": "cursor_distance + remaining_after", "after": "unchanged checked subtraction", "status": "checked"},
+      {"id": "C4", "site": "template_noexp_d2i SET OF element advance", "kind": "length", "before": "cursor_distance + remaining_after", "after": "unchanged checked subtraction", "status": "checked", "sites": 2},
+      {"id": "C5", "site": "Collected::append growth", "kind": "length", "before": "authority long overflow test, then usize add", "after": "unchanged", "status": "checked"},
+      {"id": "C6", "site": "ex_c2i ilen = len as c_int", "kind": "length", "before": "narrowing cast", "after": "unchanged cast; every use guarded by len != ilen as c_long, or by the codec's own INT_MAX guard", "status": "checked"},
+      {"id": "C7", "site": "ASN1_get_object consumed/omax (der.rs)", "kind": "length", "before": "wrapping_sub then len > omax - consumed", "after": "audited: max accounting bounds every read and every p advance, so consumed <= omax and the subtraction cannot underflow; not converted (der.rs is reader-audit scope)", "status": "checked"},
+      {"id": "C8", "site": "decoded ownership handoff", "kind": "ownership", "before": "Collected::take_raw, ex_c2i, adopt/free iff free_cont", "after": "unchanged single-owner handoff; *in_ published only after ex_c2i succeeds", "status": "checked", "note": "PushedElements for SEQUENCE OF is unchanged and remains the only element guard"}
+    ]
+  },
+  "changes": [
+    "Added Cursor (pointer + remaining) with one audited unsafe constructor and checked advance, advance_to, take, limit, read_u8 and consumed_since. A cursor past the end is unrepresentable: advance/take refuse and leave the cursor unchanged.",
+    "collect and find_end now take &mut Cursor. Both call check_tlen with ctx == NULL (no TOO_LONG pre-check); their declared content is bounded by take/limit/advance before any read, closing the historical over-read/over-advance class.",
+    "check_tlen takes &mut Cursor, advances by the header only through the cursor, and derives an indefinite plen from the cursor's remaining count.",
+    "d2i_ex_primitive holds one cursor from the caller's (in_, inlen), publishes *in_ only on success, and proves the primitive/constructed/encoded extents by cursor advance instead of p.add.",
+    "check_eoc is now safe (a copy probe through read_u8); Collected::append and Collected::terminate no longer need unsafe signatures (their source/destination extents are owned or cursor-proved).",
+    "embed_d2i, mstring_d2i, template_ex_d2i and template_noexp_d2i use short-lived cursors at each check_tlen/check_eoc boundary; their remaining field accounting is unchanged checked subtraction."
+  ],
+  "cve_2026_34180_class": {
+    "class": "content length near or above 2 GiB narrowing to a negative or wrapped c_int",
+    "excluded": true,
+    "mechanism": [
+      "check_tlen computes hdrlen + plen with checked_add and rejects declared > len with TOO_LONG before any content extent exists.",
+      "ex_c2i's string arm compares len with (int)len before use; OBJECT likewise; BIT STRING and OBJECT reject len > INT_MAX before reading content; INTEGER's magnitude length r is rejected when r > INT_MAX.",
+      "d2i_ex_primitive advances the cursor by the declared content before ex_c2i, so an extent the input does not hold is refused before the content pointer is consumed."
+    ],
+    "proof_tests": [
+      "asn1::d2i::tests::d2i_content_length_at_i32_and_u32_boundaries_is_refused (header lengths i32::MAX, i32::MAX+1, u32::MAX and 64-bit forms; plus direct ex_c2i/ossl_c2i_ASN1_BIT_STRING/ossl_c2i_ASN1_OBJECT calls at INT_MAX+1 with a one-byte buffer)",
+      "asn1::d2i::tests::d2i_declared_length_exceeding_input_is_refused",
+      "asn1::d2i_pr::tests::a_length_outside_int_range_is_refused_before_any_read (pre-existing)"
+    ],
+    "limit": "A real >2 GiB content buffer is not allocated in-test; the guard is exercised at the exact boundary and the codec guards are called directly. The allocation-infeasible path is covered by code inspection, not execution."
+  },
+  "tests": {
+    "new": [
+      "asn1::d2i::tests::d2i_declared_length_exceeding_input_is_refused ... ok",
+      "asn1::d2i::tests::d2i_nested_length_beyond_the_cursor_is_refused_before_reading ... ok",
+      "asn1::d2i::tests::d2i_indefinite_sequence_with_overlong_nested_element_is_refused ... ok",
+      "asn1::d2i::tests::d2i_nested_indefinite_length_without_matching_eoc_is_refused ... ok",
+      "asn1::d2i::tests::d2i_truncated_header_is_refused ... ok",
+      "asn1::d2i::tests::d2i_content_length_at_i32_and_u32_boundaries_is_refused ... ok",
+      "asn1::d2i::tests::d2i_failed_decode_leaves_no_partially_owned_value ... ok",
+      "asn1::d2i::tests::d2i_canary_pre_fix_cursor_advance_would_overrun ... ok"
+    ],
+    "filtered_d2i": "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 2135 filtered out; finished in 0.00s",
+    "filtered_asn1": "test result: ok. 58 passed; 0 failed; 1 ignored; 0 measured; 2092 filtered out; finished in 0.00s"
+  },
+  "negative_control": {
+    "name": "asn1::d2i::tests::d2i_canary_pre_fix_cursor_advance_would_overrun",
+    "cfg": "#[cfg(test)] only",
+    "fires_on": "the removed collect arithmetic: a declared 127-byte nested primitive with one byte remaining",
+    "output": "d2i canary: pre-fix collect would read 126 bytes past the input; post-fix cursor refused the advance and kept remaining=1",
+    "note": "It models the pre-fix distance and asserts the post-fix refusal. It is not a runtime UB detector; only Miri/ASan would observe the pre-fix read itself."
+  },
+  "unsafe": {
+    "before_after": "d2i.rs: production unsafe blocks 252 -> 238; cfg(test) blocks 5 -> 14; total 257 -> 252. unsafe fn 20 -> 18 (Cursor::new added; check_eoc, Collected::append, Collected::terminate no longer unsafe).",
+    "eliminated": "14 production unsafe blocks and 9 explicit input-pointer advance/read sites (2 raw reads + 3 advances in check_eoc, 1 advance in collect, 1 in check_tlen, 2 in d2i_ex_primitive, 2 in find_end).",
+    "relocated": "3 raw operations now live in Cursor's safe methods (one ptr.add in advance, one read and one ptr.add in read_u8), plus the audited Cursor::new unsafe constructor. advance_to derives an offset by integer address comparison and then uses advance, so it performs no raw pointer arithmetic of its own.",
+    "new_abstractions": "none. Cursor is a safe interface whose only unsafe entry is a constructor with an explicit SAFETY contract; it is not an unsafe trait or an adoption mechanism.",
+    "hidden": 0
+  },
+  "obligations": {
+    "discharged": [
+      "Every check-eoc probe is bounded and leaves the cursor unchanged on a non-marker.",
+      "Every declared content extent is refused before it is read or advanced past, including the two ctx == NULL callers that skip TOO_LONG.",
+      "check_tlen publishes its cursor only on success and returns 0/-1 with the caller's cursor unchanged.",
+      "d2i_ex_primitive publishes *in_ only after the content codec succeeds; on every error return the Collected block is released by Drop or handed to the codec exactly once.",
+      "A failed re-decode frees the caller's previous value and nulls the slot (test)."
+    ],
+    "retained": [
+      "embed_d2i/template_ex_d2i/template_noexp_d2i still pass *mut *const u8 + c_long at the internal call boundary; their arithmetic is checked by cursor_distance/remaining_after (checked, not structural).",
+      "hdrlen + plen is checked_add at the site, preserving the authority's TOO_LONG error ordering.",
+      "ex_c2i still performs the authority's narrowing cast; safety rests on the guards before each use.",
+      "ASN1_get_object's omax-consumed subtraction is safe by the max-accounting invariant, audited but not rewritten (der.rs is reader scope)."
+    ],
+    "introduced": [
+      "A stale cached header that does not fit the current cursor now returns 0 without raising. Unreachable with a consistent ASN1_TLC; the authority would advance out of bounds."
+    ],
+    "hidden": 0
+  },
+  "compatibility_delta": "No intended observable change for well-formed input or for the existing malformed courts. Error coordinates and ordering are unchanged. The two new refusals replace out-of-bounds behaviour (collect/find_end overlong nested elements); a refused decode still reports no progress. Existing d2i/asn1 tests plus the new boundary tests pass.",
+  "safety_checks": {
+    "cargo_fmt": "cargo fmt --all -- --check -> clean (no output)",
+    "cargo_check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.92s",
+    "cargo_clippy": "cargo clippy --lib -- -D warnings -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.34s (clean)",
+    "structural_guards": "no_mangle/repr(C)/export_name/extern \"C\" diff lines: 0; allocator-seam diff lines: 0; FILE/LINE unchanged",
+    "miri": "NOT_RUN (BOUNDARY instrument)",
+    "asan": "NOT_RUN",
+    "full_library_suite": "NOT_RUN (FAST only for this subphase, as instructed)"
+  },
+  "graduation": "OWNERSHIP_RECONSTRUCTED for the cursor and collected-content boundaries. Not SAFETY_DISCHARGED: Miri/ASan and independent review are NOT_RUN, and the internal template call boundary still carries checked (not structural) pointer arithmetic.",
+  "residuals": [
+    {
+      "id": "S41-R1",
+      "finding": "The pre-fix OOB read in collect cannot be observed by a normal test because the post-fix and pre-fix both return an error; the canary models the distance instead.",
+      "disposition": "Miri over d2i_nested_length_beyond_the_cursor_is_refused_before_reading and the pre-fix collector is the instrument that would observe it; NOT_RUN."
+    },
+    {
+      "id": "S41-R2",
+      "finding": "embed_d2i and both template functions still account for field extents with checked subtraction over raw pointers.",
+      "disposition": "Convert those internal signatures to Cursor in a later batch; the current guards are exhaustive (checked_sub translated to the existing failure arm)."
+    },
+    {
+      "id": "S41-R3",
+      "finding": "If ex_c2i unwinds after Collected::take_raw, the handed block is leaked rather than double-owned; guard_ffi catches the panic but cannot repair it.",
+      "disposition": "Documented residual matching the existing authority boundary; no double ownership is possible. Miri/panics are NOT_RUN."
+    },
+    {
+      "id": "S41-R4",
+      "finding": "A real 2 GiB content buffer is not allocated in-test; the INT_MAX guards are exercised directly at the exact boundary.",
+      "disposition": "Accepted evidence limit; the class is excluded by the header TOO_LONG check plus the codec guards, both tested at the boundary."
+    }
+  ]
+}

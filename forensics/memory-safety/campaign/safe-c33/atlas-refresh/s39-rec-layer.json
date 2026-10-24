@@ -1,0 +1,152 @@
+{
+  "receipt": "s39-rec-layer",
+  "date": "2026-10-24",
+  "mechanism": "RECORD_LAYER_OUTPUT_BUFFER_BOUNDARY",
+  "subphase": "S39: ssl/record/rec_layer_s3.rs output-buffer boundary (not a whole-file ZERO_UNSAFE push)",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "main",
+    "base_head": "d5f4c454a",
+    "committed": false,
+    "changed_files": 3,
+    "diffstat": "src/ssl/record/rec_layer_s3.rs +270/-156 (incl. tests); src/ssl/t1_enc.rs +6/-6; src/ssl/tls13_enc.rs +6/-6 (working tree; no commit made)",
+    "pre_existing_change_not_touched": "forensics/downstream/build-link-atlas.json was already modified at session start and is not part of this batch",
+    "scope": "The three typed-slice constructions over caller-supplied writable output in rec_layer_s3.rs, plus the two decrypt sinks (tls12_decrypt_record, tls13_decrypt_record) that receive the same buffer and repeated the construction."
+  },
+  "authority": {
+    "source": "OpenSSL 3.5.0 ssl/record/rec_layer_s3.c (ssl3_read_bytes / read pipeline), ssl/record/methods/tls13_meth.c (tls13_dec), ssl/t1_enc.c (tls1_enc decrypt); C contract: caller supplies unsigned char *buf writable for len, initialisation never promised.",
+    "abi": "No #[no_mangle], #[export_name], #[repr(C)], extern \"C\" signature, exported symbol or allocator-seam constant changed. Diff lines containing no_mangle/repr(C)/export_name/extern \"C\": 0. Diff lines touching WRITE_BUF_FILE/WRITE_BUF_LINE/SeamFile: 0.",
+    "authority_behaviour": [
+      "rec_layer_s3.c:612-944: the record reader returns the body length and the buffer contains exactly those bytes; alert decoding reads only that body.",
+      "A short BIO read is a retry; the partial header/body is retained (rec_layer_s3.c:161-...).",
+      "Message-layer framing is type(1)||length(3)||body; a message split across records is assembled; ChangeCipherSpec (20) is skipped.",
+      "A length that exceeds the record buffer is a fatal record overflow (rec_layer_s3.c:669-672)."
+    ]
+  },
+  "slice_construction_inventory": [
+    {
+      "site": "ssl3_read_bytes (old L427-432)",
+      "construction": "core::slice::from_raw_parts_mut(buf, cap)",
+      "classification": "(b) by contract (writable, uninitialised), (a) at every observed caller: rx_buf inline array, statem client vec![0;16384], ssl3_shutdown local array, rd_msg_buf tail, test arrays",
+      "callers": ["ssl_lib::ssl3_read_app_data", "ssl_lib::ssl3_shutdown", "statem_clnt::tls12_client_read_ccs", "rec_layer_s3::tls13_next_handshake_message", "boundary_tests"]
+    },
+    {
+      "site": "ssl3_read_one_record (old L631-636)",
+      "construction": "core::slice::from_raw_parts_mut(buf, cap)",
+      "classification": "(b) by contract; (a) at its only caller (inherits ssl3_read_bytes' buffer)",
+      "callers": ["rec_layer_s3::ssl3_read_bytes"]
+    },
+    {
+      "site": "tls13_next_handshake_message (old L799-804)",
+      "construction": "core::slice::from_raw_parts_mut(buf, cap)",
+      "classification": "(b) REACHABLE: statem_srvr::tls13_server_drive passes OwnedBuf::new (CRYPTO_malloc, uninitialised). (a) for statem_clnt::client_read's vec![0] and test arrays",
+      "callers": ["statem_srvr::tls13_server_drive (OwnedBuf::new -> CRYPTO_malloc: uninitialised)", "statem_clnt::client_read (vec![0u8; 16384])", "boundary_tests"]
+    },
+    {
+      "site": "ssl3_read_bytes alert read-back (old L452)",
+      "construction": "&out[..n] over the caller buffer",
+      "classification": "(c) same allocation written then read; initialisation comes from the write in ssl3_read_one_record, which bounds n <= cap",
+      "callers": ["ssl3_read_bytes itself"]
+    },
+    {
+      "site": "ssl3_read_one_record body/hdr (L669/L725)",
+      "construction": "&(*s).rec_hdr, &(*s).rec_body[..len]",
+      "classification": "(a) definitely initialised: inline arrays in the zero-initialised Ssl, and rec_body_len bytes were written by BIO_read",
+      "callers": ["rec_layer_s3"]
+    },
+    {
+      "site": "tls12_decrypt_record / tls13_decrypt_record (t1_enc.rs L804, tls13_enc.rs L1700)",
+      "construction": "core::slice::from_raw_parts_mut(out, out_cap)",
+      "classification": "(b) by contract; (a) at the only in-crate call sites (ssl3_read_one_record passes the same caller buffer). Converted with the batch because it is the sink of the same boundary.",
+      "callers": ["rec_layer_s3::ssl3_read_one_record"]
+    }
+  ],
+  "boundaries": [
+    {
+      "id": "S39-RL-OUT-READ",
+      "file": "src/ssl/record/rec_layer_s3.rs ssl3_read_bytes / ssl3_read_one_record",
+      "operation": "received-record delivery into caller-supplied writable memory",
+      "before": "A &mut [u8] over the whole caller capacity was formed before any byte was written; the alert decoder was handed &out[..n] through that slice.",
+      "after": "The buffer stays a raw writable region. Plaintext and non-AEAD arms copy with core::ptr::copy_nonoverlapping after a body.len() <= cap check; the decrypt arms pass the raw pointer and capacity. A &[u8] is published only over the prefix ssl3_read_one_record reports written (n <= cap), and an n == 0 alert takes an empty slice rather than deriving one from a possibly-NULL buffer.",
+      "mechanism": "ELIMINATED: typed-slice construction over uninitialised caller memory. RETAINED: the C ABI writes into caller memory through a raw pointer with an explicit SAFETY contract.",
+      "hidden": 0,
+      "state": "IMPLEMENTED + FAST-tested (author). Independent review NOT_RUN."
+    },
+    {
+      "id": "S39-RL-MSG-OUT",
+      "file": "src/ssl/record/rec_layer_s3.rs tls13_next_handshake_message",
+      "operation": "handshake-message delivery into caller-supplied writable memory",
+      "before": "&mut [u8] over cap, then dst.copy_from_slice(msg). statem_srvr::tls13_server_drive supplies OwnedBuf::new memory, which is CRYPTO_malloc and therefore uninitialised: real UB on the TLS1.3 server path.",
+      "after": "msg_len > cap returns -1 with rd_msg_off unchanged; otherwise core::ptr::copy_nonoverlapping writes exactly msg_len bytes. rd_msg_off advances only after the copy, so a refusal leaves the assembled message reusable.",
+      "mechanism": "ELIMINATED: typed slice over uninitialised heap output. RETAINED: the raw copy with an explicit non-overlap/initialised-source contract.",
+      "hidden": 0,
+      "state": "IMPLEMENTED + FAST-tested (author)."
+    },
+    {
+      "id": "S39-RL-DECRYPT-OUT",
+      "file": "src/ssl/t1_enc.rs tls12_decrypt_record; src/ssl/tls13_enc.rs tls13_decrypt_record",
+      "operation": "authenticated-plaintext publication to the record layer's output buffer",
+      "before": "&mut [u8] over out_cap was formed after authentication, then out[..content_len].copy_from_slice.",
+      "after": "Both sinks check content_len <= out_cap and write with core::ptr::copy_nonoverlapping from the cleansed plaintext block; they never read out. Authentication and cleansing semantics are unchanged.",
+      "mechanism": "ELIMINATED: two more whole-capacity typed slices. RETAINED: the raw copy, with a contract that out may be uninitialised.",
+      "hidden": 0,
+      "state": "IMPLEMENTED + FAST-tested (author). These two files are the sink of the rec_layer boundary; no other change was made to them."
+    }
+  ],
+  "in_place_case_proof": {
+    "same_allocation": "There is no input/output same-allocation case on this path. Input is rec_body/rec_hdr (fields of Ssl) or the cleansed plaintext block; output is rx_buf (a different Ssl field), rd_msg_buf (different field, written only by the internal ssl3_read_bytes call), an application-owned OwnedBuf/vec, or a stack local.",
+    "initialised_input": "rec_body[:len] is initialised by BIO_read (len <= 17000), rec_hdr is zero-initialised then filled, rd_msg_buf[:rd_msg_len] is written by the record reader, and the plaintext block is initialised by EVP_DecryptUpdate/Final before the copy.",
+    "no_overlapping_mut_borrows": "The mutable borrow of rd_msg_buf used to obtain dst_ptr ends before ssl3_read_bytes is called (block-scoped). No &mut to the caller's output is ever created; only raw copies touch it. The decrypted plaintext lives in a separate OwnedBuf allocation. The only read-back is the alert prefix, written by the immediately preceding ssl3_read_one_record.",
+    "caller_inventory_shows_non_overlap": "Every caller enumerated above passes a buffer distinct from rec_hdr/rec_body/rd_msg_buf. This is now a documented # Safety precondition on all three entry points rather than an implied assumption."
+  },
+  "unsafe_ops": {
+    "before_after": "rec_layer_s3.rs total `unsafe {` blocks 73 -> 78 (production 58 -> 59; #[cfg(test)] 15 -> 19). t1_enc.rs 34 -> 34 and tls13_enc.rs 84 -> 84 (the copies replace a block one-for-one inside the existing function-level unsafe block).",
+    "removed": "5 typed-slice constructions over caller output (3 in rec_layer_s3.rs, 2 in the decrypt sinks).",
+    "introduced": "Production: 2 core::ptr::copy_nonoverlapping blocks in ssl3_read_one_record, 1 core::slice::from_raw_parts over the written alert prefix, 1 `&[]` alert call for the n == 0 arm, and 1 copy inside tls13_next_handshake_message's existing unsafe block. Each has a SAFETY comment; the copies are write-only and length-bounded by cap.",
+    "net": "The three defect-carrying from_raw_parts_mut calls in the target file are gone (0 remain over caller capacity). No exported symbol, layout or seam constant changed."
+  },
+  "obligations": {
+    "discharged": [
+      "Caller output is never read before it is written; the published extent is exactly the returned n.",
+      "The alert decoder receives only initialised bytes (n == 0 uses an empty slice).",
+      "Non-overlap of output with the connection's record/assembly buffers is stated as a caller precondition and established by the caller inventory.",
+      "The decrypt sinks write only content_len <= out_cap bytes and never read the output."
+    ],
+    "retained": [
+      "The C ABI still hands raw writable memory: validity of the pointer/extent is a boundary precondition, documented per function.",
+      "A caller that passes a buffer overlapping rec_body/rd_msg_buf would still violate the contract (no current caller does; not enforceable in the type system at this ABI)."
+    ],
+    "introduced": [],
+    "hidden": 0
+  },
+  "compatibility_delta": "No behaviour change intended. Short reads, retry/rwstate, record-overflow poisoning, alert outcomes and fragmented reassembly are untouched; the only changed operations are slice construction and copy. All 17 rec_layer tests (including the 12 pre-existing boundary tests) pass, plus the 8 ssl::t1_enc and 16 ssl::tls13_enc AEAD round-trip/refusal tests. Divergences recorded: none (AGENTS.md section 17: no authority behaviour reproduced or corrected).",
+  "safety_checks": {
+    "cargo_fmt": "cargo fmt --all -- --check -> FMT_OK",
+    "cargo_check": "cargo check --lib -> Finished dev profile (0 warnings after the redundant-unsafe fix)",
+    "cargo_clippy": "cargo clippy --lib -- -D warnings -> Finished (clean)",
+    "filtered_tests": "cargo test --lib rec_layer -- --test-threads=4 -> 17 passed; 0 failed; 0 ignored (2121 filtered). cargo test --lib ssl::record -> 17 passed. cargo test --lib ssl::t1_enc -> 8 passed. cargo test --lib ssl::tls13_enc -> 16 passed.",
+    "canary": "rec_layer_canary_pre_fix_output_slice_exceeds_written_prefix passed; output: \"rec_layer canary: pre-fix published 16 bytes of which 0 were initialised (first uninitialised index Some(0)); post-fix publishes 0 byte(s)\". This is a shadow-initialisation model of the defect, not a runtime UB detector: the pre-fix construction is not observable without Miri.",
+    "miri": "NOT_RUN. BOUNDARY-level instrument; required to turn the canary model into a real read-before-write detection.",
+    "asan": "NOT_RUN.",
+    "full_library_suite": "NOT_RUN (FAST only for this subphase, as instructed).",
+    "structural_guards": "no_mangle/repr(C)/export_name/extern \"C\" diff lines: 0; allocator-seam lines: 0."
+  },
+  "graduation": "OWNERSHIP_RECONSTRUCTED (scoped to the record-layer output boundary). Not SAFETY_DISCHARGED: the Miri/ASan BOUNDARY checks and independent review are NOT_RUN, and the non-overlap precondition is a documented caller obligation rather than a type-enforced one.",
+  "residuals": [
+    {
+      "id": "S39-R1",
+      "finding": "Allocation-failure injection is not available at this boundary: the crate's CRYPTO_set_mem_functions latch is one-way (closed by the first seam allocation) and the converted path allocates nothing; the only allocation-bearing sink is the decrypt scratch. The required 'allocation failure leaves state unchanged' test could not be written as a real allocator failure.",
+      "disposition": "Rec_layer_refusal_leaves_state_unchanged tests the equivalent output-reservation refusal (message retained, rd_msg_off unchanged, retry succeeds) and is labelled as a substitute. True allocation failure: NOT_RUN / NOT INJECTABLE."
+    },
+    {
+      "id": "S39-R2",
+      "finding": "The negative control models the pre-fix rule against a shadow initialised-length. It cannot detect real UB in normal execution.",
+      "disposition": "Miri over the converted tests is the instrument that would discharge this; NOT_RUN."
+    },
+    {
+      "id": "S39-R3",
+      "finding": "The initialised-length tracking for the record accumulators (rec_hdr_len/rec_body_len) is unchanged; the body slice trusts that BIO_read initialises the bytes it reports. A BIO that overreports is already refused by accumulated(), and a test covers that.",
+      "disposition": "No new obligation; existing defence retained."
+    }
+  ]
+}

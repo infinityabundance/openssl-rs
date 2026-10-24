@@ -801,12 +801,12 @@ pub(crate) unsafe fn tls12_decrypt_record(
         if !ok {
             return -1;
         }
-        let out: &mut [u8] = if out_cap == 0 {
-            &mut []
-        } else {
-            core::slice::from_raw_parts_mut(out, out_cap)
-        };
-        out[..body_len].copy_from_slice(&plain[..body_len]);
+        // SAFETY: `body_len <= out_cap` was checked above, so `out` is writable for the whole copy;
+        // it need not be initialised and is only written, never read. `plain` is a distinct
+        // cleansed allocation.
+        if body_len != 0 {
+            core::ptr::copy_nonoverlapping(plain.as_ptr(), out, body_len);
+        }
         *content_type = hdr[0];
         (*s).dec_seq += 1;
         outl as isize

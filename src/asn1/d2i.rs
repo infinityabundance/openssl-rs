@@ -67,6 +67,16 @@
 //! conditionally would have leaked or double-freed exactly one caller pattern —
 //! a `d2i_*` into an existing string on an allocation failure.
 //!
+//! ## Cursor bounds
+//!
+//! The decode path moves a [`Cursor`] through the caller's input. A cursor is
+//! created only from the caller's `(pointer, len)` contract or from a checked
+//! split of another cursor, and every advance/take refuses to move past its
+//! remaining count. Two historical over-read paths call `asn1_check_tlen` with a
+//! NULL cache (which skips the `TOO_LONG` pre-check) and then use the declared
+//! length directly: the constructed-string collector and the indefinite-length
+//! walk. Both now bound the declared extent with the cursor before reading.
+//!
 //! ## Ownership
 //!
 //! The two transient blocks this decoder allocates are owned handles whose `Drop`
@@ -107,25 +117,130 @@ pub(crate) const LINE: c_int = 0;
 /// `tasn_dec.c:1080`, where the authority defines it.
 const MAX_STRING_NEST: c_int = 5;
 
+/// A position in the caller's input together with the number of bytes still
+/// readable there.
+///
+/// A cursor is created either from a caller's `(pointer, len)` contract
+/// ([`Cursor::new`]) or by a checked split of another cursor ([`Self::take`] /
+/// [`Self::limit`]), so `ptr` is always inside the caller's buffer and
+/// `remaining` is exactly the readable extent at that position. [`Self::advance`]
+/// and [`Self::take`] refuse an overrun, which makes a position past the end
+/// unrepresentable: every cursor advance on the decode path is structural rather
+/// than checked only after the fact.
+#[derive(Clone, Copy)]
+struct Cursor {
+    ptr: *const c_uchar,
+    remaining: c_long,
+}
+
+impl Cursor {
+    /// # Safety
+    ///
+    /// `ptr` must be readable for `len` bytes (any pointer is acceptable when
+    /// `len == 0`), and `len` must be non-negative.
+    unsafe fn new(ptr: *const c_uchar, len: c_long) -> Self {
+        debug_assert!(len >= 0);
+        Self {
+            ptr,
+            remaining: len,
+        }
+    }
+
+    fn ptr(self) -> *const c_uchar {
+        self.ptr
+    }
+
+    fn remaining(self) -> c_long {
+        self.remaining
+    }
+
+    fn is_empty(self) -> bool {
+        self.remaining == 0
+    }
+
+    /// Move forward `count` bytes, leaving the cursor unchanged when fewer than
+    /// `count` remain.
+    fn advance(&mut self, count: c_long) -> Option<()> {
+        if count < 0 || count > self.remaining {
+            return None;
+        }
+        // SAFETY: the cursor invariant states that `ptr` is readable for
+        // `remaining` bytes, and `0 <= count <= remaining` was just established.
+        self.ptr = unsafe { self.ptr.add(count as usize) };
+        self.remaining -= count;
+        Some(())
+    }
+
+    /// Move to `to`, which must lie at or after this position and at most
+    /// `remaining` bytes ahead; answers how far it moved. The upper bound is
+    /// checked without dereferencing `to`.
+    fn advance_to(&mut self, to: *const c_uchar) -> Option<c_long> {
+        let base = self.ptr as usize;
+        let target = to as usize;
+        if target < base {
+            return None;
+        }
+        let offset = c_long::try_from(target - base).ok()?;
+        self.advance(offset)?;
+        Some(offset)
+    }
+
+    /// Split off a cursor over the next `count` bytes; the receiver advances past
+    /// them.
+    fn take(&mut self, count: c_long) -> Option<Cursor> {
+        if count < 0 || count > self.remaining {
+            return None;
+        }
+        let out = Cursor {
+            ptr: self.ptr,
+            remaining: count,
+        };
+        self.advance(count)?;
+        Some(out)
+    }
+
+    /// The same position narrowed to at most `count` bytes, without advancing.
+    fn limit(mut self, count: c_long) -> Option<Cursor> {
+        if count < 0 || count > self.remaining {
+            return None;
+        }
+        self.remaining = count;
+        Some(self)
+    }
+
+    /// Consume one byte, or answer `None` at the end of the input.
+    fn read_u8(&mut self) -> Option<u8> {
+        if self.remaining < 1 {
+            return None;
+        }
+        // SAFETY: the cursor invariant says one byte is readable at `ptr`.
+        let b = unsafe { *self.ptr };
+        // SAFETY: as above; the byte just read was the first of `remaining`.
+        self.ptr = unsafe { self.ptr.add(1) };
+        self.remaining -= 1;
+        Some(b)
+    }
+
+    /// Bytes consumed since an earlier cursor over the same input. Computed from
+    /// the checked remaining counts, so it cannot wrap or depend on pointer
+    /// subtraction.
+    fn consumed_since(self, start: Cursor) -> Option<c_long> {
+        start.remaining.checked_sub(self.remaining)
+    }
+}
+
 /// `asn1_check_eoc` — is the next thing an end-of-contents marker?
 ///
-/// # Safety
-///
-/// `in_` must point to a slot holding a readable pointer to `len` bytes; the slot
-/// is advanced past the marker when one is found.
-unsafe fn check_eoc(in_: *mut *const c_uchar, len: c_long) -> bool {
-    if len < 2 {
-        return false;
+/// The two-byte probe is made on a copy, so a non-marker leaves the cursor
+/// untouched.
+fn check_eoc(cur: &mut Cursor) -> bool {
+    let mut probe = *cur;
+    if probe.read_u8() == Some(0) && probe.read_u8() == Some(0) {
+        *cur = probe;
+        true
+    } else {
+        false
     }
-    // SAFETY: the caller guarantees the slot and its pointee.
-    let p = unsafe { *in_ };
-    // SAFETY: `len >= 2`, so two octets are readable.
-    let zero_zero = unsafe { *p } == 0 && unsafe { *p.add(1) } == 0;
-    if zero_zero {
-        // SAFETY: the slot is writable per the caller's contract.
-        unsafe { *in_ = p.add(2) };
-    }
-    zero_zero
 }
 
 /// The buffer `asn1_collect` fills. A `CRYPTO_*` allocation because
@@ -150,13 +265,17 @@ impl Collected {
 
     /// `collect_data` — grow to fit and append, or raise and answer 0.
     ///
-    /// # Safety
-    ///
-    /// `p` must be readable for `plen` bytes.
-    unsafe fn append(&mut self, p: *const u8, plen: usize) -> c_int {
+    /// `src` is a cursor over exactly the bytes to append, so the source extent is
+    /// the cursor's own invariant rather than a second length argument.
+    fn append(&mut self, src: &Cursor) -> c_int {
+        // The cursor invariant makes this conversion total; a negative length is
+        // an internal inconsistency, not a caller input.
+        let Ok(plen) = usize::try_from(src.remaining()) else {
+            return 0;
+        };
         // The authority's own overflow test: the *resulting* length must fit a
         // `long`.
-        if (self.len as c_long).saturating_add(plen as c_long) < 0 {
+        if (self.len as c_long).saturating_add(src.remaining()) < 0 {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::TASN_DEC_1147) };
             return 0;
@@ -177,9 +296,10 @@ impl Collected {
             self.cap = want;
         }
         if plen != 0 {
-            // SAFETY: the destination has room for `plen` bytes at `len`, and the
-            // source is readable for `plen`.
-            unsafe { core::ptr::copy_nonoverlapping(p, self.data.add(self.len), plen) };
+            // SAFETY: the source cursor guarantees `plen` readable bytes at
+            // `src.ptr()`; the destination has room for `plen` bytes at `len`
+            // after the growth above.
+            unsafe { core::ptr::copy_nonoverlapping(src.ptr(), self.data.add(self.len), plen) };
         }
         self.len += plen;
         1
@@ -220,7 +340,7 @@ impl Collected {
     ///
     /// Returns 0 after raising once the authority's `ERR_R_BUF_LIB` site, which is
     /// what `BUF_MEM_grow_clean` failing reaches.
-    unsafe fn terminate(&mut self) -> c_int {
+    fn terminate(&mut self) -> c_int {
         let want = self.len + 1;
         if want > self.cap {
             // SAFETY: `self.data` came from this allocator or is null; `want` is
@@ -260,28 +380,19 @@ impl Drop for Collected {
 ///
 /// # Safety
 ///
-/// `in_` must point to a slot holding a readable pointer to `len_in` bytes; the
-/// slot is advanced past what was consumed.
+/// `cur` must be a cursor over the caller's readable input; it is advanced past
+/// what was consumed.
 unsafe fn collect(
     buf: &mut Collected,
-    in_: *mut *const c_uchar,
-    len_in: c_long,
+    cur: &mut Cursor,
     inf_in: bool,
     tag: c_int,
     aclass: c_int,
     depth: c_int,
 ) -> c_int {
-    // SAFETY: the caller guarantees the slot and its pointee.
-    let mut p = unsafe { *in_ };
-    let mut len = len_in;
     let mut inf = inf_in;
-    while len > 0 {
-        let q = p;
-        // SAFETY: `p` is readable for `len` bytes and the slot is writable.
-        let mut slot = p;
-        // SAFETY: `p` is readable for `len` bytes and the slot is writable.
-        if unsafe { check_eoc(&mut slot, len) } {
-            p = slot;
+    while !cur.is_empty() {
+        if check_eoc(cur) {
             if !inf {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_1107) };
@@ -293,9 +404,13 @@ unsafe fn collect(
         let mut plen: c_long = 0;
         let mut ininf: c_uchar = 0;
         let mut cst: c_uchar = 0;
-        // `asn1_check_tlen` with a null cache — no `TOO_LONG` pre-check here, which
-        // is why the authority passes `ctx = NULL` on this call too.
-        // SAFETY: `p` is readable for `len` bytes; the outputs are local slots.
+        // `asn1_check_tlen` with a null cache — the authority passes `ctx = NULL`
+        // here too. That branch does not validate the declared content length
+        // against the remaining input, so every use of `plen` below is bounded by
+        // the cursor instead: `take`/`limit` refuse an extent the input does not
+        // hold, before any byte is read or any pointer is advanced.
+        // SAFETY: `cur` is a cursor over the caller's readable input; the outputs
+        // are local slots.
         let ok = unsafe {
             check_tlen(
                 &mut plen,
@@ -303,8 +418,7 @@ unsafe fn collect(
                 core::ptr::null_mut(),
                 &mut ininf,
                 &mut cst,
-                &mut p,
-                len,
+                cur,
                 tag,
                 aclass,
                 false,
@@ -327,33 +441,48 @@ unsafe fn collect(
                 unsafe { raise_site(&err_sites::TASN_DEC_1123) };
                 return 0;
             };
-            // SAFETY: `buf` is ours; the recursion advances `p`.
-            if unsafe { collect(buf, &mut p, plen, ininf != 0, tag, aclass, depth) } == 0 {
+            // A definite nested element is confined to its declared extent; an
+            // indefinite one is confined to the rest of this cursor and ends at
+            // its own EOC.
+            let mut inner = if ininf != 0 {
+                *cur
+            } else {
+                match cur.limit(plen) {
+                    Some(inner) => inner,
+                    None => return 0,
+                }
+            };
+            // SAFETY: `cur` was checked above and `buf` is ours; the recursion
+            // advances only `inner`.
+            if unsafe { collect(buf, &mut inner, ininf != 0, tag, aclass, depth) } == 0 {
                 return 0;
+            }
+            if ininf != 0 {
+                *cur = inner;
+            } else {
+                if !inner.is_empty() {
+                    return 0;
+                }
+                if cur.advance(plen).is_none() {
+                    return 0;
+                }
             }
         } else if plen != 0 {
-            // SAFETY: `p` is readable for `plen` bytes.
-            if unsafe { buf.append(p, plen as usize) } == 0 {
+            // The primitive element's declared content is exactly what is read;
+            // `take` refuses (without reading) when the input does not hold it.
+            let Some(chunk) = cur.take(plen) else {
+                return 0;
+            };
+            if buf.append(&chunk) == 0 {
                 return 0;
             }
-            // SAFETY: as above.
-            p = unsafe { p.add(plen as usize) };
         }
-        let Some(used) = cursor_distance(q, p) else {
-            return 0;
-        };
-        let Some(rest) = remaining_after(len, used) else {
-            return 0;
-        };
-        len = rest;
     }
     if inf {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_1133) };
         return 0;
     }
-    // SAFETY: the caller's slot is writable.
-    unsafe { *in_ = p };
     1
 }
 
@@ -363,8 +492,8 @@ unsafe fn collect(
 ///
 /// # Safety
 ///
-/// `in_` must point to a slot holding a readable pointer to `len` bytes. Every
-/// output pointer must be null or writable, and `ctx` null or a live cache.
+/// `in_` must be a cursor over the caller's readable input. Every output pointer
+/// must be null or writable, and `ctx` null or a live cache.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn check_tlen(
     olen: *mut c_long,
@@ -372,16 +501,14 @@ unsafe fn check_tlen(
     oclass: *mut c_uchar,
     inf: *mut c_uchar,
     cst: *mut c_uchar,
-    in_: *mut *const c_uchar,
-    len: c_long,
+    in_: &mut Cursor,
     exptag: c_int,
     expclass: c_int,
     opt: bool,
     ctx: *mut Asn1Tlc,
 ) -> c_int {
-    // SAFETY: the caller guarantees the slot and its pointee.
-    let mut p = unsafe { *in_ };
-    let q = p;
+    let mut cur = *in_;
+    let len = cur.remaining();
 
     if len <= 0 {
         // SAFETY: a compile-time-constant site.
@@ -401,32 +528,44 @@ unsafe fn check_tlen(
             plen = (*ctx).plen;
             pclass = (*ctx).pclass;
             ptag = (*ctx).ptag;
-            p = p.add((*ctx).hdrlen as usize);
+        }
+        // A cached header is only reused against input it can fit; a stale cache
+        // that does not is refused rather than advanced past.
+        // SAFETY: `ctx` is live and marked valid by the branch above.
+        let hdrlen = unsafe { (*ctx).hdrlen as c_long };
+        if cur.advance(hdrlen).is_none() {
+            return 0;
         }
     } else {
-        // SAFETY: `p` is readable for `len` bytes; the outputs are local slots.
+        let mut p = cur.ptr();
+        // SAFETY: the cursor holds `len` readable bytes; the outputs are local
+        // slots.
         i = unsafe {
             crate::asn1::der::ASN1_get_object(&mut p, &mut plen, &mut ptag, &mut pclass, len)
         };
+        // `ASN1_get_object` never reads past `len` and only publishes `p` after a
+        // header it read; `advance_to` additionally refuses a position outside the
+        // cursor. This replaces the authority's unchecked `p += hdrlen`.
+        let Some(consumed) = cur.advance_to(p) else {
+            return 0;
+        };
         if !ctx.is_null() {
-            // SAFETY: `ctx` is a live cache; the slot is writable.
+            let Some(hdrlen) = c_int::try_from(consumed).ok() else {
+                return 0;
+            };
+            // SAFETY: `ctx` is a live cache.
             unsafe {
                 (*ctx).ret = i;
                 (*ctx).plen = plen;
                 (*ctx).pclass = pclass;
                 (*ctx).ptag = ptag;
-                let Some(hdrlen) = cursor_distance(q, p).and_then(|d| c_int::try_from(d).ok())
-                else {
-                    return 0;
-                };
                 (*ctx).hdrlen = hdrlen;
                 (*ctx).valid = 1;
             }
             // A definite length with no error must fit the available data. This
             // check runs *before* the header's error bit is consulted, which is the
             // ordering a reader most easily gets wrong.
-            // SAFETY: `ctx` is live.
-            let Some(declared) = (unsafe { (*ctx).hdrlen as c_long }).checked_add(plen) else {
+            let Some(declared) = (hdrlen as c_long).checked_add(plen) else {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_1219) };
                 return 0;
@@ -459,13 +598,9 @@ unsafe fn check_tlen(
         }
     }
     if i & 1 != 0 {
-        let Some(used) = cursor_distance(q, p) else {
-            return 0;
-        };
-        let Some(rest) = remaining_after(len, used) else {
-            return 0;
-        };
-        plen = rest;
+        // An indefinite length runs to the rest of this cursor; the cursor is
+        // already past the header, so its remaining count *is* `len - hdrlen`.
+        plen = cur.remaining();
     }
     if !inf.is_null() {
         // SAFETY: the caller offers a writable slot.
@@ -487,8 +622,7 @@ unsafe fn check_tlen(
         // SAFETY: the caller offers a writable slot.
         unsafe { *otag = ptag };
     }
-    // SAFETY: the caller's slot is writable.
-    unsafe { *in_ = p };
+    *in_ = cur;
     1
 }
 /// `asn1_d2i_ex_primitive` — the header, the content, and the content codec.
@@ -517,6 +651,11 @@ unsafe fn d2i_ex_primitive(
         unsafe { raise_site(&err_sites::TASN_DEC_739) };
         return 0;
     }
+
+    // The caller's `(pointer, len)` contract becomes one structurally bounded
+    // cursor; every position the decoder later visits is derived from it.
+    // SAFETY: the caller guarantees `*in_` is readable for `inlen` bytes.
+    let mut cur = unsafe { Cursor::new(*in_, inlen.max(0)) };
 
     let mut utype: c_int;
     let mut tag = tag;
@@ -548,11 +687,11 @@ unsafe fn d2i_ex_primitive(
             return 0;
         }
         // SAFETY: the caller's slot is readable.
-        let mut probe = unsafe { *in_ };
+        let mut probe = cur;
         let mut oclass: c_uchar = 0;
-        // SAFETY: `probe` is readable for `inlen` bytes; the outputs are local
-        // slots. The tag and class are not constrained, so both arguments are the
-        // "anything" markers.
+        // SAFETY: `probe` is a cursor over the caller's input; the outputs are
+        // local slots. The tag and class are not constrained, so both arguments
+        // are the "anything" markers.
         let ret = unsafe {
             check_tlen(
                 core::ptr::null_mut(),
@@ -561,7 +700,6 @@ unsafe fn d2i_ex_primitive(
                 core::ptr::null_mut(),
                 core::ptr::null_mut(),
                 &mut probe,
-                inlen,
                 -1,
                 0,
                 false,
@@ -584,12 +722,14 @@ unsafe fn d2i_ex_primitive(
         tag = utype;
         aclass = V_ASN1_UNIVERSAL;
     }
-    // SAFETY: the caller's slot is readable.
-    let mut p = unsafe { *in_ };
+    // The value's own first byte, before the header: kept so the encoded extent
+    // of a SEQUENCE/SET/OTHER can be measured from it.
+    let start = cur;
     let mut plen: c_long = 0;
     let mut inf: c_uchar = 0;
     let mut cst: c_uchar = 0;
-    // SAFETY: `p` is readable for `inlen` bytes; the outputs are local slots.
+    // SAFETY: `cur` is a cursor over the caller's input; the outputs are local
+    // slots.
     let ret = unsafe {
         check_tlen(
             &mut plen,
@@ -597,8 +737,7 @@ unsafe fn d2i_ex_primitive(
             core::ptr::null_mut(),
             &mut inf,
             &mut cst,
-            &mut p,
-            inlen,
+            &mut cur,
             tag,
             aclass,
             opt,
@@ -640,39 +779,24 @@ unsafe fn d2i_ex_primitive(
             return 0;
         }
         // The *value's own* first byte, before the header: this is what the string
-        // will span, so it is read from the caller's slot rather than from `p`.
-        // SAFETY: the caller's slot is readable.
-        let start = unsafe { *in_ };
+        // will span, and `start` was captured before the header was read.
         if inf != 0 {
             // An indefinite length has no declared end, so the value's extent is
             // found by walking the nested headers to the matching EOC.
-            // SAFETY: `p` is readable for the remaining input; the slot is writable.
-            if unsafe { find_end(&mut p, plen, true) } == 0 {
+            // SAFETY: `cur` is a cursor over the caller's remaining input.
+            if unsafe { find_end(&mut cur, true) } == 0 {
                 return 0;
             }
-            cont = start;
-            let Some(used) = cursor_distance(start, p) else {
-                return 0;
-            };
-            let Ok(used) = c_long::try_from(used) else {
-                return 0;
-            };
-            len = used;
-        } else {
-            cont = start;
-            let Some(used) = cursor_distance(start, p) else {
-                return 0;
-            };
-            let Ok(used) = c_long::try_from(used) else {
-                return 0;
-            };
-            let Some(full) = used.checked_add(plen) else {
-                return 0;
-            };
-            len = full;
-            // SAFETY: `p` is readable for `plen` bytes by the header just read.
-            p = unsafe { p.add(plen.max(0) as usize) };
+        } else if cur.advance(plen).is_none() {
+            // The declared content does not fit the input; refuse before the
+            // encoded extent is formed.
+            return 0;
         }
+        cont = start.ptr();
+        let Some(full_len) = cur.consumed_since(start) else {
+            return 0;
+        };
+        len = full_len;
     } else if cst != 0 {
         if matches!(
             utype,
@@ -685,28 +809,48 @@ unsafe fn d2i_ex_primitive(
         // The collected buffer becomes the content, and ownership of it passes to
         // the content codec.
         free_cont = true;
-        let mut q = p;
-        // SAFETY: `q` is readable for `plen` bytes.
-        if unsafe { collect(&mut buf, &mut q, plen, inf != 0, -1, V_ASN1_UNIVERSAL, 0) } == 0 {
+        // A definite element is confined to its declared content extent; an
+        // indefinite one runs to its EOC within the rest of this cursor.
+        let mut content = if inf != 0 {
+            cur
+        } else {
+            match cur.limit(plen) {
+                Some(content) => content,
+                None => return 0,
+            }
+        };
+        // SAFETY: `content` is a cursor over the caller's readable input.
+        if unsafe { collect(&mut buf, &mut content, inf != 0, -1, V_ASN1_UNIVERSAL, 0) } == 0 {
             return 0;
         }
         // The *content* length, read before the terminator is appended: the
         // authority assigns `len = (long)buf.length` and only then grows the
         // buffer by one.
-        let content = buf.len as c_long;
-        // SAFETY: `buf` is ours.
-        if unsafe { buf.terminate() } == 0 {
+        let content_len = buf.len as c_long;
+        if buf.terminate() == 0 {
             return 0;
         }
-        p = q;
+        if inf != 0 {
+            cur = content;
+        } else {
+            if !content.is_empty() {
+                return 0;
+            }
+            if cur.advance(plen).is_none() {
+                return 0;
+            }
+        }
         cont = buf.data;
-        len = content;
+        len = content_len;
     } else {
-        // SAFETY: `p` is readable for `plen` bytes by the header just read.
-        cont = p;
+        // The content cursor is exactly `plen` bytes at the current position;
+        // advancing first proves the input holds that extent before `ex_c2i`
+        // reads it.
+        cont = cur.ptr();
         len = plen;
-        // SAFETY: `p` holds `plen` content bytes.
-        p = unsafe { p.add(plen.max(0) as usize) };
+        if cur.advance(plen).is_none() {
+            return 0;
+        }
     }
 
     // The block's ownership passes through `free_cont`: the content codec clears it
@@ -727,7 +871,7 @@ unsafe fn d2i_ex_primitive(
         return 0;
     }
     // SAFETY: the caller's slot is writable and the content has been consumed.
-    unsafe { *in_ = p };
+    unsafe { *in_ = cur.ptr() };
     1
 }
 
@@ -1675,6 +1819,9 @@ unsafe fn embed_d2i(
             let mut seq_eoc: c_uchar = 0;
             let mut cst: c_uchar = 0;
             // SAFETY: `p` is readable for `len` bytes; the outputs are local slots.
+            let mut hdr = unsafe { Cursor::new(p, len) };
+            // SAFETY: `hdr` is a cursor over the caller's input; the outputs are
+            // local slots.
             let ret = unsafe {
                 check_tlen(
                     &mut len,
@@ -1682,8 +1829,7 @@ unsafe fn embed_d2i(
                     core::ptr::null_mut(),
                     &mut seq_eoc,
                     &mut cst,
-                    &mut p,
-                    len,
+                    &mut hdr,
                     tag,
                     aclass,
                     opt,
@@ -1698,6 +1844,7 @@ unsafe fn embed_d2i(
             if ret == -1 {
                 return -1;
             }
+            p = hdr.ptr();
             // `ASN1_AFLG_BROKEN` is for a buggy peer whose declared length cannot be
             // trusted, so the length is taken as "the rest of the input" instead.
             let broken = !aux.is_null()
@@ -1780,8 +1927,10 @@ unsafe fn embed_d2i(
                     break;
                 }
                 let q = p;
-                // SAFETY: `p` is readable for `len` bytes and the slot is writable.
-                if unsafe { check_eoc(&mut p, len) } {
+                // SAFETY: `p` is readable for `len` bytes.
+                let mut eoc = unsafe { Cursor::new(p, len) };
+                if check_eoc(&mut eoc) {
+                    p = eoc.ptr();
                     if seq_eoc == 0 {
                         // SAFETY: a compile-time-constant site.
                         unsafe { raise_site(&err_sites::TASN_DEC_427) };
@@ -1837,12 +1986,14 @@ unsafe fn embed_d2i(
                 tt = unsafe { tt.add(1) };
                 i += 1;
             }
-            // SAFETY: `p` is readable for `len` bytes and the slot is writable.
-            if seq_eoc != 0 && !unsafe { check_eoc(&mut p, len) } {
+            // SAFETY: `p` is readable for `len` bytes.
+            let mut eoc = unsafe { Cursor::new(p, len) };
+            if seq_eoc != 0 && !check_eoc(&mut eoc) {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_466) };
                 return err_tail(core::ptr::null(), item);
             }
+            p = eoc.ptr();
             if seq_nolen == 0 && len != 0 {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_471) };
@@ -1930,7 +2081,7 @@ unsafe fn mstring_d2i(
     ctx: *mut Asn1Tlc,
 ) -> c_int {
     // SAFETY: the caller's slot is readable.
-    let mut p = unsafe { *in_ };
+    let p = unsafe { *in_ };
     let mut otag: c_int = 0;
     let mut oclass: c_uchar = 0;
     // `check_tlen` is passed `opt = 1` here even though its tag argument is -1: with a
@@ -1938,7 +2089,11 @@ unsafe fn mstring_d2i(
     // the value is inert, and it is passed as the authority passes it rather than as it
     // happens to matter.
     // SAFETY: `p` is readable for `len` bytes; the outputs are local slots and `ctx` is
-    // the caller's cache.
+    // the caller's cache. The probe does not advance `p`: the decoder re-reads the
+    // header from the caller's unadvanced slot.
+    let mut probe = unsafe { Cursor::new(p, len) };
+    // SAFETY: `probe` is a cursor over the caller's input; the outputs are local
+    // slots.
     let ret = unsafe {
         check_tlen(
             core::ptr::null_mut(),
@@ -1946,8 +2101,7 @@ unsafe fn mstring_d2i(
             &mut oclass,
             core::ptr::null_mut(),
             core::ptr::null_mut(),
-            &mut p,
-            len,
+            &mut probe,
             -1,
             0,
             true,
@@ -2058,6 +2212,9 @@ unsafe fn template_ex_d2i(
     let mut exp_eoc: c_uchar = 0;
     let mut cst: c_uchar = 0;
     // SAFETY: `p` is readable for `inlen` bytes; the outputs are local slots.
+    let mut hdr = unsafe { Cursor::new(p, inlen) };
+    // SAFETY: `hdr` is a cursor over the caller's input; the outputs are local
+    // slots.
     let ret = unsafe {
         check_tlen(
             &mut len,
@@ -2065,15 +2222,13 @@ unsafe fn template_ex_d2i(
             core::ptr::null_mut(),
             &mut exp_eoc,
             &mut cst,
-            &mut p,
-            inlen,
+            &mut hdr,
             t.tag as c_int,
             aclass,
             opt,
             ctx,
         )
     };
-    let q = p;
     if ret == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_551) };
@@ -2082,6 +2237,8 @@ unsafe fn template_ex_d2i(
     if ret == -1 {
         return -1;
     }
+    p = hdr.ptr();
+    let q = p;
     if cst == 0 {
         // An explicit tag must be constructed; a primitive one cannot hold a field.
         // SAFETY: a compile-time-constant site.
@@ -2103,12 +2260,14 @@ unsafe fn template_ex_d2i(
     };
     len = rest;
     if exp_eoc != 0 {
-        // SAFETY: `p` is readable for `len` bytes and the slot is writable.
-        if !unsafe { check_eoc(&mut p, len) } {
+        // SAFETY: `p` is readable for `len` bytes.
+        let mut eoc = unsafe { Cursor::new(p, len) };
+        if !check_eoc(&mut eoc) {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::TASN_DEC_571) };
             return 0;
         }
+        p = eoc.ptr();
     } else if len != 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_579) };
@@ -2178,6 +2337,9 @@ unsafe fn template_noexp_d2i(
         };
         let mut sk_eoc: c_uchar = 0;
         // SAFETY: `p` is readable for `len` bytes; the outputs are local slots.
+        let mut hdr = unsafe { Cursor::new(p, len) };
+        // SAFETY: `hdr` is a cursor over the caller's input; the outputs are local
+        // slots.
         let ret = unsafe {
             check_tlen(
                 &mut len,
@@ -2185,8 +2347,7 @@ unsafe fn template_noexp_d2i(
                 core::ptr::null_mut(),
                 &mut sk_eoc,
                 core::ptr::null_mut(),
-                &mut p,
-                len,
+                &mut hdr,
                 sktag,
                 skaclass,
                 opt,
@@ -2201,6 +2362,7 @@ unsafe fn template_noexp_d2i(
         if ret == -1 {
             return -1;
         }
+        p = hdr.ptr();
         // SAFETY: `val` is a live slot.
         let existing = unsafe { *val };
         if existing.is_null() {
@@ -2236,8 +2398,10 @@ unsafe fn template_noexp_d2i(
 
         while len > 0 {
             let q = p;
-            // SAFETY: `p` is readable for `len` bytes and the slot is writable.
-            if unsafe { check_eoc(&mut p, len) } {
+            // SAFETY: `p` is readable for `len` bytes.
+            let mut eoc = unsafe { Cursor::new(p, len) };
+            if check_eoc(&mut eoc) {
+                p = eoc.ptr();
                 if sk_eoc == 0 {
                     // SAFETY: a compile-time-constant site.
                     unsafe { raise_site(&err_sites::TASN_DEC_669) };
@@ -2363,32 +2527,28 @@ unsafe fn template_noexp_d2i(
 ///
 /// # Safety
 ///
-/// `in_` must point to a slot holding a readable pointer to `len` bytes; the slot is
-/// advanced to the end of the value.
-unsafe fn find_end(in_: *mut *const c_uchar, len_in: c_long, inf: bool) -> c_int {
-    // SAFETY: the caller's slot is readable.
-    let mut p = unsafe { *in_ };
+/// `cur` must be a cursor over the caller's readable input; it is advanced to the
+/// end of the value.
+unsafe fn find_end(cur: &mut Cursor, inf: bool) -> c_int {
     if !inf {
-        // SAFETY: the caller guarantees `len` readable bytes.
-        unsafe { *in_ = p.add(len_in.max(0) as usize) };
+        if cur.advance(cur.remaining()).is_none() {
+            return 0;
+        }
         return 1;
     }
-    let mut len = len_in;
     let mut expected_eoc: u32 = 1;
-    while len > 0 {
-        // SAFETY: `p` is readable for `len` bytes and the slot is writable.
-        if unsafe { check_eoc(&mut p, len) } {
+    while !cur.is_empty() {
+        if check_eoc(cur) {
             expected_eoc -= 1;
             if expected_eoc == 0 {
                 break;
             }
-            len -= 2;
             continue;
         }
-        let q = p;
         let mut plen: c_long = 0;
         let mut inf_hdr: c_uchar = 0;
-        // SAFETY: `p` is readable for `len` bytes; the outputs are local slots.
+        // SAFETY: `cur` is a cursor over the caller's readable input; the outputs
+        // are local slots.
         let ok = unsafe {
             check_tlen(
                 &mut plen,
@@ -2396,8 +2556,7 @@ unsafe fn find_end(in_: *mut *const c_uchar, len_in: c_long, inf: bool) -> c_int
                 core::ptr::null_mut(),
                 &mut inf_hdr,
                 core::ptr::null_mut(),
-                &mut p,
-                len,
+                cur,
                 -1,
                 0,
                 false,
@@ -2416,34 +2575,280 @@ unsafe fn find_end(in_: *mut *const c_uchar, len_in: c_long, inf: bool) -> c_int
                 return 0;
             }
             expected_eoc += 1;
-        } else {
-            // SAFETY: `p` is readable for `plen` bytes.
-            p = unsafe { p.add(plen.max(0) as usize) };
+        } else if cur.advance(plen).is_none() {
+            // The declared content does not fit the remaining input. The
+            // authority's walk would move out of bounds here; refuse instead.
+            return 0;
         }
-        let Some(used) = cursor_distance(q, p) else {
-            return 0;
-        };
-        let Some(rest) = remaining_after(len, used) else {
-            return 0;
-        };
-        len = rest;
     }
     if expected_eoc != 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_1060) };
         return 0;
     }
-    // SAFETY: the caller's slot is writable.
-    unsafe { *in_ = p };
     1
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asn1::fre::ASN1_item_free;
+    use crate::asn1::items::ASN1_SEQUENCE_it;
+    use crate::asn1::typ::d2i_ASN1_OCTET_STRING;
 
     /// §3 boundary: the diagnostic buffer length is a checked sum, and overflow takes
     /// the no-additional-data arm instead of wrapping to a too-small request.
+    #[test]
+    fn d2i_declared_length_exceeding_input_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let cases: &[&[u8]] = &[
+            &[0x04, 0x05, 0x41, 0x42],
+            &[0x04, 0x81, 0x80, 0x41],
+            &[0x04, 0x82, 0x7F, 0xFF, 0x41],
+            &[0x04, 0x84, 0x7F, 0xFF, 0xFF, 0xFF],
+            &[0x04, 0x84, 0x80, 0x00, 0x00, 0x00],
+            &[0x04, 0x84, 0xFF, 0xFF, 0xFF, 0xFF],
+        ];
+        // SAFETY: each decode either fails or returns one value this frame frees.
+        unsafe {
+            for der in cases {
+                let mut p = der.as_ptr();
+                let s = d2i_ASN1_OCTET_STRING(core::ptr::null_mut(), &mut p, der.len() as c_long);
+                assert!(s.is_null(), "declared length must be refused: {der:?}");
+                assert_eq!(p, der.as_ptr(), "a refused decode reports no progress");
+            }
+        }
+    }
+
+    /// The constructed-string collector reads a nested element with a NULL header
+    /// cache, which does not itself check the declared content against the input.
+    /// The outer header is well formed, so the outer `TOO_LONG` check passes; the
+    /// overrun is only visible at the inner element. Pre-fix, `collect` copied 126
+    /// bytes past the one-byte tail. The cursor now refuses the advance first.
+    #[test]
+    fn d2i_nested_length_beyond_the_cursor_is_refused_before_reading() {
+        let _g = crate::test_support::lock_global_state();
+        // constructed OCTET STRING(3) { OCTET STRING(127) with one byte present }
+        let der = [0x24u8, 0x03, 0x04, 0x7F, 0x41];
+        // SAFETY: the decode either fails or returns a value this frame would free.
+        unsafe {
+            let mut p = der.as_ptr();
+            let s = d2i_ASN1_OCTET_STRING(core::ptr::null_mut(), &mut p, der.len() as c_long);
+            assert!(s.is_null(), "the nested declared length must be refused");
+            assert_eq!(p, der.as_ptr(), "a refused decode reports no progress");
+        }
+    }
+
+    /// The indefinite-length walk uses the same NULL-cache header read as the
+    /// collector. A definite nested element that claims more bytes than remain
+    /// must be refused before the walk advances out of the input.
+    #[test]
+    fn d2i_indefinite_sequence_with_overlong_nested_element_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // indefinite SEQUENCE { OCTET STRING(127) with one byte present, EOC, EOC }
+        let der = [0x30u8, 0x80, 0x04, 0x7F, 0x41, 0x00, 0x00];
+        // SAFETY: `ASN1_SEQUENCE_it` is a static item; the decode owns its value.
+        unsafe {
+            let mut p = der.as_ptr();
+            let val = ASN1_item_d2i(
+                core::ptr::null_mut(),
+                &mut p,
+                der.len() as c_long,
+                ASN1_SEQUENCE_it(),
+            );
+            assert!(val.is_null(), "the nested overrun must be refused");
+            assert_eq!(p, der.as_ptr(), "a refused decode reports no progress");
+        }
+    }
+
+    #[test]
+    fn d2i_nested_indefinite_length_without_matching_eoc_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        // Only the inner EOC is present; the outer indefinite value never ends.
+        let missing_outer = [0x30u8, 0x80, 0x30, 0x80, 0x00, 0x00];
+        // SAFETY: `ASN1_SEQUENCE_it` is a static item; the decode owns its value.
+        unsafe {
+            let mut p = missing_outer.as_ptr();
+            let val = ASN1_item_d2i(
+                core::ptr::null_mut(),
+                &mut p,
+                missing_outer.len() as c_long,
+                ASN1_SEQUENCE_it(),
+            );
+            assert!(val.is_null(), "a missing outer EOC must be refused");
+            assert_eq!(p, missing_outer.as_ptr());
+        }
+
+        // Both markers present: the walk accepts the nested indefinite value.
+        let complete = [0x30u8, 0x80, 0x30, 0x80, 0x00, 0x00, 0x00, 0x00];
+        // SAFETY: `ASN1_SEQUENCE_it` is a static item; the value is released below.
+        unsafe {
+            let mut p = complete.as_ptr();
+            let val = ASN1_item_d2i(
+                core::ptr::null_mut(),
+                &mut p,
+                complete.len() as c_long,
+                ASN1_SEQUENCE_it(),
+            );
+            assert!(
+                !val.is_null(),
+                "a well-formed nested indefinite value decodes"
+            );
+            assert_eq!(p, complete.as_ptr().add(complete.len()));
+            ASN1_item_free(val, ASN1_SEQUENCE_it());
+        }
+    }
+
+    /// Every truncated header form must be refused without publishing a cursor.
+    #[test]
+    fn d2i_truncated_header_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let cases: &[&[u8]] = &[
+            &[0x04],
+            &[0x04, 0x81],
+            &[0x04, 0x82, 0x00],
+            &[0x04, 0x83, 0x00, 0x00],
+            &[0x1F],
+            &[0x1F, 0x81],
+        ];
+        // SAFETY: each decode either fails or returns one value this frame frees.
+        unsafe {
+            for der in cases {
+                let mut p = der.as_ptr();
+                let s = d2i_ASN1_OCTET_STRING(core::ptr::null_mut(), &mut p, der.len() as c_long);
+                assert!(s.is_null(), "a truncated header must be refused: {der:?}");
+                assert_eq!(p, der.as_ptr(), "a refused decode reports no progress");
+            }
+        }
+    }
+
+    /// CVE-2026-34180 class: a content length near or above 2 GiB must not be
+    /// narrowed to `c_int` and used. The header is rejected by the checked
+    /// `hdrlen + plen` comparison before any content extent is formed, and each
+    /// content codec independently refuses a length above `INT_MAX`.
+    #[test]
+    fn d2i_content_length_at_i32_and_u32_boundaries_is_refused() {
+        let _g = crate::test_support::lock_global_state();
+        let lengths: &[&[u8]] = &[
+            &[0x84, 0x7F, 0xFF, 0xFF, 0xFF], // i32::MAX
+            &[0x84, 0x80, 0x00, 0x00, 0x00], // i32::MAX + 1
+            &[0x84, 0xFF, 0xFF, 0xFF, 0xFF], // u32::MAX
+            &[0x88, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF],
+            &[0x88, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF],
+            &[0x88, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF],
+        ];
+        // SAFETY: each decode either fails or returns one value this frame frees.
+        unsafe {
+            for length in lengths {
+                let mut der = vec![0x04u8];
+                der.extend_from_slice(length);
+                der.push(0x41);
+                let mut p = der.as_ptr();
+                let s = d2i_ASN1_OCTET_STRING(core::ptr::null_mut(), &mut p, der.len() as c_long);
+                assert!(
+                    s.is_null(),
+                    "a 2 GiB-class length must be refused: {length:?}"
+                );
+                assert_eq!(p, der.as_ptr(), "a refused decode reports no progress");
+            }
+
+            // The string arm's own guard: `len` must survive the round trip through
+            // `c_int`. This call uses a one-byte buffer, so a decoder that narrowed
+            // `len` before checking would use a negative length here.
+            let octets = [0u8; 1];
+            // Above `INT_MAX`, in the authority's `long`. On an ILP32 target such a
+            // length is not representable, so only the header-boundary arms above
+            // apply there.
+            let Ok(huge) = c_long::try_from(c_int::MAX as i64 + 1) else {
+                return;
+            };
+            let mut slot: *mut Asn1String = core::ptr::null_mut();
+            let mut free_cont = false;
+            let item = &*crate::asn1::items::ASN1_OCTET_STRING_it();
+            let rc = ex_c2i(
+                &mut slot,
+                octets.as_ptr(),
+                huge,
+                V_ASN1_OCTET_STRING,
+                &mut free_cont,
+                item,
+            );
+            assert_eq!(rc, 0, "the string arm refuses a length above INT_MAX");
+            assert!(slot.is_null());
+
+            // The bit-string and object codecs guard the same boundary before they
+            // read any content byte.
+            let mut bits: *mut Asn1String = core::ptr::null_mut();
+            let mut cur = octets.as_ptr();
+            let r = ossl_c2i_ASN1_BIT_STRING(&mut bits, &mut cur, huge);
+            assert!(
+                r.is_null(),
+                "the bit-string codec refuses a length above INT_MAX"
+            );
+            assert!(bits.is_null());
+            assert_eq!(cur, octets.as_ptr(), "a refused codec reads no content");
+
+            let mut obj: *mut Asn1Object = core::ptr::null_mut();
+            let mut cur = octets.as_ptr();
+            let r = ossl_c2i_ASN1_OBJECT(&mut obj, &mut cur, huge);
+            assert!(
+                r.is_null(),
+                "the object codec refuses a length above INT_MAX"
+            );
+            assert!(obj.is_null());
+            assert_eq!(cur, octets.as_ptr(), "a refused codec reads no content");
+        }
+    }
+
+    /// A failed re-decode releases the caller's previous value and nulls the slot:
+    /// no partially owned object survives, and nothing is freed twice on the path
+    /// that returns the error.
+    #[test]
+    fn d2i_failed_decode_leaves_no_partially_owned_value() {
+        let _g = crate::test_support::lock_global_state();
+        let good = [0x04u8, 0x01, 0x41];
+        let bad = [0x04u8, 0x05, 0x41];
+        // SAFETY: the first decode's value is released by the failed second decode;
+        // the slot is null afterwards and is not used again.
+        unsafe {
+            let mut val: *mut Asn1String = core::ptr::null_mut();
+            let mut p = good.as_ptr();
+            let first = d2i_ASN1_OCTET_STRING(&mut val, &mut p, good.len() as c_long);
+            assert!(!first.is_null());
+            assert_eq!(first, val);
+            let mut p = bad.as_ptr();
+            let second = d2i_ASN1_OCTET_STRING(&mut val, &mut p, bad.len() as c_long);
+            assert!(second.is_null());
+            assert!(
+                val.is_null(),
+                "the failed re-decode released the caller's value"
+            );
+            assert_eq!(p, bad.as_ptr(), "a refused decode reports no progress");
+        }
+    }
+
+    /// Negative control, test-only. It models the pre-fix collector arithmetic and
+    /// records the overrun the cursor now refuses; it is not a UB detector.
+    #[test]
+    fn d2i_canary_pre_fix_cursor_advance_would_overrun() {
+        let remaining: c_long = 1;
+        let declared: c_long = 0x7F;
+        let overrun = (declared - remaining).max(0);
+        // SAFETY: one byte is readable at the pointer for the cursor's extent.
+        let mut cur = unsafe { Cursor::new([0u8; 1].as_ptr(), remaining) };
+        assert!(cur.advance(declared).is_none());
+        assert_eq!(
+            cur.remaining(),
+            remaining,
+            "a refused advance changes nothing"
+        );
+        assert_eq!(overrun, 126, "the pre-fix path would read past the input");
+        eprintln!(
+            "d2i canary: pre-fix collect would read {overrun} bytes past the input; \
+             post-fix cursor refused the advance and kept remaining={remaining}"
+        );
+    }
+
     #[test]
     fn checked_error_length_sums_translate_overflow_to_failure() {
         assert_eq!(checked_sum_len([1usize, 2, 3].into_iter()), Some(6));

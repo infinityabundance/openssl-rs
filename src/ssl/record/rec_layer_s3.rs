@@ -412,34 +412,29 @@ fn accumulated(off: usize, got: c_int, offered: usize, cap: usize) -> Option<usi
 /// (which leaves `rwstate = SSL_READING`, `rec_layer_s3.c:497`).
 ///
 /// # Safety
-/// `s` must be a live connection whose read BIO is the caller's to read; `buf` must be writable for
-/// `cap` bytes; `rectype` must be writable.
+/// `s` must be a live connection whose read BIO is the caller's to read; `rectype` must be
+/// writable. `buf` must be non-NULL and writable for `cap` bytes when `cap != 0`; **it need not be
+/// initialised**, and this function never reads it before writing it. On a positive return exactly
+/// the first `n` bytes of `buf` have been written and form the whole published output. `buf` must
+/// not overlap the connection's record buffers (`rec_hdr`, `rec_body`, `rd_msg_buf`).
 pub(crate) unsafe fn ssl3_read_bytes(
     s: *mut Ssl,
     rectype: *mut u8,
     buf: *mut u8,
     cap: usize,
 ) -> c_int {
-    // The caller's output is validated once. A zero capacity needs no slice: `from_raw_parts_mut`
-    // requires a non-null aligned pointer even for length zero, and the record layer may legally be
-    // asked for a zero-byte read.
-    // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
-    let out: &mut [u8] = if cap == 0 {
-        &mut []
-    } else {
-        // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
-        unsafe { core::slice::from_raw_parts_mut(buf, cap) }
-    };
-    let (out_ptr, out_len) = (out.as_mut_ptr(), out.len());
+    // No typed slice is built over `buf`: the caller promises writable memory, not memory already
+    // valid as `u8`. The record reader writes through the raw pointer and reports how much it
+    // wrote; only that written prefix is ever published as a slice (the alert decoder below).
     loop {
         let mut rec_ty = 0u8;
-        // SAFETY: `s` is live; `out_ptr`/`out_len` are the validated output above.
-        let n = unsafe { ssl3_read_one_record(s, &mut rec_ty, out_ptr, out_len) };
+        // SAFETY: `s` is live; `buf` is writable for `cap` bytes per the contract.
+        let n = unsafe { ssl3_read_one_record(s, &mut rec_ty, buf, cap) };
         if n <= 0 {
             return n;
         }
         // The reader refuses to report more body bytes than the output it was given.
-        let Some(n) = usize::try_from(n).ok().filter(|n| *n <= out.len()) else {
+        let Some(n) = usize::try_from(n).ok().filter(|n| *n <= cap) else {
             return -1;
         };
         if rec_ty != SSL3_RT_ALERT {
@@ -448,8 +443,19 @@ pub(crate) unsafe fn ssl3_read_bytes(
             return n as c_int;
         }
         // `rec_layer_s3.c:864-944`.
-        // SAFETY: `s` is live; `out[..n]` is the alert record's body.
-        match unsafe { ssl3_read_bytes_alert(s, &out[..n]) } {
+        let outcome = if n == 0 {
+            // Nothing was written, so no slice is derived from `buf` (which may be NULL for a
+            // zero-capacity read). An empty alert is invalid exactly as before.
+            // SAFETY: `s` is live; the empty slice carries no memory.
+            unsafe { ssl3_read_bytes_alert(s, &[]) }
+        } else {
+            // SAFETY: `ssl3_read_one_record` wrote exactly these `n` bytes at `buf` (`n <= cap`),
+            // so the slice covers only initialised bytes and is derived from the written prefix.
+            let alert = unsafe { core::slice::from_raw_parts(buf, n) };
+            // SAFETY: `s` is live; `alert` is the written alert body.
+            unsafe { ssl3_read_bytes_alert(s, alert) }
+        };
+        match outcome {
             AlertOutcome::Terminal => return 0,
             AlertOutcome::Fatal => return -1,
             AlertOutcome::Ignored => continue,
@@ -622,18 +628,15 @@ unsafe fn ssl3_read_bytes_rlayer_return(s: *mut Ssl, got: c_int) -> c_int {
 /// not modelled (recorded in `src/ssl/mod.rs`).
 ///
 /// # Safety
-/// `s` must be a live connection whose read BIO is the caller's to read; `buf` must be writable for
-/// `cap` bytes; `rectype` must be writable.
+/// `s` must be a live connection whose read BIO is the caller's to read; `rectype` must be
+/// writable. `buf` must be non-NULL and writable for `cap` bytes when `cap != 0`, need not be
+/// initialised, and must not overlap the connection's record buffers (`rec_hdr`, `rec_body`,
+/// `rd_msg_buf`): the record body is read from `rec_body` while `buf` is written. On success
+/// exactly the first `n` bytes are written.
 unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap: usize) -> c_int {
-    // The output is validated once, so every copy below is a bounded slice assignment. A zero
-    // capacity needs no slice (`from_raw_parts_mut` requires a non-null aligned pointer).
-    // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
-    let out: &mut [u8] = if cap == 0 {
-        &mut []
-    } else {
-        // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
-        unsafe { core::slice::from_raw_parts_mut(buf, cap) }
-    };
+    // The caller's output stays a raw writable region: it may be uninitialised, so no `&mut [u8]`
+    // is formed over `cap` bytes. Each branch below writes a length it has already bounded by
+    // `cap`, and reads only from `rec_body`, which is initialised.
 
     // Accumulate the five-byte header, resuming after a short read. The accumulator length is the
     // only state; it is always within `rec_hdr`, so the next read targets the exact tail.
@@ -750,10 +753,16 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
         // middlebox-compatibility `ChangeCipherSpec` (20) or a plaintext alert is *not* protected
         // and is read straight through (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
         if hdr[0] != SSL3_RT_APPLICATION_DATA {
-            let Some(dst) = out.get_mut(..body.len()) else {
+            if body.len() > cap {
                 return -1;
-            };
-            dst.copy_from_slice(body);
+            }
+            if !body.is_empty() {
+                // SAFETY: `body` is `body.len()` initialised bytes in the connection's record
+                // buffer, which does not overlap `buf`; `buf` is writable for
+                // `cap >= body.len()` bytes. The copy writes the whole published prefix, so
+                // nothing uninitialised is ever read.
+                unsafe { core::ptr::copy_nonoverlapping(body.as_ptr(), buf, body.len()) };
+            }
             // SAFETY: `rectype` is writable per the contract.
             unsafe { *rectype = hdr[0] };
             return body.len() as c_int;
@@ -772,10 +781,15 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
         };
     }
 
-    let Some(dst) = out.get_mut(..body.len()) else {
+    if body.len() > cap {
         return -1;
-    };
-    dst.copy_from_slice(body);
+    }
+    if !body.is_empty() {
+        // SAFETY: as for the non-application-data arm above: `body` is `body.len()` initialised
+        // bytes in `rec_body`, which does not overlap `buf`; `buf` is writable for
+        // `cap >= body.len()`.
+        unsafe { core::ptr::copy_nonoverlapping(body.as_ptr(), buf, body.len()) };
+    }
     // SAFETY: `rectype` is writable per the contract.
     unsafe { *rectype = hdr[0] };
     body.len() as c_int
@@ -793,15 +807,13 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
 /// records.
 ///
 /// # Safety
-/// `s` must be a live connection; `buf` must be writable for `cap` bytes.
+/// `s` must be a live connection. `buf` must be non-NULL and writable for `cap` bytes when
+/// `cap != 0`; **it need not be initialised**, and this function never reads it. `buf` must not
+/// overlap the connection's assembly buffer (`rd_msg_buf`) or record buffers, whose bytes are the
+/// source of the copy. On a positive return exactly the first `n` bytes are written.
 pub(crate) unsafe fn tls13_next_handshake_message(s: *mut Ssl, buf: *mut u8, cap: usize) -> c_int {
-    // SAFETY: `buf` is writable for `cap` bytes per the contract; a zero capacity needs no slice.
-    let out: &mut [u8] = if cap == 0 {
-        &mut []
-    } else {
-        // SAFETY: `buf` is writable for `cap` bytes per the caller's contract.
-        unsafe { core::slice::from_raw_parts_mut(buf, cap) }
-    };
+    // No slice is formed over the caller's buffer: only the `msg_len` bytes copied out are ever
+    // written, and the return value tells the caller how many those are.
     // SAFETY: `s` is live per the caller's contract.
     unsafe {
         loop {
@@ -818,10 +830,15 @@ pub(crate) unsafe fn tls13_next_handshake_message(s: *mut Ssl, buf: *mut u8, cap
                     if msg_len <= buffered.len() - off {
                         // The message is complete: hand it out and advance the offset.
                         let msg = &buffered[off..off + msg_len];
-                        let Some(dst) = out.get_mut(..msg_len) else {
+                        if msg_len > cap {
                             return -1;
-                        };
-                        dst.copy_from_slice(msg);
+                        }
+                        // SAFETY: `msg` is `msg_len` initialised bytes of `rd_msg_buf`, which the
+                        // contract says does not overlap `buf`; `buf` is writable for
+                        // `cap >= msg_len`. Only the copied prefix is written or published.
+                        if msg_len != 0 {
+                            core::ptr::copy_nonoverlapping(msg.as_ptr(), buf, msg_len);
+                        }
                         (*s).rd_msg_off = off + msg_len;
                         return msg_len as c_int;
                     }
@@ -1001,6 +1018,7 @@ mod boundary_tests {
     use crate::runtime::mem::CRYPTO_free;
     use crate::ssl::adv_alloc::zeroed_ssl;
     use crate::ssl::statem::statem::ossl_statem_in_error;
+    use core::mem::MaybeUninit;
 
     /// A TLS1.2-versioned record: `type || 0x0303 || length || body`.
     fn record(type_: u8, body: &[u8]) -> Vec<u8> {
@@ -1342,5 +1360,165 @@ mod boundary_tests {
             BIO_free(bio);
             CRYPTO_free(s.cast(), ptr::null(), 0);
         }
+    }
+
+    /// The caller promises only *writable* memory, never initialised `u8` values. Both output
+    /// entry points must therefore write before they read: the buffer is a `MaybeUninit` region
+    /// and only the returned prefix is ever inspected.
+    #[test]
+    fn rec_layer_uninitialised_output_is_not_read_before_written() {
+        let msg = [2u8, 0x00, 0x00, 0x01, 0xBB];
+        // SAFETY: the connection and BIO are exclusive frame-owned objects; the output buffers
+        // are exclusively this frame's and are initialised only by the record layer.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&record(22, &msg));
+            let mut out = vec![MaybeUninit::<u8>::uninit(); 16];
+            let n = tls13_next_handshake_message(s, out.as_mut_ptr().cast(), out.len());
+            assert_eq!(n, 5, "the framed message length is reported");
+            // SAFETY: a positive return means the first `n` bytes were written by the reader.
+            let written = core::slice::from_raw_parts(out.as_ptr().cast::<u8>(), n as usize);
+            assert_eq!(written, &msg, "only the written prefix is published");
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+
+            // The record-layer entry point has the same contract.
+            let body = b"plaintext";
+            let (s, bio) = connection_with_read_bytes(&record(23, body));
+            let mut out = vec![MaybeUninit::<u8>::uninit(); 16];
+            let mut rt = 0u8;
+            let n = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr().cast(), out.len());
+            assert_eq!(n as usize, body.len());
+            assert_eq!(rt, 23);
+            // SAFETY: a positive return means the first `n` bytes were written by the reader.
+            let written = core::slice::from_raw_parts(out.as_ptr().cast::<u8>(), n as usize);
+            assert_eq!(written, body);
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A short read writes nothing and retains the partial header; the resumed read publishes
+    /// exactly the record body and leaves every byte beyond it untouched.
+    #[test]
+    fn rec_layer_short_read_publishes_only_the_written_prefix() {
+        let full = record(23, b"hello");
+        // SAFETY: the connection and BIO are exclusive frame-owned objects; `out` is a local
+        // sentinel-filled buffer whose bytes past the written prefix must stay unchanged.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&full[..2]);
+            (*s).options |= SSL_OP_IGNORE_UNEXPECTED_EOF;
+            let mut rt = 0u8;
+            let mut out = [0xCDu8; 16];
+            let first = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr(), out.len());
+            assert_eq!(first, -1, "a short header is a retryable read");
+            assert_eq!((*s).rec_hdr_len, 2, "the partial header is retained");
+            assert_eq!(out, [0xCDu8; 16], "a short read writes no output");
+            assert_eq!(
+                BIO_write(bio, full[2..].as_ptr().cast(), (full.len() - 2) as c_int),
+                (full.len() - 2) as c_int
+            );
+            let second = ssl3_read_bytes(s, &mut rt, out.as_mut_ptr(), out.len());
+            assert_eq!(second, 5, "the resumed read delivers the body");
+            assert_eq!(&out[..5], b"hello");
+            assert_eq!(
+                &out[5..],
+                &[0xCDu8; 11],
+                "only the written prefix is published"
+            );
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A handshake message split across three records, with a middlebox-compatibility
+    /// `ChangeCipherSpec` record interleaved, is reassembled into one message.
+    #[test]
+    fn rec_layer_fragmented_handshake_message_reassembles() {
+        // `ServerHello` type (2) with a four-byte body: 2 + 3 + 3 bytes across three records.
+        let msg = [2u8, 0x00, 0x00, 0x04, 0xAA, 0xBB, 0xCC, 0xDD];
+        let first = record(22, &msg[..2]);
+        let ccs = record(20, &[0x01]);
+        let second = record(22, &msg[2..5]);
+        let third = record(22, &msg[5..]);
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&first);
+            for fragment in [&ccs, &second, &third] {
+                assert_eq!(
+                    BIO_write(bio, fragment.as_ptr().cast(), fragment.len() as c_int),
+                    fragment.len() as c_int
+                );
+            }
+            let mut out = [0u8; 16];
+            let n = tls13_next_handshake_message(s, out.as_mut_ptr(), out.len());
+            assert_eq!(n, 8, "the fragments form one message");
+            assert_eq!(&out[..8], &msg, "the reassembled bytes are exact");
+            assert_eq!((*s).rd_msg_off, 8, "the whole message is consumed");
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// A refused output reservation must not consume the buffered message: the state is
+    /// left reusable so a retry with enough room delivers the same bytes.
+    ///
+    /// This boundary allocates nothing of its own (the caller supplies the output and the
+    /// connection's assembly buffer is inline), and the crate's allocator-customisation latch
+    /// is one-way, so a genuine `CRYPTO_malloc` failure cannot be injected here. The refusal
+    /// seam exercised below is the only allocation-like reservation on the converted path; the
+    /// allocation-failure requirement is recorded as **not injectable**, not as passing.
+    #[test]
+    fn rec_layer_refusal_leaves_state_unchanged() {
+        let msg = [2u8, 0x00, 0x00, 0x01, 0xBB];
+        // SAFETY: the connection and BIO are exclusive frame-owned objects.
+        unsafe {
+            let (s, bio) = connection_with_read_bytes(&record(22, &msg));
+            let mut out = [0u8; 16];
+            let refused = tls13_next_handshake_message(s, out.as_mut_ptr(), 2);
+            assert_eq!(refused, -1, "a message that does not fit is refused");
+            assert_eq!((*s).rd_msg_off, 0, "the buffered message is not consumed");
+            assert_eq!((*s).rd_msg_len, 5, "the record stays assembled for a retry");
+            assert_eq!(out, [0u8; 16], "the refusal writes nothing");
+            let retried = tls13_next_handshake_message(s, out.as_mut_ptr(), out.len());
+            assert_eq!(retried, 5, "the retry delivers the same message");
+            assert_eq!(&out[..5], &msg);
+            BIO_free(bio);
+            CRYPTO_free(s.cast(), ptr::null(), 0);
+        }
+    }
+
+    /// Negative control (`#[cfg(test)]` only): the pre-fix rule published a typed slice of the
+    /// whole caller capacity over memory that is only promised writable, so its published
+    /// length could exceed the initialised prefix. The control models both rules against a
+    /// shadow initialised-length and fails if the pre-fix rule does not expose an uninitialised
+    /// byte.
+    #[test]
+    fn rec_layer_canary_pre_fix_output_slice_exceeds_written_prefix() {
+        // Pre-fix: `from_raw_parts_mut(buf, cap)` -> published length `cap`.
+        fn pre_fix_published(cap: usize, _written: usize) -> usize {
+            cap
+        }
+        // Post-fix: only the written prefix is exposed.
+        fn post_fix_published(cap: usize, written: usize) -> usize {
+            written.min(cap)
+        }
+        let (cap, written) = (16usize, 0usize);
+        let pre = pre_fix_published(cap, written);
+        let first_uninitialised = (0..pre).find(|i| *i >= written);
+        assert_eq!(
+            first_uninitialised,
+            Some(0),
+            "the pre-fix slice exposes the unwritten byte (the defect)"
+        );
+        assert_eq!(
+            post_fix_published(cap, written),
+            0,
+            "the converted path exposes no byte before it is written"
+        );
+        std::println!(
+            "rec_layer canary: pre-fix published {pre} bytes of which {written} were initialised \
+             (first uninitialised index {first_uninitialised:?}); post-fix publishes {} byte(s)",
+            post_fix_published(cap, written)
+        );
     }
 }
