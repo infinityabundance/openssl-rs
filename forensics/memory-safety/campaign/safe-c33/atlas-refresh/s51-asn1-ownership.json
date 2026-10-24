@@ -1,0 +1,188 @@
+{
+  "receipt": "s51-asn1-ownership",
+  "date": "2026-10-24",
+  "subphase": "S51 Wave C: src/asn1/d2i.rs partial-object ownership, one boundary cursor threaded through the interior, ASN1_get_object reader audit in src/asn1/der.rs",
+  "mechanisms": [
+    "ASN1_D2I_PARTIAL_OBJECT_OWNERSHIP",
+    "ASN1_D2I_CURSOR_THREADING",
+    "ASN1_GET_OBJECT_READER_AUDIT"
+  ],
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "22f912670",
+    "committed": false,
+    "changed_files": 1,
+    "diffstat": "src/asn1/d2i.rs +598/-281 (879 changed lines); no other file modified"
+  },
+  "authority": {
+    "source": "OpenSSL 3.6.4 crypto/asn1/tasn_dec.c (asn1_item_embed_d2i, asn1_template_ex_d2i, asn1_template_noexp_d2i, asn1_d2i_ex_primitive, asn1_ex_c2i) and crypto/asn1/asn1_lib.c ASN1_get_object",
+    "abi": "Diff lines containing no_mangle, repr(C) or export_name: 0. Every exported symbol and signature is unchanged. FILE/LINE are unchanged: crypto/asn1/tasn_dec.c, 0. The only new extern \"C\" line is a test-only callback inside #[cfg(test)].",
+    "allocator_seam": "The new ContentHandoff Drop calls CRYPTO_free at the existing FILE/LINE (crypto/asn1/tasn_dec.c, 0), the same seam and coordinates the removed Collected::adopt path used. No seam constant, size, file or line changed; there is one additional call site in the handoff guard.",
+    "behaviour": "Header ordering, the cached TOO_LONG test before the header error bit, constructed-string collection, indefinite EOC walks, per-arm reason codes and the decoded-value publication rule are preserved. One deliberate divergence is recorded below for a failing EXTERN hook."
+  },
+  "scope_item_1_partial_object_ownership": {
+    "verdict": "No normal-return failure path was found that leaks or double-owns. Two defects existed and are fixed: an unwinding handoff leaked, and the free_cont flag was a Rust bool handed to a C char* hook.",
+    "PushedElements": "Audited unchanged. The guard owns exactly the elements it pushed (the stack was emptied first), frees an element the stack refuses, pops/frees on failure, and disarms on commit. The stack itself is owned by the value (or by the direct-entry caller). Its multi-push failure behaviour is now pinned by d2i_sequence_of_failure_after_several_elements_owns_nothing.",
+    "already_assigned_fields": "A field assigned before a later failure is released by item_ex_d2i_intern's ASN1_item_ex_free (the indirect entry) or by the direct caller (x509_pubkey_ex_d2i_ex frees on ret <= 0). The object is not left installed: the slot is nulled (indirect) or owned by the caller that must free it (direct).",
+    "cached_encoding": "enc_save runs immediately before the POST callback. On a POST failure the value is freed by ASN1_item_ex_free -> item_embed_free -> enc_free, which releases the cached block before the value itself, and the slot is nulled. d2i_nested_encoded_template_failure_leaves_no_cached_value proves the decode reached enc_save (recorded non-null cache at POST), then failed, then left no value at all; a retry decodes from a clean slot.",
+    "take_raw_handoff": {
+      "pre_fix": "Collected::take_raw cleared the owner; the block was reclaimed with an unsafe Collected::adopt only on a normal return from ex_c2i. An unwind out of ex_c2i left the block owned by nobody.",
+      "fix": "ContentHandoff owns the block from take_raw until after ex_c2i. Its Drop releases it unless the codec cleared free_cont, so normal failure, success-without-consumption and unwinding all release exactly once. Collected::adopt (unsafe fn) is removed.",
+      "test": "d2i_canary_pre_fix_take_raw_handoff_would_leak_on_unwind"
+    },
+    "free_cont_validity": {
+      "defect": "The flag was a Rust bool whose address was cast to the prim_c2i hook's char*. A conforming C hook may store any char, after which reading the slot as bool is an invalid-value read (UB).",
+      "fix": "The flag is c_char throughout (d2i_ex_primitive, ex_c2i, ContentHandoff); any non-zero byte means the codec still owns the block, zero means it took it. The hook now receives free_cont as *mut c_char with no cast through bool.",
+      "hidden_obligations_before": 1,
+      "hidden_obligations_after": 0
+    }
+  },
+  "scope_item_2_lifetime_bound_input": {
+    "boundary": "One Cursor is derived at each exported/internal entry point from the caller's (pointer, len) contract: item_d2i, ASN1_item_ex_d2i, ASN1_item_d2i_ex and asn1_item_embed_d2i.",
+    "interior": "embed_d2i, mstring_d2i, template_ex_d2i, template_noexp_d2i and d2i_ex_primitive now take &mut Cursor. No interior function takes a raw input pointer plus a separate length, so no interior function can re-derive an extent. Each works on a local copy and commits the caller's cursor only on success, preserving 'no progress on failure'.",
+    "removed": "cursor_distance and remaining_after are deleted (15 use sites). Nine interior Cursor::new constructor calls are gone; four boundary constructors replace them.",
+    "remaining_raw_pairs": [
+      "An ASN1_ITYPE_EXTERN asn1_ex_d2i/asn1_ex_d2i_ex hook: a genuine ABI edge. The pair is derived once from the cursor and folded back with advance_to on success; an over-advance is refused.",
+      "ex_c2i's content pointer plus length: the content-codec seam. A primitive's prim_c2i hook and the detached ossl_c2i_* codecs take (const unsigned char *, long) by contract; the pointer and length are single-sourced from the cursor and proved by take/limit/advance before the call."
+    ],
+    "representation_choice": "The module's S41 Cursor (pointer plus remaining count) is the lifetime-bounded view, rather than a materialised &[u8]: the decoder must track mutable progress and publish a raw pointer at the ABI, and a second shared-slice view over allocator-owned content would add provenance/aliasing constraints without enforcing anything the cursor does not."
+  },
+  "scope_item_3_asn1_get_object": {
+    "verdict": "SOUND AS A READER; no change made to src/asn1/der.rs.",
+    "proof": [
+      "max starts at omax and is decremented in lockstep with every p advance; every read is guarded by max >= 1, so p never exceeds start + omax.",
+      "asn1_get_length returns 0 on any length-byte overrun, and its definite-length accumulation refuses a value above c_long::MAX.",
+      "consumed = p - start is therefore in [0, omax], so omax - consumed cannot underflow; the comparison only raises the recoverable 0x80 flag and sets ret |= 0x80.",
+      "*pp is published at p even on the TOO_LONG path, and p is still within the readable extent (at the end of the header, not past omax)."
+    ],
+    "callers_audited": [
+      "asn1/d2i.rs check_tlen: len slot initialised to 0; p folded through Cursor::advance_to.",
+      "asn1/asn1_gen.rs: hdr_len initialised to 0; breaks on 0x80; pointer difference bounded by the returned p.",
+      "asn1/a_d2i_fp.rs: slen initialised to 0; 0x80 is the recoverable TOO_LONG path; offset uses the published p.",
+      "asn1/der.rs parse2: len initialised to 0; breaks on 0x80; ep = p + len is only formed after the successful branch.",
+      "asn1/prim.rs (two callers): len initialised to 0; 0x80, tag and negative-length guards precede every content read.",
+      "pkcs7/pk7_doit.rs: len initialised to 0; the constructed/tag test rejects the 0x80 form before ASN1_OCTET_STRING_set."
+    ],
+    "authority_quirk": "For an indefinite length asn1_get_length does not write *plength; ASN1_get_object then compares the caller's incoming value. Every in-crate caller initialises the slot to 0, and the exported behaviour matches the authority.",
+    "test": "d2i_asn1_get_object_header_beyond_omax_reports_too_long (declared 5, omax 5 with 3 content bytes: ret has 0x80, len 5, reason ASN1_R_TOO_LONG=155, *pp = start+2 and a real header decodes there)"
+  },
+  "scope_item_4_s41_checked_sites": {
+    "converted_to_structural": 3,
+    "converted_ids": ["C2", "C3", "C4"],
+    "dispositions": [
+      {"id": "C1", "result": "checked-at-site, retained", "reason": "The authority raises TOO_LONG (site 1219) for an unrepresentable hdrlen + plen even when the error/indefinite bit makes it skip the length comparison. A cursor-relative comparison alone would report BAD_OBJECT_HEADER (1226) for that input, changing an observable reason code, so the checked sum and the authority's ordering are preserved. d2i_check_tlen_unrepresentable_sum_keeps_too_long pins reason 155."},
+      {"id": "C2", "result": "structural", "detail": "Five embed_d2i field/template advance sites now share the value cursor; no pointer subtraction or remaining-after arithmetic."},
+      {"id": "C3", "result": "structural", "detail": "template_ex_d2i narrows its wrapper with Cursor::limit and commits with advance/assignment; no cursor_distance."},
+      {"id": "C4", "result": "structural", "detail": "Both template_noexp_d2i SET OF/SEQUENCE OF element-advance sites share the field's content cursor."},
+      {"id": "C5", "result": "checked-at-site, retained", "reason": "Collected::append reproduces the authority's long-overflow test and then grows a CRYPTO_realloc buffer. Making growth structural needs an allocator-neutral fallible capacity type, which would change the authority's allocation/error sequence, not just a representation."},
+      {"id": "C6", "result": "checked-at-site, retained", "reason": "ex_c2i keeps the authority's (int)len cast and its per-arm comparisons (len != ilen, BIT STRING/OBJECT/INTEGER INT_MAX guards). Replacing the cast with try_from would not remove a guard; the guards are exercised directly at INT_MAX+1."},
+      {"id": "C7", "result": "checked-at-site, audited sound", "reason": "der.rs is reader-audit scope. The max-accounting invariant proves consumed <= omax; the test pins the error and pointer state. No change manufactured."},
+      {"id": "C8", "result": "addressed (ownership, not a length bound)", "detail": "The decoded-ownership handoff is now structurally single-owner through ContentHandoff, including unwinding."}
+    ]
+  },
+  "changes": [
+    "Added ContentHandoff (owns the collected block from take_raw; releases on Drop unless the codec cleared free_cont) and removed the unsafe Collected::adopt constructor.",
+    "Changed free_cont from bool to c_char in d2i_ex_primitive, ex_c2i and the handoff guard; the prim_c2i hook now receives *mut c_char directly.",
+    "Threaded one &mut Cursor through embed_d2i, mstring_d2i, template_ex_d2i, template_noexp_d2i and d2i_ex_primitive; each commits the caller's cursor only on success.",
+    "Derived the boundary cursor once in item_d2i, ASN1_item_ex_d2i, ASN1_item_d2i_ex and asn1_item_embed_d2i, publishing the caller's in/pp only on success.",
+    "Deleted cursor_distance/remaining_after and the interior cursor re-derivations; C1's checked sum is retained to preserve the authority's TOO_LONG reason.",
+    "The EXTERN d2i hook remains a raw ABI edge; its answer is folded back with advance_to, and a failing hook no longer publishes partial progress."
+  ],
+  "tests": {
+    "new": [
+      "asn1::d2i::tests::d2i_sequence_of_failure_after_several_elements_owns_nothing ... ok",
+      "asn1::d2i::tests::d2i_nested_encoded_template_failure_leaves_no_cached_value ... ok",
+      "asn1::d2i::tests::d2i_asn1_get_object_header_beyond_omax_reports_too_long ... ok",
+      "asn1::d2i::tests::d2i_check_tlen_unrepresentable_sum_keeps_too_long ... ok",
+      "asn1::d2i::tests::d2i_canary_pre_fix_take_raw_handoff_would_leak_on_unwind ... ok"
+    ],
+    "s41_boundary_tests": "All eight S41 d2i tests are byte-for-byte unchanged and pass, including d2i_declared_length_exceeding_input_is_refused, d2i_nested_length_beyond_the_cursor_is_refused_before_reading, d2i_indefinite_sequence_with_overlong_nested_element_is_refused, d2i_nested_indefinite_length_without_matching_eoc_is_refused, d2i_truncated_header_is_refused, d2i_content_length_at_i32_and_u32_boundaries_is_refused, d2i_failed_decode_leaves_no_partially_owned_value, d2i_canary_pre_fix_cursor_advance_would_overrun.",
+    "filtered_d2i": "test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 2146 filtered out; finished in 0.00s",
+    "filtered_asn1": "test result: ok. 63 passed; 0 failed; 1 ignored; 0 measured; 2103 filtered out; finished in 0.00s",
+    "extra_compatibility_probes": [
+      "filtered x509 (covers the X509_NAME/X509_PUBKEY EXTERN hooks across the changed boundary): test result: ok. 134 passed; 0 failed; 0 ignored; 0 measured; 2032 filtered out; finished in 0.26s",
+      "filtered pkcs (pkcs7/pkcs12 decoders): test result: ok. 29 passed; 0 failed; 1 ignored; 0 measured; 2136 filtered out; finished in 0.01s"
+    ]
+  },
+  "negative_control": {
+    "name": "asn1::d2i::tests::d2i_canary_pre_fix_take_raw_handoff_would_leak_on_unwind",
+    "cfg": "#[cfg(test)] only",
+    "fires_on": "the removed normal-return-only adoption: take_raw cleared the owner and a panic before adoption left the block owned by nobody",
+    "mechanism": "allocates a four-byte block through the seam, constructs ContentHandoff with free_cont=1, unwinds out of the scope under catch_unwind, and asserts the guard's Drop released it (test-only HANDOFF_RELEASES counter). A pre-fix raw handoff would record 0.",
+    "output": "d2i canary: pre-fix take_raw+panic leaked the collected block; post-fix ContentHandoff released it during unwind (releases=1)",
+    "note": "This is a normal-test observation of the Drop path, not a UB detector; only Miri/ASan would observe the pre-fix leak itself."
+  },
+  "unsafe": {
+    "before_after": "production unsafe blocks 238 -> 226 (-12); production unsafe fn 18 -> 17 (Collected::adopt removed, no production unsafe fn added); cfg(test) unsafe blocks 14 -> 26 (new tests and the test-only counter). Totals 252 -> 252: every removed production block is matched by test-only scaffolding.",
+    "eliminated": "9 interior Cursor::new unsafe constructor calls, the Collected::adopt unsafe fn and its call site, 15 raw pointer-distance/remaining-length use sites, and the bool free_cont invalid-value hazard.",
+    "relocated": "4 boundary Cursor::new calls (one audited constructor each) and one ContentHandoff Drop CRYPTO_free. The EXTERN and prim_c2i raw pairs remain at their genuine ABI edges.",
+    "hidden": 0
+  },
+  "obligations": {
+    "discharged": [
+      "The collected block has one owner from take_raw until the content codec decides, including when the codec unwinds.",
+      "The free_cont flag is a valid C char for every byte a hook may store.",
+      "A decode that fails after several SEQUENCE OF elements were pushed leaves the value's stack with zero elements.",
+      "A POST failure after enc_save leaves no value and no reachable cache; a retry starts clean.",
+      "Every interior decoder shares one cursor and commits only on success.",
+      "A declared definite extent is narrowed with Cursor::limit before any field decoder sees it."
+    ],
+    "retained": [
+      "C1 hdrlen + plen stays checked-at-site so an unrepresentable sum still raises TOO_LONG (1219) exactly where the authority does.",
+      "C5 Collected::append growth stays checked-at-site (authority long-overflow test plus CRYPTO_realloc).",
+      "C6 ex_c2i keeps the authority's narrowing cast and per-arm guards.",
+      "C7 ASN1_get_object stays checked-at-site by scope; proved sound by the max-accounting invariant and a test.",
+      "The EXTERN d2i and prim_c2i hooks remain raw ABI edges.",
+      "The S41 stale-TLC refusal remains: a cached header that does not fit is refused without raising."
+    ],
+    "introduced": [
+      "A failing or absent EXTERN hook's partial *in advance is not published; the cursor is committed only on success. The crate's two EXTERN hooks (X509_NAME, X509_PUBKEY) only write *in on success, so this is not observable for them."
+    ],
+    "hidden": 0
+  },
+  "compatibility_delta": "No intended observable change for well-formed input or for the existing malformed courts. Reason codes, error ordering, allocator coordinates and exported signatures are unchanged. The EXTERN failure-progress divergence is recorded above. The four S41 boundary tests and the whole asn1 filter pass, plus x509 and pkcs probes.",
+  "safety_checks": {
+    "cargo_fmt": "cargo fmt --all -- --check -> FMT_OK (no diff)",
+    "cargo_check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.09s",
+    "cargo_clippy_lib": "cargo clippy --lib -- -D warnings -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.65s (clean)",
+    "cargo_clippy_all_targets": "NOT PASSING for pre-existing reasons: cargo clippy --all-targets -- -D warnings reports 10 diagnostics in files this batch does not touch (src/ssl/tls13_enc.rs five, src/ssl/statem/statem_clnt.rs two, src/ssl/statem/statem_srvr.rs one, src/cms/cms_pwri.rs one, src/pkcs7/pk7_doit.rs one). There are no d2i.rs diagnostics. The instructed --lib gate is clean.",
+    "structural_guards": "no_mangle/repr(C)/export_name diff lines: 0; FILE/LINE unchanged; exported signatures unchanged; the only new extern \"C\" line is test-only",
+    "miri": "NOT_RUN (BOUNDARY instrument)",
+    "asan": "NOT_RUN",
+    "full_library_suite": "NOT_RUN (FAST only for this subphase, as instructed)"
+  },
+  "graduation": "OWNERSHIP_RECONSTRUCTED for partial-object ownership, the collected-block handoff and interior input extents. Not SAFETY_DISCHARGED: Miri/ASan and independent review are NOT_RUN, and C1, C5-C7 remain checked-at-site.",
+  "residuals": [
+    {
+      "id": "S51-R1",
+      "finding": "A panic after an ASN.1 value has been allocated but before item_ex_d2i_intern's failure free (for example a panic inside a later codec) still leaks the value: guard_ffi catches the unwind but does not run the failure free.",
+      "disposition": "Pre-existing, broader than the take_raw handoff fixed here. The handoff block itself is now guard-owned. Requires a failure-atomic/poisoning design for the value slot; Miri/ASan NOT_RUN."
+    },
+    {
+      "id": "S51-R2",
+      "finding": "A caller that shares an ASN1_TLC cache across top-level calls can reuse a header cached by a failed decode. A header that does not fit is refused by the cursor; a fitting stale header can misdecode.",
+      "disposition": "Authority-compatible cache contract. No memory unsafety (all advances are bounded). Clearing the caller's cache on failure would be a deliberate behaviour change and was not made."
+    },
+    {
+      "id": "S51-R3",
+      "finding": "EXTERN hooks that advance *in on failure would have that progress published by the authority; this implementation discards it.",
+      "disposition": "Deliberate 'no progress on failure' divergence, unobservable for the crate's X509_NAME and X509_PUBKEY hooks."
+    },
+    {
+      "id": "S51-R4",
+      "finding": "The canary observes the Drop path; it does not detect the pre-fix leak itself. No Miri/ASan run verifies the pre-fix read/leak.",
+      "disposition": "Miri/ASan are BOUNDARY instruments, NOT_RUN."
+    },
+    {
+      "id": "S51-R5",
+      "finding": "C1 (authority checked sum), C5 (collector growth), C6 (authority narrowing cast) and C7 (ASN1_get_object accounting) remain checked-at-site.",
+      "disposition": "Recorded above with the reason each cannot be made structural cheaply without changing an observable error reason; C7 is proved sound and tested."
+    },
+    {
+      "id": "S51-R6",
+      "finding": "ASN1_get_object does not write *plength for an indefinite length.",
+      "disposition": "Matches the authority; every in-crate caller initialises the slot to 0. A C caller must do the same, as with the authority."
+    }
+  ]
+}
