@@ -12634,6 +12634,183 @@ RUNNERS.update({
     "mutt": _wl_mutt,
 })
 
+def _wl_sqlcipher(ctx: dict) -> dict:
+    """SQLCipher writes, reads and refuses a wrong key on a real database file."""
+    d = ctx["workdir"]
+    prog = str(ctx["program"])
+    db = d / "s46-sqlcipher.db"
+    try:
+        db.unlink()
+    except OSError:
+        pass
+    sql = ("PRAGMA key='phase25-l7-key'; CREATE TABLE t(v); "
+           "INSERT INTO t VALUES('phase25-l7-sqlcipher'); SELECT v FROM t;")
+    made = _run_captured([prog, str(db), sql], cwd=d, env=ctx["env"], timeout=60)
+    read = _run_captured([prog, str(db), "PRAGMA key='phase25-l7-key'; SELECT v FROM t;"],
+                         cwd=d, env=ctx["env"], timeout=60)
+    wrong = _run_captured([prog, str(db), "PRAGMA key='wrong-key'; SELECT v FROM t;"],
+                          cwd=d, env=ctx["env"], timeout=60)
+    good_text = made["stdout"] + made["stderr"] + read["stdout"] + read["stderr"]
+    wrong_text = wrong["stdout"] + wrong["stderr"]
+    runtime_ok = bool(made["ok"] and read["ok"] and "phase25-l7-sqlcipher" in good_text)
+    rejected = bool(not wrong["ok"] or "phase25-l7-sqlcipher" not in wrong_text)
+    functional_ok = runtime_ok and rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the encrypted database did not round-trip" if not runtime_ok else
+            "a wrong key still opened the database"),
+        "transcript": _transcript(("sqlcipher create+select", made),
+                                  ("sqlcipher reopen", read),
+                                  ("sqlcipher wrong key", wrong)),
+        "workload": ("sqlcipher: AES-256 page encryption round trip + wrong-key reject"),
+        "local_only": True,
+    }
+
+
+def _wl_tcltls(ctx: dict) -> dict:
+    """TclTLS's TLS client channel against a local server and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    port, neg_port = _free_port(), _free_port()
+    good_srv = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(port),
+                       "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]),
+                       "-www", "-quiet"], d, _auth_env(ap),
+                      d / "tcl-good.out", d / "tcl-good.err")
+    bad_srv = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(neg_port),
+                      "-cert", str(pki["other_srv_crt"]), "-key", str(pki["other_srv_key"]),
+                      "-www", "-quiet"], d, _auth_env(ap),
+                     d / "tcl-bad.out", d / "tcl-bad.err")
+    try:
+        if not (_wait_tcp("127.0.0.1", port) and _wait_tcp("127.0.0.1", neg_port)):
+            return _wl_fail([("openssl s_server", {"exit_code": 0, "stdout": ""})],
+                            "the local TLS servers did not start", "runtime-failure", d)
+        argv = [str(ctx["root"]), str(port), str(neg_port), str(pki["ca_crt"]),
+                str(pki["other_crt"])]
+        return _wl_markers_argv(ctx, argv, ["tcltls_payload=ok",
+                                            "tcltls_unrelated_ca=rejected"],
+                                "TclTLS TLS client channel + unrelated-CA reject")
+    finally:
+        _stop(good_srv)
+        _stop(bad_srv)
+
+
+def _wl_davix(ctx: dict) -> dict:
+    """davix-get fetches the fixture over verified HTTPS and rejects an unrelated CA."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    body = "davix-l7-payload"
+    port = _free_port()
+    stop, state = threading.Event(), {}
+    thread = _https_fixture(port, pki, body, state, stop)
+    good_dir, bad_dir = d / "ca-good", d / "ca-bad"
+    for directory, cert in ((good_dir, pki["ca_crt"]), (bad_dir, pki["other_crt"])):
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "ca.pem").write_bytes(Path(cert).read_bytes())
+        _ossl(ap, ["rehash", str(directory)])
+    out_good, out_bad = d / "out-good", d / "out-bad"
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("tls fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local TLS fixture did not open its port",
+                            "runtime-failure", d)
+        url = f"https://127.0.0.1:{port}/"
+        good = _run_captured([str(ctx["program"]), "-q", "--capath", str(good_dir),
+                              "-o", str(out_good), url], cwd=d, env=ctx["env"], timeout=60)
+        neg = _run_captured([str(ctx["program"]), "-q", "--capath", str(bad_dir),
+                             "-o", str(out_bad), url], cwd=d, env=ctx["env"], timeout=60)
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    got = out_good.read_bytes() if out_good.is_file() else b""
+    runtime_ok = bool(good["ok"] and body.encode() in got)
+    rejected = bool(not neg["ok"] or not (out_bad.is_file() and body.encode() in out_bad.read_bytes()))
+    functional_ok = runtime_ok and rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "davix-get did not fetch the verified fixture" if not runtime_ok else
+            "an unrelated CA was accepted"),
+        "transcript": _transcript(("davix-get verified", good), ("davix-get wrong CA", neg)),
+        "workload": "davix-get: verified HTTPS fetch + unrelated-CA reject",
+        "local_only": True,
+    }
+
+
+def _wl_pyscrypt(ctx: dict) -> dict:
+    """py-scrypt's scrypt KDF through the rebuilt extension and the subject libcrypto."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    return _wl_markers_argv(ctx, [str(ctx["root"]), str(pki["srv_key"])],
+                            ["scrypt_hash=ok", "scrypt_differs=ok"],
+                            "py-scrypt: scrypt KDF vector + different-salt control")
+
+
+def _wl_pym2crypto(ctx: dict) -> dict:
+    """M2Crypto's RSA sign/verify through the rebuilt SWIG binding."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    return _wl_markers_argv(ctx, [str(ctx["root"]), str(pki["srv_key"])],
+                            ["m2_sign=ok", "m2_verify=ok", "m2_tamper=rejected"],
+                            "M2Crypto: RSA sign/verify + tampered-signature reject")
+
+
+def _wl_ewftools(ctx: dict) -> dict:
+    """ewfacquire/ewfverify: the image digest is computed and re-verified over the subject."""
+    d = ctx["workdir"]
+    src = d / "s46-ewf-data.bin"
+    src.write_bytes(bytes(range(256)) * 16)
+    img = d / "s46-ewf-img"
+    acquire = str(ctx["root"] / "ewftools" / ".libs" / "ewfacquire")
+    verify = str(ctx["root"] / "ewftools" / ".libs" / "ewfverify")
+    acq = _run_captured([acquire, "-u", "-q", "-t", str(img), "-C", "s46-case",
+                         "-D", "s46", "-e", "s46", "-E", "s46", "-N", "s46",
+                         "-m", "fixed", "-M", "physical", "-c", "deflate:none",
+                         "-S", "1GiB", "-b", "64", "-B", "4096", "-P", "512",
+                         "-g", "0", "-d", "sha256", str(src)],
+                        cwd=d, env=ctx["env"], timeout=120)
+    ver = _run_captured([verify, "-q", "-d", "sha256", str(img) + ".E01"],
+                        cwd=d, env=ctx["env"], timeout=120)
+    tampered = d / "s46-ewf-tampered.E01"
+    tampered.write_bytes((img.with_suffix(".E01")).read_bytes())
+    blob = bytearray(tampered.read_bytes())
+    if blob:
+        blob[len(blob) // 2] ^= 0xFF
+    tampered.write_bytes(bytes(blob))
+    neg = _run_captured([verify, "-q", "-d", "sha256", str(tampered)],
+                        cwd=d, env=ctx["env"], timeout=120)
+    good_text = acq["stdout"] + acq["stderr"] + ver["stdout"] + ver["stderr"]
+    runtime_ok = bool(acq["ok"] and ver["ok"] and "ewfacquire: SUCCESS" in good_text
+                      and "ewfverify: SUCCESS" in good_text)
+    rejected = bool(not neg["ok"] or "ewfverify: SUCCESS" not in (
+        neg["stdout"] + neg["stderr"]))
+    functional_ok = runtime_ok and rejected
+    return {
+        "runtime_ok": runtime_ok, "functional_ok": functional_ok,
+        "failure_class": None if functional_ok else (
+            "functional-failure" if runtime_ok else "runtime-failure"),
+        "residual": "none" if functional_ok else (
+            "functional-divergence" if runtime_ok else "runtime-failure"),
+        "reason": None if functional_ok else (
+            "the acquired image did not verify" if not runtime_ok else
+            "a tampered image still verified"),
+        "transcript": _transcript(("ewfacquire", acq), ("ewfverify", ver),
+                                  ("tampered image", neg)),
+        "workload": ("ewf-tools: MD5/SHA-256 acquisition and re-verification + "
+                     "tampered-image reject"),
+        "local_only": True,
+    }
+
+
 # S44 corpus batch: the pristine tree's own test consumers are the admitted programs.
 _S44_PROGRAMS = {
     "librelp": {
@@ -12685,6 +12862,94 @@ PROGRAMS.update(_S44_PROGRAMS)
 RUNNERS.update({"librelp": _wl_librelp, "hydra": _wl_hydra,
                 "nagios-plugins-tcp": _wl_check_tcp, "ncrack": _wl_ncrack,
                 "ircd-hybrid": _wl_ircd_hybrid, "medusa": _wl_medusa})
+
+
+# S46 corpus batch: the consumers with an admitted deterministic workload.  Families in the batch
+# without an entry here keep their build/link row (`no-fixture`), not a fabricated workload.
+_S46_PROGRAMS: dict[str, dict] = {
+    "tcl-tls": {
+        "program": ".l7-tcl-harness", "launch": ["--version"],
+        "version_re": r"tcltls-l7-harness", "lib_paths": [],
+        "harness": {
+            "source": "forensics/tools/l7_tcl_runner.c",
+            "cflags": ["-I{aux}/usr/include", "-I{aux}/usr/include/tcl8.6",
+                       "-DL7_TCL_LIBRARY=\"{aux}/usr/share/tcltk/tcl8.6\"",
+                       "-DL7_TCL_TMLIB=\"{aux}/usr/share/tcltk/tcl8.6/tcl8\"",
+                       "-DL7_SCRIPT_PATH=\"{repo}/forensics/tools/l7_tcltls.tcl\""],
+            "ldflags": ["-L{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                        "-L{prefix}/lib", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed", "-ltcl8.6", "-lssl", "-lcrypto",
+                        "-ldl", "-lm", "-lpthread"],
+        },
+        "note": "TclTLS TLS client channel + unrelated-CA reject",
+    },
+    "sqlcipher": {
+        "program": "sqlcipher", "launch": ["--version"],
+        "version_re": r"SQLCipher", "lib_paths": [],
+        "note": "SQLCipher: AES-256 page encryption round trip + wrong-key reject",
+    },
+    "davix": {
+        "program": "bin/davix-get", "launch": ["--version"],
+        "version_re": r"davix", "lib_paths": [],
+        "note": "davix-get: verified HTTPS fetch + unrelated-CA reject",
+    },
+    "python3-scrypt": {
+        "program": ".l7-pyscrypt-harness", "launch": ["--version"],
+        "version_re": r"pyscrypt-l7-harness", "lib_paths": [],
+        "harness": {
+            "source": "forensics/tools/l7_python_runner.c",
+            "cflags": ["-I{aux}/usr/include", "-I{aux}/usr/include/python3.11",
+                       "-I{aux}/usr/include/x86_64-linux-gnu",
+                       "-DL7_SCRIPT_PATH=\"{repo}/forensics/tools/l7_pyscrypt.py\""],
+            "ldflags": ["-L{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                        "-L{prefix}/lib", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed",
+                        "-L/usr/lib/x86_64-linux-gnu",
+                        "-l:libpython3.11.so.1.0", "-lssl", "-lcrypto",
+                        "-ldl", "-lm", "-lpthread"],
+        },
+        "note": "py-scrypt: scrypt KDF vector + different-salt control",
+    },
+    "python3-m2crypto": {
+        "program": ".l7-pym2-harness", "launch": ["--version"],
+        "version_re": r"pym2-l7-harness", "lib_paths": [],
+        "harness": {
+            "source": "forensics/tools/l7_python_runner.c",
+            "cflags": ["-I{aux}/usr/include", "-I{aux}/usr/include/python3.11",
+                       "-I{aux}/usr/include/x86_64-linux-gnu",
+                       "-DL7_SCRIPT_PATH=\"{repo}/forensics/tools/l7_pym2crypto.py\""],
+            "ldflags": ["-L{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                        "-L{prefix}/lib", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,--no-as-needed",
+                        "-L/usr/lib/x86_64-linux-gnu",
+                        "-l:libpython3.11.so.1.0", "-lssl", "-lcrypto",
+                        "-ldl", "-lm", "-lpthread"],
+        },
+        "note": "M2Crypto: RSA sign/verify + tampered-signature reject",
+    },
+    "ewf-tools": {
+        "program": "ewftools/.libs/ewfverify", "launch": ["-V"],
+        "version_re": r"ewfverify", "lib_paths": ["libewf/.libs"],
+        "note": "ewf-tools: MD5/SHA-256 acquisition and re-verification + tampered-image reject",
+    },
+}
+_S46_PROGRAMS["perl-net-dns-sec"] = _s33_perl_program(
+    "perl-net-dns-sec", "l7_perl_net_dns_sec.pl", "Net/DNS/SEC", "SEC.so",
+    ["dnssec_key=ok", "dnssec_sign=ok", "dnssec_verify=ok", "dnssec_tamper=rejected"],
+    "Net::DNS::SEC 1.20: DNSSEC sign/verify + tampered-RRset reject")
+PROGRAMS.update(_S46_PROGRAMS)
+RUNNERS.update({
+    "tcl-tls": _wl_tcltls,
+    "sqlcipher": _wl_sqlcipher,
+    "davix": _wl_davix,
+    "python3-scrypt": _wl_pyscrypt,
+    "python3-m2crypto": _wl_pym2crypto,
+    "perl-net-dns-sec": _wl_perl,
+    "ewf-tools": _wl_ewftools,
+})
 
 
 # --------------------------------------------------------------------------------------------
