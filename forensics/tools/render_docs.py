@@ -686,7 +686,7 @@ class Evidence:
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
                 "— no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation "
                 "control, authority differential, full forensic regeneration or held-out "
-                "compatibility for the S16–S46 cluster | "
+                "compatibility for the S16–S53 cluster | "
                 f"`{STATUS_S}` (`gates.boundary_gate`, `gates.seal_gate`) |",
                 "| **Allocator / ABI invariants** | "
                 f"**preserved** — recorded invariant planes: {invariants or 'none recorded'} | "
@@ -899,7 +899,7 @@ class Evidence:
                 "| **Not discharged** | " + not_discharged + " |",
                 "| **BOUNDARY / SEAL gates** | "
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
-                "— the S16–S46 cluster has no independent caller/dependency-closure audit, "
+                "— the S16–S53 cluster has no independent caller/dependency-closure audit, "
                 "Miri/ASan/Loom/mutation control, authority differential, full forensic "
                 "regeneration or held-out compatibility. |",
                 "| **Known gaps** | " + (gap_bits or "none recorded") + " |",
