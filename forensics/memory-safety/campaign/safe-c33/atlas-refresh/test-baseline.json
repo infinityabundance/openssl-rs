@@ -8,6 +8,6 @@
   "total": 2133,
   "kind": "full-library-run",
   "source_tree_unchanged": false,
-  "source_tree_unchanged_note": "S35 and S36 were measurement-only, but S39-S41 changed src/ (ssl/record/rec_layer_s3.rs, ssl/t1_enc.rs, ssl/tls13_enc.rs, provider/cipher_gcm.rs, asn1/d2i.rs) and S22/S30/S34 added tests after this run. The S34 count is therefore a floor, not the current total; no full library run exists for S39-S47.",
-  "note": "S34 BATCH full run (cargo test --lib -- --test-threads=4, 137.71s) on the DHE working tree. Serial --test-threads=1 was not run in S34. Floor at the time: 1962; no test was removed or newly ignored. Left at the S34 record in S47; S44-S47 ran no cargo command and do not imply a fresh full run."
+  "source_tree_unchanged_note": "S35 and S36 were measurement-only, but S39-S41 and S49-S51 changed src/ (ssl/record/rec_layer_s3.rs, ssl/t1_enc.rs, ssl/tls13_enc.rs, provider/cipher_gcm.rs, asn1/d2i.rs, ssl/statem/statem_srvr.rs, ssl/statem/statem_clnt.rs) and S22/S30/S34 added tests after this run. The S34 count is therefore a floor, not the current total; no full library run exists for S39-S53.",
+  "note": "S34 BATCH full run (cargo test --lib -- --test-threads=4, 137.71s) on the DHE working tree. Serial --test-threads=1 was not run in S34. Floor at the time: 1962; no test was removed or newly ignored. Left at the S34 record in S54; S48 and S52-S53 ran no Rust test suite and S49-S51 ran focused tests only, so none implies a fresh full run."
 }

@@ -3,9 +3,9 @@
   "kind": "safe-c33-campaign-status",
   "generated_date": "2026-10-24",
   "branch": "integrate/safe-c33",
-  "source_head": "6b204a3a2",
-  "source_head_subject": "Merge stage/p25/corpus-196",
-  "source_head_note": "S47 documentation reconciliation on top of 6b204a3a2. The source tree includes S16-S46: the GENERAL_NAME closure, ENGINE adoption, the reduction census, the uninitialised-storage class, the four-file memory-safety batch, the TLS1.2 DHE client defect, the S39-S41 conversions (record-layer output, provider GCM output, ASN.1 d2i cursor/content extent), and the S44-S46 downstream and distribution work. S44 re-pinned libssh and sslscan to Debian pool archives with recomputed digests and replaced dma's inherited L7 row with a real pre_launch probe; S45 fixed the legacy provider module's RUNPATH and made the harness set OPENSSL_MODULES; S46 admitted 35 families, of which 2 reached L7. S44-S46 changed no Rust src/; the candidate identity remains the install measured in S42 (libcrypto 268420cb, libssl a380ecd6), and S45's legacy.so rebuild left libcrypto/libssl byte-identical. It is not the published 0.0.35 artefact (64dec4c7 / b258b12f). The pinned census remains c09eef8b; no full census regeneration is claimed.",
+  "source_head": "235ad4c71",
+  "source_head_subject": "Merge stage/p25/corpus-198",
+  "source_head_note": "S54 documentation reconciliation on top of 235ad4c71. The source tree includes S16-S53: the earlier mechanism and downstream work, the S39-S41 boundary conversions, the S44-S46 downstream/distribution work, the S48 0.0.36 release, and the S49-S53 wave. S49 reconstructed the whole record layer around a typed ReadStatus (production unsafe 59 -> 30, production unsafe fn 12 -> 7) and graded it OWNERSHIP_RECONSTRUCTED. S50 rebuilt the TLS 1.3 key schedule over slices with owned cleansed secret lifetimes and fixed three real defects (production unsafe 76 -> 77, which is honest: OutRegion::new and the cleansed-block drop are unsafe and replace dozens of scattered operations; from_raw_parts 20 -> 9, copy_nonoverlapping 8 -> 3). S51 gave the ASN.1 d2i collected block a ContentHandoff owner, made free_cont a c_char, threaded one cursor per boundary, audited ASN1_get_object sound with der.rs unchanged, and made 3 of S41's 8 checked-at-site bounds structural (production unsafe 238 -> 226). S52 rebuilt the Phase-2 install at the three-wave HEAD (libcrypto cd71d401 / libssl efd460de) and ran a full no-reuse downstream measurement: 200 loaded, 196 L7, zero candidate-only drops, zero implementation failures, ABI 11/11, provider fix intact. S53 added 35 no-recipe families: 277 recipes, 216 loaded, 198 L7, zero implementation gaps, 723 no-recipe, and fdm repaired from ENVIRONMENT. S52 is the last full no-reuse measurement; the current atlas reuses 275 of 277 committed rows at the same identity (candidate_identity_match=true). The published 0.0.36 artefact (ed415801 / 967424dd) predates S49-S51; the current 0.0.36 tree is UNRELEASED and is not the published 0.0.36 crate, because the artefact hashes differ. The working tree still reads 0.0.36 while differing from the published 0.0.36; the next release checkpoint bumps the version and rebuilds, so the identity is re-bound to the new metadata. The pinned census remains c09eef8b; S49-S51 edited existing PARTIAL files without adding a src/*.rs file, so the 877-file delta is unchanged and no full census regeneration is claimed.",
   "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
   "census": {
     "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
@@ -24,7 +24,7 @@
       "PARTIAL": 0,
       "ZERO_UNSAFE": 0,
       "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/post-census-delta.json",
-      "note": "The three production helpers are BOUNDARY_COVERED by the cited shared-boundary receipts (FreeOnDrop/OwnedCtx, OB-4 CStrSlot, SeamFile/B-ALLOC-SEAM). This is classification by receipt, not a census-registry predicate and not SAFETY_DISCHARGED. S27-S41 changed existing PARTIAL files (pk7_doit.rs, cms_pwri.rs, statem_srvr.rs, t1_lib.rs, tls13_enc.rs, ssl_sess.rs, statem_clnt.rs, t1_enc.rs, ssl/record/rec_layer_s3.rs, provider/cipher_gcm.rs, asn1/d2i.rs) without adding a src/*.rs file, so the 877-file partition is unchanged; site-level unsafe counts inside those files were not re-censused. Attribution and the pinned worklist remain bound to c09eef8b."
+      "note": "The three production helpers are BOUNDARY_COVERED by the cited shared-boundary receipts (FreeOnDrop/OwnedCtx, OB-4 CStrSlot, SeamFile/B-ALLOC-SEAM). This is classification by receipt, not a census-registry predicate and not SAFETY_DISCHARGED. S27-S41 and S49-S51 changed existing PARTIAL files (pk7_doit.rs, cms_pwri.rs, statem_srvr.rs, statem_clnt.rs, t1_lib.rs, tls13_enc.rs, ssl_sess.rs, t1_enc.rs, ssl/record/rec_layer_s3.rs, provider/cipher_gcm.rs, asn1/d2i.rs) without adding a src/*.rs file, so the 877-file partition is unchanged; site-level unsafe counts inside those files were not re-censused. Attribution and the pinned worklist remain bound to c09eef8b."
     },
     "combined_partition": {
       "ZERO_UNSAFE": 92,
@@ -541,47 +541,101 @@
       "fix": "Relink legacy.so with -Wl,--enable-new-dtags -Wl,-rpath,'$ORIGIN/..' (DT_RUNPATH, so LD_LIBRARY_PATH still overrides for ABI-SUBSTITUTION) and apply the same flag in the ASan build script. Have downstream_runtime set OPENSSL_MODULES per subject, the same prefix substitution as LD_LIBRARY_PATH. Proof: dlopen maps only the install libcrypto, legacy loads, MD4(abc) = a448017aaf21d8525fc10ae87aa6729d, medusa exit 0 matching the authority, openvpn loads the provider with a bogus-provider negative control; 11/11 ABI courts including libcrypto-contamination. libcrypto/libssl hashes are unchanged.",
       "class": "distribution/linkage defect; ELF search path plus a harness environment variable, with no Rust source change",
       "evidence": "atlas-refresh/s45-legacy-provider.json"
+    },
+    {
+      "id": "S49-D1",
+      "subphase": "S49",
+      "file": "src/ssl/record/rec_layer_s3.rs",
+      "defect": "The record reader used one raw int for retry, EOF and a completed zero-length record. A completed empty handshake record was reported as -1 (a retry) and stalled assembly, and a short read could be consumed as if it carried bytes. The pre-fix test rec_layer_empty_record_before_a_message_is_not_a_retry failed with `left: -1; right: 5`.",
+      "fix": "ReadStatus variants make the confusion unrepresentable: only Complete carries a length; WouldBlock/Fatal/Failed map to -1 and Eof/FatalEof to 0; AssemblyStep normalises rd_msg_len/rd_msg_off and skips a completed empty record under MAX_EMPTY_RECORDS.",
+      "class": "representation/state confusion; observed failing before the fix, then passing. OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED.",
+      "evidence": "atlas-refresh/s49-rec-layer-full.json"
+    },
+    {
+      "id": "S50-D1",
+      "subphase": "S50",
+      "file": "src/ssl/tls13_enc.rs",
+      "defect": "tls13_encrypt_record formed &mut [u8] over the caller's whole uninitialised record buffer (from_raw_parts_mut(out, out_len)) before writing it. S39 fixed the read path but this write sink still formed a typed reference over write-only caller memory.",
+      "fix": "OutRegion keeps the region raw; writes are capacity-checked and no reference is formed over caller memory.",
+      "class": "UB in caller-output handling; typed slice over uninitialised output eliminated.",
+      "evidence": "atlas-refresh/s50-tls13-enc.json"
+    },
+    {
+      "id": "S50-D2",
+      "subphase": "S50",
+      "file": "src/ssl/tls13_enc.rs",
+      "defect": "tls13_decrypt_record formed &mut [u8] over CRYPTO_malloc scratch for the whole plain_cap before the AEAD wrote it. The S39 receipt had called it a cleansed block, but new_cleansed is malloc, not zalloc.",
+      "fix": "The plaintext stays a raw writable region until authentication; the slice covers only outl == ct_body_len authenticated bytes.",
+      "class": "typed slice over uninitialised allocator memory; eliminated.",
+      "evidence": "atlas-refresh/s50-tls13-enc.json"
+    },
+    {
+      "id": "S50-D3",
+      "subphase": "S50",
+      "file": "src/ssl/tls13_enc.rs",
+      "defect": "tls13_encrypt_record accepted a short AEAD update (outl < inner_len) and still published out_len bytes, which could include an uninitialised gap in the record.",
+      "fix": "Success now requires outl == inner_len; the tag is placed only then.",
+      "class": "short-write acceptance; failure-atomic refusal at the output boundary.",
+      "evidence": "atlas-refresh/s50-tls13-enc.json"
+    },
+    {
+      "id": "S51-D1",
+      "subphase": "S51",
+      "file": "src/asn1/d2i.rs",
+      "defect": "Collected::take_raw cleared the owner, and the block was reclaimed by an unsafe Collected::adopt only on a normal return from ex_c2i. An unwind out of ex_c2i left the block owned by nobody.",
+      "fix": "ContentHandoff owns the block from take_raw until after ex_c2i; its Drop releases it unless the codec cleared free_cont, so normal failure, success-without-consumption and unwinding all release exactly once. Collected::adopt is removed.",
+      "class": "partial-object ownership; unwinding leak eliminated.",
+      "evidence": "atlas-refresh/s51-asn1-ownership.json"
+    },
+    {
+      "id": "S51-D2",
+      "subphase": "S51",
+      "file": "src/asn1/d2i.rs",
+      "defect": "free_cont was a Rust bool whose address was cast to the prim_c2i hook's char*. A conforming C hook may store any char, after which reading the slot as bool is an invalid-value read (UB).",
+      "fix": "The flag is c_char throughout d2i_ex_primitive, ex_c2i and ContentHandoff; any non-zero byte means the codec still owns the block. The hook receives *mut c_char with no cast through bool.",
+      "class": "invalid-value read at a C callback edge; eliminated.",
+      "evidence": "atlas-refresh/s51-asn1-ownership.json"
     }
   ],
   "gates": {
     "fmt": {
       "result": "clean",
       "command": "cargo fmt --all -- --check",
-      "source": "S34 BATCH (DHE client) on 143ba83b8 + the three-file DHE change; S39-S41 each reported fmt clean; S44-S47 changed no Rust source and ran no cargo command"
+      "source": "S49-S51 each reported cargo fmt --all -- --check clean; S52 rebuilt the Phase-2 install and ran the ABI courts; S48 and S53 ran no cargo fmt command"
     },
     "clippy": {
       "result": "clean for --lib",
       "command": "cargo clippy --lib -- -D warnings",
-      "source": "S34 BATCH; S39-S41 each reported cargo clippy --lib clean; cargo clippy --all-targets has not been re-run since S21 (c911ca629); S44-S47 ran no cargo command"
+      "source": "S49-S51 each reported cargo clippy --lib -- -D warnings clean; cargo clippy --all-targets has not been re-run since S21 (c911ca629) and S51 recorded 10 pre-existing diagnostics in files it did not touch; S48/S52/S53 ran no clippy"
     },
     "library_tests": {
       "passed": 2089,
       "failed": 0,
       "ignored": 44,
       "total": 2133,
-      "source": "S34 BATCH: cargo test --lib -- --test-threads=4 (137.71s) on the DHE working tree (143ba83b8 + the three-file change, committed as 72b625b46 and merged at 1a101b603)",
+      "source": "S34 BATCH: cargo test --lib -- --test-threads=4 (137.71s) on the DHE working tree (143ba83b8 + the three-file change, committed as 72b625b46 and merged at 1a101b603). This remains the last full library run.",
       "parallel": "2089 passed; 0 failed; 44 ignored",
       "serial": "NOT_RUN in S34; the S21 serial run remains the last serial full-run record",
       "ignored_note": "The 44 ignored tests are probes run separately by design; no test was newly ignored and none was removed.",
-      "source_tree_note": "STALE FOR CURRENT SOURCE: the S34 full run predates the S39-S41 src/ changes (ssl/record/rec_layer_s3.rs, ssl/t1_enc.rs, ssl/tls13_enc.rs, provider/cipher_gcm.rs, asn1/d2i.rs). No full library run exists for S39-S42; atlas-refresh/test-baseline.json was left at the S34 record, so 2089 is a floor, not the current total. S39-S41 ran focused tests only."
+      "source_tree_note": "STALE FOR CURRENT SOURCE: the S34 full run predates the S39-S41 and S49-S51 src/ changes (ssl/record/rec_layer_s3.rs, ssl/t1_enc.rs, ssl/tls13_enc.rs, provider/cipher_gcm.rs, asn1/d2i.rs, ssl/statem/{statem_srvr,statem_clnt}.rs). No full library run exists for S39-S53; atlas-refresh/test-baseline.json is left at the S34 record, so 2089 is a floor, not the current total. S49-S51 ran focused tests only; S48/S52/S53 ran no Rust test suite."
     },
     "phase2_abi_courts": {
       "courts_total": 11,
       "passed": 11,
       "all_pass": true,
       "artifact": "artifacts/phase2/COURTS.json",
-      "source": "S45 rebuild of legacy.so with the RUNPATH fix and a re-run of the Phase-2 ABI courts; 11/11 pass including ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT and libcrypto-contamination. libcrypto/libssl hashes unchanged from S42.",
-      "candidate_identity": "libcrypto 268420cb / libssl a380ecd6"
+      "source": "S52 rebuild of the Phase-2 install at the three-wave HEAD and a re-run of the Phase-2 ABI courts; 11/11 pass including ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT and libcrypto-contamination. The S53 corpus batch reused that install; no rebuild was made.",
+      "candidate_identity": "libcrypto cd71d401 / libssl efd460de"
     },
     "boundary_gate": {
       "state": "NOT_RUN",
-      "scope": "S16-S46 cluster",
-      "source": "S43/S47: no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control or C-authority differential was executed. S27-S30, S34 and S39-S41 were FAST/BATCH; S31/S33/S35/S36/S42/S44/S46 were compatibility measurements; S45 was a distribution/linkage change."
+      "scope": "S16-S53 cluster",
+      "source": "S54: no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control or C-authority differential has been executed for S27-S30, S34, S39-S41, S49-S51 or the S52/S53 measurements. S49-S51 are FAST; S52 and S53 are compatibility measurements."
     },
     "seal_gate": {
       "state": "NOT_RUN",
-      "scope": "S16-S46 cluster",
-      "source": "S43/S47: 41/41 adversarial probes remain the last probe result (S24), but full forensic regeneration, held-out compatibility and the complete SEAL evidence set were not executed for S25-S46."
+      "scope": "S16-S53 cluster",
+      "source": "S54: 41/41 adversarial probes remain the last probe result (S24), and full forensic regeneration, held-out compatibility and the complete SEAL evidence set were not executed for S25-S53."
     },
     "per_file_audit_gate": {
       "partial_audited": 761,
@@ -589,21 +643,22 @@
       "source": "M89 receipt"
     },
     "this_batch": {
-      "batch": "S44-S46 downstream corpus and infrastructure work plus the legacy-provider linkage fix; S47 documentation reconciliation",
-      "rust_source_changed": false,
-      "cargo_fmt": "not run: S44-S47 changed no Rust source",
-      "cargo_check": "not run: S44-S47 changed no Rust source",
-      "adversarial_probes": "41/41 recorded in S24; NOT_RUN in S39-S47",
-      "full_library_suite": "NOT_RUN for S39-S46; 2089 passed / 0 failed / 44 ignored remains the S34 full run and predates the S39-S41 src/ changes",
-      "docs": "S47: render_docs.py --write; render_docs.py --check clean after regeneration; render_status.py executed",
-      "release_readiness": "0.0.35 IS published (crates.io 2026-10-24T01:48:01Z, checksum ae54cee9c307df22972a153159010917ee13b7d0cc2c5e2ecad255f33b5f2284, 8826517 bytes, 1010 files) from a clean tree at a2af5b4da with libcrypto 64dec4c7 / libssl b258b12f. That published artefact predates S39-S46; the current candidate identity is 268420cb / a380ecd6 and is UNRELEASED. 0.0.34 remains the previous release. Publishing added no assurance: BOUNDARY and SEAL remain NOT_RUN and SAFE_COMPATIBLE remains 0/33.",
+      "batch": "S48-S53: the 0.0.36 release, the S49-S51 ownership waves, the S52 full no-reuse re-measurement and the S53 corpus batch; S54 documentation reconciliation",
+      "rust_source_changed": true,
+      "cargo_fmt": "S49-S51 FAST: cargo fmt clean; S48/S52/S53 changed no Rust source and ran no fmt",
+      "cargo_check": "S49-S51 FAST: cargo check --lib clean; S48/S52/S53 changed no Rust source",
+      "adversarial_probes": "41/41 recorded in S24; NOT_RUN in S39-S53",
+      "full_library_suite": "NOT_RUN for S39-S53; 2089 passed / 0 failed / 44 ignored remains the S34 full run and predates the S39-S41 and S49-S51 src/ changes",
+      "docs": "S54: render_docs.py --write; render_docs.py --check clean after regeneration; render_status.py executed",
+      "release_readiness": "0.0.36 IS published (crates.io 2026-10-24T07:48:51Z, checksum 85a644a2b0ca43fd3b2e160f55dd62c031a74e0ed9339825de8171d910998a70, 8836242 bytes, 1010 files) from a clean tree at cccafbea9 with libcrypto ed415801 / libssl 967424dd. That artefact contains S39-S48 but NOT S49-S51. The current tree still reads 0.0.36 but is not the published 0.0.36 crate (the artefact hashes differ); its candidate identity is cd71d401 / efd460de and it is UNRELEASED. 0.0.35 remains the previous release. Publishing added no assurance: BOUNDARY and SEAL remain NOT_RUN and SAFE_COMPATIBLE remains 0/33.",
       "not_run": [
-        "BOUNDARY gate for the S16-S46 cluster (independent caller/dependency-closure audit, Miri/ASan/Loom/mutation controls, authority differential)",
+        "BOUNDARY gate for the S16-S53 cluster (independent caller/dependency-closure audit, Miri/ASan/Loom/mutation controls, authority differential)",
         "SEAL gate (full forensic regeneration, held-out compatibility, complete probe/court evidence set)",
-        "a full library suite, serial suite and full cargo clippy --all-targets run after the S39-S41 src/ edits",
-        "the adversarial probes after S39-S46",
-        "a full census regeneration after the S27-S41 src/ edits",
-        "dudect/ctgrind for the S40 GCM tag path and the S39/S41 paths",
+        "a full library suite, serial suite and full cargo clippy --all-targets run after the S39-S41 and S49-S51 src/ edits",
+        "the adversarial probes after S39-S53",
+        "a full census regeneration after the S27-S51 src/ edits",
+        "dudect/ctgrind for the S49 record path and the S50 TLS 1.3 key schedule/AEAD path",
+        "Miri (Stacked and Tree Borrows), ASan and Loom for the S49/S50/S51 boundaries",
         "an ASan-venue rebuild of the S45 legacy.so RUNPATH parity change (build_phase2_asan.sh was edited, not exercised)"
       ]
     }
@@ -613,7 +668,7 @@
     "l7_functional": 33,
     "l4_only": 0,
     "safe_compatible": 0,
-    "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas: the two S42 infrastructure losses (libssh, sslscan) were recovered in S44. The corpus is 196 of 200 loaded families at L7, with 242 recipes, 758 no-recipe rows and zero implementation gaps. Current rows are bound to the S42 candidate identity (libcrypto 268420cb / libssl a380ecd6); the atlas records evidence_reuse=mode 'committed-rows' with candidate_identity_match=true, so 237 of 242 recipe-backed rows reuse committed measurements at that same identity. S42 remains the last full no-reuse run (192 recipes, 177 L7). Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim.",
+    "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. S52 is the last full no-reuse measurement: 196 of 200 loaded families at L7 at libcrypto cd71d401 / libssl efd460de (242 recipes), with zero candidate-only drops, zero implementation failures and ABI 11/11. S53 admitted 35 no-recipe families: 277 recipes, 216 loaded, 198 candidate = 198 authority L7, zero implementation gaps, and fdm repaired from ENVIRONMENT to L5. The atlas records evidence_reuse=mode 'committed-rows' with 275 of 277 recipe-backed rows at the same identity (candidate_identity_match=true); the S53 batch newly measured the 35 admitted families. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim.",
     "l7_families": [
       "curl",
       "cyrus-sasl",
@@ -651,286 +706,76 @@
     ],
     "p1000_corpus": {
       "families": 1000,
-      "with_recipe": 242,
-      "candidate_l7_functional": 196,
-      "authority_l7_functional": 196,
-      "candidate_loaded": 200,
-      "candidate_runtime": 197,
+      "with_recipe": 277,
+      "candidate_l7_functional": 198,
+      "authority_l7_functional": 198,
+      "candidate_loaded": 216,
+      "candidate_runtime": 199,
       "candidate_below_baseline": 0,
       "candidate_failed": 5,
-      "not_attempted": 781,
-      "no_recipe": 758,
+      "not_attempted": 761,
+      "no_recipe": 723,
       "build_link": {
-        "configured": 230,
-        "built": 224,
-        "linked": 219,
-        "authority_built": 224,
-        "authority_linked": 219,
-        "candidate_linkage_proven": 219,
+        "configured": 261,
+        "built": 244,
+        "linked": 239,
+        "authority_built": 244,
+        "authority_linked": 239,
+        "candidate_linkage_proven": 239,
         "candidate_specific_patch_count": 0
       },
       "candidate_levels": {
-        "L7-functional": 196,
+        "L7-functional": 198,
         "L6-runtime": 1,
-        "L5-loaded": 3,
-        "L4-linked": 19,
-        "L3-built": 4,
-        "L2-configured": 7,
-        "L1-admitted-source": 12,
-        "L0-catalogued": 758
+        "L5-loaded": 17,
+        "L4-linked": 23,
+        "L3-built": 5,
+        "L2-configured": 17,
+        "L1-admitted-source": 16,
+        "L0-catalogued": 723
       },
       "below_l7": [
         {
           "family": "apk-tools",
           "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
+          "classification": "HARNESS",
           "blocker": "Make.rules build fails"
+        },
+        {
+          "family": "bibtexconv",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "bip",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "bruteforce-wallet",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
         },
         {
           "family": "canl-c",
           "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
+          "classification": "HARNESS",
           "blocker": "gen_err_codes.pl fails"
         },
         {
           "family": "canl-c-examples",
           "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
+          "classification": "HARNESS",
           "blocker": "the parent canl-c failure is the same"
         },
         {
-          "family": "ckermit",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "flat tarball layout yields no single source root"
-        },
-        {
-          "family": "fdm",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "autotools bootstrap sed failure"
-        },
-        {
-          "family": "imx-code-signing-tool",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "rel_bin expects an OpenSSL source tree"
-        },
-        {
-          "family": "kore",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "-Werror build fails before the listener"
-        },
-        {
-          "family": "libcrypt-ssleay-perl",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "orig tarball omits inc/IO/Interactive/Tiny.pm"
-        },
-        {
-          "family": "perl-crypt-ssleay",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "orig tarball omits inc/IO/Interactive/Tiny.pm"
-        },
-        {
-          "family": "python3-m2crypto",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "SWIG pre-build did not complete"
-        },
-        {
-          "family": "stubby",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "cmake configure fails"
-        },
-        {
-          "family": "xar",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "libxml2 probe fails"
-        },
-        {
-          "family": "davix",
-          "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "version.cmake regeneration outside git; embedded curl build fails"
-        },
-        {
-          "family": "libcxxtools10",
-          "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "cxxtools 3.0.0 does not compile with GCC 12 under either include prefix"
-        },
-        {
-          "family": "libdigidoc-tools",
-          "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "the same libdigidoc compile failure"
-        },
-        {
-          "family": "libdigidoc2",
-          "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "libdigidoc compile failure"
-        },
-        {
-          "family": "libewf",
-          "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "autotools regeneration during make; the tools row builds when configure is touched last"
-        },
-        {
-          "family": "sbsigntool",
-          "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "bfd.h not found"
-        },
-        {
-          "family": "sqlcipher",
-          "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "generated sqlite3.c needs a complete Tcl library; shell link fails"
-        },
-        {
-          "family": "krb5-k5tls",
-          "level": "L3-built",
+          "family": "carbon-c-relay",
+          "level": "L5-loaded",
           "classification": "HARNESS",
-          "blocker": "plugin not produced by the default make targets"
-        },
-        {
-          "family": "libfsapfs-utils",
-          "level": "L3-built",
-          "classification": "HARNESS",
-          "blocker": "the tool does not itself link OpenSSL"
-        },
-        {
-          "family": "unbound-anchor",
-          "level": "L3-built",
-          "classification": "HARNESS",
-          "blocker": "artifact declares no OpenSSL DT_NEEDED"
-        },
-        {
-          "family": "yafc",
-          "level": "L3-built",
-          "classification": "HARNESS",
-          "blocker": "artifact pattern does not match the installed binary"
-        },
-        {
-          "family": "conserver-client",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "conserver-server",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "coturn",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic TURN-over-TLS/DTLS allocation workload"
-        },
-        {
-          "family": "cyrus-sasl-ntlm",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "gftp-text",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no staged gftprc and FTPS fixture (AUTH TLS + PBSZ/PROT + verified data channel)"
-        },
-        {
-          "family": "gss-ntlmssp",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no GSSAPI initiator/acceptor harness for the NTLMSSP mechanism"
-        },
-        {
-          "family": "ixwebsocket-libs",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "krb5",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "PKINIT needs a local KDC and an X.509 principal exchange"
-        },
-        {
-          "family": "libddsc0debian",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "libengine-pkcs11-openssl",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "libfsapfs1",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "libgit2",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no HTTPS fetch + certificate-callback harness and local smart-HTTP repository"
-        },
-        {
-          "family": "libmongocrypt",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no explicit-encryption/KMS harness"
-        },
-        {
-          "family": "medusa",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "the legacy provider load is fixed in S45, but the version probe still fails the banner regex because the extracted directory name contains '-b'; symmetric HARNESS"
-        },
-        {
-          "family": "nsca-ng-client",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "nsca-ng-server",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "poco",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no Poco NetSSL C++ harness"
-        },
-        {
-          "family": "python3-scrypt",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "the L7 workload harness did not compile: collect2: error: ld returned 1 exit status"
-        },
-        {
-          "family": "xilinx-bootgen",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload; the signed-image path segfaults under both subjects"
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
         },
         {
           "family": "charybdis",
@@ -939,73 +784,486 @@
           "blocker": "the setpriv euid-drop workload did not listen or greet over TLS under either subject"
         },
         {
-          "family": "libshout",
-          "level": "L5-loaded",
-          "classification": "FIXTURE",
-          "blocker": "the Icecast SOURCE stream did not complete over TLS under either subject"
+          "family": "ckermit",
+          "level": "L1-admitted-source",
+          "classification": "SOURCE-UNREACHABLE",
+          "blocker": "flat tarball layout yields no single source root"
         },
         {
-          "family": "perl-net-dns-sec",
+          "family": "conserver-client",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "conserver-server",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "coturn",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic TURN-over-TLS/DTLS allocation workload"
+        },
+        {
+          "family": "cyrus-sasl-ntlm",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "davix",
+          "level": "L2-configured",
+          "classification": "HARNESS",
+          "blocker": "version.cmake regeneration outside git; embedded curl build fails"
+        },
+        {
+          "family": "dmg2img",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "dsniff",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "encfs",
           "level": "L5-loaded",
           "classification": "HARNESS",
-          "blocker": "the XS module loads; the sign/verify script produced no marker output under either subject"
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "eurephia",
+          "level": "L2-configured",
+          "classification": "HARNESS",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "fastd",
           "level": "L6-runtime",
           "classification": "ENVIRONMENT",
           "blocker": "no /dev/net/tun and no CAP_NET_ADMIN; TUNSETIFF is refused"
+        },
+        {
+          "family": "fdm",
+          "level": "L5-loaded",
+          "classification": "ENVIRONMENT",
+          "blocker": "libtool/autoconf prerequisites supplied through the pinned aux seam and libtdb detection removed; the family now builds at L4 and loads at L5, but no admitted deterministic local workload exists for a functional run"
+        },
+        {
+          "family": "ftp-ssl",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "ftpd-ssl",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "gftp-text",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no staged gftprc and FTPS fixture (AUTH TLS + PBSZ/PROT + verified data channel)"
+        },
+        {
+          "family": "gsocket",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "gss-ntlmssp",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no GSSAPI initiator/acceptor harness for the NTLMSSP mechanism"
+        },
+        {
+          "family": "gvpe",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "hopm",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "ike-scan",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "imapfilter",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "imapproxy",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "imx-code-signing-tool",
+          "level": "L1-admitted-source",
+          "classification": "HARNESS",
+          "blocker": "rel_bin expects an OpenSSL source tree"
+        },
+        {
+          "family": "ipmiutil",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "ixwebsocket-libs",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "kore",
+          "level": "L1-admitted-source",
+          "classification": "HARNESS",
+          "blocker": "-Werror build fails before the listener"
+        },
+        {
+          "family": "krb5",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "PKINIT needs a local KDC and an X.509 principal exchange"
+        },
+        {
+          "family": "krb5-k5tls",
+          "level": "L3-built",
+          "classification": "FIXTURE",
+          "blocker": "plugin not produced by the default make targets"
+        },
+        {
+          "family": "lastpass-cli",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "libcrypt-ssleay-perl",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
+        },
+        {
+          "family": "libcxxtools10",
+          "level": "L2-configured",
+          "classification": "HARNESS",
+          "blocker": "cxxtools 3.0.0 does not compile with GCC 12 under either include prefix"
+        },
+        {
+          "family": "libddsc0debian",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "libdigidoc-tools",
+          "level": "L2-configured",
+          "classification": "HARNESS",
+          "blocker": "the same libdigidoc compile failure"
+        },
+        {
+          "family": "libdigidoc2",
+          "level": "L2-configured",
+          "classification": "HARNESS",
+          "blocker": "libdigidoc compile failure"
+        },
+        {
+          "family": "libdkim1d",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "libeac3",
+          "level": "L4-linked",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "libengine-pkcs11-openssl",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "libewf",
+          "level": "L3-built",
+          "classification": "FIXTURE",
+          "blocker": "autotools regeneration during make; the tools row builds when configure is touched last"
+        },
+        {
+          "family": "libfreefare0",
+          "level": "L2-configured",
+          "classification": "HARNESS",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "libfsapfs-utils",
+          "level": "L3-built",
+          "classification": "FIXTURE",
+          "blocker": "the tool does not itself link OpenSSL"
+        },
+        {
+          "family": "libfsapfs1",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "libgit2",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no HTTPS fetch + certificate-callback harness and local smart-HTTP repository"
+        },
+        {
+          "family": "libmongocrypt",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no explicit-encryption/KMS harness"
+        },
+        {
+          "family": "libshout",
+          "level": "L5-loaded",
+          "classification": "FIXTURE",
+          "blocker": "the Icecast SOURCE stream did not complete over TLS under either subject"
+        },
+        {
+          "family": "lua-cqueues",
+          "level": "L4-linked",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "medusa",
+          "level": "L4-linked",
+          "classification": "HARNESS",
+          "blocker": "the legacy provider load is fixed in S45, but the version probe still fails the banner regex because the extracted directory name contains '-b'; symmetric HARNESS"
+        },
+        {
+          "family": "megatools",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "mokutil",
+          "level": "L4-linked",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "mosh",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "nmh",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "nsca-ng-client",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "nsca-ng-server",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+        },
+        {
+          "family": "nzbget",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "openfortivpn",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "perdition",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "perl-crypt-ssleay",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
+        },
+        {
+          "family": "perl-net-dns-sec",
+          "level": "L5-loaded",
+          "classification": "FIXTURE",
+          "blocker": "the XS module loads; the sign/verify script produced no marker output under either subject"
+        },
+        {
+          "family": "pev",
+          "level": "L4-linked",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "poco",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no Poco NetSSL C++ harness"
+        },
+        {
+          "family": "python3-m2crypto",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
+        },
+        {
+          "family": "python3-scrypt",
+          "level": "L4-linked",
+          "classification": "HARNESS",
+          "blocker": "the L7 workload harness did not compile: collect2: error: ld returned 1 exit status"
+        },
+        {
+          "family": "sbsigntool",
+          "level": "L2-configured",
+          "classification": "ENVIRONMENT",
+          "blocker": "recipe repaired in S53, but the build still stops at L2 for an upstream/venue reason identical for both subjects"
+        },
+        {
+          "family": "sqlcipher",
+          "level": "L2-configured",
+          "classification": "HARNESS",
+          "blocker": "generated sqlite3.c needs a complete Tcl library; shell link fails"
+        },
+        {
+          "family": "stubby",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
+        },
+        {
+          "family": "tcpflow",
+          "level": "L1-admitted-source",
+          "classification": "SOURCE-UNREACHABLE",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "unbound-anchor",
+          "level": "L3-built",
+          "classification": "FIXTURE",
+          "blocker": "artifact declares no OpenSSL DT_NEEDED"
+        },
+        {
+          "family": "xar",
+          "level": "L1-admitted-source",
+          "classification": "ENVIRONMENT",
+          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
+        },
+        {
+          "family": "xilinx-bootgen",
+          "level": "L4-linked",
+          "classification": "FIXTURE",
+          "blocker": "no admitted deterministic local workload; the signed-image path segfaults under both subjects"
+        },
+        {
+          "family": "yadifa",
+          "level": "L5-loaded",
+          "classification": "HARNESS",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+        },
+        {
+          "family": "yafc",
+          "level": "L3-built",
+          "classification": "FIXTURE",
+          "blocker": "artifact pattern does not match the installed binary"
+        },
+        {
+          "family": "yapet",
+          "level": "L2-configured",
+          "classification": "HARNESS",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         }
       ],
       "partclone": "L7 in S36 after the workload was changed to partclone's documented -O/--overwrite target path; its S35 L5 row was a consumer-side S_ISBLK-on-uninitialised-stat flake proven independent of the candidate library",
       "perl_net_ssleay": "L7 in S35/S36 after the resumption workload switched from SSL_get_session to SSL_get1_session; the marker was not weakened",
-      "source": "forensics/downstream/runtime-functional-atlas.json body.counts.by_subject and body.runs; forensics/downstream/build-link-atlas.json body.counts.by_subject; atlas-refresh/s44-corpus-batch.json; atlas-refresh/s46-corpus-batch.json",
+      "source": "forensics/downstream/runtime-functional-atlas.json body.counts.by_subject and body.runs; forensics/downstream/build-link-atlas.json body.counts.by_subject; atlas-refresh/s52-reverify-196.json; atlas-refresh/s53-corpus-batch.json",
       "evidence_reuse": {
         "mode": "committed-rows",
-        "families_reused": 237,
-        "measured_families": 242,
+        "families_reused": 275,
+        "measured_families": 277,
         "candidate_identity_match": true,
-        "note": "S46 ran downstream_runtime.py --measure over the full 242-recipe catalogue. The atlas records evidence_reuse.mode='committed-rows' with 237 of 242 recipe-backed families at the same candidate identity (candidate_identity_match=true); the final S46 invocation re-measured 5 rows. S42 remains the last full no-reuse measurement (192 recipes, 177 L7 at 268420cb/a380ecd6), not a carry-forward from the superseded 64dec4c7/b258b12f rows.",
+        "note": "S53 ran downstream_runtime.py --measure over the 277-recipe catalogue. The atlas records evidence_reuse.mode='committed-rows' with 275 of 277 recipe-backed families at the same candidate identity (candidate_identity_match=true); the S53 batch newly measured the 35 admitted families and repaired fdm. S52 remains the last full no-reuse measurement (200 loaded, 196 L7 at cd71d401/efd460de), not a carry-forward from the S48 identity ed415801/967424dd, the S42 identity 268420cb/a380ecd6 or the superseded 64dec4c7/b258b12f rows.",
         "superseded_identity": {
-          "libcrypto_so_3_sha256": "64dec4c7f276ff7970b4d75488cad6fa66d8d95502d2b58b19a4b7a89e119aa7",
-          "libssl_so_3_sha256": "b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6"
+          "libcrypto_so_3_sha256": "ed4158014ebc2d4fbf3733ae0aedb28419c6a340e067d69930b3c6283e25cd15",
+          "libssl_so_3_sha256": "967424dd8afb497441f5cc65c50a1fa1db96bccd01c0d34dbf7427397d2d0674"
         },
         "current_identity": {
-          "libcrypto_so_3_sha256": "268420cb1c9effa10b25fe1463522f3a11c070ca35ceb039d21cb9ce20d683e3",
-          "libssl_so_3_sha256": "a380ecd6ee257f3a321ccdb0a1da68e9d0eb5f2ff271ed873aaf5bcad01605d9"
+          "libcrypto_so_3_sha256": "cd71d4019cbc96a37766abb69ebad242fae454b3f1e53e239deac474eb5d9b5d",
+          "libssl_so_3_sha256": "efd460debbf2f8ea9bdded5cd3c185009def7873fa5ee26b804ac618f7b40f2d"
         }
       }
     }
   },
   "remaining_obligations": [
-    "BOUNDARY and SEAL remain NOT_RUN for the S16-S46 cluster; S27-S30, S34 and S39-S41 are FAST/BATCH, S31/S33/S35/S36/S42/S44/S46 are compatibility measurements, and S45 is a distribution/linkage change. None of S44-S46 is a BOUNDARY or SEAL gate.",
-    "BOUNDARY/SEAL for S39-S42 specifically: no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control or C-authority differential was run for the record-layer output boundary, the provider GCM output boundary, the ASN.1 d2i cursor/content extent, or the S42 downstream re-measurement. The S39/S40 negative controls are shadow-initialisation models, not runtime UB detectors.",
-    "S22 retained items: ml_dsa Vector::init / matrix_init remain safe raw-pointer constructors; x509::pcy_lib::tree_levels retains its aliasing obligation. The former provider::cipher_gcm out-buffer slice formation item is no longer retained: S40 eliminated both whole-extent typed-slice constructions and graded the GCM output boundary OWNERSHIP_RECONSTRUCTED (not SAFETY_DISCHARGED).",
-    "S39 retained: the C ABI still hands raw writable memory, so pointer/extent validity and non-overlap with rec_body/rd_msg_buf are caller preconditions documented per function and not type-enforced. The ABI cannot reject a caller that passes an overlapping buffer; no current caller does, and the caller inventory is the evidence.",
-    "S39 residual: true allocation-failure injection is not available at this boundary (the seam latch is one-way and the converted path allocates nothing); the output-reservation refusal test is labelled as a substitute, and Miri/ASan are NOT_RUN.",
-    "S40 retained: the provider ABI cannot enforce that an encrypt caller initialised the plaintext region or that a decrypt caller supplied a received record; the explicit-IV and tag slots are write-only outputs and may be uninitialised. Non-overlap of out with ctx/ctx->buf and of getivgen's out with ctx->iv is a documented precondition matching the C memcpy/one-shot requirements.",
-    "S41 checked-at-site ASN.1 bounds (eight): check_tlen hdrlen + plen (checked_add, TOO_LONG ordering), embed_d2i field/template advance (five sites), template_ex_d2i explicit wrapper advance, template_noexp_d2i SET OF advance (two sites), Collected::append growth, ex_c2i ilen narrowing, ASN1_get_object consumed/omax accounting, and the decoded ownership handoff. These are checked, not structural; converting the internal template call boundary to Cursor is queued, and Miri/ASan and independent review are NOT_RUN.",
-    "S27 retained: after EVP_CIPHER_CTX_rand_key succeeds, PKCS#7 failure paths still leave key bytes on the stack; the authority has the same behaviour and the obligation is recorded, not changed.",
-    "S28 retained: the pre-existing raise_cms helper records file cms_lib.c for existing cms_pwri raise sites; only the new refusal uses its own ErrSite.",
-    "S29 retained: custom extensions, context-inappropriate extension rejection, status_request DER, missing supported_groups, key_share priority/HRR, psk_ke, ext_defs error order, the 32-entry supported_groups cap and the legacy_version clamp remain documented reductions or compatibility gaps. commit_client_hello remains unsafe with four caller-established preconditions.",
-    "S30 retained: insertion-order eviction/flush; capacity N rather than the authority's at-most-N-1; no not_resumable check in ssl_update_cache; lookup_sess_in_cache ignores SSL_SESS_CACHE_NO_INTERNAL_LOOKUP and the external get_session_cb; TLS1.2 NewSessionTicket remains a stateful cache lookup. Removal callbacks run outside the lock as a deliberate safety divergence.",
-    "S34 retained: the in-crate server still does not implement DHE; DHE-DSS, ffdhe3072/4096/6144/8192, custom primes and a no-EMS server were not observed; no dudect/ctgrind run was made for the DHE premaster path; BOUNDARY and SEAL remain NOT_RUN.",
+    "BOUNDARY and SEAL remain NOT_RUN for the S16-S53 cluster. S27-S30, S34, S39-S41 and S49-S51 are FAST/BATCH; S31/S33/S35/S36/S42/S44/S46/S52/S53 are compatibility measurements; S45 is a distribution/linkage change and S48 a release rebuild. None of S48-S53 is a BOUNDARY or SEAL gate.",
+    "S49 retained: `&mut *s` is formed from the C ABI pointer, so liveness and exclusive ownership are caller contracts; OutBuf::from_raw's writable extent and non-overlap are caller obligations; Sink::slot hands a raw writable region whose non-aliasing is argued from the internal call structure (index, not pointer), not type-enforced; BIO_read/BIO_write and the AEAD sinks keep their own liveness/extent contracts; allocation-failure injection was not run (the allocator latch is one-way).",
+    "S49 divergence: MAX_EMPTY_RECORDS=32 exhaustion returns -1 (no progress) instead of the authority's fatal SSL_R_RECORD_TOO_SMALL. Recorded as a deliberate compatibility divergence, not a safety improvement.",
+    "S49 BIO-callback non-reentrancy precondition: a custom BIO method that re-enters the connection would invalidate the `&mut Ssl`. It is now stated on every entry point (it was implicit before), matches the authority's assumption, and is not type-enforceable at the C ABI.",
+    "S49 residuals S49-R1..R5: Miri (Stacked/Tree Borrows), ASan, Loom, allocation-failure injection and independent review are NOT_RUN; the Sink::slot raw region into rd_msg_buf concurrent with the AEAD read of rec_body is argued disjoint from field layout, not model-checked.",
+    "S50 retained: `s: *mut Ssl` liveness/exclusive ownership is the caller's C ABI contract; OutRegion::new's writable-and-non-overlapping region and the raw encrypt/decrypt/transcript input regions are boundary preconditions; transcript_hash's raw output and the Finished secret pointers remain C ABI inputs with stated extents; the digest handle must be a live EVP_MD.",
+    "S50 introduced: refusal when an AEAD update does not produce the declared ciphertext/plaintext extent, and when hs_md_len is 0 or above EVP_MAX_MD_SIZE; both are internal-state refusals, not reachable from valid records. S50 residuals S50-R1..R5: Miri/ASan/Loom, a full library suite, allocation-failure injection, type-enforcement of the raw transcript/Finished extents, and independent review are NOT_RUN.",
+    "S51 retained: C1 hdrlen + plen stays checked-at-site so an unrepresentable sum still raises TOO_LONG (1219) where the authority does; C5 Collected::append growth stays checked-at-site (authority long-overflow test plus CRYPTO_realloc); C6 ex_c2i keeps the authority's narrowing cast and per-arm guards; C7 ASN1_get_object stays checked-at-site and is proved sound by the max-accounting invariant with src/asn1/der.rs unchanged; the EXTERN d2i and prim_c2i hooks remain raw ABI edges; the S41 stale-TLC refusal remains.",
+    "S51 residuals: a panic after an ASN.1 value has been allocated but before item_ex_d2i_intern's failure free still leaks the value (pre-existing, broader than the take_raw handoff fixed here; guard_ffi catches the unwind but does not run the failure free); a caller sharing an ASN1_TLC cache across top-level calls can reuse a fitting header cached by a failed decode (authority-compatible, no memory unsafety); a failing EXTERN hook's partial *in advance is discarded (deliberate 'no progress on failure', unobservable for X509_NAME/X509_PUBKEY); the canary observes Drop, not the pre-fix leak, and Miri/ASan are NOT_RUN; ASN1_get_object does not write *plength for an indefinite length, matching the authority.",
     "S20-O2: stale 'Phase 8'/'unreachable' site comments remain at some EVP_PKEY sites; the evp_pkey_name2type comment was corrected in S21, the rest are still open.",
-    "Independent review of the remaining per-file audit receipts: no per-file record claims INDEPENDENTLY_CHECKED. B39-B43 are checked at their signed scopes; B44's isolation fix and salt_len guard move are author-evidenced only (re-review NOT_RUN).",
-    "B27-X2 is CLOSED by boundary-sweep-B28. The pre-existing B27-R1 allocation-refusal leak remains recorded.",
-    "BIO mechanism closure: 73 SSL BIO call sites unaudited, non-memory methods unexamined, serial full suite and seam-coordinate differential NOT_RUN. BIO remains CONTRACTED despite B39/B40.",
+    "S22 retained items: ml_dsa Vector::init / matrix_init remain safe raw-pointer constructors; x509::pcy_lib::tree_levels retains its aliasing obligation. The provider::cipher_gcm out-buffer slice item is closed by S40.",
+    "S39 retained: the C ABI still hands raw writable memory, so pointer/extent validity and non-overlap with rec_body/rd_msg_buf are caller preconditions documented per function and not type-enforced. S39 residual: true allocation-failure injection is unavailable and Miri/ASan are NOT_RUN. S49 extends this boundary and retains the same class of caller preconditions.",
+    "S40 retained: the provider ABI cannot enforce that an encrypt caller initialised the plaintext or that a decrypt caller supplied a received record; explicit-IV/tag slots are write-only outputs and may be uninitialised. Non-overlap is a documented precondition matching the C memcpy/one-shot requirements.",
+    "S27 retained: after EVP_CIPHER_CTX_rand_key succeeds, PKCS#7 failure paths still leave key bytes on the stack; the authority has the same behaviour and the obligation is recorded, not changed. S28 retained: the pre-existing raise_cms helper records cms_lib.c for existing cms_pwri raise sites.",
+    "S29 retained: custom extensions, context-inappropriate extension rejection, status_request DER, missing supported_groups, key_share priority/HRR, psk_ke, ext_defs error order, the 32-entry supported_groups cap and the legacy_version clamp remain documented reductions or compatibility gaps. commit_client_hello remains unsafe with four caller-established preconditions. S50 makes the binder length check structural but does not discharge these.",
+    "S30 retained: insertion-order eviction/flush; capacity N rather than the authority's at-most-N-1; no not_resumable check in ssl_update_cache; lookup_sess_in_cache ignores SSL_SESS_CACHE_NO_INTERNAL_LOOKUP and the external get_session_cb; TLS1.2 NewSessionTicket remains a stateful cache lookup. Removal callbacks run outside the lock as a deliberate safety divergence.",
+    "S34 retained: the in-crate server still does not implement DHE; DHE-DSS, ffdhe3072/4096/6144/8192, custom primes and a no-EMS server were not observed; no dudect/ctgrind run was made for the DHE premaster path.",
+    "S52 retained: the full no-reuse result is compatibility evidence only. Zero candidate-only drops establishes that none of the 242 admitted workloads observed a level regression attributable to the candidate; it does not prove S49-S51 behaviour-preserving. No BOUNDARY/SEAL evidence and no dependency-closure audit were produced.",
+    "S53 retained: exactly 35 families were added and exactly 2 reached L7 (njs, casync). The other 33 are recorded at their exact level; the remaining 723 no-recipe rows keep S52's SOURCE-UNREACHABLE classification and were not re-litigated. S53 changed forensics/tools/downstream_build_link.py, downstream_runtime.py and the two atlases, not src/.",
+    "S45 retained: the candidate libcrypto's compiled-in MODULESDIR remains the empty sentinel (the recorded Phase-16 distribution divergence). A consumer that does not set OPENSSL_MODULES and has no store default path still cannot find legacy.so; a true no-environment drop-in needs the modules directory set at distribution build time. The downstream harness setting OPENSSL_MODULES is a harness fix, not a distribution fix. The ASan sibling build script was edited for RUNPATH parity but not rebuilt or exercised.",
+    "Release decision for 0.0.36: published on 2026-10-24 (checksum 85a644a2, artefacts libcrypto ed415801 / libssl 967424dd, 1010 files) from merge commit cccafbea9, so the published artefact contains S39-S48 but NOT S49-S51. The current working tree still reads 0.0.36 but is not the published 0.0.36 crate (the artefact hashes differ); its candidate identity is cd71d401 / efd460de and it is UNRELEASED. Published 0.0.35 and 0.0.34 remain previous releases. Publishing is not an assurance result.",
+    "A full library suite after the S39-S41 and S49-S51 src/ edits, a serial full-suite run (--test-threads=1) and a full cargo clippy --all-targets run after c911ca629 remain NOT_RUN. The last full run (S34, 2089/0/44) predates S39-S41 and S49-S51.",
+    "Independent review of the remaining per-file audit receipts: no per-file record claims INDEPENDENTLY_CHECKED. B39-B43 are checked at their signed scopes; B44's isolation fix and salt_len move are author-evidenced only (re-review NOT_RUN).",
+    "BIO mechanism closure: 73 SSL BIO call sites unaudited, non-memory methods unexamined, serial full suite and seam-coordinate differential NOT_RUN. BIO remains CONTRACTED despite B39/B40. S49 states the BIO-callback non-reentrancy precondition but does not audit the method surface.",
     "RUNTIME_ALLOC_OWNERSHIP batches 5..N: 1281 alloc/release sites remained after B44; Miri/ASan/BOUNDARY and SEAL evidence NOT_RUN. Owner wave: allocator decomposition (deferred behind the L7 campaign by owner instruction).",
     "SEAL dependency-closure evidence for any consumer family; SAFE_COMPATIBLE remains 0/33.",
-    "Census-bound evidence refresh: the pinned census is c09eef8b (868 files); the nine post-census files are classified by a delta rebound (877 files total). S27-S34 modified existing PARTIAL files without adding a file, but the site-level census/attribution was not regenerated. A full regeneration, including explicit predicates for the OB-4 and FreeOnDrop/unsafe-trait boundaries, is deferred to a SEAL point.",
+    "Census-bound evidence refresh: the pinned census is c09eef8b (868 files); the nine post-census files are classified by a delta rebound (877 files total). S27-S41 and S49-S51 modified existing PARTIAL files without adding a file, but the site-level census/attribution was not regenerated. A full regeneration, including explicit predicates for the OB-4 and FreeOnDrop/unsafe-trait boundaries, is deferred to a SEAL point.",
     "Generator persistence: ATTRIBUTION.md is generated by unsafe_attribution.py; the post-census delta section is supplementary and would be overwritten by a full regeneration. Fold the delta into the generator, or re-apply it, before the next SEAL regeneration.",
-    "Downstream consumer courts: the 33/33 cohort and the 196/200-loaded corpus rows are bound to the S42 candidate identity (libcrypto 268420cb / libssl a380ecd6). The atlas uses evidence_reuse=mode 'committed-rows' (237 of 242 recipe-backed rows, candidate_identity_match=true); S42 remains the last full no-reuse measurement. Forty-six recipe-backed families remain below L7 (24 HARNESS + 2 FIXTURE + 20 ENVIRONMENT, symmetric under both subjects) and 758 families have no recipe. Implementation-attributable non-L7 is zero. partclone is a consumer-side flake; fastd remains blocked by the missing TUN device; medusa remains HARNESS-limited by its banner gate; the S42 libssh/sslscan/dma losses were recovered in S44.",
+    "Downstream consumer courts: the current 198/216 corpus rows are bound to the S52/S53 candidate identity (libcrypto cd71d401 / libssl efd460de). The atlas records evidence_reuse=mode 'committed-rows' (275 of 277 recipe-backed rows, candidate_identity_match=true); S52 remains the last full no-reuse measurement. 79 recipe-backed families remain below L7 (32 HARNESS + 25 FIXTURE + 20 ENVIRONMENT + 2 SOURCE-UNREACHABLE) and 723 families have no recipe. Implementation-attributable non-L7 is zero.",
     "Census-registry encoding gap (not an audit gap): the pinned seven-predicate registry has no per-site predicate for the OB-4 member-slot boundary or the FreeOnDrop/unsafe-trait/OwnedCtx::new boundary. The delta classifies foreign.rs, member_slot.rs and mem_coords.rs BOUNDARY_COVERED by receipt; a full census regeneration must encode these boundaries explicitly at the SEAL gate.",
-    "Release decision for 0.0.35: published on 2026-10-24 (checksum ae54cee9, artefacts libcrypto 64dec4c7 / libssl b258b12f, 1010 files) from merge commit a2af5b4da, so the published artefact contains S27-S36 but NOT S39-S41. The current working tree still reads 0.0.35 but its candidate identity is 268420cb / a380ecd6 and it is UNRELEASED. Published 0.0.34 (checksum e1f553b3, artefacts defe179f/5066aa32) remains the previous release. Publishing is not an assurance result.",
-    "A full library suite after the S39-S41 src/ edits, a serial full-suite run (--test-threads=1) and a full cargo clippy --all-targets run after c911ca629 remain NOT_RUN. The last full run (S34, 2089/0/44) predates S39-S41.",
-    "Phase-25 full forensic regeneration, FRF fuzzing, ASan/Miri/Loom/TSan at the applicable BOUNDARY/SEAL gates, and dudect/ctgrind for any constant-time claim.",
-    "S45 retained: the candidate libcrypto's compiled-in MODULESDIR remains the empty sentinel (the recorded Phase-16 distribution divergence). A consumer that does not set OPENSSL_MODULES and has no store default path still cannot find legacy.so; a true no-environment drop-in needs the modules directory set at distribution build time. The downstream harness now sets OPENSSL_MODULES per subject, which is a harness fix, not a distribution fix.",
-    "S44-S46 changed no Rust src/ and produced no BOUNDARY/SEAL evidence. They are downstream compatibility and distribution/linkage measurements; they do not discharge any memory-safety obligation or graduate any consumer.",
-    "The court container's documented writable host bind mount (/work) remains a standing infrastructure task. docker/ was not changed in S44-S47."
+    "S48-S53 changed no Rust source except S49-S51, which are FAST-only ownership reconstructions. S48 is a release rebuild, S52/S53 are downstream measurements. None is a memory-safety discharge and none graduates a consumer.",
+    "The court container's documented writable host bind mount (/work) remains a standing infrastructure task. docker/ was not changed in S44-S54.",
+    "Phase-25 full forensic regeneration, FRF fuzzing, ASan/Miri/Loom/TSan at the applicable BOUNDARY/SEAL gates, and dudect/ctgrind for any constant-time claim."
   ],
   "non_claims": [
     "No consumer family is SAFE_COMPATIBLE; consumers remain 0/33.",
@@ -1016,17 +1274,21 @@
     "S21 is a BATCH checkpoint and S24 is a FAST probe/docs pass: BOUNDARY and SEAL are NOT_RUN, and passing either local gate does not graduate any mechanism or consumer.",
     "The S24 DSA/DH probe corrections change test assertions only: the old window-wide release count included a transient error-queue formatting allocation that is not an object member. No production behaviour, allocator seam or ownership model changed.",
     "The S20 unsafe-operation increase (1817 -> 1992) is restored authority dispatch at contracted FFI boundaries, not a widened unsafe abstraction.",
-    "The current 196/196 candidate-bound L7 result (196 of 200 loaded) is compatibility evidence, not a safety or cryptographic discharge (AGENTS.md section 8). The S42 177/180 result is retained as the last full no-reuse measurement.",
-    "0.0.35 is the published release and contains the four-file memory-safety batch and the DHE fix, but not S39-S41. S44-S46 changed no crate source but are also unreleased. Publishing is not a memory-safety result: the BOUNDARY and SEAL gates for that cluster remain NOT_RUN and no consumer family has graduated.",
-    "S27, S28 and S30 are FAST-only, S34 is FAST+BATCH for its changed units, and S39-S41 are FAST-only; S44 and S46 are downstream measurements and S45 is a distribution/linkage change. BOUNDARY and SEAL remain NOT_RUN for the whole S16-S46 cluster.",
-    "S39-S41 are OWNERSHIP_RECONSTRUCTED at their scoped boundaries, not SAFETY_DISCHARGED: Miri/ASan and independent review are NOT_RUN, and the non-overlap/caller-initialisation conditions remain documented ABI preconditions rather than type-enforced ones.",
-    "The S42 downstream result is the last fresh no-reuse measurement at 268420cb/a380ecd6, but zero candidate-only drops does not prove S39-S41 are behaviour-preserving; it establishes that none of the 192 admitted workloads observed a level regression attributable to the candidate. The current 196/200 atlas reuses 237 of 242 committed rows at that same identity and is not a fresh no-reuse run.",
+    "The current 198/216 candidate-bound L7 result (198 of 216 loaded, 277 recipes) is compatibility evidence, not a safety or cryptographic discharge (AGENTS.md section 8). S52's 196/196 over 200 loaded at cd71d401/efd460de is the last full no-reuse measurement; S53 added 35 families and re-measured them at the same identity, with 275 of 277 rows reusing committed measurements there.",
+    "0.0.36 is the published release and contains S39-S48, but not S49-S51. Publishing is not a memory-safety result: the BOUNDARY and SEAL gates for the cluster remain NOT_RUN and no consumer family has graduated.",
+    "S49-S51 are FAST-only; S48/S52/S53 are a release rebuild and downstream measurements. BOUNDARY and SEAL remain NOT_RUN for the whole S16-S53 cluster.",
+    "S49-S51 are OWNERSHIP_RECONSTRUCTED at their scoped boundaries, not SAFETY_DISCHARGED: Miri/ASan and independent review are NOT_RUN, and caller-region, BIO non-reentrancy, checked-at-site and raw-ABI-edge conditions remain.",
+    "S50's production unsafe count rose 76 -> 77. That is honest and not a safety regression: OutRegion::new (a contracted caller-region constructor) and the cleansed-block drop (an unsafe impl) replace dozens of scattered raw operations; from_raw_parts fell 20 -> 9 and copy_nonoverlapping 8 -> 3.",
+    "S51's ContentHandoff canary is a normal-test observation of the Drop path, not a UB detector; only Miri/ASan would observe the pre-fix leak itself.",
+    "S52 establishes that none of the 242 admitted workloads observed a level regression attributable to the candidate. Zero candidate-only drops does not prove S49-S51 are behaviour-preserving, and the atlas result is not a safety or cryptographic result.",
+    "S53's honest yield is 2 new L7 families from 35 admissions; 33 families are recorded at their exact level, no level was fabricated and no missing count was padded. No IMPLEMENTATION divergence was established.",
     "The ten S36 Phase-1 promotions and mutt are workload/fixture results. mutt's L7 row drives the SMTPS/TLS path; its linked S/MIME CMS path is not exercised.",
-    "The 46 recipe-backed families below L7 are symmetric HARNESS/FIXTURE/ENVIRONMENT blockers (24 HARNESS + 2 FIXTURE + 20 ENVIRONMENT), not candidate implementation failures (implementation_attributable_non_l7=0). partclone's S35 drop was a consumer-side flake proven independent of the library; dma's old L7 was an inherited row exposed by the fresh probe and recovered in S44; libssh and sslscan were recovered in S44 after being re-pinned to Debian pool archives.",
-    "The 758 families with no recipe are unmeasured, not failed, and are not counted as candidate failures.",
-    "No full census or attribution regeneration was made after the S27-S41 edits to existing PARTIAL files.",
-    "S44 and S46 are downstream compatibility measurements; S45 is a distribution/linkage change (ELF RUNPATH plus a harness environment variable). None of S44-S46 is a memory-safety discharge, and none makes any family SAFE_COMPATIBLE.",
-    "The current 196/200 atlas result reuses 237 of 242 committed rows at the candidate identity (candidate_identity_match=true); it is not a fresh no-reuse run. S42 remains the last full no-reuse measurement."
+    "The 79 recipe-backed families below L7 are symmetric HARNESS/FIXTURE/ENVIRONMENT/SOURCE-UNREACHABLE blockers (32 HARNESS + 25 FIXTURE + 20 ENVIRONMENT + 2 SOURCE-UNREACHABLE), not candidate implementation failures (implementation_attributable_non_l7=0). partclone's S35 drop was a consumer-side flake proven independent of the library; dma's old L7 was an inherited row exposed by the fresh probe and recovered in S44; libssh and sslscan were recovered in S44 after being re-pinned to Debian pool archives; fdm was repaired in S53.",
+    "The 723 families with no recipe are unmeasured, not failed, and are not counted as candidate failures.",
+    "No full census or attribution regeneration was made after the S27-S41 and S49-S51 edits to existing PARTIAL files.",
+    "S48 is a release rebuild; S52 and S53 are downstream compatibility measurements; S49-S51 are FAST ownership reconstructions. None is a memory-safety discharge, and none makes any family SAFE_COMPATIBLE.",
+    "S49 retains a deliberate divergence: MAX_EMPTY_RECORDS exhaustion returns -1 instead of the authority's fatal SSL_R_RECORD_TOO_SMALL. It is recorded, not silently reproduced or reclassified.",
+    "The current 198/216 atlas result reuses 275 of 277 committed rows at the candidate identity (candidate_identity_match=true); it is not a fresh no-reuse run. S52 remains the last full no-reuse measurement."
   ],
   "reduction_census": {
     "artifact": "atlas-refresh/s19-reduction-census.json",
@@ -1175,6 +1437,36 @@
       "subphase": "S46",
       "outcome": "Corpus batch 4: 35 no-recipe families admitted; 2 reached L7-functional (ewf-tools, tcl-tls) and 33 are recorded at their exact level (12 L1, 6 L2, 4 L3, 10 L4, 1 L5). Current corpus: 242 recipes, 230 configured / 224 built / 219 linked, 200 loaded, 196 candidate = 196 authority L7-functional, 758 with no recipe, zero implementation gaps and zero candidate-specific patches; below_baseline=0. No src/ change.",
       "evidence": "atlas-refresh/s46-corpus-batch.json"
+    },
+    {
+      "subphase": "S48",
+      "outcome": "Release 0.0.36: version bump, Phase-2 rebuild (libcrypto ed415801 / libssl 967424dd, legacy.so aec115a9, openssl 7ec6a961), 11/11 ABI courts, legacy-provider RUNPATH proof, and an explicit atlas identity rebind carrying 196/200 rows forward at candidate_identity_match=false. 0.0.36 was then published (2026-10-24, checksum 85a644a2, 1010 files). No downstream row was measured and no full library suite was run.",
+      "evidence": "atlas-refresh/s48-release-0.0.36.json; atlas-refresh/publish-0.0.36.json"
+    },
+    {
+      "subphase": "S49",
+      "outcome": "Whole-file ownership reconstruction of ssl/record/rec_layer_s3.rs around a typed ReadStatus: only Complete carries bytes, a partial read is WouldBlock, and a completed empty handshake record is skipped instead of returned as a retry. Production unsafe blocks 59 -> 30 and production unsafe fn 12 -> 7; every remaining production block has a SAFETY contract. The retry/completion confusion was observed failing pre-fix (`left: -1; right: 5`). One divergence: MAX_EMPTY_RECORDS exhaustion returns -1 instead of the authority's fatal SSL_R_RECORD_TOO_SMALL. Graded OWNERSHIP_RECONSTRUCTED; Miri/ASan/independent review NOT_RUN.",
+      "evidence": "atlas-refresh/s49-rec-layer-full.json"
+    },
+    {
+      "subphase": "S50",
+      "outcome": "TLS 1.3 key schedule rebuilt over slices with owned cleansed secret lifetimes: hkdf/derive functions take slices, secret stack copies are one CleansedBlock owner, and tls13_psk_do_binder takes slices, so the S29 binder overread is structural (received.len() == hashsize before any read). Three real defects fixed: encrypt over uninitialised caller output, decrypt over CRYPTO_malloc scratch, and a short AEAD update leaving an uninitialised gap. from_raw_parts 20 -> 9, copy_nonoverlapping 8 -> 3; production unsafe 76 -> 77, which is honest because OutRegion::new and the cleansed-block drop are unsafe and replace dozens of scattered operations. OWNERSHIP_RECONSTRUCTED; FAST only.",
+      "evidence": "atlas-refresh/s50-tls13-enc.json"
+    },
+    {
+      "subphase": "S51",
+      "outcome": "ASN.1 d2i partial-object ownership and cursor threading. ContentHandoff owns the collected block from take_raw, so a panic no longer leaks it; free_cont is a c_char rather than a bool whose address was cast to the hook's char*; one Cursor is derived at each boundary and threaded through the interior; ASN1_get_object is audited sound with src/asn1/der.rs unchanged; 3 of S41's 8 checked-at-site bounds (C2, C3, C4) became structural. Production unsafe 238 -> 226, production unsafe fn 18 -> 17, totals 252 -> 252. The ContentHandoff panic canary fires; Miri/ASan and independent review NOT_RUN.",
+      "evidence": "atlas-refresh/s51-asn1-ownership.json"
+    },
+    {
+      "subphase": "S52",
+      "outcome": "Full no-reuse downstream re-measurement after S49-S51: Phase-2 rebuilt at 35cd6aa84 (libcrypto cd71d401 / libssl efd460de), 11/11 ABI courts, legacy-provider RUNPATH/load re-proved, then both downstream tools with --measure only and evidence_reuse=null. Result: 200 loaded, 196 candidate = 196 authority L7, zero candidate-only drops, zero implementation failures, below_baseline=0, 242 recipes and 219 linkage-proven rows. Both atlases were rebound to the new identity by measurement output, not by a manual rewrite. No src/ change.",
+      "evidence": "atlas-refresh/s52-reverify-196.json"
+    },
+    {
+      "subphase": "S53",
+      "outcome": "Corpus batch 5: 35 tractable no-recipe families admitted and measured at the current candidate. Result: 277 recipes, 216 loaded, 198 candidate = 198 authority L7, 275 of 277 rows reusing committed measurements at the same identity, 723 no-recipe, zero implementation gaps and zero candidate-specific patches. 2 new L7 (njs, casync); 33 recorded at their exact level; fdm repaired from ENVIRONMENT to L5. No src/ change; the tool changes and two atlases changed.",
+      "evidence": "atlas-refresh/s53-corpus-batch.json"
     }
   ],
   "uninitialised_storage_census": {
@@ -1195,12 +1487,12 @@
     "graduation": "No graduation claimed; FAST gate only. BOUNDARY and SEAL were not run."
   },
   "structural_invariants": {
-    "allocator_seam": "unchanged across S27-S41: each receipt records 0 allocator-seam diff lines; S39-S41 added no CRYPTO_* call and moved no file/line coordinate",
-    "repr_c_layouts": "unchanged: 0 #[repr(C)] diff lines in the S27-S41 receipts",
-    "exported_symbols": "unchanged: 0 #[no_mangle] / #[export_name] diffs in the S27-S41 receipts",
+    "allocator_seam": "coordinate-stable across S27-S53: each receipt records 0 allocator-seam diff lines or constants; S51 added one ContentHandoff call site at the existing crypto/asn1/tasn_dec.c:0 coordinate, with no size/file/line change",
+    "repr_c_layouts": "unchanged: 0 #[repr(C)] diff lines in the S27-S53 receipts",
+    "exported_symbols": "unchanged: 0 #[no_mangle] / #[export_name] / extern \"C\" signature diffs in the S27-S53 production receipts",
     "unsafe_lints": "unchanged: unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks and missing_safety_doc remain enforced",
-    "abi_courts": "Phase-2 ABI courts 11/11 at the S25 (defe179f/5066aa32), S32 (61373488/cd24d207), S35 (b258b12f/64dec4c7) and S42 (268420cb/a380ecd6) rebuilds; S36 reused the S35 install",
-    "source": "atlas-refresh/s25-release-prep.json; atlas-refresh/s27-pk7-doit.json; atlas-refresh/s28-cms-pwri.json; atlas-refresh/s29-srvr-clienthello.json; atlas-refresh/s30-ssl-sess.json; atlas-refresh/s32-version-0.0.35.json; atlas-refresh/s34-dhe-client.json; atlas-refresh/s35-reverify-191.json; atlas-refresh/s39-rec-layer.json; atlas-refresh/s40-gcm-output.json; atlas-refresh/s41-asn1-d2i.json; atlas-refresh/s42-reverify-all.json"
+    "abi_courts": "Phase-2 ABI courts 11/11 at the S25 (defe179f/5066aa32), S32 (61373488/cd24d207), S35 (b258b12f/64dec4c7), S42 (268420cb/a380ecd6), S48 (ed415801/967424dd) and S52 (cd71d401/efd460de) rebuilds",
+    "source": "atlas-refresh/s25-release-prep.json; atlas-refresh/s27-pk7-doit.json; atlas-refresh/s28-cms-pwri.json; atlas-refresh/s29-srvr-clienthello.json; atlas-refresh/s30-ssl-sess.json; atlas-refresh/s32-version-0.0.35.json; atlas-refresh/s34-dhe-client.json; atlas-refresh/s35-reverify-191.json; atlas-refresh/s39-rec-layer.json; atlas-refresh/s40-gcm-output.json; atlas-refresh/s41-asn1-d2i.json; atlas-refresh/s42-reverify-all.json; atlas-refresh/s48-release-0.0.36.json; atlas-refresh/s49-rec-layer-full.json; atlas-refresh/s50-tls13-enc.json; atlas-refresh/s51-asn1-ownership.json; atlas-refresh/s52-reverify-196.json"
   },
   "known_gaps": [
     {
@@ -1218,8 +1510,8 @@
     {
       "id": "DOWNSTREAM-IMPLEMENTATION",
       "status": "0 OPEN",
-      "detail": "The S33 IMPLEMENTATION gap was repaired in S34 and the family is L7-functional. S44 and S46 report zero implementation gaps: every non-L7 recipe-backed row is HARNESS, FIXTURE or ENVIRONMENT, and every row is symmetric under both subjects.",
-      "evidence": "atlas-refresh/s34-dhe-client.json; atlas-refresh/s44-corpus-batch.json; atlas-refresh/s46-corpus-batch.json"
+      "detail": "The S33 IMPLEMENTATION gap was repaired in S34 and the family is L7-functional. S52 and S53 report zero implementation gaps: every non-L7 recipe-backed row is HARNESS, FIXTURE, ENVIRONMENT or SOURCE-UNREACHABLE, and every row is symmetric under both subjects.",
+      "evidence": "atlas-refresh/s34-dhe-client.json; atlas-refresh/s52-reverify-196.json; atlas-refresh/s53-corpus-batch.json"
     },
     {
       "id": "DOWNSTREAM-h2o",
@@ -1241,15 +1533,15 @@
     },
     {
       "id": "DOWNSTREAM-HARNESS-FIXTURE",
-      "status": "24 HARNESS + 2 FIXTURE",
-      "detail": "Of the 46 recipe-backed families below L7, 24 are HARNESS, 2 are FIXTURE (charybdis, libshout) and 20 are ENVIRONMENT. None is a candidate implementation failure and every one is symmetric under both subjects. S46 added 33 of these rows without changing the classification rule.",
-      "evidence": "atlas-refresh/s44-corpus-batch.json (non_l7); atlas-refresh/s46-corpus-batch.json (non_l7_summary)"
+      "status": "32 HARNESS + 25 FIXTURE + 20 ENVIRONMENT + 2 SOURCE-UNREACHABLE",
+      "detail": "Of the 79 recipe-backed families below L7, 32 are HARNESS, 25 FIXTURE, 20 ENVIRONMENT and 2 SOURCE-UNREACHABLE (ckermit, tcpflow). None is a candidate implementation failure and every one is symmetric under both subjects. The S52 full re-measurement supplied the earlier 46 rows' classification and S53 supplied the 33 added rows.",
+      "evidence": "atlas-refresh/s52-reverify-196.json (non_l7_classification); atlas-refresh/s53-corpus-batch.json (non_l7_summary)"
     },
     {
       "id": "DOWNSTREAM-BELOW-L7",
-      "status": "46 FAMILIES",
-      "detail": "46 recipe-backed families remain below L7: 12 L1-admitted-source, 7 L2-configured, 4 L3-built, 19 L4-linked, 3 L5-loaded and 1 L6-runtime. Classification: 24 HARNESS, 2 FIXTURE, 20 ENVIRONMENT; implementation_attributable_non_l7 = 0. The other 758 counted families have no admitted recipe.",
-      "evidence": "forensics/downstream/runtime-functional-atlas.json; atlas-refresh/s44-corpus-batch.json; atlas-refresh/s46-corpus-batch.json"
+      "status": "79 FAMILIES",
+      "detail": "79 recipe-backed families remain below L7: 16 L1-admitted-source, 17 L2-configured, 5 L3-built, 23 L4-linked, 17 L5-loaded and 1 L6-runtime. Classification: 32 HARNESS, 25 FIXTURE, 20 ENVIRONMENT and 2 SOURCE-UNREACHABLE; implementation_attributable_non_l7 = 0. The other 723 counted families have no admitted recipe. S53 added 33 of the 79 rows and repaired fdm from ENVIRONMENT to L5.",
+      "evidence": "forensics/downstream/runtime-functional-atlas.json; atlas-refresh/s52-reverify-196.json; atlas-refresh/s53-corpus-batch.json"
     },
     {
       "id": "DOWNSTREAM-S42-SYMMETRIC-LOSSES",
@@ -1271,15 +1563,21 @@
     },
     {
       "id": "DOWNSTREAM-NO-RECIPE",
-      "status": "758 UNMEASURED",
-      "detail": "758 of the 1000 counted families have no admitted pristine-source recipe. They are acquire-failure / not-attempted rows, not candidate failures, and no URL is fabricated for them.",
-      "evidence": "forensics/downstream/runtime-functional-atlas.json (body.counts.no_recipe)"
+      "status": "723 UNMEASURED",
+      "detail": "723 of the 1000 counted families have no admitted pristine-source recipe. They are acquire-failure / not-attempted rows, not candidate failures, and no URL is fabricated for them. S53 added 35 recipes and reduced the no-recipe set from 758 to 723.",
+      "evidence": "forensics/downstream/runtime-functional-atlas.json (body.counts.no_recipe); atlas-refresh/s53-corpus-batch.json"
     },
     {
       "id": "DOWNSTREAM-MEDUSA",
       "status": "HARNESS",
       "detail": "medusa remains L4-linked because its version probe suppresses the banner when the extracted directory name contains '-b', so the version-regex gate fails for both subjects. The underlying S44 failure (candidate legacy provider did not load) was fixed in S45; the provider now loads and the SMTPS workload passes under both subjects, but the row cannot rise without a separate measurement-instrument change.",
       "evidence": "atlas-refresh/s44-corpus-batch.json (non_l7); atlas-refresh/s45-legacy-provider.json (downstream_remeasure)"
+    },
+    {
+      "id": "DOWNSTREAM-S53-YIELD",
+      "status": "2 NEW L7 / 35 ADMITTED",
+      "detail": "S53 admitted 35 no-recipe families and exactly 2 reached L7-functional (njs, casync). The other 33 are recorded at their exact level (5 L1, 11 L2, 4 L4, 13 L5); no level was fabricated and no missing count was padded.",
+      "evidence": "atlas-refresh/s53-corpus-batch.json (selection.after, added_families)"
     }
   ],
   "unsafe_count": {
@@ -1291,6 +1589,9 @@
     "s39_rec_layer": "rec_layer_s3.rs 73 -> 78 total (production 58 -> 59, test 15 -> 19); the 5 removed typed-slice constructions are replaced by write-only raw copies with SAFETY contracts, and the 4 new test-only blocks are the boundary/canary tests.",
     "s40_cipher_gcm": "cipher_gcm.rs 66 -> 70 total (production 47 -> 47, test 19 -> 23); 2 whole-extent typed-slice constructions removed, production work relocated to 3 raw operations inside existing unsafe blocks, and the 4 new test-only blocks are the boundary/canary tests.",
     "s41_asn1_d2i": "d2i.rs production 252 -> 238; total 257 -> 252; unsafe fn 20 -> 18. Fourteen production blocks eliminated into Cursor's safe methods, with the new Cursor::new constructor carrying an explicit contract.",
-    "note": "This global count remains the S20 recount. S27-S41 record per-file before/after unsafe-operation counts in their receipts but no global recount was made; several changes relocated releases into owners (S27), grouped existing calls into contracted blocks (S30/S40), or moved raw work behind safe cursor/owner interfaces (S39/S41) rather than adding abstractions. S44-S46 changed no src/ file, so the count is unchanged by those subphases."
+    "note": "This global count remains the S20 recount. S27-S51 record per-file before/after unsafe-operation counts in their receipts but no global recount was made; several changes relocated releases into owners, grouped existing calls into contracted blocks, or moved raw work behind safe cursor/owner interfaces rather than adding abstractions. S48 and S52-S53 changed no src/ file; S49-S51 changed existing files and are reflected only in their per-file receipts.",
+    "s49_rec_layer_full": "rec_layer_s3.rs 78 -> 54 total; production 59 -> 30; #[cfg(test)] 19 -> 24; production unsafe fn 12 -> 7. The removed blocks are the raw field-offset and offset arithmetic in the retry/completion algorithm, replaced by ReadStatus, OutBuf, Scratch and Sink; the added test blocks are fixtures and canaries.",
+    "s50_tls13_enc": "tls13_enc.rs production unsafe blocks 76 -> 77; #[cfg(test)] 8 -> 13; total 84 -> 90; production unsafe fn 36 -> 35. from_raw_parts 20 -> 9, copy_nonoverlapping 8 -> 3, raw .add()/as_mut_ptr() 39 -> 22. The production count rose by one because OutRegion::new is a contracted unsafe constructor and the cleansed-block drop is an unsafe impl; those two narrow operations replace dozens of scattered raw operations.",
+    "s51_asn1_d2i": "d2i.rs production unsafe blocks 238 -> 226 (-12); production unsafe fn 18 -> 17; #[cfg(test)] 14 -> 26; totals 252 -> 252. Nine interior Cursor::new constructors and Collected::adopt are removed; four boundary Cursor::new calls remain; ContentHandoff::drop adds one call at the existing seam coordinate."
   }
 }
