@@ -1697,12 +1697,12 @@ pub(crate) unsafe fn tls13_decrypt_record(
         if content_len > out_cap {
             return -1;
         }
-        let out: &mut [u8] = if out_cap == 0 {
-            &mut []
-        } else {
-            core::slice::from_raw_parts_mut(out, out_cap)
-        };
-        out[..content_len].copy_from_slice(&plain[..content_len]);
+        // SAFETY: `content_len <= out_cap` was checked above, so `out` is writable for the whole
+        // copy; it need not be initialised and is only written, never read. `plain` is a distinct
+        // cleansed allocation.
+        if content_len != 0 {
+            core::ptr::copy_nonoverlapping(plain.as_ptr(), out, content_len);
+        }
         *content_type = inner_type;
         (*s).dec_seq += 1;
         content_len as isize
