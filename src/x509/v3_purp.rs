@@ -65,14 +65,14 @@
 #![allow(non_upper_case_globals)]
 
 use core::cell::UnsafeCell;
-use core::ffi::{c_char, c_int, c_long, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void, CStr};
 use core::mem::size_of;
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
-use crate::asn1::layout::V_ASN1_NEG_INTEGER;
+use crate::asn1::layout::{Asn1String, V_ASN1_NEG_INTEGER};
 use crate::asn1::prim::{ASN1_INTEGER_cmp, ASN1_INTEGER_get, ASN1_OBJECT_free};
-use crate::asn1::string::{ASN1_BIT_STRING_free, ASN1_OCTET_STRING_cmp};
+use crate::asn1::string::{ASN1_BIT_STRING_free, ASN1_OCTET_STRING_cmp, ASN1_OCTET_STRING_free};
 use crate::evp::legacy_sha::EVP_sha1;
 use crate::evp::pkey::{EVP_PKEY_is_a, EvpPkey};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
@@ -101,10 +101,13 @@ use crate::runtime::stack::{
     OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::thread::{CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock};
-use crate::x509::v3_akeya::AuthorityKeyid;
+use crate::x509::v3_addr::{IPAddressFamily_free, IpAddressFamily};
+use crate::x509::v3_akeya::{AUTHORITY_KEYID_free, AuthorityKeyid};
+use crate::x509::v3_asid::{ASIdentifiers_free, AsIdentifiers};
 use crate::x509::v3_bcons::{BASIC_CONSTRAINTS_free, BasicConstraints};
-use crate::x509::v3_crld::{ossl_dist_point_name_full, DistPoint};
-use crate::x509::v3_genn::{GeneralName, GEN_DIRNAME};
+use crate::x509::v3_crld::{ossl_dist_point_name_full, DIST_POINT_free, DistPoint};
+use crate::x509::v3_genn::{GENERAL_NAMES_free, GeneralName, GEN_DIRNAME};
+use crate::x509::v3_ncons::{NAME_CONSTRAINTS_free, NameConstraints};
 use crate::x509::v3_pcia::{PROXY_CERT_INFO_EXTENSION_free, ProxyCertInfoExtension};
 use crate::x509::x509_cmp::{
     X509_NAME_cmp, X509_get0_pubkey, X509_get0_serialNumber, X509_get_issuer_name,
@@ -535,8 +538,14 @@ const _: () = {
 #[repr(transparent)]
 struct XstandardTable(UnsafeCell<[X509Purpose; 10]>);
 
-// SAFETY: the table is read and written only through this module's unlocked, single-threaded
-// purpose-table discipline, exactly as the authority's plain `xstandard[]` is.
+// SAFETY: `Sync` here is a claim about **access discipline**, not about the bytes being immutable:
+// `X509_PURPOSE_add` can rewrite a reserved row in place (a short-name match selects a standard
+// row and replaces its names, trust, checker and opaque argument), and the accessors hand out
+// `*mut` rows. The type system enforces neither single-threaded use nor the absence of a live
+// borrow taken through `X509_PURPOSE_get0`. The obligation is therefore explicit and belongs to
+// every caller of this module's unsafe table API: no thread may add, modify, clean up or read the
+// purpose tables while another thread does. That is exactly the authority's own
+// `xstandard[]`/`xptable` contract; this `unsafe impl` does not strengthen it.
 unsafe impl Sync for XstandardTable {}
 
 /// `static X509_PURPOSE xstandard[]` — `v3_purp.c:46-70`.
@@ -640,6 +649,10 @@ static XSTANDARD: XstandardTable = XstandardTable(UnsafeCell::new([
 /// The dynamic rows an application adds through [`X509_PURPOSE_add`]. The authority stores a bare
 /// pointer and never locks it; this models the same single-threaded slot as an `AtomicPtr` so the
 /// static is sound, without adding synchronisation the authority does not have.
+///
+/// `AtomicPtr` orders the publication of the *stack pointer* only. It makes neither the stack's
+/// elements nor a standard row reached through the table safe to mutate concurrently; the
+/// single-threaded contract stated on [`XstandardTable`] covers those.
 static XPTABLE: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
 
 /// `static int xp_cmp(const X509_PURPOSE *const *a, const X509_PURPOSE *const *b)` —
@@ -865,8 +878,10 @@ pub unsafe extern "C" fn X509_PURPOSE_get_by_id(purpose: c_int) -> c_int {
 ///
 /// # Safety
 ///
-/// `name` and `sname` must be NUL-terminated C strings; `ck` must be a valid checker; the dynamic
-/// table must not be raced.
+/// `name` and `sname` must be NUL-terminated C strings; `ck` must be a valid checker. This
+/// function mutates the table without a lock, and a short-name match rewrites a **reserved** row
+/// of [`XSTANDARD`] in place, so no other thread may use any purpose-table entry concurrently.
+/// That single-threaded obligation is the authority's own and is not enforced by the type system.
 #[no_mangle]
 pub unsafe extern "C" fn X509_PURPOSE_add(
     id: c_int,
@@ -1195,6 +1210,516 @@ pub unsafe extern "C" fn X509_supported_extension(ex: *mut X509Extension) -> c_i
 // Building the extension cache — `v3_purp.c:349-679`
 // ---------------------------------------------------------------------------------------------
 
+/// The authority's release for one decoded cache value.
+type Release<T> = unsafe extern "C" fn(*mut T);
+
+/// One decoded value, owned until the cache is published (or released if construction is
+/// abandoned).
+///
+/// `ptr` is always a value the matching decoder produced, and `release` is that value's authority
+/// destructor. `Drop` runs the release exactly once; [`Self::into_raw`] transfers the value to the
+/// certificate's cache slot without releasing it. This is the **single** owner type for both the
+/// construction slots and the teardown path, so no value can be released twice.
+struct CacheValue<T> {
+    ptr: ptr::NonNull<T>,
+    release: Release<T>,
+}
+
+impl<T> CacheValue<T> {
+    /// Adopt a decoded value (NULL is the absent-extension case and answers `None`).
+    ///
+    /// # Safety
+    ///
+    /// `ptr` must be NULL or a live value produced by the decoder whose `release` is passed, and
+    /// no other owner may release it.
+    unsafe fn adopt(ptr: *mut T, release: Release<T>) -> Option<Self> {
+        ptr::NonNull::new(ptr).map(|ptr| CacheValue { ptr, release })
+    }
+
+    fn as_ptr(&self) -> *mut T {
+        self.ptr.as_ptr()
+    }
+
+    /// Transfer ownership to the caller without releasing the value.
+    fn into_raw(self) -> *mut T {
+        let p = self.ptr.as_ptr();
+        core::mem::forget(self);
+        p
+    }
+}
+
+impl<T> Drop for CacheValue<T> {
+    fn drop(&mut self) {
+        // SAFETY: `adopt`'s contract says `release` matches this value, and `Drop` runs once.
+        unsafe { (self.release)(self.ptr.as_ptr()) };
+    }
+}
+
+/// Drop one teardown value, recording its address in the test-only release audit.
+#[inline]
+fn release_cache_value<T>(value: Option<CacheValue<T>>) {
+    #[cfg(test)]
+    if let Some(value) = value.as_ref() {
+        release_audit::record(value.as_ptr() as usize);
+    }
+    drop(value);
+}
+
+/// The `sk_DIST_POINT_pop_free(..., DIST_POINT_free)` release for a decoded CRLDP stack.
+///
+/// # Safety
+///
+/// `stack` must be NULL or a stack of `DIST_POINT` values this module's decoder produced.
+unsafe extern "C" fn release_dist_points(stack: *mut OpenSslStack) {
+    // SAFETY: `stack` owns its points; the thunk releases each one.
+    unsafe { OPENSSL_sk_pop_free(stack, Some(dist_point_free_thunk)) };
+}
+
+/// # Safety
+///
+/// `elem` must be NULL or a `DIST_POINT` the stack owns.
+unsafe extern "C" fn dist_point_free_thunk(elem: *mut c_void) {
+    // SAFETY: the stack holds `DIST_POINT *` values per its declaration.
+    unsafe { DIST_POINT_free(elem.cast::<DistPoint>()) };
+}
+
+/// The `sk_IPAddressFamily_pop_free(..., IPAddressFamily_free)` release for RFC 3779 address
+/// blocks.
+///
+/// # Safety
+///
+/// `stack` must be NULL or a stack of `IPAddressFamily` values this module's decoder produced.
+unsafe extern "C" fn release_address_families(stack: *mut OpenSslStack) {
+    // SAFETY: `stack` owns its families; the thunk releases each one.
+    unsafe { OPENSSL_sk_pop_free(stack, Some(ip_address_family_free_thunk)) };
+}
+
+/// # Safety
+///
+/// `elem` must be NULL or an `IPAddressFamily` the stack owns.
+unsafe extern "C" fn ip_address_family_free_thunk(elem: *mut c_void) {
+    // SAFETY: the stack holds `IPAddressFamily *` values per its declaration.
+    unsafe { IPAddressFamily_free(elem.cast::<IpAddressFamily>()) };
+}
+
+/// The `sk_ASN1_OBJECT_pop_free(..., ASN1_OBJECT_free)` release for a decoded extended-key-usage
+/// stack.
+///
+/// # Safety
+///
+/// `stack` must be NULL or a stack of `ASN1_OBJECT` values this module's decoder produced.
+unsafe extern "C" fn release_extended_key_usage(stack: *mut OpenSslStack) {
+    // SAFETY: `stack` owns its objects; the thunk releases each one.
+    unsafe { OPENSSL_sk_pop_free(stack, Some(asn1_object_free_thunk)) };
+}
+
+/// Test-only accounting of the cache values released by [`ossl_x509v3_cache_free`], keyed by
+/// address.
+///
+/// The normal suite cannot install a counting allocator (that is a process-global act reserved
+/// for the `adv_alloc` probes), so the teardown records each address it releases here. The map is
+/// thread-local so tests running in parallel cannot contribute, and a test resets it before it
+/// builds the cache. Nothing here exists in a non-test build.
+#[cfg(test)]
+mod release_audit {
+    use std::cell::RefCell;
+
+    thread_local! {
+        static RELEASES: RefCell<Vec<(usize, usize)>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Forget every observation made on this thread.
+    pub(super) fn reset() {
+        RELEASES.with(|releases| releases.borrow_mut().clear());
+    }
+
+    /// Record one teardown release of `ptr`.
+    pub(super) fn record(ptr: usize) {
+        RELEASES.with(|releases| {
+            let mut releases = releases.borrow_mut();
+            match releases.iter_mut().find(|(p, _)| *p == ptr) {
+                Some((_, count)) => *count += 1,
+                None => releases.push((ptr, 1)),
+            }
+        });
+    }
+
+    /// How many times this thread's teardown released `ptr`.
+    pub(super) fn count(ptr: usize) -> usize {
+        RELEASES.with(|releases| {
+            releases
+                .borrow()
+                .iter()
+                .find(|(p, _)| *p == ptr)
+                .map_or(0, |(_, count)| *count)
+        })
+    }
+}
+
+/// The result of decoding one cache slot: the value (owned here until publication) and whether
+/// the authority considers the extension well formed.
+struct Decoded<T> {
+    value: Option<CacheValue<T>>,
+    valid: bool,
+}
+
+/// Every output of one cache construction, owned locally until the single publication point.
+struct CacheBuild {
+    flags: c_uint,
+    pathlen: c_long,
+    pcpathlen: c_long,
+    kusage: c_uint,
+    xkusage: c_uint,
+    nscert: c_uint,
+    sha1_hash: [c_uchar; 20],
+    skid: Option<CacheValue<Asn1String>>,
+    akid: Option<CacheValue<AuthorityKeyid>>,
+    crldp: Option<CacheValue<OpenSslStack>>,
+    altname: Option<CacheValue<OpenSslStack>>,
+    nc: Option<CacheValue<NameConstraints>>,
+    rfc3779_addr: Option<CacheValue<OpenSslStack>>,
+    rfc3779_asid: Option<CacheValue<AsIdentifiers>>,
+}
+
+impl CacheBuild {
+    /// Decode and derive the whole cache **without writing any cache member of `x`**.
+    ///
+    /// Each slot is owned by a [`CacheValue`] until [`Self::publish`] transfers it to the
+    /// certificate; a slot whose decode fails is `None`, never a partially built object. The
+    /// resulting cache is a complete invalid state when `EXFLAG_INVALID` is set, which is the
+    /// authority's own contract: `x509_vfy` may still consume the slots that decoded successfully
+    /// after a cache failure.
+    ///
+    /// # Safety
+    ///
+    /// `x` must be live and write-locked, and its cache slots must be NULL (true on every path
+    /// that reaches here: `EXFLAG_SET` was clear and `d2i_X509`'s pre-operation clears them).
+    unsafe fn build(x: *mut X509) -> CacheBuild {
+        // SAFETY: the enclosing function's contract is the contract for every pointer below.
+        unsafe {
+            let mut flags = (*x).ex_flags & !EXFLAG_SET;
+            let mut pathlen: c_long = -1;
+            let mut pcpathlen = (*x).ex_pcpathlen;
+            let mut kusage = (*x).ex_kusage;
+            let mut xkusage: c_uint;
+            let mut nscert = (*x).ex_nscert;
+            let mut sha1_hash = (*x).sha1_hash;
+
+            // Cache the SHA1 digest of the cert.
+            if X509_digest(x, EVP_sha1(), sha1_hash.as_mut_ptr(), ptr::null_mut()) == 0 {
+                flags |= EXFLAG_NO_FINGERPRINT;
+            }
+
+            // V1 should mean no extensions ...
+            if X509_get_version(x) == X509_VERSION_1 {
+                flags |= EXFLAG_V1;
+            }
+
+            let mut i: c_int = 0;
+
+            // Handle basic constraints.
+            let bs = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_basic_constraints, &raw mut i, ptr::null_mut())
+                    .cast::<BasicConstraints>(),
+                BASIC_CONSTRAINTS_free,
+            );
+            if let Some(bs) = bs {
+                let bs = bs.as_ptr();
+                if (*bs).ca != 0 {
+                    flags |= EXFLAG_CA;
+                }
+                if !(*bs).pathlen.is_null() {
+                    if (*(*bs).pathlen).type_ == V_ASN1_NEG_INTEGER {
+                        raise_site(&V3_PURP_484);
+                        flags |= EXFLAG_INVALID;
+                    } else {
+                        pathlen = ASN1_INTEGER_get((*bs).pathlen);
+                    }
+                }
+                flags |= EXFLAG_BCONS;
+            } else if i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            // Handle proxy certificates.
+            let pci = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_proxyCertInfo, &raw mut i, ptr::null_mut())
+                    .cast::<ProxyCertInfoExtension>(),
+                PROXY_CERT_INFO_EXTENSION_free,
+            );
+            if let Some(pci) = pci {
+                let pci = pci.as_ptr();
+                let has_ca_flag = (flags & EXFLAG_CA) != 0;
+                let has_san = X509_get_ext_by_NID(x, NID_subject_alt_name, -1) >= 0;
+                let has_ian = X509_get_ext_by_NID(x, NID_issuer_alt_name, -1) >= 0;
+                if has_ca_flag || has_san || has_ian {
+                    flags |= EXFLAG_INVALID;
+                }
+                if !(*pci).pcPathLengthConstraint.is_null() {
+                    pcpathlen = ASN1_INTEGER_get((*pci).pcPathLengthConstraint);
+                } else {
+                    pcpathlen = -1;
+                }
+                flags |= EXFLAG_PROXY;
+            } else if i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            // Handle (basic) key usage.
+            let usage = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_key_usage, &raw mut i, ptr::null_mut())
+                    .cast::<Asn1String>(),
+                ASN1_BIT_STRING_free,
+            );
+            if let Some(usage) = usage {
+                let usage = usage.as_ptr();
+                kusage = 0;
+                let length = (*usage).length;
+                if length > 0 {
+                    kusage = *(*usage).data as c_uint;
+                    if length > 1 {
+                        kusage |= (*(*usage).data.add(1) as c_uint) << 8;
+                    }
+                }
+                flags |= EXFLAG_KUSAGE;
+                // Check for empty key usage according to RFC 5280 section 4.2.1.3.
+                if kusage == 0 {
+                    raise_site(&V3_PURP_525);
+                    flags |= EXFLAG_INVALID;
+                }
+            } else if i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            // Handle extended key usage.
+            xkusage = 0;
+            let extusage = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_ext_key_usage, &raw mut i, ptr::null_mut())
+                    .cast::<OpenSslStack>(),
+                release_extended_key_usage,
+            );
+            if let Some(extusage) = extusage {
+                let extusage = extusage.as_ptr();
+                flags |= EXFLAG_XKUSAGE;
+                let n = OPENSSL_sk_num(extusage);
+                for j in 0..n {
+                    let nid = OBJ_obj2nid(OPENSSL_sk_value(extusage, j).cast::<Asn1Object>());
+                    match nid {
+                        NID_server_auth => xkusage |= XKU_SSL_SERVER,
+                        NID_client_auth => xkusage |= XKU_SSL_CLIENT,
+                        NID_email_protect => xkusage |= XKU_SMIME,
+                        NID_code_sign => xkusage |= XKU_CODE_SIGN,
+                        NID_ms_sgc | NID_ns_sgc => xkusage |= XKU_SGC,
+                        NID_OCSP_sign => xkusage |= XKU_OCSP_SIGN,
+                        NID_time_stamp => xkusage |= XKU_TIMESTAMP,
+                        NID_dvcs => xkusage |= XKU_DVCS,
+                        NID_anyExtendedKeyUsage => xkusage |= XKU_ANYEKU,
+                        // Ignore unknown extended key usage.
+                        _ => {}
+                    }
+                }
+            } else if i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            // Handle legacy Netscape extension.
+            let ns = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_netscape_cert_type, &raw mut i, ptr::null_mut())
+                    .cast::<Asn1String>(),
+                ASN1_BIT_STRING_free,
+            );
+            if let Some(ns) = ns {
+                let ns = ns.as_ptr();
+                nscert = if (*ns).length > 0 {
+                    *(*ns).data as c_uint
+                } else {
+                    0
+                };
+                flags |= EXFLAG_NSCERT;
+            } else if i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            // Handle subject key identifier and issuer/authority key identifier.
+            let skid = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_subject_key_identifier, &raw mut i, ptr::null_mut())
+                    .cast::<Asn1String>(),
+                ASN1_OCTET_STRING_free,
+            );
+            if skid.is_none() && i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            let akid = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_authority_key_identifier, &raw mut i, ptr::null_mut())
+                    .cast::<AuthorityKeyid>(),
+                AUTHORITY_KEYID_free,
+            );
+            if akid.is_none() && i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            // Check if subject name matches issuer.
+            if X509_NAME_cmp(X509_get_subject_name(x), X509_get_issuer_name(x)) == 0 {
+                flags |= EXFLAG_SI; // Cert is self-issued
+                let akid_ptr: *const AuthorityKeyid = akid
+                    .as_ref()
+                    .map_or(ptr::null(), |v| v.as_ptr().cast_const());
+                let skid_ptr: *const Asn1String = skid
+                    .as_ref()
+                    .map_or(ptr::null(), |v| v.as_ptr().cast_const());
+                let akid_ok =
+                    akid_ptr.is_null() || check_akid_with_skid(x, akid_ptr, skid_ptr) == X509_V_OK;
+                let sig_ok = check_sig_alg_match(X509_get0_pubkey(x), x) == X509_V_OK;
+                // .. and the signature alg matches the PUBKEY alg.
+                if akid_ok && sig_ok {
+                    flags |= EXFLAG_SS; // indicate self-signed
+                }
+            }
+
+            // Handle subject alternative names and various other extensions.
+            let altname = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_subject_alt_name, &raw mut i, ptr::null_mut())
+                    .cast::<OpenSslStack>(),
+                GENERAL_NAMES_free,
+            );
+            if altname.is_none() && i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            let nc = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_name_constraints, &raw mut i, ptr::null_mut())
+                    .cast::<NameConstraints>(),
+                NAME_CONSTRAINTS_free,
+            );
+            if nc.is_none() && i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            // Handle CRL distribution point entries. No relative name is expanded here: see
+            // [`setup_crldp`] and CVE-2026-35189.
+            let crldp = setup_crldp(x);
+            if !crldp.valid {
+                flags |= EXFLAG_INVALID;
+            }
+
+            let rfc3779_addr = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_sbgp_ipAddrBlock, &raw mut i, ptr::null_mut())
+                    .cast::<OpenSslStack>(),
+                release_address_families,
+            );
+            if rfc3779_addr.is_none() && i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            let rfc3779_asid = CacheValue::adopt(
+                X509_get_ext_d2i(x, NID_sbgp_autonomousSysNum, &raw mut i, ptr::null_mut())
+                    .cast::<AsIdentifiers>(),
+                ASIdentifiers_free,
+            );
+            if rfc3779_asid.is_none() && i != -1 {
+                flags |= EXFLAG_INVALID;
+            }
+
+            let ext_count = X509_get_ext_count(x);
+            for k in 0..ext_count {
+                let ex = X509_get_ext(x, k);
+                let nid = OBJ_obj2nid(X509_EXTENSION_get_object(ex));
+
+                if nid == NID_freshest_crl {
+                    flags |= EXFLAG_FRESHEST;
+                }
+                if X509_EXTENSION_get_critical(ex) == 0 {
+                    continue;
+                }
+                if X509_supported_extension(ex) == 0 {
+                    flags |= EXFLAG_CRITICAL;
+                    break;
+                }
+                match nid {
+                    NID_basic_constraints => flags |= EXFLAG_BCONS_CRITICAL,
+                    NID_authority_key_identifier => flags |= EXFLAG_AKID_CRITICAL,
+                    NID_subject_key_identifier => flags |= EXFLAG_SKID_CRITICAL,
+                    NID_subject_alt_name => flags |= EXFLAG_SAN_CRITICAL,
+                    _ => {}
+                }
+            }
+
+            CacheBuild {
+                flags,
+                pathlen,
+                pcpathlen,
+                kusage,
+                xkusage,
+                nscert,
+                sha1_hash,
+                skid,
+                akid,
+                crldp: crldp.value,
+                altname,
+                nc,
+                rfc3779_addr,
+                rfc3779_asid,
+            }
+        }
+    }
+
+    /// Install every decoded value and scalar in one place, under the caller's write lock, and
+    /// return the flag word for the caller to store last.
+    ///
+    /// # Safety
+    ///
+    /// `x` must be live and write-locked; its cache slots must be NULL; called once per build.
+    unsafe fn publish(self, x: *mut X509) -> c_uint {
+        let CacheBuild {
+            flags,
+            pathlen,
+            pcpathlen,
+            kusage,
+            xkusage,
+            nscert,
+            sha1_hash,
+            skid,
+            akid,
+            crldp,
+            altname,
+            nc,
+            rfc3779_addr,
+            rfc3779_asid,
+        } = self;
+        // SAFETY: `x` is live and write-locked per the contract; each `into_raw` transfers one
+        // value exactly once and every absent slot writes NULL.
+        unsafe {
+            debug_assert!(
+                (*x).skid.is_null()
+                    && (*x).akid.is_null()
+                    && (*x).crldp.is_null()
+                    && (*x).altname.is_null()
+                    && (*x).nc.is_null()
+                    && (*x).rfc3779_addr.is_null()
+                    && (*x).rfc3779_asid.is_null(),
+                "a cache slot was already installed before publication"
+            );
+            (*x).ex_pathlen = pathlen;
+            (*x).ex_pcpathlen = pcpathlen;
+            (*x).ex_kusage = kusage;
+            (*x).ex_xkusage = xkusage;
+            (*x).ex_nscert = nscert;
+            (*x).sha1_hash = sha1_hash;
+            (*x).skid = skid.map_or(ptr::null_mut(), |v| v.into_raw());
+            (*x).akid = akid.map_or(ptr::null_mut(), |v| v.into_raw().cast::<c_void>());
+            (*x).crldp = crldp.map_or(ptr::null_mut(), |v| v.into_raw().cast::<c_void>());
+            (*x).altname = altname.map_or(ptr::null_mut(), |v| v.into_raw().cast::<c_void>());
+            (*x).nc = nc.map_or(ptr::null_mut(), |v| v.into_raw().cast::<c_void>());
+            (*x).rfc3779_addr =
+                rfc3779_addr.map_or(ptr::null_mut(), |v| v.into_raw().cast::<c_void>());
+            (*x).rfc3779_asid =
+                rfc3779_asid.map_or(ptr::null_mut(), |v| v.into_raw().cast::<c_void>());
+        }
+        flags
+    }
+}
+
 /// `static int setup_dp(DIST_POINT *dp)` — `v3_purp.c:357-376` (3.6.5).
 ///
 /// Validates one distribution point and unpacks its reason flags. **The full relative name is not
@@ -1279,36 +1804,41 @@ pub(crate) unsafe fn crldp_full_name(x: *const X509, dp: *const DistPoint) -> *m
 
 /// `static int setup_crldp(X509 *x)` — `v3_purp.c:376-395` (3.6.5).
 ///
-/// Decodes and validates the certificate's CRL distribution points, caching the stack in
-/// `x->crldp`, but does **not** expand any relative name. Answers 1 on success and 0 for an
-/// invalid extension.
+/// Decodes and validates the certificate's CRL distribution points, returning the stack as an owned
+/// [`CacheValue`] for the caller to publish, but **does not expand any relative name**. Answers a
+/// value whose `valid` is false when the extension is malformed or a point is invalid.
+///
+/// The decoded stack is returned even on an invalid point, because that is the authority's cache
+/// state: `EXFLAG_INVALID` is published alongside the successfully decoded stack.
 ///
 /// # Safety
 ///
-/// `x` must be a live `X509`.
-unsafe fn setup_crldp(x: *mut X509) -> c_int {
+/// `x` must be a live `X509` whose `crldp` cache slot is NULL.
+unsafe fn setup_crldp(x: *mut X509) -> Decoded<OpenSslStack> {
     let mut i: c_int = 0;
-    // SAFETY: `x` is live; `crldp` is its own cache slot and `&i` is a writable crit out-param.
-    unsafe {
-        (*x).crldp = X509_get_ext_d2i(x, NID_crl_distribution_points, &raw mut i, ptr::null_mut());
-    }
-    // SAFETY: `x` is live.
-    if unsafe { (*x).crldp.is_null() } && i != -1 {
-        return 0;
-    }
-    // SAFETY: `x` is live; `crldp` is a live stack of distribution points.
-    let crldp = unsafe { (*x).crldp }.cast::<OpenSslStack>();
-    // SAFETY: `crldp` is a live stack.
-    let n = unsafe { OPENSSL_sk_num(crldp) };
-    for i in 0..n {
-        // SAFETY: `i` is a valid index and `crldp` is the live stack.
-        let dp = unsafe { OPENSSL_sk_value(crldp, i) }.cast::<DistPoint>();
-        // SAFETY: `dp` is a live distribution point.
-        if unsafe { setup_dp(dp) } == 0 {
-            return 0;
+    // SAFETY: `x` is live; `&i` is a writable crit out-param and the decoded stack is this call's.
+    let value = unsafe {
+        CacheValue::adopt(
+            X509_get_ext_d2i(x, NID_crl_distribution_points, &raw mut i, ptr::null_mut())
+                .cast::<OpenSslStack>(),
+            release_dist_points,
+        )
+    };
+    let mut valid = !(value.is_none() && i != -1);
+    if let Some(stack) = value.as_ref() {
+        // SAFETY: `stack` is the stack `X509_get_ext_d2i` produced.
+        let n = unsafe { OPENSSL_sk_num(stack.as_ptr()) };
+        for k in 0..n {
+            // SAFETY: `k` is a valid index and `stack` is the decoded stack.
+            let dp = unsafe { OPENSSL_sk_value(stack.as_ptr(), k) }.cast::<DistPoint>();
+            // SAFETY: `dp` is a live distribution point.
+            if unsafe { setup_dp(dp) } == 0 {
+                valid = false;
+                break;
+            }
         }
     }
-    1
+    Decoded { value, valid }
 }
 
 /// `static int check_sig_alg_match(const EVP_PKEY *issuer_key, const X509 *subject)` —
@@ -1348,6 +1878,11 @@ unsafe fn check_sig_alg_match(issuer_key: *const EvpPkey, subject: *const X509) 
 /// alternative names, name constraints, CRL distribution points and RFC 3779 blocks, and derives
 /// the self-issued/self-signed flags. Answers 1 on success and 0 when the certificate is invalid.
 ///
+/// Every decoded value is built into a local owner and installed in one publication step at the
+/// end, so a reader that observes the completed cache never observes a half-built one. The cache
+/// is immutable after publication; the deliberate exception to that rule is the lazy CRLDP name
+/// (see [`crldp_full_name`]), which is never written into the cached distribution point.
+///
 /// # Safety
 ///
 /// `x` must be a live, unlocked `X509` with a live `lock` (or a NULL lock, which the authority's
@@ -1369,324 +1904,85 @@ pub unsafe extern "C" fn ossl_x509v3_cache_extensions(x: *mut X509) -> c_int {
     // ERR_set_mark is a safe entry point with no pointer arguments.
     ERR_set_mark();
 
-    // Cache the SHA1 digest of the cert
-    // SAFETY: `x` is live; `sha1_hash` is its own twenty-byte buffer.
-    if unsafe { X509_digest(x, EVP_sha1(), (*x).sha1_hash.as_mut_ptr(), ptr::null_mut()) } == 0 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_NO_FINGERPRINT };
-    }
+    // Decode and derive everything into local owners. `x`'s cache members stay untouched until
+    // the publication step below, so no reader can see a partially built cache.
+    // SAFETY: `x` is live and write-locked; its slots are NULL (see `CacheBuild::build`).
+    let build = unsafe { CacheBuild::build(x) };
+    // SAFETY: as above; `publish` transfers each staged value exactly once.
+    let flags = unsafe { build.publish(x) };
 
-    // V1 should mean no extensions ...
-    // SAFETY: `x` is live.
-    if unsafe { X509_get_version(x) } == X509_VERSION_1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_V1 };
-    }
-
-    // Handle basic constraints
-    // SAFETY: `x` is live.
-    unsafe { (*x).ex_pathlen = -1 };
-    let mut i: c_int = 0;
-    // SAFETY: `x` is live; `bs` is the decoded extension or NULL and `&i` is writable.
-    let bs = unsafe { X509_get_ext_d2i(x, NID_basic_constraints, &raw mut i, ptr::null_mut()) }
-        .cast::<BasicConstraints>();
-    if !bs.is_null() {
-        // SAFETY: `bs` is a live BASIC_CONSTRAINTS.
-        if unsafe { (*bs).ca } != 0 {
-            // SAFETY: `x` is live and write-locked.
-            unsafe { (*x).ex_flags |= EXFLAG_CA };
-        }
-        // SAFETY: `bs` is live.
-        if !unsafe { (*bs).pathlen.is_null() } {
-            // SAFETY: `pathlen` is a live ASN1_INTEGER.
-            if unsafe { (*(*bs).pathlen).type_ } == V_ASN1_NEG_INTEGER {
-                // SAFETY: the site is a compiled-in constant.
-                unsafe { raise_site(&V3_PURP_484) };
-                // SAFETY: `x` is live and write-locked.
-                unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-            } else {
-                // SAFETY: `pathlen` is a live integer and `x` is writable.
-                unsafe { (*x).ex_pathlen = ASN1_INTEGER_get((*bs).pathlen) };
-            }
-        }
-        // SAFETY: `bs` is the value decoded above.
-        unsafe { BASIC_CONSTRAINTS_free(bs) };
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_BCONS };
-    } else if i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // Handle proxy certificates
-    // SAFETY: `x` is live; the decoded value is NULL or a live proxy extension and `&i` is writable.
-    let pci = unsafe { X509_get_ext_d2i(x, NID_proxyCertInfo, &raw mut i, ptr::null_mut()) }
-        .cast::<ProxyCertInfoExtension>();
-    if !pci.is_null() {
-        // SAFETY: `x` is live.
-        let has_ca_flag = (unsafe { (*x).ex_flags } & EXFLAG_CA) != 0;
-        // SAFETY: `x` is live.
-        let has_san = unsafe { X509_get_ext_by_NID(x, NID_subject_alt_name, -1) } >= 0;
-        // SAFETY: `x` is live.
-        let has_ian = unsafe { X509_get_ext_by_NID(x, NID_issuer_alt_name, -1) } >= 0;
-        if has_ca_flag || has_san || has_ian {
-            // SAFETY: `x` is live and write-locked.
-            unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-        }
-        // SAFETY: `pci` is live.
-        if !unsafe { (*pci).pcPathLengthConstraint.is_null() } {
-            // SAFETY: the constraint is a live integer and `x` is writable.
-            unsafe {
-                (*x).ex_pcpathlen = ASN1_INTEGER_get((*pci).pcPathLengthConstraint);
-            }
-        } else {
-            // SAFETY: `x` is live and writable.
-            unsafe { (*x).ex_pcpathlen = -1 };
-        }
-        // SAFETY: `pci` is the value decoded above.
-        unsafe { PROXY_CERT_INFO_EXTENSION_free(pci) };
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_PROXY };
-    } else if i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // Handle (basic) key usage
-    // SAFETY: `x` is live; the decoded value is NULL or a live bit string and `&i` is writable.
-    let usage = unsafe { X509_get_ext_d2i(x, NID_key_usage, &raw mut i, ptr::null_mut()) }
-        .cast::<crate::asn1::layout::Asn1String>();
-    if !usage.is_null() {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_kusage = 0 };
-        // SAFETY: `usage` is a live ASN1_BIT_STRING.
-        let length = unsafe { (*usage).length };
-        if length > 0 {
-            // SAFETY: the bit string has at least one octet.
-            unsafe { (*x).ex_kusage = *(*usage).data as c_uint };
-            if length > 1 {
-                // SAFETY: the bit string has at least two octets.
-                unsafe { (*x).ex_kusage |= (*(*usage).data.add(1) as c_uint) << 8 };
-            }
-        }
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_KUSAGE };
-        // SAFETY: `usage` is the value decoded above.
-        unsafe { ASN1_BIT_STRING_free(usage) };
-        // Check for empty key usage according to RFC 5280 section 4.2.1.3
-        // SAFETY: `x` is live.
-        if unsafe { (*x).ex_kusage } == 0 {
-            // SAFETY: the site is a compiled-in constant.
-            unsafe { raise_site(&V3_PURP_525) };
-            // SAFETY: `x` is live and write-locked.
-            unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-        }
-    } else if i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // Handle extended key usage
-    // SAFETY: `x` is live and write-locked.
-    unsafe { (*x).ex_xkusage = 0 };
-    // SAFETY: `x` is live; the decoded value is NULL or a live stack and `&i` is writable.
-    let extusage = unsafe { X509_get_ext_d2i(x, NID_ext_key_usage, &raw mut i, ptr::null_mut()) }
-        .cast::<OpenSslStack>();
-    if !extusage.is_null() {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_XKUSAGE };
-        // SAFETY: `extusage` is a live stack.
-        let n = unsafe { OPENSSL_sk_num(extusage) };
-        for j in 0..n {
-            // SAFETY: `j` is a valid index and `extusage` is the live stack.
-            let nid = unsafe { OBJ_obj2nid(OPENSSL_sk_value(extusage, j).cast::<Asn1Object>()) };
-            // SAFETY: `x` is live and write-locked.
-            unsafe {
-                match nid {
-                    NID_server_auth => (*x).ex_xkusage |= XKU_SSL_SERVER,
-                    NID_client_auth => (*x).ex_xkusage |= XKU_SSL_CLIENT,
-                    NID_email_protect => (*x).ex_xkusage |= XKU_SMIME,
-                    NID_code_sign => (*x).ex_xkusage |= XKU_CODE_SIGN,
-                    NID_ms_sgc | NID_ns_sgc => (*x).ex_xkusage |= XKU_SGC,
-                    NID_OCSP_sign => (*x).ex_xkusage |= XKU_OCSP_SIGN,
-                    NID_time_stamp => (*x).ex_xkusage |= XKU_TIMESTAMP,
-                    NID_dvcs => (*x).ex_xkusage |= XKU_DVCS,
-                    NID_anyExtendedKeyUsage => (*x).ex_xkusage |= XKU_ANYEKU,
-                    // Ignore unknown extended key usage.
-                    _ => {}
-                }
-            }
-        }
-        // SAFETY: `extusage` is the value decoded above; the thunk frees its objects.
-        unsafe { OPENSSL_sk_pop_free(extusage, Some(asn1_object_free_thunk)) };
-    } else if i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // Handle legacy Netscape extension
-    // SAFETY: `x` is live; the decoded value is NULL or a live bit string and `&i` is writable.
-    let ns = unsafe { X509_get_ext_d2i(x, NID_netscape_cert_type, &raw mut i, ptr::null_mut()) }
-        .cast::<crate::asn1::layout::Asn1String>();
-    if !ns.is_null() {
-        // SAFETY: `ns` is a live ASN1_BIT_STRING.
-        if unsafe { (*ns).length } > 0 {
-            // SAFETY: the bit string has at least one octet and `x` is writable.
-            unsafe { (*x).ex_nscert = *(*ns).data as c_uint };
-        } else {
-            // SAFETY: `x` is live and writable.
-            unsafe { (*x).ex_nscert = 0 };
-        }
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_NSCERT };
-        // SAFETY: `ns` is the value decoded above.
-        unsafe { ASN1_BIT_STRING_free(ns) };
-    } else if i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // Handle subject key identifier and issuer/authority key identifier
-    // SAFETY: `x` is live; `skid` is its own cache slot and `&i` is writable.
-    unsafe {
-        (*x).skid = X509_get_ext_d2i(x, NID_subject_key_identifier, &raw mut i, ptr::null_mut())
-            .cast::<crate::asn1::layout::Asn1String>();
-    }
-    // SAFETY: `x` is live.
-    if unsafe { (*x).skid.is_null() } && i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // SAFETY: `x` is live; `akid` is its own cache slot and `&i` is writable.
-    unsafe {
-        (*x).akid = X509_get_ext_d2i(x, NID_authority_key_identifier, &raw mut i, ptr::null_mut());
-    }
-    // SAFETY: `x` is live.
-    if unsafe { (*x).akid.is_null() } && i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // Check if subject name matches issuer
-    // SAFETY: `x` is live.
-    if unsafe { X509_NAME_cmp(X509_get_subject_name(x), X509_get_issuer_name(x)) } == 0 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_SI }; // Cert is self-issued
-                                               // SAFETY: `x` is live; its akid cache slot holds the decoded value or NULL.
-        let akid_ok =
-            unsafe { X509_check_akid(x, (*x).akid.cast::<AuthorityKeyid>()) } == X509_V_OK;
-        // SAFETY: `x` is live and its public key is its own.
-        let sig_ok = unsafe { check_sig_alg_match(X509_get0_pubkey(x), x) } == X509_V_OK;
-        // .. and the signature alg matches the PUBKEY alg.
-        if akid_ok && sig_ok {
-            // SAFETY: `x` is live and write-locked.
-            unsafe { (*x).ex_flags |= EXFLAG_SS }; // indicate self-signed
-        }
-    }
-
-    // Handle subject alternative names and various other extensions
-    // SAFETY: `x` is live; `altname` is its own cache slot and `&i` is writable.
-    unsafe {
-        (*x).altname = X509_get_ext_d2i(x, NID_subject_alt_name, &raw mut i, ptr::null_mut());
-    }
-    // SAFETY: `x` is live.
-    if unsafe { (*x).altname.is_null() } && i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-    // SAFETY: `x` is live; `nc` is its own cache slot and `&i` is writable.
-    unsafe {
-        (*x).nc = X509_get_ext_d2i(x, NID_name_constraints, &raw mut i, ptr::null_mut());
-    }
-    // SAFETY: `x` is live.
-    if unsafe { (*x).nc.is_null() } && i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // Handle CRL distribution point entries
-    // SAFETY: `x` is live.
-    let res = unsafe { setup_crldp(x) };
-    if res == 0 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // SAFETY: `x` is live; each RFC 3779 cache slot is its own and `&i` is writable.
-    unsafe {
-        (*x).rfc3779_addr = X509_get_ext_d2i(x, NID_sbgp_ipAddrBlock, &raw mut i, ptr::null_mut());
-    }
-    // SAFETY: `x` is live.
-    if unsafe { (*x).rfc3779_addr.is_null() } && i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-    // SAFETY: `x` is live; the RFC 3779 AS cache slot is its own and `&i` is writable.
-    unsafe {
-        (*x).rfc3779_asid =
-            X509_get_ext_d2i(x, NID_sbgp_autonomousSysNum, &raw mut i, ptr::null_mut());
-    }
-    // SAFETY: `x` is live.
-    if unsafe { (*x).rfc3779_asid.is_null() } && i != -1 {
-        // SAFETY: `x` is live and write-locked.
-        unsafe { (*x).ex_flags |= EXFLAG_INVALID };
-    }
-
-    // SAFETY: `x` is live.
-    let ext_count = unsafe { X509_get_ext_count(x) };
-    for i in 0..ext_count {
-        // SAFETY: `i` is a valid index.
-        let ex = unsafe { X509_get_ext(x, i) };
-        // SAFETY: `ex` is a live extension.
-        let nid = unsafe { OBJ_obj2nid(X509_EXTENSION_get_object(ex)) };
-
-        if nid == NID_freshest_crl {
-            // SAFETY: `x` is live and write-locked.
-            unsafe { (*x).ex_flags |= EXFLAG_FRESHEST };
-        }
-        // SAFETY: `ex` is live.
-        if unsafe { X509_EXTENSION_get_critical(ex) } == 0 {
-            continue;
-        }
-        // SAFETY: `ex` is live.
-        if unsafe { X509_supported_extension(ex) } == 0 {
-            // SAFETY: `x` is live and write-locked.
-            unsafe { (*x).ex_flags |= EXFLAG_CRITICAL };
-            break;
-        }
-        // SAFETY: `x` is live and write-locked.
-        unsafe {
-            match nid {
-                NID_basic_constraints => (*x).ex_flags |= EXFLAG_BCONS_CRITICAL,
-                NID_authority_key_identifier => (*x).ex_flags |= EXFLAG_AKID_CRITICAL,
-                NID_subject_key_identifier => (*x).ex_flags |= EXFLAG_SKID_CRITICAL,
-                NID_subject_alt_name => (*x).ex_flags |= EXFLAG_SAN_CRITICAL,
-                _ => {}
-            }
-        }
-    }
-
-    // Set x->siginf, ignoring errors due to unsupported algos
+    // Set x->siginf, ignoring errors due to unsupported algos. `siginf` owns nothing and is not
+    // part of the staged ownership, but it must be complete before `EXFLAG_SET` publishes the
+    // cache to a lock-free reader.
     // SAFETY: `x` is live.
     let _ = unsafe { ossl_x509_init_sig_info(x) };
 
+    // The single publication point: every slot and scalar is installed, and `EXFLAG_SET` makes the
+    // completed state visible. (A certificate whose extensions were invalid publishes the same
+    // complete invalid state the authority does -- the slots that decoded successfully plus
+    // `EXFLAG_INVALID` -- because `x509_vfy` still consumes those slots.)
     // SAFETY: `x` is live and write-locked.
-    unsafe { (*x).ex_flags |= EXFLAG_SET }; // Indicate that cert has been processed
-                                            // ERR_pop_to_mark is a safe entry point with no pointer arguments.
+    unsafe { (*x).ex_flags = flags | EXFLAG_SET };
+
     ERR_pop_to_mark();
 
-    // SAFETY: `x` is live.
-    if (unsafe { (*x).ex_flags } & EXFLAG_INVALID) == 0 {
-        // SAFETY: the lock is held.
-        unsafe { CRYPTO_THREAD_unlock((*x).lock) };
-        return 1;
-    }
+    // SAFETY: `x` is live and write-locked.
+    let invalid = (unsafe { (*x).ex_flags } & EXFLAG_INVALID) != 0;
     // SAFETY: the lock is held.
     unsafe { CRYPTO_THREAD_unlock((*x).lock) };
-    // SAFETY: the site is a compiled-in constant.
-    unsafe { raise_site(&V3_PURP_677) };
-    0
+    if invalid {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&V3_PURP_677) };
+        0
+    } else {
+        1
+    }
+}
+
+/// Release every cache value [`ossl_x509v3_cache_extensions`] installed and clear the slots.
+///
+/// Each non-NULL slot is re-adopted by the same [`CacheValue`] owner the construction path uses,
+/// so the release runs through one audited implementation and a second call is a no-op. The
+/// function is the cache's **teardown**; it is called when the certificate is freed or re-decoded,
+/// not after publication while the cache is in use.
+///
+/// # Safety
+///
+/// `x` must be live and not concurrently read or built. Every non-NULL slot must be a value this
+/// module installed (the cache invariant), not a value another owner still holds.
+pub(crate) unsafe fn ossl_x509v3_cache_free(x: *mut X509) {
+    // SAFETY: `x` is live per the contract; each `replace` removes the slot before the owner is
+    // dropped, so the block is released exactly once even if a later slot's release runs.
+    unsafe {
+        release_cache_value(CacheValue::adopt(
+            core::mem::replace(&mut (*x).skid, ptr::null_mut()),
+            ASN1_OCTET_STRING_free,
+        ));
+        release_cache_value(CacheValue::adopt(
+            core::mem::replace(&mut (*x).akid, ptr::null_mut()).cast::<AuthorityKeyid>(),
+            AUTHORITY_KEYID_free,
+        ));
+        release_cache_value(CacheValue::adopt(
+            core::mem::replace(&mut (*x).crldp, ptr::null_mut()).cast::<OpenSslStack>(),
+            release_dist_points,
+        ));
+        release_cache_value(CacheValue::adopt(
+            core::mem::replace(&mut (*x).altname, ptr::null_mut()).cast::<OpenSslStack>(),
+            GENERAL_NAMES_free,
+        ));
+        release_cache_value(CacheValue::adopt(
+            core::mem::replace(&mut (*x).nc, ptr::null_mut()).cast::<NameConstraints>(),
+            NAME_CONSTRAINTS_free,
+        ));
+        release_cache_value(CacheValue::adopt(
+            core::mem::replace(&mut (*x).rfc3779_addr, ptr::null_mut()).cast::<OpenSslStack>(),
+            release_address_families,
+        ));
+        release_cache_value(CacheValue::adopt(
+            core::mem::replace(&mut (*x).rfc3779_asid, ptr::null_mut()).cast::<AsIdentifiers>(),
+            ASIdentifiers_free,
+        ));
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2255,12 +2551,32 @@ pub unsafe extern "C" fn X509_check_akid(
     if akid.is_null() {
         return X509_V_OK;
     }
+    // SAFETY: `issuer` is live per the contract, so its cached subject key id is NULL or live.
+    let skid = unsafe { (*issuer).skid };
+    // SAFETY: `issuer` is live and `akid` is non-NULL per the checks above.
+    unsafe { check_akid_with_skid(issuer, akid, skid) }
+}
 
+/// The body of [`X509_check_akid`] with the issuer's subject key id supplied explicitly.
+///
+/// The cache builder calls this before publication, when the decoded `skid` lives in its staging
+/// owner rather than in `issuer`'s slot; the exported entry point passes the installed slot. The
+/// result is identical in both cases.
+///
+/// # Safety
+///
+/// `issuer` must be a live `X509`; `akid` must be a live `AUTHORITY_KEYID`; `skid` must be NULL or
+/// a live `ASN1_OCTET_STRING`.
+unsafe fn check_akid_with_skid(
+    issuer: *const X509,
+    akid: *const AuthorityKeyid,
+    skid: *const Asn1String,
+) -> c_int {
     // Check key ids (if present)
-    // SAFETY: `akid` is live and `issuer` is live.
-    if !unsafe { (*akid).keyid.is_null() } && !unsafe { (*issuer).skid.is_null() } {
+    // SAFETY: `akid` and `issuer` are live; `skid` is NULL or live per the contract.
+    if !unsafe { (*akid).keyid.is_null() } && !skid.is_null() {
         // SAFETY: both key ids are live octet strings.
-        if unsafe { ASN1_OCTET_STRING_cmp((*akid).keyid, (*issuer).skid) } != 0 {
+        if unsafe { ASN1_OCTET_STRING_cmp((*akid).keyid, skid) } != 0 {
             return X509_V_ERR_AKID_SKID_MISMATCH;
         }
     }
@@ -2617,9 +2933,54 @@ mod crldp_lazy_tests {
         unsafe { OPENSSL_sk_value(stack, i) }.cast::<DistPoint>()
     }
 
+    /// Add one extension whose DER-encoded `extnValue` is `der`.
+    ///
+    /// # Safety
+    /// `x` must be a live `X509`.
+    unsafe fn add_der_ext(x: *mut X509, nid: c_int, der: &[u8]) {
+        // SAFETY: every object is created here; the extension takes over its octet string.
+        unsafe {
+            let os = ASN1_OCTET_STRING_new();
+            assert!(!os.is_null());
+            assert_eq!(
+                ASN1_OCTET_STRING_set(os, der.as_ptr(), der.len() as c_int),
+                1
+            );
+            let ext = X509_EXTENSION_create_by_NID(ptr::null_mut(), nid, 0, os);
+            assert!(!ext.is_null(), "the extension must build");
+            assert_eq!(X509_add_ext(x, ext, -1), 1);
+            X509_EXTENSION_free(ext);
+        }
+    }
+
+    /// The pre-fix (3.6.4) eager expansion, kept only as a negative control.
+    ///
+    /// It performs the name expansion `setup_crldp` used to do at parse time, so a test can show
+    /// that the lazy-cache assertion (every `dpname` NULL after caching) actually detects it.
+    ///
+    /// # Safety
+    /// `x` must be live and cached; every relative distribution point must be live.
+    unsafe fn canary_eager_expand(x: *mut X509) -> usize {
+        // SAFETY: `x` is live and cached per the contract.
+        unsafe {
+            let stack = (*x).crldp.cast::<OpenSslStack>();
+            let n = OPENSSL_sk_num(stack);
+            let mut expanded = 0;
+            for i in 0..n {
+                let dp = OPENSSL_sk_value(stack, i).cast::<DistPoint>();
+                let dpn = (*dp).distpoint;
+                if !dpn.is_null() && (*dpn).type_ == 1 {
+                    assert_eq!(DIST_POINT_set_dpname(dpn, X509_get_issuer_name(x)), 1);
+                    expanded += 1;
+                }
+            }
+            expanded
+        }
+    }
+
     /// The whole point of the 3.6.5 repair: caching a certificate expands no relative name.
     #[test]
-    fn caching_a_certificate_expands_no_relative_name() {
+    fn v3_purp_lazy_crldp_expands_no_relative_name_at_parse() {
         let _g = crate::test_support::lock_global_state();
         // The allocation the attacker controls is `distribution points x issuer size`: each
         // relative point is expanded against the whole issuer name. `organizationName`
@@ -2686,7 +3047,7 @@ mod crldp_lazy_tests {
 
     /// Querying a relative point on demand yields exactly the name the eager path produced.
     #[test]
-    fn on_demand_full_name_matches_the_eager_expansion() {
+    fn v3_purp_on_demand_full_name_matches_the_eager_expansion() {
         let _g = crate::test_support::lock_global_state();
         let der = crldp_der(&[relative_dp(&[atv(OID_CN, b"dp1"), atv(OID_O, b"org")])]);
         // SAFETY: the certificate is created and released in this frame.
@@ -2724,7 +3085,7 @@ mod crldp_lazy_tests {
     /// A malformed CRLDP encoding is still refused by the cache (the decode fails, so the
     /// certificate is marked invalid), and nothing is expanded.
     #[test]
-    fn malformed_crldp_is_refused_without_expansion() {
+    fn v3_purp_malformed_crldp_is_refused_without_expansion() {
         let _g = crate::test_support::lock_global_state();
         // A relative-name point whose outer [0] wrapper is truncated.
         let bad = tlv(0x30, &[0xA0, 0x05, 0xA1, 0x01, 0x30]);
@@ -2740,6 +3101,213 @@ mod crldp_lazy_tests {
             );
             // SAFETY: `x` is live.
             assert_ne!((*x).ex_flags & EXFLAG_INVALID, 0);
+            X509_free(x);
+        }
+    }
+
+    /// A slot whose decode fails is absent -- NULL, not a stale or partially built address.
+    ///
+    /// The valid certificate supplies a non-NULL address for the same slot, so the negative
+    /// assertion is an address-identity comparison, not a release count.
+    #[test]
+    fn v3_purp_decode_failure_installs_no_slot() {
+        let _g = crate::test_support::lock_global_state();
+        let good_der = crldp_der(&[relative_dp(&[atv(OID_CN, b"dp")])]);
+        // The outer [0] wrapper is truncated, so the CRLDP decode fails.
+        let bad = tlv(0x30, &[0xA0, 0x05, 0xA1, 0x01, 0x30]);
+        let bad_der = tlv(0x30, &bad);
+        // SAFETY: both certificates are created and released in this frame.
+        unsafe {
+            let good = cert_with_crldp(1, 4, &good_der);
+            assert_eq!(ossl_x509v3_cache_extensions(good), 1);
+            let installed = (*good).crldp as usize;
+            assert_ne!(installed, 0, "the valid fixture must install the slot");
+            X509_free(good);
+
+            let bad_x = cert_with_crldp(1, 4, &bad_der);
+            // A slot that decodes successfully before the failing extension is still installed;
+            // the failing slot itself is not.
+            add_der_ext(bad_x, NID_subject_key_identifier, &tlv(0x04, b"\xaa\xbb"));
+            assert_eq!(ossl_x509v3_cache_extensions(bad_x), 0);
+            assert_ne!((*bad_x).ex_flags & EXFLAG_INVALID, 0);
+            assert!(!(*bad_x).skid.is_null(), "the SKID slot decoded");
+            let failed = (*bad_x).crldp as usize;
+            assert_eq!(failed, 0, "the failed CRLDP slot must be NULL");
+            assert_ne!(
+                failed, installed,
+                "no stale address may survive the failure"
+            );
+            X509_free(bad_x);
+        }
+    }
+
+    /// The standard purpose table answers the authority's ids, trusts and short names.
+    #[test]
+    fn v3_purp_purpose_table_answers() {
+        let _g = crate::test_support::lock_global_state();
+        // (purpose id, default trust id, short name) -- `xstandard[]`, `v3_purp.c:46-70`.
+        const ROWS: [(c_int, c_int, &str); 10] = [
+            (1, 2, "sslclient"),
+            (2, 3, "sslserver"),
+            (3, 3, "nssslserver"),
+            (4, 4, "smimesign"),
+            (5, 4, "smimeencrypt"),
+            (6, 1, "crlsign"),
+            (7, 0, "any"),
+            (8, 1, "ocsphelper"),
+            (9, 8, "timestampsign"),
+            (10, 5, "codesign"),
+        ];
+        // SAFETY: every accessor is called on the module's own static table.
+        unsafe {
+            for (idx, &(id, trust, sname)) in ROWS.iter().enumerate() {
+                assert_eq!(X509_PURPOSE_get_by_id(id), idx as c_int);
+                let row = X509_PURPOSE_get0(idx as c_int);
+                assert!(!row.is_null());
+                assert_eq!((*row).purpose, id);
+                assert_eq!((*row).trust, trust);
+                assert_eq!(X509_PURPOSE_get_id(row), id);
+                assert_eq!(X509_PURPOSE_get_trust(row), trust);
+                assert_eq!(CStr::from_ptr((*row).sname).to_str().unwrap(), sname);
+            }
+
+            // The reserved setter accepts the zero "default any" and every reserved id, and
+            // refuses an id that is not in the table.
+            let mut p: c_int = -1;
+            assert_eq!(X509_PURPOSE_set(&raw mut p, 0), 1);
+            assert_eq!(p, 0);
+            assert_eq!(X509_PURPOSE_set(&raw mut p, 10), 1);
+            assert_eq!(p, 10);
+            assert_eq!(X509_PURPOSE_set(&raw mut p, -1), 0);
+            assert_eq!(p, 10, "a refused purpose leaves the slot unchanged");
+        }
+    }
+
+    /// A cached certificate that installs every owned cache slot this module manages.
+    ///
+    /// # Safety
+    /// The caller owns the returned certificate and releases it with `X509_free`.
+    unsafe fn cert_with_all_cached_slots() -> *mut X509 {
+        let crldp = crldp_der(&[relative_dp(&[atv(OID_CN, b"dp")])]);
+        // SAFETY: every object is created here and owned by `x` after the calls.
+        unsafe {
+            let x = cert_with_crldp(1, 4, &crldp);
+            add_der_ext(x, NID_subject_key_identifier, &tlv(0x04, b"\xaa\xbb"));
+            add_der_ext(
+                x,
+                NID_authority_key_identifier,
+                &tlv(0x30, &tlv(0x80, b"\xaa\xbb")),
+            );
+            add_der_ext(
+                x,
+                NID_subject_alt_name,
+                &tlv(0x30, &tlv(0x82, b"example.com")),
+            );
+            add_der_ext(x, NID_name_constraints, &tlv(0x30, &[]));
+            add_der_ext(x, NID_sbgp_ipAddrBlock, &tlv(0x30, &[]));
+            add_der_ext(x, NID_sbgp_autonomousSysNum, &tlv(0x30, &[]));
+            assert_eq!(ossl_x509v3_cache_extensions(x), 1);
+            x
+        }
+    }
+
+    /// The cached slot addresses of a certificate built by [`cert_with_all_cached_slots`].
+    ///
+    /// # Safety
+    /// `x` must be live with a built cache.
+    unsafe fn cached_slot_addresses(x: *mut X509) -> [usize; 7] {
+        // SAFETY: `x` is live and cached per the contract.
+        unsafe {
+            [
+                (*x).skid as usize,
+                (*x).akid as usize,
+                (*x).crldp as usize,
+                (*x).altname as usize,
+                (*x).nc as usize,
+                (*x).rfc3779_addr as usize,
+                (*x).rfc3779_asid as usize,
+            ]
+        }
+    }
+
+    /// Every cached value is released exactly once, by address, across teardown and free.
+    #[test]
+    fn v3_purp_cache_values_released_exactly_once() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every certificate is created and released in this frame.
+        unsafe {
+            let x = cert_with_all_cached_slots();
+            let slots = cached_slot_addresses(x);
+            for &slot in &slots {
+                assert_ne!(slot, 0, "the fixture must install every cache slot");
+            }
+
+            release_audit::reset();
+            ossl_x509v3_cache_free(x);
+            for &slot in &slots {
+                assert_eq!(release_audit::count(slot), 1, "released exactly once");
+            }
+            assert!((*x).skid.is_null() && (*x).crldp.is_null() && (*x).nc.is_null());
+
+            // A second teardown is a no-op: the slots are already NULL and nothing is released.
+            ossl_x509v3_cache_free(x);
+            for &slot in &slots {
+                assert_eq!(release_audit::count(slot), 1);
+            }
+
+            // `X509_free` runs the same teardown on the cleared slots, releasing nothing again.
+            X509_free(x);
+            for &slot in &slots {
+                assert_eq!(release_audit::count(slot), 1);
+            }
+
+            // The destructor path alone releases every installed slot exactly once.
+            let y = cert_with_all_cached_slots();
+            let slots = cached_slot_addresses(y);
+            release_audit::reset();
+            X509_free(y);
+            for &slot in &slots {
+                assert_eq!(
+                    release_audit::count(slot),
+                    1,
+                    "the destructor releases once"
+                );
+            }
+        }
+    }
+
+    /// Negative control for the lazy-CRLDP assertion: replaying the pre-fix eager expansion makes
+    /// the positive observable (`dpname.is_null()` after caching) false. Test-only.
+    #[test]
+    fn v3_purp_negative_control_eager_crldp_is_detectable() {
+        let _g = crate::test_support::lock_global_state();
+        const DPS: usize = 4;
+        let points: Vec<Vec<u8>> = (0..DPS)
+            .map(|i| relative_dp(&[atv(OID_CN, format!("dp{i}").as_bytes())]))
+            .collect();
+        let der = crldp_der(&points);
+        // SAFETY: the certificate is created and released in this frame.
+        unsafe {
+            let x = cert_with_crldp(2, 8, &der);
+            assert_eq!(ossl_x509v3_cache_extensions(x), 1);
+            for i in 0..DPS as c_int {
+                let dp = dp_at(x, i);
+                assert!((*(*dp).distpoint).dpname.is_null());
+            }
+
+            let expanded = canary_eager_expand(x);
+            assert_eq!(expanded, DPS, "the canary must expand every relative point");
+            for i in 0..DPS as c_int {
+                let dp = dp_at(x, i);
+                assert!(
+                    !(*(*dp).distpoint).dpname.is_null(),
+                    "the eager expansion is observable in dpname"
+                );
+            }
+            eprintln!(
+                "negative control: the 3.6.4 eager path wrote {} dpname values; the cache leaves them NULL",
+                expanded
+            );
             X509_free(x);
         }
     }
