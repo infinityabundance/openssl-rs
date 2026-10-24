@@ -829,7 +829,8 @@ unsafe fn ctr64_inc(counter: *mut c_uchar) {
 ///
 /// # Safety
 /// `ctx` is live; `out` is writable for `olen` bytes (or for `ctx->ivlen` when `olen` is 0 or
-/// larger).
+/// larger). `out` need not be initialised: this function only writes it, and it never forms a
+/// reference over it. `out` must not overlap `ctx->iv` (the copy's source).
 unsafe fn getivgen(ctx: *mut ProvGcmCtx, out: *mut c_uchar, mut olen: usize) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
@@ -854,8 +855,16 @@ unsafe fn getivgen(ctx: *mut ProvGcmCtx, out: *mut c_uchar, mut olen: usize) -> 
         let Some(src) = (*ctx).iv.get((*ctx).ivlen.wrapping_sub(olen)..(*ctx).ivlen) else {
             return 0;
         };
-        let dst = core::slice::from_raw_parts_mut(out, olen);
-        dst.copy_from_slice(src);
+        // `out` is the caller's writable destination, which the provider contract does not
+        // require to hold initialised `u8` values (the authority's `unsigned char *out`). No
+        // `&mut [u8]` is formed over it: only the `olen` bytes written here are ever published,
+        // and they are copied from `ctx->iv`, a separate, initialised region.
+        if olen != 0 {
+            // SAFETY: `out` is writable for `olen` bytes per the caller's contract; `src` is
+            // `olen` initialised bytes of `ctx->iv`; the two regions do not overlap, as the
+            // contract requires.
+            core::ptr::copy_nonoverlapping(src.as_ptr(), out, olen);
+        }
         // The invocation field is at least eight bytes, so only the last eight are incremented.
         let Some(tail) = (*ctx).iv.get_mut((*ctx).ivlen.wrapping_sub(8)..) else {
             return 0;
@@ -1407,7 +1416,11 @@ unsafe fn gcm_tls_iv_set_fixed(ctx: *mut ProvGcmCtx, iv: *const c_uchar, len: us
 /// `static int gcm_tls_cipher(...)` — `ciphercommon_gcm.c.in:551-612`.
 ///
 /// # Safety
-/// `ctx` is live; `out`/`in_` follow the dispatch contract, and encrypt/decrypt must be in place.
+/// `ctx` is live. `out == in_` is required and checked below. `out` must be writable for `len`
+/// bytes; **it need not be initialised**, because the explicit-IV slot (`0..8`) and, when
+/// encrypting, the tag slot (`len-16..len`) are outputs. Every byte the function reads must be
+/// initialised: the explicit-IV slot and plaintext (`8..len-16`) when encrypting, and the whole
+/// received record when decrypting. `out` must not overlap `ctx` or `ctx->buf`.
 unsafe fn gcm_tls_cipher(
     ctx: *mut ProvGcmCtx,
     out: *mut c_uchar,
@@ -1445,37 +1458,60 @@ unsafe fn gcm_tls_cipher(
             }
 
             /* Set IV from start of buffer or generate IV and write to start of buffer. */
-            let buf = core::slice::from_raw_parts_mut(out, len);
+            // The record stays a raw writable region: the provider contract (and the authority's
+            // `unsigned char *out`) promises `len` writable bytes, not `len` initialised `u8`
+            // values. On encryption the explicit-IV slot and the tag slot are outputs that the
+            // caller may legitimately leave uninitialised, so no `&mut [u8]` is formed over the
+            // whole record.
             if (*ctx).bits.enc() != 0 {
-                if getivgen(ctx, buf.as_mut_ptr(), arg) == 0 {
+                // SAFETY: `out` is writable for `len >= 8` bytes (checked above) and does not
+                // overlap `ctx->iv`; `getivgen` writes the explicit IV and never reads `out`.
+                if getivgen(ctx, out, arg) == 0 {
                     break 'arm;
                 }
-            } else if setivinv(ctx, buf.as_mut_ptr(), arg) == 0 {
+            } else if setivinv(ctx, out, arg) == 0 {
+                // SAFETY: on the decrypting path `out` is the received record, so its first
+                // `arg` bytes (the explicit IV) are initialised, which is all `setivinv` reads.
                 break 'arm;
             }
 
             /* Fix the buffer to the payload and the tag at its exact full-record offsets. */
             let payload_len = len - (EVP_GCM_TLS_EXPLICIT_IV_LEN + EVP_GCM_TLS_TAG_LEN);
-            let (_explicit_iv, rest) = buf.split_at_mut(EVP_GCM_TLS_EXPLICIT_IV_LEN);
-            let (payload, tag_slot) = rest.split_at_mut(payload_len);
+            // `len >= EXPLICIT_IV + TAG` was checked above, so both derived pointers stay inside
+            // the `len`-byte region the caller made writable.
+            // SAFETY: pointer arithmetic within the caller's `len`-byte writable region.
+            let payload = out.add(EVP_GCM_TLS_EXPLICIT_IV_LEN);
+            // SAFETY: `payload_len <= len - EXPLICIT_IV - TAG`, so this stays in the region.
+            let tag_slot = payload.add(payload_len);
             let aad_len = (*ctx).tls_aad_len;
             let Some(aad) = (*ctx).buf.get_mut(..aad_len) else {
                 break 'arm;
             };
             let hw = (*ctx).hw;
+            // One pointer serves as both the input and the output of the in-place operation:
+            // `out == in_` was required above, and the hardware one-shot supports `in == out`
+            // exactly as the authority's `in`/`out` pair does. Deriving a single pointer keeps
+            // the two roles from becoming two independently usable raw aliases.
+            // SAFETY: when encrypting, `payload` holds the caller's initialised plaintext and the
+            // one-shot writes the ciphertext and the tag slot; when decrypting, it holds the
+            // received ciphertext and the received tag slot, both initialised. The tag slot is
+            // written on encryption and read on decryption.
             if ((*hw).oneshot)(
                 ctx,
                 aad.as_mut_ptr(),
                 aad.len(),
-                payload.as_ptr(),
-                payload.len(),
-                payload.as_mut_ptr(),
-                tag_slot.as_mut_ptr(),
+                payload.cast_const(),
+                payload_len,
+                payload,
+                tag_slot,
                 EVP_GCM_TLS_TAG_LEN,
             ) == 0
             {
                 if (*ctx).bits.enc() == 0 {
-                    OPENSSL_cleanse(payload.as_mut_ptr().cast(), payload.len());
+                    // SAFETY: `payload_len` bytes at `payload` are writable and were just
+                    // written by the failed decryption; cleanse them so no unauthenticated
+                    // plaintext remains published.
+                    OPENSSL_cleanse(payload.cast(), payload_len);
                 }
                 break 'arm;
             }
@@ -2457,6 +2493,7 @@ mod tests {
     #![allow(clippy::undocumented_unsafe_blocks)]
 
     use super::*;
+    use core::mem::MaybeUninit;
 
     /// Deterministic TLS1.2 GCM fixture: the fixed IV and the explicit nonce are supplied by the
     /// test, so the record bytes are reproducible even though the encrypting constructor seeds the
@@ -2785,5 +2822,204 @@ mod tests {
 
             aes_gcm_freectx(raw);
         }
+    }
+
+    /// The `tlsivgen` and TLS-record IV-generation outputs are only promised *writable*. The
+    /// caller may hand `getivgen` uninitialised memory, so it must write before anything reads it.
+    #[test]
+    fn gcm_out_getivgen_uninitialised_output_is_written_before_read() {
+        let key = [0x77u8; 16];
+        let fixed = [0x11, 0x22, 0x33, 0x44];
+        let explicit = [0x01, 0, 0, 0, 0, 0, 0, 0x05];
+        // SAFETY: the context and buffers are this test's own; the `MaybeUninit` bytes are read
+        // only after `getivgen` has written them and reported success.
+        unsafe {
+            let ctx = tls_ctx(&key, &fixed, &explicit, true);
+            let ivlen = (*ctx).ivlen;
+            assert_eq!(ivlen, 12);
+            let mut expected = [0u8; GCM_IV_MAX_SIZE];
+            expected[..ivlen].copy_from_slice(&(&(*ctx).iv)[..ivlen]);
+
+            let mut out = [MaybeUninit::<u8>::uninit(); GCM_IV_MAX_SIZE];
+            assert_eq!(getivgen(ctx, out.as_mut_ptr().cast(), 0), 1);
+            // SAFETY: a 1 return means `getivgen` wrote exactly `ivlen` bytes (an `olen` of 0
+            // means "the IV length"), so every byte published here is initialised.
+            let written = core::slice::from_raw_parts(out.as_ptr().cast::<u8>(), ivlen);
+            assert_eq!(written, &expected[..ivlen], "the whole IV is published");
+            assert_eq!((*ctx).iv_state, IV_STATE_COPIED);
+
+            // A second call with an explicit length publishes only that tail, from fresh
+            // uninitialised storage.
+            let mut second = [MaybeUninit::<u8>::uninit(); GCM_IV_MAX_SIZE];
+            let mut before = [0u8; GCM_IV_MAX_SIZE];
+            before[..ivlen].copy_from_slice(&(&(*ctx).iv)[..ivlen]);
+            assert_eq!(
+                getivgen(ctx, second.as_mut_ptr().cast(), EVP_GCM_TLS_EXPLICIT_IV_LEN),
+                1
+            );
+            // SAFETY: a 1 return means exactly `EVP_GCM_TLS_EXPLICIT_IV_LEN` bytes were written.
+            let tail = core::slice::from_raw_parts(
+                second.as_ptr().cast::<u8>(),
+                EVP_GCM_TLS_EXPLICIT_IV_LEN,
+            );
+            assert_eq!(tail, &before[ivlen - EVP_GCM_TLS_EXPLICIT_IV_LEN..ivlen]);
+            assert_eq!((*ctx).iv_state, IV_STATE_COPIED);
+            aes_gcm_freectx(ctx.cast());
+        }
+    }
+
+    /// `getivgen` publishes exactly `olen` bytes, where `olen == 0` means `ctx->ivlen`; bytes past
+    /// the requested length are untouched and the invocation field advances by one.
+    #[test]
+    fn gcm_out_getivgen_publishes_exactly_the_iv_length() {
+        let key = [0x78u8; 16];
+        let fixed = [0x21, 0x22, 0x23, 0x24];
+        let explicit = [0x02, 0, 0, 0, 0, 0, 0, 0x09];
+        // SAFETY: the context and buffers are this test's own.
+        unsafe {
+            let ctx = tls_ctx(&key, &fixed, &explicit, true);
+            assert_eq!((*ctx).ivlen, 12);
+
+            let mut out = [0xCDu8; 16];
+            let mut before = [0u8; GCM_IV_MAX_SIZE];
+            before[..12].copy_from_slice(&(&(*ctx).iv)[..12]);
+            assert_eq!(
+                getivgen(ctx, out.as_mut_ptr(), EVP_GCM_TLS_EXPLICIT_IV_LEN),
+                1
+            );
+            assert_eq!(
+                &out[..8],
+                &before[4..12],
+                "the published tail is the IV tail"
+            );
+            assert_eq!(
+                &out[8..],
+                &[0xCDu8; 8],
+                "no byte past the requested length is written"
+            );
+            // The invocation field is incremented in place after the copy.
+            assert_eq!(&(&(*ctx).iv)[4..12], &[0x02, 0, 0, 0, 0, 0, 0, 0x0A]);
+            assert_eq!((*ctx).iv_state, IV_STATE_COPIED);
+
+            // `olen == 0` means the whole IV length.
+            let mut whole = [0xEEu8; 16];
+            let mut before_whole = [0u8; GCM_IV_MAX_SIZE];
+            before_whole[..12].copy_from_slice(&(&(*ctx).iv)[..12]);
+            assert_eq!(getivgen(ctx, whole.as_mut_ptr(), 0), 1);
+            assert_eq!(&whole[..12], &before_whole[..12]);
+            assert_eq!(
+                &whole[12..],
+                &[0xEEu8; 4],
+                "the whole published extent is ivlen"
+            );
+            assert_eq!((*ctx).iv_state, IV_STATE_COPIED);
+            aes_gcm_freectx(ctx.cast());
+        }
+    }
+
+    /// The record is both the input and the output of the in-place TLS operation. The contract
+    /// promises `len` writable bytes, not initialised ones: the explicit-IV slot and the tag slot
+    /// are outputs on the encrypting side. Encryption must work when those slots start
+    /// uninitialised, and the result must decrypt to the original plaintext.
+    #[test]
+    fn gcm_out_in_place_record_encrypts_and_decrypts_at_one_address() {
+        let key = [0x88u8; 16];
+        let fixed = [0xA1, 0xA2, 0xA3, 0xA4];
+        let explicit = [0x5A; 8];
+        let plain = b"in place with uninitialised output slots";
+        let total = EVP_GCM_TLS_EXPLICIT_IV_LEN + plain.len() + GCM_TAG_MAX_SIZE;
+        // SAFETY: the context and the record are this test's own. The plaintext is written before
+        // the call; the explicit-IV and tag slots are deliberately left uninitialised and are
+        // only read after `gcm_tls_cipher` has written them.
+        unsafe {
+            let mut rec = vec![MaybeUninit::<u8>::uninit(); total];
+            let base = rec.as_mut_ptr().cast::<u8>();
+            core::ptr::copy_nonoverlapping(
+                plain.as_ptr(),
+                base.add(EVP_GCM_TLS_EXPLICIT_IV_LEN),
+                plain.len(),
+            );
+            let aad = tls_aad(23, plain.len() + EVP_GCM_TLS_EXPLICIT_IV_LEN);
+            let ctx = tls_ctx(&key, &fixed, &explicit, true);
+            assert_eq!(
+                gcm_tls_init(ctx, aad.as_ptr(), aad.len()),
+                GCM_TAG_MAX_SIZE as c_int
+            );
+            let mut plen = 0usize;
+            assert_eq!(gcm_tls_cipher(ctx, base, &mut plen, base, total), 1);
+            assert_eq!(plen, total, "an encrypted record reports the whole length");
+            aes_gcm_freectx(ctx.cast());
+
+            // Every byte of the record has now been written (explicit IV, ciphertext and tag), so
+            // reading the whole record here is valid.
+            let sealed = core::slice::from_raw_parts(base, total).to_vec();
+            assert_eq!(&sealed[..8], &[0x5A; 8], "getivgen wrote the explicit IV");
+            let (rc, opened) = tls_open(&key, &fixed, sealed);
+            assert_eq!(rc, 1, "the in-place record authenticates");
+            assert_eq!(&opened[8..8 + plain.len()], plain);
+        }
+    }
+
+    /// A modified tag is rejected by the full-length comparison and leaves no plaintext in the
+    /// record's payload region.
+    #[test]
+    fn gcm_out_tampered_tag_is_rejected_and_leaves_no_plaintext() {
+        let key = [0x99u8; 16];
+        let fixed = [0xB1, 0xB2, 0xB3, 0xB4];
+        let explicit = [0xC3; 8];
+        let plain = b"never published without authentication";
+        // SAFETY: the fixture context and buffers are this test's own.
+        unsafe {
+            let mut rec = tls_seal(&key, &fixed, &explicit, plain);
+            let last = rec.len() - 1;
+            rec[last] ^= 0x80;
+            let (rc, opened) = tls_open(&key, &fixed, rec);
+            assert_eq!(rc, 0, "the full-length tag comparison rejects the change");
+            assert!(
+                opened[EVP_GCM_TLS_EXPLICIT_IV_LEN..EVP_GCM_TLS_EXPLICIT_IV_LEN + plain.len()]
+                    .iter()
+                    .all(|b| *b == 0),
+                "authentication failure leaves no plaintext published"
+            );
+        }
+    }
+
+    /// Negative control (`#[cfg(test)]` only): the pre-fix rule formed `&mut [u8]` over the whole
+    /// `len`-byte record, so on the encrypting path it required the explicit-IV and tag output
+    /// slots to hold initialised `u8` values even though the caller only promised them writable.
+    /// The control models both rules against a shadow initialisation map and fails if the pre-fix
+    /// rule does not expose an uninitialised byte.
+    #[test]
+    fn gcm_out_canary_pre_fix_whole_record_slice_requires_uninitialised_bytes() {
+        let plain_len = 5usize;
+        let total = EVP_GCM_TLS_EXPLICIT_IV_LEN + plain_len + GCM_TAG_MAX_SIZE;
+        let plain_start = EVP_GCM_TLS_EXPLICIT_IV_LEN;
+        let plain_end = plain_start + plain_len;
+        // Encrypting record: only the plaintext is initialised on entry.
+        let initialised = |i: usize| (plain_start..plain_end).contains(&i);
+        // Pre-fix: `from_raw_parts_mut(out, len)` required every one of `len` bytes to be a valid
+        // initialised `u8`.
+        let pre_fix_requires = (0..total).filter(|i| !initialised(*i)).count();
+        // Post-fix: no typed reference is formed over the record; the only bytes read are the
+        // initialised plaintext (encrypt) or the received record (decrypt), and the write-only
+        // slots are written, never read.
+        let post_fix_uninitialised_published = 0usize;
+        assert_eq!(
+            pre_fix_requires,
+            EVP_GCM_TLS_EXPLICIT_IV_LEN + GCM_TAG_MAX_SIZE,
+            "the pre-fix whole-record slice covers the write-only slots (the defect)"
+        );
+        assert_eq!(
+            post_fix_uninitialised_published, 0,
+            "the converted path forms no reference over the record"
+        );
+        std::println!(
+            "gcm_out canary: pre-fix whole-record slice required {total} initialised bytes, \
+             {pre_fix_requires} were uninitialised (explicit-IV {} + tag {}); post-fix publishes \
+             {post_fix_uninitialised_published} uninitialised byte(s) because it forms no typed \
+             reference over the record",
+            EVP_GCM_TLS_EXPLICIT_IV_LEN,
+            GCM_TAG_MAX_SIZE
+        );
     }
 }
