@@ -9,36 +9,234 @@
       "libssl_so_3_sha256": "b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6"
     },
     "counts": {
-      "authority_linkage_proven": 190,
+      "authority_linkage_proven": 191,
       "by_subject": {
         "authority": {
-          "built": 190,
-          "configured": 191,
+          "built": 191,
+          "configured": 192,
           "failed": 1,
-          "linked": 190,
-          "not_attempted": 809
+          "linked": 191,
+          "not_attempted": 808
         },
         "candidate": {
-          "built": 190,
-          "configured": 191,
+          "built": 191,
+          "configured": 192,
           "failed": 1,
-          "linked": 190,
-          "not_attempted": 809
+          "linked": 191,
+          "not_attempted": 808
         }
       },
       "candidate_failures": {
-        "acquire-failure": 809,
+        "acquire-failure": 808,
         "candidate-build-failure": 1
       },
-      "candidate_linkage_proven": 190,
+      "candidate_linkage_proven": 191,
       "candidate_specific_patch_count": 0,
-      "measured_families": 191,
-      "no_recipe": 809,
+      "measured_families": 192,
+      "no_recipe": 808,
       "p1000": 1000,
       "rows": 2000,
-      "with_recipe": 191
+      "with_recipe": 192
     },
-    "evidence_reuse": null,
+    "evidence_reuse": {
+      "candidate_identity_match": true,
+      "families_reused": 191,
+      "mode": "committed-rows",
+      "reused_families": [
+        "afflib",
+        "aircrack-ng",
+        "apache2-bin",
+        "apache2-utils",
+        "appx-util",
+        "apr-util",
+        "arm-trusted-firmware-tools",
+        "asterisk-srtp",
+        "axel",
+        "bannergrab",
+        "bruteforce-salted-openssl",
+        "charybdis",
+        "cjose",
+        "coturn",
+        "cowpatty",
+        "curl",
+        "curl-minimal",
+        "cyrus-sasl",
+        "cyrus-sasl-digestmd5",
+        "cyrus-sasl-scram",
+        "dcap-tunnel-ssl",
+        "dcmtk",
+        "dma",
+        "dovecot",
+        "duo_unix",
+        "efitools",
+        "eggdrop",
+        "elinks",
+        "epic5",
+        "epic5-lite",
+        "exim",
+        "fastd",
+        "fetchmail",
+        "fido2",
+        "fossil",
+        "fsverity-utils",
+        "gensio",
+        "getdns",
+        "gftp-text",
+        "git-crypt",
+        "gmnisrv",
+        "gostsum",
+        "gss-ntlmssp",
+        "h2o",
+        "haproxy",
+        "hcxkeys",
+        "hcxtools",
+        "hiredis-ssl",
+        "hitch",
+        "httest",
+        "httpd",
+        "httperf",
+        "httping",
+        "httrack",
+        "icecast",
+        "icecast2",
+        "ima-evm-utils",
+        "iperf3",
+        "ircii",
+        "irssi",
+        "isync",
+        "jimtcl",
+        "jwt",
+        "kea",
+        "keepalived",
+        "kmod",
+        "krb5",
+        "ldns",
+        "ldnsutils",
+        "lftp",
+        "libaprutil1",
+        "libarchive",
+        "libcjose0",
+        "libcoap",
+        "libcpp-httplib0.11",
+        "libcrypt-openssl-ec-perl",
+        "libcrypt-openssl-pkcs10-perl",
+        "libcxxtools10",
+        "libengine-gost-openssl",
+        "libengine-pkcs11-openssl",
+        "libesmtp",
+        "libevent",
+        "libevent-openssl-2.1-7",
+        "libevhtp",
+        "libfsverity",
+        "libgetdns10",
+        "libgit2",
+        "libjose",
+        "libmongocrypt",
+        "libnetconf2",
+        "liboauth2",
+        "libpaho-mqtt",
+        "librabbitmq",
+        "librdkafka",
+        "libre",
+        "libretls",
+        "libshout",
+        "libssh",
+        "libstrophe",
+        "libtins",
+        "libtpms",
+        "libu2f-server",
+        "libwebsockets",
+        "libxmlsec1",
+        "libzip",
+        "lighttpd",
+        "links",
+        "lua-luaossl",
+        "lua-sec",
+        "lynx",
+        "makepasswd",
+        "memcached",
+        "mini-httpd",
+        "minizip-ng",
+        "mktorrent",
+        "monit",
+        "monitoring-plugins",
+        "mosquitto",
+        "mumble-server",
+        "nagios-plugins-http",
+        "nagios-plugins-ldap",
+        "nagios-plugins-smtp",
+        "neon",
+        "net-snmp",
+        "nghttp2",
+        "nginx",
+        "nmap",
+        "nmap-ncat",
+        "nrpe",
+        "nsd",
+        "opendkim",
+        "openldap",
+        "openssh",
+        "openssh-client",
+        "openssh-server",
+        "openvpn",
+        "osslsigncode",
+        "partclone",
+        "perl-crypt-openssl-aes",
+        "perl-crypt-openssl-bignum",
+        "perl-crypt-openssl-dsa",
+        "perl-crypt-openssl-random",
+        "perl-crypt-openssl-rsa",
+        "perl-crypt-openssl-x509",
+        "perl-crypt-smime",
+        "perl-net-ssleay",
+        "php",
+        "poco",
+        "postfix",
+        "proftpd",
+        "prosody",
+        "proxytunnel",
+        "pure-ftpd",
+        "qpdf",
+        "rabbitmq-c",
+        "radsecproxy",
+        "redis",
+        "rhash",
+        "rsync",
+        "ruby",
+        "s-nail",
+        "s2n-tls",
+        "shellinabox",
+        "siege",
+        "sipp",
+        "sipsak",
+        "slowhttptest",
+        "slrn",
+        "socat",
+        "sofia-sip",
+        "squid",
+        "srt",
+        "srtp",
+        "sscg",
+        "ssldump",
+        "sslscan",
+        "sslsplit",
+        "ssmtp",
+        "strongswan",
+        "stunnel",
+        "swtpm",
+        "tcpdump",
+        "tinc",
+        "tnftp",
+        "u-boot-tools",
+        "unbound",
+        "vsftpd",
+        "w3m",
+        "wrk",
+        "yara",
+        "znc"
+      ],
+      "superseded_identity": null
+    },
     "non_claims": [
       "a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software",
       "1000/1000 is not a security proof: a full pass is not a guarantee that any consumer is safe, and it makes no statement about an unmeasured consumer",
@@ -2734,6 +2932,18 @@
         "sha256": "372cb7f26aca0760c90d245c1039766588650f207f129858cc72a103bf38ba11",
         "url": "https://deb.debian.org/debian/pool/main/g/gss-ntlmssp/gss-ntlmssp_1.2.0.orig.tar.gz",
         "version": "1.2.0"
+      },
+      {
+        "archive": "tar.gz",
+        "artifact": "mutt",
+        "build_system": "configure",
+        "env_extra": null,
+        "family": "mutt",
+        "note": "Mutt 2.2.13's SMTP-over-TLS submission path and its classic S/MIME PKCS#7/CMS implementation through the subject libssl/libcrypto; the admitted workload submits a message to a local SMTPS peer and rejects an unrelated CA.",
+        "recipe_id": "recipe:mutt:2.2.13",
+        "sha256": "eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+        "url": "https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz",
+        "version": "2.2.13"
       }
     ],
     "resource_limits": {
@@ -85694,24 +85904,58 @@
         "canonical_name": "mutt",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:mutt"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libncursesw.so.6",
+          "libssl.so.3",
+          "libtinfo.so.6",
+          "libz.so.1"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:mutt",
+          "recipe:recipe:mutt:2.2.13",
+          "source:https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz#eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+          "artifact:mutt"
+        ],
+        "failure_class": null,
         "family_id": "family:mutt",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 79,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "mutt",
+          "artifact_sha256": "75d945fd0d7fe67eb42ef65c8b5e7973db79355bce7d426e0fda54106ad7ffed",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": true,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": true,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 469,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
-        "resolved_under_authority": false,
+        "reason": null,
+        "recipe_id": "recipe:mutt:2.2.13",
+        "residual_class": "none",
+        "resolved_under_authority": true,
         "resource_limits": {
           "cpu_max": "800000 100000",
           "image": "openssl-rs-court:1",
@@ -85721,41 +85965,118 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:authority:mutt",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "421984f927d0f8c90a378fbe3b0df3ccb349c4b3129761f72e51a001092fc626",
+        "source_sha256": "eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+        "source_url": "https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz",
+        "specimen_id": "specimen:mutt:2.2.13",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/mutt/source.tar.gz",
+              "-C",
+              "{scratch}/mutt/authority/src"
+            ],
+            "elapsed_seconds": 0.075,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/mutt/authority/src/mutt-2.2.13/.l7-install",
+              "--with-ssl={prefix}",
+              "--enable-imap",
+              "--enable-pop",
+              "--enable-smtp",
+              "--enable-smime",
+              "--disable-gpgme",
+              "--disable-doc",
+              "--disable-nls",
+              "--without-sasl"
+            ],
+            "elapsed_seconds": 2.612,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j8"
+            ],
+            "elapsed_seconds": 2.095,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "authority",
-        "variant_id": null
+        "variant_id": "variant:mutt:2.2.13:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
         "canonical_name": "mutt",
         "container_image": "openssl-rs-court:1",
         "directness_class": "DIRECT_OPENSSL_CONSUMER",
-        "dt_needed": [],
-        "evidence": [
-          "family:family:mutt"
+        "dt_needed": [
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libncursesw.so.6",
+          "libssl.so.3",
+          "libtinfo.so.6",
+          "libz.so.1"
         ],
-        "failure_class": "acquire-failure",
+        "evidence": [
+          "family:family:mutt",
+          "recipe:recipe:mutt:2.2.13",
+          "source:https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz#eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+          "artifact:mutt"
+        ],
+        "failure_class": null,
         "family_id": "family:mutt",
-        "has_recipe": false,
-        "imported_openssl_symbols_count": 0,
-        "level": "L0-catalogued",
-        "linkage": null,
-        "linkage_proven": false,
+        "has_recipe": true,
+        "imported_openssl_symbols_count": 79,
+        "level": "L4-linked",
+        "linkage": {
+          "all_under_prefix": true,
+          "artifact_rel": "mutt",
+          "artifact_sha256": "3f682ec0165b2d7635b49c18f8edf88b75651cd23b12595e1d1aa10c05daf760",
+          "default_resolution": {
+            "libcrypto.so.3": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "libssl.so.3": "/lib/x86_64-linux-gnu/libssl.so.3"
+          },
+          "resolved_under_authority": false,
+          "sonames": {
+            "libcrypto.so.3": {
+              "resolved": "prefix:libcrypto.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            },
+            "libssl.so.3": {
+              "resolved": "prefix:libssl.so.3",
+              "under_authority": false,
+              "under_prefix": true
+            }
+          },
+          "version_needs": [
+            "OPENSSL_3.0.0"
+          ]
+        },
+        "linkage_proven": true,
         "openssl_linkage": "direct",
-        "outcome": "not_attempted",
+        "outcome": "reached",
         "p1000_rank": 469,
-        "reason": "no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL",
-        "recipe_id": null,
-        "residual_class": "unavailable",
+        "reason": null,
+        "recipe_id": "recipe:mutt:2.2.13",
+        "residual_class": "none",
         "resolved_under_authority": false,
         "resource_limits": {
           "cpu_max": "800000 100000",
@@ -85766,18 +86087,61 @@
           "platform": "linux"
         },
         "run_id": "run:build-link:candidate:mutt",
-        "source_root_hash": null,
-        "source_sha256": null,
-        "source_url": null,
-        "specimen_id": null,
+        "source_root_hash": "421984f927d0f8c90a378fbe3b0df3ccb349c4b3129761f72e51a001092fc626",
+        "source_sha256": "eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+        "source_url": "https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz",
+        "specimen_id": "specimen:mutt:2.2.13",
         "static_linkage": {
           "applicable": false,
           "proven": false,
-          "reason": "no build was attempted"
+          "reason": "the artifact declares a shared libssl/libcrypto DT_NEEDED"
         },
-        "steps": [],
+        "steps": [
+          {
+            "argv": [
+              "tar",
+              "xf",
+              "{scratch}/mutt/source.tar.gz",
+              "-C",
+              "{scratch}/mutt/candidate/src"
+            ],
+            "elapsed_seconds": 0.075,
+            "exit_code": 0,
+            "name": "extract",
+            "ok": true
+          },
+          {
+            "argv": [
+              "configure",
+              "--prefix={scratch}/mutt/candidate/src/mutt-2.2.13/.l7-install",
+              "--with-ssl={prefix}",
+              "--enable-imap",
+              "--enable-pop",
+              "--enable-smtp",
+              "--enable-smime",
+              "--disable-gpgme",
+              "--disable-doc",
+              "--disable-nls",
+              "--without-sasl"
+            ],
+            "elapsed_seconds": 2.988,
+            "exit_code": 0,
+            "name": "configure",
+            "ok": true
+          },
+          {
+            "argv": [
+              "make",
+              "-j8"
+            ],
+            "elapsed_seconds": 2.078,
+            "exit_code": 0,
+            "name": "make",
+            "ok": true
+          }
+        ],
         "subject": "candidate",
-        "variant_id": null
+        "variant_id": "variant:mutt:2.2.13:pristine"
       },
       {
         "candidate_specific_patch_count": 0,
@@ -120987,6 +121351,20 @@
       },
       {
         "evidence": [
+          "source:https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz#eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+          "recipe:recipe:mutt:2.2.13",
+          "pinned_sha256:eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb"
+        ],
+        "family_id": "family:mutt",
+        "licence": "unknown",
+        "pristine_source_root_hash": "421984f927d0f8c90a378fbe3b0df3ccb349c4b3129761f72e51a001092fc626",
+        "pristine_source_sha256": "eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+        "specimen_id": "specimen:mutt:2.2.13",
+        "upstream_ref": "https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz",
+        "version": "2.2.13"
+      },
+      {
+        "evidence": [
           "source:https://www.monitoring-plugins.org/download/monitoring-plugins-2.4.0.tar.gz#e5dfd4ad8fde0a40da50aab3aff6d9a27020b8f283e332bc4da6ef9914f4028c",
           "recipe:recipe:nagios-plugins-http:2.4.0",
           "pinned_sha256:e5dfd4ad8fde0a40da50aab3aff6d9a27020b8f283e332bc4da6ef9914f4028c"
@@ -123425,6 +123803,18 @@
       },
       {
         "arch": "x86_64",
+        "build_profile": "configure-pristine-shared",
+        "evidence": [
+          "recipe:recipe:mutt:2.2.13",
+          "build_system:configure"
+        ],
+        "patch_set": "pristine",
+        "platform": "linux",
+        "specimen_id": "specimen:mutt:2.2.13",
+        "variant_id": "variant:mutt:2.2.13:pristine"
+      },
+      {
+        "arch": "x86_64",
         "build_profile": "autotools-pristine-shared",
         "evidence": [
           "recipe:recipe:nagios-plugins-http:2.4.0",
@@ -124289,7 +124679,7 @@
       }
     ]
   },
-  "body_hash": "bcf8d614bf3588397060b1eb7bdc23a7664203fc78c827ff8e01395c12a9e6dd",
+  "body_hash": "d3b6618bf0294da3b3318387fc521e7ffede4ab5a60c898c79378c006e3910ae",
   "generator": "forensics/tools/downstream_build_link.py",
   "inputs": [
     {
