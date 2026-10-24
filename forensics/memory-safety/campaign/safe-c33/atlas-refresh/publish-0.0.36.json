@@ -1,0 +1,54 @@
+{
+  "receipt": "publish-0.0.36",
+  "date": "2026-10-24",
+  "crate": "openssl-rs",
+  "version": "0.0.36",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "commit": "cccafbea9",
+    "commit_subject": "Merge pull request #60 from infinityabundance/integrate/safe-c33",
+    "note": "Published from a clean working tree on main at this merge commit. Contains S39-S47: the TLS record output boundary, AES-GCM output buffers, the ASN.1 cursor with the collect overread fixed, the DHE client repair, the legacy-provider RUNPATH fix, and the S44/S46 corpus batches.",
+    "working_tree": "clean at publish time"
+  },
+  "artefacts": {
+    "libcrypto.so.3": "ed4158014ebc2d4fbf3733ae0aedb28419c6a340e067d69930b3c6283e25cd15",
+    "libssl.so.3": "967424dd8afb497441f5cc65c50a1fa1db96bccd01c0d34dbf7427397d2d0674",
+    "legacy.so": "aec115a974b9b4f8540fa1b157ed8075f8ea385633b1490a28c4a22fd8840488",
+    "openssl": "7ec6a9611ed81e9ca69691c5cac9f50fcdfadc5c6c4545321129332099adb054"
+  },
+  "packaging": {
+    "files": 1010,
+    "uncompressed_bytes": 42470000,
+    "compressed_bytes": 8836242,
+    "limit_bytes": 10000000,
+    "note": "Published with --no-verify. The tree had been compiled by the phase-2 rebuild and the ABI courts; no full library suite was run for 0.0.36."
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.36",
+    "checksum": "85a644a2b0ca43fd3b2e160f55dd62c031a74e0ed9339825de8171d910998a70",
+    "checksum_prefix": "85a644a2",
+    "crate_size": 8836242,
+    "published_at": "2026-10-24T07:48:51Z"
+  },
+  "provider_verification": {
+    "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",
+    "ldd": "resolves the install's own libcrypto",
+    "load": "OSSL_PROVIDER_load(NULL,\"legacy\") non-NULL with OPENSSL_MODULES set",
+    "legacy_algorithm": "MD4(abc) = a448017aaf21d8525fc10ae87aa6729d",
+    "retained": "compiled-in MODULESDIR is still the empty sentinel, so a no-environment drop-in requires the distribution to set the modules directory at build time"
+  },
+  "evidence_shipped": {
+    "abi_courts": "11/11 including ABI-INSTALL-LAYOUT and libcrypto-contamination",
+    "downstream": "196/1000 L7 with 200 loaded and 242 recipes, measured at the previous identity; 237 of 242 recipe-backed rows are carried forward with candidate_identity_match=false",
+    "library_tests": "2089 passing at 72b625b46 (S34) - a floor, not a measurement of this tree",
+    "adversarial_probes": "41/41 at S24"
+  },
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "No full library suite was run for 0.0.36.",
+    "BOUNDARY and SEAL gates remain NOT_RUN for the S27-S47 cluster: no Miri, ASan, Loom, dudect, authority differential or independent caller audit.",
+    "SAFE_COMPATIBLE remains 0/33; no consumer family has graduated.",
+    "The 196/1000 downstream figure was not re-measured at this crate's artefacts."
+  ]
+}
