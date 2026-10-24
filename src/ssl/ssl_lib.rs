@@ -111,7 +111,7 @@ use crate::ssl::statem::statem::{
     ossl_statem_get_in_handshake, ossl_statem_in_error, ossl_statem_set_in_handshake,
     ossl_statem_set_in_init, SSL_in_before, SSL_in_init, SSL_is_init_finished,
 };
-use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled};
+use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled, SigalgsSlot};
 use crate::x509::by_dir::X509_LOOKUP_hash_dir;
 use crate::x509::by_file::X509_LOOKUP_file;
 use crate::x509::by_store::X509_LOOKUP_store;
@@ -1832,15 +1832,22 @@ pub struct Ssl {
     /// (`tls13_save_handshake_digest_for_pha`, `statem_lib.c:2846-2867`). Owned; freed by `SSL_free`.
     pub pha_dgst: *mut c_void,
     /// `uint16_t *s3.tmp.peer_sigalgs` — the peer's signature-algorithm list, as native-endian
-    /// schemes. NULL until a ClientHello's `signature_algorithms` is parsed; the connection owns
-    /// the `CRYPTO_malloc` block and `SSL_free` releases it.
-    pub peer_sigalgs: *mut u16,
-    /// `size_t s3.tmp.peer_sigalgslen` — the element count of `peer_sigalgs`.
-    pub peer_sigalgslen: usize,
-    /// `SIGALG_LOOKUP **shared_sigalgs` — the negotiated list (always NULL here).
-    pub shared_sigalgs: *mut c_void,
-    /// `size_t shared_sigalgslen`.
-    pub shared_sigalgslen: usize,
+    /// schemes. An object-owned element-counted member pair ([`SigalgsSlot`]) whose length
+    /// companion is [`Self::peer_sigalgslen`]; mediated by [`Ssl::peer_sigalgs`]/
+    /// [`Ssl::peer_sigalgs_slot`]; **private**. NULL/0 until a `signature_algorithms` vector is
+    /// saved, and the connection owns the `CRYPTO_malloc` block until `SSL_free` or the next save.
+    peer_sigalgs: *mut u16,
+    /// `size_t s3.tmp.peer_sigalgslen` — the element count of `peer_sigalgs`, published only by
+    /// the slot and always the allocation's own count.
+    peer_sigalgslen: usize,
+    /// `SIGALG_LOOKUP **shared_sigalgs` — the negotiated list. This reduced build stores the
+    /// shared schemes as native-endian `u16` codes rather than `SIGALG_LOOKUP *`: no ABI reads the
+    /// representation, and `SSL_get_shared_sigalgs` resolves each code through the same static
+    /// table. An object-owned element-counted member pair ([`SigalgsSlot`]) mediated by
+    /// [`Ssl::shared_sigalgs`]/[`Ssl::shared_sigalgs_slot`]; **private**.
+    shared_sigalgs: *mut u16,
+    /// `size_t shared_sigalgslen` — the element count of `shared_sigalgs`.
+    shared_sigalgslen: usize,
     /// `const SIGALG_LOOKUP *s3.tmp.sigalg` — this side's chosen sigalg (always NULL here).
     pub sigalg: *const c_void,
     /// `const SIGALG_LOOKUP *s3.tmp.peer_sigalg` — the peer's chosen sigalg (always NULL here).
@@ -2281,6 +2288,57 @@ impl Ssl {
     pub(crate) unsafe fn server_cert_type_slot(&mut self) -> MemberBufSlot<'_> {
         // SAFETY: `self` is live and its `server_cert_type` pair obeys the invariant.
         unsafe { MemberBufSlot::of(&mut self.server_cert_type, &mut self.server_cert_type_len) }
+    }
+
+    /// The object-owned peer signature-algorithm list — the authoritative read of the
+    /// `peer_sigalgs`/`peer_sigalgslen` member pair. Empty until a list is saved.
+    ///
+    /// This is a safe slice because the fields are private and every publication goes through
+    /// [`SigalgsSlot`], which stores an owning list value's own pointer and element count
+    /// together. A NULL pointer therefore means "no list" regardless of the companion word (the
+    /// slot sets the pointer before the length and clears it before the length), so the transient
+    /// window inside a slot operation still reads as empty.
+    pub(crate) fn peer_sigalgs(&self) -> &[u16] {
+        if self.peer_sigalgs.is_null() {
+            return &[];
+        }
+        // SAFETY: by the private-field invariant the pointer is the base of a live `CRYPTO_malloc`
+        // block of exactly `peer_sigalgslen` initialised `u16`s owned by this connection, and the
+        // returned borrow cannot outlive `&self`.
+        unsafe { core::slice::from_raw_parts(self.peer_sigalgs, self.peer_sigalgslen) }
+    }
+
+    /// Derive the [`SigalgsSlot`] handle over this connection's peer list pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `peer_sigalgs` pair obeys the element-counted pair invariant
+    /// (`(NULL, 0)`, or one owned block of exactly `len` schemes).
+    pub(crate) unsafe fn peer_sigalgs_slot(&mut self) -> SigalgsSlot<'_> {
+        // SAFETY: `self` is live and its peer pair obeys the invariant.
+        unsafe { SigalgsSlot::of(&mut self.peer_sigalgs, &mut self.peer_sigalgslen) }
+    }
+
+    /// The object-owned negotiated signature-algorithm list (scheme codes) — the authoritative read
+    /// of the `shared_sigalgs`/`shared_sigalgslen` member pair. Empty until
+    /// `tls1_process_sigalgs` has run on a peer list.
+    pub(crate) fn shared_sigalgs(&self) -> &[u16] {
+        if self.shared_sigalgs.is_null() {
+            return &[];
+        }
+        // SAFETY: as `peer_sigalgs`: the pair is private and published only by `SigalgsSlot`, so
+        // the pointer names exactly `shared_sigalgslen` initialised `u16`s owned by `self`.
+        unsafe { core::slice::from_raw_parts(self.shared_sigalgs, self.shared_sigalgslen) }
+    }
+
+    /// Derive the [`SigalgsSlot`] handle over this connection's shared list pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `shared_sigalgs` pair obeys the element-counted pair invariant.
+    pub(crate) unsafe fn shared_sigalgs_slot(&mut self) -> SigalgsSlot<'_> {
+        // SAFETY: `self` is live and its shared pair obeys the invariant.
+        unsafe { SigalgsSlot::of(&mut self.shared_sigalgs, &mut self.shared_sigalgslen) }
     }
 
     /// The object-owned SNI name (NULL when unset) — the authoritative read of the `ext_hostname`
@@ -3593,7 +3651,10 @@ unsafe impl CtxDestroy for Ssl {
             SSL_SESSION_free((*s).session);
             crate::ssl::tls_srp::ssl_srp_ctx_free_intern(s);
             CRYPTO_free((*s).session_ticket.cast(), FILE, 0);
-            CRYPTO_free((*s).peer_sigalgs.cast(), FILE, 0);
+            // The two element-counted sigalg lists are released through their pair handles, whose
+            // private-field invariant makes each release the block's single one.
+            (*s).peer_sigalgs_slot().clear(FILE, 0);
+            (*s).shared_sigalgs_slot().clear(FILE, 0);
             dtls1_free(s);
             BIO_free_all((*s).wbio);
             BIO_free_all((*s).rbio);
@@ -14407,12 +14468,13 @@ mod contract_tests {
             // Model a mid-handshake connection: state that a swap must not disturb.
             (*s).hand_state = 7;
             (*s).statem_state = 3;
-            let sigs = crate::runtime::mem::CRYPTO_malloc(4, ptr::null(), 0).cast::<u16>();
-            assert!(!sigs.is_null());
-            sigs.write(0x0403);
-            sigs.add(1).write(0x0503);
-            (*s).peer_sigalgs = sigs;
-            (*s).peer_sigalgslen = 2;
+            // Publish the peer list through the sanctioned writer so the connection's pair is
+            // constructed by `OwnedSigalgs`/`SigalgsSlot` rather than by a second, raw writer: the
+            // element-counted invariant the safe accessor relies on then has one producer.
+            assert_eq!(
+                crate::ssl::t1_lib::tls1_save_peer_sigalgs_raw(s, &[0x04, 0x03, 0x05, 0x03]),
+                1
+            );
 
             let ret = SSL_set_SSL_CTX(s, ctx2);
             assert_eq!(ret, ctx2);
@@ -14431,9 +14493,11 @@ mod contract_tests {
             );
             assert_eq!((*s).hand_state, 7, "handshake state survives the swap");
             assert_eq!((*s).statem_state, 3);
-            assert_eq!((*s).peer_sigalgslen, 2, "peer sigalgs are connection state");
-            assert_eq!((*s).peer_sigalgs.read(), 0x0403);
-            assert_eq!((*s).peer_sigalgs.add(1).read(), 0x0503);
+            assert_eq!(
+                (*s).peer_sigalgs(),
+                &[0x0403, 0x0503],
+                "peer sigalgs are connection state"
+            );
             assert_eq!(
                 (*ctx1).references.load(Ordering::Relaxed),
                 2,
