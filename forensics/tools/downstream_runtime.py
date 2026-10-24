@@ -12861,6 +12861,14 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     lib_paths = expanded
     lib_paths += _aux_runtime_lib_dirs(recipe, root)
     env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(lib_paths))
+    # The candidate distribution shell is not installed at a configure-time prefix, so
+    # its compiled-in MODULESDIR is empty (the recorded Phase 16 divergence): without an
+    # explicit path `OSSL_PROVIDER_load(NULL, "legacy")` cannot find
+    # `<prefix>/lib/ossl-modules/legacy.so` and a provider-loading consumer (medusa) fails
+    # at startup.  The authority side already finds its own module through its compiled-in
+    # MODULESDIR; naming each subject's own directory is the same prefix substitution as
+    # `LD_LIBRARY_PATH`, and is the mechanism every provider court's `side_env` uses.
+    env["OPENSSL_MODULES"] = str(prefix / "lib" / "ossl-modules")
     # A template program may need a runtime environment variable (siege's SIEGERC is the released
     # configuration file).  The values are expanded from the same root/prefix tokens the recipe
     # uses, so they are not candidate-specific.

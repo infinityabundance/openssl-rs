@@ -112,9 +112,13 @@ echo "--- legacy.so (ASan) ---"
 rustc "+$NIGHTLY" --edition 2021 --emit=obj --crate-type lib -O -C panic=abort \
   --crate-name legacy_shell -o "$OBJ/legacy.shell.o" shell/legacy.shell.rs
 printf '%s\n' '{' '    global: OSSL_provider_init;' '    local: *;' '};' > "$OUT/legacy.ld"
+# The module is installed at `$PREFIX/lib/ossl-modules/legacy.so`, so
+# `$ORIGIN/..` is `$PREFIX/lib`: the ASan prefix's own libcrypto, never the
+# host's (see the same RUNPATH and its rationale in build_phase2.sh).
 cc -shared -o "$OUT/legacy.so" \
   -Wl,--whole-archive "$ARCHIVE" -Wl,--no-whole-archive "$OBJ/legacy.shell.o" \
   -Wl,--version-script="$OUT/legacy.ld" \
+  -Wl,--enable-new-dtags -Wl,-rpath,'$ORIGIN/..' \
   -Wl,--no-as-needed -L"$PREFIX/lib" -lcrypto -lpthread -ldl -lm -lrt -lutil
 cp "$OUT/legacy.so" "$PREFIX/lib/ossl-modules/legacy.so"
 

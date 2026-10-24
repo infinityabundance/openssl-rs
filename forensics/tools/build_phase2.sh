@@ -138,6 +138,19 @@ ar_quiet rcs "$OBJ/libssl.a" "$OBJ/libssl.shell.o"
 # linker drops the library (nothing is referenced) and the module would load
 # WITHOUT the dependency the authority declares, which a provider-loading court
 # would catch.
+#
+# The module is installed at `lib/ossl-modules/legacy.so`, so `$ORIGIN/..` is the
+# install's own `lib`.  Without a RUNPATH the loader searches the system paths
+# for `libcrypto.so.3` and, whenever the loading process has not already mapped a
+# libcrypto with that SONAME, picks the host's copy -- a second libcrypto with
+# its own allocator and provider state.  The install tree is a drop-in prefix,
+# not `/usr`, so the sibling dependency must be named explicitly.  When the
+# process *has* already loaded the candidate libcrypto (the ordinary consumer
+# case, e.g. an executable linked against this install), the dynamic loader's
+# SONAME match keeps that mapping; the RUNPATH governs the un-preloaded case and
+# makes it resolve the same file rather than the host's.  `--enable-new-dtags`
+# emits `DT_RUNPATH` so `LD_LIBRARY_PATH` can still override it, exactly as the
+# ABI-SUBSTITUTION court relies on.
 echo "--- legacy.so ---"
 rustc --edition 2021 --emit=obj --crate-type lib -O -C panic=abort \
   --crate-name legacy_shell -o "$OBJ/legacy.shell.o" shell/legacy.shell.rs
@@ -145,6 +158,7 @@ printf '%s\n' '{' '    global: OSSL_provider_init;' '    local: *;' '};' > legac
 cc -shared -o legacy.so \
   -Wl,--whole-archive "$CRATE" -Wl,--no-whole-archive "$OBJ/legacy.shell.o" \
   -Wl,--version-script="$PWD/legacy.ld" \
+  -Wl,--enable-new-dtags -Wl,-rpath,'$ORIGIN/..' \
   -Wl,--no-as-needed -L"$PWD" -lcrypto -lpthread -ldl -lm -lrt -lutil
 
 # --- executables --------------------------------------------------------------
