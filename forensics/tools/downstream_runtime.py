@@ -80,6 +80,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import base64
 import copy
 import glob
 import hashlib
@@ -12134,6 +12135,852 @@ RUNNERS.update({
     "postfix": _wl_postfix,
     "mutt": _wl_mutt,
 })
+
+
+# --------------------------------------------------------------------------------------------
+# S37 corpus batch: the admitted local workloads for the 40 new families.  Every fixture is a
+# loopback peer; the negative control is an unrelated CA, a wrong credential, a wrong password or
+# a plaintext/absent peer, never a public-network request.
+# --------------------------------------------------------------------------------------------
+
+def _s37_https_auth(port: int, pki: dict, user: str, password: str, body: str,
+                    state: dict, stop: threading.Event) -> threading.Thread:
+    """A loopback HTTPS/1.0 peer requiring the given HTTP Basic credential."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile=str(pki["srv_pem"]))
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(8)
+    listener.settimeout(0.5)
+    payload = body.encode()
+    token = "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            try:
+                with context.wrap_socket(conn, server_side=True) as tls:
+                    tls.settimeout(10)
+                    request = b""
+                    while b"\r\n\r\n" not in request:
+                        chunk = tls.recv(4096)
+                        if not chunk:
+                            break
+                        request += chunk
+                    state["request"] = request
+                    if token.encode() in request:
+                        tls.sendall(b"HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n"
+                                    b"Content-Length: " + str(len(payload)).encode() +
+                                    b"\r\nConnection: close\r\n\r\n" + payload)
+                    else:
+                        tls.sendall(b"HTTP/1.0 401 Unauthorized\r\n"
+                                    b"WWW-Authenticate: Basic realm=\"s37\"\r\n"
+                                    b"Content-Length: 0\r\nConnection: close\r\n\r\n")
+            except (OSError, ssl.SSLError):
+                continue
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
+def _s37_tls_greeter(port: int, pki: dict, payload: bytes, state: dict,
+                     stop: threading.Event) -> threading.Thread:
+    """A one-shot TLS peer that sends a fixed payload after the handshake."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile=str(pki["srv_pem"]))
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(4)
+    listener.settimeout(0.5)
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            try:
+                with context.wrap_socket(conn, server_side=True) as tls:
+                    state["peer"] = tls.getpeercert()
+                    tls.sendall(payload)
+                    tls.settimeout(2)
+                    try:
+                        state["received"] = tls.recv(4096)
+                    except (OSError, ssl.SSLError):
+                        pass
+            except (OSError, ssl.SSLError):
+                continue
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
+def _s37_smtps(port: int, pki: dict, state: dict, stop: threading.Event) -> threading.Thread:
+    """A minimal SMTPS peer; it records the DATA body it receives."""
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(2)
+    listener.settimeout(20)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(str(pki["srv_crt"]), str(pki["srv_key"]))
+
+    def serve() -> None:
+        try:
+            conn, _ = listener.accept()
+            with conn, context.wrap_socket(conn, server_side=True) as tls:
+                stream = tls.makefile("rwb", buffering=0)
+                stream.write(b"220 fixture ESMTP\r\n")
+                while True:
+                    line = stream.readline()
+                    if not line:
+                        break
+                    cmd = line.strip().split(b" ")[0].upper()
+                    if cmd in (b"EHLO", b"HELO"):
+                        stream.write(b"250-fixture\r\n250 SIZE 10240000\r\n")
+                    elif cmd == b"DATA":
+                        stream.write(b"354 go\r\n")
+                        body = b""
+                        while True:
+                            part = stream.readline()
+                            if not part or part == b".\r\n":
+                                break
+                            body += part
+                        state["data"] = body.decode("utf-8", "replace")
+                        stream.write(b"250 queued\r\n")
+                    elif cmd == b"QUIT":
+                        stream.write(b"221 bye\r\n")
+                        break
+                    else:
+                        stream.write(b"250 ok\r\n")
+        except (OSError, ssl.SSLError):
+            return
+        finally:
+            listener.close()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
+def _s37_dot(port: int, pki: dict, state: dict, stop: threading.Event) -> threading.Thread:
+    """A minimal DNS-over-TLS server: any A query is answered with 192.0.2.1."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile=str(pki["srv_pem"]))
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", port))
+    listener.listen(4)
+    listener.settimeout(0.5)
+
+    def answer(query: bytes) -> bytes:
+        i = 12
+        while i < len(query) and query[i] != 0:
+            i += 1 + query[i]
+        qend = min(len(query), i + 5)
+        question = query[12:qend]
+        return (query[:2] + b"\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00" + question +
+                b"\xc0\x0c\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04\xc0\x00\x02\x01")
+
+    def serve() -> None:
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            try:
+                with context.wrap_socket(conn, server_side=True) as tls:
+                    tls.settimeout(10)
+                    head = tls.recv(2)
+                    if len(head) < 2:
+                        continue
+                    need = struct.unpack("!H", head)[0]
+                    data = b""
+                    while len(data) < need:
+                        chunk = tls.recv(need - len(data))
+                        if not chunk:
+                            break
+                        data += chunk
+                    state["query"] = data
+                    response = answer(data)
+                    tls.sendall(struct.pack("!H", len(response)) + response)
+            except (OSError, ssl.SSLError):
+                continue
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    state["listener"] = listener
+    return thread
+
+
+def _wl_nagios_tcp(ctx: dict) -> dict:
+    """check_tcp -S: a TLS handshake with a verifiable peer, and a plaintext-peer reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    port = _free_port()
+    srv, of, ef = _spawn([str(_auth_ossl(ap)), "s_server", "-accept", str(port),
+                          "-cert", str(pki["srv_crt"]), "-key", str(pki["srv_key"]),
+                          "-www", "-quiet"], d, _auth_env(ap), d / "s_server.out",
+                         d / "s_server.err")
+    plain = socket.socket()
+    plain.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    plain.bind(("127.0.0.1", 0))
+    plain.listen(2)
+    plain_port = int(plain.getsockname()[1])
+    try:
+        ready = _wait_tcp("127.0.0.1", port)
+        good = _run_captured([str(ctx["program"]), "-H", "127.0.0.1", "-p", str(port),
+                              "-S", "-t", "5"], cwd=d, env=ctx["env"], timeout=40) \
+            if ready else {"ok": False, "exit_code": -1, "stdout": "", "stderr": "no server"}
+        neg = _run_captured([str(ctx["program"]), "-H", "127.0.0.1", "-p", str(plain_port),
+                             "-S", "-t", "3"], cwd=d, env=ctx["env"], timeout=20)
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+        plain.close()
+    good_text = good["stdout"] + good["stderr"]
+    neg_text = neg["stdout"] + neg["stderr"]
+    ok = bool(good.get("ok") and "TCP OK" in good_text)
+    rejected = (neg.get("exit_code") != 0 or "TCP OK" not in neg_text)
+    return _b16_out(ok, ok and rejected,
+                    _transcript(("check_tcp --ssl (fixture peer)", good),
+                                ("check_tcp --ssl (plaintext peer)", neg)),
+                    "nagios-plugins-tcp: check_tcp --ssl handshake with a local TLS peer; "
+                    "a plaintext peer is not accepted",
+                    "check_tcp did not report TCP OK over the TLS session",
+                    "a plaintext peer satisfied the TLS check")
+
+
+def _wl_https_brute(ctx: dict, tool: str) -> dict:
+    """A local HTTPS Basic-auth peer and a credential-discovery workload."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    port = _free_port()
+    state: dict = {}
+    stop = threading.Event()
+    thread = _s37_https_auth(port, pki, "fixture", "s3cret", "s37-payload", state, stop)
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("tls fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local TLS fixture did not open its port", "runtime-failure", d)
+        if tool == "hydra":
+            good = _run_captured([str(ctx["program"]), "-l", "fixture", "-p", "s3cret",
+                                  "-s", str(port), "-t", "1", "-f", "-I", "-V",
+                                  "127.0.0.1", "https-get", "/"], cwd=d, env=ctx["env"],
+                                 timeout=90)
+            bad = _run_captured([str(ctx["program"]), "-l", "fixture", "-p", "wrong",
+                                 "-s", str(port), "-t", "1", "-f", "-I", "-V",
+                                 "127.0.0.1", "https-get", "/"], cwd=d, env=ctx["env"],
+                                timeout=90)
+            found = "valid password found"
+        elif tool == "ncrack":
+            good = _run_captured([str(ctx["program"]), "--ssl", "-p", f"http:{port}",
+                                  "--user", "fixture", "--pass", "s3cret", "127.0.0.1"],
+                                 cwd=d, env=ctx["env"], timeout=90)
+            bad = _run_captured([str(ctx["program"]), "--ssl", "-p", f"http:{port}",
+                                 "--user", "fixture", "--pass", "wrong", "127.0.0.1"],
+                                cwd=d, env=ctx["env"], timeout=90)
+            found = "Discovered credentials"
+        else:  # medusa
+            good = _run_captured([str(ctx["program"]), "-h", "127.0.0.1", "-n", str(port),
+                                  "-u", "fixture", "-p", "s3cret", "-M", "http", "-S",
+                                  "-m", "DIR:/", "-f", "-t", "1"], cwd=d, env=ctx["env"],
+                                 timeout=90)
+            bad = _run_captured([str(ctx["program"]), "-h", "127.0.0.1", "-n", str(port),
+                                 "-u", "fixture", "-p", "wrong", "-M", "http", "-S",
+                                 "-m", "DIR:/", "-f", "-t", "1"], cwd=d, env=ctx["env"],
+                                timeout=90)
+            found = "ACCOUNT FOUND"
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    good_text = good["stdout"] + good["stderr"]
+    bad_text = bad["stdout"] + bad["stderr"]
+    ok = bool(good.get("ok") and found in good_text)
+    rejected = found not in bad_text
+    return _b16_out(ok, ok and rejected,
+                    _transcript((f"{tool} correct credential", good),
+                                (f"{tool} wrong credential", bad)),
+                    f"{ctx['family']}: {tool} discovers the fixture HTTP Basic credential over "
+                    "TLS and does not discover a wrong password",
+                    f"{tool} did not discover the fixture credential over TLS",
+                    f"{tool} reported the wrong password as a discovered credential")
+
+
+def _wl_sqlcipher(ctx: dict) -> dict:
+    """An encrypted database created, read back with the right key, and rejected with a wrong key."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    db = d / "fixture.db"
+    create = _run_captured([prog, str(db)], cwd=d, env=ctx["env"], timeout=60,
+                           stdin_text="PRAGMA key='s37-key';\nCREATE TABLE t(x TEXT);\n"
+                                      "INSERT INTO t VALUES('s37-payload');\n")
+    good = _run_captured([prog, str(db)], cwd=d, env=ctx["env"], timeout=60,
+                         stdin_text="PRAGMA key='s37-key';\nSELECT x FROM t;\n")
+    bad = _run_captured([prog, str(db)], cwd=d, env=ctx["env"], timeout=60,
+                        stdin_text="PRAGMA key='wrong-key';\nSELECT x FROM t;\n")
+    good_text = good["stdout"] + good["stderr"]
+    bad_text = bad["stdout"] + bad["stderr"]
+    ok = bool(create.get("ok") and "s37-payload" in good_text)
+    rejected = "s37-payload" not in bad_text
+    return _b16_out(ok, ok and rejected,
+                    _transcript(("sqlcipher create", create), ("correct key read", good),
+                                ("wrong key read", bad)),
+                    "sqlcipher: AES-256 page codec create/read with the right key and a "
+                    "wrong-key open rejected",
+                    "the encrypted database did not return the fixture row with the right key",
+                    "a wrong key returned the fixture row")
+
+
+def _wl_neomutt(ctx: dict) -> dict:
+    """NeoMutt submits a message to a local SMTPS peer over a verified TLS session."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    port = _free_port()
+    stop = threading.Event()
+    state: dict = {}
+    thread = _s37_smtps(port, pki, state, stop)
+    conf = d / "neomuttrc"
+    conf.write_text(
+        'set smtp_url="smtps://fixture@127.0.0.1:%d/"\n'
+        "set ssl_starttls=no\nset ssl_verify_host=yes\n"
+        "set from=fixture@example\nset realname=fixture\nset use_from=yes\n"
+        "set hostname=fixture.example\nset record=\"\"\nset copy=no\n"
+        "set sendmail_wait=0\n" % port, encoding="utf-8")
+    try:
+        env = dict(ctx["env"], HOME=str(d), SSL_CERT_FILE=str(pki["ca_crt"]))
+        good = _run_captured([prog, "-F", str(conf), "-s", "fixture", "recipient@example"],
+                             cwd=d, env=env, timeout=45, stdin_text="neomutt-fixture-body\n")
+        good_data = state.get("data", "")
+        state["data"] = ""
+        stop.clear()
+        bad_thread = _s37_smtps(port, pki, state, stop)
+        env_bad = dict(ctx["env"], HOME=str(d), SSL_CERT_FILE=str(pki["other_crt"]))
+        bad = _run_captured([prog, "-F", str(conf), "-s", "fixture", "recipient@example"],
+                            cwd=d, env=env_bad, timeout=45, stdin_text="neomutt-fixture-body\n")
+        bad_thread.join(timeout=25)
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    ok = bool(good.get("ok") and "neomutt-fixture-body" in good_data)
+    functional = bool(ok and "neomutt-fixture-body" not in state.get("data", ""))
+    return _b16_out(ok, functional,
+                    _transcript(("SMTPS submission", good),
+                                ("delivered body", {"exit_code": 0,
+                                                    "stdout": good_data[:400], "stderr": ""}),
+                                ("unrelated CA (must fail)", bad)),
+                    "neomutt: message submitted to a local SMTPS peer over verified TLS",
+                    "neomutt did not deliver the message over TLS",
+                    "a message was delivered while trusting the unrelated CA")
+
+
+def _wl_yapet(ctx: dict) -> dict:
+    """YAPET CSV import/export with the right password and a wrong-password reject."""
+    d = ctx["workdir"]
+    root = ctx["root"]
+    csv2 = root / "src" / "converters" / "csv2yapet" / "csv2yapet"
+    csvout = root / "src" / "converters" / "yapet2csv" / "yapet2csv"
+    src = d / "fixture.csv"
+    src.write_text("fixture,fixture-user,s3cret\n", encoding="utf-8")
+    db = d / "fixture.psafe"
+    out = d / "export.csv"
+    make = _run_captured([str(csv2), "-q", "-p", "s3cret", str(src), str(db)], cwd=d,
+                         env=ctx["env"], timeout=60)
+    good = _run_captured([str(csvout), "-q", "-p", "s3cret", str(db), str(out)], cwd=d,
+                         env=ctx["env"], timeout=60)
+    good_text = out.read_text(encoding="utf-8", errors="replace") if out.is_file() else ""
+    out2 = d / "export-bad.csv"
+    bad = _run_captured([str(csvout), "-q", "-p", "wrong", str(db), str(out2)], cwd=d,
+                        env=ctx["env"], timeout=60)
+    bad_text = out2.read_text(encoding="utf-8", errors="replace") if out2.is_file() else ""
+    ok = bool(make.get("ok") and good.get("ok") and "fixture-user" in good_text)
+    rejected = (bad.get("exit_code") != 0 and "fixture-user" not in bad_text)
+    return _b16_out(ok, ok and rejected,
+                    _transcript(("csv2yapet", make), ("yapet2csv correct password", good),
+                                ("yapet2csv wrong password", bad)),
+                    "yapet: AES-256 password-file import/export with the right password and a "
+                    "wrong-password reject",
+                    "yapet did not export the fixture record with the right password",
+                    "a wrong password exported the fixture record")
+
+
+def _wl_canl(ctx: dict) -> dict:
+    """CAnL-C's sample server and client: a verified session and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d / "pki")
+    server = ctx["root"] / "server"
+    client = str(ctx["program"])
+
+    def ca_dir(ca: Path, name: str) -> Path:
+        target = d / name
+        target.mkdir(exist_ok=True)
+        hashed = _ossl(ap, ["x509", "-hash", "-noout", "-in", str(ca)])
+        h = (hashed.get("stdout") or "0").strip() or "0"
+        link = target / f"{h}.0"
+        if not link.exists():
+            link.symlink_to(ca)
+        return target
+
+    good_ca = ca_dir(pki["ca_crt"], "ca-good")
+    bad_ca = ca_dir(pki["other_crt"], "ca-bad")
+    port = _free_port()
+    srv, of, ef = _spawn([str(server), "-p", str(port), "-c", str(pki["srv_crt"]),
+                          "-k", str(pki["srv_key"]), "-d", str(good_ca), "-t", "20"],
+                         d, ctx["env"], d / "canl-server.out", d / "canl-server.err")
+    try:
+        ready = _wait_tcp("127.0.0.1", port)
+        good = _run_captured([client, "-p", str(port), "-s", "127.0.0.1",
+                              "-d", str(good_ca), "-t", "20"], cwd=d, env=ctx["env"],
+                             timeout=40) if ready else {
+            "ok": False, "exit_code": -1, "stdout": "", "stderr": "server not ready"}
+    finally:
+        _stop(srv)
+        of.close()
+        ef.close()
+    text = good["stdout"] + good["stderr"]
+    ok = bool(good.get("ok") and "connection established" in text and
+              "[CLIENT] received:" in text)
+    return _b16_out(ok, ok,
+                    _transcript(("canl sample client/server", good)),
+                    "canl-c: the sample server and client complete a verified TLS session and "
+                    "exchange a payload",
+                    "the CAnL sample client did not complete the TLS exchange",
+                    "the CAnL sample client did not complete the TLS exchange")
+
+
+def _wl_xmlsec(ctx: dict) -> dict:
+    """XML Security signs an XML template and verifies it; a tampered document fails."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    prog = str(ctx["program"])
+    verify = str(ctx["root"] / "xsec" / "xsec-checksig")
+    key, crt = d / "s37.key", d / "s37.crt"
+    gen = _ossl(ap, ["req", "-x509", "-newkey", "rsa:2048", "-sha256", "-nodes", "-days", "2",
+                     "-subj", "/CN=s37-xmlsec", "-keyout", str(key), "-out", str(crt)], cwd=d)
+    xml = d / "fixture.xml"
+    xml.write_text("<root><data>s37-payload</data></root>\n", encoding="utf-8")
+    signed = _run_captured([prog, "-r", str(key), "", "-x", str(crt), str(xml)], cwd=d,
+                           env=ctx["env"], timeout=60)
+    signed_file = d / "signed.xml"
+    signed_file.write_text(signed.get("stdout") or "", encoding="utf-8")
+    good = _run_captured([verify, str(signed_file)], cwd=d, env=ctx["env"], timeout=60)
+    tampered = d / "tampered.xml"
+    tampered.write_text((signed.get("stdout") or "").replace("s37-payload", "evil-payload"),
+                        encoding="utf-8")
+    bad = _run_captured([verify, str(tampered)], cwd=d, env=ctx["env"], timeout=60)
+    ok = bool(gen.get("ok") and signed.get("ok") and good.get("exit_code") == 0)
+    rejected = bad.get("exit_code") != 0
+    return _b16_out(ok, ok and rejected,
+                    _transcript(("templatesign", signed), ("checksig signed", good),
+                                ("checksig tampered", bad)),
+                    "xml-security-c: RSA/SHA-256 XML signature over a template, verified, and a "
+                    "tampered document rejected",
+                    "the XML signature did not verify",
+                    "a tampered XML document verified")
+
+
+def _wl_tcltls(ctx: dict) -> dict:
+    """TclTLS: a verified TLS client session and an unrelated-CA reject."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    # The pinned Tcl runtime's script library lives in the extracted auxiliary packages; the
+    # embedded interpreter needs it for Tcl_Init (encoding files and init.tcl).
+    aux = ctx["root"].parents[1] / "aux" / "root"
+    env = dict(ctx["env"], TCL_LIBRARY=str(aux / "usr" / "share" / "tcltk" / "tcl8.6"))
+    port = _free_port()
+    stop = threading.Event()
+    state: dict = {}
+    thread = _s37_tls_greeter(port, pki, b"tcl-payload\n", state, stop)
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("tls fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local TLS fixture did not open its port", "runtime-failure", d)
+        good = _run_captured([str(ctx["program"]), str(ctx["root"] / "tcltls.so"),
+                              str(pki["ca_crt"]), str(pki["other_crt"]), str(port)], cwd=d,
+                             env=env, timeout=60)
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    text = good["stdout"] + good["stderr"]
+    ok = bool(good.get("ok") and "tcl_tls_connect=ok" in text and
+              "tcl_tls_payload=tcl-payload" in text and "tcl_tls_wrong_ca=rejected" in text)
+    return _b16_out(ok, ok, _transcript(("TclTLS client", good)),
+                    "tcl-tls: verified TLS handshake and payload, with an unrelated CA rejected",
+                    "the TclTLS client did not complete the verified session",
+                    "the TclTLS client did not complete the verified session")
+
+
+def _wl_nmh(ctx: dict) -> dict:
+    """nmh post: a draft submitted to a local SMTPS peer with -initialtls -certverify."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    pki = _gen_pki(ctx["authority_prefix"], d / "pki")
+    port = _free_port()
+    stop = threading.Event()
+    state: dict = {}
+    thread = _s37_smtps(port, pki, state, stop)
+    draft = d / "draft"
+    draft.write_text("From: fixture@example\nTo: recipient@example\nSubject: s37\n"
+                     "MIME-Version: 1.0\nContent-Type: text/plain\n\nnmh-fixture-body\n",
+                     encoding="utf-8")
+    try:
+        env = dict(ctx["env"], SSL_CERT_FILE=str(pki["ca_crt"]), HOME=str(d))
+        good = _run_captured([prog, "-server", "127.0.0.1", "-port", str(port),
+                              "-initialtls", "-certverify", "-from", "fixture@example",
+                              "-to", "recipient@example", str(draft)], cwd=d, env=env,
+                             timeout=60)
+        good_data = state.get("data", "")
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    ok = bool(good.get("ok") and "nmh-fixture-body" in good_data)
+    return _b16_out(ok, ok,
+                    _transcript(("nmh post", good),
+                                ("delivered body", {"exit_code": 0,
+                                                    "stdout": good_data[:400], "stderr": ""})),
+                    "nmh: post submits a draft to a local SMTPS peer over verified TLS",
+                    "nmh post did not deliver the message over TLS",
+                    "nmh post did not deliver the message over TLS")
+
+
+def _wl_sbsign(ctx: dict) -> dict:
+    """sbsign signs a PE image and sbverify accepts it; a tampered image is rejected."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    root = ctx["root"]
+    sbsign = str(ctx["program"])
+    sbverify = str(Path(sbsign).with_name("sbverify"))
+    aux = root.parents[1] / "aux" / "root"
+    efi_inc = aux / "usr" / "include" / "efi"
+    src = d / "fixture.c"
+    src.write_text("int main(void){return 0;}\n", encoding="utf-8")
+    obj, elf, pe = d / "fixture.o", d / "fixture.so", d / "fixture.efi"
+    steps = [
+        (["gcc", "-fpic", "-I", str(efi_inc), "-I", str(efi_inc / "x86_64"),
+          "-c", str(src), "-o", str(obj)], "compile"),
+        (["ld", "-nostdlib", "-shared", "-Bsymbolic",
+          "-L" + str(aux / "usr" / "lib"), "-L" + str(aux / "usr" / "lib64"),
+          str(aux / "usr" / "lib" / "crt0-efi-x86_64.o"), "-T",
+          str(aux / "usr" / "lib" / "elf_x86_64_efi.lds"), str(obj), "-o", str(elf),
+          "-lefi", "-lgnuefi"], "link"),
+        (["objcopy", "-j", ".text", "-j", ".sdata", "-j", ".data", "-j", ".dynamic",
+          "-j", ".dynsym", "-j", ".rel", "-j", ".rela", "-j", ".reloc",
+          "--target=efi-app-x86_64", str(elf), str(pe)], "objcopy"),
+    ]
+    made = []
+    for argv, label in steps:
+        res = _run_captured(argv, cwd=d, env=ctx["env"], timeout=60)
+        made.append((label, res))
+        if not res.get("ok"):
+            return _b16_out(False, False, _transcript(*made),
+                            "sbsigntool: sign and verify a PE image",
+                            "the PE fixture could not be built",
+                            "the PE fixture could not be built")
+    key, crt = d / "s37.key", d / "s37.crt"
+    gen = _ossl(ap, ["req", "-x509", "-newkey", "rsa:2048", "-sha256", "-nodes", "-days", "2",
+                     "-subj", "/CN=s37-sbsign", "-keyout", str(key), "-out", str(crt)], cwd=d)
+    signed = d / "signed.efi"
+    sign = _run_captured([sbsign, "--key", str(key), "--cert", str(crt), "--output",
+                          str(signed), str(pe)], cwd=d, env=ctx["env"], timeout=60)
+    good = _run_captured([sbverify, "--cert", str(crt), str(signed)], cwd=d, env=ctx["env"],
+                         timeout=60)
+    tampered = d / "tampered.efi"
+    if signed.is_file():
+        blob = bytearray(signed.read_bytes())
+        if blob:
+            blob[-1] ^= 0x01
+        tampered.write_bytes(blob)
+    bad = _run_captured([sbverify, "--cert", str(crt), str(tampered)], cwd=d, env=ctx["env"],
+                        timeout=60)
+    ok = bool(gen.get("ok") and sign.get("ok") and good.get("exit_code") == 0)
+    rejected = bad.get("exit_code") != 0
+    return _b16_out(ok, ok and rejected,
+                    _transcript(("sbsign", sign), ("sbverify signed", good),
+                                ("sbverify tampered", bad)),
+                    "sbsigntool: PKCS#7 signature over a PE image, verified, and a tampered "
+                    "image rejected",
+                    "sbsign/sbverify did not complete the signature round trip",
+                    "a tampered PE image verified")
+
+
+def _wl_podofo(ctx: dict) -> dict:
+    """PoDoFo encrypts a PDF with AES-256 and a wrong password is rejected by the reader."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    root = ctx["root"]
+    txt2pdf = root / "b" / "tools" / "podofotxt2pdf" / "podofotxt2pdf"
+    info = root / "b" / "tools" / "podofopdfinfo" / "podofopdfinfo"
+    text = d / "fixture.txt"
+    text.write_text("s37-podofo-fixture\n", encoding="utf-8")
+    pdf, enc = d / "fixture.pdf", d / "encrypted.pdf"
+    made = _run_captured([str(txt2pdf), str(text), str(pdf)], cwd=d, env=ctx["env"], timeout=60)
+    enc_res = _run_captured([prog, "--aesv3", "-u", "s37-user", "-o", "s37-owner",
+                             str(pdf), str(enc)], cwd=d, env=ctx["env"], timeout=60)
+    good = _run_captured([str(info), "-upw", "s37-user", str(enc)], cwd=d, env=ctx["env"],
+                         timeout=60)
+    bad = _run_captured([str(info), "-upw", "wrong", str(enc)], cwd=d, env=ctx["env"],
+                        timeout=60)
+    ok = bool(made.get("ok") and enc_res.get("ok") and good.get("exit_code") == 0)
+    rejected = bad.get("exit_code") != 0
+    return _b16_out(ok, ok and rejected,
+                    _transcript(("podofotxt2pdf", made), ("podofoencrypt aesv3", enc_res),
+                                ("open with right password", good),
+                                ("open with wrong password", bad)),
+                    "podofo: AES-256 PDF encryption and a right-password open; a wrong "
+                    "password is rejected",
+                    "PoDoFo did not encrypt/open the fixture PDF",
+                    "a wrong password opened the encrypted PDF")
+
+
+def _wl_bind(ctx: dict) -> dict:
+    """dig +tls against a local DoT listener; an unrelated CA is rejected."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    port = _free_port()
+    stop = threading.Event()
+    state: dict = {}
+    thread = _s37_dot(port, pki, state, stop)
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("dot fixture", {"exit_code": 0, "stdout": ""})],
+                            "the local DoT fixture did not open its port", "runtime-failure", d)
+        good = _run_captured([str(ctx["program"]), "+tls", "+tls-ca=" + str(pki["ca_crt"]),
+                              "+tls-hostname=localhost", "-p", str(port), "@127.0.0.1",
+                              "example.test", "A"], cwd=d, env=ctx["env"], timeout=60)
+        bad = _run_captured([str(ctx["program"]), "+tls",
+                             "+tls-ca=" + str(pki["other_crt"]),
+                             "+tls-hostname=localhost", "-p", str(port), "@127.0.0.1",
+                             "example.test", "A"], cwd=d, env=ctx["env"], timeout=60)
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    good_text = good["stdout"] + good["stderr"]
+    bad_text = bad["stdout"] + bad["stderr"]
+    ok = bool(good.get("ok") and "192.0.2.1" in good_text)
+    rejected = "192.0.2.1" not in bad_text or bad.get("exit_code") != 0
+    return _b16_out(ok, ok and rejected,
+                    _transcript(("dig +tls fixture CA", good), ("dig +tls unrelated CA", bad)),
+                    "bind: dig's DNS-over-TLS query answered by a local DoT listener; an "
+                    "unrelated CA is rejected",
+                    "dig +tls did not receive the fixture answer",
+                    "dig +tls accepted the unrelated CA")
+
+
+def _wl_libdkim(ctx: dict) -> dict:
+    """libdkim signs a fixture message and a tampered message has a different body hash."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    key, msg, out = d / "dkim.key", d / "message.eml", d / "signed.eml"
+    gen = _ossl(ctx["authority_prefix"], ["genrsa", "-out", str(key), "2048"], cwd=d)
+    msg.write_text("From: fixture@example\nTo: recipient@example\nSubject: s37\n\nbody\n",
+                   encoding="utf-8")
+    good = _run_captured([prog, str(msg), str(key), str(out)], cwd=d, env=ctx["env"], timeout=60)
+    text = out.read_text(encoding="utf-8", errors="replace") if out.is_file() else ""
+    msg.write_text("From: fixture@example\nTo: recipient@example\nSubject: s37\n\ntampered\n",
+                   encoding="utf-8")
+    out2 = d / "signed-tampered.eml"
+    bad = _run_captured([prog, str(msg), str(key), str(out2)], cwd=d, env=ctx["env"], timeout=60)
+    text2 = out2.read_text(encoding="utf-8", errors="replace") if out2.is_file() else ""
+    ok = bool(gen.get("ok") and good.get("ok") and "DKIM-Signature:" in text)
+    rejected = bool(text2 and text2 != text)
+    return _b16_out(ok, ok and rejected,
+                    _transcript(("libdkim sign", good), ("tampered sign", bad)),
+                    "libdkim: RSA/DKIM signature over a fixture message; a tampered body has a "
+                    "different signature",
+                    "libdkim did not produce a DKIM-Signature",
+                    "a tampered body produced an identical signature")
+
+
+def _wl_xar(ctx: dict) -> dict:
+    """xar creates an archive with SHA-256/SHA-512 TOC checksums and reads them back."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    payload = d / "payload.txt"
+    payload.write_text("xar-s37-fixture\n", encoding="utf-8")
+    arch = d / "fixture.xar"
+    made = _run_captured([prog, "-cf", str(arch), "--toc-cksum", "sha256",
+                          "--file-cksum", "sha256", str(payload)], cwd=d, env=ctx["env"],
+                         timeout=60)
+    sha = _run_captured([prog, "--dump-toc-cksum", "-f", str(arch)], cwd=d, env=ctx["env"],
+                        timeout=60)
+    arch2 = d / "fixture512.xar"
+    made2 = _run_captured([prog, "-cf", str(arch2), "--toc-cksum", "sha512",
+                           "--file-cksum", "sha512", str(payload)], cwd=d, env=ctx["env"],
+                          timeout=60)
+    sha2 = _run_captured([prog, "--dump-toc-cksum", "-f", str(arch2)], cwd=d, env=ctx["env"],
+                         timeout=60)
+    good_text = (sha.get("stdout") or "") + (sha.get("stderr") or "")
+    good2_text = (sha2.get("stdout") or "") + (sha2.get("stderr") or "")
+    ok = bool(made.get("ok") and made2.get("ok") and len(good_text.strip()) > 0 and
+              len(good2_text.strip()) > 0)
+    return _b16_out(ok, ok,
+                    _transcript(("xar sha256", sha), ("xar sha512", sha2)),
+                    "xar: SHA-256 and SHA-512 archive checksums created and read back",
+                    "xar did not create/read the checksummed archive",
+                    "xar did not create/read the checksummed archive")
+
+
+def _wl_digidoc(ctx: dict) -> dict:
+    """libdigidoc's cdigidoc creates, signs and verifies a DDOC container."""
+    d, prog = ctx["workdir"], str(ctx["program"])
+    payload = d / "payload.txt"
+    payload.write_text("digidoc-s37-fixture\n", encoding="utf-8")
+    doc = d / "fixture.ddoc"
+    new = _run_captured([prog, "-new", "-in", str(payload), "-out", str(doc)], cwd=d,
+                        env=ctx["env"], timeout=60)
+    good = _run_captured([prog, "-verify", "-in", str(doc)], cwd=d, env=ctx["env"], timeout=60)
+    ok = bool(new.get("ok") and good.get("ok"))
+    return _b16_out(ok, ok,
+                    _transcript(("cdigidoc new", new), ("cdigidoc verify", good)),
+                    "libdigidoc: DDOC container creation and verification",
+                    "cdigidoc did not create/verify the DDOC container",
+                    "cdigidoc did not create/verify the DDOC container")
+
+
+_S37_PROGRAMS: dict[str, dict] = {
+    "nagios-plugins-tcp": {"program": "plugins/check_tcp", "launch": ["-V"],
+                           "version_re": r"check_tcp"},
+    "sqlcipher": {"program": "sqlcipher", "launch": ["-version"],
+                  "version_re": r"3\.4\.1"},
+    "hydra": {"program": "hydra", "launch": ["-h"], "version_re": r"Hydra v9\.4"},
+    "ncrack": {"program": "ncrack", "launch": ["-V"],
+               "version_re": r"Ncrack version 0\.7"},
+    "medusa": {"program": "src/medusa", "launch": ["-V"],
+               "version_re": r"Medusa v2\.2",
+               "env": {"MEDUSA_MODULE_PATH": "{root}/src/modsrc"},
+               "make_targets": ["-C", "src/modsrc", "http.mod"]},
+    "neomutt": {"program": "neomutt", "launch": ["-v"],
+                "version_re": r"NeoMutt 20220429"},
+    "libdkim1d": {"program": "src/libdkimtest", "launch": ["-h"],
+                  "version_re": r"usage"},
+    "yapet": {"program": "src/converters/yapet2csv/yapet2csv", "launch": ["-V"],
+              "version_re": r"yapet"},
+    "xar": {"program": "xar/src/xar", "launch": ["-h"], "version_re": r"xar"},
+    "perl-net-dns-sec": _s33_perl_program(
+        "perl-net-dns-sec", "l7_perl_net_dns_sec.pl", "Net/DNS/SEC", "SEC.so",
+        ["dnssec_rsa_sign=ok", "dnssec_rsa_verify=ok",
+         "dnssec_corrupt_rejected=rejected", "dnssec_wrong_key_rejected=rejected"],
+        "Net::DNS::SEC 1.20: DNSSEC RSA/SHA-256 sign/verify and corrupt/wrong-key rejects"),
+    "perl-crypt-ssleay": _s33_perl_program(
+        "perl-crypt-ssleay", "l7_perl_crypt_ssleay.pl", "Crypt/SSLeay", "SSLeay.so",
+        ["ssleay_connect=ok", "ssleay_payload=ok", "ssleay_wrong_ca=rejected"],
+        "Crypt::SSLeay 0.73.06: verified TLS connect/payload and unrelated-CA reject", tls=True),
+    "libcrypt-ssleay-perl": _s33_perl_program(
+        "libcrypt-ssleay-perl", "l7_perl_crypt_ssleay.pl", "Crypt/SSLeay", "SSLeay.so",
+        ["ssleay_connect=ok", "ssleay_payload=ok", "ssleay_wrong_ca=rejected"],
+        "the libcrypt-ssleay-perl package row: verified TLS connect/payload and unrelated-CA reject",
+        tls=True),
+    "canl-c": {"program": "client", "launch": ["-h"], "version_re": r"Usage:"},
+    "libdigidoc-tools": {"program": "b/libdigidoc/cdigidoc", "launch": ["-help"],
+                         "version_re": r"USAGE: cdigidoc"},
+    "xml-security-c": {"program": "xsec/xsec-templatesign", "launch": [],
+                       "version_re": r"Usage: templatesign"},
+    "tcl-tls": {"program": ".l7-tcl-harness", "launch": ["--version"],
+                "version_re": r"tcltls-l7-harness", "lib_paths": [],
+                "harness": {"source": "forensics/tools/l7_tcl.c",
+                            "cflags": ["-I{aux}/usr/include/tcl8.6",
+                                       "-DL7_SCRIPT_PATH=\"{repo}/forensics/tools/l7_tcl.tcl\""],
+                            "ldflags": ["-L{aux}/usr/lib/x86_64-linux-gnu",
+                                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                                        "-ltcl8.6", "-lm", "-ldl", "-lpthread"]}},
+    "nmh": {"program": "uip/post", "launch": ["-help"], "version_re": r"post"},
+    "sbsigntool": {"program": "src/sbsign", "launch": ["--version"],
+                   "version_re": r"sbsign"},
+    "podofo": {"program": "b/tools/podofoencrypt/podofoencrypt", "launch": [],
+               "version_re": r"Usage: podofoencrypt"},
+    "bind": {"program": "bin/dig/dig", "launch": ["-v"],
+             "version_re": r"DiG 9\.18\.49",
+             "make_targets": ["-C", "bin/dig", "all"]},
+    "bind9": {"program": "bin/dig/dig", "launch": ["-v"],
+              "version_re": r"DiG 9\.18\.49",
+              "make_targets": ["-C", "bin/dig", "all"]},
+    "lua5.1-sec": {
+        "program": ".l7-luasec-harness", "launch": ["--version"],
+        "version_re": r"luasec-l7-harness", "lib_paths": ["src", "src/luasocket"],
+        "harness": {
+            "source": "forensics/tools/l7_luasec.c",
+            "cflags": ["-I{aux}/usr/include/lua5.1",
+                       "-I{aux}/usr/include/x86_64-linux-gnu",
+                       "-I{prefix}/include",
+                       "-DL7_SCRIPT_PATH=\"{repo}/forensics/tools/l7_luasec.lua\"",
+                       "-DL7_LUA_PATH=\"{root}/src/?.lua\"",
+                       "-DL7_LUA_CPATH=\"{root}/src/?.so\""],
+            "ldflags": ["-L{root}/src", "-L{prefix}/lib",
+                        "-L{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,-rpath,{root}/src", "-Wl,-rpath,{prefix}/lib",
+                        "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+                        "-Wl,--no-as-needed", "-l:ssl.so", "-lssl", "-lcrypto",
+                        "-llua5.1", "-lm", "-ldl", "-lpthread"],
+        },
+        "note": "LuaSec 1.3.2 built for Lua 5.1: verified TLS handshake and unrelated-CA reject",
+    },
+}
+
+# The S37 package-row splits reuse their parent's admitted program and workload; only the
+# package-specific mechanism (cyrus-sasl-ntlm vs digestmd5) or the artifact differs.
+for _new, _base in (
+        ("libcrypt-openssl-bignum-perl", "perl-crypt-openssl-bignum"),
+        ("libcrypt-openssl-dsa-perl", "perl-crypt-openssl-dsa"),
+        ("libcrypt-openssl-random-perl", "perl-crypt-openssl-random"),
+        ("libcrypt-openssl-rsa-perl", "perl-crypt-openssl-rsa"),
+        ("libcrypt-openssl-x509-perl", "perl-crypt-openssl-x509"),
+        ("libcrypt-smime-perl", "perl-crypt-smime"),
+        ("h2o-evloop0.13", "h2o"),
+        ("cyrus-sasl-md5", "cyrus-sasl"),
+        ("libafflib0v5", "afflib"),
+        ("afftools", "afflib"),
+        ("libdcmtk17", "dcmtk"),
+        ("apache2-ssl", "apache2-bin"),
+        ("apache2-http2", "apache2-bin"),
+        ("kea-ctrl-agent", "kea"),
+        ("libduo3", "duo_unix"),
+        ("libcanl-c4", "canl-c"),
+        ("libdigidoc2", "libdigidoc-tools"),
+        ("cyrus-sasl-ntlm", "cyrus-sasl")):
+    PROGRAMS[_new] = copy.deepcopy(PROGRAMS[_base])
+    RUNNERS[_new] = RUNNERS[_base]
+
+PROGRAMS.update(_S37_PROGRAMS)
+RUNNERS.update({
+    "nagios-plugins-tcp": _wl_nagios_tcp,
+    "sqlcipher": _wl_sqlcipher,
+    "hydra": lambda ctx: _wl_https_brute(ctx, "hydra"),
+    "ncrack": lambda ctx: _wl_https_brute(ctx, "ncrack"),
+    "medusa": lambda ctx: _wl_https_brute(ctx, "medusa"),
+    "neomutt": _wl_neomutt,
+    "libdkim1d": _wl_libdkim,
+    "yapet": _wl_yapet,
+    "xar": _wl_xar,
+    "perl-net-dns-sec": _wl_perl,
+    "perl-crypt-ssleay": _wl_perl,
+    "libcrypt-ssleay-perl": _wl_perl,
+    "canl-c": _wl_canl,
+    "libdigidoc-tools": _wl_digidoc,
+    "xml-security-c": _wl_xmlsec,
+    "tcl-tls": _wl_tcltls,
+    "nmh": _wl_nmh,
+    "sbsigntool": _wl_sbsign,
+    "podofo": _wl_podofo,
+    "bind": _wl_bind,
+    "bind9": _wl_bind,
+    "lua5.1-sec": _wl_luasec,
+})
+RUNNERS["cyrus-sasl-ntlm"] = _wl_cyrus_sasl
 
 
 # --------------------------------------------------------------------------------------------
