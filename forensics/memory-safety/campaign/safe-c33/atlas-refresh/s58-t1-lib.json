@@ -1,0 +1,202 @@
+{
+  "schema": "safe-c33/atlas-refresh/s58/v1",
+  "receipt": "s58-t1-lib",
+  "subphase": "S58",
+  "branch": "integrate/safe-c33",
+  "source_head": "90107ceda987752da56e082e65629b8618c3f218",
+  "worktree": "dirty: scripts/adv-probe.sh, src/ssl/ssl_lib.rs, src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs, src/ssl/t1_lib.rs plus this receipt; no commit, no push (subagent)",
+  "date": "2026-10-24",
+  "verification_level": "FAST plus one full-suite BATCH regression run; BATCH serial run, affected compatibility courts and sanitizer/Miri evidence NOT_RUN",
+  "scope": "Object ownership of the TLS peer and negotiated signature-algorithm lists in src/ssl/t1_lib.rs (tls1_save_peer_sigalgs, tls1_save_peer_sigalgs_raw, tls1_save_peer_sigalgs_default, tls1_set_shared_sigalgs, tls1_process_sigalgs, SSL_get_sigalgs, SSL_get_shared_sigalgs), the private (ptr,len) member pairs on Ssl, caller updates in src/ssl/ssl_lib.rs, src/ssl/statem/statem_clnt.rs and src/ssl/statem/statem_srvr.rs, the shared signature_algorithms extension acceptance rule, and one allocator-injection probe registration.",
+  "continuity": {
+    "situation": "A previous subagent implemented the conversion and died before reporting. It left an uncommitted tree that the orchestrator had only observed compiling (`cargo check --lib`).",
+    "left_by_previous_agent": {
+      "diffstat_at_handoff": "scripts/adv-probe.sh +1; src/ssl/ssl_lib.rs +83/-?; src/ssl/statem/statem_clnt.rs +215/-?; src/ssl/statem/statem_srvr.rs +103/-?; src/ssl/t1_lib.rs +1042/-? (1275 insertions, 169 deletions in total)",
+      "present": [
+        "OwnedSigalgs + SigalgsSlot owner design in src/ssl/t1_lib.rs.",
+        "Ssl.peer_sigalgs/peer_sigalgslen and Ssl.shared_sigalgs/shared_sigalgslen changed from pub raw fields to private fields with safe read accessors and unsafe slot derivations.",
+        "The sigalg table extended with sigalg/sigandhash/sig_idx/sec_bits and the three provider (ML-DSA) rows; tls1_lookup_sigalg added.",
+        "tls12_sigalg_allowed, tls12_shared_sigalgs, tls1_set_shared_sigalgs and tls1_process_sigalgs added; callers wired.",
+        "The sigalg vector acceptance rule tightened to require the length-prefixed vector to exhaust the extension body and be non-empty and even.",
+        "t1_lib_sigalgs_tests (8 tests) and client/server malformed-vector tests added; the ignored allocator probe registered in scripts/adv-probe.sh."
+      ],
+      "missing_at_handoff": [
+        "No receipt, no gate output, no test run, no probe run and no reviewer report; the conversion was unverified.",
+        "No commit."
+      ]
+    },
+    "completed_this_session": [
+      "Read and audited the whole diff against the OpenSSL 3.5.9 authority sources in forensics/authorities/src/openssl-3.5.9.",
+      "Ran fmt, check, both requested filtered test runs, clippy --lib, a full library regression run and the registered allocator probe in the court container.",
+      "Found no TODO/FIXME marker, no newly unreachable production branch, no referenced-but-undefined test and no non-compiling probe in the handed-off state.",
+      "Found one place where the new private-field invariant was bypassed by a pre-existing contract test (raw CRYPTO_malloc plus direct writes to Ssl.peer_sigalgs/peer_sigalgslen); changed that test to publish through tls1_save_peer_sigalgs_raw and read through Ssl::peer_sigalgs, so every in-crate publication now has one producer. No production behaviour changed.",
+      "Computed the unsafe before/after figures and wrote this receipt."
+    ]
+  },
+  "owner_design": {
+    "value": "OwnedSigalgs (src/ssl/t1_lib.rs:1015) owns exactly one CRYPTO_malloc block and the element count it was allocated for; the only constructors are from_codes (:1024) and from_scheme_bytes (:1042), each of which allocates the block for exactly codes.len()/count schemes and initialises every slot before the value exists. Its Drop (through OwnedBlock) is the block's single release.",
+    "transfer_boundary": "SigalgsSlot (src/ssl/t1_lib.rs:1071) borrows a connection's two member words. replace (:1098) releases the incumbent and publishes a new list; clear (:1108) releases and publishes (NULL, 0). replace is private to the module, so only an OwnedSigalgs built here can be published; the pair cannot be made to disagree with its allocation through the sanctioned surface.",
+    "connection_surface": "Ssl.peer_sigalgs/peer_sigalgslen and Ssl.shared_sigalgs/shared_sigalgslen are private (src/ssl/ssl_lib.rs:1839-1850). Ssl::peer_sigalgs (:2301) and Ssl::shared_sigalgs (:2325) are safe reads that answer an empty slice for NULL and otherwise derive the extent from the connection's own count; Ssl::peer_sigalgs_slot (:2317) and Ssl::shared_sigalgs_slot (:2339) are unsafe derivations whose contracts require the pair invariant. CtxDestroy releases both through the slots (:3655-3657).",
+    "shared_list_representation": "The negotiated list stores native-endian u16 scheme codes instead of SIGALG_LOOKUP pointers. No exported ABI reads the representation; SSL_get_shared_sigalgs resolves each code through the same static table, so the accessor's NID out-parameters are the authority's lu->hash/lu->sig/lu->sigandhash and rsig/rhash are the code's low/high bytes.",
+    "callback_safety": "tls1_set_shared_sigalgs copies the connection's peer list into a Vec before the shared-list walk invokes the application security callback, so no borrow of connection storage crosses that re-entrancy edge.",
+    "authority_ordering": "A replacement list is allocated before the incumbent is released, preserving tls1_save_u16's parse/allocate-then-store ordering: a refused allocation or a malformed vector leaves the incumbent installed."
+  },
+  "completeness_audit": {
+    "todo_markers": "none in the changed files",
+    "unreachable_code": "no newly unreachable production branch; the only remaining 'unreachable' comments are pre-existing recorded reductions (sigalg/peer_sigalg are never populated; DTLS arms). The removed empty-cache explanation in SSL_get_sigalgs was replaced by a real table lookup.",
+    "referenced_but_undefined_tests": "none; every test named in comments (including t1_lib_sigalgs_client_tls12_empty_vector_is_signature_algorithms_error) is defined and ran",
+    "registered_probe": "scripts/adv-probe.sh:39 names ssl::t1_lib::t1_lib_sigalgs_tests::t1_lib_sigalgs_repeated_save_releases_the_incumbent_by_address, which is defined at src/ssl/t1_lib.rs:1965 and passes when run alone with OPENSSL_RS_ADV_PROBE=1",
+    "accessor_population": "shared_sigalgs is populated by tls1_set_shared_sigalgs and cleared by tls1_process_sigalgs through the server ClientHello path and both client CertificateRequest paths; it is not an accessor over a never-written field",
+    "invariant_bypass_found_and_fixed": "src/ssl/ssl_lib.rs contract_tests::a_context_swap_rebuilds_the_cert_slots_and_preserves_connection_state previously allocated the peer list with CRYPTO_malloc and wrote the two fields directly; it now calls tls1_save_peer_sigalgs_raw and reads Ssl::peer_sigalgs. The block was a valid single allocation before the change (no UB), but the 'one producer' claim is now true."
+  },
+  "coverage_map": {
+    "empty_list": [
+      "src/ssl/t1_lib.rs:1664 malformed_vectors (zero-length vector)",
+      "src/ssl/statem/statem_clnt.rs:5747 TLS1.3 CertificateRequest",
+      "src/ssl/statem/statem_clnt.rs:5792 TLS1.2 CertificateRequest",
+      "src/ssl/statem/statem_srvr.rs:9418 ClientHello"
+    ],
+    "odd_length": [
+      "src/ssl/t1_lib.rs:1664 malformed_vectors",
+      "src/ssl/statem/statem_clnt.rs:5816 TLS1.2 CertificateRequest",
+      "src/ssl/statem/statem_srvr.rs:9431 ClientHello"
+    ],
+    "unknown_code_points": ["src/ssl/t1_lib.rs:1706"],
+    "duplicates": ["src/ssl/t1_lib.rs:1753", "src/ssl/t1_lib.rs:1836 (duplicate preference entries preserved in the shared list)"],
+    "oversized_list": ["src/ssl/t1_lib.rs:1664 (declared length 0xfffe)", "src/ssl/statem/statem_srvr.rs:9459"],
+    "length_disagrees_with_extension": [
+      "src/ssl/t1_lib.rs:1664 (trailing byte after the declared vector)",
+      "src/ssl/t1_lib.rs:1945 negative control records that the pre-fix predicate accepted it",
+      "src/ssl/statem/statem_clnt.rs:5769",
+      "src/ssl/statem/statem_srvr.rs:9446"
+    ],
+    "repeated_save_releases_incumbent_by_address": ["src/ssl/t1_lib.rs:1965 (ignored probe; run alone)"],
+    "accessor_agreement_with_authority": [
+      "src/ssl/t1_lib.rs:1783 SSL_get_sigalgs table columns (including a provider row and an unknown code point)",
+      "src/ssl/t1_lib.rs:1836 SSL_get_shared_sigalgs ordering, unknown/un-offered skipping, duplicate preservation, SSL_OP_SERVER_PREFERENCE ordering, provider row, empty state"
+    ]
+  },
+  "tests": [
+    { "name": "t1_lib_sigalgs_malformed_vectors_are_refused_without_touching_the_incumbent", "location": "src/ssl/t1_lib.rs:1664", "result": "ok" },
+    { "name": "t1_lib_sigalgs_unknown_code_points_are_stored_and_resolve_to_nid_undef", "location": "src/ssl/t1_lib.rs:1706", "result": "ok" },
+    { "name": "t1_lib_sigalgs_duplicates_are_preserved", "location": "src/ssl/t1_lib.rs:1753", "result": "ok" },
+    { "name": "t1_lib_sigalgs_get_sigalgs_matches_the_authority_table", "location": "src/ssl/t1_lib.rs:1783", "result": "ok" },
+    { "name": "t1_lib_sigalgs_shared_list_matches_the_authority", "location": "src/ssl/t1_lib.rs:1836", "result": "ok" },
+    { "name": "t1_lib_sigalgs_owned_list_extent_matches_its_allocation", "location": "src/ssl/t1_lib.rs:1932", "result": "ok" },
+    { "name": "t1_lib_sigalgs_negative_control_trailing_bytes", "location": "src/ssl/t1_lib.rs:1945", "result": "ok" },
+    { "name": "t1_lib_sigalgs_repeated_save_releases_the_incumbent_by_address", "location": "src/ssl/t1_lib.rs:1965", "result": "ok (ignored; run alone with OPENSSL_RS_ADV_PROBE=1)" },
+    { "name": "t1_lib_sigalgs_client_tls13_empty_vector_is_decode_bad_extension", "location": "src/ssl/statem/statem_clnt.rs:5747", "result": "ok" },
+    { "name": "t1_lib_sigalgs_client_tls13_trailing_bytes_is_decode_bad_extension", "location": "src/ssl/statem/statem_clnt.rs:5769", "result": "ok" },
+    { "name": "t1_lib_sigalgs_client_tls12_empty_vector_is_signature_algorithms_error", "location": "src/ssl/statem/statem_clnt.rs:5792", "result": "ok" },
+    { "name": "t1_lib_sigalgs_client_tls12_odd_vector_is_signature_algorithms_error", "location": "src/ssl/statem/statem_clnt.rs:5816", "result": "ok" },
+    { "name": "t1_lib_sigalgs_server_empty_vector_is_decode_bad_extension", "location": "src/ssl/statem/statem_srvr.rs:9418", "result": "ok" },
+    { "name": "t1_lib_sigalgs_server_odd_vector_is_decode_bad_extension", "location": "src/ssl/statem/statem_srvr.rs:9431", "result": "ok" },
+    { "name": "t1_lib_sigalgs_server_trailing_bytes_is_decode_bad_extension", "location": "src/ssl/statem/statem_srvr.rs:9446", "result": "ok" },
+    { "name": "t1_lib_sigalgs_server_over_long_vector_is_decode_bad_extension", "location": "src/ssl/statem/statem_srvr.rs:9459", "result": "ok" },
+    { "name": "ssl::ssl_lib::contract_tests::a_context_swap_rebuilds_the_cert_slots_and_preserves_connection_state", "location": "src/ssl/ssl_lib.rs:14444 (rewritten publication)", "result": "ok" }
+  ],
+  "probe_run": {
+    "registration": "scripts/adv-probe.sh:39",
+    "command": "OPENSSL_RS_ADV_PROBE=1 cargo test --lib -- --ignored --exact ssl::t1_lib::t1_lib_sigalgs_tests::t1_lib_sigalgs_repeated_save_releases_the_incumbent_by_address --test-threads=1 --nocapture",
+    "result_line": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2192 filtered out; finished in 0.01s",
+    "note": "The exact command in the task omits OPENSSL_RS_ADV_PROBE=1; without it require_installed() fails loudly by design, so the probe must be run as scripts/adv-probe.sh does (or with that variable set)."
+  },
+  "gate": {
+    "fmt": "cargo fmt --all -- --check -> exit 0, no output",
+    "check": "cargo check --lib -> Checking openssl-rs v0.0.37 (/work); Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.20s",
+    "filtered_sigalgs": "cargo test --lib t1_lib_sigalgs -- --test-threads=4 -> test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 2177 filtered out; finished in 0.01s",
+    "filtered_t1_lib": "cargo test --lib t1_lib -- --test-threads=4 -> test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 2177 filtered out; finished in 0.01s",
+    "clippy_lib": "cargo clippy --lib -- -D warnings -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.88s (no warnings)",
+    "clippy_all_targets": "NOT PASS (pre-existing, not introduced by S58): cargo clippy --all-targets -- -D warnings reports 10 test-target lints -- undocumented_unsafe_blocks at src/cms/cms_pwri.rs:1065, src/pkcs7/pk7_doit.rs:2475, src/ssl/statem/statem_clnt.rs:6424, src/ssl/statem/statem_srvr.rs:9394, src/ssl/tls13_enc.rs:2554/2561/2571/2582/2588, and absurd_extreme_comparisons at src/ssl/statem/statem_clnt.rs:6324. Every cited line was verified byte-identical in HEAD 90107ceda, and none is inside an S58 hunk.",
+    "full_library_test": "cargo test --lib -- --test-threads=4 -> test result: ok. 2148 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 147.17s",
+    "full_serial": "NOT_RUN (BATCH serial gate)",
+    "baseline_floor": "1962 passed / 0 failed / 42 ignored at a8676158f; this run has no removals and adds tests (2148 passed / 45 ignored)",
+    "structural": {
+      "no_mangle_diff_lines": 0,
+      "repr_c_diff_lines": 0,
+      "allocator_seam": "src/runtime/mem.rs is not in the diff; CRYPTO_malloc (line 498) and CRYPTO_free (line 834) are unchanged. The peer-list allocation keeps the authority's byte count (2 * count) at file ssl/t1_lib.c, line 0; the shared-list allocation is 2 * count because the crate stores u16 codes rather than SIGALG_LOOKUP pointers (recorded divergence). The release functions and their file/line metadata are the pre-existing ones.",
+      "exports": "all #[no_mangle] exports and #[repr(C)] layouts unchanged"
+    },
+    "environment": "All commands ran in docker/openssl-rs-court.sh exec with CARGO_BUILD_JOBS=4, TMPDIR=/work/court/tmp, CARGO_TARGET_DIR=/work/court/target. docker/ was not edited. Host MemAvailable was 58-59 GiB before the full run; the court stayed at 0 OOM events."
+  },
+  "unsafe": {
+    "definition": "Lexical counts from forensics/tools/unsafe_footprint.py `_metrics`; 'production' excludes #[cfg(test)] items by brace-matched attribute stripping; 'total' is the whole file.",
+    "per_file": [
+      {
+        "file": "src/ssl/t1_lib.rs",
+        "production_before": { "unsafe_blocks": 52, "unsafe_fns": 11, "unsafe_sites": 72 },
+        "production_after": { "unsafe_blocks": 62, "unsafe_fns": 15, "unsafe_sites": 86 },
+        "total_before": { "unsafe_blocks": 52, "lines": 1192 },
+        "total_after": { "unsafe_blocks": 70, "lines": 2034 }
+      },
+      {
+        "file": "src/ssl/ssl_lib.rs",
+        "production_before": { "unsafe_blocks": 764, "unsafe_fns": 75, "unsafe_sites": 1234 },
+        "production_after": { "unsafe_blocks": 768, "unsafe_fns": 77, "unsafe_sites": 1240 },
+        "total_before": { "unsafe_blocks": 862, "lines": 14644 },
+        "total_after": { "unsafe_blocks": 866, "lines": 14708 }
+      },
+      {
+        "file": "src/ssl/statem/statem_clnt.rs",
+        "production_before": { "unsafe_blocks": 258, "unsafe_fns": 38, "unsafe_sites": 296 },
+        "production_after": { "unsafe_blocks": 261, "unsafe_fns": 38, "unsafe_sites": 299 },
+        "total_before": { "unsafe_blocks": 319, "lines": 6515 },
+        "total_after": { "unsafe_blocks": 326, "lines": 6648 }
+      },
+      {
+        "file": "src/ssl/statem/statem_srvr.rs",
+        "production_before": { "unsafe_blocks": 264, "unsafe_fns": 49, "unsafe_sites": 313 },
+        "production_after": { "unsafe_blocks": 263, "unsafe_fns": 49, "unsafe_sites": 312 },
+        "total_before": { "unsafe_blocks": 380, "lines": 10089 },
+        "total_after": { "unsafe_blocks": 379, "lines": 10158 }
+      }
+    ],
+    "eliminated": [
+      "alloc_peer_sigalgs (manual CRYPTO_free of the incumbent, hand-checked multiply, raw store and separate length write) was removed; allocation and publication are now the OwnedSigalgs constructors plus SigalgsSlot::replace.",
+      "Caller-computed (pointer, length) slice construction in SSL_get_sigalgs, SSL_get_shared_sigalgs, tls13_construct_cert_verify, tls12_sign and the client test helper `saved`: all now read one invariant-checked accessor whose extent is the allocation's own count.",
+      "Crate-wide mutability of Ssl.peer_sigalgs/shared_sigalgs: both fields are private, so no caller outside the owner/transfer code can publish a length that disagrees with the block.",
+      "The direct raw publication of the pair in ssl_lib contract_tests (raw CRYPTO_malloc plus two field writes): now routed through tls1_save_peer_sigalgs_raw.",
+      "A re-entrancy hazard in the shared-list walk: the peer list is copied before the application security callback runs, so no connection borrow survives the callback."
+    ],
+    "relocated": [
+      "List provenance, extent, alignment and the single release are now OwnedBlock::malloc / OwnedBlock::Drop, reached only through OwnedSigalgs.",
+      "The (ptr, len) transfer lifecycle is now SigalgsSlot::replace (release-then-publish a pre-built list) and SigalgsSlot::clear (release and publish NULL/0); CtxDestroy releases both lists through those handles.",
+      "The authority's parse/allocate-before-release ordering is retained by building the OwnedSigalgs value before replace() frees the incumbent."
+    ],
+    "introduced": [
+      "Private-field invariant: Ssl.peer_sigalgs/peer_sigalgslen and Ssl.shared_sigalgs/shared_sigalgslen are either (NULL, 0) or one exclusively owned CRYPTO_* block of exactly len initialised u16s. Documented on the fields and both safe accessors.",
+      "SigalgsSlot::of and SigalgsSlot::clear contracts (live connection member pair; exclusive borrow; incumbent is the connection's own single block).",
+      "OwnedSigalgs::from_codes/from_scheme_bytes internal initialisation contracts (every slot written before the value exists; checked extent).",
+      "Live-connection contracts on tls12_sigalg_allowed, tls12_shared_sigalgs, tls1_set_shared_sigalgs and tls1_process_sigalgs.",
+      "The static-table lookup answers the admitted build's availability; unknown or unavailable code points answer NID_undef in all three NID out-parameters."
+    ],
+    "hidden": 0,
+    "hidden_note": "Every new unsafe operation carries a SAFETY contract, and the private fields have one producer family after the test fix. Recorded reductions (provider availability, default-only configured lists, permissive default security callback, u16 shared-list representation) are stated in the module header, not left hidden."
+  },
+  "grading": {
+    "mechanism": "TLS peer and shared signature-algorithm list ownership and accessors",
+    "state": "OWNERSHIP_RECONSTRUCTED",
+    "not_SAFETY_DISCHARGED_because": [
+      "No independent reviewer/adversarial review, Miri/ASan run, allocator differential court or authority executable differential was produced at this level (AGENTS §7 condition 3, §21 lifecycle).",
+      "Row availability is assumed from the admitted build's default provider; a caller-supplied libctx with a different provider set is not re-probed (recorded reduction).",
+      "The configured/preference lists are the default CLIENT_SIGALGS only; client_sigalgs/conf_sigalgs and Suite B are not modelled, and ssl_cert_is_disabled is a constant false stub.",
+      "The default security callback is permissive, so the authority's level-1 SHA-1 rejection is not reproduced unless the application installs a callback.",
+      "The shared list is stored as u16 codes, so its allocator-observable size is 2 * count rather than sizeof(SIGALG_LOOKUP *) * count.",
+      "C-ABI caller lifetime obligations (a live connection for every unsafe entry point) remain external."
+    ],
+    "residuals": [
+      "Allocation-refusal ordering: tls1_set_shared_sigalgs leaves the incumbent shared list installed when the new block cannot be allocated, while the authority clears it first. Both callers treat the refusal as fatal and no accessor is reached after the fatal; recorded rather than restructured.",
+      "No-shared rejection: the reduced server ClientHello path does not reproduce tls1_set_server_sigalgs' SSL_R_NO_SHARED_SIGNATURE_ALGORITHMS fatal when the peer list intersects nothing; the shared list is simply empty. This is a pre-existing handshake reduction outside S58's ownership scope.",
+      "Absent extension on a repeated client TLS1.3 CertificateRequest: the branch stores the client defaults and does not recompute the shared list. The authority does not clear peer_sigalgs between requests either, so a repeated request without the extension recomputes from the same stale peer list and yields the same answer in the ordinary case; a configuration/security-state change between requests would diverge. Not memory-unsafe; recorded.",
+      "Recorded reductions from the module header: no per-context sigalg cache, default-only configured lists, permissive default security callback, reduced certificate path does not model valid_flags.",
+      "Pre-existing test-target clippy failures (see gate.clippy_all_targets) remain; they are outside this diff.",
+      "No authority differential, sanitizer, Miri or Loom run at this level; the full serial library suite was not run."
+    ],
+    "not_established": [
+      "No authority executable differential; compatibility claims are source-level against openssl-3.5.9.",
+      "No allocator-failure injection forced the shared-list allocation refusal (the probe covers the peer-list refusal and replacement); the shared-list refusal arm is inspected, not executed.",
+      "No Miri, Loom, ASan or mutation run.",
+      "The full serial library suite is NOT_RUN (BATCH gate)."
+    ]
+  }
+}
