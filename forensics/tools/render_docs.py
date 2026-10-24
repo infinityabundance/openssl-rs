@@ -253,16 +253,23 @@ def publish_identity(refresh: Path, root: Path, version: str) -> dict:
     published = [r for r in receipts if r.get("status") == "PUBLISHED"]
     if not published:
         raise RenderError("no PUBLISHED receipt under atlas-refresh/")
-    latest = max(published, key=lambda r: (r.get("date", ""), r.get("version", "")))
+    ordered = sorted(
+        published, key=lambda r: (r.get("date", ""), r.get("version", ""))
+    )
+    latest = ordered[-1]
+    previous = ordered[-2] if len(ordered) > 1 else None
     verification = latest.get("registry_verification") or {}
     artefacts = latest.get("artefacts") or {}
+    published_version = latest.get("version", version)
     return {
-        "version": latest.get("version", version),
+        "version": published_version,
         "date": latest.get("date", ""),
         "checksum": verification.get("checksum_prefix", ""),
         "libcrypto": str(artefacts.get("libcrypto.so.3", ""))[:8],
         "libssl": str(artefacts.get("libssl.so.3", ""))[:8],
-        "source": f"atlas-refresh/publish-{latest.get('version', version)}.json",
+        "source": f"atlas-refresh/publish-{published_version}.json",
+        "is_candidate": published_version == version,
+        "previous": (previous or {}).get("version", ""),
     }
 
 
@@ -512,7 +519,15 @@ class Evidence:
         bits = []
         if self.candidate["commit"]:
             bits.append(f"candidate commit `{self.candidate['commit']}`")
-        bits.append(f"working-tree crate version `{self.version}` (**not published**)")
+        if self.publish["is_candidate"]:
+            bits.append(
+                f"crate version `{self.version}` (**published** "
+                f"{self.publish['date']}, checksum `{self.publish['checksum']}…`)"
+            )
+        else:
+            bits.append(
+                f"working-tree crate version `{self.version}` (**not published**)"
+            )
         bits.extend(
             f"`{name}` sha256 `{digest}`" for name, digest in self.candidate["libs"]
         )
@@ -639,18 +654,40 @@ class Evidence:
                 f"`{STATUS_S}` (`structural_invariants`) |",
                 "| **Known gaps** | " + (gap_bits or "none recorded") + " | "
                 f"`{STATUS_S}` (`known_gaps`) |",
-                "| **Release** | "
-                f"**Published: {self.publish['version']}** on crates.io "
-                f"({self.publish['date']}), checksum `{self.publish['checksum']}…`, "
-                f"artefacts `libcrypto.so.3` `{self.publish['libcrypto']}…` / "
-                f"`libssl.so.3` `{self.publish['libssl']}…`. **Working tree: "
-                f"{self.version} — not published.** This evidence is bound to the "
-                f"{self.version} tree, not to the published {self.publish['version']} "
-                "crate. | "
+                "| **Release** | " + self.release_text() + " | "
                 f"`{self.publish['source']}`; `Cargo.toml` |",
                 "",
                 reuse_text,
             ]
+        )
+
+    def release_text(self) -> str:
+        """The published release, and whether it is the candidate tree itself.
+
+        The published version and the tree version are separate facts. When a
+        receipt names the tree version, the tree is released and the row must say
+        so instead of repeating a stale "not published" claim.
+        """
+        published = (
+            f"**Published: {self.publish['version']}** on crates.io "
+            f"({self.publish['date']}), checksum `{self.publish['checksum']}…`, "
+            f"artefacts `libcrypto.so.3` `{self.publish['libcrypto']}…` / "
+            f"`libssl.so.3` `{self.publish['libssl']}…`."
+        )
+        if self.publish["is_candidate"]:
+            previous = (
+                f" {self.publish['previous']} remains the previous release."
+                if self.publish["previous"]
+                else ""
+            )
+            return (
+                f"{published} This evidence is bound to the {self.version} tree, "
+                f"which is the published {self.publish['version']} crate.{previous}"
+            )
+        return (
+            f"{published} **Working tree: {self.version} — not published.** This "
+            f"evidence is bound to the {self.version} tree, not to the published "
+            f"{self.publish['version']} crate."
         )
 
     def l7_families(self) -> str:
@@ -886,18 +923,38 @@ class Evidence:
                 f"| candidate identity | {self.identity_text()} | "
                 f"`{ATLAS_S}` (`body.candidate_identity`); `Cargo.toml` |",
                 "| working-tree version | "
-                f"**{self.version}** — **not published** | `Cargo.toml` |",
+                + (
+                    f"**{self.version}** — **published** on crates.io "
+                    f"({self.publish['date']}, checksum "
+                    f"`{self.publish['checksum']}…`) | `Cargo.toml`; "
+                    f"`{self.publish['source']}` |"
+                    if self.publish["is_candidate"]
+                    else f"**{self.version}** — **not published** | `Cargo.toml` |"
+                ),
                 "| published release | "
                 f"**{self.publish['version']}** on crates.io ({self.publish['date']}, "
                 f"checksum `{self.publish['checksum']}…`), artefacts "
                 f"`libcrypto.so.3` `{self.publish['libcrypto']}…` / "
                 f"`libssl.so.3` `{self.publish['libssl']}…` | "
                 f"`{self.publish['source']}` |",
-                "| evidence binding | the evidence in this table is bound to the "
-                f"**{self.version} tree**, not to the published "
-                f"{self.publish['version']} crate; downstream rows are bound to the "
-                "candidate identity recorded in the atlas | this document; "
-                f"`{ATLAS_S}` (`body.candidate_identity`, `body.evidence_reuse`) |",
+                "| evidence binding | "
+                + (
+                    f"the evidence in this table is bound to the "
+                    f"**{self.version} tree**, which is the published "
+                    f"{self.publish['version']} crate; downstream rows are bound to "
+                    "the candidate identity recorded in the atlas | this document; "
+                    f"`{ATLAS_S}` (`body.candidate_identity`, "
+                    "`body.evidence_reuse`) |"
+                    if self.publish["is_candidate"]
+                    else (
+                        "the evidence in this table is bound to the "
+                        f"**{self.version} tree**, not to the published "
+                        f"{self.publish['version']} crate; downstream rows are bound "
+                        "to the candidate identity recorded in the atlas | this "
+                        f"document; `{ATLAS_S}` (`body.candidate_identity`, "
+                        "`body.evidence_reuse`) |"
+                    )
+                ),
                 test_row(self.tests, "library tests", verb="passed"),
                 "| cohort | "
                 f"**{self.consumers['l7_functional']}/{self.consumers['families_total']}** "
