@@ -1,0 +1,283 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S42-REVERIFY-ALL",
+  "date": "2026-10-24",
+  "subphase": "S42: full no-reuse downstream re-measurement after S39 (record layer), S40 (AES-GCM provider) and S41 (ASN.1 decoder)",
+  "branch": "integrate/safe-c33",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+    "cargo_build_jobs": 4,
+    "cargo_target_dir_note": "the Phase-2 script pins CRATE=/work/target/release, so CARGO_TARGET_DIR was not overridden for that command (same constraint recorded in S35); the downstream build/link and runtime tools do not invoke cargo",
+    "src_changed_this_subphase": false,
+    "docker_changed_this_subphase": false
+  },
+  "source_identity": {
+    "head": "e832606b7630e426c09b53ba3b239bc307022445",
+    "head_short": "e832606b7",
+    "head_subject": "Merge stage/p25/asn1-cursor",
+    "authority": "openssl-3.6.4-production (forensics/authorities/prefix/openssl-3.6.4-production)",
+    "candidate_identity": {
+      "install_prefix": "artifacts/phase2/install",
+      "libcrypto_so_3_sha256": "268420cb1c9effa10b25fe1463522f3a11c070ca35ceb039d21cb9ce20d683e3",
+      "libssl_so_3_sha256": "a380ecd6ee257f3a321ccdb0a1da68e9d0eb5f2ff271ed873aaf5bcad01605d9"
+    },
+    "superseded_candidate_identity": {
+      "libcrypto_so_3_sha256": "64dec4c7f276ff7970b4d75488cad6fa66d8d95502d2b58b19a4b7a89e119aa7",
+      "libssl_so_3_sha256": "b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6"
+    },
+    "atlases": {
+      "build_link_sha256": "511d08fc2bae9d7619f002f72ebf026a3c01424c051d68bf50d5625621f23e7e",
+      "runtime_functional_sha256": "0c41c854f32694f4ba1213a752f5a594d40b4eb51fcac592ac31aa604eaab535"
+    },
+    "changed_functions_under_test": {
+      "S39": [
+        "src/ssl/record/rec_layer_s3.rs: accumulated, ssl3_read_bytes, ssl3_read_bytes_rlayer_return, ssl3_read_one_record, tls13_next_handshake_message",
+        "src/ssl/t1_enc.rs: tls12_decrypt_record",
+        "src/ssl/tls13_enc.rs: tls13_decrypt_record"
+      ],
+      "S40": [
+        "src/provider/cipher_gcm.rs: ctr64_inc, getivgen, gcm_tls_iv_set_fixed, gcm_tls_cipher"
+      ],
+      "S41": [
+        "src/asn1/d2i.rs: check_eoc, Collected, collect, check_tlen, d2i_ex_primitive, embed_d2i, mstring_d2i, template_ex_d2i, template_noexp_d2i, find_end"
+      ]
+    }
+  },
+  "why_no_reuse": "S39 sits under every TLS consumer's record/app-data path, S40 under every AEAD consumer's TLS-AAD path, and S41 under every d2i/ASN.1 parser. The pre-run atlas, 180 candidate L7 of 183 loaded with 192 recipes, was itself carried forward (evidence_reuse.mode=committed-rows, 191 families reused from the superseded identity), so none of it was inherited: both tools were run with --measure only, no --only, no --reuse-committed and no --reuse-previous-candidate.",
+  "task_a_rebuild_and_abi": {
+    "command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh (court container)",
+    "install_rebuilt": true,
+    "build_rc": 0,
+    "abi_courts": {
+      "count": 11,
+      "all_pass": true,
+      "names": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "receipt": "artifacts/phase2/COURTS.json all_pass=True"
+    }
+  },
+  "task_b_measurement": {
+    "evidence_reuse": null,
+    "reuse_flags": "none",
+    "commands": [
+      "python3 forensics/tools/downstream_build_link.py --measure",
+      "python3 forensics/tools/downstream_runtime.py --measure"
+    ],
+    "tool_summary_build_link": [
+      "[downstream-build-link] elapsed=3962s with_recipe=192 no_recipe=808",
+      "  authority configured=191 built=190 linked=190 failed=1",
+      "  candidate configured=191 built=190 linked=190 failed=1",
+      "  candidate_linkage_proven=190 candidate_specific_patch_count=0",
+      "  -> forensics/downstream/build-link-atlas.json"
+    ],
+    "tool_summary_runtime": [
+      "[downstream-runtime] elapsed=5140s with_recipe=192 no_recipe=808",
+      "  authority loaded=180 runtime=178 functional=177 failed=3 not_attempted=811",
+      "  candidate loaded=180 runtime=178 functional=177 failed=3 not_attempted=811",
+      "  candidate_reaches_baseline=192 reaches_linked_baseline=189 below_baseline=0 baseline_not_linked=3 candidate_failures={'acquire-failure': 809, 'runtime-failure': 2, 'load-failure': 1, 'link-failure': 2}"
+    ],
+    "checks": {
+      "runtime_check": "[downstream-runtime] with_recipe=192 cand_loaded=180 cand_functional=177 reaches_baseline=192 findings=0 control honest=True (RC=0)",
+      "build_link_check": "[downstream-build-link] with_recipe=192 candidate_linked=190 linkage_proven=190 findings=0 control honest=True (RC=0)"
+    },
+    "atlases_candidate_identity_set": true,
+    "atlases_evidence_reuse_null": true,
+    "candidate_identity_in_both_atlases": {
+      "libcrypto_so_3_sha256": "268420cb1c9effa10b25fe1463522f3a11c070ca35ceb039d21cb9ce20d683e3",
+      "libssl_so_3_sha256": "a380ecd6ee257f3a321ccdb0a1da68e9d0eb5f2ff271ed873aaf5bcad01605d9"
+    }
+  },
+  "before_after": {
+    "before_source": "committed atlases at e832606b7 before this run; evidence_reuse.mode=committed-rows, 191 families reused from libcrypto 64dec4c7/libssl b258b12f; not a current-candidate measurement",
+    "before": {
+      "recipe_backed": 192,
+      "authority": {"loaded": 183, "runtime": 181, "functional": 180, "failed": 2, "not_attempted": 809},
+      "candidate": {"loaded": 183, "runtime": 181, "functional": 180, "failed": 2, "not_attempted": 809},
+      "candidate_levels": {"L7-functional": 180, "L6-runtime": 1, "L5-loaded": 2, "L4-linked": 8, "L2-configured": 1, "L0-catalogued": 808},
+      "candidate_below_baseline": 0,
+      "candidate_baseline_not_linked": 1
+    },
+    "after": {
+      "recipe_backed": 192,
+      "authority": {"loaded": 180, "runtime": 178, "functional": 177, "failed": 3, "not_attempted": 811},
+      "candidate": {"loaded": 180, "runtime": 178, "functional": 177, "failed": 3, "not_attempted": 811},
+      "candidate_levels": {"L7-functional": 177, "L6-runtime": 1, "L5-loaded": 2, "L4-linked": 9, "L2-configured": 1, "L0-catalogued": 810},
+      "candidate_below_baseline": 0,
+      "candidate_baseline_not_linked": 3,
+      "candidate_specific_patch_count": 0
+    },
+    "delta": {
+      "loaded": -3,
+      "runtime": -3,
+      "functional": -3,
+      "candidate_only_changes": 0,
+      "authority_identical_to_candidate": true,
+      "composition": "the three lost families (dma, libssh, sslscan) fell for both subjects by the same amount and the same causes; no family rose and no family changed grade for only one subject"
+    }
+  },
+  "regressions": [
+    {
+      "family": "libssh",
+      "old_grade": "L7-functional",
+      "new_grade": "L0-catalogued",
+      "authority_also_dropped": true,
+      "authority_this_run": "L0-catalogued",
+      "failure_class": "acquire-failure (build/link); the runtime row derives link-failure because nothing reached L4",
+      "failing_call": "curl -sSL --fail --retry 2 --retry-delay 2 --max-time 300 -o {scratch}/libssh/source.tar.xz https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz",
+      "authority_value": "curl exit 7: Failed to connect to www.libssh.org port 443 after 140 ms: Couldn't connect to server (elapsed 0.145 s)",
+      "candidate_value": "curl exit 7: identical failure, same URL and elapsed time",
+      "causal_region_in_src": null,
+      "classification": "ENVIRONMENT",
+      "evidence": "the source host was still unreachable from the court after the run: curl -sSIL https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz -> curl (7) after 131 ms (http=000, no remote IP). No candidate build or run ever happened, and the authority failed identically."
+    },
+    {
+      "family": "sslscan",
+      "old_grade": "L7-functional",
+      "new_grade": "L0-catalogued",
+      "authority_also_dropped": true,
+      "authority_this_run": "L0-catalogued",
+      "failure_class": "acquire-failure (runtime re-acquisition; the build/link pass had succeeded)",
+      "failing_call": "fetching the pristine source from https://github.com/rbsec/sslscan/archive/refs/tags/2.1.5.tar.gz -> curl: (6) Could not resolve host: github.com",
+      "authority_value": "curl (6) Could not resolve host: github.com",
+      "candidate_value": "curl (6) identical",
+      "causal_region_in_src": null,
+      "classification": "ENVIRONMENT",
+      "evidence": "the build/link run had already fetched and built sslscan (extract exit 0, make exit 0); the later runtime run's own acquisition hit a transient DNS failure. The host was reachable after the run: curl -sSIL ... -> http=200, ip=20.250.119.71. Both subjects failed identically."
+    },
+    {
+      "family": "dma",
+      "old_grade": "L7-functional",
+      "new_grade": "L4-linked",
+      "authority_also_dropped": true,
+      "authority_this_run": "L4-linked",
+      "failure_class": "load-failure",
+      "failing_call": "dma -q (the harness's version/load probe)",
+      "authority_value": "transcript: exit=66, 'dma: reading queue: No such file or directory'",
+      "candidate_value": "transcript: exit=66, 'dma: reading queue: No such file or directory'",
+      "causal_region_in_src": null,
+      "classification": "HARNESS",
+      "evidence": "the built program starts, resolves libcrypto.so.3/libssl.so.3 under the subject prefix (link.all_under_prefix=true) and then refuses the -q invocation before reaching any OpenSSL operation; both subjects produce the same exit and stderr. The launch probe, not the library, is the cause. The previously recorded L7 row was inherited (evidence_reuse=committed-rows); the full no-reuse run exposed the latent probe defect."
+    }
+  ],
+  "non_l7_classification": {
+    "taxonomy": [
+      "HARNESS: the venue's launch/version probe or workload catalogue is the limiting factor",
+      "ENVIRONMENT: source host, network/DNS, container device or consumer toolchain is the limiting factor",
+      "SOURCE-UNREACHABLE: no admitted pristine-source recipe exists, so the family was never buildable in this venue",
+      "IMPLEMENTATION: the candidate library behaves worse than the authority",
+      "FIXTURE: the consumer workload setup does not establish the condition it needs, identically under both subjects"
+    ],
+    "candidate_level_counts": {
+      "L7-functional": 177,
+      "L6-runtime": 1,
+      "L5-loaded": 2,
+      "L4-linked": 9,
+      "L2-configured": 1,
+      "L0-catalogued": 810
+    },
+    "counts": {
+      "L7-functional": 177,
+      "non_l7_total": 823,
+      "HARNESS": 9,
+      "ENVIRONMENT": 4,
+      "SOURCE-UNREACHABLE": 808,
+      "IMPLEMENTATION": 0,
+      "FIXTURE": 2
+    },
+    "families": [
+      {"family": "dma", "level": "L4-linked", "failure_class": "load-failure", "classification": "HARNESS", "evidence": "dma -q exits 66 'reading queue: No such file or directory' under both subjects; load resolution succeeded"},
+      {"family": "charybdis", "level": "L5-loaded", "failure_class": "runtime-failure", "classification": "FIXTURE", "evidence": "'Don't run ircd as root!!!' then the setpriv euid-drop workload did not listen or greet over TLS under both subjects; load proof present for both"},
+      {"family": "libshout", "level": "L5-loaded", "failure_class": "runtime-failure", "classification": "FIXTURE", "evidence": "SOURCE stream to the Icecast peer did not complete over TLS under both subjects; load proof present for both"},
+      {"family": "libcxxtools10", "level": "L2-configured", "failure_class": "link-failure (build/link row: build failure)", "classification": "ENVIRONMENT", "evidence": "cxxtools' own serializationerror.cpp fails to compile with the same g++ command under the authority and candidate include prefixes (make exit 2 in both); no OpenSSL object is implicated"},
+      {"family": "fastd", "level": "L6-runtime", "failure_class": null, "classification": "ENVIRONMENT", "evidence": "the court has no /dev/net/tun and no CAP_NET_ADMIN, so the data path cannot be exercised; identical for both subjects"},
+      {"family": "coturn", "level": "L4-linked", "failure_class": null, "classification": "HARNESS", "evidence": "no admitted deterministic local workload exists for this program in this venue"},
+      {"family": "gftp-text", "level": "L4-linked", "failure_class": null, "classification": "HARNESS", "evidence": "no admitted deterministic local workload exists for this program in this venue"},
+      {"family": "gss-ntlmssp", "level": "L4-linked", "failure_class": null, "classification": "HARNESS", "evidence": "no admitted deterministic local workload exists for this program in this venue"},
+      {"family": "krb5", "level": "L4-linked", "failure_class": null, "classification": "HARNESS", "evidence": "no admitted deterministic local workload exists for this program in this venue"},
+      {"family": "libengine-pkcs11-openssl", "level": "L4-linked", "failure_class": null, "classification": "HARNESS", "evidence": "no admitted deterministic local workload exists for this program in this venue"},
+      {"family": "libgit2", "level": "L4-linked", "failure_class": null, "classification": "HARNESS", "evidence": "no admitted deterministic local workload exists for this program in this venue"},
+      {"family": "libmongocrypt", "level": "L4-linked", "failure_class": null, "classification": "HARNESS", "evidence": "no admitted deterministic local workload exists for this program in this venue"},
+      {"family": "poco", "level": "L4-linked", "failure_class": null, "classification": "HARNESS", "evidence": "no admitted deterministic local workload exists for this program in this venue"},
+      {"family": "libssh", "level": "L0-catalogued", "failure_class": "acquire-failure", "classification": "ENVIRONMENT", "evidence": "www.libssh.org unreachable (curl exit 7) during and after the run; both subjects"},
+      {"family": "sslscan", "level": "L0-catalogued", "failure_class": "acquire-failure", "classification": "ENVIRONMENT", "evidence": "transient github.com DNS failure during the runtime run; build/link had already succeeded and the host returned http=200 afterwards; both subjects"}
+    ],
+    "bulk": [
+      {
+        "families": 808,
+        "level": "L0-catalogued",
+        "classification": "SOURCE-UNREACHABLE",
+        "evidence": "no admitted pristine-source build recipe is recorded for these families; they are not_attempted under both subjects with reason 'no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL'. They were not measured at any behavioural level and are unchanged from before."
+      }
+    ],
+    "implementation_attributable_non_l7": 0
+  },
+  "consumer_coverage_classes": {
+    "tls_heavy": {
+      "definition": "the S35 TLS-heavy cohort (record layer and handshake consumers)",
+      "L7_functional": [
+        "apache2-bin", "curl", "curl-minimal", "dovecot", "elinks", "exim", "haproxy",
+        "httpd", "lighttpd", "lynx", "mosquitto", "nginx", "openssh", "openssh-client",
+        "openssh-server", "openvpn", "perl-net-ssleay", "postfix", "proftpd", "redis",
+        "s-nail", "squid", "stunnel", "vsftpd", "w3m"
+      ],
+      "below_L7": [
+        {"family": "libssh", "grade": "L0-catalogued", "cause": "ENVIRONMENT (source host unreachable)"},
+        {"family": "krb5", "grade": "L4-linked", "cause": "HARNESS (no admitted workload)"}
+      ],
+      "summary": "25/27 at L7-functional; the only new loss is libssh, which was never built this run"
+    },
+    "aead_heavy": {
+      "definition": "families whose admitted workload transcript names the negotiated AEAD (AES-GCM or ChaCha20-Poly1305). The venue's default TLS 1.3 handshake is AES-256-GCM, so this is a lower bound on AEAD exposure.",
+      "L7_functional": [
+        "epic5", "epic5-lite", "exim", "fetchmail", "fossil", "haproxy", "monit", "mutt",
+        "nginx", "nmap", "openvpn", "postfix", "radsecproxy", "redis", "ssldump",
+        "sslsplit", "stunnel"
+      ],
+      "below_L7": [],
+      "summary": "17/17 transcript-named AEAD consumers at L7-functional; no AES-GCM or ChaCha20 workload regressed"
+    },
+    "parser_heavy": {
+      "definition": "families whose admitted workload parses or issues X.509/CMS/PKCS#7/PKCS#10/PKCS#12 structures (the S41 d2i surface)",
+      "L7_functional": [
+        "perl-crypt-smime", "perl-crypt-openssl-x509", "libcrypt-openssl-pkcs10-perl",
+        "perl-crypt-openssl-rsa", "perl-crypt-openssl-dsa", "libcrypt-openssl-ec-perl",
+        "osslsigncode", "arm-trusted-firmware-tools", "efitools", "sscg", "u-boot-tools",
+        "libxmlsec1", "strongswan", "dcmtk", "openssh", "openssh-client", "openssh-server",
+        "openldap"
+      ],
+      "below_L7": [],
+      "summary": "18/18 parser-heavy consumers at L7-functional, including the CMS (Crypt::SMIME, DCMTK), X.509 (Crypt::OpenSSL::X509, TF-A cert_create, sscg, efitools), CSR (PKCS10), key (RSA/DSA/EC) and negative controls (unrelated CA, tampered certificate, tampered DICOM/XML/FIT)"
+    }
+  },
+  "not_measured_or_open": [
+    "No BOUNDARY or SEAL evidence was generated: no Miri, ASan/MSan/TSan, dudect/ctgrind, FFI negative controls or caller-closure audit. This receipt is a FAST/BATCH downstream measurement, not a safety or cryptographic certificate.",
+    "The 808 families with no admitted recipe remain acquire-failure/no-recipe rows; they are SOURCE-UNREACHABLE, unchanged and unmeasured at every behavioural level.",
+    "dma, libssh and sslscan were attempted but did not reach L7 in this run; their rows record the measured outcome rather than the prior inherited grade. No retry was folded into the no-reuse atlas, because a targeted retry would have to reuse the other 189 rows and would no longer be a full no-reuse measurement.",
+    "The crate's own library test suite, cargo fmt and cargo clippy were not re-run in S42 (no src/ change was made).",
+    "No cross-candidate transcript-hash comparison was used as a regression signal: the before rows belong to the superseded candidate identity and an earlier harness, so their normalised hashes are not comparable. The measured level is the regression signal here.",
+    "The expansion container's documented writable host bind mount (/work) remains a standing infrastructure task; it was not changed or assessed in this subphase.",
+    "Constant-time behaviour of the S40 GCM tag comparison and the S39/S41 paths was not re-measured (no dudect/ctgrind run).",
+    "Network access was used for pristine-source acquisition (Debian pool, github.com, libssh.org); libssh.org was unreachable and github.com failed transiently, as recorded above."
+  ],
+  "non_claims": [
+    "No family graduates to SAFE_COMPATIBLE in S42.",
+    "A fresh candidate-bound L7 count is not safety or cryptographic evidence (AGENTS.md section 8).",
+    "177 L7 of 192 recipe-backed families, 180 loaded, is a measurement of this candidate at e832606b7 under this venue; it is not a claim that the corpus is stable. Three previously measured families are infrastructure-limited in this run.",
+    "Zero candidate-only drops does not prove the three changes are behaviour-preserving; it establishes that none of the 192 admitted workloads observed a level regression attributable to the candidate."
+  ]
+}
