@@ -25,47 +25,48 @@ LibreSSL, or `ring`.
 
 ## What is achieved
 
-Measured at the source identity rendered below, except where a row is explicitly
-marked **carried forward**. Every row names its own machine-readable evidence;
-none of them is a claim of completeness.
+Measured at the source identity rendered below. The reuse row states how many
+committed measurements were reused at that same identity. Every row names its
+own machine-readable evidence; none of them is a claim of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: working-tree crate version `0.0.35` (**not published**); `libcrypto.so.3` sha256 `61373488ceea36d2a8e60c244034da756bd29391aa6a1a695168f83a5d9c6ba6`; `libssl.so.3` sha256 `cd24d2075273cc8bb71b0f301163615333f5ef2b7a655dbea1be8ea49b89241d`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: working-tree crate version `0.0.35` (**not published**); `libcrypto.so.3` sha256 `64dec4c7f276ff7970b4d75488cad6fa66d8d95502d2b58b19a4b7a89e119aa7`; `libssl.so.3` sha256 `b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
-| **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority; **carried forward** — 33/33 cohort rows are in `evidence_reuse.reused_families` and `candidate_identity_match=false` | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`); `CAMPAIGN-STATUS.json` (`consumers`) |
-| **Downstream drop-in, 1000-family corpus** | **157 / 1000 at `L7-functional`**; candidate 157 = authority 157; **8 failed**; 166 loaded; 834 not attempted; **166 of 166 measured rows carried forward** | same atlas, `body.counts.by_subject`, `body.evidence_reuse` |
-| **Library test suite** | **2,048 passing, 0 failing, 44 ignored** at `c911ca629` — a **floor**, not the current count: later commits add tests without a further full run; **2,098 total tests observed** on a later tree — a full-suite pass after the recorded commit is `NOT_RUN` | `atlas-refresh/test-baseline.json` (`full-library-run`) |
+| **Downstream drop-in, Safe-33 cohort** | **33 / 33 families at `L7-functional`**, candidate and authority; measured at the identity above; **33/33 cohort rows reuse committed measurements at that same identity** | `forensics/downstream/runtime-functional-atlas.json` (`body.runs`); `CAMPAIGN-STATUS.json` (`consumers`) |
+| **Downstream drop-in, 1000-family corpus** | **180 / 1000 at `L7-functional`**; candidate 180 = authority 180; **192 recipes, 191 built and linked**; 183 loaded, 8 `L4-linked`, 2 failed, 809 not attempted (808 with no recipe); 191 of 192 rows reuse committed measurements at the same identity | same atlas, `body.counts.by_subject`, `body.evidence_reuse`; `forensics/downstream/build-link-atlas.json` |
+| **Library test suite** | **2,089 passing, 0 failing, 44 ignored** | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **6 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam, GEN-1 GENERAL_NAME selected-arm representation | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
 | **Memory safety: boundaries** | 5 scoped boundary discharges (B23, B25, B27, B28, B29); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: files converted / partial** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
 | **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure | `CAMPAIGN-STATUS.json` (`consumers`) |
-| **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S24 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
+| **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S36 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
-| **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` ENVIRONMENT; `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` HARNESS/FIXTURE | `CAMPAIGN-STATUS.json` (`known_gaps`) |
+| **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` ENVIRONMENT; `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 8 HARNESS + 1 FIXTURE; `DOWNSTREAM-BELOW-L7` 12 FAMILIES; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 808 UNMEASURED | `CAMPAIGN-STATUS.json` (`known_gaps`) |
 | **Release** | **Published: 0.0.34** on crates.io (2026-10-23), checksum `e1f553b3…`, artefacts `libcrypto.so.3` `defe179f…` / `libssl.so.3` `5066aa32…`. **Working tree: 0.0.35 — not published.** This evidence is bound to the 0.0.35 tree, not to the published 0.0.34 crate. | `atlas-refresh/publish-0.0.34.json`; `Cargo.toml` |
 
-Downstream evidence reuse: **166 of 166 measured families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 33/33 of its families in that set.
+Downstream evidence reuse: **191 of 192 recipe-backed families reuse committed rows at the same candidate identity** (`committed-rows`, `candidate_identity_match=true`); 1 family was newly measured in the latest batch. A reused row is still a measurement at the identity above, but it was not re-run in that batch. The Safe-33 cohort has 33/33 of its families in the reused set.
 <!-- END GENERATED: readme-achievements -->
 
 ### The families at `L7-functional`
 
 <!-- BEGIN GENERATED: readme-l7-families -->
-**157 of 1000 counted corpus families are `L7-functional`** — candidate and authority rows agree (157 = 157); 8 failed, 166 loaded, 834 not attempted.
+**180 of 1000 counted corpus families are `L7-functional`** — candidate and authority rows agree (180 = 180); 2 failed, 183 loaded, 192 recipes, 809 not attempted.
 
-`aircrack-ng`†, `apache2-bin`†, `apache2-utils`†, `appx-util`†, `apr-util`†, `arm-trusted-firmware-tools`†, `asterisk-srtp`†, `axel`†, `bannergrab`†, `bruteforce-salted-openssl`†, `cjose`†, `cowpatty`†, `curl`†, `curl-minimal`†, `cyrus-sasl`†, `cyrus-sasl-digestmd5`†, `cyrus-sasl-scram`†, `dcap-tunnel-ssl`†, `dovecot`†, `duo_unix`†, `efitools`†, `eggdrop`†, `elinks`†, `epic5`†, `epic5-lite`†, `exim`†, `fetchmail`†, `fido2`†, `fossil`†, `fsverity-utils`†, `gensio`†, `getdns`†, `git-crypt`†, `gmnisrv`†, `gostsum`†, `h2o`†, `haproxy`†, `hcxkeys`†, `hcxtools`†, `hiredis-ssl`†, `hitch`†, `httpd`†, `httperf`†, `httping`†, `httrack`†, `icecast`†, `icecast2`†, `iperf3`†, `ircii`†, `irssi`†, `isync`†, `jimtcl`†, `jwt`†, `kea`†, `keepalived`†, `kmod`†, `ldns`†, `ldnsutils`†, `lftp`†, `libaprutil1`†, `libarchive`†, `libcjose0`†, `libcoap`†, `libengine-gost-openssl`†, `libesmtp`†, `libevent`†, `libevent-openssl-2.1-7`†, `libevhtp`†, `libfsverity`†, `libgetdns10`†, `libjose`†, `libnetconf2`†, `liboauth2`†, `libpaho-mqtt`†, `librabbitmq`†, `librdkafka`†, `libre`†, `libretls`†, `libssh`†, `libstrophe`†, `libtins`†, `libtpms`†, `libu2f-server`†, `libwebsockets`†, `libxmlsec1`†, `libzip`†, `lighttpd`†, `links`†, `lua-luaossl`†, `lua-sec`†, `lynx`†, `makepasswd`†, `memcached`†, `mini-httpd`†, `minizip-ng`†, `mktorrent`†, `monit`†, `monitoring-plugins`†, `mosquitto`†, `mumble-server`†, `nagios-plugins-http`†, `nagios-plugins-ldap`†, `nagios-plugins-smtp`†, `neon`†, `net-snmp`†, `nginx`†, `nmap`†, `nmap-ncat`†, `nrpe`†, `nsd`†, `opendkim`†, `openldap`†, `openssh`†, `openssh-client`†, `openssh-server`†, `openvpn`†, `osslsigncode`†, `partclone`†, `proftpd`†, `prosody`†, `proxytunnel`†, `pure-ftpd`†, `qpdf`†, `rabbitmq-c`†, `radsecproxy`†, `redis`†, `rhash`†, `rsync`†, `s-nail`†, `s2n-tls`†, `shellinabox`†, `siege`†, `sipsak`†, `slowhttptest`†, `slrn`†, `socat`†, `sofia-sip`†, `squid`†, `srt`†, `srtp`†, `sscg`†, `ssldump`†, `sslscan`†, `sslsplit`†, `ssmtp`†, `stunnel`†, `swtpm`†, `tcpdump`†, `tinc`†, `tnftp`†, `u-boot-tools`†, `unbound`†, `vsftpd`†, `w3m`†, `wrk`†, `yara`†, `znc`†.
+`afflib`, `aircrack-ng`, `apache2-bin`, `apache2-utils`, `appx-util`, `apr-util`, `arm-trusted-firmware-tools`, `asterisk-srtp`, `axel`, `bannergrab`, `bruteforce-salted-openssl`, `cjose`, `cowpatty`, `curl`, `curl-minimal`, `cyrus-sasl`, `cyrus-sasl-digestmd5`, `cyrus-sasl-scram`, `dcap-tunnel-ssl`, `dcmtk`, `dma`, `dovecot`, `duo_unix`, `efitools`, `eggdrop`, `elinks`, `epic5`, `epic5-lite`, `exim`, `fetchmail`, `fido2`, `fossil`, `fsverity-utils`, `gensio`, `getdns`, `git-crypt`, `gmnisrv`, `gostsum`, `h2o`, `haproxy`, `hcxkeys`, `hcxtools`, `hiredis-ssl`, `hitch`, `httest`, `httpd`, `httperf`, `httping`, `httrack`, `icecast`, `icecast2`, `ima-evm-utils`, `iperf3`, `ircii`, `irssi`, `isync`, `jimtcl`, `jwt`, `kea`, `keepalived`, `kmod`, `ldns`, `ldnsutils`, `lftp`, `libaprutil1`, `libarchive`, `libcjose0`, `libcoap`, `libcpp-httplib0.11`, `libcrypt-openssl-ec-perl`, `libcrypt-openssl-pkcs10-perl`, `libengine-gost-openssl`, `libesmtp`, `libevent`, `libevent-openssl-2.1-7`, `libevhtp`, `libfsverity`, `libgetdns10`, `libjose`, `libnetconf2`, `liboauth2`, `libpaho-mqtt`, `librabbitmq`, `librdkafka`, `libre`, `libretls`, `libssh`, `libstrophe`, `libtins`, `libtpms`, `libu2f-server`, `libwebsockets`, `libxmlsec1`, `libzip`, `lighttpd`, `links`, `lua-luaossl`, `lua-sec`, `lynx`, `makepasswd`, `memcached`, `mini-httpd`, `minizip-ng`, `mktorrent`, `monit`, `monitoring-plugins`, `mosquitto`, `mumble-server`, `mutt`, `nagios-plugins-http`, `nagios-plugins-ldap`, `nagios-plugins-smtp`, `neon`, `net-snmp`, `nghttp2`, `nginx`, `nmap`, `nmap-ncat`, `nrpe`, `nsd`, `opendkim`, `openldap`, `openssh`, `openssh-client`, `openssh-server`, `openvpn`, `osslsigncode`, `partclone`, `perl-crypt-openssl-aes`, `perl-crypt-openssl-bignum`, `perl-crypt-openssl-dsa`, `perl-crypt-openssl-random`, `perl-crypt-openssl-rsa`, `perl-crypt-openssl-x509`, `perl-crypt-smime`, `perl-net-ssleay`, `php`, `postfix`, `proftpd`, `prosody`, `proxytunnel`, `pure-ftpd`, `qpdf`, `rabbitmq-c`, `radsecproxy`, `redis`, `rhash`, `rsync`, `ruby`, `s-nail`, `s2n-tls`, `shellinabox`, `siege`, `sipp`, `sipsak`, `slowhttptest`, `slrn`, `socat`, `sofia-sip`, `squid`, `srt`, `srtp`, `sscg`, `ssldump`, `sslscan`, `sslsplit`, `ssmtp`, `strongswan`, `stunnel`, `swtpm`, `tcpdump`, `tinc`, `tnftp`, `u-boot-tools`, `unbound`, `vsftpd`, `w3m`, `wrk`, `yara`, `znc`.
 
-**† carried forward:** 157 of 157 listed rows are in `evidence_reuse.reused_families` (`committed-rows-carried-forward`, `candidate_identity_match=false`); they were not re-measured at the identity above. The Safe-33 cohort has 33/33 of its families in the same carried-forward set.
+**Freshness:** `candidate_identity_match=true`; 179 of 180 listed rows reuse committed measurements at the identity above. Reused rows are measurements at that identity, not rows carried forward from a different candidate. The Safe-33 cohort has 33/33 of its families in the reused set. Newly measured in the latest batch: `mutt`.
 <!-- END GENERATED: readme-l7-families -->
 
 Client, server, library, signing, interception, VPN, mail, DNS, IMAP, IRC,
 XMPP, FTP, MQTT, Kafka, TPM, SNMP and digest/KDF faces are all represented. Each
 row records a build against this crate's headers and libraries, linked with
 `-Wl,--no-as-needed` so the subject libraries are provably loaded, and exercised
-by a deterministic local workload with a negative control. A row marked `†` was
-carried forward from an earlier candidate identity: it is evidence about that
-build, not a fresh measurement at the identity above.
+by a deterministic local workload with a negative control. All 180 rows are
+bound to the candidate identity above; the reuse figure records committed
+measurements at that same identity, not rows carried forward from a different
+build.
 
 ### Memory safety is partial — precisely what that means
 
@@ -82,8 +83,8 @@ derived from the receipts:
 | **STOP-class defects** | **0 open** — `B27-X2` (`STOP-CLASS`, B27) **closed by B28**; `NEO-ERR-1` (`STOP_LEVEL`, B33) **fixed in B33**. |
 | **Audited but not converted** | **761 `PARTIAL` files**; 761/761 audited, 0 remaining. Audit completion is not discharge. |
 | **Not discharged** | Receipt-backed mechanisms still open: `BIO`, `RUNTIME_ALLOC_OWNERSHIP`; `SAFE_COMPATIBLE` remains 0/33. |
-| **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — the S16–S24 cluster has no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility. |
-| **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` ENVIRONMENT; `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` HARNESS/FIXTURE |
+| **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — the S16–S36 cluster has no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility. |
+| **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` ENVIRONMENT; `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 8 HARNESS + 1 FIXTURE; `DOWNSTREAM-BELOW-L7` 12 FAMILIES; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 808 UNMEASURED |
 | **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no consumer family has a proven dependency closure. |
 <!-- END GENERATED: readme-memory-safety -->
 

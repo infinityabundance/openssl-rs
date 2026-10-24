@@ -127,12 +127,26 @@ const SSL_AD_UNEXPECTED_MESSAGE: c_int = 10;
 const SSL_AD_DECRYPT_ERROR: c_int = 51;
 /// `SSL_AD_ILLEGAL_PARAMETER` — `ssl3.h` (47).
 const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
+/// `SSL_AD_HANDSHAKE_FAILURE` — `ssl3.h` (40).
+const SSL_AD_HANDSHAKE_FAILURE: c_int = 40;
+/// `SSL_R_LENGTH_MISMATCH` — `sslerr.h:159`.
+const SSL_R_LENGTH_MISMATCH: c_int = 159;
+/// `SSL_R_BAD_DH_VALUE` — `sslerr.h:102`.
+const SSL_R_BAD_DH_VALUE: c_int = 102;
+/// `SSL_R_DH_KEY_TOO_SMALL` — `sslerr.h:394`.
+const SSL_R_DH_KEY_TOO_SMALL: c_int = 394;
+/// `SSL_SECOP_TMP_DH` — `ssl.h:2775` (`7 | SSL_SECOP_OTHER_PKEY`).
+const SSL_SECOP_TMP_DH: c_int = 7 | (4 << 16);
+/// `TLS1_FLAGS_RECEIVED_EXTMS` — `ssl3.h:300`.
+const TLS1_FLAGS_RECEIVED_EXTMS: u64 = 0x0200;
+/// `TLSEXT_TYPE_extended_master_secret` — `tls1.h:107`.
+const TLSEXT_TYPE_EXTENDED_MASTER_SECRET: u16 = 23;
 const ERR_R_INTERNAL_ERROR: c_int = 259 | (2 << 18) | (1 << 18);
 const SSL_R_UNEXPECTED_MESSAGE: c_int = 244;
 /// `SSL3_MT_CLIENT_KEY_EXCHANGE` — `ssl3.h` (16).
 const SSL3_MT_CLIENT_KEY_EXCHANGE: c_int = 16;
-/// `SSL_R_BAD_SIGNATURE` — `sslerr.h:148`.
-const SSL_R_BAD_SIGNATURE: c_int = 148;
+/// `SSL_R_BAD_SIGNATURE` — `sslerr.h:123`.
+const SSL_R_BAD_SIGNATURE: c_int = 123;
 /// `SSL_R_BAD_KEY_SHARE` — `sslerr.h:43` (108). The previous 384 is
 /// `SSL_R_INVALID_COMMAND`'s neighbour in the authority's table and was never this reason.
 const SSL_R_BAD_KEY_SHARE: c_int = 108;
@@ -2419,6 +2433,19 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
                     // SAFETY: `s` is live.
                     unsafe { (*s).ext_ticket_expected = 1 };
                 }
+                if etype == TLSEXT_TYPE_EXTENDED_MASTER_SECRET {
+                    // `tls_parse_stoc_ems` (`extensions_clnt.c:1818-1828`): the ServerHello form
+                    // has an empty body and the authority does not read it. The flag makes the
+                    // master secret use RFC 7627's session hash, and the session records the
+                    // negotiation so a resumed session keeps it.
+                    // SAFETY: `s` is live; a non-NULL `session` is the connection's own.
+                    unsafe {
+                        (*s).s3_flags |= TLS1_FLAGS_RECEIVED_EXTMS;
+                        if (*s).hit == 0 && !(*s).session.is_null() {
+                            (*(*s).session).flags |= crate::ssl::ssl_lib::SSL_SESS_FLAG_EXTMS;
+                        }
+                    }
+                }
                 if etype == TLSEXT_TYPE_STATUS_REQUEST {
                     // `tls_parse_stoc_status_request` (`extensions_clnt.c:1492-1528`): the server's
                     // TLS1.2 `status_request` acknowledgement is empty and means a
@@ -2581,9 +2608,9 @@ struct ServerEcdhParams<'a> {
 /// sig_alg(2) || sig_len(2) || sig`.
 ///
 /// Only the named-curve form (`curve_type == 3`) is reachable in this client; the explicit-prime
-/// `ServerDHParams` form is not implemented here, and the authority's length checks leave it
-/// unreachable, so it is refused rather than guessed at. Trailing bytes after the signature are
-/// ignored, exactly as the reduce does today.
+/// `ServerDHParams` form is a different key-exchange family and is handled by
+/// [`read_server_dhe_params`]. Trailing bytes after the signature are ignored, exactly as the
+/// reduce does today.
 fn read_server_ecdh_params(body: &[u8]) -> Option<ServerEcdhParams<'_>> {
     let mut cur = SliceCursor::new(body);
     let params_start = cur.pos();
@@ -2607,14 +2634,205 @@ fn read_server_ecdh_params(body: &[u8]) -> Option<ServerEcdhParams<'_>> {
     })
 }
 
-/// `MSG_PROCESS_RETURN tls_process_key_exchange(...)` (`statem_clnt.c:1995`/`statem_lib.c:441`) for
-/// the ECDHE arm: verify the `ServerECDHParams` signature with the server certificate key and wrap
-/// the server's point into an `EVP_PKEY`.
+/// `ServerDHParams` and the signature that follows it.
+///
+/// `params` is the exact signed extent (`p<2> || g<2> || Ys<2>`); it stops before the signature
+/// algorithm, as `tls_process_ske_dhe` does when the signed data is assembled from the packet
+/// prefix.
+struct ServerDheParams<'a> {
+    params: &'a [u8],
+    p: &'a [u8],
+    g: &'a [u8],
+    ys: &'a [u8],
+    sigalg: u16,
+    sig: &'a [u8],
+}
+
+/// `ServerDHParams` framing: `p<2> || g<2> || Ys<2> || sig_alg(2) || sig_len(2) || sig`.
+///
+/// The authority reads the three vectors with `PACKET_get_length_prefixed_2` and reports
+/// `SSL_R_LENGTH_MISMATCH` when any is short (`tls_process_ske_dhe`). `SliceCursor::take` performs
+/// the extent arithmetic with `checked_add`, so an overflowing or short vector is `None` here and
+/// the caller raises the authority's decode error.
+fn read_server_dhe_params(body: &[u8]) -> Option<ServerDheParams<'_>> {
+    let mut cur = SliceCursor::new(body);
+    let params_start = cur.pos();
+    let plen = cur.take_u16()? as usize;
+    let p = cur.take(plen)?;
+    let glen = cur.take_u16()? as usize;
+    let g = cur.take(glen)?;
+    let yslen = cur.take_u16()? as usize;
+    let ys = cur.take(yslen)?;
+    let params_end = cur.pos();
+    let params = body.get(params_start..params_end)?;
+    let sigalg = cur.take_u16()?;
+    let siglen = cur.take_u16()? as usize;
+    let sig = cur.take(siglen)?;
+    Some(ServerDheParams {
+        params,
+        p,
+        g,
+        ys,
+        sigalg,
+        sig,
+    })
+}
+
+/// Verify the ServerKeyExchange signature over `client_random || server_random || params`.
+///
+/// The authority assembles the same three parts in `tls_process_key_exchange` and verifies with
+/// `tls12_check_peer_sigalg` + `EVP_DigestVerify`; both the RSA and DSA certificate arms reach
+/// this same signature check, and the scheme itself selects the padding (see [`tls12_verify`]).
+///
+/// # Safety
+/// `s` is live; `params`/`sig` are readable.
+unsafe fn tls12_verify_ske_signature(s: *mut Ssl, params: &[u8], sigalg: u16, sig: &[u8]) -> bool {
+    use crate::x509::x509_cmp::X509_get0_pubkey;
+    // SAFETY: `s` is live.
+    let peer_cert = unsafe { (*s).peer_cert };
+    if peer_cert.is_null() {
+        return false;
+    }
+    // SAFETY: `peer_cert` is a live certificate.
+    let pkey = unsafe { X509_get0_pubkey(peer_cert.cast()) };
+    if pkey.is_null() {
+        return false;
+    }
+    // The signed data is `client_random(32) || server_random(32) || params`. It is public data,
+    // and a DHE `ServerDHParams` is far larger than the ECDHE prefix, so it is heap-allocated
+    // instead of carried in a fixed stack frame. The length is checked with `checked_add`.
+    let Some(total) = params.len().checked_add(64) else {
+        return false;
+    };
+    let mut tbs = vec![0u8; total];
+    // SAFETY: `s` is live; both randoms are 32-byte arrays and `tbs` has 64 + params.len() bytes.
+    unsafe {
+        tbs[..32].copy_from_slice(&(*s).client_random);
+        tbs[32..64].copy_from_slice(&(*s).server_random);
+    }
+    tbs[64..].copy_from_slice(params);
+    // SAFETY: `pkey` is live; `tbs`/`sig` are readable.
+    unsafe { crate::ssl::statem::statem_srvr::tls12_verify(pkey.cast(), &tbs, sigalg, sig) }
+}
+
+/// Build the peer's ephemeral DH public key from the `ServerDHParams` vectors.
+///
+/// The authority does this with `EVP_PKEY_fromdata` over `p`/`g`/`pub` (`tls_process_ske_dhe`,
+/// `statem_clnt.c:2310-2334`). The provider's DH importer reads the three `OSSL_PARAM`s and creates
+/// an unvalidated key; the caller then runs the authority's parameter and public-key checks.
+///
+/// # Safety
+/// `s` is live; `p`/`g`/`ys` are readable for their lengths.
+unsafe fn tls12_peer_dh_key(
+    s: *mut Ssl,
+    p: &[u8],
+    g: &[u8],
+    ys: &[u8],
+) -> *mut crate::evp::pkey::EvpPkey {
+    use crate::bn::bignum::{BN_bin2bn, BN_free};
+    use crate::evp::pkey::EVP_PKEY_free;
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_name};
+    use crate::evp::pmeth_gn::{EVP_PKEY_fromdata, EVP_PKEY_fromdata_init};
+    use crate::params::build::{
+        OSSL_PARAM_BLD_free, OSSL_PARAM_BLD_new, OSSL_PARAM_BLD_push_BN, OSSL_PARAM_BLD_to_param,
+    };
+    use crate::params::dup::OSSL_PARAM_free;
+    // `EVP_PKEY_KEYPAIR` — `include/openssl/evp.h:112`: `PUBLIC_KEY | PRIVATE_KEY` plus the two
+    // domain-parameter selection bits. The provider's `dh_import` only reads the public key when
+    // the KEYPAIR bit is present; the absent private-key parameter is optional.
+    const EVP_PKEY_KEYPAIR: c_int = 0x04 | 0x80 | 0x01 | 0x02;
+    // The wire vectors are big-endian; `BN_bin2bn` is the authority's own conversion. The import
+    // parameters are then built with `OSSL_PARAM_BLD_push_BN`, exactly as `tls_process_ske_dhe`
+    // does: a `BIGNUM` parameter's transport representation is native-endian, so building it from
+    // the wire bytes with `OSSL_PARAM_construct_BN` would misread them on a little-endian target.
+    // SAFETY: the three slices are readable for their lengths and the constructor allocates the
+    // results.
+    let (bp, bg, by) = unsafe {
+        (
+            BN_bin2bn(p.as_ptr(), p.len() as c_int, core::ptr::null_mut()),
+            BN_bin2bn(g.as_ptr(), g.len() as c_int, core::ptr::null_mut()),
+            BN_bin2bn(ys.as_ptr(), ys.len() as c_int, core::ptr::null_mut()),
+        )
+    };
+    if bp.is_null() || bg.is_null() || by.is_null() {
+        // SAFETY: each pointer is NULL or this frame's own number.
+        unsafe {
+            BN_free(bp);
+            BN_free(bg);
+            BN_free(by);
+        }
+        return core::ptr::null_mut();
+    }
+    let bld = OSSL_PARAM_BLD_new();
+    if bld.is_null() {
+        // SAFETY: each pointer is this frame's own number.
+        unsafe {
+            BN_free(bp);
+            BN_free(bg);
+            BN_free(by);
+        }
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `bld` is live; the three numbers are live and the keys are NUL-terminated.
+    let built = unsafe {
+        OSSL_PARAM_BLD_push_BN(bld, c"p".as_ptr(), bp) != 0
+            && OSSL_PARAM_BLD_push_BN(bld, c"g".as_ptr(), bg) != 0
+            && OSSL_PARAM_BLD_push_BN(bld, c"pub".as_ptr(), by) != 0
+    };
+    // SAFETY: `bld` is this frame's own builder.
+    let params = unsafe {
+        let p = if built {
+            OSSL_PARAM_BLD_to_param(bld)
+        } else {
+            core::ptr::null_mut()
+        };
+        OSSL_PARAM_BLD_free(bld);
+        p
+    };
+    // SAFETY: each number is this frame's own allocation and the builder has copied them.
+    unsafe {
+        BN_free(bp);
+        BN_free(bg);
+        BN_free(by);
+    }
+    if params.is_null() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `s` is live.
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
+    // SAFETY: `libctx`/`propq` are the context's and `c"DH"` is NUL-terminated.
+    let ctx = unsafe { EVP_PKEY_CTX_new_from_name(libctx, c"DH".as_ptr(), propq) };
+    if ctx.is_null() {
+        // SAFETY: `params` is this frame's own terminated array.
+        unsafe { OSSL_PARAM_free(params) };
+        return core::ptr::null_mut();
+    }
+    let mut key: *mut crate::evp::pkey::EvpPkey = core::ptr::null_mut();
+    // SAFETY: `ctx` is live; `key` is this frame's writable slot; `params` is terminated.
+    let ok = unsafe {
+        EVP_PKEY_fromdata_init(ctx) > 0
+            && EVP_PKEY_fromdata(ctx, &mut key, EVP_PKEY_KEYPAIR, params) > 0
+    };
+    // SAFETY: `ctx` and `params` are this frame's own objects.
+    unsafe {
+        EVP_PKEY_CTX_free(ctx);
+        OSSL_PARAM_free(params);
+    }
+    if !ok {
+        // SAFETY: a non-NULL `key` is the failure path's partially built key, owned here.
+        unsafe { EVP_PKEY_free(key) };
+        return core::ptr::null_mut();
+    }
+    key
+}
+
+/// `MSG_PROCESS_RETURN tls_process_key_exchange(...)` (`statem_clnt.c:2443`) for the TLS1.2
+/// `SSL_kDHE`/`SSL_kECDHE` arms: parse the server's key-exchange parameters, verify the signature
+/// with the server certificate key, and wrap the peer's ephemeral into an `EVP_PKEY`.
 ///
 /// # Safety
 /// `s` is live; `msg` is the full ServerKeyExchange message.
 unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
-    use crate::x509::x509_cmp::X509_get0_pubkey;
     let mut frame = SliceCursor::new(msg);
     if frame.take_u8() != Some(SSL3_MT_SERVER_KEY_EXCHANGE as u8) {
         return 0;
@@ -2625,6 +2843,104 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
     let Some(body) = frame.take(blen) else {
         return 0;
     };
+    // SAFETY: `s` is live.
+    let cipher = unsafe { (*s).pending_cipher };
+    if cipher.is_null() {
+        return 0;
+    }
+    // SAFETY: `cipher` is a live table row.
+    let mkey = unsafe { (*cipher).algorithm_mkey as u64 };
+    if (mkey & (t::SSL_kDHE | t::SSL_kDHEPSK)) != 0 {
+        // `tls_process_ske_dhe` (`statem_clnt.c:2287-2385`): three length-prefixed vectors, then
+        // the authority's parameter and public-key checks before the signature.
+        let Some(dhe) = read_server_dhe_params(body) else {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
+            return 0;
+        };
+        // SAFETY: `s` is live; the vectors are readable for their lengths.
+        let raw = unsafe { tls12_peer_dh_key(s, dhe.p, dhe.g, dhe.ys) };
+        if raw.is_null() {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_BAD_DH_VALUE) };
+            return 0;
+        }
+        // SAFETY: `raw` is the fresh key this frame built and owns; the handle's `Drop` is its
+        // single `EVP_PKEY_free`.
+        let Some(peer) = (unsafe { OwnedCtx::<crate::evp::pkey::EvpPkey>::new(raw) }) else {
+            return 0;
+        };
+        // SAFETY: `s` is live.
+        let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
+        // SAFETY: `libctx`/`propq` are the context's; `peer` is the live key.
+        let pctx = unsafe {
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_new_from_pkey(libctx, peer.as_ptr(), propq)
+        };
+        if pctx.is_null() {
+            // The authority folds a missing check context into its
+            // `pctx == NULL || param_check != 1 || public_check != 1` test.
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_BAD_DH_VALUE) };
+            return 0;
+        }
+        // The authority's two checks (`EVP_PKEY_param_check_quick`, then `EVP_PKEY_public_check`):
+        // quick parameter validity (odd `p`, a generator in range, 512..10000 bits) and the
+        // SP800-56A public-key range check. Any failure is `SSL_R_BAD_DH_VALUE` at
+        // `SSL_AD_ILLEGAL_PARAMETER`.
+        // SAFETY: `pctx` is live.
+        let checks_ok = unsafe {
+            crate::evp::pmeth_check::EVP_PKEY_param_check_quick(pctx) == 1
+                && crate::evp::pmeth_check::EVP_PKEY_public_check(pctx) == 1
+        };
+        // SAFETY: `pctx` is this frame's own context.
+        unsafe { crate::evp::pkey_ctx::EVP_PKEY_CTX_free(pctx) };
+        if !checks_ok {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_BAD_DH_VALUE) };
+            return 0;
+        }
+        // `ssl_security(..., SSL_SECOP_TMP_DH, EVP_PKEY_get_security_bits(peer_tmp), ...)`;
+        // the default callback (installed on the certificate) accepts the reduced profile, an
+        // application callback may still refuse it.
+        // SAFETY: `s` is live; `peer` is the live key.
+        let secbits = unsafe { crate::evp::pkey::EVP_PKEY_get_security_bits(peer.as_ptr()) };
+        // SAFETY: `s` is live; `peer` is the live key handed to the callback.
+        if unsafe {
+            crate::ssl::ssl_cert::ssl_security(
+                s,
+                SSL_SECOP_TMP_DH,
+                secbits,
+                0,
+                peer.as_ptr().cast(),
+            )
+        } == 0
+        {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_DH_KEY_TOO_SMALL) };
+            return 0;
+        }
+        // SAFETY: `s` is live; the param prefix and signature are readable.
+        if !unsafe { tls12_verify_ske_signature(s, dhe.params, dhe.sigalg, dhe.sig) } {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_DECRYPT_ERROR, SSL_R_BAD_SIGNATURE) };
+            return 0;
+        }
+        // SAFETY: `s` is live; `peer` is this frame's fresh key and the slot's previous owner is
+        // released first.
+        unsafe {
+            crate::evp::pkey::EVP_PKEY_free((*s).peer_tmp.cast());
+            (*s).peer_tmp = peer.into_raw().cast();
+        }
+        // SAFETY: `s` is live; `msg` is the full message.
+        return unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) };
+    }
+    if (mkey & (t::SSL_kECDHE | t::SSL_kECDHEPSK)) == 0 {
+        // The authority's `else if (alg_k)` arm is `SSL_AD_UNEXPECTED_MESSAGE`; a suite whose
+        // key exchange needs no ServerKeyExchange never reaches this function.
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE) };
+        return 0;
+    }
     let Some(ServerEcdhParams {
         params,
         group,
@@ -2635,36 +2951,8 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
     else {
         return 0;
     };
-    // SAFETY: `s` is live.
-    let peer_cert = unsafe { (*s).peer_cert };
-    if peer_cert.is_null() {
-        return 0;
-    }
-    // SAFETY: `peer_cert` is a live certificate.
-    let pkey = unsafe { X509_get0_pubkey(peer_cert.cast()) };
-    if pkey.is_null() {
-        return 0;
-    }
-    // The signed data is `client_random || server_random || ServerECDHParams`.
-    let mut tbs = [0u8; 32 + 32 + 192];
-    if params.len() > 192 {
-        return 0;
-    }
-    // SAFETY: `s` is live; both randoms are 32-byte arrays.
-    unsafe {
-        core::ptr::copy_nonoverlapping((*s).client_random.as_ptr(), tbs.as_mut_ptr(), 32);
-        core::ptr::copy_nonoverlapping((*s).server_random.as_ptr(), tbs.as_mut_ptr().add(32), 32);
-    }
-    tbs[64..64 + params.len()].copy_from_slice(params);
-    // SAFETY: `pkey` is live; `tbs`/`sig` are readable.
-    if !unsafe {
-        crate::ssl::statem::statem_srvr::tls12_verify(
-            pkey.cast(),
-            &tbs[..64 + params.len()],
-            sigalg,
-            sig,
-        )
-    } {
+    // SAFETY: `s` is live; the params and signature are readable.
+    if !unsafe { tls12_verify_ske_signature(s, params, sigalg, sig) } {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_DECRYPT_ERROR, SSL_R_BAD_SIGNATURE) };
         return 0;
@@ -2848,9 +3136,47 @@ pub(crate) unsafe fn tls12_process_cert_verify(s: *mut Ssl, msg: &[u8], _is_serv
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
 }
 
-/// `CON_FUNC_RETURN tls_construct_client_key_exchange(...)` (`statem_clnt.c:3387-3540`) for the
-/// ECDHE arm: generate the client ephemeral, send `ClientECDHParams`, and derive the master secret
-/// and key block.
+/// A heap-allocated secret scratch whose single release cleanses the bytes first.
+///
+/// A DHE premaster is the size of the negotiated prime (up to 1250 bytes at the authority's
+/// 10000-bit ceiling), too large for the fixed 80-byte stack frame the ECDHE and RSA arms use. The
+/// allocation is this owner's; `Drop` wipes the whole extent with the crate's volatile cleanse
+/// before the `Vec` releases it, so no failure path can leave a copy behind.
+struct CleansedHeap(Vec<u8>);
+
+impl CleansedHeap {
+    fn new(len: usize) -> Self {
+        Self(vec![0u8; len])
+    }
+
+    fn as_ptr(&self) -> *const u8 {
+        self.0.as_ptr()
+    }
+
+    fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.0.as_mut_ptr()
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl Drop for CleansedHeap {
+    fn drop(&mut self) {
+        // SAFETY: the vector owns `len` writable bytes for the whole call and is not aliased here.
+        unsafe { crate::runtime::mem::cleanse(self.0.as_mut_ptr(), self.0.len()) }
+    }
+}
+
+/// `CON_FUNC_RETURN tls_construct_client_key_exchange(...)` (`statem_clnt.c:3622-3671`): the RSA,
+/// DHE and ECDHE arms — generate the client ephemeral, send the arm's `ClientKeyExchange` body,
+/// and derive the master secret and key block.
+///
+/// The message is written *before* the master secret is derived, matching the authority's state
+/// machine (`tls_construct_client_key_exchange` builds the message, then
+/// `tls_client_key_exchange_post_work` calls `ssl_generate_master_secret`); an
+/// `extended_master_secret` session hash therefore includes the ClientKeyExchange.
 ///
 /// # Safety
 /// `s` is live.
@@ -2866,7 +3192,10 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     // The premaster is a secret stack copy; the guard wipes it on every return path, not only on
     // success. 80 bytes covers an X25519/X448 secret and a P-521 x-coordinate (66).
     let mut pms = CleansedScratch::<80>::new();
-    let pmslen;
+    // A DHE premaster is the size of the prime, so it is heap-allocated and owned by this guard.
+    let mut dhe_pms: Option<CleansedHeap> = None;
+    let pms_ptr: *const u8;
+    let pmslen: usize;
     // The authority's `OPENSSL_RSA_MAX_MODULUS_BITS` is 16384 (`rsa.h:39`), so the largest
     // ciphertext this writer can carry is 2048 bytes. The buffer is sized to that maximum and the
     // actual modulus size is checked against it; the former fixed 512-byte buffer rejected every
@@ -2947,6 +3276,107 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
         }
         bodylen = 2 + enclen;
         pmslen = crate::ssl::ssl_lib::SSL_MAX_MASTER_KEY_LENGTH;
+        pms_ptr = pms.as_ptr();
+    } else if (mkey & ct::SSL_kDHE) != 0 {
+        // `tls_construct_cke_dhe` (`statem_clnt.c:3238-3298`): generate a client ephemeral with the
+        // server's `p`/`g`, derive the premaster, and send the client's public value in a
+        // `dh_Yc<1..2^16-1>` vector, zero-padded to the prime length.
+        use crate::evp::pkey::EvpPkey;
+        use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_pkey};
+        use crate::evp::pmeth_gn::{EVP_PKEY_keygen, EVP_PKEY_keygen_init};
+        // SAFETY: `s` is live.
+        let server = unsafe { (*s).peer_tmp };
+        if server.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live.
+        let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq()) };
+        // SAFETY: `server` is the live `ServerDHParams` key; `libctx`/`propq` are the context's.
+        let cctx = unsafe { EVP_PKEY_CTX_new_from_pkey(libctx, server.cast(), propq) };
+        if cctx.is_null() {
+            return 0;
+        }
+        let mut ckey: *mut EvpPkey = core::ptr::null_mut();
+        // SAFETY: `cctx` is live and `ckey` is this frame's writable slot. `ssl_generate_pkey`
+        // (`s3_lib.c:5351-5372`) is exactly this keygen-from-template sequence.
+        let ok = unsafe { EVP_PKEY_keygen_init(cctx) > 0 && EVP_PKEY_keygen(cctx, &mut ckey) > 0 };
+        // SAFETY: `cctx` is this frame's own context.
+        unsafe { EVP_PKEY_CTX_free(cctx) };
+        if !ok || ckey.is_null() {
+            // SAFETY: `ckey` is NULL or this frame's partial key.
+            unsafe { EVP_PKEY_free(ckey) };
+            return 0;
+        }
+        // SAFETY: `ckey` is this frame's fresh key; the handle's `Drop` is its single release.
+        let Some(ckey) = (unsafe { OwnedCtx::<EvpPkey>::new(ckey) }) else {
+            return 0;
+        };
+        // SAFETY: `s` is live; the old `pkey` slot is NULL or owned by the field.
+        unsafe {
+            if !(*s).pkey.is_null() {
+                EVP_PKEY_free((*s).pkey.cast());
+            }
+            (*s).pkey = ckey.into_raw().cast();
+        }
+        // The premaster is the shared secret; its length is at most the modulus size
+        // (`DH_compute_key` strips leading zeros, so the bound is the safe capacity).
+        // SAFETY: `s` is live; `(*s).pkey` is the live ephemeral.
+        let prime_len = unsafe { EVP_PKEY_get_size((*s).pkey.cast()) };
+        if prime_len <= 0 {
+            return 0;
+        }
+        let prime_len = prime_len as usize;
+        let mut buf = CleansedHeap::new(prime_len);
+        let mut got = 0usize;
+        // SAFETY: `s` is live; both keys are live; `buf` is `prime_len` writable bytes.
+        if unsafe {
+            crate::ssl::tls13_enc::tls13_derive_shared(
+                s,
+                (*s).pkey,
+                (*s).peer_tmp,
+                buf.as_mut_ptr(),
+                buf.len(),
+                &mut got,
+            )
+        } == 0
+            || got == 0
+            || got > prime_len
+        {
+            return 0;
+        }
+        let mut pub_ = core::ptr::null_mut::<u8>();
+        // SAFETY: `s` is live; `(*s).pkey` is live; `pub_` is this frame's writable slot.
+        let publen = unsafe { EVP_PKEY_get1_encoded_public_key((*s).pkey.cast(), &mut pub_) };
+        if publen == 0 || publen > prime_len || prime_len > u16::MAX as usize {
+            // SAFETY: `pub_` is NULL or the block `get1` allocated and this frame owns.
+            drop(unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), SeamFile::NULL, 0) });
+            return 0;
+        }
+        // SAFETY: `pub_` is the block `get1` allocated above and has not been released.
+        let Some(pub_) = (unsafe { OwnedBuf::adopt_plain(pub_.cast::<u8>(), SeamFile::NULL, 0) })
+        else {
+            return 0;
+        };
+        let Some(total) = prime_len.checked_add(2) else {
+            return 0;
+        };
+        if total > body.len() {
+            return 0;
+        }
+        body[0] = (prime_len >> 8) as u8;
+        body[1] = prime_len as u8;
+        let pad = prime_len - publen;
+        body[2..2 + pad].fill(0);
+        // SAFETY: `pub_` is `publen` readable bytes; `body` has room for `2 + prime_len`.
+        unsafe {
+            core::ptr::copy_nonoverlapping(pub_.as_ptr(), body.as_mut_ptr().add(2 + pad), publen)
+        };
+        // The `get1` block's single release is this drop.
+        drop(pub_);
+        pms_ptr = buf.as_ptr();
+        pmslen = got;
+        dhe_pms = Some(buf);
+        bodylen = total;
     } else if (mkey & ct::SSL_kECDHE) != 0 {
         // `tls_construct_cke_ecdhe` (`statem_clnt.c:3257-3285`): generate the ephemeral for the
         // group the server selected in its ServerKeyExchange and send its encoded point.
@@ -2993,6 +3423,7 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
             return 0;
         }
         pmslen = got;
+        pms_ptr = pms.as_ptr();
         body[0] = publen as u8;
         // SAFETY: `pub_` is `publen` readable bytes; `body` has room.
         unsafe { core::ptr::copy_nonoverlapping(pub_.as_ptr(), body.as_mut_ptr().add(1), publen) };
@@ -3002,17 +3433,30 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     } else {
         return 0;
     }
-    // Derive the pre-master secret and the key schedule (`ssl_derive`, `s3_lib.c:5474`).
-    // SAFETY: `s` is live; `pms[..pmslen]` is the pre-master secret.
-    if unsafe { crate::ssl::t1_enc::tls12_derive_master_secret(s, pms.as_ptr(), pmslen) } == 0 {
+    // The authority writes the ClientKeyExchange and then derives the master secret in
+    // `tls_client_key_exchange_post_work`; the ordered transcript therefore includes the CKE when
+    // an `extended_master_secret` session hash is taken. The record write result is this function's
+    // answer, as `CON_FUNC_SUCCESS` is the construct function's.
+    // SAFETY: `s` is live; `body` is `bodylen` initialised bytes.
+    let wrote = unsafe {
+        write_handshake_message(s, SSL3_MT_CLIENT_KEY_EXCHANGE as u8, body.as_ptr(), bodylen)
+    };
+    if wrote <= 0 {
         return 0;
     }
+    // Derive the pre-master secret and the key schedule (`ssl_derive`, `s3_lib.c:5474`).
+    // SAFETY: `s` is live; `pms_ptr[..pmslen]` is the pre-master secret.
+    if unsafe { crate::ssl::t1_enc::tls12_derive_master_secret(s, pms_ptr, pmslen) } == 0 {
+        return 0;
+    }
+    // The DHE premaster guard is no longer needed: the master secret is its only consumer. Its
+    // `Drop` wipes the heap block.
+    drop(dhe_pms.take());
     // SAFETY: `s` is live.
     if unsafe { crate::ssl::t1_enc::tls12_derive_key_block(s) } == 0 {
         return 0;
     }
-    // SAFETY: `s` is live; `body` is `bodylen` initialised bytes.
-    unsafe { write_handshake_message(s, SSL3_MT_CLIENT_KEY_EXCHANGE as u8, body.as_ptr(), bodylen) }
+    wrote
 }
 
 /// `CON_FUNC_RETURN tls_construct_cert_verify(...)` (`statem_lib.c:313-439`) for TLS1.2: sign the
@@ -5440,5 +5884,628 @@ mod certificate_request_sigalgs {
             SSL_free(s);
             SSL_CTX_free(ctx);
         }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// TLS1.2 DHE client key exchange (S34)
+// -------------------------------------------------------------------------------------------
+//
+// The authority's `tls_process_ske_dhe` parses `p`, `g`, `Ys`, validates the key and stores it;
+// `tls_construct_cke_dhe` generates the client ephemeral, derives the premaster and sends the
+// padded public value. These tests drive those two real functions with a synthetic server flight
+// built from the crate's own provider, so no external authority process is needed.
+#[cfg(test)]
+mod dhe_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use crate::bn::bignum::{BN_bin2bn, BN_bn2bin, BN_free, BigNum};
+    use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_new};
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey::{
+        openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free, EVP_PKEY_get_bn_param, EvpPkey,
+    };
+    use crate::evp::pkey_ctx::{
+        EVP_PKEY_CTX_new_from_name, EVP_PKEY_CTX_new_from_pkey, EVP_PKEY_CTX_set_signature_md,
+        EvpPkeyCtx,
+    };
+    use crate::evp::pmeth_gn::{EVP_PKEY_fromdata, EVP_PKEY_fromdata_init};
+    use crate::params::build::{
+        OSSL_PARAM_BLD_free, OSSL_PARAM_BLD_new, OSSL_PARAM_BLD_push_BN, OSSL_PARAM_BLD_to_param,
+    };
+    use crate::params::dup::OSSL_PARAM_free;
+    use crate::rsa::ctrl::{
+        EVP_PKEY_CTX_set_rsa_mgf1_md, EVP_PKEY_CTX_set_rsa_padding,
+        EVP_PKEY_CTX_set_rsa_pss_saltlen,
+    };
+    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_ctrl_pending, BIO_new, BIO_read};
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_ciph::ssl3_get_cipher_by_id;
+    use crate::ssl::ssl_lib::{
+        SSL_CTX_ctrl, SSL_CTX_free, SSL_CTX_new, SSL_CTX_set_cipher_list, SSL_free, SSL_get_wbio,
+        SSL_new, SSL_set_bio, SSL_set_connect_state, Ssl, SslCtx,
+    };
+    use crate::ssl::ssl_sess::SSL_SESSION_new;
+    use crate::x509::x509_set::{
+        X509_set_issuer_name, X509_set_pubkey, X509_set_subject_name, X509_set_version,
+    };
+    use crate::x509::x509_vfy::X509_gmtime_adj;
+    use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+    use crate::x509::x_all::X509_sign;
+    use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+    use crate::x509::x_x509::{X509_new, X509};
+
+    const TLS1_2_VERSION: c_int = 0x0303;
+    const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
+    const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
+    /// `TLS_DHE_RSA_WITH_AES_128_GCM_SHA256` — `ssl3.h`: the cipher-suite value and the table
+    /// row's full `SSL3_CK_*` id (`version << 16 | suite`).
+    const DHE_RSA_AES128_GCM_SHA256: u16 = 0x009e;
+    const DHE_RSA_AES128_GCM_SHA256_ID: u32 = 0x0300_009e;
+    /// `RSA_PKCS1_PSS_PADDING` / `RSA_PSS_SALTLEN_DIGEST` — `include/openssl/rsa.h`.
+    const RSA_PKCS1_PSS_PADDING: c_int = 6;
+    const RSA_PSS_SALTLEN_DIGEST: c_int = -1;
+
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
+    /// A self-signed RSA identity, as the TLS1.2 server flight's signing key.
+    ///
+    /// # Safety
+    /// Every object is created and released by the caller.
+    unsafe fn rsa_identity(bits: usize) -> (*mut EvpPkey, *mut X509) {
+        use crate::asn1::layout::MBSTRING_UTF8;
+        use crate::asn1::prim::ASN1_INTEGER_set;
+        // SAFETY: constructors below answer fresh objects owned by this frame.
+        unsafe {
+            let pkey = openssl_rs_evp_pkey_q_keygen(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                c"RSA".as_ptr(),
+                1,
+                bits,
+                core::ptr::null(),
+            );
+            assert!(!pkey.is_null(), "an RSA key must be generatable");
+            let x = X509_new();
+            let name = X509_NAME_new();
+            assert!(!x.is_null() && !name.is_null());
+            assert_eq!(
+                X509_NAME_add_entry_by_txt(
+                    name,
+                    c"CN".as_ptr(),
+                    MBSTRING_UTF8,
+                    c"tls12.test".as_ptr().cast::<u8>(),
+                    10,
+                    -1,
+                    0,
+                ),
+                1
+            );
+            assert_eq!(X509_set_version(x, 2), 1);
+            assert_eq!(ASN1_INTEGER_set(&mut (*x).cert_info.serialNumber, 1), 1);
+            assert_eq!(X509_set_subject_name(x, name), 1);
+            assert_eq!(X509_set_issuer_name(x, name), 1);
+            (*x).cert_info.validity.notBefore = X509_gmtime_adj(core::ptr::null_mut(), 0);
+            (*x).cert_info.validity.notAfter = X509_gmtime_adj(core::ptr::null_mut(), 86_400);
+            assert!(!(*x).cert_info.validity.notBefore.is_null());
+            assert!(!(*x).cert_info.validity.notAfter.is_null());
+            assert_eq!(X509_set_pubkey(x, pkey), 1);
+            assert!(X509_sign(x, pkey, EVP_sha256()) > 0, "signing must succeed");
+            X509_NAME_free(name);
+            (pkey, x)
+        }
+    }
+
+    /// A DH key on the named `ffdhe2048` group (it carries `p`, `q`, `g` and a fresh `pub`).
+    ///
+    /// # Safety
+    /// The caller owns and releases the answer.
+    unsafe fn dh_group_key() -> *mut EvpPkey {
+        // SAFETY: `kind == 2` passes the group name; the constructor allocates the key.
+        unsafe {
+            openssl_rs_evp_pkey_q_keygen(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                c"DH".as_ptr(),
+                2,
+                0,
+                c"ffdhe2048".as_ptr(),
+            )
+        }
+    }
+
+    /// A named `BIGNUM` of `key`, in its big-endian wire form.
+    ///
+    /// # Safety
+    /// `key` is live; the caller owns the returned number.
+    unsafe fn bn_bytes(key: *mut EvpPkey, name: &core::ffi::CStr) -> Vec<u8> {
+        let mut b: *mut BigNum = core::ptr::null_mut();
+        // SAFETY: `key` and `name` are live/NUL-terminated per the contract.
+        unsafe {
+            assert!(EVP_PKEY_get_bn_param(key, name.as_ptr(), &mut b) > 0);
+            let n = ((crate::bn::bignum::BN_num_bits(b) + 7) / 8) as usize;
+            let mut v = vec![0u8; n];
+            BN_bn2bin(b, v.as_mut_ptr());
+            BN_free(b);
+            v
+        }
+    }
+
+    /// The `ServerDHParams` prefix: `p<2> || g<2> || Ys<2>`.
+    fn dhe_params(p: &[u8], g: &[u8], ys: &[u8]) -> Vec<u8> {
+        let mut out = Vec::new();
+        for v in [p, g, ys] {
+            assert!(v.len() <= u16::MAX as usize);
+            out.extend_from_slice(&(v.len() as u16).to_be_bytes());
+            out.extend_from_slice(v);
+        }
+        out
+    }
+
+    /// A framed TLS1.2 `ServerKeyExchange` carrying `params`, a scheme and its signature.
+    fn ske_message(params: &[u8], sigalg: u16, sig: &[u8]) -> Vec<u8> {
+        let mut body = params.to_vec();
+        body.extend_from_slice(&sigalg.to_be_bytes());
+        body.extend_from_slice(&(sig.len() as u16).to_be_bytes());
+        body.extend_from_slice(sig);
+        let mut msg = Vec::with_capacity(4 + body.len());
+        msg.push(SSL3_MT_SERVER_KEY_EXCHANGE as u8);
+        msg.extend_from_slice(&[
+            (body.len() >> 16) as u8,
+            (body.len() >> 8) as u8,
+            body.len() as u8,
+        ]);
+        msg.extend_from_slice(&body);
+        msg
+    }
+
+    /// `rsa_pss_rsae_sha256` over `data`, the scheme the authority selects for an RSA
+    /// certificate in TLS1.2 (`tls12_check_peer_sigalg`).
+    ///
+    /// # Safety
+    /// `pkey` is live.
+    unsafe fn sign_pss(pkey: *mut EvpPkey, data: &[u8]) -> Vec<u8> {
+        // SAFETY: `EVP_MD_CTX_new` is the matching constructor for the owned handle below.
+        let Some(mctx_owner) =
+            (unsafe { OwnedCtx::<crate::evp::digest::EvpMdCtx>::new(EVP_MD_CTX_new()) })
+        else {
+            panic!("an EVP_MD_CTX must be allocatable");
+        };
+        let mctx = mctx_owner.as_ptr();
+        let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
+        // SAFETY: `mctx` and `pkey` are live.
+        unsafe {
+            assert!(
+                EVP_DigestSignInit(mctx, &mut pctx, EVP_sha256(), core::ptr::null_mut(), pkey) > 0
+            );
+            assert!(!pctx.is_null());
+            assert!(EVP_PKEY_CTX_set_signature_md(pctx, EVP_sha256()) > 0);
+            assert!(EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) > 0);
+            assert!(EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, RSA_PSS_SALTLEN_DIGEST) > 0);
+            assert!(EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, EVP_sha256()) > 0);
+            let mut len = 0usize;
+            assert!(
+                EVP_DigestSign(
+                    mctx,
+                    core::ptr::null_mut(),
+                    &mut len,
+                    data.as_ptr(),
+                    data.len()
+                ) > 0
+            );
+            let mut sig = vec![0u8; len];
+            assert!(
+                EVP_DigestSign(mctx, sig.as_mut_ptr(), &mut len, data.as_ptr(), data.len()) > 0
+            );
+            sig.truncate(len);
+            sig
+        }
+    }
+
+    /// A client connection in the state `tls_construct_client_hello` leaves it: the TLS1.2 DHE
+    /// cipher selected, the transcript initialised, and memory BIOs installed.
+    ///
+    /// # Safety
+    /// The caller releases the pair with `SSL_free`/`SSL_CTX_free`.
+    unsafe fn make_client() -> (*mut SslCtx, *mut Ssl) {
+        // SAFETY: every constructor answers a fresh object owned by this frame.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_set_cipher_list(ctx, c"DHE-RSA-AES128-GCM-SHA256".as_ptr()),
+                1
+            );
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_MIN_PROTO_VERSION,
+                    TLS1_2_VERSION as core::ffi::c_long,
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            assert_eq!(
+                SSL_CTX_ctrl(
+                    ctx,
+                    SSL_CTRL_SET_MAX_PROTO_VERSION,
+                    TLS1_2_VERSION as core::ffi::c_long,
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            SSL_set_connect_state(s);
+            let r = BIO_new(BIO_s_mem());
+            let w = BIO_new(BIO_s_mem());
+            assert!(!r.is_null() && !w.is_null());
+            SSL_set_bio(s, r, w);
+            (*s).pending_cipher = ssl3_get_cipher_by_id(DHE_RSA_AES128_GCM_SHA256_ID);
+            assert!(!(*s).pending_cipher.is_null());
+            (*s).version = TLS1_2_VERSION;
+            (*s).client_version = TLS1_2_VERSION;
+            (*s).client_random = [0x11; 32];
+            (*s).server_random = [0x22; 32];
+            assert_eq!(
+                crate::ssl::t1_enc::tls12_setup_cipher(s, DHE_RSA_AES128_GCM_SHA256),
+                1
+            );
+            (ctx, s)
+        }
+    }
+
+    /// The queued error reasons.
+    fn error_reasons() -> Vec<c_int> {
+        let mut out = Vec::new();
+        loop {
+            let e = ERR_get_error();
+            if e == 0 {
+                break;
+            }
+            out.push((e & 0x7f_ffff) as c_int);
+        }
+        out
+    }
+
+    /// Drain the write BIO and return the last fatal alert it carries.
+    ///
+    /// # Safety
+    /// `s` is live.
+    unsafe fn last_alert(s: *mut Ssl) -> Option<(u8, u8)> {
+        // SAFETY: `s` is live and its write BIO is the one `SSL_set_bio` installed.
+        unsafe {
+            let b = SSL_get_wbio(s);
+            if b.is_null() {
+                return None;
+            }
+            let n = BIO_ctrl_pending(b);
+            if n <= 0 {
+                return None;
+            }
+            let mut v = vec![0u8; n];
+            let r = BIO_read(b, v.as_mut_ptr().cast(), n as c_int);
+            v.truncate(r.max(0) as usize);
+            let mut p = 0usize;
+            let mut alert = None;
+            while p + 5 <= v.len() {
+                let ty = v[p];
+                let len = ((v[p + 3] as usize) << 8) | v[p + 4] as usize;
+                if p + 5 + len > v.len() {
+                    break;
+                }
+                if ty == 21 && len >= 2 {
+                    alert = Some((v[p + 5], v[p + 6]));
+                }
+                p += 5 + len;
+            }
+            alert
+        }
+    }
+
+    /// The client's `dh_Yc` from the ClientKeyExchange the constructor wrote.
+    ///
+    /// # Safety
+    /// `s` is live and its write BIO holds the CKE record.
+    unsafe fn read_client_public(s: *mut Ssl) -> Vec<u8> {
+        // SAFETY: `s` is live and its write BIO is the one `SSL_set_bio` installed.
+        unsafe {
+            let b = SSL_get_wbio(s);
+            let n = BIO_ctrl_pending(b);
+            assert!(n > 0, "the constructor must write a ClientKeyExchange");
+            let mut v = vec![0u8; n];
+            let r = BIO_read(b, v.as_mut_ptr().cast(), n as c_int);
+            v.truncate(r.max(0) as usize);
+            let mut p = 0usize;
+            while p + 5 <= v.len() {
+                let ty = v[p];
+                let len = ((v[p + 3] as usize) << 8) | v[p + 4] as usize;
+                assert!(p + 5 + len <= v.len(), "one whole record");
+                if ty == 22 && len >= 4 && v[p + 5] == SSL3_MT_CLIENT_KEY_EXCHANGE as u8 {
+                    let body = &v[p + 9..p + 5 + len];
+                    assert!(body.len() >= 2);
+                    let ylen = u16::from_be_bytes([body[0], body[1]]) as usize;
+                    assert_eq!(body.len(), 2 + ylen, "dh_Yc consumes the body");
+                    return body[2..].to_vec();
+                }
+                p += 5 + len;
+            }
+            panic!("no ClientKeyExchange in the write BIO");
+        }
+    }
+
+    /// Build a DH peer key from wire vectors. `q` is supplied for the server side, whose own key
+    /// carries the named group's `q`, so `dh_match_params` accepts the pair.
+    ///
+    /// # Safety
+    /// The caller owns and releases the answer.
+    unsafe fn dh_peer_key(p: &[u8], q: Option<&[u8]>, g: &[u8], y: &[u8]) -> *mut EvpPkey {
+        const EVP_PKEY_KEYPAIR: c_int = 0x04 | 0x80 | 0x01 | 0x02;
+        // SAFETY: the wire vectors are readable for their lengths; `BN_bin2bn` allocates.
+        let (bp, bq, bg, by) = unsafe {
+            (
+                BN_bin2bn(p.as_ptr(), p.len() as c_int, core::ptr::null_mut()),
+                q.map_or(core::ptr::null_mut(), |q| {
+                    BN_bin2bn(q.as_ptr(), q.len() as c_int, core::ptr::null_mut())
+                }),
+                BN_bin2bn(g.as_ptr(), g.len() as c_int, core::ptr::null_mut()),
+                BN_bin2bn(y.as_ptr(), y.len() as c_int, core::ptr::null_mut()),
+            )
+        };
+        assert!(!bp.is_null() && !bq.is_null() == q.is_some() && !bg.is_null() && !by.is_null());
+        let bld = OSSL_PARAM_BLD_new();
+        assert!(!bld.is_null());
+        // SAFETY: `bld` and the numbers are live; the keys are NUL-terminated.
+        let built = unsafe {
+            OSSL_PARAM_BLD_push_BN(bld, c"p".as_ptr(), bp) != 0
+                && (q.is_none() || OSSL_PARAM_BLD_push_BN(bld, c"q".as_ptr(), bq) != 0)
+                && OSSL_PARAM_BLD_push_BN(bld, c"g".as_ptr(), bg) != 0
+                && OSSL_PARAM_BLD_push_BN(bld, c"pub".as_ptr(), by) != 0
+        };
+        // SAFETY: `bld` is this frame's builder.
+        let params = unsafe {
+            let out = if built {
+                OSSL_PARAM_BLD_to_param(bld)
+            } else {
+                core::ptr::null_mut()
+            };
+            OSSL_PARAM_BLD_free(bld);
+            out
+        };
+        // SAFETY: each number is this frame's allocation.
+        unsafe {
+            BN_free(bp);
+            BN_free(bq);
+            BN_free(bg);
+            BN_free(by);
+        }
+        assert!(!params.is_null());
+        let ctx = unsafe {
+            EVP_PKEY_CTX_new_from_name(core::ptr::null_mut(), c"DH".as_ptr(), core::ptr::null())
+        };
+        assert!(!ctx.is_null());
+        let mut key: *mut EvpPkey = core::ptr::null_mut();
+        // SAFETY: `ctx` is live, `key` is this frame's slot, `params` is terminated.
+        let ok = unsafe {
+            EVP_PKEY_fromdata_init(ctx) > 0
+                && EVP_PKEY_fromdata(ctx, &mut key, EVP_PKEY_KEYPAIR, params) > 0
+        };
+        // SAFETY: `ctx` and `params` are this frame's objects.
+        unsafe {
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(ctx);
+            OSSL_PARAM_free(params);
+        }
+        assert!(ok && !key.is_null());
+        key
+    }
+
+    /// Derive `priv(pub)` with the crate's provider.
+    ///
+    /// # Safety
+    /// Both keys are live.
+    unsafe fn derive_pms(priv_: *mut EvpPkey, peer: *mut EvpPkey) -> Vec<u8> {
+        // SAFETY: the keys are live; the context is this frame's.
+        unsafe {
+            let ctx = EVP_PKEY_CTX_new_from_pkey(core::ptr::null_mut(), priv_, core::ptr::null());
+            assert!(!ctx.is_null());
+            assert!(crate::evp::exchange::EVP_PKEY_derive_init(ctx) > 0);
+            assert!(crate::evp::exchange::EVP_PKEY_derive_set_peer(ctx, peer) > 0);
+            let mut len = 0usize;
+            assert!(
+                crate::evp::exchange::EVP_PKEY_derive(ctx, core::ptr::null_mut(), &mut len) > 0
+            );
+            let mut out = vec![0u8; len];
+            assert!(crate::evp::exchange::EVP_PKEY_derive(ctx, out.as_mut_ptr(), &mut len) > 0);
+            out.truncate(len);
+            crate::evp::pkey_ctx::EVP_PKEY_CTX_free(ctx);
+            out
+        }
+    }
+
+    /// A complete client-side DHE flight: a valid DHE `ServerKeyExchange` is accepted, the
+    /// ClientKeyExchange is produced, and the two sides derive the same master secret.
+    #[test]
+    fn tls12_dhe_handshake_derives_the_same_secret() {
+        let _g = lock();
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let (server_pkey, cert) = rsa_identity(2048);
+            let server_dh = dh_group_key();
+            assert!(
+                !server_dh.is_null(),
+                "the ffdhe2048 group must create a key"
+            );
+            let p = bn_bytes(server_dh, c"p");
+            let q = bn_bytes(server_dh, c"q");
+            let g = bn_bytes(server_dh, c"g");
+            let ys = bn_bytes(server_dh, c"pub");
+            let params = dhe_params(&p, &g, &ys);
+            let mut signed = vec![0x11u8; 32];
+            signed.extend_from_slice(&[0x22u8; 32]);
+            signed.extend_from_slice(&params);
+            let sig = sign_pss(server_pkey, &signed);
+            let ske = ske_message(&params, 0x0804, &sig);
+
+            let (ctx, c) = make_client();
+            (*c).peer_cert = cert.cast();
+            // The authority's server echoes `extended_master_secret`; exercise that arm.
+            let sess = SSL_SESSION_new();
+            assert!(!sess.is_null());
+            (*sess).flags |= crate::ssl::ssl_lib::SSL_SESS_FLAG_EXTMS;
+            (*c).session = sess;
+
+            assert_eq!(
+                tls12_process_server_key_exchange(c, &ske),
+                1,
+                "a well-formed DHE ServerKeyExchange must be accepted"
+            );
+            assert!(!(*c).peer_tmp.is_null(), "the peer ephemeral is stored");
+            assert_eq!(
+                tls12_construct_client_key_exchange(c),
+                1,
+                "the DHE ClientKeyExchange must be produced"
+            );
+            let yc = read_client_public(c);
+
+            // Server side: derive with its own private key and the client's public value.
+            let client_pub = dh_peer_key(&p, Some(&q), &g, &yc);
+            let server_pms = derive_pms(server_dh, client_pub);
+            assert!(!server_pms.is_empty());
+
+            // The client's master secret was derived in `tls12_construct_client_key_exchange`.
+            // Re-deriving with the server's premaster over the same transcript must reproduce it.
+            let client_master = (*c).tls12_master_secret;
+            assert_eq!(
+                crate::ssl::t1_enc::tls12_derive_master_secret(
+                    c,
+                    server_pms.as_ptr(),
+                    server_pms.len()
+                ),
+                1
+            );
+            assert_eq!(
+                (*c).tls12_master_secret,
+                client_master,
+                "both peers must derive the same master secret"
+            );
+
+            EVP_PKEY_free(client_pub);
+            EVP_PKEY_free(server_dh);
+            EVP_PKEY_free(server_pkey);
+            SSL_free(c);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// The authority's `tls_process_ske_dhe` rejects a parameter set at the checks it names, with
+    /// `SSL_AD_ILLEGAL_PARAMETER` / `SSL_R_BAD_DH_VALUE`.
+    ///
+    /// # Safety
+    /// Allocates and releases the client and server identity in this frame.
+    unsafe fn assert_dhe_reject(p: &[u8], g: &[u8], ys: &[u8]) {
+        // SAFETY: every object below is created, used and released in this frame.
+        unsafe {
+            let (server_pkey, cert) = rsa_identity(2048);
+            let params = dhe_params(p, g, ys);
+            let mut signed = vec![0x11u8; 32];
+            signed.extend_from_slice(&[0x22u8; 32]);
+            signed.extend_from_slice(&params);
+            let sig = sign_pss(server_pkey, &signed);
+            let ske = ske_message(&params, 0x0804, &sig);
+            ERR_clear_error();
+            let (ctx, c) = make_client();
+            (*c).peer_cert = cert.cast();
+            assert_eq!(
+                tls12_process_server_key_exchange(c, &ske),
+                0,
+                "the authority rejects these parameters"
+            );
+            let reasons = error_reasons();
+            assert!(
+                reasons.contains(&SSL_R_BAD_DH_VALUE),
+                "the authority's reason is SSL_R_BAD_DH_VALUE: {reasons:?}"
+            );
+            assert_eq!(
+                last_alert(c),
+                Some((2, SSL_AD_ILLEGAL_PARAMETER as u8)),
+                "the authority's alert is fatal illegal_parameter"
+            );
+            SSL_free(c);
+            SSL_CTX_free(ctx);
+            EVP_PKEY_free(server_pkey);
+        }
+    }
+
+    #[test]
+    fn tls12_dhe_short_prime_is_rejected() {
+        let _g = lock();
+        // 256 bits: below the authority's `DH_MIN_MODULUS_BITS` (512).
+        // SAFETY: the vectors are this frame's and the client is released inside.
+        unsafe { assert_dhe_reject(&[0x80; 32], &[2], &[0x02]) };
+    }
+
+    #[test]
+    fn tls12_dhe_zero_public_value_is_rejected() {
+        let _g = lock();
+        // SAFETY: as above; `Ys = 0` fails `2 <= Ys <= p - 2`.
+        unsafe {
+            let server = dh_group_key();
+            let p = bn_bytes(server, c"p");
+            let g = bn_bytes(server, c"g");
+            EVP_PKEY_free(server);
+            assert_dhe_reject(&p, &g, &[0]);
+        }
+    }
+
+    #[test]
+    fn tls12_dhe_oversized_prime_is_rejected() {
+        let _g = lock();
+        // 10001 bits: above `OPENSSL_DH_MAX_MODULUS_BITS` (10000).
+        let mut p = vec![0xffu8; 1251];
+        p[0] = 0x01;
+        // SAFETY: as above.
+        unsafe { assert_dhe_reject(&p, &[2], &[2]) };
+    }
+
+    #[test]
+    fn tls12_dhe_not_prime_is_rejected() {
+        let _g = lock();
+        // SAFETY: the ffdhe2048 `p` with an even low byte fails `DH_check_params`' oddness test.
+        unsafe {
+            let server = dh_group_key();
+            let mut p = bn_bytes(server, c"p");
+            let g = bn_bytes(server, c"g");
+            EVP_PKEY_free(server);
+            let last = p.len() - 1;
+            p[last] &= 0xfe;
+            assert_dhe_reject(&p, &g, &[2]);
+        }
+    }
+
+    /// Negative control: the pre-fix dispatcher had only the ECDHE parser, and it cannot read a
+    /// DHE frame. This is the test-only canary for the defect class; it fires on the old
+    /// behaviour (the ECDHE-only parser answers `None`) and on a regression that removed the DHE
+    /// parser (the second assertion).
+    #[test]
+    fn tls12_dhe_negative_control_ecdhe_only_parser_cannot_read_the_frame() {
+        let _g = lock();
+        let body = {
+            let mut b = dhe_params(&[0x01; 256], &[2], &[0x02; 256]);
+            b.extend_from_slice(&[0x08, 0x04, 0x00, 0x01, 0xAA]);
+            b
+        };
+        assert!(
+            read_server_ecdh_params(&body).is_none(),
+            "the pre-fix ECDHE-only parser must refuse a DHE frame"
+        );
+        assert!(
+            read_server_dhe_params(&body).is_some(),
+            "the DHE parser must accept the same frame"
+        );
     }
 }
