@@ -1,0 +1,171 @@
+{
+  "receipt": "s50-tls13-enc",
+  "date": "2026-10-24",
+  "subphase": "S50: safe-33 ownership reconstruction of ssl/tls13_enc.rs (Wave B)",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "e4c1005e3",
+    "committed": false,
+    "changed_files": 3,
+    "diffstat": "src/ssl/tls13_enc.rs +728/-393 (production reconstruction and tests); src/ssl/statem/statem_srvr.rs +16/-10 (binder + ticket caller); src/ssl/statem/statem_clnt.rs +5/-1 (ticket caller); 3 files changed, 749 insertions(+), 404 deletions(-); working tree, no commit",
+    "builds_on": "s49-rec-layer-full.json (ReadStatus and the contracted output region are retained; this batch consumes them, it does not undo them) and s29-srvr-clienthello.json (S29-PSK-BINDER)"
+  },
+  "authority": {
+    "source": "OpenSSL 3.5.0 ssl/tls13_enc.c, ssl/record/methods/tls13_meth.c, ssl/statem/extensions.c (tls_psk_do_binder), ssl/statem/extensions_srvr.c:1439-1453, ssl/ssl_lib.c (ssl_log_secret).",
+    "abi": "No #[no_mangle], #[export_name], #[repr(C)], extern \"C\" signature, exported symbol or allocator-seam coordinate changed. Diff lines containing no_mangle/repr(C)/export_name/extern \"C\": 0. Production allocator calls (OwnedBuf::new_cleansed / OwnedBuf::new at SeamFile::NULL, line 0) are unchanged; the only added CRYPTO_free line is in a #[cfg(test)] fixture.",
+    "authority_behaviour": [
+      "tls13_enc appends the inner content type and AEAD-seals plain||type under type||version||length AAD.",
+      "tls13_dec strips the trailing zero padding, reads the last non-zero byte as the inner type, and returns content_len.",
+      "tls_psk_do_binder derives early/binder/finished keys and HMACs Hash(ClientHello up to the binders vector); the received binder must be hashsize bytes (extensions_srvr.c:1441-1448).",
+      "tls13_generate_secret is Derive-Secret(prev, \"derived\", Hash(\"\")) then HKDF-Extract; labels, orders and lengths are unchanged."
+    ]
+  },
+  "boundary": {
+    "id": "S50-TLS13-KEY-MAT",
+    "file": "src/ssl/tls13_enc.rs",
+    "reconstructed": "One slice-based key schedule over the live connection: every key-schedule input and output is a Rust slice whose extent is the actual buffer; every secret-bearing stack copy is a single CleansedBlock owner; the record output is an OutRegion whose only unsafe construction is the caller-region proof and whose writes are bounds-checked. The digest handle (`*const EvpMd`), the connection pointer and the C input/output regions remain the named unsafe boundary.",
+    "aead_bounds": {
+      "encrypt": "tag_len is the cipher mandat (16 for the three suites); inner_len = len+1 checked <= TLS13_HS_BUF_LEN+1; rec_len = inner_len+tag_len checked <= u16::MAX; out_len = 5+rec_len checked; header/body/tag written through OutRegion::write/slot after capacity checks. Success now requires the AEAD update to have produced exactly inner_len ciphertext bytes, so the published record has no uninitialised gap.",
+      "decrypt": "ct_len < tag_len -> -1; ct_body_len = ct_len-tag_len checked <= TLS13_HS_BUF_LEN+1; tag = ct[ct_body_len..] is exactly tag_len; the plaintext block is plain_cap = max(ct_body_len,1); success requires outl == ct_body_len; the padding walk reads only the authenticated prefix.",
+      "inner_type_and_padding": "strip_record_padding returns Option<(content_len,u8)>; None for an all-zero plaintext (no type); on Some, content_len < plain.len() and plain[content_len] is the in-range type byte. content_len > out_cap is refused before the copy.",
+      "s39_s40_verification": "The S39 decrypt sink contract still holds: out is written only for content_len <= out_cap, never read, and only on authenticated success. This batch additionally removed the pre-existing typed slice over the uninitialised decrypt scratch and the typed slice over the caller's whole encrypt output (see defects)."
+    },
+    "transcript_ownership": "hs_buf/hs_buf_len/hs_md_ctx remain single-owned by Ssl and released by SSL_free; transcript_update and tls13_init_transcript use checked prefixes and do not create a second live mutable alias. Stack transcript hashes are CleansedBlock<past> locals (one owner, wiped on every return).",
+    "key_material": "early_secret/handshake_secret/master_secret/traffic secrets/resumption secret stay in their single Ssl fields; the traffic key and IV are derived into CleansedBlock<32>/<16> locals and copied into enc_key/enc_iv or dec_key/dec_iv through checked field prefixes. No secret is duplicated into a second long-lived owner.",
+    "hidden": 0
+  },
+  "unsafe_ops": {
+    "before_after": "tls13_enc.rs production `unsafe {` blocks 76 -> 77; #[cfg(test)] blocks 8 -> 13; total 84 -> 90. Production `unsafe fn` 36 -> 35 (select_secret removed). from_raw_parts 20 -> 9; copy_nonoverlapping 8 -> 3; raw .add()/as_mut_ptr() occurrences 39 -> 22.",
+    "eliminated": [
+      "hkdf_extract / hkdf_expand_label / tls13_derive_key / tls13_derive_iv / tls13_derive_finishedkey raw pointer parameters: replaced by slices, so the extent is the buffer (11 from_raw_parts removed overall).",
+      "tls13_generate_secret(_md), tls13_generate_handshake_secret and tls13_generate_master_secret raw output pointers and from_raw_parts borrows of the connection's secret fields.",
+      "Traffic-secret derivation's raw ptr::copy_nonoverlapping of the transcript hash into handshake_traffic_hash/server_finished_hash and its from_raw_parts reads of the stored secrets (now checked field prefixes and copy_from_slice).",
+      "select_secret (a raw *const u8 return) and its unsafe block; tls13_change_cipher_state now selects a checked field prefix and installs key/IV with copy_from_slice instead of four ptr::copy_nonoverlapping calls.",
+      "tls13_psk_do_binder's raw msgstart/binderoffset deref, its raw `*binder.add(i)` compare read and its raw HMAC output: the transcript and both binder buffers are slices, and the received length is checked at the top of the function.",
+      "tls13_encrypt_record's `from_raw_parts_mut(out, out_len)` over the caller's whole record buffer and its slice indexing for the body/tag.",
+      "tls13_decrypt_record's `from_raw_parts_mut(plain, plain_cap)` over CRYPTO_malloc (uninitialised) memory; it now keeps a raw writable region until authentication and forms `&[u8]` only over the authenticated prefix.",
+      "write_handshake_message's three raw byte stores/copies; framing now goes through OutRegion::write."
+    ],
+    "relocated": [
+      "OutRegion::new (one unsafe constructor: caller writable region, no overlap), OutRegion::write (bounds-checked copy) and OutRegion::slot (bounds-checked raw pointer for the AEAD output) - 3 narrow blocks, one caller-region contract.",
+      "The 9 remaining from_raw_parts sites: C input regions (transcript_update data, encrypt plain, decrypt ct, write_handshake_message body), C output region (transcript_hash out), the initialised inner-plaintext block, the authenticated decrypt prefix, and the two Finished secret inputs. Each has a SAFETY contract naming the boundary.",
+      "The remaining FFI calls (HMAC, EVP_*, EVP_MD_CTX_*, BIO-facing handshake write) are unchanged calls inside their documented blocks."
+    ],
+    "contract_coverage": "Every production unsafe block carries a `SAFETY:` contract; undocumented_unsafe_blocks and unsafe_op_in_unsafe_fn are unchanged, so cargo clippy --lib -D warnings is the mechanical evidence."
+  },
+  "binder_verification": {
+    "s29_finding": "The pre-fix receiver read hashsize bytes through a bare pointer for a binder of any non-zero length (out-of-bounds read past the ClientHello).",
+    "remaining_paths": "tls13_psk_do_binder is the only binder computation. It now takes `transcript: &[u8]` (hash input extent = the ClientHello prefix), `binder: &mut [u8]`, and `received: &[u8]`; it (1) requires binder.len() == EVP_MD_get_size(md), (2) for sign=false requires received.len() == hashsize, both before any secret is derived or any byte read, then (3) runs the full-length accumulation with slice indexing. The only production caller derives md_size from the resolved session ciphersuite (tls13_md_size(kind)), checks binder.len() == md_size and binderoffset <= hs.len(), and passes hs[..binderoffset] and calc[..md_size].",
+    "result": "VERIFIED from this side; no out-of-bounds read remains on the binder path. The regression test fails deterministically pre-fix because the pre-fix code writes the computed binder into the output buffer before checking the received length (asserted untouched)."
+  },
+  "secret_cleansing": {
+    "owner": "CleansedBlock<N> is the single stack owner for HKDF scratch, early/binder/finished intermediates, traffic key/IV, transcript hashes, the Finished verify-data buffers and the keylog hex line; Drop is the only release and runs on every early return.",
+    "release_vs_cleansing": "Heap plaintext blocks still use OwnedBuf::new_cleansed (CRYPTO_malloc + CRYPTO_clear_free), preserving the authority's release mechanism; the stack owner wipes before returning. A destructor that merely frees is not used for secret material.",
+    "failure_paths": "Every refusal after a secret exists (failed HMAC, over-long label, missing transcript context, tag failure) drops the owners and wipes them; the test hook observed 4 cleansed blocks with 3 non-zero secret blocks on the tls13_finished_mac failure path.",
+    "constant_time": "The tag compare and the binder compare remain full-length accumulations with no early exit; no secret-dependent branch was introduced. The padding walk branches on public padding bytes only, after authentication."
+  },
+  "defects_found_and_fixed": [
+    {
+      "id": "S50-D1",
+      "finding": "tls13_encrypt_record formed `&mut [u8]` over the caller's whole uninitialised record buffer (`from_raw_parts_mut(out, out_len)`) before writing it. The S39 boundary fixed the read path but this write sink still had the same class of UB.",
+      "fix": "OutRegion keeps the region raw and raw writes are capacity-checked; no reference is formed over caller memory."
+    },
+    {
+      "id": "S50-D2",
+      "finding": "tls13_decrypt_record formed `&mut [u8]` over `CRYPTO_malloc` (uninitialised) scratch for the whole `plain_cap` before the AEAD wrote it; the S39 receipt described the block as a cleansed block, but new_cleansed is malloc, not zalloc.",
+      "fix": "The plaintext stays a raw writable region until authentication; the slice covers only `outl == ct_body_len` authenticated bytes."
+    },
+    {
+      "id": "S50-D3",
+      "finding": "tls13_encrypt_record accepted a short AEAD update (`outl < inner_len`) and still published `out_len` bytes, which could include an uninitialised gap in the record.",
+      "fix": "Success now requires outl == inner_len; the tag is placed only then."
+    }
+  ],
+  "tests": {
+    "new_or_renamed": [
+      "tls13_enc_truncated_inner_plaintext_is_refused",
+      "tls13_enc_truncated_ciphertext_is_refused",
+      "tls13_enc_padding_removal_cannot_yield_an_out_of_range_type_or_length",
+      "tls13_enc_binder_length_must_match_the_digest_size (renamed S29 regression control; also asserts the output is untouched on refusal)",
+      "tls13_enc_failure_path_cleanses_intermediate_secrets",
+      "tls13_enc_canary_pre_fix_binder_read_past_input"
+    ],
+    "unchanged_handshake": "ssl::statem::statem_srvr::tls12_group_tests::tls13_handshake_and_write_fit_a_32_kib_thread_stack passed unchanged in the statem run.",
+    "pass_lines": [
+      "cargo test --lib tls13_enc -- --test-threads=4: test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 2141 filtered out",
+      "cargo test --lib t1_enc -- --test-threads=4: test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 2154 filtered out",
+      "cargo test --lib rec_layer -- --test-threads=4: test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 2139 filtered out",
+      "cargo test --lib statem -- --test-threads=4: test result: ok. 183 passed; 0 failed; 5 ignored; 0 measured; 1974 filtered out; finished in 97.97s",
+      "tls13_enc regression group (--test-threads=1 --nocapture): test result: ok. 6 passed; 0 failed"
+    ],
+    "canary_output": [
+      "tls13_enc canary: pre-fix binder compare read 32 bytes from a 1-byte input (out of bounds); post-fix refuses before any read",
+      "tls13_enc cleanse hook: 4 block(s) cleansed on the failure path, 3 of them held secret bytes"
+    ],
+    "method": "The canary models the pre-fix pointer walk (`hashsize > received_len`) and then feeds the same 1-byte input to the converted function, which returns 0 without writing the output buffer. The cleanse hook is a #[cfg(test)] thread-local counter incremented in CleansedBlock::drop; it observes the drop, not freed memory."
+  },
+  "compatibility_delta": "Key-schedule outputs are unchanged: labels, derivation order, hash/HMAC inputs and lengths are identical. All changes are refusals on internal states that cannot arise from a valid record or binder: out-of-range digest lengths, a short/long binder, a short HKDF output, an AEAD update that does not fill the declared extent, and an all-zero inner plaintext. Record protection semantics, error values (-1), sequence advancement (only on success), and keylog formatting are unchanged.",
+  "gate": {
+    "cargo_fmt": "cargo fmt --all -- --check -> FMT_OK",
+    "cargo_check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.58s (0 warnings)",
+    "cargo_clippy": "cargo clippy --lib -- -D warnings -> Finished `dev` profile in 4.94s (clean)",
+    "filtered_tests": "21 + 8 + 23 + 183 passed; 0 failed; 5 pre-existing ignored",
+    "structural_guards": "no_mangle/repr(C)/export_name/extern \"C\" diff lines: 0; production allocator-seam calls unchanged (same OwnedBuf constructors and SeamFile::NULL/0 coordinates).",
+    "full_library_suite": "NOT_RUN (FAST schedule for this subphase).",
+    "miri": "NOT_RUN.",
+    "asan": "NOT_RUN.",
+    "independent_review": "NOT_RUN (the author wrote this receipt)."
+  },
+  "obligations": {
+    "discharged": [
+      "Every AEAD extent is derived from a checked length against the actual buffer; the tag length is the cipher's mandated value.",
+      "An all-zero/truncated inner plaintext is refused; padding removal cannot produce an out-of-range type or length (structural Option + test).",
+      "A short, long or empty received binder is refused before any secret derivation or read (S29 regression control).",
+      "Secret-bearing stack copies have one cleansing owner on success and every failure path.",
+      "The encrypt path no longer forms a reference over the caller's uninitialised record buffer, and publishes only fully written bytes.",
+      "The decrypt path no longer forms a reference over uninitialised allocator memory; the padding walk sees only authenticated bytes.",
+      "The binder transcript extent is the slice length, not a separately asserted offset."
+    ],
+    "retained": [
+      "`s: *mut Ssl` liveness/exclusive ownership is the caller's C ABI contract.",
+      "OutRegion::new's writable-and-non-overlapping caller region, and the raw input regions for encrypt/decrypt/transcript bodies, remain boundary preconditions.",
+      "transcript_hash's raw output pointer and the Finished functions' raw secret pointer remain C ABI inputs with stated extents.",
+      "The digest handle `md` must be a live EVP_MD; no safe caller can construct one otherwise.",
+      "The BIO/handshake write and EVP calls retain their own liveness contracts."
+    ],
+    "introduced": [
+      "Refusal when an AEAD update does not produce the declared ciphertext/plaintext extent (impossible for the three reduced suites in practice).",
+      "Refusal when hs_md_len is 0 or greater than EVP_MAX_MD_SIZE before any secret slice is formed."
+    ],
+    "hidden": 0
+  },
+  "graduation": "OWNERSHIP_RECONSTRUCTED",
+  "residuals": [
+    {
+      "id": "S50-R1",
+      "finding": "Miri (Stacked/Tree Borrows), ASan and Loom were not run; the OutRegion raw writes/pointers and the checked field-prefix borrows are argued from the call structure, not measured.",
+      "disposition": "BOUNDARY instrument; NOT_RUN. Blocks SAFETY_DISCHARGED."
+    },
+    {
+      "id": "S50-R2",
+      "finding": "The full library suite was not run at this schedule; the filtered tls13_enc/t1_enc/rec_layer/statem groups and the unchanged 1.3 handshake test passed.",
+      "disposition": "BATCH gate; NOT_RUN."
+    },
+    {
+      "id": "S50-R3",
+      "finding": "Allocation-failure injection remains unavailable (the allocator latch is one-way); the new refusal paths were exercised by malformed input, not by a failing allocator.",
+      "disposition": "Release is RAII over one owner; allocation-failure injection NOT_RUN."
+    },
+    {
+      "id": "S50-R4",
+      "finding": "The transcript_hash output and the Finished secret inputs still cross the C ABI as raw pointers; their extents are stated and checked (hash_len <= HASH_MAX) but not type-enforced at the boundary.",
+      "disposition": "Retained caller obligation; not hidden."
+    },
+    {
+      "id": "S50-R5",
+      "finding": "Independent adversarial review and the dependency-closure audit required for SAFETY_DISCHARGED were not run.",
+      "disposition": "BOUNDARY/SEAL gate; NOT_RUN."
+    }
+  ]
+}

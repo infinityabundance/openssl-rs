@@ -12952,6 +12952,103 @@ RUNNERS.update({
 })
 
 
+# S53 corpus batch: consumers whose own executable can be launched deterministically.  The batch
+# families without an entry keep their build/link row (`no-fixture`); no workload is fabricated.
+_S53_PROGRAMS: dict[str, dict] = {
+    "njs": {"program": "build/njs", "launch": ["-v"], "version_re": r"^\d+\.\d+",
+            "lib_paths": []},
+    "carbon-c-relay": {"program": "relay", "launch": ["-h"],
+                       "version_re": r"carbon-c-relay|Usage|usage", "lib_paths": []},
+    "dmg2img": {"program": "vfdecrypt", "launch": ["-h"],
+                "version_re": r"vfdecrypt|Usage|usage", "lib_paths": []},
+    "ike-scan": {"program": "ike-scan", "launch": ["--version"],
+                 "version_re": r"ike-scan", "lib_paths": []},
+    "gsocket": {"program": "tools/gs-netcat", "launch": ["--version"],
+                "version_re": r"gsocket|gs-netcat", "lib_paths": []},
+    "megatools": {"program": "megatools", "launch": ["--version"],
+                  "version_re": r"megatools|Megatools", "lib_paths": []},
+    "lastpass-cli": {"program": "b/lpass", "launch": ["--version"],
+                     "version_re": r"lpass|LastPass", "lib_paths": []},
+    "ipmiutil": {"program": "util/ipmiutil", "launch": ["-V"],
+                 "version_re": r"ipmiutil|IPMIUTIL", "lib_paths": ["util"]},
+    "yadifa": {"program": "sbin/yadifad/yadifad", "launch": ["--help"],
+               "version_re": r"yadifad|Usage|usage", "lib_paths": ["lib"]},
+    "mosh": {"program": "src/frontend/mosh-client", "launch": ["--version"],
+             "version_re": r"mosh|Mosh", "lib_paths": []},
+    "encfs": {"program": "b/encfs", "launch": ["--version"],
+              "version_re": r"encfs|EncFS", "lib_paths": []},
+    "casync": {"program": "b/casync", "launch": ["--version"],
+               "version_re": r"casync", "lib_paths": []},
+    "openfortivpn": {"program": "src/openfortivpn", "launch": ["--version"],
+                     "version_re": r"openfortivpn", "lib_paths": []},
+    "yapet": {"program": "src/yapet/yapet", "launch": ["--help"],
+              "version_re": r"yapet|YAPET|Usage|usage", "lib_paths": []},
+    "ftp-ssl": {"program": "ftp/ftp", "launch": ["-?"],
+                "version_re": r"ftp|usage|Usage", "lib_paths": []},
+    "ftpd-ssl": {"program": "ftpd/ftpd", "launch": ["-h"],
+                 "version_re": r"ftpd|usage|Usage", "lib_paths": []},
+    "hopm": {"program": "src/hopm", "launch": ["-v"],
+             "version_re": r"hopm|HOPM", "lib_paths": []},
+    "bip": {"program": "src/bip", "launch": ["-v"],
+            "version_re": r"bip|BIP", "lib_paths": []},
+    "bruteforce-wallet": {"program": "bruteforce-wallet", "launch": ["-h"],
+                          "version_re": r"bruteforce-wallet|Usage|usage", "lib_paths": []},
+    "gvpe": {"program": "src/gvpe", "launch": ["--version"],
+             "version_re": r"gvpe|GVPE", "lib_paths": []},
+    "imapfilter": {"program": "src/imapfilter", "launch": ["-v"],
+                   "version_re": r"imapfilter|IMAPFilter", "lib_paths": []},
+    "nmh": {"program": "uip/inc", "launch": ["-help"],
+            "version_re": r"inc|usage|Usage", "lib_paths": ["sbr/.libs"]},
+    "fdm": {"program": "fdm", "launch": ["-V"],
+            "version_re": r"fdm|FDM", "lib_paths": []},
+}
+PROGRAMS.update(_S53_PROGRAMS)
+
+
+def _wl_njs(ctx: dict) -> dict:
+    """njs's crypto module: SHA-256/SHA-1 digests through the subject libcrypto."""
+    script = ("var c = require('crypto');"
+              "console.log('sha256='+c.createHash('sha256').update('abc').digest('hex'));"
+              "console.log('sha1='+c.createHash('sha1').update('abc').digest('hex'));")
+    return _wl_markers_argv(ctx, ["-c", script],
+                            ["sha256=ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                             "sha1=a9993e364706816aba3e25717850c26c9cd0d89d"],
+                            "njs: SHA-256 and SHA-1 vectors through the crypto module")
+
+
+RUNNERS.update({"njs": _wl_njs})
+
+
+def _wl_casync(ctx: dict) -> dict:
+    """casync make/extract: the content digest is computed and re-verified over the subject."""
+    d = ctx["workdir"]
+    src = d / "casync-src"
+    src.mkdir(parents=True, exist_ok=True)
+    payload = b"s53-casync-payload\n" * 512
+    (src / "payload.bin").write_bytes(payload)
+    idx = d / "casync.caidx"
+    out = d / "casync-out"
+    mk = _run_captured([str(ctx["program"]), "make", str(idx), str(src)],
+                       cwd=d, env=ctx["env"], timeout=120)
+    ex = _run_captured([str(ctx["program"]), "extract", str(idx), str(out)],
+                       cwd=d, env=ctx["env"], timeout=120)
+    got = out / "payload.bin"
+    roundtrip = bool(got.is_file() and got.read_bytes() == payload)
+    ok = bool(mk["ok"] and ex["ok"] and roundtrip)
+    return {
+        "runtime_ok": ok, "functional_ok": ok,
+        "failure_class": None if ok else "functional-failure",
+        "residual": "none" if ok else "functional-divergence",
+        "reason": None if ok else "casync did not round-trip the payload",
+        "transcript": _transcript(("casync make", mk), ("casync extract", ex)),
+        "workload": "casync: content digest make/extract round trip",
+        "local_only": True,
+    }
+
+
+RUNNERS.update({"casync": _wl_casync})
+
+
 # --------------------------------------------------------------------------------------------
 # the load proof (L5): the subject's libssl/libcrypto are actually loaded
 # --------------------------------------------------------------------------------------------

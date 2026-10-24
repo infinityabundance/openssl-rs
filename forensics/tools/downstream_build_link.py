@@ -2076,6 +2076,12 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec.update({"family": new, "recipe_id": f"recipe:{new}:{rec['version']}"})
         rec.update(overrides)
         recipes.append(rec)
+    # The S53 corpus batch: 35 further pristine upstreams, each pinned by the digest computed in
+    # the court.  The subject prefix is the only OpenSSL on the link line.
+    for spec in _S53_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -2599,10 +2605,25 @@ _NCURSES_AUX: tuple[dict, ...] = (
     _aux_deb("n/ncurses", "libncurses-dev_6.4-4_amd64.deb",
              "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
              include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
-             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
+             links={"usr/lib/x86_64-linux-gnu/libncurses.so":
+                    "../../../lib/x86_64-linux-gnu/libncurses.so.6.4",
+                    "usr/lib/x86_64-linux-gnu/libncursesw.so":
+                    "../../../lib/x86_64-linux-gnu/libncursesw.so.6.4"}),
     _aux_deb("n/ncurses", "libtinfo-dev_6.4-4_amd64.deb",
              "e1935c2006661f1cda0bfd35f12ea30f9d64a110f30a074d512efe6c9466bf86",
-             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             links={"usr/lib/x86_64-linux-gnu/libtinfo.so":
+                    "../../../lib/x86_64-linux-gnu/libtinfo.so.6.4"}),
+    _aux_deb("n/ncurses", "libncurses6_6.4-4_amd64.deb",
+             "72300f09f02669c06c99b641ea795d52300ec7eb65eaccddf7bc3b72934f0ef5",
+             library_dirs=("lib/x86_64-linux-gnu",)),
+    _aux_deb("n/ncurses", "libtinfo6_6.4-4_amd64.deb",
+             "072d908f38f51090ca28ca5afa3b46b2957dc61fe35094c0b851426859a49a51",
+             library_dirs=("lib/x86_64-linux-gnu",)),
+    _aux_deb("n/ncurses", "libncursesw6_6.4-4_amd64.deb",
+             "98fa7a53dc565a38b65fb70422ad08001bf5361d8fbc74255280c329996a6bec",
+             library_dirs=("lib/x86_64-linux-gnu",)),
 )
 
 _READLINE_AUX: tuple[dict, ...] = (
@@ -4722,6 +4743,13 @@ _S46_LIBXML2_AUX: tuple[dict, ...] = (
              include_dirs=("usr/include", "usr/include/libxml2"),
              library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
              bin_dirs=("usr/bin",)),
+    _aux_deb("i/icu", "libicu72_72.1-3+deb12u1_amd64.deb",
+             "f7f6f99c6d7b025914df2447fc93e11d22c44c0c8bdd8b6f36691c9e7ddcef88",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("i/icu", "libicu-dev_72.1-3+deb12u1_amd64.deb",
+             "08bd4e3f4bd4fc725cf25e739edf0e7df5ac1826bdac9a7d990eea8f93b2d7a0",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
 )
 
 _S46_BISON_FLEX_AUX: tuple[dict, ...] = (
@@ -4748,6 +4776,9 @@ _S46_CONFUSE_AUX: tuple[dict, ...] = (
 
 _S46_FDM_AUX: tuple[dict, ...] = (
     *list(_S46_BISON_FLEX_AUX),
+    _aux_deb("libt/libtool", "libtool_2.4.7-7~deb12u1_all.deb",
+             "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+             bin_dirs=("usr/bin",)),
     _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
              "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
              library_dirs=(_AUX_MULTIARCH,)),
@@ -4766,6 +4797,8 @@ _S46_FDM_AUX: tuple[dict, ...] = (
 
 _S46_PERL_AUX: tuple[dict, ...] = (
     *list(_S23_PERL_AUX),
+    _s23_deb("libi/libio-interactive-tiny-perl", "libio-interactive-tiny-perl_0.2-2_all.deb",
+             "46e0886278f09c08581b928ca3dd5afe1283792e1b8ac504cf037ea72b6f06cc"),
     _s23_deb("libn/libnet-dns-perl", "libnet-dns-perl_1.36-1_all.deb",
              "2d5f9cf243c04f41e7c906bad882e67407a3593cf52caf2d814483f0f92f90fc",
              library_dirs=(_AUX_MULTIARCH,)),
@@ -4824,7 +4857,8 @@ _S46_SPECS: tuple[dict, ...] = (
                       "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
                       "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
         "make": [], "artifact": "b/stubby", "launch": ["-V"],
-        "aux_sources": list(_S46_STUBBY_AUX),
+        "aux_sources": list(_S46_STUBBY_AUX) + list(_S46_BSD_AUX),
+        "env_extra": {"CMAKE_REQUIRED_LIBRARIES": "{aux}/usr/lib/x86_64-linux-gnu/libbsd.so"},
         "note": ("getdns 1.7.3's stubby DNS-over-TLS client linked to the subject libssl"),
     },
     {
@@ -4844,11 +4878,15 @@ _S46_SPECS: tuple[dict, ...] = (
         "url": "https://deb.debian.org/debian/pool/main/x/xar/xar_1.8.0.498.orig.tar.gz",
         "archive": "tar.gz", "build_system": "make", "configure": None,
         "sha256": "9cee4f80b96cf592ccc545a4fdd51e4da4a5bd3b4734901637d67b043eff3c75",
-        "pre_build": [["sh", "-c", ("sed -i 's#/usr#{aux}/usr#g' {aux}/usr/bin/xml2-config; "
+        "pre_build": [["sh", "-c", ("printf '#define API_AVAILABLE(x)\n' > {root}/api_compat.h; "
+                                       "sed -i 's#/usr#{aux}/usr#g' {aux}/usr/bin/xml2-config; "
                                        "cd xar && ./configure --prefix={root}/.l7-install "
-                                       "--with-openssl={prefix} && make -j4")]],
+                                       "--with-openssl={prefix} "
+                                       "--with-xml2-config={aux}/usr/bin/xml2-config && "
+                                       "make -j4")]],
         "make": ["-C", "xar"], "artifact": "xar/xar", "launch": ["--version"],
         "aux_sources": list(_S46_LIBXML2_AUX),
+        "env_extra": {"CFLAGS": "-O2 -include {root}/api_compat.h"},
         "note": ("xar 1.8.0's signed-archive path through the subject libcrypto"),
     },
     {
@@ -4986,10 +5024,15 @@ _S46_SPECS: tuple[dict, ...] = (
                                        "cp -a {aux}/usr/lib/x86_64-linux-gnu/perl5/5.36/. "
                                        "{root}/.perl-deps/arch/ 2>/dev/null || true; "
                                        "export PERL5LIB={aux}/usr/share/perl5:{aux}/usr/lib/x86_64-linux-gnu/perl5/5.36:{root}/.perl-deps/lib:{root}/.perl-deps/arch; "
+                                       "mkdir -p {aux}/usr/share/perl5/inc/IO/Interactive; "
+                                       "ln -sf ../../../IO/Interactive/Tiny.pm "
+                                       "{aux}/usr/share/perl5/inc/IO/Interactive/Tiny.pm; "
                                        "perl Makefile.PL OPENSSL_PREFIX={prefix}")]],
         "make": [MAKE_JOBS], "artifact": "blib/arch/auto/Crypt/SSLeay/SSLeay.so", "launch": None,
         "aux_sources": list(_S46_PERL_AUX),
-        "env_extra": {"LD_LIBRARY_PATH": "{prefix}/lib"},
+        "env_extra": {"LD_LIBRARY_PATH": "{prefix}/lib",
+                      "CPPFLAGS": "-I{prefix}/include",
+                      "LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
         "note": ("Crypt::SSLeay 0.73_06's XS TLS client linked to the subject libssl"),
     },
     {
@@ -5018,9 +5061,9 @@ _S46_SPECS: tuple[dict, ...] = (
                 "fdm_1.9+git20181219.orig.tar.xz"),
         "archive": "tar.xz", "build_system": "autotools",
         "sha256": "055fcd7c654efa97b94c68087537bf59347fa9383f7cd8578ec54f1953cbffe0",
-        "configure": ["--prefix={root}/.l7-install", "--enable-pcre"],
+        "configure": ["--prefix={root}/.l7-install"],
         "make": [MAKE_JOBS], "artifact": "fdm", "launch": ["-V"],
-        "aux_sources": list(_S46_FDM_AUX),
+        "aux_sources": list(_S46_FDM_AUX) + list(_ONBOARD_AUTOTOOLS_AUX),
         "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
         "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
         "note": ("fdm 1.9's IMAPS/POP3S fetch path through the subject libssl"),
@@ -5056,18 +5099,27 @@ _S46_SPECS: tuple[dict, ...] = (
         "url": "https://deb.debian.org/debian/pool/main/s/sbsigntool/sbsigntool_0.9.4.orig.tar.xz",
         "archive": "tar.xz", "build_system": "autotools",
         "sha256": "016d7db322492b09f2f8a3bc02aa2b643db3ca0f31f9efa630c3e8ddef9484e8",
-        "configure": ["--prefix={root}/.l7-install", "--with-efi-include={aux}/usr/include"],
+        "configure": ["--prefix={root}/.l7-install", "--with-efi-include={aux}/usr/include",
+                      "--with-efi-libdir={aux}/usr/lib"],
         "make": [MAKE_JOBS], "artifact": "src/sbsign", "launch": ["--version"],
         "aux_sources": tuple(_S46_BISON_FLEX_AUX) + tuple(_ONBOARD_AUTOTOOLS_AUX) + (
             _aux_deb("b/binutils", "binutils-dev_2.40-2_amd64.deb",
                      "35066c624bd9d9f3d7fb9fee8f98556482a4fd0bbbf4a00a285fa877da350257",
                      include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+            _aux_deb("h/help2man", "help2man_1.49.3_amd64.deb",
+                     "9b17251751ee4e813df789ba39c25841b9e26bf44206fd53ce4d34bc2d761eed",
+                     bin_dirs=("usr/bin",)),
             _aux_deb("g/gnu-efi", "gnu-efi_3.0.15-1_amd64.deb",
                      "1e668cebcb94678b39a69e5c7b8f1d1eb51fd4eb251643491a8c249ae6fa0c36",
                      include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),),
-        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
-        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
-        "note": ("sbsigntool 0.9.4 signs a PE image with the subject libcrypto"),
+        "pre_build": [["sh", "-c", ("set -e; mkdir -p /usr/include/efi /usr/lib; "
+                                       "cp -a {aux}/usr/include/efi/. /usr/include/efi/; "
+                                       "cp -a {aux}/usr/lib/crt0-efi-*.o "
+                                       "{aux}/usr/lib/libgnuefi.a {aux}/usr/lib/*.lds /usr/lib/")],
+                      ["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV, CFLAGS="-O2 -Wno-error"),
+        "note": ("sbsigntool 0.9.4 signs a PE image with the subject libcrypto; the gnu-efi "
+                 "crt/headers are staged at the fixed paths its configure probes"),
     },
     {
         "family": "conserver-client", "version": "8.2.7",
@@ -5203,6 +5255,800 @@ _S46_SPECS: tuple[dict, ...] = (
         "note": ("libfsapfs 20201107's APFS image verification through the subject libcrypto"),
     },
 )
+
+# --------------------------------------------------------------------------------------------
+# S53 corpus batch (2026-10-24): 35 further no-recipe families, chosen for buildability and a
+# non-interactive TLS/crypto entry point.  Every archive is a pristine Debian upstream source
+# pinned by the digest this subphase computed in the court; non-OpenSSL dependencies come from
+# pinned bookworm packages through the auxiliary seam, so the subject prefix remains the only
+# OpenSSL on every link line.  A family the venue cannot drive deterministically keeps its
+# build/link row rather than fabricating a workload.
+# --------------------------------------------------------------------------------------------
+
+_S53_M4_AUX: tuple[dict, ...] = (
+    _aux_deb("m/m4", "m4_1.4.19-3_amd64.deb",
+             "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+             bin_dirs=("usr/bin",)),
+)
+
+_S53_LUA54_AUX: tuple[dict, ...] = tuple(_LUA54_AUX) + (
+    _aux_deb("l/lua5.4", "lua5.4_5.4.4-3+deb12u1_amd64.deb",
+             "8a7221aa9614911f1236cbb1ba85401bb06f9ac66b51e5f98f31fbdeeca99fa7",
+             bin_dirs=("usr/bin",)),
+)
+
+_S53_LUA52_AUX: tuple[dict, ...] = (
+    _aux_deb("l/lua5.2", "liblua5.2-0_5.2.4-3_amd64.deb",
+             "c5e1e8410ab9dbbe9ddc30f306c3e50c5ed17acfe4bcfb681078d4b85070c9eb",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("l/lua5.2", "liblua5.2-dev_5.2.4-3_amd64.deb",
+             "abbb0067953854d0cca1901ab6fdab255500aafc645cccbf467670597d33a46a",
+             include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S53_READLINE_AUX: tuple[dict, ...] = tuple(_READLINE_AUX) + (
+    _aux_deb("r/readline", "libreadline8_8.2-1.3_amd64.deb",
+             "e02ebbd3701cf468dbf98d6d917fbe0325e881f07fe8b316150c8d2a64486e66",
+             library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S53_PAM_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pam", "libpam0g_1.5.2-6+deb12u2_amd64.deb",
+             "a06f889caf9e97ccf04dedec0905573916bc6ec3366ade2c6ef8900047fd5cc1",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pam", "libpam0g-dev_1.5.2-6+deb12u2_amd64.deb",
+             "acee39196e2e3ccf51fd7ccdf1247d7a4bd061cd6fd17c277eccbdcc87d6b6f1",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S53_WRAP_AUX: tuple[dict, ...] = (
+    _aux_deb("t/tcp-wrappers", "libwrap0_7.6.q-32_amd64.deb",
+             "cbce2669a3ba4d74cfdc52b14f38014893e23d85a33d109a3422c342eefc55f8",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("t/tcp-wrappers", "libwrap0-dev_7.6.q-32_amd64.deb",
+             "e2bf9aa192496ea98ec664702054ef712a16190ff4690e1e955f9fe8f93e1017",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S53_DB_AUX: tuple[dict, ...] = (
+    _aux_deb("d/db5.3", "libdb5.3_5.3.28+dfsg2-1_amd64.deb",
+             "7dc5127b8dd0da80e992ba594954c005ae4359d839a24eb65d0d8129b5235c84",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("d/db5.3", "libdb5.3-dev_5.3.28+dfsg2-1_amd64.deb",
+             "f792f095deecb4f990f695e0d33f75f70b92491eab649adf91ea8574885d157c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S53_PCAP_AUX: tuple[dict, ...] = (
+    _aux_deb("libp/libpcap", "libpcap0.8_1.10.3-1_amd64.deb",
+             "856014904c4d7ec9a9ba864c546d91c059b9bf00c7c89eda6fd0a16045f8faac",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libp/libpcap", "libpcap0.8-dev_1.10.3-1_amd64.deb",
+             "5f66e87262e42cc42a77d6acdb41098e4ff3e6db3bdba1b73189dea5a3afb88c",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libn/libnet", "libnet1_1.1.6+dfsg-3.2_amd64.deb",
+             "9e0677a92de3df272e3a87a4e1591a71cb8c03fdea2bac68908ac4177066bb7f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libn/libnet", "libnet1-dev_1.1.6+dfsg-3.2_amd64.deb",
+             "7cdbdbfe6d45dcff469667d8c990b02006964b556ee97bc60b70a149f1a07e7a",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S53_NIDS_AUX: tuple[dict, ...] = tuple(_S53_PCAP_AUX) + tuple(_S53_DB_AUX) + (
+    _aux_deb("libn/libnids", "libnids1.21_1.26-2_amd64.deb",
+             "f4d56741c487c1c30976f402b9fd531d00b7faa0bdbae34d59dd0e50795a5e91",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libn/libnids", "libnids-dev_1.26-2_amd64.deb",
+             "cd9dd8f300a102181b624a81e983c4661e9db8dcf3adc4efb1465f39c5544e78",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S53_MOSH_AUX: tuple[dict, ...] = tuple(_NCURSES_AUX) + tuple(_S53_READLINE_AUX) + (
+    _aux_deb("p/protobuf", "libprotobuf32_3.21.12-3+deb12u1_amd64.deb",
+             "e9e4e8cf0d2c48e2e3c17308e2093b3856f470b77e0022b7d906fb1b3551f213",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/protobuf", "libprotobuf-dev_3.21.12-3+deb12u1_amd64.deb",
+             "2f045f82e4ae0bdfce7f18f1f36613b9cd8c570024b8de68668bc255c32a2d88",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("p/protobuf", "protobuf-compiler_3.21.12-3+deb12u1_amd64.deb",
+             "698e96f08152490ee576ead6a9116e1239514de66473305473f67ce2b5408e23",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("p/protobuf", "libprotoc32_3.21.12-3+deb12u1_amd64.deb",
+             "27770048715fdebe3dab2f6603ca6667ac72ab474989226d2f70153522286adf",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libu/libutempter", "libutempter0_1.2.1-3_amd64.deb",
+             "e2bf3c7fb0ebd7d7966166d98320767adcd35a6d1eabc32220d8219c9efb1c0f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libu/libutempter", "libutempter-dev_1.2.1-3_amd64.deb",
+             "77fdfdfe2755618e30ff073843f83c61b27921554c24cde1c7464ebf2888d378",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S53_NMH_AUX: tuple[dict, ...] = (tuple(_NCURSES_AUX) + tuple(_S53_READLINE_AUX)
+                                  + tuple(_S53_DB_AUX) + tuple(_LIBCURL_AUX) + (
+    _aux_deb("c/cyrus-sasl2", "libsasl2-2_2.1.28+dfsg-10_amd64.deb",
+             "11ee190ad39f8d7af441d2c8347388b9449434c73acc67b4b372445ac4152efa",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("c/cyrus-sasl2", "libsasl2-dev_2.1.28+dfsg-10_amd64.deb",
+             "10d19a79adfebe333a124d0f171cc4d727716374bce30d3ffd247e1081ef4ead",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+))
+
+_S53_NZBGET_AUX: tuple[dict, ...] = tuple(_NCURSES_AUX) + tuple(_S46_LIBXML2_AUX)
+
+_S53_MOKUTIL_AUX: tuple[dict, ...] = (
+    _aux_deb("e/efivar", "libefivar1_37-6_amd64.deb",
+             "2abb5ccbd287049da2eca79c34ef9d68923ae6c73366ce7c7d65f084588dc2c2",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("e/efivar", "libefivar-dev_37-6_amd64.deb",
+             "1435093aa0badfbfffb3ba19a286accde269ff55834cf946039dd69642860fc1",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("k/keyutils", "libkeyutils1_1.6.3-2_amd64.deb",
+             "cfac89e6a7a54ff3c6a4f843310e25efeddaa771baeae470bd98bd588c373563",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("k/keyutils", "libkeyutils-dev_1.6.3-2_amd64.deb",
+             "b26aa6df93bbf977f3b945ea7329cb89cc800b93cc0e4a3542c964f3e387d64a",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S53_ENC_FS_AUX: tuple[dict, ...] = (
+    _aux_deb("f/fuse", "libfuse2_2.9.9-6+b1_amd64.deb",
+             "df32b8f65d819f854e096896890d6ad632b6e520977bb120bb3143b4c66e2fcd",
+             library_dirs=("lib/x86_64-linux-gnu",)),
+    _aux_deb("f/fuse", "libfuse-dev_2.9.9-6+b1_amd64.deb",
+             "cf4114336cdf0ff6b720e04999f953276efb2f7c3c2df90043ee274842f09dce",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
+             links={"usr/lib/x86_64-linux-gnu/libfuse.so":
+                    "../../../lib/x86_64-linux-gnu/libfuse.so.2.9.9"}),
+)
+
+_S53_CASYNC_AUX: tuple[dict, ...] = (tuple(_LIBCURL_AUX) + (
+    _aux_deb("a/acl", "libacl1_2.3.1-3_amd64.deb",
+             "8be9df5795114bfe90e2be3d208ef47a5edd3fc7b3e20d387a597486d444e5e2",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("a/acl", "libacl1-dev_2.3.1-3_amd64.deb",
+             "b82d80354727720278b28da4d7da9165fd97d7c46e4d6e5c20d033d1f4c423c9",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("x/xz-utils", "liblzma5_5.4.1-1+deb12u1_amd64.deb",
+             "f96d8876b53ec89d76a992bc199679b818cf518225a768954d9451fb556a4eb7",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("x/xz-utils", "liblzma-dev_5.4.1-1+deb12u1_amd64.deb",
+             "0f30921b4b7ce6baa8565f2b83145158267fb77c654aa431a6fea1e239019e1f",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libz/libzstd", "libzstd1_1.5.4+dfsg2-5_amd64.deb",
+             "6315b5ac38b724a710fb96bf1042019398cb656718b1522279a5185ed39318fa",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libz/libzstd", "libzstd-dev_1.5.4+dfsg2-5_amd64.deb",
+             "5d079cf5f96b724c97a611630ea428a1ebe793746db7bbf6e1455803b962b4ea",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("s/systemd", "libudev1_252.39-1~deb12u2_amd64.deb",
+             "6f7e08f11c4809d2e5998c775f7b423ab5ec2ce0309494b4a2615037052245e2",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("s/systemd", "libudev-dev_252.39-1~deb12u2_amd64.deb",
+             "b8795a05b96799cb25ed3677eef8e8b1f1facdf07ad4527e06ef8f82ca164fbd",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libs/libselinux", "libselinux1_3.4-1+b6_amd64.deb",
+             "2b07f5287b9105f40158b56e4d70cc1652dac56a408f3507b4ab3d061eed425f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libs/libselinux", "libselinux1-dev_3.4-1+b6_amd64.deb",
+             "efd67cd1c09a19bb1f33a53bfa30e703cecee0345f66ba727a7cc64c34656206",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+))
+
+_S53_TCPFLOW_AUX: tuple[dict, ...] = (tuple(_S53_PCAP_AUX) + tuple(_S23_HTTP_PARSER_AUX) + (
+    _aux_deb("c/cairo", "libcairo2_1.16.0-7_amd64.deb",
+             "927fa059f8b5791d0cd744d4e3a8c57fa872ef849ce14434dc2222ac8a076a69",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("c/cairo", "libcairo2-dev_1.16.0-7_amd64.deb",
+             "fd952dcfec073330c5c82c9ac63a4035ead4c78187cb67ad6fd818d4a2f8b145",
+             include_dirs=("usr/include", "usr/include/cairo"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("p/pixman", "libpixman-1-0_0.42.2-1_amd64.deb",
+             "9ed75ef81b6b1eba9e1357f8b0ce01d31112b0e07b2b685bee2cf627a8932892",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pixman", "libpixman-1-dev_0.42.2-1_amd64.deb",
+             "4430a914164274a5c81e979f786bb84895f680b8fe041dfcf4c6bfa521183122",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("f/freetype", "libfreetype6_2.12.1+dfsg-5+deb12u4_amd64.deb",
+             "8043e479f73f29992d652e3f9dfe8b17f9780c7ea6330afe379ec5f9f188ac44",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("f/freetype", "libfreetype-dev_2.12.1+dfsg-5+deb12u4_amd64.deb",
+             "5fa327ae78e645cff5a2aadad92ca3640abc5cee7ad5368d7551bea8930202af",
+             include_dirs=("usr/include", "usr/include/freetype2"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("f/fontconfig", "libfontconfig1_2.14.1-4_amd64.deb",
+             "16ee38d374e064f534116dc442b086ef26f9831f1c0af7e5fb4fe4512e700649",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("f/fontconfig", "libfontconfig-dev_2.14.1-4_amd64.deb",
+             "74f4bbde5795e4fb4c453308bd0eb8ef45d7ade3cf11b3c18394f9e2c15d28df",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+))
+
+_S53_PERDITION_AUX: tuple[dict, ...] = tuple(_S53_PAM_AUX) + (
+    _aux_deb("v/vanessa-logger", "libvanessa-logger0_0.0.10-3.1_amd64.deb",
+             "bdb45b55a10a92569b241928777b145eda4bbe626ffd568abd3ed387fb121226",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("v/vanessa-logger", "libvanessa-logger-dev_0.0.10-3.1_amd64.deb",
+             "a1d08a2dca51b786e79e3c90a5e57bf4107f47c60ea4ab7e0da8ae971772bdc2",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("v/vanessa-socket", "libvanessa-socket2_0.0.13-1+b3_amd64.deb",
+             "9ad900cb68fcfe99416885137ed35e7dbd5145c5de34982e67fec7d4ed339bc1",
+             library_dirs=("usr/lib",)),
+    _aux_deb("v/vanessa-socket", "libvanessa-socket-dev_0.0.13-1+b3_amd64.deb",
+             "af0639e2c5aa8a6c02a732158aa1b4ce10963aec54ae41d29388c2e0ffce0e3c",
+             include_dirs=("usr/include",), library_dirs=("usr/lib",),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("v/vanessa-adt", "libvanessa-adt1_0.0.9-2.1_amd64.deb",
+             "55b5065225854bd79525710ad42bc8bebedf4a0167a436ec03ebe86e93427aec",
+             library_dirs=("usr/lib",)),
+    _aux_deb("v/vanessa-adt", "libvanessa-adt-dev_0.0.9-2.1_amd64.deb",
+             "099b7b6a4ee5be10d3019a64bf033cc8f7fed1f6556ae4be65cb70d182748b6a",
+             include_dirs=("usr/include",), library_dirs=("usr/lib",),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("p/popt", "libpopt0_1.19+dfsg-1_amd64.deb",
+             "6f94b488255acd996254f775c77ff3956557c61f860a3c9caeaf65457554194f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/popt", "libpopt-dev_1.19+dfsg-1_amd64.deb",
+             "0f1c2bcc8270f6f06a3f351efd43296ad4793fe1daf641b7d9f0428dc7d141a2",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("t/tcp-wrappers", "libwrap0_7.6.q-32_amd64.deb",
+             "cbce2669a3ba4d74cfdc52b14f38014893e23d85a33d109a3422c342eefc55f8",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("t/tcp-wrappers", "libwrap0-dev_7.6.q-32_amd64.deb",
+             "e2bf9aa192496ea98ec664702054ef712a16190ff4690e1e955f9fe8f93e1017",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libi/libidn", "libidn12_1.41-1_amd64.deb",
+             "42b89a25fadc6ba31cbb70d6e60fbda0adf1494025f8a434209fe9929e2d7df8",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libi/libidn", "libidn-dev_1.41-1_amd64.deb",
+             "57277eddda4e1c0b89c7730aace9bf821199a369fe6ac55f54a710579a31d333",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S53_LIBFREEFARE_AUX: tuple[dict, ...] = (
+    _aux_deb("libn/libnfc", "libnfc6_1.8.0-2_amd64.deb",
+             "66dfef3018b89468045dd19ff7ea7b35a8ce40373778d860b72d322ad9ce4937",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libn/libnfc", "libnfc-dev_1.8.0-2_amd64.deb",
+             "ce26cea52d094bbcb4f834d508cefb15e85b950c5f39724d75e26aea1dd2eb61",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libu/libusb-1.0", "libusb-1.0-0_1.0.26-1_amd64.deb",
+             "0a8a6c4a7d944538f2820cbde2a313f2fe6f94c21ffece9e6f372fc2ab8072e1",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libu/libusb-1.0", "libusb-1.0-0-dev_1.0.26-1_amd64.deb",
+             "22a952f48cdb59f1d0c476874facc62418eda5b4c30c5a23a17c28781b426c1b",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S53_YAPET_AUX: tuple[dict, ...] = tuple(_NCURSES_AUX) + (
+    _aux_deb("a/argon2", "libargon2-1_0~20171227-0.3+deb12u1_amd64.deb",
+             "4a8155b06270b88eed34d132acfc8ccc0b85499e1c4bfd7f31f8b199af42b1de",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("a/argon2", "libargon2-dev_0~20171227-0.3+deb12u1_amd64.deb",
+             "dc84400da5878a974842d272330b06c6691a10b27c488557e3ba9364a56f0670",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("c/cppunit", "libcppunit-1.15-0_1.15.1-4+b1_amd64.deb",
+             "85e20157e3497c024f655107b2c569ce5391f45c32023ffa96db247c9c0cdee0",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("c/cppunit", "libcppunit-dev_1.15.1-4+b1_amd64.deb",
+             "7b71c36da51edeaca28678775d146cf6b8bedd419e2dd4365cd27e5fc415e4db",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S53_GLIB_AUX: tuple[dict, ...] = (
+    _aux_deb("g/glib2.0", "libglib2.0-0_2.74.6-2+deb12u9_amd64.deb",
+             "7ff85197685d89e150e342b29a59aab1beee400050ba7da73de81cd999ffee5a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("g/glib2.0", "libglib2.0-dev_2.74.6-2+deb12u9_amd64.deb",
+             "217766f170553e14884f7d67c0636b833da43c1e4a65dfe41268ba1292001ccd",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S53_SPECS: tuple[dict, ...] = (
+    {
+        "family": "njs", "version": "0.7.9",
+        "url": ("https://deb.debian.org/debian/pool/main/libn/libnginx-mod-js/"
+                "libnginx-mod-js_0.7.9.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "92cc425d0b0952bb7e2e7a396cba58feb4a90fb3cb63441c201ab4d3e0cd6403",
+        "configure": ["--cc-opt=-I{prefix}/include -I{aux}/usr/include",
+                      "--ld-opt=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                      "-L{aux}/usr/lib/x86_64-linux-gnu "
+                      "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"],
+        "make": [MAKE_JOBS], "artifact": "build/njs", "launch": ["-v"],
+        "aux_sources": list(_PCRE2_AUX),
+        "note": ("nginx njs 0.7.9: its crypto module (EVP hash/HMAC) linked to the subject "
+                 "libcrypto; pcre2 is the venue's pinned regex engine"),
+    },
+    {
+        "family": "lua-cqueues", "version": "20200726",
+        "url": ("https://deb.debian.org/debian/pool/main/l/lua-cqueues/"
+                "lua-cqueues_20200726.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "make", "configure": None,
+        "sha256": "25507b079e825ef8644039f4c2d10f9aec6f02bb1af5a1b4c47d7e5f275d1bbe",
+        "make": [MAKE_JOBS, "LUA_APIS=5.4",
+                 "LUA54_CPPFLAGS=-I{aux}/usr/include/lua5.4 "
+                 "-I{aux}/usr/include/x86_64-linux-gnu",
+                 "lua54cpath={aux}/usr/lib/x86_64-linux-gnu/lua/5.4"],
+        "artifact": "src/5.4/cqueues.so", "launch": None,
+        "aux_sources": list(_S53_LUA54_AUX) + list(_S53_M4_AUX),
+        "note": ("lua-cqueues 20200726: its socket/DNS path calls the subject libcrypto's "
+                 "RAND_bytes; the Lua 5.4 build is selected explicitly"),
+    },
+    {
+        "family": "pev", "version": "0.81",
+        "url": "https://deb.debian.org/debian/pool/main/p/pev/pev_0.81.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "4192691c57eec760e752d3d9eca2a1322bfe8003cfc210e5a6b52fca94d5172b",
+        "make": [MAKE_JOBS], "artifact": "src/build/pesec", "launch": ["-h"],
+        "note": ("pev 0.81's pesec parses PE Authenticode/X.509 with the subject libcrypto; "
+                 "the other PE viewers in the tree link no OpenSSL"),
+    },
+    {
+        "family": "ftp-ssl", "version": "0.17.34+really0.17",
+        "url": ("https://deb.debian.org/debian/pool/main/n/netkit-ftp-ssl/"
+                "netkit-ftp-ssl_0.17.34+really0.17.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "61c913299b81a4671ff089aac821329f7db9bc111aa812993dd585798b700349",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "ftp/ftp", "launch": ["-?"],
+        "aux_sources": list(_S53_READLINE_AUX) + list(_NCURSES_AUX),
+        "env_extra": {"CFLAGS": "-O2 -D_GNU_SOURCE -DARG_MAX=131072 -I{prefix}/include -I{aux}/usr/include "
+                              "-L{aux}/lib/x86_64-linux-gnu "
+                              "-L{aux}/usr/lib/x86_64-linux-gnu"},
+        "note": "netkit-ftp-ssl's FTPS client linked to the subject libssl",
+    },
+    {
+        "family": "ftpd-ssl", "version": "0.17.36+really0.17",
+        "url": ("https://deb.debian.org/debian/pool/main/l/linux-ftpd-ssl/"
+                "linux-ftpd-ssl_0.17.36+really0.17.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "65a0b249e38bf3c3a16dbd4d3edd2657683ca8f47b307e92007f378b21d2fa65",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "ftpd/ftpd", "launch": ["-h"],
+        "aux_sources": list(_S53_PAM_AUX) + list(_NCURSES_AUX),
+        "env_extra": {"CFLAGS": "-O2 -D_GNU_SOURCE -DARG_MAX=131072 -I{prefix}/include -I{aux}/usr/include "
+                              "-L{aux}/lib/x86_64-linux-gnu "
+                              "-L{aux}/usr/lib/x86_64-linux-gnu"},
+        "note": "linux-ftpd-ssl's PAM/TLS FTP server linked to the subject libssl",
+    },
+    {
+        "family": "carbon-c-relay", "version": "3.7.3",
+        "url": ("https://deb.debian.org/debian/pool/main/c/carbon-c-relay/"
+                "carbon-c-relay_3.7.3.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "559e7199c5ca5d34779f58a99b90d93635477cfbb3430f179c04b36ce026e209",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl"],
+        "make": [MAKE_JOBS], "artifact": "relay", "launch": ["-h"],
+        "aux_sources": list(_S46_BISON_FLEX_AUX),
+        "env_extra": {"LIBS": "-lssl -lcrypto"},
+        "note": ("carbon-c-relay 3.7.3's TLS send/receive transport linked to the subject "
+                 "libssl; bison/flex generate its config parser"),
+    },
+    {
+        "family": "libdkim1d", "version": "1.0.21",
+        "url": "https://deb.debian.org/debian/pool/main/libd/libdkim/libdkim_1.0.21.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "b85ef742d3490350b4b6d25f98902aba4ca360ab8375728ddb1d57759c1a72d8",
+        "make": [MAKE_JOBS, "-C", "src", "CFLAGS=-c -I{prefix}/include",
+                 "INCL=-I{prefix}/include",
+                 "LIBS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib -lcrypto -lresolv"],
+        "artifact": "src/libdkimtest", "launch": ["-h"],
+        "note": ("libdkim 1.0.21: the DomainKeys sign/verify test driver through the subject "
+                 "libcrypto"),
+    },
+    {
+        "family": "bruteforce-wallet", "version": "1.5.3",
+        "url": ("https://deb.debian.org/debian/pool/main/b/bruteforce-wallet/"
+                "bruteforce-wallet_1.5.3.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "fca54f6610a387cd1da4cec43af14233c7f83bcf66234ad222e0d9a9953afacd",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "bruteforce-wallet", "launch": ["-h"],
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX) + list(_S53_DB_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": ("bruteforce-wallet 1.5.3: PBKDF2/AES key recovery through the subject "
+                 "libcrypto, with the pinned Berkeley DB"),
+    },
+    {
+        "family": "bibtexconv", "version": "1.3.4",
+        "url": ("https://deb.debian.org/debian/pool/main/b/bibtexconv/"
+                "bibtexconv_1.3.4.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "cmake",
+        "sha256": "7afa46f649ccd985874831b7dfb6e65b21db2920515f38be1647c1d707c4bf13",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCURL_INCLUDE_DIR={aux}/usr/include",
+                      "-DCURL_LIBRARY={aux}/usr/lib/x86_64-linux-gnu/libcurl.so",
+                      "-DM4_EXECUTABLE={aux}/usr/bin/m4"],
+        "make": [], "artifact": "bibtexconv", "launch": ["-h"],
+        "aux_sources": list(_LIBCURL_AUX) + list(_S46_BISON_FLEX_AUX) + list(_S53_M4_AUX),
+        "pre_build": [["sh", "-c", ("mkdir -p /usr/share/bison; "
+                                       "cp -a {aux}/usr/share/bison/. /usr/share/bison/")]],
+        "env_extra": {"BISON_PKGDATADIR": "{aux}/usr/share/bison"},
+        "note": ("bibtexconv 1.3.4: its checksum/download path through libcurl with the "
+                 "subject OpenSSL"),
+    },
+    {
+        "family": "dmg2img", "version": "1.6.7",
+        "url": "https://deb.debian.org/debian/pool/main/d/dmg2img/dmg2img_1.6.7.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "2003f656d551f7e317f629398b24c5df50b01713305313fd5c6e1fed3d39e102",
+        "make": [MAKE_JOBS, "CFLAGS=-O2 -Wall -I{prefix}/include"],
+        "artifact": "vfdecrypt", "launch": ["-h"],
+        "env_extra": {"CC": "cc -I{prefix}/include -L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "note": ("dmg2img 1.6.7's vfdecrypt: DMG AES decryption through the subject libcrypto"),
+    },
+    {
+        "family": "ike-scan", "version": "1.9.5",
+        "url": "https://deb.debian.org/debian/pool/main/i/ike-scan/ike-scan_1.9.5.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "5152bf06ac82d0cadffb93a010ffb6bca7efd35ea169ca7539cf2860ce2b263f",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}"],
+        "make": [MAKE_JOBS], "artifact": "ike-scan", "launch": ["--version"],
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": "ike-scan 1.9.5's IKE certificate parsing through the subject libcrypto",
+    },
+    {
+        "family": "gsocket", "version": "1.4.39",
+        "url": "https://deb.debian.org/debian/pool/main/g/gsocket/gsocket_1.4.39.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "1c9a78d53374e15747c0be63ee3c5dcb6fcea183cf53822702b90523f04e9d92",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "tools/gs-netcat", "launch": ["--version"],
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": "gsocket 1.4.39's TLS relay client linked to the subject libssl",
+    },
+    {
+        "family": "megatools", "version": "1.11.0",
+        "url": ("https://deb.debian.org/debian/pool/main/m/megatools/"
+                "megatools_1.11.0.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "meson",
+        "sha256": "b30b1d87d916570f7aa6d36777dd378e83215d75ea5a2c14106028b6bddc261b",
+        "configure": ["--buildtype=release"],
+        "make": [], "artifact": "megatools", "launch": ["--version"],
+        "aux_sources": tuple(_S53_GLIB_AUX) + tuple(_LIBCURL_AUX),
+        "note": "megatools 1.11.0's HTTPS client through libcurl and the subject OpenSSL",
+    },
+    {
+        "family": "imapfilter", "version": "2.8.1",
+        "url": "https://deb.debian.org/debian/pool/main/i/imapfilter/imapfilter_2.8.1.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "758a0f78aff30935916426c878d2cc803bdcd31c74982fbfcd2372e6744262cc",
+        "make": [MAKE_JOBS, "-C", "src",
+                 "INCDIRS=-I{aux}/usr/include -I{aux}/usr/include/lua5.2 -I{prefix}/include",
+                 "LIBDIRS=-L{aux}/usr/lib/x86_64-linux-gnu -L{prefix}/lib",
+                 "LIBLUA=-llua5.2"],
+        "artifact": "src/imapfilter", "launch": ["-v"],
+        "aux_sources": list(_S53_LUA52_AUX) + list(_PCRE2_AUX),
+        "note": "imapfilter 2.8.1's IMAPS client linked to the subject libssl",
+    },
+    {
+        "family": "lastpass-cli", "version": "1.3.7",
+        "url": ("https://deb.debian.org/debian/pool/main/l/lastpass-cli/"
+                "lastpass-cli_1.3.7.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "3fb1373fc05d568599da7657fcff801cbaa704254f00bb8e13d4510cb236be90",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{aux}/usr/include"],
+        "make": [], "artifact": "b/lpass", "launch": ["--version"],
+        "aux_sources": tuple(_LIBCURL_AUX) + tuple(_S46_LIBXML2_AUX),
+        "note": "lastpass-cli 1.3.7's HTTPS client through libcurl and the subject OpenSSL",
+    },
+    {
+        "family": "ipmiutil", "version": "3.1.8",
+        "url": "https://deb.debian.org/debian/pool/main/i/ipmiutil/ipmiutil_3.1.8.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "b14357b9723e38a19c24df2771cff63d5f15f8682cd8a5b47235044b767b1888",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "util/ipmiutil", "launch": ["-V"],
+        "note": ("ipmiutil 3.1.8: its LANplus HMAC/AES path through the subject libcrypto"),
+    },
+    {
+        "family": "nzbget", "version": "21.0",
+        "url": "https://deb.debian.org/debian/pool/main/n/nzbget/nzbget_21.0+dfsg.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "e8c14e714d5c331e6873d9348579cf89f4584b37243329ed6bf45063a71db8d2",
+        "configure": ["--prefix={root}/.l7-install", "--with-tlslib=OpenSSL",
+                      "--with-openssl-includes={prefix}/include",
+                      "--with-openssl-libraries={prefix}/lib",
+                      "--with-libxml2-includes={aux}/usr/include/libxml2",
+                      "--with-libxml2-libraries={aux}/usr/lib/x86_64-linux-gnu "
+                      "-lxml2 -licuuc -licudata",
+                      "--with-curses-includes={aux}/usr/include",
+                      "--with-curses-libraries={aux}/lib/x86_64-linux-gnu "
+                      "-lncurses -ltinfo", "--disable-curses"],
+        "make": [MAKE_JOBS], "artifact": "nzbget", "launch": ["--version"],
+        "aux_sources": list(_S53_NZBGET_AUX),
+        "env_extra": {"CFLAGS": "-O2 -Wno-error=deprecated-declarations -I{prefix}/include -I{aux}/usr/include "
+                              "-L{aux}/lib/x86_64-linux-gnu "
+                              "-L{aux}/usr/lib/x86_64-linux-gnu",
+                      "PKG_CONFIG": "/usr/bin/pkg-config"},
+        "note": "nzbget 21.0's TLS news connection linked to the subject libssl",
+    },
+    {
+        "family": "hopm", "version": "1.1.10",
+        "url": "https://deb.debian.org/debian/pool/main/h/hopm/hopm_1.1.10.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "dfe26e8963444467bb95380d4b40af68ca6721c3b6f093b332f15ee85683068b",
+        "configure": ["--prefix={root}/.l7-install", "--enable-openssl={prefix}"],
+        "make": [MAKE_JOBS], "artifact": "src/hopm", "launch": ["-v"],
+        "note": "hopm 1.1.10's TLS IRC proxy monitor linked to the subject libssl",
+    },
+    {
+        "family": "bip", "version": "0.9.3",
+        "url": "https://deb.debian.org/debian/pool/main/b/bip/bip_0.9.3.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "2bee800bc9a0d1a2d0b028220e8141339c365eb47e576b5f5a723c07279198e2",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS, "CFLAGS=-O2 -Wno-error"],
+        "artifact": "src/bip", "launch": ["-v"],
+        "note": "bip 0.9.3's TLS IRC bouncer linked to the subject libssl",
+    },
+    {
+        "family": "dsniff", "version": "2.4b1",
+        "url": "https://deb.debian.org/debian/pool/main/d/dsniff/dsniff_2.4b1+debian.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "ef1f59165adf1021029abdcd923fa0fde02f5761f4434c8f75c5a3eba6a2ce2e",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "dsniff", "launch": ["-h"],
+        "aux_sources": list(_S53_NIDS_AUX),
+        "note": "dsniff 2.4b1's sshmitm/OpenSSL path linked to the subject libssl",
+    },
+    {
+        "family": "mokutil", "version": "0.6.0",
+        "url": "https://deb.debian.org/debian/pool/main/m/mokutil/mokutil_0.6.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "6cc4be216ac083ee19dc986e8a510e1d74f6f4080baa4b5fdc7c503eb483f569",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "src/mokutil", "launch": ["--version"],
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX) + list(_S53_MOKUTIL_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": "mokutil 0.6.0's PKCS#7 signature path through the subject libcrypto",
+    },
+    {
+        "family": "nmh", "version": "1.8~RC2",
+        "url": "https://deb.debian.org/debian/pool/main/n/nmh/nmh_1.8~RC2.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c5ed3581a8b1adc2d95446b8cff20b7a8d70c08909a365a1a24cf50c0aff6c4b",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}"],
+        "make": [MAKE_JOBS], "artifact": "uip/inc", "launch": ["-help"],
+        "aux_sources": list(_S53_NMH_AUX),
+        "note": "nmh 1.8-RC2's TLS mail retrieval client linked to the subject libssl",
+    },
+    {
+        "family": "libeac3", "version": "1.1.2",
+        "url": ("https://deb.debian.org/debian/pool/main/o/openpace/"
+                "openpace_1.1.2+ds+git20220117+453c3d6b03a0.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "autotools",
+        "sha256": "39df269232047e7aec7a9e49a0d8d4ff3db74fb5011d3a5443ad2aa0c12b1eb7",
+        "configure": ["--prefix={root}/.l7-install"], "make": ["-j1", "HELP2MAN=true"],
+        "artifact": "src/.libs/libeac.so*", "launch": None,
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX) + [
+            _aux_deb("h/help2man", "help2man_1.49.3_amd64.deb",
+                     "9b17251751ee4e813df789ba39c25841b9e26bf44206fd53ce4d34bc2d761eed",
+                     bin_dirs=("usr/bin",)),
+            _aux_deb("g/gengetopt", "gengetopt_2.23+dfsg1-1_amd64.deb",
+                     "b6cc627f20a806625603fa9f97071b4b7da662338e1f22829ffc92867e36695a",
+                     bin_dirs=("usr/bin",)),
+        ],
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": "OpenPACE 1.1.2's EAC cryptographic library through the subject libcrypto",
+    },
+    {
+        "family": "yadifa", "version": "2.6.4",
+        "url": "https://deb.debian.org/debian/pool/main/y/yadifa/yadifa_2.6.4.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "d8bb73a2d645594acbf05169542947bbf447911fbe63392e010dae00d803b571",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}"],
+        "make": [MAKE_JOBS], "artifact": "sbin/yadifad/yadifad", "launch": ["-v"],
+        "note": "yadifa 2.6.4's DNSSEC signing/validation through the subject libcrypto",
+    },
+    {
+        "family": "mosh", "version": "1.4.0",
+        "url": "https://deb.debian.org/debian/pool/main/m/mosh/mosh_1.4.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "872e4b134e5df29c8933dff12350785054d2fd2839b5ae6b5587b14db1465ddd",
+        "configure": ["--prefix={root}/.l7-install", "--without-utempter"],
+        "make": [MAKE_JOBS], "artifact": "src/frontend/mosh-client", "launch": ["--version"],
+        "aux_sources": list(_S53_MOSH_AUX),
+        "note": "mosh 1.4.0's AES-OCB terminal transport through the subject libcrypto",
+    },
+    {
+        "family": "imapproxy", "version": "1.2.8~svn20171105",
+        "url": ("https://deb.debian.org/debian/pool/main/u/up-imapproxy/"
+                "up-imapproxy_1.2.8~svn20171105.orig.tar.bz2"),
+        "archive": "tar.bz2", "build_system": "configure",
+        "sha256": "2fa3d400227c791b94d7f1e04f5ead5c2165eece44c8b018cc94ed55bb9efdde",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "src/imapproxy", "launch": ["-h"],
+        "aux_sources": list(_NCURSES_AUX) + list(_S53_PAM_AUX) + list(_S53_WRAP_AUX),
+        "note": "up-imapproxy 1.2.8's TLS IMAP proxy linked to the subject libssl",
+    },
+    {
+        "family": "encfs", "version": "1.9.5",
+        "url": "https://deb.debian.org/debian/pool/main/e/encfs/encfs_1.9.5.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "cmake",
+        "sha256": "b5232280ebb7e3131de28beb7fe8bc4d3d1c110f70a5f90cf7a55b2c9340f119",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DUSE_INTERNAL_TINYXML=ON",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DENABLE_NLS=OFF",
+                      "-DFUSE_INCLUDE_DIR={aux}/usr/include",
+                      "-DFUSE_LIBRARIES={aux}/lib/x86_64-linux-gnu/libfuse.so.2.9.9",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}"],
+        "make": [], "artifact": "b/encfs", "launch": ["--version"],
+        "aux_sources": list(_S53_ENC_FS_AUX),
+        "note": "encfs 1.9.5's AES filename/content encryption through the subject libcrypto",
+    },
+    {
+        "family": "eurephia", "version": "1.1.1",
+        "url": "https://deb.debian.org/debian/pool/main/e/eurephia/eurephia_1.1.1.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "cmake",
+        "sha256": "f163fa635e3d3496d82411423c9e1235090b3cb46bb0748c211f7d7fde89b5ee",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DEUREPHIADM=ON", "-DSQLITE3=ON"],
+        "make": [], "artifact": "eurephiadm/eurephiadm", "launch": ["--help"],
+        "aux_sources": [
+            _aux_deb("s/sqlite3", "libsqlite3-0_3.40.1-2+deb12u2_amd64.deb",
+                     "a8d78b40e9b4e422224aeebfe0e4dfc243f6acf3532490b0c05480d4283d41e2",
+                     library_dirs=(_AUX_MULTIARCH,)),
+            _aux_deb("s/sqlite3", "libsqlite3-dev_3.40.1-2+deb12u2_amd64.deb",
+                     "afb550eb103e717000a2c7adae2e06e3eebd2952bf7d243ae2f1ca8594307563",
+                     include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+                     pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+            _aux_deb("libx/libxslt", "libxslt1.1_1.1.35-1+deb12u4_amd64.deb",
+                     "5bf795dc6374f744906d39a786024d98b2cb6b885c7776f5dc64eb4092b550a6",
+                     library_dirs=(_AUX_MULTIARCH,)),
+            _aux_deb("libx/libxslt", "libxslt1-dev_1.1.35-1+deb12u4_amd64.deb",
+                     "f7f5686127331d97a65e2abac1953e32b1ed8eb774cdf1749a849090b2f75ccb",
+                     include_dirs=("usr/include", "usr/include/x86_64-linux-gnu"),
+                     library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+        ] + list(_ONBOARD_XMLSEC_AUX),
+        "env_extra": {"CFLAGS": "-I{prefix}/include -I{aux}/usr/include"},
+        "note": "eurephia 1.1.1's certificate/auth crypto through the subject libcrypto",
+    },
+    {
+        "family": "gvpe", "version": "3.1",
+        "url": "https://deb.debian.org/debian/pool/main/g/gvpe/gvpe_3.1.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "f1ebd572d725bb940e080771a1c10867c3509dcd8316f6114814503dcbb1e8b3",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "src/gvpe", "launch": ["--version"],
+        "note": "gvpe 3.1's HMAC/RSA VPN control channel through the subject libcrypto",
+    },
+    {
+        "family": "tcpflow", "version": "1.6.1",
+        "url": "https://deb.debian.org/debian/pool/main/t/tcpflow/tcpflow_1.6.1.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "c1c88513473e12011c0c00bba88dd02013ea3b813b08088f250cbf82b8f42358",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DPCAP_INCLUDE_DIR={aux}/usr/include",
+                      "-DPCAP_LIBRARIES={aux}/usr/lib/x86_64-linux-gnu/libpcap.so",
+                      "-DCMAKE_INCLUDE_PATH={aux}/usr/include",
+                      "-DCMAKE_LIBRARY_PATH={aux}/usr/lib/x86_64-linux-gnu",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}"],
+        "make": [], "artifact": "src/tcpflow", "launch": ["-h"],
+        "aux_sources": list(_S53_TCPFLOW_AUX) + list(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": "tcpflow 1.6.1's flow MD5/SHA digest path through the subject libcrypto",
+    },
+    {
+        "family": "casync", "version": "2+20201210",
+        "url": "https://deb.debian.org/debian/pool/main/c/casync/casync_2+20201210.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "meson",
+        "sha256": "e9904ce0176d4ea0d5ccc1098eae00910b293bf992b7bd81ae85572ddad7f2a8",
+        "configure": ["--buildtype=release", "-Dudevrulesdir=/tmp",
+                      "-Dfuse=false", "-Dselinux=false",
+                      "-Dudev=false", "-Dman=false"],
+        "make": [], "artifact": "b/casync", "launch": ["--version"],
+        "aux_sources": list(_S53_CASYNC_AUX),
+        "note": "casync 2's SHA-512 content digest through the subject libcrypto",
+    },
+    {
+        "family": "openfortivpn", "version": "1.19.0",
+        "url": ("https://deb.debian.org/debian/pool/main/o/openfortivpn/"
+                "openfortivpn_1.19.0.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "9e244c3b63176269ce433349e67f8fd6e532f7c8d515f4c97558911a449152c3",
+        "configure": ["--prefix={root}/.l7-install", "--without-ppp",
+                      "--with-rt_dst=no", "--with-resolvconf=no"],
+        "make": [MAKE_JOBS, "CFLAGS=-O2 -Wno-error"], "artifact": "src/openfortivpn",
+        "launch": ["--version"],
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": "openfortivpn 1.19.0's TLS/PPP client path through the subject libssl",
+    },
+    {
+        "family": "perdition", "version": "2.2",
+        "url": "https://deb.debian.org/debian/pool/main/p/perdition/perdition_2.2.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "877df9cece5c97992991bbbc09078af2363c77d329979017c15b531425bd1a1b",
+        "configure": ["--prefix={root}/.l7-install", "--without-pam",
+                      "--without-gdbm", "--without-mysql", "--without-pgsql",
+                      "--without-ldap"],
+        "make": [MAKE_JOBS], "artifact": "perdition/perdition", "launch": ["-h"],
+        "aux_sources": list(_S53_PERDITION_AUX),
+        "env_extra": {"PKG_CONFIG": "/usr/bin/pkg-config",
+                      "VANESSA_SOCKET_CFLAGS": "-I{aux}/usr/include",
+                      "VANESSA_SOCKET_LIBS": "-L{aux}/usr/lib -lvanessa_socket -lvanessa_logger -lvanessa_adt -lpopt",
+                      "VANESSA_LOGGER_CFLAGS": "-I{aux}/usr/include",
+                      "VANESSA_LOGGER_LIBS": "-L{aux}/usr/lib/x86_64-linux-gnu -lvanessa_logger"},
+        "note": "perdition 2.2's TLS POP/IMAP proxy linked to the subject libssl",
+    },
+    {
+        "family": "libfreefare0", "version": "0.4.0",
+        "url": ("https://deb.debian.org/debian/pool/main/libf/libfreefare/"
+                "libfreefare_0.4.0.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "c2880d147660317b85aae41d67bb17b218c3aba1d43d727e51181b65296c6a8e",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DLIBNFC_INCLUDE_DIRS={aux}/usr/include",
+                      "-DLIBNFC_LIBRARIES={aux}/usr/lib/x86_64-linux-gnu/libnfc.so",
+                      "-DCMAKE_C_FLAGS=-I{aux}/usr/include -include unistd.h -include getopt.h",
+                      "-DCMAKE_EXE_LINKER_FLAGS=-L{aux}/usr/lib/x86_64-linux-gnu -lusb-1.0",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}"],
+        "make": [], "artifact": "libfreefare/libfreefare.so*", "launch": None,
+        "aux_sources": list(_S53_LIBFREEFARE_AUX),
+        "pre_build": [["sh", "-c", "touch config.h"]],
+        "note": "libfreefare 0.4.0's DES/3DES MIFARE crypto through the subject libcrypto",
+    },
+    {
+        "family": "yapet", "version": "2.6",
+        "url": "https://deb.debian.org/debian/pool/main/y/yapet/yapet_2.6.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "54ca11c9c71d1bc530908f7f68d0a6021c871d283bdc1b421d8776ba8b456302",
+        "configure": ["--prefix={root}/.l7-install"], "make": [MAKE_JOBS],
+        "artifact": "src/yapet/yapet", "launch": ["--help"],
+        "aux_sources": list(_S53_YAPET_AUX),
+        "note": "yapet 2.6's AES-256 password-file crypto through the subject libcrypto",
+    },
+)
+
 
 RECIPES: tuple[dict, ...] = _build_catalogue()
 _RECIPE_BY_FAMILY: dict[str, dict] = {r["family"]: r for r in RECIPES}
