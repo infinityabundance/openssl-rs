@@ -1,0 +1,250 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S44-CORPUS-BATCH",
+  "date": "2026-10-24",
+  "subphase": "S44: recover the three S42 infrastructure losses and extend the recipe-backed P1000 corpus",
+  "branch": "main",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+    "cargo_build_jobs": 4,
+    "src_changed_this_subphase": false,
+    "docker_changed_this_subphase": false,
+    "note": "every acquisition, build and workload ran inside the court container; the host only read/wrote the receipt and ran git metadata commands"
+  },
+  "source_identity": {
+    "head": "486984e7120eb235395df01b369ba02c9ba0650e",
+    "head_short": "486984e71",
+    "head_subject": "Merge pull request #58 from infinityabundance/integrate/safe-c33",
+    "authority": "openssl-3.6.4-production (forensics/authorities/prefix/openssl-3.6.4-production)",
+    "candidate_identity": {
+      "install_prefix": "artifacts/phase2/install",
+      "libcrypto_so_3_sha256": "268420cb1c9effa10b25fe1463522f3a11c070ca35ceb039d21cb9ce20d683e3",
+      "libssl_so_3_sha256": "a380ecd6ee257f3a321ccdb0a1da68e9d0eb5f2ff271ed873aaf5bcad01605d9"
+    },
+    "atlases": {
+      "build_link_sha256": "98e92304788c5e06e774c1e6d48fdeed3b82203937006d62e76717038c83d764",
+      "runtime_functional_sha256": "3e4411328cae8790e4193794f1ebcd917ee7f6728ea5ede19cf2392d1c194f93"
+    },
+    "tools": {
+      "downstream_build_link.py_sha256": "a3696ed942716defdabb23eca9e71be5545ccaca7b571152649532353a7e979a",
+      "downstream_runtime.py_sha256": "f6235acdf12d0d62e668e5175e1cf1c3a21d8bb54687d2e5de6e71eb176aef43"
+    },
+    "candidate_identity_in_both_atlases": true,
+    "evidence_reuse": "committed-rows, candidate_identity_match=true, 192 unchanged families reused per tool; only the S44 families were rebuilt"
+  },
+  "part1_infrastructure_losses": [
+    {
+      "family": "libssh",
+      "old_state": "L0-catalogued (curl 7 to www.libssh.org; host unreachable during and after S42)",
+      "action": "re-pinned the identical upstream 0.10.6 release archive to the Debian pool",
+      "url": "https://deb.debian.org/debian/pool/main/libs/libssh/libssh_0.10.6.orig.tar.xz",
+      "observed_sha256": "1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1",
+      "digest_note": "byte-identical to the value _CENSUS_PINS already asserted; no digest was guessed",
+      "authority_level": "L7-functional",
+      "candidate_level": "L7-functional",
+      "evidence": "CMake build against the subject prefix; the admitted workload imports a pinned RSA private key and compares its exported public blob"
+    },
+    {
+      "family": "sslscan",
+      "old_state": "L0-catalogued (transient DNS failure in the runtime run; build/link had succeeded)",
+      "action": "re-pinned to the Debian pool's 2.1.5 orig archive (the same bytes as the GitHub tag archive)",
+      "url": "https://deb.debian.org/debian/pool/main/s/sslscan/sslscan_2.1.5.orig.tar.gz",
+      "observed_sha256": "b36616b1d59f3276af6ff9495ab8178ec6812393582fb3c094c56cc873efe956",
+      "digest_note": "equals the existing campaign pin; verified by fetching the pool archive and computing the digest",
+      "authority_level": "L7-functional",
+      "candidate_level": "L7-functional",
+      "evidence": "TLS1.3 protocol/cipher scan of a local server plus the TLS1.2-only negative control"
+    },
+    {
+      "family": "dma",
+      "old_state": "L4-linked (the -q launch probe exited 66 'reading queue: No such file or directory' before any OpenSSL call)",
+      "action": "added a generic pre_launch hook to downstream_runtime._measure_subject_runtime and gave dma a pre_launch that removes stale /etc/dma configuration and creates the default /var/spool/dma directory; the -q queue probe then exits 0 silently, and the admitted workload submits a message over SMTPS",
+      "authority_level": "L7-functional",
+      "candidate_level": "L7-functional",
+      "evidence": "dma -f sender@example -t delivers to the fixture SMTPS peer over verified TLS; an unrelated CA delivers nothing"
+    }
+  ],
+  "part2_corpus_batch": {
+    "selection_rule": "the frozen P1000 was read from forensics/downstream/family-freeze.json; candidates were taken from the 808 no-recipe rows in buildability/workload-tractability order, not by hunting for a particular API surface",
+    "corpus_source": "forensics/downstream/family-freeze.json body.p1000 (authoritative)",
+    "added_family_count": 15,
+    "added_l7_count": 14,
+    "added_non_l7_count": 1,
+    "not_30_note": "15 families were added, not 30. The remaining no-recipe rows in this venue are either not buildable without a toolchain/tool the expansion image lacks (autotools, Tcl), need a device/kernel capability, need a live database/service fixture, are interactive GUI/TUI daemons, or need a heavy dependency closure deferred to a separate bounded batch. Each considered skip is recorded below; no recipe or digest was invented to reach a count.",
+    "added_families": [
+      {"family": "h2o-evloop0.13", "version": "2.2.6", "recipe_id": "recipe:h2o-evloop0.13:2.2.6", "kind": "package row of h2o", "url": "https://github.com/h2o/h2o/archive/refs/tags/v2.2.6.tar.gz", "sha256": "f8cbc1b530d85ff098f6efc2c3fdbc5e29baffb30614caac59d5c710f7bda201", "artifact": "b/h2o", "program": "b/h2o", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "libafflib0v5", "version": "3.7.20", "recipe_id": "recipe:libafflib0v5:3.7.20", "kind": "package row of afflib", "url": "https://deb.debian.org/debian/pool/main/a/afflib/afflib_3.7.20.orig.tar.gz", "sha256": "7264d705ff53185f0847c69abdfce072779c0b907257e087a6372c7608108f65", "artifact": "lib/.libs/libafflib.so*", "program": "tools/.libs/affsign", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "libcrypt-openssl-bignum-perl", "version": "0.09", "recipe_id": "recipe:libcrypt-openssl-bignum-perl:0.09", "kind": "package row of Crypt::OpenSSL::Bignum", "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-bignum-perl/libcrypt-openssl-bignum-perl_0.09.orig.tar.gz", "sha256": "234e72fb8396d45527e6fd45e43759c5c3f3a208cf8f29e6a22161a996fd42dc", "artifact": "blib/arch/auto/Crypt/OpenSSL/Bignum/Bignum.so", "program": ".l7-perl-harness", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "libcrypt-openssl-random-perl", "version": "0.15", "recipe_id": "recipe:libcrypt-openssl-random-perl:0.15", "kind": "package row of Crypt::OpenSSL::Random", "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-random-perl/libcrypt-openssl-random-perl_0.15.orig.tar.gz", "sha256": "f0876faa1ba3111e39b86aa730c603211eff2905e460c72a57b61e8cf475cef4", "artifact": "blib/arch/auto/Crypt/OpenSSL/Random/Random.so", "program": ".l7-perl-harness", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "libcrypt-openssl-rsa-perl", "version": "0.33", "recipe_id": "recipe:libcrypt-openssl-rsa-perl:0.33", "kind": "package row of Crypt::OpenSSL::RSA", "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-rsa-perl/libcrypt-openssl-rsa-perl_0.33.orig.tar.gz", "sha256": "bdbe630f6d6f540325746ad99977272ac8664ff81bd19f0adaba6d6f45efd864", "artifact": "blib/arch/auto/Crypt/OpenSSL/RSA/RSA.so", "program": ".l7-perl-harness", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "libcrypt-openssl-dsa-perl", "version": "0.20", "recipe_id": "recipe:libcrypt-openssl-dsa-perl:0.20", "kind": "package row of Crypt::OpenSSL::DSA", "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-dsa-perl/libcrypt-openssl-dsa-perl_0.20.orig.tar.gz", "sha256": "e4575d787d44e49b3b59cc39eda2e461fe0606dd0e87d3a9c3df5011b133e702", "artifact": "blib/arch/auto/Crypt/OpenSSL/DSA/DSA.so", "program": ".l7-perl-harness", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "libcrypt-openssl-x509-perl", "version": "1.9.14", "recipe_id": "recipe:libcrypt-openssl-x509-perl:1.9.14", "kind": "package row of Crypt::OpenSSL::X509", "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-x509-perl/libcrypt-openssl-x509-perl_1.9.14.orig.tar.gz", "sha256": "49c575257e6408ad5a89011e5b5800d598f9ccafdf42e71004ed81cb2f44ee7a", "artifact": "blib/arch/auto/Crypt/OpenSSL/X509/X509.so", "program": ".l7-perl-harness", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "libcrypt-smime-perl", "version": "0.28", "recipe_id": "recipe:libcrypt-smime-perl:0.28", "kind": "package row of Crypt::SMIME", "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-smime-perl/libcrypt-smime-perl_0.28.orig.tar.gz", "sha256": "ca90ecacfef620f8a2f1723c5bc3307a0079c0c6f5170849a9896b20280d1c2d", "artifact": "blib/arch/auto/Crypt/SMIME/SMIME.so", "program": ".l7-perl-harness", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "librelp", "version": "1.13.0", "recipe_id": "recipe:librelp:1.13.0", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/libr/librelp/librelp_1.13.0.orig.tar.gz", "sha256": "58e976e31795d7309cf2d9f37fdc93522daa4a322f5012d7879fed9ebfa40068", "artifact": "src/.libs/librelp.so*", "program": "tests/.libs/receive", "authority_level": "L7-functional", "candidate_level": "L7-functional", "workload": "the tree's own RELP send/receive pair carries a message over mutual TLS; a sender trusting an unrelated CA is refused"},
+      {"family": "hydra", "version": "9.5", "recipe_id": "recipe:hydra:9.5", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/h/hydra/hydra_9.5.orig.tar.gz", "sha256": "a3969a8cd7dbd1f805f756df980beda83c53778087d8e6ffcb8aa28693f407d5", "artifact": "hydra", "program": "hydra", "authority_level": "L7-functional", "candidate_level": "L7-functional", "workload": "https-get over TLS finds the fixture Basic credential and misses a wrong one"},
+      {"family": "apache2-ssl", "version": "2.4.62", "recipe_id": "recipe:apache2-ssl:2.4.62", "kind": "package row of apache2-bin", "url": "https://archive.apache.org/dist/httpd/httpd-2.4.62.tar.gz", "sha256": "3e2404d762a2da03560d7ada379ba1599d32f04a0d70ad6ff86f44325f2f062d", "artifact": "httpd", "program": "httpd", "authority_level": "L7-functional", "candidate_level": "L7-functional"},
+      {"family": "nagios-plugins-tcp", "version": "2.4.0", "recipe_id": "recipe:nagios-plugins-tcp:2.4.0", "kind": "package row of monitoring-plugins", "url": "https://www.monitoring-plugins.org/download/monitoring-plugins-2.4.0.tar.gz", "sha256": "e5dfd4ad8fde0a40da50aab3aff6d9a27020b8f283e332bc4da6ef9914f4028c", "artifact": "plugins/check_tcp", "program": "plugins/check_tcp", "authority_level": "L7-functional", "candidate_level": "L7-functional", "workload": "check_tcp --ssl completes a TLS handshake and refuses a plaintext peer"},
+      {"family": "ncrack", "version": "0.7+debian", "recipe_id": "recipe:ncrack:0.7+debian", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/n/ncrack/ncrack_0.7+debian.orig.tar.xz", "sha256": "117096d9e25a8308f1f1a012e573f7575c36592d842555482b4cf53b7065bd21", "artifact": "ncrack", "program": "ncrack", "authority_level": "L7-functional", "candidate_level": "L7-functional", "workload": "ncrack's HTTPS module finds the fixture credential over TLS and misses a wrong one"},
+      {"family": "ircd-hybrid", "version": "8.2.46", "recipe_id": "recipe:ircd-hybrid:8.2.46", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/i/ircd-hybrid/ircd-hybrid_8.2.46+dfsg.1.orig.tar.gz", "sha256": "c16dc92536fd6519a85b7aa35f061bbb40b366cd449866fa2ff90ac88881aef7", "artifact": "src/ircd", "program": "src/ircd", "authority_level": "L7-functional", "candidate_level": "L7-functional", "workload": "the TLS listener greets a verified loopback client and an unrelated CA is refused"},
+      {"family": "medusa", "version": "2.3", "recipe_id": "recipe:medusa:2.3", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/m/medusa/medusa_2.3.orig.tar.gz", "sha256": "7ad4b4ed8acecd42fa48fc31fad6e255a8ee894c66615509196f5b9173e3f891", "artifact": "src/medusa", "program": "src/medusa", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "see non_l7 below"}
+    ]
+  },
+  "non_l7": [
+    {
+      "family": "medusa",
+      "level": "L4-linked",
+      "failure_class": "load-failure",
+      "classification": "HARNESS",
+      "failing_call": "medusa -V (the launch/version probe)",
+      "authority_value": "exit 0; the banner is suppressed because the extracted directory name 'jmk-foofus-medusa-bac38b3' contains '-b' (medusa's banner scan sees it in argv[0])",
+      "candidate_value": "exit 1; FATAL: Error loading OpenSSL 'legacy' provider.",
+      "causal_region_in_src": null,
+      "candidate_specific_defect": {
+        "call": "OSSL_PROVIDER_load(NULL, \"legacy\") at medusa 2.3 src/medusa.c:2006",
+        "authority": "returns non-NULL (authority legacy.so resolves the authority libcrypto)",
+        "candidate": "returns NULL",
+        "evidence": "ldd artifacts/phase2/install/lib/ossl-modules/legacy.so -> libcrypto.so.3 => /lib/x86_64-linux-gnu/libcrypto.so.3 (system 3.0.22), while the authority legacy.so resolves its own prefix; this is a candidate install-artifact linkage defect, not a src/ region",
+        "classification": "ENVIRONMENT (candidate install artifact)",
+        "note": "the candidate and authority reach the same L4 because the version probe is also suppressed for the authority; the provider defect is recorded separately and not used to claim an L7 divergence"
+      }
+    },
+    {
+      "family": "charybdis",
+      "level": "L5-loaded",
+      "failure_class": "runtime-failure",
+      "classification": "FIXTURE",
+      "evidence": "unchanged from S42: the setpriv euid-drop workload did not listen or greet over TLS under both subjects"
+    },
+    {
+      "family": "libshout",
+      "level": "L5-loaded",
+      "failure_class": "runtime-failure",
+      "classification": "FIXTURE",
+      "evidence": "unchanged from S42: the Icecast SOURCE stream did not complete over TLS under both subjects"
+    },
+    {
+      "family": "libcxxtools10",
+      "level": "L2-configured",
+      "failure_class": "build-failure",
+      "classification": "ENVIRONMENT",
+      "evidence": "unchanged from S42: cxxtools' serializationerror.cpp fails with the same g++ command under both subjects"
+    },
+    {
+      "family": "fastd",
+      "level": "L6-runtime",
+      "failure_class": null,
+      "classification": "ENVIRONMENT",
+      "evidence": "unchanged from S42: no /dev/net/tun and no CAP_NET_ADMIN"
+    },
+    {
+      "families": ["coturn", "gftp-text", "gss-ntlmssp", "krb5", "libengine-pkcs11-openssl", "libgit2", "libmongocrypt", "poco"],
+      "level": "L4-linked",
+      "failure_class": null,
+      "classification": "HARNESS",
+      "evidence": "unchanged from S42: no admitted deterministic local workload for these programs in this venue"
+    }
+  ],
+  "skipped_families": [
+    {"family": "inadyn", "reason": "the pristine tarball ships configure.ac/autogen.sh only; the expansion image has no autoconf/automake/libtool (verified: which autoreconf -> absent), so it is not buildable without a new bootstrap toolchain"},
+    {"family": "fdm", "reason": "same autotools bootstrap gap; additionally needs libpcre2-dev and libtdb-dev through the aux seam"},
+    {"family": "nsca-ng-client", "reason": "same autotools bootstrap gap; needs libconfuse through the aux seam"},
+    {"family": "nsca-ng-server", "reason": "same autotools bootstrap gap; needs libconfuse through the aux seam"},
+    {"family": "sbsigntool", "reason": "same autotools bootstrap gap; the tests also need gnu-efi and objcopy's efi target"},
+    {"family": "yadifa", "reason": "builds (CMake, links the subject libssl) but its OpenSSL path is DNSSEC signing/validation, not a TLS transport; a deterministic workload needs a signed zone and key-management sequence rather than one non-interactive invocation"},
+    {"family": "xar", "reason": "needs libxml2-dev through the aux seam and the tarball's configure lives in a xar/ subdirectory; deferred as auxiliary-toolchain work"},
+    {"family": "davix", "reason": "needs libxml2-dev and an embedded/system libcurl; the embedded-curl build is a heavy dependency closure, deferred"},
+    {"family": "sqlcipher", "reason": "the Makefile's has_tclsh84 target requires Tcl; the venue has no tclsh, so the amalgamation cannot be generated"},
+    {"family": "clamav", "reason": "heavy dependency closure (libmspack/json-c/pcre2-dev/libxml2-dev and more) deferred to a separate bounded batch; sigtool --sha256 would be the digest workload"},
+    {"family": "freeradius", "reason": "heavy dependency closure (talloc, krb5, libpcap and more) deferred; radclient over TLS would be the workload"},
+    {"family": "rsyslog-openssl", "reason": "heavy dependency closure; a TLS syslog listener does not answer the client, so it is not a one-invocation contract"},
+    {"family": "collectd", "reason": "multi-dependency daemon; no deterministic one-shot TLS CLI"},
+    {"family": "zabbix-agent", "reason": "multi-dependency daemon; requires a live server fixture"},
+    {"family": "unbound", "reason": "heavy build; a meaningful workload needs a resolver/zone fixture rather than a one-shot CLI"},
+    {"family": "ntpsec", "reason": "waf-based build and an NTS-KE/NTP peer fixture; deferred"},
+    {"family": "uwsgi", "reason": "needs a plugin/app fixture and PCRE headers; deferred"},
+    {"family": "alpine", "reason": "interactive TUI mail client; no non-interactive TLS invocation"},
+    {"family": "neomutt", "reason": "interactive TUI mail client"},
+    {"family": "tin", "reason": "interactive TUI newsreader"},
+    {"family": "sylpheed", "reason": "GTK GUI mail client"},
+    {"family": "xca", "reason": "Qt GUI certificate manager"},
+    {"family": "falkon", "reason": "Qt GUI browser"},
+    {"family": "qbittorrent", "reason": "Qt GUI BitTorrent client"},
+    {"family": "transmission-gtk", "reason": "GTK GUI BitTorrent client"},
+    {"family": "transmission-qt", "reason": "Qt GUI BitTorrent client"},
+    {"family": "hexchat", "reason": "GTK GUI IRC client"},
+    {"family": "x11vnc", "reason": "needs an X11 display"},
+    {"family": "xrdp", "reason": "needs an X11 display"},
+    {"family": "opensc", "reason": "requires a smartcard/PKCS#11 device"},
+    {"family": "yubico-piv-tool", "reason": "requires a YubiKey USB device"},
+    {"family": "pkcs11-helper", "reason": "requires a PKCS#11 token provider"},
+    {"family": "libp11", "reason": "requires a PKCS#11 token provider"},
+    {"family": "tpm2-tools", "reason": "requires a TPM or a separately built TPM simulator"},
+    {"family": "trousers", "reason": "requires a TPM 1.2 device"},
+    {"family": "mokutil", "reason": "requires EFI variable access"},
+    {"family": "openfortivpn", "reason": "requires PPP/kernel tunnel capability"},
+    {"family": "sstp-client", "reason": "requires PPP/kernel tunnel capability"},
+    {"family": "anytun", "reason": "requires a TUN device"},
+    {"family": "gvpe", "reason": "requires a TUN device"},
+    {"family": "openvswitch", "reason": "requires the kernel datapath or a large userspace build"},
+    {"family": "pgbouncer", "reason": "requires a live PostgreSQL backend"},
+    {"family": "libpq", "reason": "psql needs a live PostgreSQL server; configure also needs a full PostgreSQL build"},
+    {"family": "pgbackrest", "reason": "requires a PostgreSQL repository/stanza"},
+    {"family": "freetds", "reason": "tsql needs a live TDS/SQL Server peer"},
+    {"family": "mariadb-client", "reason": "requires a live MariaDB server"},
+    {"family": "libcrypt-ssleay-perl", "reason": "depends on Net::SSLeay and LWP; the admitted Perl aux does not ship LWP, so the HTTPS path is not one invocation"},
+    {"family": "libcrypt-openssl-guess-perl", "reason": "build-time path detection only; no crypto operation to observe"},
+    {"family": "weex", "reason": "the Debian pool directory carries no orig archive (listing empty); SOURCE-UNREACHABLE without a verified URL"},
+    {"family": "unrealircd", "reason": "no Debian orig archive (404); the upstream tarball is not pinned"},
+    {"family": "hostapd", "reason": "the tarball has no ./configure or Makefile at the root (upstream .config build); an eapol_test workload also needs an EAP/RADIUS peer"},
+    {"family": "wpa_supplicant", "reason": "same .config build and a kernel/nl80211 or eapol_test peer requirement"},
+    {"family": "libduo3", "reason": "the duo_unix recipe builds libduo.a only; the package row names the shared libduo.so, so there is no honest artifact match"},
+    {"family": "softhsm2", "reason": "not a frozen-P1000 family (the corpus row is hsmwiz); a recipe for this name would be outside the corpus and was removed"},
+    {"family": "apache2-http2", "reason": "the apache2-bin recipe does not build mod_http2; pointing the row at the same httpd binary would not be the package's artifact"}
+  ],
+  "re_pinned_urls": [
+    {"family": "libssh", "old": "https://www.libssh.org/files/0.10/libssh-0.10.6.tar.xz", "new": "https://deb.debian.org/debian/pool/main/libs/libssh/libssh_0.10.6.orig.tar.xz", "sha256": "1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1", "reason": "www.libssh.org still returns curl 7 from the court; the Debian orig archive is byte-identical to the existing pin"},
+    {"family": "sslscan", "old": "https://github.com/rbsec/sslscan/archive/refs/tags/2.1.5.tar.gz", "new": "https://deb.debian.org/debian/pool/main/s/sslscan/sslscan_2.1.5.orig.tar.gz", "sha256": "b36616b1d59f3276af6ff9495ab8178ec6812393582fb3c094c56cc873efe956", "reason": "GitHub was subject to transient DNS failure; the Debian pool archive is the same bytes as the existing pin"}
+  ],
+  "before_after": {
+    "before_s42_committed": {"recipe_backed": 192, "candidate_loaded": 180, "candidate_runtime": 178, "candidate_functional": 177, "candidate_levels": {"L7-functional": 177, "L6-runtime": 1, "L5-loaded": 2, "L4-linked": 9, "L2-configured": 1, "L0-catalogued": 810}},
+    "after_part1": {"recipe_backed": 192, "candidate_loaded": 183, "candidate_runtime": 181, "candidate_functional": 180, "note": "libssh, sslscan and dma all restored to L7"},
+    "after_s44": {"recipe_backed": 207, "candidate_loaded": 197, "candidate_runtime": 195, "candidate_functional": 194, "candidate_levels": {"L7-functional": 194, "L6-runtime": 1, "L5-loaded": 2, "L4-linked": 9, "L2-configured": 1, "L0-catalogued": 793}, "authority_levels": {"L7-functional": 194, "L6-runtime": 1, "L5-loaded": 2, "L4-linked": 9, "L2-configured": 1, "L0-catalogued": 793}},
+    "delta_s44": {"recipe_backed": 15, "candidate_l7": 14, "candidate_non_l7": 1, "authority_identical_to_candidate": true, "candidate_specific_patch_count": 0}
+  },
+  "tool_summaries": {
+    "build_link_measure": [
+      "[downstream-build-link] elapsed=3s with_recipe=207 no_recipe=793",
+      "  authority configured=207 built=206 linked=206 failed=1",
+      "  candidate configured=207 built=206 linked=206 failed=1",
+      "  candidate_linkage_proven=206 candidate_specific_patch_count=0",
+      "  -> forensics/downstream/build-link-atlas.json"
+    ],
+    "runtime_measure": [
+      "[downstream-runtime] elapsed=3s with_recipe=207 no_recipe=793",
+      "  authority loaded=197 runtime=195 functional=194 failed=3 not_attempted=794",
+      "  candidate loaded=197 runtime=195 functional=194 failed=3 not_attempted=794",
+      "  candidate_reaches_baseline=207 reaches_linked_baseline=206 below_baseline=0 baseline_not_linked=1 candidate_failures={'acquire-failure': 793, 'runtime-failure': 2, 'link-failure': 1, 'load-failure': 1}"
+    ],
+    "checks": [
+      "[downstream-build-link] with_recipe=207 candidate_linked=206 linkage_proven=206 findings=0 control honest=True",
+      "[downstream-runtime] with_recipe=207 cand_loaded=197 cand_functional=194 reaches_baseline=207 findings=0 control honest=True"
+    ]
+  },
+  "residuals": [
+    "The runtime tool's --self-test still reports the pre-existing entries 'vsftpd' and 'postfix' as incomplete runtime intents because their launch list is empty; this predates S44 and was not changed (the --check gate passes with findings=0 and control honest=True).",
+    "The medusa candidate install's legacy provider module resolves the system libcrypto (3.0.22) instead of the candidate prefix; this is recorded as an install-artifact/environment defect, not fixed.",
+    "No BOUNDARY or SEAL evidence was generated: no Miri, sanitizers, dudect/ctgrind, FFI negative controls or caller-closure audit. This receipt is a FAST/BATCH downstream measurement.",
+    "The 793 no-recipe rows remain L0-catalogued/acquire-failure; they were not measured and no source URL was manufactured.",
+    "The court container's documented writable host bind mount (/work) remains a standing infrastructure task; docker/ was not changed."
+  ],
+  "non_claims": [
+    "15 new families were added, not 30; the exact added count is 15 (14 at L7-functional, 1 at L4-linked).",
+    "A fresh candidate-bound L7 count is not safety or cryptographic evidence (AGENTS.md section 8).",
+    "The medusa provider-load difference is a candidate install-artifact observation, not a claim that the candidate libcrypto is unsafe.",
+    "No family graduates to SAFE_COMPATIBLE in S44."
+  ]
+}
