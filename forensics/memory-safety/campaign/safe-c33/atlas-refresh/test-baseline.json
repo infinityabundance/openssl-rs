@@ -1,11 +1,13 @@
 {
-  "command": "cargo test --lib -- --test-threads=4 (and serially with --test-threads=1)",
-  "source_commit": "c911ca629",
-  "passed": 2048,
+  "command": "cargo test --lib -- --test-threads=4",
+  "source_commit": "72b625b46",
+  "source_commit_note": "the S34 full run was on the DHE working tree checked out at 143ba83b8 plus the three-file DHE change; that change is commit 72b625b46, merged at 1a101b603",
+  "passed": 2089,
   "failed": 0,
   "ignored": 44,
+  "total": 2133,
   "kind": "full-library-run",
-  "observed_total": 2098,
-  "observed_total_note": "2,098 total tests were observed on the S22 tree through focused filters (ml_dsa: 2098 total; p12/bn focused filters agree). No full-suite pass after c911ca629 is claimed.",
-  "note": "S21 BATCH full run on the working tree on top of c911ca629; the S21 edits are the change under test and become the next commit. Parallel and serial runs agree: 2048 passed, 0 failed, 44 ignored."
+  "source_tree_unchanged": true,
+  "source_tree_unchanged_note": "git diff 72b625b46..4f3c4daad -- src/ is empty; S35 and S36 were measurement-only and added no src/ or test code",
+  "note": "S34 BATCH full run (cargo test --lib -- --test-threads=4, 137.71s) on the DHE working tree. Serial --test-threads=1 was not run in S34. Floor at the time: 1962; no test was removed or newly ignored."
 }
