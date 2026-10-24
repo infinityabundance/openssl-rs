@@ -1,0 +1,135 @@
+{
+  "receipt": "s45-legacy-provider",
+  "date": "2026-10-24",
+  "subphase": "S45: legacy provider module linkage and provider-load discovery in the phase-2 install",
+  "mechanism": "LEGACY_PROVIDER_MODULE_DEPENDENCY_AND_DISCOVERY",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "integrate/safe-c33",
+    "base_head": "cf7999924",
+    "committed": false,
+    "changed_files": 5,
+    "diffstat": "forensics/tools/build_phase2.sh +14; forensics/tools/build_phase2_asan.sh +4; forensics/tools/downstream_runtime.py +8; artifacts/phase2/install/lib/ossl-modules/legacy.so rebuilt (same size, RUNPATH added); forensics/downstream/runtime-functional-atlas.json re-measured for medusa (tool output; also carries the tool's pre-existing LD_DEBUG PID churn)"
+  },
+  "environment": {
+    "court": "bash docker/openssl-rs-court.sh exec bash -lc ... (court container only, nothing on the host)",
+    "build_env": "PATH=/usr/local/cargo/bin, TMPDIR=/work/court/tmp, CARGO_BUILD_JOBS=4, CARGO_TARGET_DIR=/work/court/target",
+    "mem_before_build_gb": {"available": 66},
+    "install": "/work/artifacts/phase2/install",
+    "authority": "forensics/authorities/prefix/openssl-3.6.4-production"
+  },
+  "facts_before_fix": {
+    "install_legacy_so": {
+      "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "readelf_d": [
+        "NEEDED libcrypto.so.3",
+        "NEEDED libm.so.6",
+        "NEEDED libgcc_s.so.1",
+        "NEEDED libc.so.6",
+        "NEEDED ld-linux-x86-64.so.2",
+        "no RPATH and no RUNPATH"
+      ],
+      "ldd_without_env": "libcrypto.so.3 => /lib/x86_64-linux-gnu/libcrypto.so.3 (system 3.0.22)",
+      "headers_included": "the module carries the crate archive itself (whole-archive), so its internal libcrypto references bind locally; the NEEDED entry was the only producer of the system resolution"
+    },
+    "install_libssl_so_3": {
+      "readelf_d": ["NEEDED libcrypto.so.3", "NEEDED libgcc_s.so.1", "NEEDED libc.so.6", "NEEDED ld-linux-x86-64.so.2", "no RPATH and no RUNPATH"],
+      "ldd_without_env": "libcrypto.so.3 => /lib/x86_64-linux-gnu/libcrypto.so.3",
+      "ldd_with_LD_LIBRARY_PATH_install_lib": "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3",
+      "note": "identical dynamic-section shape to the authority's libssl.so.3 (NEEDED libcrypto.so.3, no RPATH/RUNPATH); this is preserved authority behaviour, not changed in S45"
+    },
+    "install_openssl_bin": {
+      "readelf_d": ["NEEDED libgcc_s.so.1", "NEEDED libc.so.6", "NEEDED ld-linux-x86-64.so.2"],
+      "note": "the CLI statically links the crate rlib; it declares no OpenSSL DSO dependency, so there is no libcrypto resolution here"
+    },
+    "authority_legacy_so": {
+      "readelf_d": ["NEEDED libcrypto.so.3", "NEEDED libc.so.6", "no RPATH and no RUNPATH"],
+      "ldd": "/lib/x86_64-linux-gnu/libcrypto.so.3: version `OPENSSL_3.6.0' not found (required by .../legacy.so)",
+      "note": "the authority has the same no-RUNPATH layout; its module only works because a consumer already mapped the authority libcrypto. Its standalone ldd fails loudly on the version requirement, while the candidate's module (whose references bind locally) resolved the system 3.0.22 silently."
+    },
+    "why_the_loader_picks_the_system_copy": "with no DT_RPATH/DT_RUNPATH and no LD_LIBRARY_PATH, DT_NEEDED libcrypto.so.3 is searched in the default paths first; the install's lib is not in them. In a process that has already mapped the candidate libcrypto (SONAME libcrypto.so.3), the loader reuses that mapping, so the system copy is only picked when the module is dlopen'ed by a process that has not preloaded the candidate."
+  },
+  "provider_probe_before": {
+    "probe": "candidate-linked C consumer calling OSSL_info(OPENSSL_INFO_MODULES_DIR), OSSL_PROVIDER_load(NULL,\"default\"/\"legacy\") and EVP_MD_fetch(NULL,\"MD4\",\"provider=legacy\")",
+    "candidate_without_OPENSSL_MODULES": ["modulesdir=(null)", "default=loaded", "legacy=NULL", "fetch MD4=NULL", "exit=1"],
+    "candidate_with_OPENSSL_MODULES_install_lib_ossl_modules": ["modulesdir=(null)", "default=loaded", "legacy=loaded", "fetch MD4=ok", "MD4(abc)=a448017aaf21d8525fc10ae87aa6729d", "exit=0"],
+    "authority_without_OPENSSL_MODULES": ["modulesdir=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/ossl-modules", "default=loaded", "legacy=loaded", "fetch MD4=ok", "MD4(abc)=a448017aaf21d8525fc10ae87aa6729d", "exit=0"],
+    "dlopen_probe_no_preloaded_libcrypto": "before the fix: dlopen(legacy.so) succeeded but /proc/self/maps showed /lib/x86_64-linux-gnu/libcrypto.so.3; after: /work/artifacts/phase2/install/lib/libcrypto.so.3"
+  },
+  "root_cause": "The medusa NULL is not caused by the module's linkage: the candidate libcrypto's compiled-in MODULESDIR is the empty sentinel (OPENSSL_info(1003) == NULL, a recorded distribution-fact divergence), so provider_init never finds install/lib/ossl-modules/legacy.so unless OPENSSL_MODULES is set; medusa's environment did not set it. The missing RUNPATH is a separate, real hazard: it is what makes the module's DT_NEEDED resolve to the system libcrypto whenever the loading process has not already mapped the candidate libcrypto.",
+  "fix": {
+    "in_scope_repo_changes": [
+      "forensics/tools/build_phase2.sh: link legacy.so with -Wl,--enable-new-dtags -Wl,-rpath,'$ORIGIN/..' (install path lib/ossl-modules -> lib). DT_RUNPATH (not DT_RPATH) so LD_LIBRARY_PATH still overrides, which the ABI-SUBSTITUTION court relies on.",
+      "forensics/tools/build_phase2_asan.sh: the same RUNPATH in the ASan sibling; updated for parity, NOT_RUN (the ASan venue was not rebuilt in S45).",
+      "forensics/tools/downstream_runtime.py: _measure_subject_runtime now sets OPENSSL_MODULES=<subject prefix>/lib/ossl-modules, the same per-subject prefix substitution as LD_LIBRARY_PATH and the same mechanism phase16/17/18/19's side_env already uses. This is the project's documented disposition for the empty MODULESDIR (PHASE-16-CLI-SEAL 5.4 and correction 3)."
+    ],
+    "rejected_alternative": "baking OPENSSL_RS_MODULESDIR into the release build was considered and not done: it would embed a non-relocatable absolute court path in libcrypto, contradict build.rs's stated rationale for the empty sentinel and the Phase 16 recorded divergence, and would change libcrypto_so_3_sha256, invalidating every downstream row bound to the current candidate identity. The measured RUNPATH change leaves libssl/libcrypto hashes unchanged (candidate_identity: libcrypto 268420cb..., libssl a380ecd6...).",
+    "docker_required": false,
+    "install_layout_changed": false
+  },
+  "proof_after_fix": {
+    "install_legacy_so_readelf_d": "NEEDED libcrypto.so.3; NEEDED libm/libgcc_s/libc/ld; RUNPATH [$ORIGIN/..]",
+    "ldd_without_env": "libcrypto.so.3 => /work/artifacts/phase2/install/lib/ossl-modules/../libcrypto.so.3",
+    "dlopen_probe": "dlopen=ok; only /work/artifacts/phase2/install/lib/libcrypto.so.3 is mapped",
+    "exported_symbols": ["OSSL_provider_init"],
+    "provider_load_with_OPENSSL_MODULES": "legacy=loaded; EVP_MD_fetch(NULL,\"MD4\",\"provider=legacy\")=ok; MD4(abc)=a448017aaf21d8525fc10ae87aa6729d",
+    "provider_load_without_OPENSSL_MODULES": "still legacy=NULL (MODULESDIR is still the empty sentinel by design); the fix for that is the harness environment above, not the module linkage",
+    "module_sha256": "f8e645c7d75b1670a56303190df9b2a14f054243fa65239496488bce3c282b09"
+  },
+  "phase2_abi_courts": {
+    "command": "bash forensics/tools/build_phase2.sh (rebuild + courts)",
+    "result": "11/11 pass: ABI-SYMBOL, ABI-VERSION, ABI-DYNAMIC, ABI-LAYOUT, ABI-LINK, ABI-LOAD, ABI-CONSTANTS, ABI-MATRIX, ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT, libcrypto-contamination",
+    "ABI_INSTALL_LAYOUT_asserts": [
+      "the 14 required install entries exist (bin/openssl, bin/c_rehash, include/openssl/{opensslv,evp,ssl}.h, lib/{libcrypto,libssl}.so.3, lib/{libcrypto,libssl}.so, lib/{libcrypto,libssl}.a, lib/ossl-modules/legacy.so, lib/pkgconfig/{libcrypto,libssl}.pc)",
+      "the provider module declares NEEDED libcrypto.so.3"
+    ],
+    "ABI_INSTALL_LAYOUT_result": "required_missing=[]; provider_module_needed includes libcrypto.so.3; provider_declares_libcrypto=true; verdict pass",
+    "libcrypto_contamination_result": "libssl: resolved_openssl_closure=[libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3], resolved_outside_candidate=[]; libcrypto: no OpenSSL soname; verdict pass. The court's libraries are artifacts/phase2/{libssl,libcrypto}.so.3, not the module; the module's own resolution is proved by ldd/dlopen above."
+  },
+  "downstream_remeasure": {
+    "command": "python3 forensics/tools/downstream_runtime.py --measure --only medusa --reuse-committed",
+    "medusa_launch": {
+      "before": "candidate exit=1, 'FATAL: Error loading OpenSSL legacy provider.'; authority exit=0",
+      "after": "authority exit=0; candidate exit=0 (identical); atlas row remains L4-linked for both because medusa -V suppresses its banner when the extracted path contains '-b' (the pre-existing S44 HARNESS classification), so the version-regex gate fails for both subjects",
+      "atlas_change": "candidate transcript_sha256 d65703d9... -> bb733a02...; load_proof.trace_exit 1 -> 0; candidate_identity unchanged"
+    },
+    "medusa_workload": {
+      "driver": "downstream_runtime._wl_medusa against the candidate-built src/medusa, fixture HTTPS server, right and wrong password",
+      "before_env": "LD_LIBRARY_PATH=<install>/lib, no OPENSSL_MODULES -> both runs exit=1 FATAL legacy provider; runtime_ok=false",
+      "after_env": "LD_LIBRARY_PATH=<install>/lib, OPENSSL_MODULES=<install>/lib/ossl-modules -> right password: ACCOUNT FOUND (exit 0); wrong password: no ACCOUNT FOUND (exit 0); runtime_ok=true, functional_ok=true"
+    },
+    "second_consumer_openvpn": {
+      "binary": "court/dev/openvpn/src/openvpn-2.5.10/src/openvpn/openvpn (NEEDED libssl.so.3/libcrypto.so.3, no RUNPATH)",
+      "command": "openvpn --providers legacy --dev null --ifconfig-noexec --route-noexec",
+      "before": "OpenSSL: error 12800067 ... could not load the shared library; failed to load provider 'legacy'; Exiting due to fatal error (exit 1)",
+      "after": "provider 'legacy' loads; the program proceeds past init_early to later configuration/crypto errors (no 'failed to load provider'); exit 1 only because the probe has no keys/config",
+      "control": "a bogus provider name still fails with 'failed to load provider' after the change, so the observation is the load, not a vacuous pass"
+    },
+    "counts_after": "authority and candidate both loaded=197 runtime=195 functional=194 failed=3 not_attempted=794; candidate_reaches_baseline=207; no count changed, because medusa's remaining L4 is the banner gate, not the provider"
+  },
+  "obligations": {
+    "eliminated": "the module's DT_NEEDED can no longer resolve to the host libcrypto in a process that has not preloaded a matching SONAME; the install's own lib is named by $ORIGIN/..",
+    "relocated": "none new; the RUNPATH is a narrow ELF-level boundary, and the harness path substitution is one environment variable",
+    "hidden": 0,
+    "retained": [
+      "candidate libcrypto's compiled-in MODULESDIR remains the empty sentinel (recorded distribution divergence); a consumer that does not set OPENSSL_MODULES and has no store default path still cannot find the module. The authority differs because its configure-time prefix is baked in.",
+      "install libssl.so.3 has no RUNPATH (same as the authority); it resolves the install libcrypto under LD_LIBRARY_PATH, which is what the downstream harness and ABI-SUBSTITUTION use. Changing it was rejected to preserve authority parity and the candidate identity.",
+      "the medusa atlas row remains L4 due to the pre-existing banner-suppression HARNESS issue; the provider failure itself is gone"
+    ],
+    "not_run": [
+      "build_phase2_asan.sh was edited for parity but the ASan venue was not rebuilt or exercised in S45 (NOT_RUN; the ASan gate owns it)",
+      "no Miri/sanitizer/dudect/constant-time work: this batch changes ELF search paths and a test-harness environment variable, not unsafe code",
+      "no full 207-family downstream re-measure; only medusa was rebuilt, the rest reused from the unchanged candidate identity",
+      "the 1962-test library suite was not re-run: no Rust source, allocator seam, repr(C) layout, exported symbol or unsafe block changed; the affected gates are the Phase-2 ABI courts (11/11) and downstream_runtime --check (findings=0, control honest=True)"
+    ]
+  },
+  "evidence_identity": {
+    "candidate_identity_before_after": {"libcrypto_so_3_sha256": "268420cb1c9effa10b25fe1463522f3a11c070ca35ceb039d21cb9ce20d683e3", "libssl_so_3_sha256": "a380ecd6ee257f3a321ccdb0a1da68e9d0eb5f2ff271ed873aaf5bcad01605d9", "install_prefix": "artifacts/phase2/install"},
+    "unchanged": "libcrypto and libssl are byte-identical to the pre-fix build; only legacy.so and the medusa row changed"
+  },
+  "residuals": [
+    "The downstream runtime atlas re-measurement also rewrote LD_DEBUG trace lines whose PID prefix is nondeterministic (the tool records the raw loader lines); this is pre-existing tool behaviour, not introduced by the fix, and the meaningful medusa fields are transcript_sha256 and trace_exit.",
+    "The medusa program's launch probe is still HARNESS-classified (banner suppressed by the '-b' in the extracted root name); fixing that is a separate measurement-instrument change.",
+    "The court container's writable host bind mount remains a standing infrastructure task; docker/ was not touched."
+  ]
+}
