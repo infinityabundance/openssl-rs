@@ -2281,15 +2281,18 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                         crate::ssl::ssl_sess::SSL_SESSION_free(looked);
                         return reject(HelloReject::DECODE_BAD_EXTENSION);
                     }
-                    // `tls_psk_do_binder(..., sign=0, ...)` (`extensions_srvr.c:1523`).
+                    let Some(transcript) = hs.get(..parsed.psk_binderoffset) else {
+                        crate::ssl::ssl_sess::SSL_SESSION_free(looked);
+                        return reject(HelloReject::DECODE_BAD_EXTENSION);
+                    };
+                    let Some(binder_out) = calc.get_mut(..md_size) else {
+                        crate::ssl::ssl_sess::SSL_SESSION_free(looked);
+                        return reject(HelloReject::DECODE_BAD_EXTENSION);
+                    };
+                    // `tls_psk_do_binder(..., sign=0, ...)` (`extensions_srvr.c:1523`). The
+                    // transcript extent and the output extent are slices, not offsets.
                     if crate::ssl::tls13_enc::tls13_psk_do_binder(
-                        md,
-                        hs.as_ptr(),
-                        parsed.psk_binderoffset,
-                        psk,
-                        calc.as_mut_ptr(),
-                        false,
-                        binder,
+                        md, transcript, psk, binder_out, false, binder,
                     ) == 0
                     {
                         ok = false;
@@ -4721,8 +4724,11 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         let nonce = (*s).next_ticket_nonce.to_be_bytes();
         // `tls13_hkdf_expand(... resumption_master_secret, "resumption", tick_nonce,`
         // `                  s->session->master_key, hashlen, 1)` (`statem_srvr.c:4433-4441`).
-        if crate::ssl::tls13_enc::tls13_ticket_psk(s, &nonce, (*sess).master_key.as_mut_ptr()) == 0
-        {
+        let hash_len = (*s).hs_md_len;
+        let Some(out) = (*sess).master_key.get_mut(..hash_len) else {
+            return 0;
+        };
+        if crate::ssl::tls13_enc::tls13_ticket_psk(s, &nonce, out) == 0 {
             return 0;
         }
         (*sess).master_key_length = (*s).hs_md_len;
