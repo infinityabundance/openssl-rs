@@ -2056,6 +2056,26 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The S44 corpus batch: pristine upstreams driven by one non-interactive TLS or crypto
+    # operation.  Each carries its own pinned archive digest and the subject prefix is the only
+    # OpenSSL on the link line; non-OpenSSL dependencies come through the pinned aux seam.
+    for spec in _S44_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # The S46 corpus batch: pristine upstreams with a pinned archive digest.  The subject prefix is
+    # the only OpenSSL on the link line; non-OpenSSL dependencies come through the auxiliary seam.
+    for spec in _S46_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
+    # S46 package rows of S46/earlier parents: same archive and build intent, package artifact.
+    by_family = {rec["family"]: rec for rec in recipes}
+    for new, base, overrides in _S46_SPLIT_RECIPES:
+        rec = copy.deepcopy(by_family[base])
+        rec.update({"family": new, "recipe_id": f"recipe:{new}:{rec['version']}"})
+        rec.update(overrides)
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -3498,8 +3518,24 @@ _LATE_RECIPE_OVERRIDES: dict[str, dict] = {
                       "-DWITH_GSSAPI=OFF", "-DWITH_ZLIB=ON", "-DWITH_PCAP=OFF",
                       "-DWITH_SERVER=OFF", "-DBUILD_EXAMPLES=OFF", "-DUNIT_TESTING=OFF"],
         "make": [], "artifact": "b/lib/libssh.so*", "launch": None,
-        "note": ("libssh 0.10.6 built by CMake against the subject libssl/libcrypto; the admitted "
-                 "workload imports a pinned RSA private key and checks its exported public blob"),
+        # S44 re-pin: www.libssh.org is unreachable from the court (curl exit 7, reproduced after
+        # S42).  The Debian pool carries the identical upstream 0.10.6 release archive; the
+        # observed SHA-256 is byte-for-byte the value `_CENSUS_PINS` already asserts.
+        "url": "https://deb.debian.org/debian/pool/main/libs/libssh/libssh_0.10.6.orig.tar.xz",
+        "archive": "tar.xz",
+        "sha256": "1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1",
+        "note": ("libssh 0.10.6 (Debian pool re-pin, S44) built by CMake against the subject "
+                 "libssl/libcrypto; the admitted workload imports a pinned RSA private key and "
+                 "checks its exported public blob"),
+    },
+    "sslscan": {
+        # S44 re-pin: the upstream GitHub tag archive was lost to a transient DNS failure.  The
+        # Debian pool's 2.1.5 orig archive is the same bytes (the observed digest equals the pin).
+        "url": "https://deb.debian.org/debian/pool/main/s/sslscan/sslscan_2.1.5.orig.tar.gz",
+        "archive": "tar.gz",
+        "sha256": "b36616b1d59f3276af6ff9495ab8178ec6812393582fb3c094c56cc873efe956",
+        "note": ("sslscan 2.1.5 (Debian pool re-pin, S44) scans the authority's local TLS1.3 "
+                 "server and confirms TLS1.3 is disabled on a TLS1.2-only server"),
     },
 }
 
@@ -3801,6 +3837,80 @@ _L7_SPLIT_RECIPES: tuple[tuple[str, str, dict], ...] = (
         "note": ("the librabbitmq package row of rabbitmq-c 0.15.0: the same TLS socket "
                  "harness completes the connection and rejects an unrelated CA"),
     }),
+
+    # S44 package rows of upstreams this catalogue already builds and drives.  Each row is the
+    # same pristine archive, the same build intent and the same admitted workload; only the
+    # distribution's own package name (and, where the package names it, artifact pattern) differs.
+    ("h2o-evloop0.13", "h2o", {
+        "artifact": "b/h2o",
+        "note": ("the h2o-evloop0.13 package row of h2o 2.2.6: the same verified TLS "
+                 "listener serves the fixture and rejects an unrelated CA"),
+    }),
+    ("libafflib0v5", "afflib", {
+        "artifact": "lib/.libs/libafflib.so*",
+        "note": ("the libafflib0v5 package row of AFFLIB 3.7.20: the same affsign "
+                 "sign/verify workload and tampered-image rejection"),
+    }),
+    ("apache2-ssl", "apache2-bin", {
+        "artifact": "httpd",
+        "note": ("the apache2-ssl package row of Apache 2.4.62: the same statically-linked "
+                 "mod_ssl httpd serves the fixture over verified TLS"),
+    }),
+    ("nagios-plugins-tcp", "monitoring-plugins", {
+        "artifact": "plugins/check_tcp",
+        "note": ("the nagios-plugins-tcp package row of monitoring-plugins 2.4.0: check_tcp's "
+                 "own --ssl path completes the TLS handshake with the fixture and refuses a "
+                 "plaintext peer"),
+    }),
+)
+
+# S46 package rows are split from parents that the S46 batch itself appends, so they are applied
+# after `_S46_SPECS` (see `_build_catalogue`).
+_S46_SPLIT_RECIPES: tuple[tuple[str, str, dict], ...] = (
+    ("cyrus-sasl-ntlm", "cyrus-sasl-scram", {
+        "artifact": "plugins/.libs/libntlm.so*",
+        "configure": ["--with-openssl={prefix}", "--disable-static", "--enable-shared",
+                      "--disable-otp", "--disable-ldapdb", "--without-pam", "--disable-sql",
+                      "--enable-ntlm"],
+        "note": ("the cyrus-sasl-ntlm package row of cyrus-sasl 2.1.28: the NTLM plugin's "
+                 "MD4/HMAC-MD5 path linked to the subject libcrypto"),
+    }),
+    ("unbound-anchor", "unbound", {
+        "artifact": "unbound-anchor",
+        "note": ("the unbound-anchor package row of Unbound 1.22.0: the root trust-anchor "
+                 "update path through the subject libcrypto"),
+    }),
+    ("krb5-k5tls", "krb5", {
+        "artifact": "src/plugins/tls/k5tls.so",
+        "configure": ["--with-crypto-impl=openssl", "--disable-static", "--enable-k5tls"],
+        "note": ("the krb5-k5tls package row of MIT krb5 1.20.1: the OpenSSL-backed k5tls "
+                 "plugin linked to the subject libssl"),
+    }),
+    ("canl-c-examples", "canl-c", {
+        "artifact": ".libs/client",
+        "note": ("the canl-c-examples package row of canl-c 3.0.0: the shipped client "
+                 "example performs proxy-certificate operations through the subject libcrypto"),
+    }),
+    ("libdigidoc-tools", "libdigidoc2", {
+        "artifact": "b/libdigidoc/cdigidoc",
+        "note": ("the libdigidoc-tools package row of libdigidoc 3.10.5: the cdigidoc tool "
+                 "signs and verifies a container with the subject libcrypto"),
+    }),
+    ("ewf-tools", "libewf", {
+        "artifact": "ewftools/.libs/ewfverify",
+        "note": ("the ewf-tools package row of libewf 20140813: ewfverify recomputes the "
+                 "image digest with the subject libcrypto"),
+    }),
+    ("libfsapfs-utils", "libfsapfs1", {
+        "artifact": "fsapfstools/fsapfsinfo",
+        "note": ("the libfsapfs-utils package row of libfsapfs 20201107: the image-information "
+                 "tool through the subject libcrypto"),
+    }),
+    ("perl-crypt-ssleay", "libcrypt-ssleay-perl", {
+        "artifact": "blib/arch/auto/Crypt/SSLeay/SSLeay.so",
+        "note": ("the CPAN-name row of Crypt::SSLeay 0.73_06: the same XS TLS client "
+                 "handshake and unrelated-CA reject"),
+    }),
 )
 
 # ima-evm-utils 1.4 is the only new upstream in this batch: its `evmctl` signs and verifies a
@@ -4024,6 +4134,61 @@ _S23_PERL_SPECS: tuple[dict, ...] = (
         "blib/arch/auto/Crypt/OpenSSL/Random/Random.so",
         "Crypt::OpenSSL::Random 0.15: RAND_bytes/RAND_add through the subject "
         "libcrypto."),
+    # S44 package rows: the Debian source package's own name for the exact modules above.
+    # The corpus carries both the CPAN-style name and the distribution package name as separate
+    # families; the archive, build intent and harness are byte-identical, so these rows are the
+    # same upstream consumer under its package name (the established split-row rule).
+    _s23_perl_spec(
+        "libcrypt-openssl-bignum-perl", "0.09",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-bignum-perl/"
+         "libcrypt-openssl-bignum-perl_0.09.orig.tar.gz"),
+        "234e72fb8396d45527e6fd45e43759c5c3f3a208cf8f29e6a22161a996fd42dc",
+        "blib/arch/auto/Crypt/OpenSSL/Bignum/Bignum.so",
+        "the libcrypt-openssl-bignum-perl package row of Crypt::OpenSSL::Bignum 0.09: "
+        "BN add/mul/mod_exp/mod_inverse through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-random-perl", "0.15",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-random-perl/"
+         "libcrypt-openssl-random-perl_0.15.orig.tar.gz"),
+        "f0876faa1ba3111e39b86aa730c603211eff2905e460c72a57b61e8cf475cef4",
+        "blib/arch/auto/Crypt/OpenSSL/Random/Random.so",
+        "the libcrypt-openssl-random-perl package row of Crypt::OpenSSL::Random 0.15: "
+        "RAND_bytes and RAND_status through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-rsa-perl", "0.33",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-rsa-perl/"
+         "libcrypt-openssl-rsa-perl_0.33.orig.tar.gz"),
+        "bdbe630f6d6f540325746ad99977272ac8664ff81bd19f0adaba6d6f45efd864",
+        "blib/arch/auto/Crypt/OpenSSL/RSA/RSA.so",
+        "the libcrypt-openssl-rsa-perl package row of Crypt::OpenSSL::RSA 0.33: RSA "
+        "keygen, sign/verify and public encrypt/decrypt through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-dsa-perl", "0.20",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-dsa-perl/"
+         "libcrypt-openssl-dsa-perl_0.20.orig.tar.gz"),
+        "e4575d787d44e49b3b59cc39eda2e461fe0606dd0e87d3a9c3df5011b133e702",
+        "blib/arch/auto/Crypt/OpenSSL/DSA/DSA.so",
+        "the libcrypt-openssl-dsa-perl package row of Crypt::OpenSSL::DSA 0.20: DSA "
+        "keygen, sign/verify and PEM roundtrip through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-x509-perl", "1.9.14",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-x509-perl/"
+         "libcrypt-openssl-x509-perl_1.9.14.orig.tar.gz"),
+        "49c575257e6408ad5a89011e5b5800d598f9ccafdf42e71004ed81cb2f44ee7a",
+        "blib/arch/auto/Crypt/OpenSSL/X509/X509.so",
+        "the libcrypt-openssl-x509-perl package row of Crypt::OpenSSL::X509 1.9.14: "
+        "X.509 parse, fingerprint, extensions and issuer linkage through the subject "
+        "libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-smime-perl", "0.28",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-smime-perl/"
+         "libcrypt-smime-perl_0.28.orig.tar.gz"),
+        "ca90ecacfef620f8a2f1723c5bc3307a0079c0c6f5170849a9896b20280d1c2d",
+        "blib/arch/auto/Crypt/SMIME/SMIME.so",
+        "the libcrypt-smime-perl package row of Crypt::SMIME 0.28: CMS sign/check and "
+        "encrypt/decrypt through the subject libcrypto.",
+        {"LIBCRYPTO_CFLAGS": "-I{prefix}/include",
+         "LIBCRYPTO_LIBS": "-L{prefix}/lib -lcrypto"}),
 )
 
 _S23_BINUTILS_AUX: tuple[dict, ...] = (
@@ -4400,6 +4565,642 @@ _S36_SPECS: tuple[dict, ...] = (
                  "PKCS#7/CMS implementation through the subject libssl/libcrypto; the "
                  "admitted workload submits a message to a local SMTPS peer and rejects "
                  "an unrelated CA."),
+    },
+)
+
+
+# --------------------------------------------------------------------------------------------
+# S44 corpus batch (2026-10-24)
+#
+# The families below were the next tractable rows in the frozen P1000 with no admitted recipe:
+# each has a pristine published source archive, builds with the venue's toolchain against the
+# subject prefix, and exposes a CLI that performs one non-interactive TLS or crypto operation.
+# Families whose only entry point is an interactive daemon, a kernel capability, a USB/smartcard
+# device or a distribution meta-package were skipped and are itemised in the S44 receipt.
+# --------------------------------------------------------------------------------------------
+_S44_SPECS: tuple[dict, ...] = (
+    {
+        # A RELP sender/receiver pair from the library's own test programs.  Both ends
+        # negotiate mutual TLS through librelp's OpenSSL backend, so the workload is a real
+        # TLS session between two consumers in the same pristine tree.
+        "family": "librelp", "version": "1.13.0",
+        "url": "https://deb.debian.org/debian/pool/main/libr/librelp/librelp_1.13.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "58e976e31795d7309cf2d9f37fdc93522daa4a322f5012d7879fed9ebfa40068",
+        "configure": ["--prefix={root}/.l7-install", "--disable-tls",
+                      "--enable-tls-openssl", "--disable-static"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/.libs/librelp.so*", "launch": None,
+        "env_extra": {"OPENSSL_CFLAGS": "-I{prefix}/include",
+                      "OPENSSL_LIBS": ("-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                                       "-lssl -lcrypto")},
+        "note": ("librelp 1.13.0's own RELP send/receive pair negotiates mutual TLS "
+                 "through the subject libssl and carries a message; a sender trusting "
+                 "an unrelated CA is refused"),
+    },
+    {
+        # Hydra's https-get module is an OpenSSL client: it completes a TLS handshake and sends
+        # HTTP Basic credentials.  The workload's fixture answers 401 for the wrong password and
+        # 200 for the right one, so the finding is a real TLS-authenticated decision.
+        "family": "hydra", "version": "9.5",
+        "url": "https://deb.debian.org/debian/pool/main/h/hydra/hydra_9.5.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "a3969a8cd7dbd1f805f756df980beda83c53778087d8e6ffcb8aa28693f407d5",
+        "configure": ["--prefix={prefix}", "--disable-xhydra"],
+        "make": [MAKE_JOBS, "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "hydra", "launch": ["-h"],
+        "note": ("hydra 9.5's https-get module authenticates over the subject libssl; the "
+                 "admitted workload finds the fixture credential and misses a wrong one"),
+    },
+    {
+        # Ncrack's HTTP(S) module is a second, independent OpenSSL client (nsock + the ncrack
+        # HTTP engine).  Its services database is a build-tree data file, so NCRACKDIR points at
+        # the extracted root.
+        "family": "ncrack", "version": "0.7+debian",
+        "url": ("https://deb.debian.org/debian/pool/main/n/ncrack/"
+                "ncrack_0.7+debian.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "117096d9e25a8308f1f1a012e573f7575c36592d842555482b4cf53b7065bd21",
+        "configure": ["--with-openssl={prefix}", "--without-openssl-header-check"],
+        "env_extra": {"LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "make": [MAKE_JOBS, "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                             "-Lnbase -Lnsock/src -Lopensshlib -Wl,--allow-multiple-definition"],
+        "artifact": "ncrack", "launch": ["-h"],
+        "note": ("ncrack 0.7's HTTPS module authenticates through the subject libssl; the "
+                 "admitted workload finds the fixture credential and misses a wrong one"),
+    },
+    {
+        # ircd-hybrid's TLS listener: the daemon refuses root, so the workload drops to `nobody`
+        # and stages the install prefix the binary expects.  The evidence is its own IRC greeting
+        # over a verified TLS session, with an unrelated CA rejected.
+        "family": "ircd-hybrid", "version": "8.2.46",
+        "url": ("https://deb.debian.org/debian/pool/main/i/ircd-hybrid/"
+                "ircd-hybrid_8.2.46+dfsg.1.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c16dc92536fd6519a85b7aa35f061bbb40b366cd449866fa2ff90ac88881aef7",
+        "configure": ["--prefix={root}/.l7-install", "--with-tls=openssl"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/ircd", "launch": ["-v"],
+        "note": ("ircd-hybrid 8.2.46's TLS listener greets a verified loopback client over the "
+                 "subject libssl; an unrelated CA is refused"),
+    },
+    {
+        # Medusa's http module with -s is an OpenSSL client (medusa-thread-ssl.c).  Its modules
+        # are loaded from src/modsrc through MEDUSA_MODULE_PATH.
+        "family": "medusa", "version": "2.3",
+        "url": "https://deb.debian.org/debian/pool/main/m/medusa/medusa_2.3.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "7ad4b4ed8acecd42fa48fc31fad6e255a8ee894c66615509196f5b9173e3f891",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/medusa", "launch": ["-V"],
+        "note": ("medusa 2.3's HTTP module over TLS finds the fixture credential through the "
+                 "subject libssl and misses a wrong one"),
+    },
+)
+
+
+# --------------------------------------------------------------------------------------------
+# S46 corpus batch (2026-10-24)
+#
+# The next tractable rows in the frozen P1000.  Every archive is a pristine published release
+# pinned by the digest this subphase observed; non-OpenSSL dependencies come from pinned bookworm
+# packages through the auxiliary seam, so the subject prefix is the only OpenSSL on the link line.
+# A family the venue cannot drive deterministically keeps its build/link row (no `PROGRAMS` entry)
+# rather than fabricating a workload.
+# --------------------------------------------------------------------------------------------
+
+_S46_TCL_AUX: tuple[dict, ...] = (
+    _aux_deb("t/tcl8.6", "libtcl8.6_8.6.13+dfsg-2_amd64.deb",
+             "976c4235b816635e1756016f3adbabb634e8b97a9f6b97cf901be099e4fd2487",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("t/tcl8.6", "tcl8.6_8.6.13+dfsg-2_amd64.deb",
+             "4d539bdd459ea9fd5be25bf46c3c928ae5eb9cfdb5a1bf7ca25cacc596327d9d",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("t/tcl8.6", "tcl8.6-dev_8.6.13+dfsg-2_amd64.deb",
+             "e37b3f8888003ca9a34b85452885662bb9885b17f70cf7dfe4ec821a48328509",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S46_POPT_AUX: tuple[dict, ...] = (
+    _aux_deb("p/popt", "libpopt0_1.19+dfsg-1_amd64.deb",
+             "6f94b488255acd996254f775c77ff3956557c61f860a3c9caeaf65457554194f",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/popt", "libpopt-dev_1.19+dfsg-1_amd64.deb",
+             "0f1c2bcc8270f6f06a3f351efd43296ad4793fe1daf641b7d9f0428dc7d141a2",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S46_BSD_AUX: tuple[dict, ...] = (
+    _aux_deb("libm/libmd", "libmd0_1.0.4-2_amd64.deb",
+             "03539fd30c509e27101d13a56e52eda9062bdf1aefe337c07ab56def25a13eab",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libm/libmd", "libmd-dev_1.0.4-2_amd64.deb",
+             "fc755a2552c03653cb51575bf70d1aa0874f78d86fbc8ff7fb246b1c9e7e31c5",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("libb/libbsd", "libbsd0_0.11.7-2_amd64.deb",
+             "bb31cc8b40f962a85b2cec970f7f79cc704a1ae4bad24257a822055404b2c60b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    {"url": ("https://deb.debian.org/debian/pool/main/libb/libbsd/"
+              "libbsd-dev_0.11.7-2_amd64.deb"),
+     "sha256": "788ec28ca78eab1ba14d2e1a50727efb7276c6b034163dca40931d8ab3d94aab",
+     "archive": "deb", "extract": ["dpkg-deb", "-x"],
+     "include_dirs": ["usr/include"], "library_dirs": [_AUX_MULTIARCH],
+     "pkgconfig_dirs": [_AUX_MULTIARCH_PC],
+     "links": {"usr/lib/x86_64-linux-gnu/libbsd.so": "libbsd.so.0.11.7"},
+     "note": "pinned bookworm libbsd-dev; its ld script is replaced with a symlink"},
+)
+
+_S46_LIBXML2_AUX: tuple[dict, ...] = (
+    _aux_deb("libx/libxml2", "libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "4460e39dda10a815881374217cde08474747cfa018358cd8612c14b390eff53b",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libx/libxml2", "libxml2-dev_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+             "e8ceacf656b1720e7a310e1d159439a356bfcb9f5fb0325907f26aa8590e5f70",
+             include_dirs=("usr/include", "usr/include/libxml2"),
+             library_dirs=(_AUX_MULTIARCH,), pkgconfig_dirs=(_AUX_MULTIARCH_PC,),
+             bin_dirs=("usr/bin",)),
+)
+
+_S46_BISON_FLEX_AUX: tuple[dict, ...] = (
+    _aux_deb("b/bison", "bison_3.8.2+dfsg-1+b1_amd64.deb",
+             "a414afd7519c53bfa33415ba5b951bc8b4906877004c49723ffda50a6033c3e8",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("f/flex", "flex_2.6.4-8.2_amd64.deb",
+             "da3fd55dbb6aff4f7b3187580813e0ef707d0c596402e37c8fd144df60003636",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("libt/libtool", "libtool-bin_2.4.7-7~deb12u1_amd64.deb",
+             "f7994513ca6b138b49e8814067c9c0fe565da503ec27b64b4095b890ffb12faf",
+             bin_dirs=("usr/bin",)),
+)
+
+_S46_CONFUSE_AUX: tuple[dict, ...] = (
+    _aux_deb("libc/libconfuse", "libconfuse2_3.3-3_amd64.deb",
+             "bdfc3f22a513cc7040d2164572100a286592e7b9971c5d8b6d742065a4105249",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("libc/libconfuse", "libconfuse-dev_3.3-3_amd64.deb",
+             "66e6947aef970dbb18a9a5420b23f4b5095881fd2214d8d51b099daea534bab9",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S46_FDM_AUX: tuple[dict, ...] = (
+    *list(_S46_BISON_FLEX_AUX),
+    _aux_deb("p/pcre2", "libpcre2-8-0_10.42-1_amd64.deb",
+             "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pcre2", "libpcre2-dev_10.42-1_amd64.deb",
+             "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+    _aux_deb("t/tdb", "libtdb1_1.4.8-2_amd64.deb",
+             "8732969f56ad8f3bdc4e789602682f7c067f9ccd03dfd622118df817c52437d0",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("t/tdb", "libtdb-dev_1.4.8-2_amd64.deb",
+             "830e5e526fdfc5daa9cefdea7365622e7f0cc531417603a9359c2a9c50a832f5",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S46_PERL_AUX: tuple[dict, ...] = (
+    *list(_S23_PERL_AUX),
+    _s23_deb("libn/libnet-dns-perl", "libnet-dns-perl_1.36-1_all.deb",
+             "2d5f9cf243c04f41e7c906bad882e67407a3593cf52caf2d814483f0f92f90fc",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _s23_deb("libn/libnet-ssleay-perl", "libnet-ssleay-perl_1.92-2+b1_amd64.deb",
+             "33b84b99b0374dcc8bf4a339554b06c035189359deb9f0aab431d16b170ca52a",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _s23_deb("libd/libdigest-hmac-perl", "libdigest-hmac-perl_1.04+dfsg-2_all.deb",
+             "840aeda60f5eb20b483943b4ef9f2dc901f5884484b05edc02c935eeb287974d"),
+)
+
+_S46_SWIG_AUX: tuple[dict, ...] = (
+    _aux_deb("s/swig", "swig4.0_4.1.0-0.2_amd64.deb",
+             "fad70d1d34431a6d12f7fed3f7df8bf1a089a618b7b34c775cafaa95ad211c2d",
+             bin_dirs=("usr/bin",)),
+    _aux_deb("p/python3.11", "libpython3.11-dev_3.11.2-6+deb12u8_amd64.deb",
+             "01a8eddeb8505bb6e2c01209cda66b41fb5ebeaa64e69d0e25f7131915f1cd32",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S46_CANL_AUX: tuple[dict, ...] = tuple(_S46_BISON_FLEX_AUX) + tuple(_ONBOARD_AUTOTOOLS_AUX)
+
+_S46_STUBBY_AUX: tuple[dict, ...] = (
+    _aux_deb("liby/libyaml", "libyaml-0-2_0.2.5-1_amd64.deb",
+             "207b539919a47c85bcf738677f0ccf5bbac9844f2d3f158696f518be4c4ba6c4",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("liby/libyaml", "libyaml-dev_0.2.5-1_amd64.deb",
+             "429a3853453346d971b7a6abc3a9dde4a7bb37ead65685de0eb031871b33b8e2",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,),
+             pkgconfig_dirs=(_AUX_MULTIARCH_PC,)),
+)
+
+_S46_DAVIX_AUX: tuple[dict, ...] = tuple(_S46_LIBXML2_AUX) + tuple(_LIBCURL_AUX)
+
+_S46_CKERMIT_AUX: tuple[dict, ...] = (
+    _aux_deb("p/pam", "libpam0g_1.5.2-6+deb12u2_amd64.deb",
+             "a06f889caf9e97ccf04dedec0905573916bc6ec3366ade2c6ef8900047fd5cc1",
+             library_dirs=(_AUX_MULTIARCH,)),
+    _aux_deb("p/pam", "libpam0g-dev_1.5.2-6+deb12u2_amd64.deb",
+             "acee39196e2e3ccf51fd7ccdf1247d7a4bd061cd6fd17c277eccbdcc87d6b6f1",
+             include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+)
+
+_S46_SPECS: tuple[dict, ...] = (
+    {
+        "family": "stubby", "version": "1.7.3",
+        "url": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_SHARED=ON",
+                      "-DENABLE_STATIC=OFF", "-DBUILD_TESTING=OFF",
+                      "-DENABLE_STUB_ONLY=ON", "-DUSE_LIBIDN2=OFF",
+                      "-DBUILD_LIBEV=OFF", "-DBUILD_LIBEVENT2=OFF", "-DBUILD_LIBUV=OFF",
+                      "-DBUILD_EXAMPLES=OFF", "-DBUILD_GETDNS_QUERY=OFF",
+                      "-DBUILD_GETDNS_SERVER_MON=OFF", "-DBUILD_STUBBY=ON",
+                      "-DOPENSSL_ROOT_DIR={prefix}", "-DCMAKE_PREFIX_PATH={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/stubby", "launch": ["-V"],
+        "aux_sources": list(_S46_STUBBY_AUX),
+        "note": ("getdns 1.7.3's stubby DNS-over-TLS client linked to the subject libssl"),
+    },
+    {
+        "family": "ckermit", "version": "402~beta08",
+        "url": "https://deb.debian.org/debian/pool/main/c/ckermit/ckermit_402~beta08.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "f611a290866bacfd4fe0a4f9321261686351efd8f97a9c76698f3ef431a7b397",
+        "make": ["linux+ssl", "SSLINC=-I{prefix}/include -I{aux}/usr/include",
+                 "SSLLIB=-L{prefix}/lib -L{aux}/usr/lib/x86_64-linux-gnu "
+                 "-Wl,-rpath,{prefix}/lib -Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"],
+        "artifact": "wermit", "launch": ["-V"],
+        "aux_sources": list(_S46_CKERMIT_AUX),
+        "note": ("C-Kermit 10.0's HTTPS client path (ck_ssl.c) linked to the subject libssl"),
+    },
+    {
+        "family": "xar", "version": "1.8.0.498",
+        "url": "https://deb.debian.org/debian/pool/main/x/xar/xar_1.8.0.498.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "9cee4f80b96cf592ccc545a4fdd51e4da4a5bd3b4734901637d67b043eff3c75",
+        "pre_build": [["sh", "-c", ("sed -i 's#/usr#{aux}/usr#g' {aux}/usr/bin/xml2-config; "
+                                       "cd xar && ./configure --prefix={root}/.l7-install "
+                                       "--with-openssl={prefix} && make -j4")]],
+        "make": ["-C", "xar"], "artifact": "xar/xar", "launch": ["--version"],
+        "aux_sources": list(_S46_LIBXML2_AUX),
+        "note": ("xar 1.8.0's signed-archive path through the subject libcrypto"),
+    },
+    {
+        "family": "imx-code-signing-tool", "version": "3.3.1+dfsg",
+        "url": ("https://deb.debian.org/debian/pool/main/i/imx-code-signing-tool/"
+                "imx-code-signing-tool_3.3.1+dfsg.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "make", "configure": None,
+        "sha256": "1f804b078d45344f099b543bde712c205ee80a4b231bff99f68c625e60ced9d1",
+        "make": ["-C", "code/cst", "OPENSSL_PATH={prefix}"],
+        "artifact": "code/cst/release/linux64/cst", "launch": ["--help"],
+        "note": ("NXP CST 3.3.1 signs an HAB CSF image with the subject libcrypto"),
+    },
+    {
+        "family": "canl-c", "version": "3.0.0",
+        "url": "https://deb.debian.org/debian/pool/main/c/canl-c/canl-c_3.0.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "3d397ea2a8144f5945449919d599add6238da87fba2134407585d48c86db9796",
+        "pre_build": [["sh", "-c", ("sed -i 's#/usr/share#{aux}/usr/share#g' "
+                                       "{aux}/usr/bin/libtoolize; ./configure --prefix={root}/.l7-install")]],
+        "make": [MAKE_JOBS], "artifact": ".libs/libcanl_c.so*", "launch": None,
+        "aux_sources": list(_S46_CANL_AUX),
+        "env_extra": {"PATH": "{aux}/usr/bin:" + os.environ.get("PATH", ""),
+                      "M4": "{aux}/usr/bin/m4",
+                      "LIBTOOL": "{aux}/usr/bin/libtool"},
+        "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("canl-c 3.0.0's X.509 proxy-certificate path through the subject libcrypto"),
+    },
+    {
+        "family": "libdigidoc2", "version": "3.10.5",
+        "url": "https://deb.debian.org/debian/pool/main/libd/libdigidoc/libdigidoc_3.10.5.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "f635bbce14936b5a7d1eeac9623874ba56982c15b07c2ccd3f9865138932835b",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_DISABLE_FIND_PACKAGE_Doxygen=ON",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include -I{aux}/usr/include "
+                      "-I{aux}/usr/include/libxml2",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include -I{aux}/usr/include "
+                      "-I{aux}/usr/include/libxml2",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libdigidoc/libdigidoc.so*", "launch": None,
+        "aux_sources": list(_S46_LIBXML2_AUX),
+        "note": ("libdigidoc 3.10.5's XAdES/BDoc signing path linked to the subject libcrypto"),
+    },
+    {
+        "family": "libewf", "version": "20140813",
+        "url": "https://deb.debian.org/debian/pool/main/libe/libewf/libewf_20140813.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "dbfdf1bbea5944b014c2311cce4615d92b2b6b91c8401eef8640de9f3e75845b",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--without-libfuse", "--disable-python", "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "libewf/.libs/libewf.so*", "launch": None,
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", ("find . \( -name aclocal.m4 -o -name configure -o -name Makefile.in "
+                                       "-o -name config.h.in \) -print0 | xargs -0 touch")]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": ("libewf 20140813's digest/encryption path through the subject libcrypto"),
+    },
+    {
+        "family": "yafc", "version": "1.3.7",
+        "url": "https://deb.debian.org/debian/pool/main/y/yafc/yafc_1.3.7.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "4b3ebf62423f21bdaa2449b66d15e8d0bb04215472cb63a31d473c3c3912c1e0",
+        "configure": ["--prefix={root}/.l7-install", "--without-ssh",
+                      "--with-openssl={prefix}"],
+        "make": [MAKE_JOBS], "artifact": "src/yafc", "launch": ["--version"],
+        "aux_sources": list(_S46_BSD_AUX),
+        "note": ("yafc 1.3.7's FTPS client path linked to the subject libssl"),
+    },
+    {
+        "family": "kore", "version": "4.1.0",
+        "url": "https://deb.debian.org/debian/pool/main/k/kore/kore_4.1.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "b7d73b005fde0ea01c356a54e4bbd8a209a4dff9cf315802a127ce7267efbe61",
+        "make": [MAKE_JOBS, "OPENSSL_PATH={prefix}",
+                 "CFLAGS=-Wall -Wno-error -Wno-missing-prototypes "
+                 "-Wno-missing-declarations -Wno-deprecated-declarations "
+                 "-I{prefix}/include"],
+        "artifact": "kore", "launch": ["-v"],
+        "note": ("Kore 4.1.0's TLS listener linked to the subject libssl"),
+    },
+    {
+        "family": "davix", "version": "0.8.4",
+        "url": "https://deb.debian.org/debian/pool/main/d/davix/davix_0.8.4.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "519d56f746e86ea3fd615bc49e559b520df07e051e1ca3d8c092067958f3b2b7",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DEMBEDDED_LIBCURL=OFF",
+                      "-DLIBXML2_INCLUDE_DIR={aux}/usr/include/libxml2",
+                      "-DLIBXML2_LIBRARY={aux}/usr/lib/x86_64-linux-gnu/libxml2.so",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include -I{aux}/usr/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                      "-L{aux}/usr/lib/x86_64-linux-gnu"],
+        "make": [], "artifact": "bin/davix-get", "launch": ["--version"],
+        "aux_sources": list(_S46_DAVIX_AUX),
+        "note": ("davix 0.8.4's HTTPS client (davix-get) linked to the subject libssl"),
+    },
+    {
+        "family": "xilinx-bootgen", "version": "2022.2",
+        "url": "https://deb.debian.org/debian/pool/main/x/xilinx-bootgen/xilinx-bootgen_2022.2.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "af1d494e30f357b46868ad4580f78bef7c660b5a32a10308c3bc8ae452a9eaba",
+        "make": [MAKE_JOBS,
+                 "LIBS=-L{prefix}/lib -lssl -lcrypto -ldl -lpthread -Wl,-rpath,{prefix}/lib",
+                 "INCLUDE_USER=-I{prefix}/include"],
+        "artifact": "bootgen", "launch": ["-help"],
+        "note": ("Xilinx Bootgen 2022.2 signs boot images with the subject libcrypto"),
+    },
+    {
+        "family": "perl-net-dns-sec", "version": "1.20",
+        "url": ("https://deb.debian.org/debian/pool/main/libn/libnet-dns-sec-perl/"
+                "libnet-dns-sec-perl_1.20.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "f5e495e575cda03a8b72fa07c20ad57bb3a767dc9408ad0329ef62c3637a6865",
+        "pre_build": [["sh", "-c", ("mkdir -p {root}/.perl-deps/lib {root}/.perl-deps/arch; "
+                                       "cp -a {aux}/usr/share/perl5/. {root}/.perl-deps/lib/; "
+                                       "cp -a {aux}/usr/lib/x86_64-linux-gnu/perl5/5.36/. "
+                                       "{root}/.perl-deps/arch/ 2>/dev/null || true; "
+                                       "export PERL5LIB={aux}/usr/share/perl5:{aux}/usr/lib/x86_64-linux-gnu/perl5/5.36:{root}/.perl-deps/lib:{root}/.perl-deps/arch; "
+                                       "perl Makefile.PL OPENSSL_PREFIX={prefix}")]],
+        "make": [MAKE_JOBS], "artifact": "blib/arch/auto/Net/DNS/SEC/SEC.so", "launch": None,
+        "aux_sources": list(_S46_PERL_AUX),
+        "env_extra": {"LD_LIBRARY_PATH": "{prefix}/lib"},
+        "note": ("Net::DNS::SEC 1.20's DNSSEC signing/validation through the subject libcrypto"),
+    },
+    {
+        "family": "libcrypt-ssleay-perl", "version": "0.73.06",
+        "url": ("https://deb.debian.org/debian/pool/main/libc/libcrypt-ssleay-perl/"
+                "libcrypt-ssleay-perl_0.73.06.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "f8ecca45c87eb91325992b13f0594f808e6f1bc4c3b9a7f141b9a838384d252c",
+        "pre_build": [["sh", "-c", ("mkdir -p {root}/.perl-deps/lib {root}/.perl-deps/arch; "
+                                       "cp -a {aux}/usr/share/perl5/. {root}/.perl-deps/lib/; "
+                                       "cp -a {aux}/usr/lib/x86_64-linux-gnu/perl5/5.36/. "
+                                       "{root}/.perl-deps/arch/ 2>/dev/null || true; "
+                                       "export PERL5LIB={aux}/usr/share/perl5:{aux}/usr/lib/x86_64-linux-gnu/perl5/5.36:{root}/.perl-deps/lib:{root}/.perl-deps/arch; "
+                                       "perl Makefile.PL OPENSSL_PREFIX={prefix}")]],
+        "make": [MAKE_JOBS], "artifact": "blib/arch/auto/Crypt/SSLeay/SSLeay.so", "launch": None,
+        "aux_sources": list(_S46_PERL_AUX),
+        "env_extra": {"LD_LIBRARY_PATH": "{prefix}/lib"},
+        "note": ("Crypt::SSLeay 0.73_06's XS TLS client linked to the subject libssl"),
+    },
+    {
+        "family": "tcl-tls", "version": "1.7.22",
+        "url": "https://deb.debian.org/debian/pool/main/t/tcltls/tcltls_1.7.22.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "e84e2b7a275ec82c4aaa9d1b1f9786dbe4358c815e917539ffe7f667ff4bc3b4",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl-dir={prefix}",
+                      "--enable-deterministic",
+                      "--with-tcl={aux}/usr/lib/x86_64-linux-gnu/tcl8.6",
+                      "--with-tclinclude={aux}/usr/include"],
+        "make": [MAKE_JOBS], "artifact": "tcltls.so", "launch": None,
+        "aux_sources": list(_S46_TCL_AUX),
+        "pre_build": [["sh", "-c", ("sed -i 's#/usr#{aux}/usr#g' "
+                                       "{aux}/usr/lib/x86_64-linux-gnu/tcl8.6/tclConfig.sh; "
+                                       "sed -i 's#/usr#{aux}/usr#g' "
+                                       "{aux}/usr/lib/tcl8.6/tclConfig.sh")]],
+        "env_extra": {"PATH": "{aux}/usr/bin:" + os.environ.get("PATH", ""),
+                      "TCL_LIBRARY": "{aux}/usr/share/tcltk/tcl8.6"},
+        "ldflags_extra": "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu",
+        "note": ("TclTLS 1.7.22's TLS client channel linked to the subject libssl"),
+    },
+    {
+        "family": "fdm", "version": "1.9+git20181219",
+        "url": ("https://deb.debian.org/debian/pool/main/f/fdm/"
+                "fdm_1.9+git20181219.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "autotools",
+        "sha256": "055fcd7c654efa97b94c68087537bf59347fa9383f7cd8578ec54f1953cbffe0",
+        "configure": ["--prefix={root}/.l7-install", "--enable-pcre"],
+        "make": [MAKE_JOBS], "artifact": "fdm", "launch": ["-V"],
+        "aux_sources": list(_S46_FDM_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": ("fdm 1.9's IMAPS/POP3S fetch path through the subject libssl"),
+    },
+    {
+        "family": "nsca-ng-client", "version": "1.6",
+        "url": "https://deb.debian.org/debian/pool/main/n/nsca-ng/nsca-ng_1.6.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "4454de9ea043954687f9b6d912c7fded1713899126944b8ad153340b7c331bcb",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--enable-client", "--enable-server"],
+        "make": [MAKE_JOBS], "artifact": "src/client/send_nsca", "launch": ["-h"],
+        "aux_sources": tuple(_S46_CONFUSE_AUX) + tuple(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": ("nsca-ng 1.6's TLS check submission client linked to the subject libssl"),
+    },
+    {
+        "family": "nsca-ng-server", "version": "1.6",
+        "url": "https://deb.debian.org/debian/pool/main/n/nsca-ng/nsca-ng_1.6.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "4454de9ea043954687f9b6d912c7fded1713899126944b8ad153340b7c331bcb",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--enable-client", "--enable-server"],
+        "make": [MAKE_JOBS], "artifact": "src/server/nsca-ng", "launch": ["-h"],
+        "aux_sources": tuple(_S46_CONFUSE_AUX) + tuple(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": ("nsca-ng 1.6's TLS check receiver linked to the subject libssl"),
+    },
+    {
+        "family": "sbsigntool", "version": "0.9.4",
+        "url": "https://deb.debian.org/debian/pool/main/s/sbsigntool/sbsigntool_0.9.4.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "autotools",
+        "sha256": "016d7db322492b09f2f8a3bc02aa2b643db3ca0f31f9efa630c3e8ddef9484e8",
+        "configure": ["--prefix={root}/.l7-install", "--with-efi-include={aux}/usr/include"],
+        "make": [MAKE_JOBS], "artifact": "src/sbsign", "launch": ["--version"],
+        "aux_sources": tuple(_S46_BISON_FLEX_AUX) + tuple(_ONBOARD_AUTOTOOLS_AUX) + (
+            _aux_deb("b/binutils", "binutils-dev_2.40-2_amd64.deb",
+                     "35066c624bd9d9f3d7fb9fee8f98556482a4fd0bbbf4a00a285fa877da350257",
+                     include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),
+            _aux_deb("g/gnu-efi", "gnu-efi_3.0.15-1_amd64.deb",
+                     "1e668cebcb94678b39a69e5c7b8f1d1eb51fd4eb251643491a8c249ae6fa0c36",
+                     include_dirs=("usr/include",), library_dirs=(_AUX_MULTIARCH,)),),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": ("sbsigntool 0.9.4 signs a PE image with the subject libcrypto"),
+    },
+    {
+        "family": "conserver-client", "version": "8.2.7",
+        "url": "https://deb.debian.org/debian/pool/main/c/conserver/conserver_8.2.7.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "b88f1880f4090b42370e075ca9c8a6062fb553ee33f155b204714c43dc71cef3",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--without-pam"],
+        "make": [MAKE_JOBS], "artifact": "console/console", "launch": ["-V"],
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": ("conserver 8.2.7's TLS console client linked to the subject libssl"),
+    },
+    {
+        "family": "conserver-server", "version": "8.2.7",
+        "url": "https://deb.debian.org/debian/pool/main/c/conserver/conserver_8.2.7.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "autotools",
+        "sha256": "b88f1880f4090b42370e075ca9c8a6062fb553ee33f155b204714c43dc71cef3",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--without-pam"],
+        "make": [MAKE_JOBS], "artifact": "conserver/conserver", "launch": ["-V"],
+        "aux_sources": list(_ONBOARD_AUTOTOOLS_AUX),
+        "pre_build": [["sh", "-c", _ONBOARD_AUTOTOOLS_BOOTSTRAP]],
+        "env_extra": dict(_ONBOARD_AUTOTOOLS_ENV),
+        "note": ("conserver 8.2.7's TLS console server linked to the subject libssl"),
+    },
+    {
+        "family": "sqlcipher", "version": "4.6.1",
+        "url": "https://github.com/sqlcipher/sqlcipher/archive/refs/tags/v4.6.1.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "d8f9afcbc2f4b55e316ca4ada4425daf3d0b4aab25f45e11a802ae422b9f53a3",
+        "configure": ["--prefix={root}/.l7-install", "--with-crypto-lib=openssl",
+                      "--disable-static"],
+        "make": [MAKE_JOBS, "sqlcipher"], "artifact": "sqlcipher", "launch": ["--version"],
+        "aux_sources": list(_S46_TCL_AUX),
+        "pre_build": [["sh", "-c", ("mkdir -p {root}/.l7-bin; "
+            "printf '#!/bin/sh\\nTCL_LIBRARY=%s TCLLIBPATH=%s exec %s \"$@\"\\n' "
+            "'{aux}/usr/share/tcltk/tcl8.6' '{aux}/usr/share/tcltk/tcl8.6/tcl8' "
+            "'{aux}/usr/bin/tclsh8.6' > {root}/.l7-bin/tclsh; "
+            "chmod +x {root}/.l7-bin/tclsh")]],
+        "env_extra": {"PATH": "{root}/.l7-bin:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+                      "TCL_LIBRARY": "{aux}/usr/share/tcltk/tcl8.6",
+                      "LD_LIBRARY_PATH": "{aux}/usr/lib/x86_64-linux-gnu:{prefix}/lib"},
+        "note": ("SQLCipher 4.6.1's AES-256 page encryption through the subject libcrypto"),
+    },
+    {
+        "family": "apk-tools", "version": "2.14.4",
+        "url": ("https://gitlab.alpinelinux.org/alpine/apk-tools/-/archive/v2.14.4/"
+                "apk-tools-v2.14.4.tar.gz"),
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "c8ad16bddfae988392ad067a244cfdaf643eb7d6761b73450739585ca76f9a25",
+        "pre_build": [["sh", "-c", (
+            "mkdir -p .l7-pc; printf 'prefix={prefix}\\n"
+            "Name: openssl\\nDescription: subject shim\\n"
+            "Version: 3\\nLibs: -L{prefix}/lib -lssl -lcrypto\\n"
+            "Cflags: -I{prefix}/include\\n' > .l7-pc/openssl.pc")]],
+        "make": [MAKE_JOBS], "artifact": "src/apk", "launch": ["--version"],
+        "env_extra": {"PKG_CONFIG_PATH": "{root}/.l7-pc:{prefix}/lib/pkgconfig"},
+        "note": ("apk-tools 2.14.4's package-signature verification through the subject libcrypto"),
+    },
+    {
+        "family": "ixwebsocket-libs", "version": "11.4.5",
+        "url": ("https://github.com/machinezone/IXWebSocket/archive/refs/tags/"
+                "v11.4.5.tar.gz"),
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "c5fc225edec32bf7d583e55347ef2c9c4940d005c13ef5e848354a85602f5fd6",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DUSE_TLS=ON", "-DUSE_OPEN_SSL=ON",
+                      "-DUSE_MBED_TLS=OFF", "-DBUILD_TESTING=OFF",
+                      "-DBUILD_SHARED_LIBS=ON",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_CXX_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/libixwebsocket.so*", "launch": None,
+        "note": ("IXWebSocket 11.4.5's TLS client/server linked to the subject libssl"),
+    },
+    {
+        "family": "python3-m2crypto", "version": "0.38.0",
+        "url": "https://deb.debian.org/debian/pool/main/m/m2crypto/m2crypto_0.38.0.orig.tar.xz",
+        "archive": "tar.xz", "build_system": "make", "configure": None,
+        "sha256": "29dd19418ed7d04605287dd5c33dd473ea3bc9f9a9528841c5998b10b581aec4",
+        "pre_build": [["sh", "-c", ("mkdir -p {root}/.l7-bin; ln -sf {aux}/usr/bin/swig4.0 {root}/.l7-bin/swig; "
+                                       "python3 setup.py build_ext --inplace --openssl={prefix}")]],
+        "make": ["-f", "/dev/null", "--eval=all:;@true", "all"],
+        "artifact": "M2Crypto/_m2crypto*.so", "launch": None,
+        "aux_sources": list(_S46_SWIG_AUX),
+        "env_extra": {"PATH": "{root}/.l7-bin:{aux}/usr/bin:" + os.environ.get("PATH", ""),
+                      "LD_LIBRARY_PATH": "{prefix}/lib",
+                      "CPPFLAGS": "-I{prefix}/include -I{aux}/usr/include/python3.11",
+                      "LDFLAGS": "-L{prefix}/lib -L{aux}/usr/lib/x86_64-linux-gnu "
+                                 "-Wl,-rpath,{prefix}/lib"},
+        "note": ("M2Crypto 0.38.0's SWIG binding to the subject libssl/libcrypto"),
+    },
+    {
+        "family": "python3-scrypt", "version": "0.8.20",
+        "url": "https://deb.debian.org/debian/pool/main/p/python-scrypt/python-scrypt_0.8.20.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "make", "configure": None,
+        "sha256": "abd83b85b1a4317e41be1109a9d8cf97354ce0d62c8b15a0f60534082afe36f5",
+        "pre_build": [["sh", "-c", "python3 setup.py build_ext --inplace"]],
+        "make": ["-f", "/dev/null", "--eval=all:;@true", "all"],
+        "artifact": "_scrypt*.so", "launch": None,
+        "aux_sources": list(_S46_SWIG_AUX),
+        "env_extra": {"PATH": "{aux}/usr/bin:" + os.environ.get("PATH", ""),
+                      "LD_LIBRARY_PATH": "{prefix}/lib",
+                      "CFLAGS": "-I{prefix}/include -I{aux}/usr/include/python3.11",
+                      "LDFLAGS": "-L{prefix}/lib -L{aux}/usr/lib/x86_64-linux-gnu "
+                                 "-Wl,-rpath,{prefix}/lib"},
+        "note": ("py-scrypt 0.8.20's scrypt KDF linked to the subject libcrypto"),
+    },
+    {
+        "family": "libddsc0debian", "version": "0.10.2",
+        "url": "https://deb.debian.org/debian/pool/main/c/cyclonedds/cyclonedds_0.10.2.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "cmake",
+        "sha256": "ac59ee08975cd25a1fb414ddeb0183fb8636b12d49cea80373013bea59465b43",
+        "configure": ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_TESTING=OFF",
+                      "-DENABLE_SSL=ON", "-DENABLE_SECURITY=ON",
+                      "-DCMAKE_INSTALL_PREFIX={root}/.l7-install",
+                      "-DCMAKE_PREFIX_PATH={prefix}", "-DOPENSSL_ROOT_DIR={prefix}",
+                      "-DCMAKE_C_FLAGS=-I{prefix}/include",
+                      "-DCMAKE_SHARED_LINKER_FLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "make": [], "artifact": "b/lib/libddsc.so*", "launch": None,
+        "note": ("CycloneDDS 0.10.2's TLS/security plugin linked to the subject libssl"),
+    },
+    {
+        "family": "libfsapfs1", "version": "20201107",
+        "url": "https://deb.debian.org/debian/pool/main/libf/libfsapfs/libfsapfs_20201107.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "dc0543b86779a3c0b46913d780a9fd7fdb7af86e1fea61c54f0d1d0209a18f15",
+        "configure": ["--prefix={root}/.l7-install", "--with-openssl={prefix}",
+                      "--disable-static"],
+        "make": [MAKE_JOBS], "artifact": "libfsapfs/.libs/libfsapfs.so*", "launch": None,
+        "note": ("libfsapfs 20201107's APFS image verification through the subject libcrypto"),
     },
 )
 
