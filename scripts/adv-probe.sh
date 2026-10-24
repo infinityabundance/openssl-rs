@@ -36,6 +36,7 @@ probes=(
   "ssl::statem::statem_clnt::adv_probe::canary_refusal_instrument_fires"
   "ssl::statem::statem_srvr::adv_probe::tls12_construct_refused_ticket_alloc_leaves_ext_tick_empty"
   "ssl::statem::statem_srvr::adv_probe::canary_double_release_is_detected"
+  "ssl::t1_lib::t1_lib_sigalgs_tests::t1_lib_sigalgs_repeated_save_releases_the_incumbent_by_address"
   "ssl::ssl_lib::adv_realloc_probe::serverinfo_realloc_refused_keeps_old_owner"
   "ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc"
   "ssl::ssl_sess::adv_probe::self_aliasing_session_setters_copy_before_clearing"

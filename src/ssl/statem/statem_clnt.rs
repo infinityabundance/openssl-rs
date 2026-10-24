@@ -1594,19 +1594,17 @@ pub(crate) unsafe fn tls_process_certificate_request(s: *mut Ssl, msg: &[u8]) ->
             return 0;
         };
         if ty == TLSEXT_TYPE_SIG_ALGS {
-            if eb.len() >= 2 && eb[0] == 0 && eb[1] == 0 {
-                // An empty vector is legal for a CertificateRequest (`PACKET_memdup` answers
-                // NULL for zero bytes), and the result is the same as an absent extension:
-                // the client stays on its defaults.
-            } else {
-                // SAFETY: `s` is live; `eb` is the extension body.
-                if unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs(s, eb) } == 0 {
-                    // SAFETY: `s` is live.
-                    unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
-                    return 0;
-                }
-                sigalgs_seen = true;
+            // `tls_parse_ctos_sig_algs` (`extensions_srvr.c:303-328`): the body is exactly one
+            // length-prefixed, non-empty, even-length vector. An empty vector is refused (not
+            // treated as an absent extension), as are an odd length and trailing bytes; the
+            // shared acceptance rule lives in `t1_lib::tls1_peer_sigalgs`.
+            // SAFETY: `s` is live; `eb` is the extension body.
+            if unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs(s, eb) } == 0 {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                return 0;
             }
+            sigalgs_seen = true;
         }
     }
     if walk.remaining() != 0 {
@@ -1629,6 +1627,16 @@ pub(crate) unsafe fn tls_process_certificate_request(s: *mut Ssl, msg: &[u8]) ->
         {
             // SAFETY: `s` is live.
             unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_LENGTH) };
+            return 0;
+        }
+    } else {
+        // The peer list was saved, so `tls1_process_sigalgs` computes the shared list now, as
+        // `statem_clnt.c:2656` does after parsing the request. An allocation refusal there is the
+        // authority's `SSL_R_BAD_LENGTH` internal error.
+        // SAFETY: `s` is live.
+        if unsafe { crate::ssl::t1_lib::tls1_process_sigalgs(s) } == 0 {
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_BAD_LENGTH) };
             return 0;
         }
     }
@@ -2993,6 +3001,8 @@ unsafe fn tls12_process_server_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
 unsafe fn tls12_process_certificate_request(s: *mut Ssl, msg: &[u8]) -> c_int {
     // `SSL_AD_DECODE_ERROR` — `ssl3.h` (50); `SSL_AD_INTERNAL_ERROR` — `ssl3.h` (80);
     // `SSL_R_LENGTH_MISMATCH` — `sslerr.h:163`; `SSL_R_SIGNATURE_ALGORITHMS_ERROR` — `sslerr.h:360`.
+    // `ERR_R_SSL_LIB` — `err.h.in:332` (`ERR_LIB_SSL | ERR_RFLAG_COMMON`).
+    const ERR_R_SSL_LIB: c_int = 20 | (2 << 18);
     const SSL_AD_DECODE_ERROR: c_int = 50;
     const SSL_AD_INTERNAL_ERROR: c_int = 80;
     const SSL_R_LENGTH_MISMATCH: c_int = 159;
@@ -3031,24 +3041,22 @@ unsafe fn tls12_process_certificate_request(s: *mut Ssl, msg: &[u8]) -> c_int {
         unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH) };
         return 0;
     };
-    // An empty vector is legal (`PACKET_memdup` answers NULL for zero bytes) and leaves the
-    // client on its advertised defaults, exactly as an empty list does for the authority.
-    // SAFETY: `s` is live; `schemes` is the vector's bytes and the default list is `'static`.
-    let saved = if schemes.is_empty() {
-        // SAFETY: `s` is live; the default list is a `'static` array.
-        unsafe {
-            crate::ssl::t1_lib::tls1_save_peer_sigalgs_default(
-                s,
-                &crate::ssl::statem::extensions_clnt::CLIENT_SIGALGS,
-            )
-        }
-    } else {
-        // SAFETY: `s` is live; `schemes` is the vector's bytes.
-        unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs_raw(s, schemes) }
-    };
-    if saved == 0 {
+    // `tls1_save_u16` (`t1_lib.c:3530-3533`) refuses a zero-length vector, so the authority's
+    // `tls1_save_sigalgs` fails for an empty certificate-request vector and the caller raises
+    // `SSL_AD_INTERNAL_ERROR` / `SSL_R_SIGNATURE_ALGORITHMS_ERROR` (`statem_clnt.c:2686-2689`). An
+    // empty vector is therefore *not* the same as an absent extension here.
+    // SAFETY: `s` is live; `schemes` is the vector's bytes.
+    if unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs_raw(s, schemes) } == 0 {
         // SAFETY: `s` is live.
         unsafe { ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, SSL_R_SIGNATURE_ALGORITHMS_ERROR) };
+        return 0;
+    }
+    // `tls1_process_sigalgs` (`statem_clnt.c:2691-2694`): a failure is the authority's
+    // `SSL_AD_INTERNAL_ERROR` / `ERR_R_SSL_LIB`.
+    // SAFETY: `s` is live.
+    if unsafe { crate::ssl::t1_lib::tls1_process_sigalgs(s) } == 0 {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_SSL_LIB) };
         return 0;
     }
     // `certificate_authorities<2>`: validated for extent but not retained.
@@ -5111,13 +5119,16 @@ mod post_server_hello_parse {
         }
     }
 
+    /// A TLS1.2 CertificateRequest frame is accepted and bounded. The scheme vector is a real
+    /// non-empty vector (`tls1_save_u16` refuses an empty one; that refusal is covered by
+    /// `t1_lib_sigalgs_client_tls12_empty_vector_is_signature_algorithms_error`), and the trailing
+    /// CA field is mandatory for the authority's reader.
     #[test]
     fn tls12_certificate_request_frame_is_accepted_and_bounded() {
         let _g = crate::test_support::lock_global_state();
-        // `certificate_types<1>(rsa_sign) || supported_signature_algorithms<2>(empty) ||
-        // certificate_authorities<2>(empty)`: an empty scheme vector is legal and selects the
-        // client's defaults. The trailing CA field is mandatory for the authority's reader.
-        let body = [0x01, 0x01, 0x00, 0x00, 0x00, 0x00];
+        // `certificate_types<1>(rsa_sign) || supported_signature_algorithms<2>(ecdsa_secp256r1)
+        // || certificate_authorities<2>(empty)`.
+        let body = [0x01, 0x01, 0x00, 0x02, 0x04, 0x03, 0x00, 0x00];
         let msg = framed(SSL3_MT_CERTIFICATE_REQUEST, &body);
         // SAFETY: `s` is this frame's zeroed block; the accepted path appends to the transcript.
         unsafe {
@@ -5578,7 +5589,7 @@ mod certificate_request_sigalgs {
 
     use super::*;
     use crate::evp::pkey::{openssl_rs_evp_pkey_q_keygen, EVP_PKEY_free, EvpPkey};
-    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_new};
+    use crate::runtime::bio::{bss_mem::BIO_s_mem, BIO_ctrl_pending, BIO_new, BIO_read};
     use crate::runtime::err::{ERR_clear_error, ERR_get_error};
     use crate::runtime::obj as o;
     use crate::ssl::methods::TLS_method;
@@ -5694,17 +5705,139 @@ mod certificate_request_sigalgs {
         v
     }
 
+    /// Run one CertificateRequest through `process` with a memory write side attached and require
+    /// the authority's exact error reason and fatal alert. `assert_rejected`'s client-side
+    /// counterpart.
+    ///
+    /// # Safety
+    /// `s` must be a live connection with no write side of its own.
+    unsafe fn rejected_with(
+        s: *mut Ssl,
+        msg: &[u8],
+        process: unsafe fn(*mut Ssl, &[u8]) -> c_int,
+        reason: c_int,
+        alert: c_int,
+    ) {
+        // SAFETY: every object is this test's own; ownership of the BIO transfers to `s`.
+        unsafe {
+            let bio = BIO_new(BIO_s_mem());
+            assert!(!bio.is_null());
+            (*s).wbio = bio;
+            ERR_clear_error();
+            assert_eq!(process(s, msg), 0, "the malformed request must be refused");
+            assert_eq!(drain_reasons(), vec![reason], "the authority's reason");
+            let n = BIO_ctrl_pending(bio);
+            assert!(n >= 2, "the fatal alert must reach the write side");
+            let mut out = vec![0u8; n];
+            let got = BIO_read(bio, out.as_mut_ptr().cast(), n as c_int);
+            assert!(got >= 2);
+            out.truncate(got as usize);
+            assert_eq!(
+                &out[out.len() - 2..],
+                &[2, alert as u8],
+                "fatal alert {alert}"
+            );
+        }
+    }
+
+    /// S58: an empty `signature_algorithms` vector in a TLS1.3 CertificateRequest is the
+    /// authority's `SSL_AD_DECODE_ERROR` / `SSL_R_BAD_EXTENSION` (it is *not* treated as an absent
+    /// extension).
+    #[test]
+    fn t1_lib_sigalgs_client_tls13_empty_vector_is_decode_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            rejected_with(
+                s,
+                &cr_tls13(&extension(13, &[0x00, 0x00])),
+                tls_process_certificate_request,
+                110,
+                50,
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// S58: a declared vector that does not exhaust the extension body (trailing bytes) is the
+    /// authority's `SSL_AD_DECODE_ERROR` / `SSL_R_BAD_EXTENSION`; the pre-fix reader accepted it.
+    #[test]
+    fn t1_lib_sigalgs_client_tls13_trailing_bytes_is_decode_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            rejected_with(
+                s,
+                &cr_tls13(&extension(13, &[0x00, 0x02, 0x04, 0x03, 0xff])),
+                tls_process_certificate_request,
+                110,
+                50,
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// S58: the TLS1.2 CertificateRequest reader refuses an empty vector with the authority's
+    /// `SSL_AD_INTERNAL_ERROR` / `SSL_R_SIGNATURE_ALGORITHMS_ERROR` (360); it does not fall back
+    /// to the defaults. Before this change an empty vector silently installed the default list.
+    #[test]
+    fn t1_lib_sigalgs_client_tls12_empty_vector_is_signature_algorithms_error() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            ERR_clear_error();
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            rejected_with(
+                s,
+                &cr_tls12(&[]),
+                tls12_process_certificate_request,
+                360,
+                80,
+            );
+            assert_eq!(saved(s), Vec::<u16>::new(), "no list is stored");
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// S58: the TLS1.2 reader refuses an odd-length vector with the same reason as an empty one
+    /// (`tls1_save_u16` rejects both before storing).
+    #[test]
+    fn t1_lib_sigalgs_client_tls12_odd_vector_is_signature_algorithms_error() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: every object is this test's own.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            let s = SSL_new(ctx);
+            assert!(!ctx.is_null() && !s.is_null());
+            rejected_with(
+                s,
+                &cr_tls12(&[0x04, 0x03, 0x00]),
+                tls12_process_certificate_request,
+                360,
+                80,
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
     /// # Safety
     /// The connection must be live and own a certificate installed by this test.
     unsafe fn saved(s: *mut Ssl) -> Vec<u16> {
-        // SAFETY: `s` is live; a saved list is `peer_sigalgslen` live `u16`s.
-        let (p, n) = unsafe { ((*s).peer_sigalgs, (*s).peer_sigalgslen) };
-        if p.is_null() || n == 0 {
-            Vec::new()
-        } else {
-            // SAFETY: as above.
-            unsafe { core::slice::from_raw_parts(p, n) }.to_vec()
-        }
+        // SAFETY: `s` is live; the accessor derives the extent from the connection's own
+        // element-counted pair.
+        unsafe { (*s).peer_sigalgs() }.to_vec()
     }
 
     /// The TLS1.3 request's `signature_algorithms` is saved, so the certificate constructor can
