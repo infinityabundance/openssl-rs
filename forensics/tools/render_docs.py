@@ -9,6 +9,7 @@ if any rendered block differs from the committed copy.
 Evidence inputs (no others):
 
 * ``forensics/downstream/runtime-functional-atlas.json``
+* ``forensics/downstream/build-link-atlas.json``
 * ``forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json``
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/unsafe-census.json``
 * ``forensics/memory-safety/campaign/safe-c33/atlas-refresh/post-census-delta.json``
@@ -32,6 +33,7 @@ from pathlib import Path
 
 CAMPAIGN = Path("forensics/memory-safety/campaign/safe-c33")
 ATLAS = Path("forensics/downstream/runtime-functional-atlas.json")
+BUILD_LINK = Path("forensics/downstream/build-link-atlas.json")
 CENSUS = CAMPAIGN / "atlas-refresh/unsafe-census.json"
 DELTA = CAMPAIGN / "atlas-refresh/post-census-delta.json"
 STATUS_JSON = CAMPAIGN / "CAMPAIGN-STATUS.json"
@@ -41,6 +43,7 @@ PUBLISH_GLOB = "publish-*.json"
 
 # Display names used in the rendered blocks (repo-relative, short).
 ATLAS_S = "forensics/downstream/runtime-functional-atlas.json"
+BUILD_LINK_S = "forensics/downstream/build-link-atlas.json"
 STATUS_S = "CAMPAIGN-STATUS.json"
 CENSUS_S = "atlas-refresh/unsafe-census.json"
 DELTA_S = "atlas-refresh/post-census-delta.json"
@@ -192,6 +195,7 @@ def test_baseline(root: Path, candidate: dict) -> dict:
         kind = str(data["kind"])
         observed = int(data.get("observed_total") or 0)
         observed_note = str(data.get("observed_total_note") or "")
+        tree_unchanged = bool(data.get("source_tree_unchanged"))
         if kind != "full-library-run":
             raise ValueError(f"kind is {kind!r}, not 'full-library-run'")
     except (RenderError, KeyError, TypeError, ValueError) as exc:
@@ -203,7 +207,8 @@ def test_baseline(root: Path, candidate: dict) -> dict:
         "ignored": counts["ignored"],
         "source_commit": commit,
         "kind": kind,
-        "floor": candidate.get("commit") != commit,
+        "floor": candidate.get("commit") != commit and not tree_unchanged,
+        "tree_unchanged": tree_unchanged,
         "observed_total": observed,
         "observed_total_note": observed_note,
     }
@@ -416,6 +421,7 @@ class Evidence:
     def __init__(self, root: Path):
         self.root = root
         self.atlas = load_json(root / ATLAS)
+        self.build_link = load_json(root / BUILD_LINK)
         self.status = load_json(root / STATUS_JSON)
         self.census = load_json(root / CENSUS)
         self.delta = load_json(root / DELTA)
@@ -462,13 +468,38 @@ class Evidence:
     def corpus(self) -> dict:
         counts = self.counts()
         subject = counts["by_subject"]
+        build = self.build_counts()
+        if build["recipes"] != counts.get("with_recipe"):
+            raise RenderError(
+                "build-link and runtime atlases disagree on the recipe count: "
+                f"build-link={build['recipes']} runtime={counts.get('with_recipe')}"
+            )
+        l4 = sum(
+            1
+            for run in self.atlas["body"]["runs"]
+            if run.get("subject") == "candidate" and run.get("level") == "L4-linked"
+        )
         return {
             "total": counts["p1000"],
+            "recipes": build["recipes"],
+            "built": build["built"],
+            "linked": build["linked"],
+            "no_recipe": counts.get("no_recipe", 0),
             "candidate": subject["candidate"]["functional"],
             "authority": subject["authority"]["functional"],
             "loaded": subject["candidate"]["loaded"],
+            "l4": l4,
             "not_attempted": subject["candidate"]["not_attempted"],
             "failed": subject["candidate"]["failed"],
+        }
+
+    def build_counts(self) -> dict:
+        counts = self.build_link.get("body", {}).get("counts") or {}
+        candidate = (counts.get("by_subject") or {}).get("candidate") or {}
+        return {
+            "recipes": int(counts.get("with_recipe") or 0),
+            "built": int(candidate.get("built") or 0),
+            "linked": int(candidate.get("linked") or 0),
         }
 
     def audit(self) -> dict:
@@ -502,11 +533,30 @@ class Evidence:
         cohort_reused = len(cohort & reuse["names"])
         if reuse["match"]:
             freshness = "measured at the identity above"
-            reuse_text = (
-                "Downstream evidence reuse: **no carried-forward rows** "
-                "(`candidate_identity_match=true`); these rows are measured at the "
-                "identity above."
-            )
+            if reuse["reused"]:
+                newly = corpus["recipes"] - reuse["reused"]
+                freshness = (
+                    "measured at the identity above; "
+                    f"**{cohort_reused}/{len(cohort)} cohort rows reuse committed "
+                    "measurements at that same identity**"
+                )
+                reuse_text = (
+                    "Downstream evidence reuse: "
+                    f"**{reuse['reused']} of {corpus['recipes']} recipe-backed "
+                    f"families reuse committed rows at the same candidate identity** "
+                    f"(`{reuse['mode']}`, `candidate_identity_match=true`); "
+                    f"{plural(newly, 'family', 'families')} "
+                    f"{'was' if newly == 1 else 'were'} newly measured in the latest "
+                    "batch. A reused row is still a measurement at the identity above, "
+                    "but it was not re-run in that batch. The Safe-33 cohort has "
+                    f"{cohort_reused}/{len(cohort)} of its families in the reused set."
+                )
+            else:
+                reuse_text = (
+                    "Downstream evidence reuse: **no carried-forward rows** "
+                    "(`candidate_identity_match=true`); these rows are measured at the "
+                    "identity above."
+                )
         else:
             freshness = (
                 f"**carried forward** — {cohort_reused}/{len(cohort)} cohort rows are in "
@@ -522,6 +572,12 @@ class Evidence:
                 f"above. The Safe-33 cohort has {cohort_reused}/{len(cohort)} of its "
                 "families in that set."
             )
+        reuse_cell = (
+            f"{reuse['reused']} of {corpus['recipes']} rows reuse committed "
+            "measurements at the same identity"
+            if reuse["match"]
+            else f"{reuse['reused']} of {corpus['loaded']} measured rows carried forward"
+        )
         gap_bits = "; ".join(
             f"`{g.get('id', '?')}` {g.get('status', '?')}" for g in self.known_gaps
         )
@@ -543,10 +599,12 @@ class Evidence:
                 "| **Downstream drop-in, 1000-family corpus** | "
                 f"**{corpus['candidate']} / {corpus['total']} at `L7-functional`**; "
                 f"candidate {corpus['candidate']} = authority {corpus['authority']}; "
-                f"**{corpus['failed']} failed**; {corpus['loaded']} loaded; "
-                f"{corpus['not_attempted']} not attempted; **{reuse['reused']} of "
-                f"{corpus['loaded']} measured rows carried forward** | same atlas, "
-                "`body.counts.by_subject`, `body.evidence_reuse` |",
+                f"**{corpus['recipes']} recipes, {corpus['built']} built and linked**; "
+                f"{corpus['loaded']} loaded, {corpus['l4']} `L4-linked`, "
+                f"{corpus['failed']} failed, {corpus['not_attempted']} not attempted "
+                f"({corpus['no_recipe']} with no recipe); {reuse_cell} | "
+                f"same atlas, `body.counts.by_subject`, `body.evidence_reuse`; "
+                f"`{BUILD_LINK_S}` |",
                 test_row(self.tests, "**Library test suite**"),
                 "| **Memory safety: mechanisms** | "
                 f"**{plural(len(self.mechanisms), 'mechanism')} discharged at mechanism scope** "
@@ -574,7 +632,7 @@ class Evidence:
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
                 "— no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation "
                 "control, authority differential, full forensic regeneration or held-out "
-                "compatibility for the S16–S24 cluster | "
+                "compatibility for the S16–S36 cluster | "
                 f"`{STATUS_S}` (`gates.boundary_gate`, `gates.seal_gate`) |",
                 "| **Allocator / ABI invariants** | "
                 f"**preserved** — recorded invariant planes: {invariants or 'none recorded'} | "
@@ -606,18 +664,33 @@ class Evidence:
             for name in self.families
         )
         not_carried = sorted(set(self.families) - reuse["names"])
-        uncovered = (
-            f" Not in that list: {', '.join(f'`{n}`' for n in not_carried)}; the "
-            "atlas-level `candidate_identity_match=false` still applies, so it is not "
-            "claimed as a fresh measurement at the identity above."
-            if not_carried
-            else ""
-        )
-        freshness = (
-            "**Freshness:** `candidate_identity_match=true`; these rows are measured at "
-            "the identity above."
-            if reuse["match"]
-            else (
+        if reuse["match"]:
+            uncovered = (
+                f" Newly measured in the latest batch: "
+                f"{', '.join(f'`{n}`' for n in not_carried)}."
+                if not_carried
+                else ""
+            )
+        else:
+            uncovered = (
+                f" Not in that list: {', '.join(f'`{n}`' for n in not_carried)}; the "
+                "atlas-level `candidate_identity_match=false` still applies, so it is not "
+                "claimed as a fresh measurement at the identity above."
+                if not_carried
+                else ""
+            )
+        if reuse["match"]:
+            freshness = (
+                "**Freshness:** `candidate_identity_match=true`; "
+                f"{len(carried)} of {len(self.families)} listed rows reuse committed "
+                "measurements at the identity above. Reused rows are measurements at "
+                "that identity, not rows carried forward from a different candidate. "
+                "The Safe-33 cohort has "
+                f"{len(cohort & reuse['names'])}/{len(cohort)} of its families in the "
+                "reused set." + uncovered
+            )
+        else:
+            freshness = (
                 f"**† carried forward:** {len(carried)} of {len(self.families)} listed "
                 f"rows are in `evidence_reuse.reused_families` (`{reuse['mode']}`, "
                 "`candidate_identity_match=false`); they were not re-measured at the "
@@ -625,13 +698,13 @@ class Evidence:
                 f"{len(cohort & reuse['names'])}/{len(cohort)} of its families in the same "
                 "carried-forward set." + uncovered
             )
-        )
         return "\n".join(
             [
                 f"**{len(self.families)} of {corpus['total']} counted corpus families are "
                 "`L7-functional`** — candidate and authority rows agree "
                 f"({corpus['candidate']} = {corpus['authority']}); {corpus['failed']} failed, "
-                f"{corpus['loaded']} loaded, {corpus['not_attempted']} not attempted.",
+                f"{corpus['loaded']} loaded, {corpus['recipes']} recipes, "
+                f"{corpus['not_attempted']} not attempted.",
                 "",
                 listed + ".",
                 "",
@@ -741,7 +814,7 @@ class Evidence:
                 "| **Not discharged** | " + not_discharged + " |",
                 "| **BOUNDARY / SEAL gates** | "
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
-                "— the S16–S24 cluster has no independent caller/dependency-closure audit, "
+                "— the S16–S36 cluster has no independent caller/dependency-closure audit, "
                 "Miri/ASan/Loom/mutation control, authority differential, full forensic "
                 "regeneration or held-out compatibility. |",
                 "| **Known gaps** | " + (gap_bits or "none recorded") + " |",
@@ -822,23 +895,25 @@ class Evidence:
                 f"`{self.publish['source']}` |",
                 "| evidence binding | the evidence in this table is bound to the "
                 f"**{self.version} tree**, not to the published "
-                f"{self.publish['version']} crate; downstream rows are carried forward "
-                "from their recorded candidate identity | this document; "
-                f"`{ATLAS_S}` (`body.evidence_reuse`) |",
+                f"{self.publish['version']} crate; downstream rows are bound to the "
+                "candidate identity recorded in the atlas | this document; "
+                f"`{ATLAS_S}` (`body.candidate_identity`, `body.evidence_reuse`) |",
                 test_row(self.tests, "library tests", verb="passed"),
                 "| cohort | "
                 f"**{self.consumers['l7_functional']}/{self.consumers['families_total']}** "
                 "at `L7-functional` | `" + ATLAS_S + "` (`body.runs`) |",
                 "| corpus (1000 families) | "
                 f"{corpus['candidate']} candidate / {corpus['authority']} authority "
-                f"`L7-functional`; {corpus['loaded']} loaded; "
-                f"{corpus['not_attempted']} not attempted; {corpus['failed']} failed | "
-                "same atlas, `body.counts.by_subject` |",
+                f"`L7-functional`; {corpus['recipes']} recipes, {corpus['built']} built "
+                f"and linked; {corpus['loaded']} loaded, {corpus['l4']} `L4-linked`, "
+                f"{corpus['failed']} failed, {corpus['not_attempted']} not attempted "
+                f"({corpus['no_recipe']} with no recipe) | "
+                f"`{ATLAS_S}` (`body.counts.by_subject`); `{BUILD_LINK_S}` |",
                 "| downstream evidence reuse | "
-                f"{reuse['reused']} of {corpus['loaded']} measured families carried "
-                f"forward (`{reuse['mode']}`); `candidate_identity_match` = "
-                f"`{str(reuse['match']).lower()}` | same atlas, "
-                "`body.evidence_reuse` |",
+                f"{reuse['reused']} of {corpus['recipes']} recipe-backed families reuse "
+                f"committed rows at the same identity (`{reuse['mode']}`); "
+                f"`candidate_identity_match` = `{str(reuse['match']).lower()}` | "
+                "same atlas, `body.evidence_reuse` |",
                 "| `SAFE_COMPATIBLE` consumers | "
                 f"**{self.consumers['safe_compatible']}/{self.consumers['families_total']}** | "
                 f"`{STATUS_S}` (`consumers`) |",
