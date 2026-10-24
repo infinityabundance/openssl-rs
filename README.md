@@ -31,7 +31,7 @@ at. Every row names its own machine-readable evidence; none of them is a claim
 of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: working-tree crate version `0.0.37` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `4870ebd39d05eb30b0c82c6b6ab1d94283ac04ad1d6572f11db4d134cdcf4a9c`; `libssl.so.3` sha256 `0db35845367c85dbdd2d1cec92a05eae77321488e29213604c97fbab8d2b436a`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: crate version `0.0.37` (**published** 2026-10-24, checksum `d7e75f69…`); `libcrypto.so.3` sha256 `4870ebd39d05eb30b0c82c6b6ab1d94283ac04ad1d6572f11db4d134cdcf4a9c`; `libssl.so.3` sha256 `0db35845367c85dbdd2d1cec92a05eae77321488e29213604c97fbab8d2b436a`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
@@ -45,7 +45,7 @@ Source identity: working-tree crate version `0.0.37` (**not published at this ca
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S53 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
 | **Known gaps** | `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` FIXTURE; `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 32 HARNESS + 25 FIXTURE + 20 ENVIRONMENT + 2 SOURCE-UNREACHABLE; `DOWNSTREAM-BELOW-L7` 79 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 723 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED | `CAMPAIGN-STATUS.json` (`known_gaps`) |
-| **Release** | **Published: 0.0.36** on crates.io (2026-10-24), checksum `85a644a2…`, artefacts `libcrypto.so.3` `ed415801…` / `libssl.so.3` `967424dd…`. **Working tree: 0.0.37 — not the published artefact.** This evidence is bound to the 0.0.37 tree, not to the published 0.0.36 crate. 0.0.35 remains the previous release. | `atlas-refresh/publish-0.0.36.json`; `Cargo.toml` |
+| **Release** | **Published: 0.0.37** on crates.io (2026-10-24), checksum `d7e75f69…`, artefacts `libcrypto.so.3` `4870ebd3…` / `libssl.so.3` `0db35845…`. This evidence is bound to the 0.0.37 tree, which is the published 0.0.37 crate. 0.0.36 remains the previous release. | `atlas-refresh/publish-0.0.37.json`; `Cargo.toml` |
 
 Downstream evidence reuse: **277 of 277 recipe-backed families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 33/33 of its families in that set.
 <!-- END GENERATED: readme-achievements -->
