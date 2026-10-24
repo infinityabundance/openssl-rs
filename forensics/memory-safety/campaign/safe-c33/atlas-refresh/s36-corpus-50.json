@@ -1,0 +1,166 @@
+{
+  "schema": "safe-c33/s36-corpus-50/v1",
+  "receipt": "S36-CORPUS-50",
+  "date": "2026-10-24",
+  "branch": "integrate/safe-c33",
+  "source_head": "82da0cf882b2980c25488d1a2c05b237c317c9f7",
+  "source_head_subject": "Merge stage/p25/reverify-191",
+  "worktree": {
+    "src_changed": false,
+    "docker_changed": false,
+    "tracked_changes": [
+      "forensics/tools/downstream_runtime.py (Phase-1 workload repairs; S36 workloads and PROGRAMS/RUNNERS)",
+      "forensics/tools/downstream_build_link.py (postfix fixture config; S36 mutt recipe)",
+      "forensics/tools/l7_strongswan.c (new admitted harness for strongSwan pki)",
+      "forensics/downstream/build-link-atlas.json",
+      "forensics/downstream/runtime-functional-atlas.json",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s36-corpus-50.json"
+    ],
+    "not_committed": true
+  },
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libssl_so_3_sha256": "b258b12f363f95c4dc845c3e3912112da30437a5f9eac5ab4c1ce4982a6a59d6",
+    "libcrypto_so_3_sha256": "64dec4c7f276ff7970b4d75488cad6fa66d8d95502d2b58b19a4b7a89e119aa7"
+  },
+  "candidate_reused_not_rebuilt": "the S35 candidate install was reused; its two library digests above are the ones recorded by both measurements. No src/ change was made in S36.",
+  "phase1": {
+    "promoted_to_l7": [
+      {"family": "partclone", "workload": "torrent_info SHA-1 + restored ext4 payload + corrupted-block CRC", "fix": "restore now uses partclone's documented -O/--overwrite target path instead of -o on a non-existent path; this avoids the consumer's S_ISBLK-on-uninitialised-stat ENOENT race. The corruption, SHA-1 and payload assertions are unchanged."},
+      {"family": "ima-evm-utils", "workload": "evmctl IMA sign/verify with a tampered-file reject", "fix": "ima_sign uses -n -f (no setxattr; the court filesystem refuses it) and ima_verify is given the X.509 certificate in DER (evmctl 1.4 parses it with d2i_X509_fp)."},
+      {"family": "afflib", "workload": "affconvert + affsign/affverify over a signed AFF image, tampered image rejected", "fix": "the raw source payload now has a .raw extension (AFFLIB raw_identify_file accepts .raw/.iso); the -o image path is kept."},
+      {"family": "dma", "workload": "SMTPS submission to a local peer, unrelated CA rejected", "fix": "DMA reads /etc/dma/dma.conf and drops root to the `mail` user; the workload writes that path and makes the spool writable by mail. The program has no version banner, so the launch proof is an empty-output exit plus the loader closure (recorded in PROGRAMS)."},
+      {"family": "httest", "workload": "HTTPS GET over verified TLS, unrelated CA rejected", "fix": "correct script syntax is `_REQ host SSL:port` plus `_VERIFY_PEER`; the old script used a non-existent -f option and an _SSL:CONNECT command."},
+      {"family": "nghttp2", "workload": "nghttp fetch from nghttpd over TLS; chain result reported", "fix": "nghttp 1.64 installs a verify callback that always returns 1 and reports a failed chain only as '[WARNING] Certificate verification failed'; the workload now asserts the warning under the unrelated CA instead of a refused connection (the consumer does not refuse)."},
+      {"family": "sipp", "workload": "SIP call between its own UAS and UAC over verified TLS; unrelated CA rejected", "fix": "the UAC now presents the fixture client certificate (SIPp always loads a default client cert) and the TLS probe no longer consumes the -m 1 UAS's only call; the negative control reads the verify error from SIPp's error log."},
+      {"family": "strongswan", "workload": "pki RSA keygen, X.509 issue/verify, PKCS#10, PKCS#12 parse via the openssl plugin; unrelated CA and wrong PKCS#12 password rejected", "fix": "new admitted harness (forensics/tools/l7_strongswan.c) links the subject libcrypto so the L5 proof resolves it, then execs pki; the workload stages the plugin directory and makes pki print its loaded openssl/pkcs12 plugins."},
+      {"family": "dcmtk", "workload": "dcmsign CMS SignedData (SHA-256) over a DICOM dataset; tampered dataset and unrelated CA rejected", "fix": "dump2dcm input plus DCMDICTPATH; the signing certificate is valid from 2020 so the signature-creation-date check passes; verification uses +cf for the CA."},
+      {"family": "postfix", "workload": "posttls-finger implicit TLS (SMTPS), TLS1.2 cipher and chain verification", "fix": "the recipe stages {root}/.s36-postfix/main.cf (postfix refuses root as mail_owner); the workload opens the connection with -w (SMTPS wrapper) and reads the TLS1.2 cipher plus the chain result. Postfix passes the literal destination IP to SSL_add1_host, so the name check reports num=62 while the chain is trusted; the unrelated CA reports 'untrusted issuer'. The distinction is asserted explicitly."}
+    ],
+    "blocked": [
+      {"family": "charybdis", "classification": "ENVIRONMENT", "level": "L5-loaded", "blocker": "charybdis refuses to run as root; the workload now drops to nobody with setpriv and stages the compiled prefix (helpers, modules, etc/logs). The daemon reaches 'Server Ready', but its ssld TLS helper returns a handshake_failure alert for every client (TLS1.2 and TLS1.3, with and without a client certificate), so no IRC greeting can be observed. No container capability was granted."},
+      {"family": "fastd", "classification": "ENVIRONMENT", "level": "L6-runtime", "blocker": "the container has no /dev/net/tun and no CAP_NET_ADMIN (TUNSETIFF is refused); unchanged from S35."},
+      {"family": "libshout", "classification": "HARNESS", "level": "L5-loaded", "blocker": "the admitted libshout build links only libogg and builds no vorbis/opus codec; its only supported format (ogg) therefore cannot accept a stream (shout_send returns SHOUTERR_INSANE after the SOURCE request). The TLS session itself is established (the peer sees the request and the wrong-host certificate is rejected), but the stream contract is unavailable in this build."},
+      {"family": "libcxxtools10", "classification": "ENVIRONMENT", "level": "L2-configured", "blocker": "cxxtools 3.0.0 does not compile with GCC 12 (string_view static_assert); unchanged from S33."},
+      {"family": "coturn", "classification": "HARNESS", "level": "L4-linked", "blocker": "no admitted deterministic TURN-over-TLS/DTLS allocation workload; the recipe builds turnserver but no admitted uclient exchange was written in S36."},
+      {"family": "gftp-text", "classification": "HARNESS", "level": "L4-linked", "blocker": "the text client is interactive; its -d URL mode needs a staged gftprc and an FTPS fixture (AUTH TLS + PBSZ/PROT + verified data channel), which was not completed in S36."},
+      {"family": "gss-ntlmssp", "classification": "HARNESS", "level": "L4-linked", "blocker": "no GSSAPI initiator/acceptor harness for the NTLMSSP mechanism was written in S36."},
+      {"family": "krb5", "classification": "HARNESS", "level": "L4-linked", "blocker": "PKINIT needs a local KDC and an X.509 principal exchange; the recipe's admitted artifact is libk5crypto and no KDC/kinit workload was admitted in S36."},
+      {"family": "libengine-pkcs11-openssl", "classification": "FIXTURE", "level": "L4-linked", "blocker": "the legacy pkcs11 ENGINE needs a PKCS#11 token/provider before ENGINE_init can be exercised; no SoftHSM/Opencryptoki provider is admitted in this venue."},
+      {"family": "libgit2", "classification": "HARNESS", "level": "L4-linked", "blocker": "library-only; the HTTPS fetch + certificate-callback harness and a local smart-HTTP repository were not written in S36."},
+      {"family": "libmongocrypt", "classification": "HARNESS", "level": "L4-linked", "blocker": "library-only; the explicit-encryption/KMS harness was not written in S36."},
+      {"family": "poco", "classification": "HARNESS", "level": "L4-linked", "blocker": "library-only; the Poco NetSSL C++ harness was not written in S36."}
+    ]
+  },
+  "phase2": {
+    "added": [
+      {
+        "family": "mutt",
+        "version": "2.2.13",
+        "url": "https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz",
+        "sha256": "eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb",
+        "surface": "mail client: SMTPS submission over verified TLS; the classic S/MIME PKCS#7/CMS implementation is linked against the subject",
+        "build_link": {"authority": "L4-linked", "candidate": "L4-linked"},
+        "runtime": {"authority": "L7-functional", "candidate": "L7-functional"},
+        "workload": "mutt submits a message to a local SMTPS peer over TLS1.3; the message is delivered under the fixture CA and is not delivered when only the unrelated CA is trusted",
+        "caveat": "the admitted workload drives the SMTPS/TLS path; the S/MIME CMS path is linked (smime.o / PKCS#7 through libssl) but is not driven by this workload. No CMS/S-MIME functional claim is made for mutt in S36."
+      }
+    ],
+    "not_onboarded": [
+      {"surface": "TS/TSP", "classification": "SOURCE-UNREACHABLE", "reason": "no tractable P1000 consumer was found with a pristine, verifiable source in this batch; osslsigncode (already L7) is the only admitted consumer and its RFC3161 timestamp path is not exercised."},
+      {"surface": "CMP/CRMF", "classification": "SOURCE-UNREACHABLE", "reason": "the P1000 has no CMP/CRMF consumer other than OpenSSL's own cmp app, which is not a downstream family; no pristine third-party source was admitted."},
+      {"surface": "QUIC", "classification": "SOURCE-UNREACHABLE", "reason": "ngtcp2/quiche/picoquic/msquic are not P1000 families; the admitted curl/nginx/h2o builds in this venue have no QUIC backend."},
+      {"surface": "OCSP/stapling", "classification": "HARNESS", "reason": "the admitted OCSP-capable consumers (nginx, apache2-bin, haproxy, ruby) already have L7 rows; no new P1000 consumer with an OCSP/stapling workload was admitted in S36."},
+      {"surface": "DTLS", "classification": "HARNESS", "reason": "coturn (L4) is the only untried P1000 DTLS consumer in this cohort; eturnal/janus/freeradius were not built (heavy dependencies). libcoap/socat already have L7 rows."},
+      {"surface": "legacy ENGINE", "classification": "FIXTURE", "reason": "libengine-pkcs11-openssl remains L4 (no PKCS#11 token); tpm2-tss-engine needs a TPM device; opencryptoki was not built in S36."},
+      {"surface": "policy/name-constraint/CRL", "classification": "HARNESS", "reason": "strongswan (now L7) loads the revocation/constraints plugins and ruby/php already verify stores/CRLs; no new P1000 consumer with a name-constraint/CRL workload was admitted in S36."}
+    ],
+    "shortfall": "1 new family was added (mutt), not the requested ~30. The remaining candidate surfaces are either already represented by an admitted family, need a heavy build (freeradius/janus/eturnal/libdigidocpp), need hardware (TPM/token), or have no P1000 consumer (QUIC/CMP/TS). This is a partial Phase 2 and is not reported as a completion."
+  },
+  "tool_summaries": {
+    "build_link_final": [
+      "[downstream-build-link] elapsed=12s with_recipe=192 no_recipe=808",
+      "  authority configured=192 built=191 linked=191 failed=1",
+      "  candidate configured=192 built=191 linked=191 failed=1",
+      "  candidate_linkage_proven=191 candidate_specific_patch_count=0",
+      "  check: with_recipe=192 candidate_linked=191 linkage_proven=191 findings=0 control honest=True"
+    ],
+    "runtime_final": [
+      "[downstream-runtime] elapsed=17s with_recipe=192 no_recipe=808",
+      "  authority loaded=183 runtime=181 functional=180 failed=2 not_attempted=809",
+      "  candidate loaded=183 runtime=181 functional=180 failed=2 not_attempted=809",
+      "  candidate_reaches_baseline=192 reaches_linked_baseline=191 below_baseline=0 baseline_not_linked=1 candidate_failures={'acquire-failure': 808, 'runtime-failure': 2, 'link-failure': 1}",
+      "  check: with_recipe=192 cand_loaded=183 cand_functional=180 reaches_baseline=192 findings=0 control honest=True"
+    ],
+    "intermediate_phase1_run": [
+      "[downstream-runtime] elapsed=412s with_recipe=191 no_recipe=809",
+      "  authority loaded=181 runtime=177 functional=176 failed=5 not_attempted=810",
+      "  candidate loaded=181 runtime=177 functional=176 failed=5 not_attempted=810",
+      "[downstream-runtime] elapsed=261s with_recipe=191 no_recipe=809",
+      "  authority loaded=182 runtime=180 functional=179 failed=2 not_attempted=810",
+      "  candidate loaded=182 runtime=180 functional=179 failed=2 not_attempted=810"
+    ]
+  },
+  "before_after": {
+    "baseline": "S35 after (committed atlas): 191 recipes, authority 179 loaded / 170 functional, candidate 179 loaded / 169 functional, candidate_failures={acquire-failure:809, runtime-failure:7, link-failure:1, functional-failure:2}",
+    "after": {
+      "with_recipe": 192,
+      "no_recipe": 808,
+      "authority": {"loaded": 183, "runtime": 181, "functional": 180, "failed": 2},
+      "candidate": {"loaded": 183, "runtime": 181, "functional": 180, "failed": 2},
+      "candidate_levels": {"L7-functional": 180, "L6-runtime": 1, "L5-loaded": 2, "L4-linked": 8, "L2-configured": 1, "L0-catalogued": 808}
+    },
+    "delta": {"with_recipe": 1, "loaded": 4, "runtime": 4, "functional": 11},
+    "composition": "the 10 Phase-1 promotions (partclone, ima-evm-utils, afflib, dma, httest, nghttp2, sipp, strongswan, dcmtk, postfix) plus the new mutt family account for the +11 functional count; no previously-L7 family regressed."
+  },
+  "pins": {
+    "method": "the build/link tool re-fetches each recipe URL and refuses a digest mismatch; the new mutt URL was fetched and SHA-256'd directly before the recipe was authored",
+    "verified_this_batch": [
+      {"family": "partclone", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "ima-evm-utils", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "afflib", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "dma", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "httest", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "libshout", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "nghttp2", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "sipp", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "charybdis", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "strongswan", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "dcmtk", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "postfix", "note": "re-fetched and digest-checked by the build/link run"},
+      {"family": "mutt", "url": "https://deb.debian.org/debian/pool/main/m/mutt/mutt_2.2.13.orig.tar.gz", "sha256": "eb23faddc1cc97d867693f3a4a9f30949ad93765ad5b6fdae2797a4001c58efb"}
+    ],
+    "not_reverified": "the other 179 recipe URLs were not re-fetched in S36; their pins are unchanged from the S33/S35 catalogue. No URL was re-pinned and no download was simulated."
+  },
+  "implementation_gaps": [],
+  "implementation_gap_note": "no measured S36 family failed on the candidate after both subjects passed the same workload; there is no IMPLEMENTATION-class gap to report from this batch. The 12 non-L7 rows are classified HARNESS/ENVIRONMENT/FIXTURE above, and none is attributed to src/.",
+  "non_l7_after": [
+    {"family": "charybdis", "classification": "ENVIRONMENT", "level": "L5-loaded"},
+    {"family": "coturn", "classification": "HARNESS", "level": "L4-linked"},
+    {"family": "fastd", "classification": "ENVIRONMENT", "level": "L6-runtime"},
+    {"family": "gftp-text", "classification": "HARNESS", "level": "L4-linked"},
+    {"family": "gss-ntlmssp", "classification": "HARNESS", "level": "L4-linked"},
+    {"family": "krb5", "classification": "HARNESS", "level": "L4-linked"},
+    {"family": "libcxxtools10", "classification": "ENVIRONMENT", "level": "L2-configured"},
+    {"family": "libengine-pkcs11-openssl", "classification": "FIXTURE", "level": "L4-linked"},
+    {"family": "libgit2", "classification": "HARNESS", "level": "L4-linked"},
+    {"family": "libmongocrypt", "classification": "HARNESS", "level": "L4-linked"},
+    {"family": "libshout", "classification": "HARNESS", "level": "L5-loaded"},
+    {"family": "poco", "classification": "HARNESS", "level": "L4-linked"}
+  ],
+  "not_measured": [
+    "No BOUNDARY or SEAL evidence was generated (no Miri, ASan, dudec/ctgrind, FFI negative controls or caller-closure audit).",
+    "The crate's own library suite, fmt and clippy were not run (no src/ change).",
+    "The 808 no-recipe families remain acquire-failure rows and were not measured.",
+    "The S/MIME CMS path in mutt is linked but not functionally driven; mutt's L7 row is a TLS result.",
+    "The QUIC, CMP/CRMF and TS/TSP surfaces are not represented by a new admissible family in S36.",
+    "No new family's source URL beyond mutt was individually re-hashed; the build/link tool's fetch-time pin check is the evidence for the 12 Phase-1 families."
+  ],
+  "non_claims": [
+    "A candidate-bound L7 row is a local functional workload result, not a safety or cryptographic discharge (AGENTS.md §8).",
+    "Partclone, libshout and charybdis were previously flaky or environment-limited; the current grades are this run's measured results, not stable product claims.",
+    "The +11 L7 count is 10 repaired/admitted workloads plus one new family, not a claim that the corpus is now stable or complete.",
+    "The Phase-2 shortfall (1 family versus ~30) is reported as a shortfall, not as a partial success.",
+    "No family graduates to SAFE_COMPATIBLE in S36."
+  ]
+}
