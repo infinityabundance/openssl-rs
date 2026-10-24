@@ -1,0 +1,186 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S46-CORPUS-BATCH",
+  "date": "2026-10-24",
+  "subphase": "S46: add the next 35 tractable no-recipe P1000 families and measure them at the current candidate",
+  "branch": "integrate/safe-c33",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+    "cargo_build_jobs": 4,
+    "src_changed_this_subphase": false,
+    "docker_changed_this_subphase": false,
+    "note": "every acquisition, build and workload ran inside the court container; the host only read/wrote this receipt and ran git metadata commands"
+  },
+  "source_identity": {
+    "head": "ab3e12504af38862da6c8dc58f0638388fe9f0fa",
+    "head_short": "ab3e12504",
+    "head_subject": "Merge stage/p25/legacy-provider",
+    "authority": "openssl-3.6.4-production (forensics/authorities/prefix/openssl-3.6.4-production)",
+    "candidate_identity": {
+      "install_prefix": "artifacts/phase2/install",
+      "libcrypto_so_3_sha256": "268420cb1c9effa10b25fe1463522f3a11c070ca35ceb039d21cb9ce20d683e3",
+      "libssl_so_3_sha256": "a380ecd6ee257f3a321ccdb0a1da68e9d0eb5f2ff271ed873aaf5bcad01605d9"
+    },
+    "atlases": {
+      "build_link_sha256": "83497ad1e4818a7c12116f4e7bacd6a71295f716996016bfdf908d268d0a6f6d",
+      "runtime_functional_sha256": "7ad9637a3ca4568cf11d2e4a562ff22d41ed2d9261027e8bbf8125dccbad552b"
+    },
+    "tools": {
+      "downstream_build_link.py_sha256": "1d75e3c2ac4720a6b5a89c2b10d76d3f1fc57915672d1b1ed753661a2e8fd546",
+      "downstream_runtime.py_sha256": "c128ae3e4a9e38bd5ae0d48386405a151e9e76e0d44f041d1a8eaa564c57f4d2"
+    },
+    "candidate_identity_in_both_atlases": true,
+    "evidence_reuse": "committed rows with candidate_identity_match=true were reused; only the S46 families and the earlier S46 rows whose recipe/artifact was repaired were re-measured"
+  },
+  "selection": {
+    "corpus_source": "forensics/downstream/family-freeze.json body.p1000 (authoritative)",
+    "rule": "remaining no-recipe rows in buildability/workload-tractability order; a Debian/Ubuntu binary package or published source archive plus a non-interactive TLS/crypto entry point; package rows of an upstream already in the corpus were admitted only when the package ships a distinct tool or shared object",
+    "before": {"no_recipe": 793, "with_recipe": 207},
+    "after": {"no_recipe": 758, "with_recipe": 242},
+    "added_family_count": 35,
+    "added_l7_count": 2,
+    "added_non_l7_count": 33
+  },
+  "added_families": [
+    {"family": "conserver-client", "version": "8.2.7", "recipe_id": "recipe:conserver-client:8.2.7", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/c/conserver/conserver_8.2.7.orig.tar.gz", "sha256": "b88f1880f4090b42370e075ca9c8a6062fb553ee33f155b204714c43dc71cef3", "artifact": "console/console", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "builds and links the subject libssl; no admitted deterministic console-relay workload in this venue"},
+    {"family": "cyrus-sasl-ntlm", "version": "2.1.28", "recipe_id": "recipe:cyrus-sasl-ntlm:2.1.28", "kind": "package row of cyrus-sasl", "url": "https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz", "sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c", "artifact": "plugins/.libs/libntlm.so*", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "built with --enable-ntlm against the subject libcrypto; the NTLM client/server fixture did not authenticate under either subject, so no L7 claim is made"},
+    {"family": "nsca-ng-client", "version": "1.6", "recipe_id": "recipe:nsca-ng-client:1.6", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/n/nsca-ng/nsca-ng_1.6.orig.tar.gz", "sha256": "4454de9ea043954687f9b6d912c7fded1713899126944b8ad153340b7c331bcb", "artifact": "src/client/send_nsca", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "TLS check submission client; no deterministic Nagios peer/config workload admitted"},
+    {"family": "nsca-ng-server", "version": "1.6", "recipe_id": "recipe:nsca-ng-server:1.6", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/n/nsca-ng/nsca-ng_1.6.orig.tar.gz", "sha256": "4454de9ea043954687f9b6d912c7fded1713899126944b8ad153340b7c331bcb", "artifact": "src/server/nsca-ng", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "TLS check receiver; no deterministic Nagios command-file fixture admitted"},
+    {"family": "perl-crypt-ssleay", "version": "0.73.06", "recipe_id": "recipe:perl-crypt-ssleay:0.73.06", "kind": "CPAN-name row of libcrypt-ssleay-perl", "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-ssleay-perl/libcrypt-ssleay-perl_0.73.06.orig.tar.gz", "sha256": "f8ecca45c87eb91325992b13f0594f808e6f1bc4c3b9a7f141b9a838384d252c", "artifact": "blib/arch/auto/Crypt/SSLeay/SSLeay.so", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the pristine archive's Makefile.PL requires inc/IO/Interactive/Tiny.pm, which the Debian orig tarball does not carry"},
+    {"family": "perl-net-dns-sec", "version": "1.20", "recipe_id": "recipe:perl-net-dns-sec:1.20", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/libn/libnet-dns-sec-perl/libnet-dns-sec-perl_1.20.orig.tar.gz", "sha256": "f5e495e575cda03a8b72fa07c20ad57bb3a767dc9408ad0329ef62c3637a6865", "artifact": "blib/arch/auto/Net/DNS/SEC/SEC.so", "authority_level": "L4-linked", "candidate_level": "L5-loaded", "classification": "HARNESS", "evidence": "the XS module loads and links the subject libcrypto, but the admitted sign/verify script produced no marker output under either subject; no L7 claim"},
+    {"family": "python3-m2crypto", "version": "0.38.0", "recipe_id": "recipe:python3-m2crypto:0.38.0", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/m/m2crypto/m2crypto_0.38.0.orig.tar.xz", "sha256": "29dd19418ed7d04605287dd5c33dd473ea3bc9f9a9528841c5998b10b581aec4", "artifact": "M2Crypto/_m2crypto*.so", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the SWIG build requires the pinned swig/pydev aux; the pre-build did not complete in this venue"},
+    {"family": "python3-scrypt", "version": "0.8.20", "recipe_id": "recipe:python3-scrypt:0.8.20", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/p/python-scrypt/python-scrypt_0.8.20.orig.tar.gz", "sha256": "abd83b85b1a4317e41be1109a9d8cf97354ce0d62c8b15a0f60534082afe36f5", "artifact": "_scrypt*.so", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "evidence": "the _scrypt extension links the subject libcrypto; the admitted Python harness failed to link (collect2: ld returned 1) under both subjects"},
+    {"family": "sbsigntool", "version": "0.9.4", "recipe_id": "recipe:sbsigntool:0.9.4", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/s/sbsigntool/sbsigntool_0.9.4.orig.tar.xz", "sha256": "016d7db322492b09f2f8a3bc02aa2b643db3ca0f31f9efa630c3e8ddef9484e8", "artifact": "src/sbsign", "authority_level": "L2-configured", "candidate_level": "L2-configured", "classification": "ENVIRONMENT", "evidence": "configure fails with 'bfd.h not found'; the pinned binutils-dev/gnu-efi aux did not satisfy the probe"},
+    {"family": "sqlcipher", "version": "4.6.1", "recipe_id": "recipe:sqlcipher:4.6.1", "kind": "new upstream", "url": "https://github.com/sqlcipher/sqlcipher/archive/refs/tags/v4.6.1.tar.gz", "sha256": "d8f9afcbc2f4b55e316ca4ada4425daf3d0b4aab25f45e11a802ae422b9f53a3", "artifact": "sqlcipher", "authority_level": "L2-configured", "candidate_level": "L2-configured", "classification": "ENVIRONMENT", "evidence": "the build's generated sqlite3.c step needs a full Tcl library (clock/msgcat); the pinned tclsh shim does not carry the complete Debian tcl8.6 library, and the shell link then fails"},
+    {"family": "tcl-tls", "version": "1.7.22", "recipe_id": "recipe:tcl-tls:1.7.22", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/t/tcltls/tcltls_1.7.22.orig.tar.gz", "sha256": "e84e2b7a275ec82c4aaa9d1b1f9786dbe4358c815e917539ffe7f667ff4bc3b4", "artifact": "tcltls.so", "authority_level": "L7-functional", "candidate_level": "L7-functional", "workload": "TclTLS client channel against an authority s_server with the fixture CA, and an unrelated-CA server rejected"},
+    {"family": "unbound-anchor", "version": "1.22.0", "recipe_id": "recipe:unbound-anchor:1.22.0", "kind": "package row of unbound", "url": "https://www.nlnetlabs.nl/downloads/unbound/unbound-1.22.0.tar.gz", "sha256": "c5dd1bdef5d5685b2cedb749158dd152c52d44f65529a34ac15cd88d4b1b3d43", "artifact": "unbound-anchor", "authority_level": "L3-built", "candidate_level": "L3-built", "classification": "HARNESS", "evidence": "the artifact matching 'unbound-anchor' declares no libssl/libcrypto DT_NEEDED, so the subject was not consumed"},
+    {"family": "xar", "version": "1.8.0.498", "recipe_id": "recipe:xar:1.8.0.498", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/x/xar/xar_1.8.0.498.orig.tar.gz", "sha256": "9cee4f80b96cf592ccc545a4fdd51e4da4a5bd3b4734901637d67b043eff3c75", "artifact": "xar/xar", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "configure reports 'Cannot build without libxml2' despite the pinned libxml2-dev; the xml2-config probe still fails"},
+    {"family": "xilinx-bootgen", "version": "2022.2", "recipe_id": "recipe:xilinx-bootgen:2022.2", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/x/xilinx-bootgen/xilinx-bootgen_2022.2.orig.tar.gz", "sha256": "af1d494e30f357b46868ad4580f78bef7c660b5a32a10308c3bc8ae452a9eaba", "artifact": "bootgen", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "evidence": "the signed-image path segfaults on a synthetic ELF under both subjects; no deterministic crypto workload admitted, so only the link level is claimed"},
+    {"family": "davix", "version": "0.8.4", "recipe_id": "recipe:davix:0.8.4", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/d/davix/davix_0.8.4.orig.tar.gz", "sha256": "519d56f746e86ea3fd615bc49e559b520df07e051e1ca3d8c092067958f3b2b7", "artifact": "bin/davix-get", "authority_level": "L2-configured", "candidate_level": "L2-configured", "classification": "ENVIRONMENT", "evidence": "the release tree refuses to regenerate version.cmake outside git; the embedded-curl path also failed, so the system-curl branch is required"},
+    {"family": "libewf", "version": "20140813", "recipe_id": "recipe:libewf:20140813", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/libe/libewf/libewf_20140813.orig.tar.gz", "sha256": "dbfdf1bbea5944b014c2311cce4615d92b2b6b91c8401eef8640de9f3e75845b", "artifact": "libewf/.libs/libewf.so*", "authority_level": "L3-built", "candidate_level": "L2-configured", "classification": "ENVIRONMENT", "evidence": "the 2014 autotools tree regenerates configure/aclocal.m4 during make; the repository's timestamp guard still lets the configure regeneration fail before the library links, while the tools row builds when configure is touched last"},
+    {"family": "stubby", "version": "1.7.3", "recipe_id": "recipe:stubby:1.7.3", "kind": "package row of getdns", "url": "https://deb.debian.org/debian/pool/main/g/getdns/getdns_1.7.3.orig.tar.gz", "sha256": "f1404ca250f02e37a118aa00cf0ec2cbe11896e060c6d369c6761baea7d55a2c", "artifact": "b/stubby", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "cmake configure fails before the stubby target; the getdns recipe itself builds with BUILD_STUBBY=OFF"},
+    {"family": "yafc", "version": "1.3.7", "recipe_id": "recipe:yafc:1.3.7", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/y/yafc/yafc_1.3.7.orig.tar.xz", "sha256": "4b3ebf62423f21bdaa2449b66d15e8d0bb04215472cb63a31d473c3c3912c1e0", "artifact": "src/yafc", "authority_level": "L3-built", "candidate_level": "L3-built", "classification": "HARNESS", "evidence": "the build succeeds against the subject libssl but the artifact pattern 'src/yafc' does not match the installed binary path"},
+    {"family": "apk-tools", "version": "2.14.4", "recipe_id": "recipe:apk-tools:2.14.4", "kind": "new upstream", "url": "https://gitlab.alpinelinux.org/alpine/apk-tools/-/archive/v2.14.4/apk-tools-v2.14.4.tar.gz", "sha256": "c8ad16bddfae988392ad067a244cfdaf643eb7d6761b73450739585ca76f9a25", "artifact": "src/apk", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the custom Make.rules build fails in src/ after the openssl.pc shim is provided"},
+    {"family": "canl-c", "version": "3.0.0", "recipe_id": "recipe:canl-c:3.0.0", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/c/canl-c/canl-c_3.0.0.orig.tar.gz", "sha256": "3d397ea2a8144f5945449919d599add6238da87fba2134407585d48c86db9796", "artifact": ".libs/libcanl_c.so*", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the custom Makefile's gen_err_codes.pl step fails before the library is built"},
+    {"family": "canl-c-examples", "version": "3.0.0", "recipe_id": "recipe:canl-c-examples:3.0.0", "kind": "package row of canl-c", "url": "https://deb.debian.org/debian/pool/main/c/canl-c/canl-c_3.0.0.orig.tar.gz", "sha256": "3d397ea2a8144f5945449919d599add6238da87fba2134407585d48c86db9796", "artifact": ".libs/client", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "same parent build failure (gen_err_codes.pl)"},
+    {"family": "ckermit", "version": "402~beta08", "recipe_id": "recipe:ckermit:402~beta08", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/c/ckermit/ckermit_402~beta08.orig.tar.gz", "sha256": "f611a290866bacfd4fe0a4f9321261686351efd8f97a9c76698f3ef431a7b397", "artifact": "wermit", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the pristine tarball extracts without a single source root (flat member layout), so the venue's extractor reports no diagnostics and no build is attempted"},
+    {"family": "conserver-server", "version": "8.2.7", "recipe_id": "recipe:conserver-server:8.2.7", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/c/conserver/conserver_8.2.7.orig.tar.gz", "sha256": "b88f1880f4090b42370e075ca9c8a6062fb553ee33f155b204714c43dc71cef3", "artifact": "conserver/conserver", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "TLS console server links the subject libssl; no deterministic pty/console workload admitted"},
+    {"family": "ewf-tools", "version": "20140813", "recipe_id": "recipe:ewf-tools:20140813", "kind": "package row of libewf", "url": "https://deb.debian.org/debian/pool/main/libe/libewf/libewf_20140813.orig.tar.gz", "sha256": "dbfdf1bbea5944b014c2311cce4615d92b2b6b91c8401eef8640de9f3e75845b", "artifact": "ewftools/.libs/ewfverify", "authority_level": "L7-functional", "candidate_level": "L7-functional", "workload": "ewfacquire writes an E01 with MD5/SHA-256 through the subject libcrypto; ewfverify re-verifies it and a tampered image is rejected"},
+    {"family": "fdm", "version": "1.9+git20181219", "recipe_id": "recipe:fdm:1.9+git20181219", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/f/fdm/fdm_1.9+git20181219.orig.tar.xz", "sha256": "055fcd7c654efa97b94c68087537bf59347fa9383f7cd8578ec54f1953cbffe0", "artifact": "fdm", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the pinned autotools bootstrap fails to sed the libtoolize wrapper under the extracted aux root"},
+    {"family": "imx-code-signing-tool", "version": "3.3.1+dfsg", "recipe_id": "recipe:imx-code-signing-tool:3.3.1+dfsg", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/i/imx-code-signing-tool/imx-code-signing-tool_3.3.1+dfsg.orig.tar.xz", "sha256": "1f804b078d45344f099b543bde712c205ee80a4b231bff99f68c625e60ced9d1", "artifact": "code/cst/release/linux64/cst", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the CST Makefile's rel_bin target fails; it expects an OpenSSL source tree at OPENSSL_PATH, not the subject prefix"},
+    {"family": "ixwebsocket-libs", "version": "11.4.5", "recipe_id": "recipe:ixwebsocket-libs:11.4.5", "kind": "new upstream", "url": "https://github.com/machinezone/IXWebSocket/archive/refs/tags/v11.4.5.tar.gz", "sha256": "c5fc225edec32bf7d583e55347ef2c9c4940d005c13ef5e848354a85602f5fd6", "artifact": "b/libixwebsocket.so*", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "TLS client/server library links the subject libssl; no admitted in-tree TLS exchange workload"},
+    {"family": "kore", "version": "4.1.0", "recipe_id": "recipe:kore:4.1.0", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/k/kore/kore_4.1.0.orig.tar.gz", "sha256": "b7d73b005fde0ea01c356a54e4bbd8a209a4dff9cf315802a127ce7267efbe61", "artifact": "kore", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the build uses -Werror/-Wmissing-prototypes and fails against the subject headers before the TLS listener is produced"},
+    {"family": "krb5-k5tls", "version": "1.20.1", "recipe_id": "recipe:krb5-k5tls:1.20.1", "kind": "package row of krb5", "url": "https://deb.debian.org/debian/pool/main/k/krb5/krb5_1.20.1.orig.tar.gz", "sha256": "704aed49b19eb5a7178b34b2873620ec299db08752d6a8574f95d41879ab8851", "artifact": "src/plugins/tls/k5tls.so", "authority_level": "L3-built", "candidate_level": "L3-built", "classification": "HARNESS", "evidence": "the k5tls plugin is not produced by the parent build's default make targets, so the artifact pattern does not match"},
+    {"family": "libcrypt-ssleay-perl", "version": "0.73.06", "recipe_id": "recipe:libcrypt-ssleay-perl:0.73.06", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/libc/libcrypt-ssleay-perl/libcrypt-ssleay-perl_0.73.06.orig.tar.gz", "sha256": "f8ecca45c87eb91325992b13f0594f808e6f1bc4c3b9a7f141b9a838384d252c", "artifact": "blib/arch/auto/Crypt/SSLeay/SSLeay.so", "authority_level": "L1-admitted-source", "candidate_level": "L1-admitted-source", "classification": "ENVIRONMENT", "evidence": "the Debian orig tarball omits inc/IO/Interactive/Tiny.pm, which Makefile.PL requires"},
+    {"family": "libddsc0debian", "version": "0.10.2", "recipe_id": "recipe:libddsc0debian:0.10.2", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/c/cyclonedds/cyclonedds_0.10.2.orig.tar.gz", "sha256": "ac59ee08975cd25a1fb414ddeb0183fb8636b12d49cea80373013bea59465b43", "artifact": "b/lib/libddsc.so*", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "CycloneDDS with SSL/security links the subject libssl; no admitted loopback DDS/TLS workload"},
+    {"family": "libdigidoc-tools", "version": "3.10.5", "recipe_id": "recipe:libdigidoc-tools:3.10.5", "kind": "package row of libdigidoc", "url": "https://deb.debian.org/debian/pool/main/libd/libdigidoc/libdigidoc_3.10.5.orig.tar.gz", "sha256": "f635bbce14936b5a7d1eeac9623874ba56982c15b07c2ccd3f9865138932835b", "artifact": "b/libdigidoc/cdigidoc", "authority_level": "L2-configured", "candidate_level": "L2-configured", "classification": "ENVIRONMENT", "evidence": "CMake configures but the libdigidoc compile fails before cdigidoc is produced"},
+    {"family": "libdigidoc2", "version": "3.10.5", "recipe_id": "recipe:libdigidoc2:3.10.5", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/libd/libdigidoc/libdigidoc_3.10.5.orig.tar.gz", "sha256": "f635bbce14936b5a7d1eeac9623874ba56982c15b07c2ccd3f9865138932835b", "artifact": "b/libdigidoc/libdigidoc.so*", "authority_level": "L2-configured", "candidate_level": "L2-configured", "classification": "ENVIRONMENT", "evidence": "same libdigidoc compile failure"},
+    {"family": "libfsapfs-utils", "version": "20201107", "recipe_id": "recipe:libfsapfs-utils:20201107", "kind": "package row of libfsapfs", "url": "https://deb.debian.org/debian/pool/main/libf/libfsapfs/libfsapfs_20201107.orig.tar.gz", "sha256": "dc0543b86779a3c0b46913d780a9fd7fdb7af86e1fea61c54f0d1d0209a18f15", "artifact": "fsapfstools/fsapfsinfo", "authority_level": "L3-built", "candidate_level": "L3-built", "classification": "HARNESS", "evidence": "fsapfsinfo builds but declares no libssl/libcrypto DT_NEEDED; the library it calls is the linked consumer, so this row does not itself consume the subject"},
+    {"family": "libfsapfs1", "version": "20201107", "recipe_id": "recipe:libfsapfs1:20201107", "kind": "new upstream", "url": "https://deb.debian.org/debian/pool/main/libf/libfsapfs/libfsapfs_20201107.orig.tar.gz", "sha256": "dc0543b86779a3c0b46913d780a9fd7fdb7af86e1fea61c54f0d1d0209a18f15", "artifact": "libfsapfs/.libs/libfsapfs.so*", "authority_level": "L4-linked", "candidate_level": "L4-linked", "classification": "HARNESS", "note": "APFS image library links the subject libcrypto; no admitted APFS-image workload (a fixture image is required)"}
+  ],
+  "non_l7_summary": {
+    "L5-loaded": [{"family": "perl-net-dns-sec", "classification": "HARNESS", "evidence": "the XS module loads; the sign/verify script produced no marker output under either subject"}],
+    "L4-linked": [
+      {"family": "conserver-client", "classification": "HARNESS"},
+      {"family": "cyrus-sasl-ntlm", "classification": "HARNESS"},
+      {"family": "nsca-ng-client", "classification": "HARNESS"},
+      {"family": "nsca-ng-server", "classification": "HARNESS"},
+      {"family": "python3-scrypt", "classification": "HARNESS"},
+      {"family": "xilinx-bootgen", "classification": "HARNESS"},
+      {"family": "conserver-server", "classification": "HARNESS"},
+      {"family": "ixwebsocket-libs", "classification": "HARNESS"},
+      {"family": "libddsc0debian", "classification": "HARNESS"},
+      {"family": "libfsapfs1", "classification": "HARNESS"}
+    ],
+    "L3-built": [
+      {"family": "unbound-anchor", "classification": "HARNESS", "evidence": "artifact declares no OpenSSL DT_NEEDED"},
+      {"family": "yafc", "classification": "HARNESS", "evidence": "artifact pattern does not match the installed binary"},
+      {"family": "krb5-k5tls", "classification": "HARNESS", "evidence": "plugin not produced by the default make targets"},
+      {"family": "libfsapfs-utils", "classification": "HARNESS", "evidence": "tool does not itself link OpenSSL"}
+    ],
+    "L2-configured": [
+      {"family": "sbsigntool", "classification": "ENVIRONMENT", "evidence": "bfd.h not found"},
+      {"family": "sqlcipher", "classification": "ENVIRONMENT", "evidence": "generated sqlite3.c needs a complete Tcl library; shell link fails"},
+      {"family": "davix", "classification": "ENVIRONMENT", "evidence": "version.cmake regeneration outside git; embedded curl build fails"},
+      {"family": "libewf", "classification": "ENVIRONMENT", "evidence": "autotools regeneration during make; the tools row builds when configure is touched last"},
+      {"family": "libdigidoc2", "classification": "ENVIRONMENT", "evidence": "libdigidoc compile failure"},
+      {"family": "libdigidoc-tools", "classification": "ENVIRONMENT", "evidence": "same compile failure"}
+    ],
+    "L1-admitted-source": [
+      {"family": "perl-crypt-ssleay", "classification": "ENVIRONMENT", "evidence": "orig tarball omits inc/IO/Interactive/Tiny.pm"},
+      {"family": "python3-m2crypto", "classification": "ENVIRONMENT", "evidence": "SWIG pre-build did not complete"},
+      {"family": "libcrypt-ssleay-perl", "classification": "ENVIRONMENT", "evidence": "orig tarball omits inc/IO/Interactive/Tiny.pm"},
+      {"family": "xar", "classification": "ENVIRONMENT", "evidence": "libxml2 probe fails"},
+      {"family": "stubby", "classification": "ENVIRONMENT", "evidence": "cmake configure fails"},
+      {"family": "apk-tools", "classification": "ENVIRONMENT", "evidence": "Make.rules build fails"},
+      {"family": "canl-c", "classification": "ENVIRONMENT", "evidence": "gen_err_codes.pl fails"},
+      {"family": "canl-c-examples", "classification": "ENVIRONMENT", "evidence": "same parent failure"},
+      {"family": "ckermit", "classification": "ENVIRONMENT", "evidence": "flat tarball layout yields no single source root"},
+      {"family": "fdm", "classification": "ENVIRONMENT", "evidence": "autotools bootstrap sed failure"},
+      {"family": "imx-code-signing-tool", "classification": "ENVIRONMENT", "evidence": "rel_bin expects an OpenSSL source tree"},
+      {"family": "kore", "classification": "ENVIRONMENT", "evidence": "-Werror build fails before the listener"}
+    ],
+    "implementation_gaps": []
+  },
+  "skipped_families": {
+    "note": "these are representative groups from the remaining 758 no-recipe rows; each is excluded for the reason given, not for lack of effort or a missing count",
+    "interactive_tui_gui": ["alpine", "neomutt", "tin", "sylpheed", "xca", "falkon", "qbittorrent", "qbittorrent-nox", "transmission-gtk", "transmission-qt", "hexchat", "x11vnc", "xrdp", "gftp-gtk", "kvirc", "nextcloud-client", "poedit", "kdeconnect", "qterm", "netsurf-fb", "freedroid", "supertuxkart"],
+    "kernel_tun_device": ["fastd", "openfortivpn", "sstp-client", "anytun", "gvpe", "openvswitch", "open-iscsi", "opensc", "yubico-piv-tool", "tpm2-tools", "tpm-tools", "trousers", "mokutil", "libnvme", "mstflint", "ecryptfs-utils", "gocryptfs", "encfs", "fuse-encfs", "btfs", "btrfs-fuse", "s3fs-fuse", "httpdirfs", "lxc"],
+    "live_service_or_database": ["mariadb", "mariadb-client", "mariadb-server", "pgbouncer", "libpq", "pgbackrest", "pgloader", "freetds", "libcouchbase", "zabbix", "zabbix-agent", "zabbix-agent2", "tarantool", "galera", "clickhouse-common", "snapserver", "nut", "cups", "pipewire", "pulseaudio", "shairport-sync", "squeezelite", "hylafax+"],
+    "heavy_dependency_closure": ["clamav", "freeradius", "rsyslog-openssl", "collectd", "uwsgi", "ntpsec", "trafficserver", "ceph", "ceph17", "ceph18", "glusterfs", "ovn", "dotnet6-runtime", "dotnet8-runtime", "cargo", "cargo-c", "cargo-outdated", "nodejs", "monero", "tor", "i2pd", "rpm", "libzypp", "librepo", "ostree", "gdal", "mupdf", "calibre", "thrift", "folly", "wangle", "proxygen", "fizz"],
+    "unreachable_or_absent_source": ["weex (no Debian orig archive; SOURCE-UNREACHABLE)", "unrealircd (no Debian orig archive; upstream not pinned)", "hinsightd (no upstream repository found from the court)", "libdkimpp (no Debian source package)", "podofo (no Debian pool directory)"],
+    "duplicate_or_same_binary": ["afftools (same affsign/affcat binaries already admitted as libafflib0v5)", "ewftools (alias of ewf-tools; the same tools binary set)", "libdcmtk17 (same libdcmtk shared object as the dcmtk recipe)", "cyrus-sasl-md5 (its CRAM-MD5 plugin does not link OpenSSL and its DIGEST-MD5 plugin is already admitted as cyrus-sasl-digestmd5)", "weex"],
+    "new_s46_exclusions": ["perdition (requires vanessa_logger + vanessa_socket; not in the expansion image or the existing aux seam)", "libc-client2007e / imap (uw-imap builds a static c-client only; no libssl/libcrypto DT_NEEDED and no deterministic IMAP fixture)", "libfsapfs-utils (tool itself does not link OpenSSL; only the library does)", "unbound-anchor (artifact did not link the subject)", "xilinx-bootgen (signed-image path segfaults under both subjects; only link evidence claimed)"]
+  },
+  "urls_re_pinned": [],
+  "split_rows": {
+    "families": ["cyrus-sasl-ntlm", "unbound-anchor", "krb5-k5tls", "canl-c-examples", "libdigidoc-tools", "ewf-tools", "libfsapfs-utils", "perl-crypt-ssleay"],
+    "note": "these are distribution package rows split from a parent recipe already in the catalogue; they reuse the parent's pristine archive and the copy of the parent's digest, which was verified when the parent was admitted. No new source URL was manufactured and no digest was guessed."
+  },
+  "urls_note": "all non-split source URLs are original Debian pool, GitHub release/archive, GitLab archive or nlnetlabs release assets; each was fetched in the court and its SHA-256 computed there. No URL was re-pinned in S46 and no digest was guessed.",
+  "before_after": {
+    "before_s44": {"recipe_backed": 207, "candidate_loaded": 197, "candidate_runtime": 195, "candidate_functional": 194, "candidate_levels": {"L7-functional": 194, "L6-runtime": 1, "L5-loaded": 2, "L4-linked": 9, "L2-configured": 1, "L0-catalogued": 793}},
+    "after_s46": {"recipe_backed": 242, "candidate_loaded": 200, "candidate_runtime": 197, "candidate_functional": 196, "candidate_levels": {"L7-functional": 196, "L6-runtime": 1, "L5-loaded": 3, "L4-linked": 19, "L3-built": 4, "L2-configured": 7, "L1-admitted-source": 12, "L0-catalogued": 758}},
+    "delta_s46": {"recipe_backed": 35, "candidate_l7": 2, "candidate_l5": 1, "candidate_l4": 10, "candidate_l3": 4, "candidate_l2": 6, "candidate_l1": 12, "candidate_specific_patch_count": 0, "authority_identical_to_candidate": true}
+  },
+  "tool_summaries": {
+    "build_link_measure": [
+      "[downstream-build-link] elapsed=59s with_recipe=242 no_recipe=758",
+      "  authority configured=230 built=224 linked=219 failed=23",
+      "  candidate configured=230 built=224 linked=219 failed=23",
+      "  candidate_linkage_proven=219 candidate_specific_patch_count=0",
+      "  -> forensics/downstream/build-link-atlas.json"
+    ],
+    "runtime_measure": [
+      "[downstream-runtime] elapsed=1s with_recipe=242 no_recipe=758",
+      "  authority loaded=200 runtime=197 functional=196 failed=5 not_attempted=781",
+      "  candidate loaded=200 runtime=197 functional=196 failed=5 not_attempted=781",
+      "  candidate_reaches_baseline=242 reaches_linked_baseline=219 below_baseline=0 baseline_not_linked=23 candidate_failures={'acquire-failure': 758, 'link-failure': 23, 'runtime-failure': 2, 'load-failure': 2, 'functional-failure': 1}"
+    ],
+    "checks": [
+      "[downstream-build-link] with_recipe=242 candidate_linked=219 linkage_proven=219 findings=0 control honest=True",
+      "[downstream-runtime] with_recipe=242 cand_loaded=200 cand_functional=196 reaches_baseline=242 findings=0 control honest=True"
+    ]
+  },
+  "l7_workloads": [
+    {"family": "ewf-tools", "candidate_level": "L7-functional", "evidence": "ewfacquire writes an E01 with MD5 and SHA-256 calculated through the subject libcrypto; ewfverify recomputes and matches both, and a byte-flipped image is rejected"},
+    {"family": "tcl-tls", "candidate_level": "L7-functional", "evidence": "TclTLS client channel completes a verified TLS exchange against an authority s_server with the fixture CA, and a server certificate signed by an unrelated CA is rejected"}
+  ],
+  "residuals": [
+    "This is a FAST/BATCH downstream measurement. No BOUNDARY or SEAL evidence was generated: no Miri, sanitizers, dudect/ctgrind, FFI negative controls or caller-closure audit.",
+    "The honest yield is 2 new L7 families from 35 admissions. 33 families are recorded with their exact build level and classification; no level was fabricated and no missing count was padded.",
+    "The S46 additions are downstream compatibility/build evidence only and do not make any family SAFE_COMPATIBLE (AGENTS.md section 7/8).",
+    "The court container's documented writable host bind mount (/work) remains a standing infrastructure task; docker/ was not changed.",
+    "The S46 build changed forensics/tools/downstream_build_link.py and forensics/tools/downstream_runtime.py plus four new test-only harness files; src/ was not changed."
+  ],
+  "non_claims": [
+    "Exactly 35 families were added, not more; the exact added L7 count is 2 (ewf-tools and tcl-tls).",
+    "A fresh candidate-bound L7 count is not safety or cryptographic evidence (AGENTS.md section 8).",
+    "No IMPLEMENTATION divergence was established in S46; the non-L7 outcomes are HARNESS or ENVIRONMENT with the evidence recorded above.",
+    "No family graduates to SAFE_COMPATIBLE in S46."
+  ]
+}
