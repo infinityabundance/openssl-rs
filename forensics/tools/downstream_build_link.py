@@ -2056,6 +2056,13 @@ def _build_catalogue() -> tuple[dict, ...]:
         rec = dict(spec)
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
+    # The S44 corpus batch: pristine upstreams driven by one non-interactive TLS or crypto
+    # operation.  Each carries its own pinned archive digest and the subject prefix is the only
+    # OpenSSL on the link line; non-OpenSSL dependencies come through the pinned aux seam.
+    for spec in _S44_SPECS:
+        rec = dict(spec)
+        rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
+        recipes.append(rec)
     return tuple(recipes)
 
 
@@ -3498,8 +3505,24 @@ _LATE_RECIPE_OVERRIDES: dict[str, dict] = {
                       "-DWITH_GSSAPI=OFF", "-DWITH_ZLIB=ON", "-DWITH_PCAP=OFF",
                       "-DWITH_SERVER=OFF", "-DBUILD_EXAMPLES=OFF", "-DUNIT_TESTING=OFF"],
         "make": [], "artifact": "b/lib/libssh.so*", "launch": None,
-        "note": ("libssh 0.10.6 built by CMake against the subject libssl/libcrypto; the admitted "
-                 "workload imports a pinned RSA private key and checks its exported public blob"),
+        # S44 re-pin: www.libssh.org is unreachable from the court (curl exit 7, reproduced after
+        # S42).  The Debian pool carries the identical upstream 0.10.6 release archive; the
+        # observed SHA-256 is byte-for-byte the value `_CENSUS_PINS` already asserts.
+        "url": "https://deb.debian.org/debian/pool/main/libs/libssh/libssh_0.10.6.orig.tar.xz",
+        "archive": "tar.xz",
+        "sha256": "1861d498f5b6f1741b6abc73e608478491edcf9c9d4b6630eef6e74596de9dc1",
+        "note": ("libssh 0.10.6 (Debian pool re-pin, S44) built by CMake against the subject "
+                 "libssl/libcrypto; the admitted workload imports a pinned RSA private key and "
+                 "checks its exported public blob"),
+    },
+    "sslscan": {
+        # S44 re-pin: the upstream GitHub tag archive was lost to a transient DNS failure.  The
+        # Debian pool's 2.1.5 orig archive is the same bytes (the observed digest equals the pin).
+        "url": "https://deb.debian.org/debian/pool/main/s/sslscan/sslscan_2.1.5.orig.tar.gz",
+        "archive": "tar.gz",
+        "sha256": "b36616b1d59f3276af6ff9495ab8178ec6812393582fb3c094c56cc873efe956",
+        "note": ("sslscan 2.1.5 (Debian pool re-pin, S44) scans the authority's local TLS1.3 "
+                 "server and confirms TLS1.3 is disabled on a TLS1.2-only server"),
     },
 }
 
@@ -3801,6 +3824,31 @@ _L7_SPLIT_RECIPES: tuple[tuple[str, str, dict], ...] = (
         "note": ("the librabbitmq package row of rabbitmq-c 0.15.0: the same TLS socket "
                  "harness completes the connection and rejects an unrelated CA"),
     }),
+
+    # S44 package rows of upstreams this catalogue already builds and drives.  Each row is the
+    # same pristine archive, the same build intent and the same admitted workload; only the
+    # distribution's own package name (and, where the package names it, artifact pattern) differs.
+    ("h2o-evloop0.13", "h2o", {
+        "artifact": "b/h2o",
+        "note": ("the h2o-evloop0.13 package row of h2o 2.2.6: the same verified TLS "
+                 "listener serves the fixture and rejects an unrelated CA"),
+    }),
+    ("libafflib0v5", "afflib", {
+        "artifact": "lib/.libs/libafflib.so*",
+        "note": ("the libafflib0v5 package row of AFFLIB 3.7.20: the same affsign "
+                 "sign/verify workload and tampered-image rejection"),
+    }),
+    ("apache2-ssl", "apache2-bin", {
+        "artifact": "httpd",
+        "note": ("the apache2-ssl package row of Apache 2.4.62: the same statically-linked "
+                 "mod_ssl httpd serves the fixture over verified TLS"),
+    }),
+    ("nagios-plugins-tcp", "monitoring-plugins", {
+        "artifact": "plugins/check_tcp",
+        "note": ("the nagios-plugins-tcp package row of monitoring-plugins 2.4.0: check_tcp's "
+                 "own --ssl path completes the TLS handshake with the fixture and refuses a "
+                 "plaintext peer"),
+    }),
 )
 
 # ima-evm-utils 1.4 is the only new upstream in this batch: its `evmctl` signs and verifies a
@@ -4024,6 +4072,61 @@ _S23_PERL_SPECS: tuple[dict, ...] = (
         "blib/arch/auto/Crypt/OpenSSL/Random/Random.so",
         "Crypt::OpenSSL::Random 0.15: RAND_bytes/RAND_add through the subject "
         "libcrypto."),
+    # S44 package rows: the Debian source package's own name for the exact modules above.
+    # The corpus carries both the CPAN-style name and the distribution package name as separate
+    # families; the archive, build intent and harness are byte-identical, so these rows are the
+    # same upstream consumer under its package name (the established split-row rule).
+    _s23_perl_spec(
+        "libcrypt-openssl-bignum-perl", "0.09",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-bignum-perl/"
+         "libcrypt-openssl-bignum-perl_0.09.orig.tar.gz"),
+        "234e72fb8396d45527e6fd45e43759c5c3f3a208cf8f29e6a22161a996fd42dc",
+        "blib/arch/auto/Crypt/OpenSSL/Bignum/Bignum.so",
+        "the libcrypt-openssl-bignum-perl package row of Crypt::OpenSSL::Bignum 0.09: "
+        "BN add/mul/mod_exp/mod_inverse through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-random-perl", "0.15",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-random-perl/"
+         "libcrypt-openssl-random-perl_0.15.orig.tar.gz"),
+        "f0876faa1ba3111e39b86aa730c603211eff2905e460c72a57b61e8cf475cef4",
+        "blib/arch/auto/Crypt/OpenSSL/Random/Random.so",
+        "the libcrypt-openssl-random-perl package row of Crypt::OpenSSL::Random 0.15: "
+        "RAND_bytes and RAND_status through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-rsa-perl", "0.33",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-rsa-perl/"
+         "libcrypt-openssl-rsa-perl_0.33.orig.tar.gz"),
+        "bdbe630f6d6f540325746ad99977272ac8664ff81bd19f0adaba6d6f45efd864",
+        "blib/arch/auto/Crypt/OpenSSL/RSA/RSA.so",
+        "the libcrypt-openssl-rsa-perl package row of Crypt::OpenSSL::RSA 0.33: RSA "
+        "keygen, sign/verify and public encrypt/decrypt through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-dsa-perl", "0.20",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-dsa-perl/"
+         "libcrypt-openssl-dsa-perl_0.20.orig.tar.gz"),
+        "e4575d787d44e49b3b59cc39eda2e461fe0606dd0e87d3a9c3df5011b133e702",
+        "blib/arch/auto/Crypt/OpenSSL/DSA/DSA.so",
+        "the libcrypt-openssl-dsa-perl package row of Crypt::OpenSSL::DSA 0.20: DSA "
+        "keygen, sign/verify and PEM roundtrip through the subject libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-openssl-x509-perl", "1.9.14",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-openssl-x509-perl/"
+         "libcrypt-openssl-x509-perl_1.9.14.orig.tar.gz"),
+        "49c575257e6408ad5a89011e5b5800d598f9ccafdf42e71004ed81cb2f44ee7a",
+        "blib/arch/auto/Crypt/OpenSSL/X509/X509.so",
+        "the libcrypt-openssl-x509-perl package row of Crypt::OpenSSL::X509 1.9.14: "
+        "X.509 parse, fingerprint, extensions and issuer linkage through the subject "
+        "libcrypto."),
+    _s23_perl_spec(
+        "libcrypt-smime-perl", "0.28",
+        ("https://deb.debian.org/debian/pool/main/libc/libcrypt-smime-perl/"
+         "libcrypt-smime-perl_0.28.orig.tar.gz"),
+        "ca90ecacfef620f8a2f1723c5bc3307a0079c0c6f5170849a9896b20280d1c2d",
+        "blib/arch/auto/Crypt/SMIME/SMIME.so",
+        "the libcrypt-smime-perl package row of Crypt::SMIME 0.28: CMS sign/check and "
+        "encrypt/decrypt through the subject libcrypto.",
+        {"LIBCRYPTO_CFLAGS": "-I{prefix}/include",
+         "LIBCRYPTO_LIBS": "-L{prefix}/lib -lcrypto"}),
 )
 
 _S23_BINUTILS_AUX: tuple[dict, ...] = (
@@ -4400,6 +4503,97 @@ _S36_SPECS: tuple[dict, ...] = (
                  "PKCS#7/CMS implementation through the subject libssl/libcrypto; the "
                  "admitted workload submits a message to a local SMTPS peer and rejects "
                  "an unrelated CA."),
+    },
+)
+
+
+# --------------------------------------------------------------------------------------------
+# S44 corpus batch (2026-10-24)
+#
+# The families below were the next tractable rows in the frozen P1000 with no admitted recipe:
+# each has a pristine published source archive, builds with the venue's toolchain against the
+# subject prefix, and exposes a CLI that performs one non-interactive TLS or crypto operation.
+# Families whose only entry point is an interactive daemon, a kernel capability, a USB/smartcard
+# device or a distribution meta-package were skipped and are itemised in the S44 receipt.
+# --------------------------------------------------------------------------------------------
+_S44_SPECS: tuple[dict, ...] = (
+    {
+        # A RELP sender/receiver pair from the library's own test programs.  Both ends
+        # negotiate mutual TLS through librelp's OpenSSL backend, so the workload is a real
+        # TLS session between two consumers in the same pristine tree.
+        "family": "librelp", "version": "1.13.0",
+        "url": "https://deb.debian.org/debian/pool/main/libr/librelp/librelp_1.13.0.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "58e976e31795d7309cf2d9f37fdc93522daa4a322f5012d7879fed9ebfa40068",
+        "configure": ["--prefix={root}/.l7-install", "--disable-tls",
+                      "--enable-tls-openssl", "--disable-static"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/.libs/librelp.so*", "launch": None,
+        "env_extra": {"OPENSSL_CFLAGS": "-I{prefix}/include",
+                      "OPENSSL_LIBS": ("-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                                       "-lssl -lcrypto")},
+        "note": ("librelp 1.13.0's own RELP send/receive pair negotiates mutual TLS "
+                 "through the subject libssl and carries a message; a sender trusting "
+                 "an unrelated CA is refused"),
+    },
+    {
+        # Hydra's https-get module is an OpenSSL client: it completes a TLS handshake and sends
+        # HTTP Basic credentials.  The workload's fixture answers 401 for the wrong password and
+        # 200 for the right one, so the finding is a real TLS-authenticated decision.
+        "family": "hydra", "version": "9.5",
+        "url": "https://deb.debian.org/debian/pool/main/h/hydra/hydra_9.5.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "a3969a8cd7dbd1f805f756df980beda83c53778087d8e6ffcb8aa28693f407d5",
+        "configure": ["--prefix={prefix}", "--disable-xhydra"],
+        "make": [MAKE_JOBS, "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib"],
+        "artifact": "hydra", "launch": ["-h"],
+        "note": ("hydra 9.5's https-get module authenticates over the subject libssl; the "
+                 "admitted workload finds the fixture credential and misses a wrong one"),
+    },
+    {
+        # Ncrack's HTTP(S) module is a second, independent OpenSSL client (nsock + the ncrack
+        # HTTP engine).  Its services database is a build-tree data file, so NCRACKDIR points at
+        # the extracted root.
+        "family": "ncrack", "version": "0.7+debian",
+        "url": ("https://deb.debian.org/debian/pool/main/n/ncrack/"
+                "ncrack_0.7+debian.orig.tar.xz"),
+        "archive": "tar.xz", "build_system": "configure",
+        "sha256": "117096d9e25a8308f1f1a012e573f7575c36592d842555482b4cf53b7065bd21",
+        "configure": ["--with-openssl={prefix}", "--without-openssl-header-check"],
+        "env_extra": {"LDFLAGS": "-L{prefix}/lib -Wl,-rpath,{prefix}/lib"},
+        "make": [MAKE_JOBS, "LDFLAGS=-L{prefix}/lib -Wl,-rpath,{prefix}/lib "
+                             "-Lnbase -Lnsock/src -Lopensshlib -Wl,--allow-multiple-definition"],
+        "artifact": "ncrack", "launch": ["-h"],
+        "note": ("ncrack 0.7's HTTPS module authenticates through the subject libssl; the "
+                 "admitted workload finds the fixture credential and misses a wrong one"),
+    },
+    {
+        # ircd-hybrid's TLS listener: the daemon refuses root, so the workload drops to `nobody`
+        # and stages the install prefix the binary expects.  The evidence is its own IRC greeting
+        # over a verified TLS session, with an unrelated CA rejected.
+        "family": "ircd-hybrid", "version": "8.2.46",
+        "url": ("https://deb.debian.org/debian/pool/main/i/ircd-hybrid/"
+                "ircd-hybrid_8.2.46+dfsg.1.orig.tar.gz"),
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "c16dc92536fd6519a85b7aa35f061bbb40b366cd449866fa2ff90ac88881aef7",
+        "configure": ["--prefix={root}/.l7-install", "--with-tls=openssl"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/ircd", "launch": ["-v"],
+        "note": ("ircd-hybrid 8.2.46's TLS listener greets a verified loopback client over the "
+                 "subject libssl; an unrelated CA is refused"),
+    },
+    {
+        # Medusa's http module with -s is an OpenSSL client (medusa-thread-ssl.c).  Its modules
+        # are loaded from src/modsrc through MEDUSA_MODULE_PATH.
+        "family": "medusa", "version": "2.3",
+        "url": "https://deb.debian.org/debian/pool/main/m/medusa/medusa_2.3.orig.tar.gz",
+        "archive": "tar.gz", "build_system": "configure",
+        "sha256": "7ad4b4ed8acecd42fa48fc31fad6e255a8ee894c66615509196f5b9173e3f891",
+        "configure": ["--prefix={root}/.l7-install", "--with-ssl={prefix}"],
+        "make": [MAKE_JOBS],
+        "artifact": "src/medusa", "launch": ["-V"],
+        "note": ("medusa 2.3's HTTP module over TLS finds the fixture credential through the "
+                 "subject libssl and misses a wrong one"),
     },
 )
 
