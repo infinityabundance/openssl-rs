@@ -1,13 +1,13 @@
 {
   "command": "cargo test --lib -- --test-threads=4",
-  "source_commit": "72b625b46",
-  "source_commit_note": "the S34 full run was on the DHE working tree checked out at 143ba83b8 plus the three-file DHE change; that change is commit 72b625b46, merged at 1a101b603",
-  "passed": 2089,
+  "source_commit": "7bdc53d83",
+  "source_commit_note": "the S58 full run was on the S58 working tree checked out at 90107ceda plus the five-file peer-sigalgs change; that change is commit 7bdc53d83, merged at aeeb5a83a",
+  "passed": 2148,
   "failed": 0,
-  "ignored": 44,
-  "total": 2133,
+  "ignored": 45,
+  "total": 2193,
   "kind": "full-library-run",
   "source_tree_unchanged": false,
-  "source_tree_unchanged_note": "S35 and S36 were measurement-only, but S39-S41 and S49-S51 changed src/ (ssl/record/rec_layer_s3.rs, ssl/t1_enc.rs, ssl/tls13_enc.rs, provider/cipher_gcm.rs, asn1/d2i.rs, ssl/statem/statem_srvr.rs, ssl/statem/statem_clnt.rs) and S22/S30/S34 added tests after this run. The S34 count is therefore a floor, not the current total; no full library run exists for S39-S53.",
-  "note": "S34 BATCH full run (cargo test --lib -- --test-threads=4, 137.71s) on the DHE working tree. Serial --test-threads=1 was not run in S34. Floor at the time: 1962; no test was removed or newly ignored. Left at the S34 record in S54; S48 and S52-S53 ran no Rust test suite and S49-S51 ran focused tests only, so none implies a fresh full run."
+  "source_tree_unchanged_note": "S59 and S60 changed no src/ (measurements and tooling), but S61 changed src/ssl/ssl_lib.rs and added test-only code in src/ssl/statem/statem_lib.rs and statem_srvr.rs after this run; S62 changed only the crate version. The S58 count is therefore a floor for the 0.0.38 tree, not its current total; no full library run exists after S58.",
+  "note": "S58 BATCH full run (cargo test --lib -- --test-threads=4, 147.17s) on the S58 working tree. Serial --test-threads=1 was not run. Floor at the time: 1962; no test was removed or newly ignored. The earlier S57 full run was 2133/0/44 and the S34 run 2089/0/44; S59-S62 ran focused or no Rust tests, so none implies a fresh full run."
 }
