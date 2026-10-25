@@ -1,0 +1,96 @@
+{
+  "receipt": "c1-cms-env",
+  "branch": "integrate/safe-c33",
+  "source_head": "87abad068",
+  "worktree": true,
+  "date": "2026-10-25",
+  "verification_level": "FAST plus the full library suite. One bounded mechanism change in cms_env.rs: key-unwrap output capacity is established before provider dispatch and the unwrapped content key has a single owner; both KEK and KTRI arms. No new hidden obligation, no ABI/layout/export change, no allocator-seam size/file/line change.",
+  "scope": "src/cms/cms_env.rs, restricted to key unwrapping and content-key ownership: cms_RecipientInfo_kekri_decrypt, cms_RecipientInfo_ktri_decrypt, the staging/validation helpers, and the content-key owner. Not a whole-file conversion.",
+  "files": [
+    "src/cms/cms_env.rs",
+    "scripts/adv-probe.sh"
+  ],
+  "mechanism": {
+    "id": "C1-CMS-UNWRAP-CAPACITY",
+    "class": "HEAP_OOB_WRITE / content-key ownership",
+    "trigger": "CVE-2026-63072's write edge: EVP_DecryptUpdate is passed `in_len + block_size` as the provider's writable extent while CMS gives the unwrap output only `in_len - 8`; the produced length was checked only after the writes, and the reported length became ec->keylen (the extent a later OPENSSL_clear_free cleanses).",
+    "capacity_before_dispatch": [
+      "KEK: declared_update_extent(wrapped_len, cipher block size) reproduces exactly the outsize EVP_DecryptUpdate passes (`in_len` for a one-byte block, `in_len + block_size` otherwise), checked with checked_add. A frame-private SecretScratch of exactly that extent is allocated before any provider call, so the provider is told the truth about the block it can fill.",
+      "KEK: content_key_extent(wrapped_len) = checked `in_len - 8`; the authority's content-key allocation stays at cms_env.c:995 with the same size/file/line.",
+      "KEK: the update's reported length is accepted only by reported_extent(report, stage.capacity()); it is then required to be <= the content-key extent before the final write pointer (stage + written) is constructed. The final report is validated against the remaining stage capacity and the total against the content-key extent. A larger report is refused, never used as an offset or as ec->keylen.",
+      "KTRI: the provider's own two-pass query is now performed in this function; the first EVP_PKEY_decrypt call establishes `capacity` before allocation or write, the block is allocated at exactly that extent (asymcipher.c:337 / :343 coordinates preserved), the second call is given `capacity` as its declared output extent, and `produced <= capacity` is required before adoption."
+    ],
+    "owner_design": {
+      "kekri": "SecretScratch (Rust Vec, zero-initialised, try_reserve_exact, cleansed over its whole extent in Drop) owns the provider's staged plaintext. OwnedBuf at cms_env.c:995 owns the content key; it is transferred into ec.key exactly once with into_raw(), with ec.keylen set to the validated produced length. Every failure after the allocation drops the OwnedBuf (cleansing release, single release); failures before it leave the slot untouched.",
+      "ktri": "A single OwnedBuf::new_cleansed_released(capacity, asymcipher.c:337, release :343) is the only owner from the moment the provider's extent is known. Validation failure drops it at :343 over the allocation extent; success transfers it into ec.key exactly once. The authority's ec destructor later releases it at cms_asn1.c:88 over ec.keylen = produced."
+    }
+  },
+  "unsafe_before_after": {
+    "eliminated": [
+      "The post-write unwrap_length_fits check as the only defence against a provider over-report: it could not establish the safety of writes that had already happened.",
+      "Direct provider writes into the in_len-8 content-key allocation: the provider now writes only into a block of exactly the extent it was told it could fill.",
+      "Production use of evp_pkey_decrypt_alloc's trust that the second-call report is within the first-call extent."
+    ],
+    "relocated": [
+      "Provider output writes are confined to unwrap_staged + SecretScratch, an auditable boundary whose # Safety contract fixes the ctx, stage extent, key extent and input readability.",
+      "The KTRI seam allocation moved inside cms_env.rs but keeps the authority's exact coordinates and size derivation (asymcipher.c:337 malloc, :343 cleansing free)."
+    ],
+    "hidden": 0,
+    "new_unsafe_operations": [
+      "SecretScratch::drop's OPENSSL_cleanse over its own allocation (narrow, documented).",
+      "unwrap_staged's # Safety contract and its two provider calls (narrow, documented; callers establish the extent relations)."
+    ],
+    "removed_from_production": [
+      "adopt_decrypted_key is now #[cfg(test)]: it remains the release-model witness that an installed ec.key is cleansed/released at cms_asn1.c:88, but the production path no longer adopts a helper block."
+    ]
+  },
+  "preserved": {
+    "owned_buf_patterns": "OwnedBuf::new_cleansed_released at cms_env.c:995 unchanged in arguments; into_raw remains the single transfer edge.",
+    "modes_wrap_cleansing_limits": "src/modes/wrap.rs untouched; the CVE-2026-63072 cleanse-extent test still passes.",
+    "exported_symbols": "none added, removed or re-signed; no #[no_mangle] diff.",
+    "repr_c_layouts": "none changed.",
+    "allocator_seam": "same sizes and coordinates: cms_env.c:995 (content key), asymcipher.c:337/343 (KTRI key). The added SecretScratch is a Rust allocation, not a CRYPTO_* event, so a caller-installed CRYPTO_set_mem_functions hook sees the same seam event stream.",
+    "error_reason_codes": "CMS_R_INVALID_KEY_LENGTH, CMS_R_INVALID_ENCRYPTED_KEY_LENGTH, CMS_R_UNWRAP_ERROR and ASYMCIPHER_342 retained."
+  },
+  "tests": {
+    "filtered": "cargo test --lib cms::cms_env -- --test-threads=4: 29 passed / 0 failed / 6 ignored (2171 filtered).",
+    "new": [
+      "cms_env_padded_wrap_oid_substitution_is_refused ... ok",
+      "cms_env_provider_reported_length_beyond_capacity_is_refused ... ok",
+      "cms_env_malformed_wrapped_key_lengths_are_refused ... ok"
+    ],
+    "ignored_probes_observed": [
+      "cms_env_content_key_allocation_refusal_leaves_the_slot_untouched ... ok (1 passed)",
+      "cms_env_failed_unwrap_releases_the_incumbent_once_by_address ... ok (1 passed)",
+      "cms_env_replacing_the_content_key_releases_each_incumbent_once_by_address ... ok (1 passed)",
+      "adv_probe_decrypted_key_release_cleanses_before_free ... ok (1 passed)"
+    ],
+    "negative_control": "cms_env_negative_control_pre_fix_undersized_output_is_detected ... ok. It reconstructs the pre-fix pairing (declared extent in_len + block_size into a block of in_len - 8), asserts the pairing is exactly the defect (declared > key_capacity), and asserts the new detectors (reported_extent against the key extent; checked_add capacity arithmetic) fire on it. Test-only; no production path can reach it.",
+    "full_lib_threads4": "2158 passed / 0 failed / 48 ignored, 116.17 s."
+  },
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean.",
+    "check_lib": "cargo check --lib clean.",
+    "clippy_lib": "cargo clippy --lib -- -D warnings clean.",
+    "structural": "git diff of src/cms/cms_env.rs contains no #[no_mangle], #[repr(C)] or exported-signature change; the only new extern \"C\" fns are test-local fake provider callbacks. No allocator-seam size/file/line change.",
+    "affected_probes": "The four cms_env allocator probes run one per process under OPENSSL_RS_ADV_PROBE=1; all passed. Miri/ASan/Loom/const-time were not run (no aliasing, concurrency or secret-dependent-control mechanism changed).",
+    "no_std_notes": "none"
+  },
+  "historical_cve_replay": {
+    "cve": "CVE-2026-63072",
+    "case": "cms_key_unwrap_aead",
+    "state": "UNKNOWN (unchanged)",
+    "why": "The candidate path is now drivable end-to-end and is exercised by the new unit tests, including the padded-wrap OID and a provider that over-reports. The historical replay's positive control, however, is an 8-byte heap OOB write in the vulnerable authority; making that observable requires a guard-page or ASan allocator in the replay venue, which courts/phase25/cve_replay_probe.c does not install for the historical authority (the probe still emits `unsupported` for this case). A replay with an unfired control is recorded UNKNOWN, never as a pass, so the record was deliberately not promoted."
+  },
+  "residuals": [
+    "The staging buffer doubles the transient plaintext footprint (content-key extent plus declared update extent). It is a Rust allocation, so it does not alter the CRYPTO_* seam event stream, and it is cleansed on drop.",
+    "A provider that lies about its produced length after writing can still write within the declared extent (now a real allocation); the report is detected and refused before it becomes an offset or ec.keylen, but a write beyond the declared extent cannot be detected without a sanitizer/guard-page instrument. This is a detection boundary, not a trust boundary.",
+    "The KTRI inline duplicates the two-pass shape of evp_pkey_decrypt_alloc because that helper does not expose the first-pass capacity. The helper itself is unchanged for its other caller; its own second-pass report is not hardened here (out of this target's scope).",
+    "Miri/ASan/Loom and a differential allocator transcript against the authority were not run at this level (BATCH evidence only for the focused probes)."
+  ],
+  "non_claims": [
+    "This does not discharge the whole src/cms unsafe surface or any consumer family's dependency closure.",
+    "The provider boundary is now sound against a conforming provider and detects over-reports; it is not a claim that a hostile in-process provider cannot corrupt memory through unrelated callbacks.",
+    "The CVE replay remains UNKNOWN; a unit-level exercise is not a historical replay."
+  ]
+}

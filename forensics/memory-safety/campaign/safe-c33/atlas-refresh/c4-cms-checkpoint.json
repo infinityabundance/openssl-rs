@@ -1,0 +1,50 @@
+{
+  "receipt": "c4-cms-checkpoint",
+  "date": "2026-10-25",
+  "source_head_at_start": "9e9f2728f",
+  "commit": "fb9896f87",
+  "scope": "Combined checkpoint for the CMS batch: cms_env key unwrap, cms_enc AEAD parameters, cms_kari key-agreement handoff.",
+  "gates": {
+    "fmt": "PASS (exit 0)",
+    "clippy_all_targets": "PASS, -D warnings, no diagnostics",
+    "library_suite_parallel": "2168 passed, 0 failed, 52 ignored",
+    "library_suite_serial": "2168 passed, 0 failed, 52 ignored",
+    "serial_parallel_agreement": "identical counts and passing set",
+    "adversarial_probes": "49 probes, all passed, one test per process",
+    "asan_cms_env": "29 passed, 0 failed, 6 ignored; no AddressSanitizer report",
+    "asan_scope_limit": "the repo's focused ASan invocation sets detect_leaks=0, so this is an address-error result and not a leak result",
+    "asan_instrumentation_proof": "the test binary carried 516 __asan* symbols, so the green result reflects an instrumented build"
+  },
+  "lint_regression_closed": {
+    "defect": "cargo clippy --all-targets failed on an undocumented unsafe block at src/cms/cms_enc.rs:956",
+    "fix": "the dereference was hoisted into a documented binding stating the item is non-null, freshly constructed, and has its algorithm member initialised",
+    "not_a_fix": "no allow was added anywhere"
+  },
+  "test_fixture_defect_closed": {
+    "defect": "a cms_kari test stored a pointer into a temporary as the cipher provider field, so the pointer could outlive its referent",
+    "found_by": "the ASan pass over the new CMS tests",
+    "fix": "the assignment was removed"
+  },
+  "downstream_spot_check": {
+    "kmod": {"authority": "L7-functional", "candidate": "L7-functional", "workload": "modinfo parses a signed module PKCS#7 and rejects a corrupted signature"},
+    "dcmtk": {"authority": "L7-functional", "candidate": "L7-functional", "workload": "dcmsign CMS SignedData over a DICOM dataset with tampered-data and unrelated-CA controls"},
+    "identity": "libcrypto c6a15e47 / libssl abb3163f"
+  },
+  "cve_replay_status": {
+    "CVE-2026-63072": "UNKNOWN, deliberately not promoted: the candidate path is now drivable by unit tests but the replay's positive control needs a guard-page allocator the replay venue does not install, so its control never fires",
+    "cms_aead_2025_15467_class": "guarded by the validated AEAD parameter type added in cms_enc; no replay promotion claimed"
+  },
+  "retained": [
+    "the KEM sibling cms_kemri.rs still carries the old two-pass trust shape, so the class is not closed across all recipient types",
+    "a hostile provider that writes past its declared extent after reporting a smaller length is only detectable by a sanitizer or guard page",
+    "ec tag extent rests on the ABI contract",
+    "encode refuses a negative provider tag length, a deliberate divergence from the authority, unreachable through the crate's own accessor",
+    "no Miri, TSan, Loom or authority differential for this batch",
+    "independent review NOT_RUN"
+  ],
+  "non_claims": [
+    "These are FAST/BATCH results. BOUNDARY and SEAL remain NOT_RUN for this batch.",
+    "SAFE_COMPATIBLE remains 0/33; the closure engine refused the only closure attempted.",
+    "L7 is functional compatibility evidence, not a safety or cryptographic result."
+  ]
+}
