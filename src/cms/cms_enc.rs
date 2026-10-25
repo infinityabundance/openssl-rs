@@ -952,8 +952,11 @@ mod tests {
         let ec =
             unsafe { m_asn1_new(cms_encryptedcontentinfo_it()) }.cast::<CmsEncryptedContentInfo>();
         assert!(!ec.is_null(), "the content-info allocation succeeds");
+        // SAFETY: `ec` is non-null and points at the freshly constructed item above; its
+        // algorithm member is initialised by that constructor.
+        let algorithm = unsafe { (*ec).content_encryption_algorithm };
         assert!(
-            !unsafe { (*ec).content_encryption_algorithm }.is_null(),
+            !algorithm.is_null(),
             "the item allocation includes the algorithm member"
         );
         ec
