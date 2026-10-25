@@ -36337,3 +36337,38 @@ temporary buffer before the regrow, and uses that temporary for both the `memcpy
 documented success instead of the authority's UB. This is an `AGENTS.md` §17 elimination of UB in
 the authority. Witness: `ssl::ssl_rsa::adv_probe::self_aliasing_serverinfo_is_teed_before_realloc`.
 
+## D565 -- the remaining engine init bits are accepted, because the authority answers 1
+
+**Decision.** Remove the last option-refusal mask from `src/runtime/init.rs` and take
+`OPENSSL_INIT_ENGINE_RDRAND`, `_OPENSSL`, `_CRYPTODEV`, `_PADLOCK`, `_CAPI` and `_AFALG` off it.
+`OPENSSL_init_crypto` now runs the authority's engine steps in the authority's order
+(`crypto/init.c:652-682`): only `engine_dynamic` has a loader in this crate; the other steps are
+successful no-ops. When `OPENSSL_INIT_ENGINE_ALL_BUILTIN` (or `_OPENSSL`/`_AFALG`, which it
+contains) is set, the crate also calls `ENGINE_register_all_complete()` at the authority's
+coordinate (`crypto/init.c:685-688`).
+
+**Why the refusal was wrong, and in which direction.** Every authority `ossl_init_engine_*` body
+returns 1 unconditionally; none of them can fail `OPENSSL_init_crypto`, and none of them raises.
+The crate's refusal therefore reported a failure the authority does not have. A new test,
+`init_engine_all_builtin_with_load_config_succeeds_like_the_authority`, drives bind9's exact call
+(`lib/isc/tls.c:88`, `OPENSSL_init_ssl(ENGINE_ALL_BUILTIN | LOAD_CONFIG, NULL)`) and measured
+`0` before this decision. That failure aborted bind9's configuration test under the candidate
+only; the authority returned 1.
+
+**The contents divergence is kept and named.** This crate does not implement the `openssl`,
+`rdrand` or platform engine loaders, so those steps register nothing and a caller that looks one
+of those engines up by id still observes the difference. That is a contents divergence: the
+return value, the error queue and the accepted bit now all match the authority. It is recorded
+here and in `src/engine/eng_all.rs` rather than converted back into a fabricated init failure.
+
+**`LOAD_CONFIG` is unchanged and now guarded.** The config step already answers 1 for a missing
+file: `DEFAULT_CONF_MFLAGS` carries `CONF_MFLAGS_IGNORE_MISSING_FILE`, and `def_load` maps the
+BIO's missing-file reason to `CONF_R_NO_SUCH_FILE`, which `CONF_modules_load_file_ex` accepts.
+`init_load_config_succeeds_when_the_file_is_missing` fixes that behaviour in a test so a later
+change cannot make bind9's second bit fail instead of its first.
+
+**The unit test that encoded the old decision is rewritten rather than deleted.**
+`unsupported_options_fail_with_init_fail_and_do_not_get_recorded` became
+`the_remaining_engine_bits_are_accepted_and_raise_nothing`, which asserts `1`, an empty queue and
+fast-path recording for every bit including the union.
+
