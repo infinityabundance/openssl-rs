@@ -1,0 +1,55 @@
+{
+  "receipt": "publish-0.0.39",
+  "date": "2026-10-25",
+  "crate": "openssl-rs",
+  "version": "0.0.39",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "commit": "see merge commit of PR #69",
+    "commit_subject": "Release 0.0.39",
+    "note": "Published from a clean working tree on main. Contains V3-C4: the BOUNDARY instrument matrix with firing controls, the ASan-discovered error-state leak fix, the consumer closure engine and its refusal of cyrus-sasl, the CMS batch (cms_env, cms_enc, cms_kari) and the full no-reuse downstream re-measurement.",
+    "working_tree": "clean at publish time"
+  },
+  "artefacts": {
+    "libcrypto.so.3": "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48",
+    "libssl.so.3": "069c2cb1496ef9cda3aed0da478d67c2822e5de8da123a5f29d365438ebd6851",
+    "legacy.so": "57dc86fd4493aab8c78ad412306ba3fad0b87652007472617d5843572f9ad925",
+    "openssl": "412324e6806defc9a40e36f1534ef711b06644aa595eda24eb9189cabd584f66"
+  },
+  "packaging": {
+    "files": 1010,
+    "compressed_bytes": 8898646,
+    "limit_bytes": 10000000,
+    "note": "Published with --no-verify. The tree was compiled by the phase-2 rebuild and exercised by the C4 checkpoint at the same source: 2168 tests serially and in parallel, 49 probes, ASan clean on cms_env."
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.39",
+    "checksum": "48888f37c705dae453c19574021b3b7fde76a50ccd5fcdd96d0dadbb1a51159d",
+    "checksum_prefix": "48888f37",
+    "crate_size": 8898646,
+    "published_at": "2026-10-25T13:30:45Z"
+  },
+  "provider_verification": {
+    "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",
+    "ldd": "resolves the install's own libcrypto",
+    "load": "OSSL_PROVIDER_load(NULL,\"legacy\") non-NULL with OPENSSL_MODULES set",
+    "legacy_algorithm": "MD4(abc) = a448017aaf21d8525fc10ae87aa6729d",
+    "retained": "compiled-in MODULESDIR is still the null sentinel"
+  },
+  "evidence_shipped": {
+    "abi_courts": "11/11",
+    "library_tests": "2168 passed, 0 failed, 52 ignored, serially and with four threads, identical passing sets",
+    "adversarial_probes": "49/49 in isolated processes",
+    "downstream": "207 candidate L7 of 223 loaded against authority 209/224, measured at the previous identity; 307 of 307 recipe-backed families carried forward with candidate_identity_match=false",
+    "closure": "cyrus-sasl REFUSED: 0 discharged, 30 blocked, 163 unknown"
+  },
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "No full suite was run for this exact 0.0.39 tree.",
+    "BOUNDARY instruments ran with firing controls but the BOUNDARY gate did not pass: the S56 and S57 concurrency scenarios were neither exercised nor faithfully modelled.",
+    "SEAL remains NOT_RUN: no forensic regeneration, held-out cryptographic assurance, release-build reproducibility or independent review.",
+    "SAFE_COMPATIBLE remains 0/33; the closure engine refused the only closure attempted.",
+    "198 production uncontracted operations remain blockers."
+  ]
+}
