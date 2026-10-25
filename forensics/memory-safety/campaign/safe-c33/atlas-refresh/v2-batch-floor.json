@@ -1,0 +1,147 @@
+{
+  "schema": "safe-c33/atlas-refresh/v2-batch-floor/v1",
+  "receipt": "V2-BATCH-FLOOR",
+  "subphase": "V2: establish a fresh BATCH functional floor at the frozen identity",
+  "date": "2026-10-25",
+  "supersedes": [
+    "the 2148/0/45 parallel figure recorded in test-baseline.json (S58 source identity, predates S60-S66; no full library run existed after S58)",
+    "the 41/41 adversarial-probe figure (the probe array now contains 42 probes)"
+  ],
+  "branch": "integrate/safe-c33",
+  "source_head": "109608602358de524e101e0308df92a4f1ef91e2",
+  "source_head_short": "109608602",
+  "source_head_subject": "Merge stage/p25/v2a-clippy",
+  "crate_version": "0.0.38",
+  "frozen_identity": {
+    "head_before": "109608602358de524e101e0308df92a4f1ef91e2",
+    "head_after": "109608602358de524e101e0308df92a4f1ef91e2",
+    "worktree_before": "clean",
+    "worktree_after": "clean",
+    "note": "No source file was edited in this subphase. The phase-2 court run regenerates artifacts/phase2/COURTS.json and artifacts/phase2/courts/*; git status is clean afterwards, so the regenerated artifacts are byte-identical to the committed ones at this identity."
+  },
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court:1 / openssl-rs-court (docker/openssl-rs-court.sh exec)",
+    "docker_changed": false,
+    "oom_guard": "One heavy command at a time; CARGO_BUILD_JOBS=4; CARGO_TARGET_DIR=/work/court/target; TMPDIR=/work/court/tmp. Host/container memory checked before starting.",
+    "host_memory_at_start": {
+      "MemTotal_kB": 131565232,
+      "MemAvailable_kB": 53926820,
+      "container_rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "container_cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+      "decision": "proceed"
+    },
+    "command_prefix": "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin && export TMPDIR=/work/court/tmp && export CARGO_BUILD_JOBS=4 && export CARGO_TARGET_DIR=/work/court/target && <cmd>'"
+  },
+  "gates": {
+    "1_fmt": {
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0,
+      "summary_line": "FMT_EXIT=0",
+      "output_tail": "FMT_EXIT=0"
+    },
+    "2_clippy": {
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "exit_code": 0,
+      "output_tail": "Compiling openssl-rs v0.0.38 (/work)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 17.56s\nCLIPPY_PIPE_EXIT=0",
+      "warnings": 0
+    },
+    "3_library_tests_parallel": {
+      "command": "cargo test --lib -- --test-threads=4",
+      "exit_code": 0,
+      "summary_line": "test result: ok. 2151 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 157.26s",
+      "output_tail": "test x509::x509_vfy::tests::the_error_is_published_before_the_callback_runs ... ok\n\ntest result: ok. 2151 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 157.26s\n\nPARALLEL_PIPE_EXIT=0",
+      "counts": { "passed": 2151, "failed": 0, "ignored": 45, "measured": 0, "filtered_out": 0 }
+    },
+    "4_library_tests_serial": {
+      "command": "cargo test --lib -- --test-threads=1",
+      "exit_code": 0,
+      "summary_line": "test result: ok. 2151 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 301.31s",
+      "output_tail": "test x509::x_req::tests::a_blank_request_has_the_authoritys_defaults ... ok\ntest x509::x_x509::tests::a_blank_certificate_has_the_authoritys_defaults ... ok\n\ntest result: ok. 2151 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 301.31s\n\nSERIAL_PIPE_EXIT=0",
+      "counts": { "passed": 2151, "failed": 0, "ignored": 45, "measured": 0, "filtered_out": 0 }
+    },
+    "5_adversarial_probes": {
+      "command": "bash scripts/adv-probe.sh",
+      "exit_code": 0,
+      "isolation_preserved": "scripts/adv-probe.sh runs one separate cargo invocation per probe with --ignored --exact <probe> --test-threads=1 and requires exactly `1 passed` in each invocation.",
+      "summary_line": "adv-probe: all 42 probes passed",
+      "probes_invoked": 42,
+      "probe_pass_lines": 42,
+      "probe_fail_lines": 0,
+      "output_tail": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2195 filtered out; finished in 0.00s\n\n--- PASS: provider::kdf::tests::adv_probe::password_kdf_width_guards_refuse_before_allocating\nadv-probe: all 42 probes passed\nADV_PIPE_EXIT=0"
+    },
+    "6_phase2_abi_courts": {
+      "command": "python3 forensics/tools/phase2_courts.py",
+      "exit_code": 0,
+      "courts_run": 11,
+      "courts_passed": 11,
+      "courts_failed": 0,
+      "all_pass": true,
+      "summary_line": "-> artifacts/phase2/COURTS.json all_pass=True",
+      "output_tail": "[phase2-courts] authority=openssl-3.6.4-production\n  ABI-SYMBOL                 pass\n  ABI-VERSION                pass\n  ABI-DYNAMIC                pass\n  ABI-LAYOUT                 pass\n  ABI-LINK                   pass\n  ABI-LOAD                   pass\n  ABI-CONSTANTS              pass\n  ABI-MATRIX                 pass\n  ABI-SUBSTITUTION           pass\n  ABI-INSTALL-LAYOUT         pass\n  libcrypto-contamination    pass\n  -> artifacts/phase2/COURTS.json all_pass=True\nPHASE2_EXIT=0",
+      "courts": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "artifact_effect": "artifacts/phase2/COURTS.json and artifacts/phase2/courts/* regenerated; git status clean (byte-identical to committed artifacts)."
+    }
+  },
+  "baseline_comparison": {
+    "previous_floor": {
+      "passed": 2151,
+      "failed": 0,
+      "ignored": 45,
+      "source": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v2a-clippy-gate.json (V2a, source_head 748c085e8)"
+    },
+    "current": {
+      "passed": 2151,
+      "failed": 0,
+      "ignored": 45
+    },
+    "delta": { "passed": 0, "failed": 0, "ignored": 0 },
+    "test_removed": false,
+    "test_newly_ignored": false,
+    "note": "No test was added, removed or newly ignored between V2a and this frozen identity. The AGENTS floor is 1962/42; this run is above it."
+  },
+  "serial_parallel_agreement": {
+    "agree": true,
+    "parallel": "2151 passed; 0 failed; 45 ignored",
+    "serial": "2151 passed; 0 failed; 45 ignored",
+    "note": "Identical pass/fail/ignore counts; serial total wall time 301.31s vs parallel 157.26s. No order- or concurrency-dependent difference observed."
+  },
+  "failures": [],
+  "not_run": [
+    {
+      "gate": "Miri / ASan / Loom / dudect / authority differential",
+      "status": "NOT_RUN",
+      "reason": "V2 establishes the functional BATCH floor only. Out of scope for this subphase; they belong to BOUNDARY/SEAL gates."
+    },
+    {
+      "gate": "forensic regeneration (Phase-25 seal)",
+      "status": "NOT_RUN",
+      "reason": "Full Phase-25 forensic regeneration is deferred to seal points per AGENTS.md §6."
+    },
+    {
+      "gate": "release build / downstream consumer courts (curl, nginx, OpenSSH, HAProxy, Redis)",
+      "status": "NOT_RUN",
+      "reason": "Not part of the V2 BATCH functional floor; SEAL-scope evidence."
+    }
+  ],
+  "claims_and_limits": {
+    "claimed": "A fresh BATCH functional floor at exact source identity 109608602: formatting, the configured -D warnings Clippy gate, parallel and serial library tests, all 42 adversarial probes, and all 11 phase-2 ABI courts pass.",
+    "not_claimed": "This is not a memory-safety, cryptographic, constant-time, Miri/ASan, downstream-compatibility or SEAL result. FAST/BATCH evidence never graduates a mechanism to SAFETY_DISCHARGED by itself.",
+    "stop_conditions": "None triggered: no failure, no serial/parallel disagreement, no artifact divergence, no test removed or newly ignored."
+  }
+}
