@@ -52,6 +52,7 @@
 #![allow(clippy::collapsible_match)]
 
 use core::ffi::c_int;
+use core::sync::atomic::Ordering;
 
 use crate::packet::{
     WPACKET_close, WPACKET_get_length, WPACKET_put_bytes_u16, WPACKET_put_bytes_u8,
@@ -3984,7 +3985,9 @@ unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
             (*s).session = dup;
             sess = dup;
         }
-        (*sess).time = crate::ssl::ssl_sess::time_now_secs();
+        (*sess)
+            .time
+            .store(crate::ssl::ssl_sess::time_now_secs(), Ordering::Relaxed);
         crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
         // Release any incumbent at the authority's own site; a duplicated session's member is
         // unset, so this is `CRYPTO_free`'s no-op (see `MemberBufSlot`).
@@ -4002,7 +4005,7 @@ unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
         crate::digest::sha2::SHA256(ticket.as_ptr(), ticklen, digest.as_mut_ptr());
         (*sess).session_id_length = 32;
         core::ptr::copy_nonoverlapping(digest.as_ptr(), (*sess).session_id.as_mut_ptr(), 32);
-        (*sess).not_resumable = 0;
+        (*sess).not_resumable.store(0, Ordering::Relaxed);
     }
     1
 }
@@ -4065,7 +4068,9 @@ pub(crate) unsafe fn tls13_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -
         crate::ssl::ssl_sess::SSL_SESSION_free(sess0);
         (*s).session = dup;
         let sess = dup;
-        (*sess).time = crate::ssl::ssl_sess::time_now_secs();
+        (*sess)
+            .time
+            .store(crate::ssl::ssl_sess::time_now_secs(), Ordering::Relaxed);
         crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
         // Release any incumbent at the authority's own site; the TLS1.3 session is a fresh duplicate
         // whose member is unset, so this is `CRYPTO_free`'s no-op (see `MemberBufSlot`).
@@ -4099,7 +4104,7 @@ pub(crate) unsafe fn tls13_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -
         crate::digest::sha2::SHA256(ticket.as_ptr(), ticklen, digest.as_mut_ptr());
         (*sess).session_id_length = 32;
         core::ptr::copy_nonoverlapping(digest.as_ptr(), (*sess).session_id.as_mut_ptr(), 32);
-        (*sess).not_resumable = 0;
+        (*sess).not_resumable.store(0, Ordering::Relaxed);
         // `ssl_update_cache(s, SSL_SESS_CACHE_CLIENT)` (`statem_clnt.c:2902`).
         crate::ssl::ssl_sess::ssl_update_cache(s, crate::ssl::ssl_sess::SSL_SESS_CACHE_CLIENT);
     }

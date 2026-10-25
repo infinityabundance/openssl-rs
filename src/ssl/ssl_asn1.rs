@@ -31,6 +31,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
+use core::sync::atomic::Ordering;
 
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::i2d::ASN1_item_i2d;
@@ -617,8 +618,8 @@ pub unsafe extern "C" fn i2d_SSL_SESSION(input: *const SslSession, pp: *mut *mut
             }
         }
 
-        as_.time = s.time as i64;
-        as_.timeout = s.timeout as i64;
+        as_.time = s.time.load(Ordering::Relaxed) as i64;
+        as_.timeout = s.timeout.load(Ordering::Relaxed) as i64;
         as_.verify_result = s.verify_result as i32;
         as_.peer = s.peer;
 
@@ -809,14 +810,16 @@ pub unsafe extern "C" fn d2i_SSL_SESSION_ex(
             (*ret).master_key_length = tmpl;
 
             if (*as_).time != 0 {
-                (*ret).time = (*as_).time as u64;
+                (*ret).time.store((*as_).time as u64, Ordering::Relaxed);
             } else {
-                (*ret).time = time_now_secs();
+                (*ret).time.store(time_now_secs(), Ordering::Relaxed);
             }
             if (*as_).timeout != 0 {
-                (*ret).timeout = (*as_).timeout as u64;
+                (*ret)
+                    .timeout
+                    .store((*as_).timeout as u64, Ordering::Relaxed);
             } else {
-                (*ret).timeout = 3;
+                (*ret).timeout.store(3, Ordering::Relaxed);
             }
             ssl_session_calculate_timeout(ret);
 
