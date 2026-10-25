@@ -2278,7 +2278,7 @@ fn unwrap_length_fits(reported: c_int, capacity: usize) -> bool {
 /// allocate a block the provider cannot legitimately overrun: the declared capacity and the
 /// allocation are the same number.
 #[inline]
-fn declared_update_extent(in_len: usize, block_size: c_int) -> Option<usize> {
+pub(crate) fn declared_update_extent(in_len: usize, block_size: c_int) -> Option<usize> {
     match block_size {
         b if b < 1 => None,
         1 => Some(in_len),
@@ -2295,7 +2295,7 @@ fn content_key_extent(in_len: usize) -> Option<usize> {
 /// Convert a provider-reported length into an accepted offset, or `None` when it exceeds the
 /// block that was actually allocated. A report is never trusted before this check.
 #[inline]
-fn reported_extent(reported: c_int, capacity: usize) -> Option<usize> {
+pub(crate) fn reported_extent(reported: c_int, capacity: usize) -> Option<usize> {
     unwrap_length_fits(reported, capacity).then_some(reported as usize)
 }
 
@@ -2307,28 +2307,28 @@ fn reported_extent(reported: c_int, capacity: usize) -> Option<usize> {
 /// allocation keeps the authority's `CRYPTO_*` seam event stream unchanged (there is still one
 /// seam allocation for the key, at the same size/`file`/`line`); `Drop` cleanses the whole extent
 /// because it held the unwrapped key (AGENTS.md §5).
-struct SecretScratch {
+pub(crate) struct SecretScratch {
     bytes: Vec<u8>,
 }
 
 impl SecretScratch {
     /// A zero-initialised block of `len` bytes, or `None` when the allocation is refused.
-    fn new(len: usize) -> Option<Self> {
+    pub(crate) fn new(len: usize) -> Option<Self> {
         let mut bytes = Vec::new();
         bytes.try_reserve_exact(len).ok()?;
         bytes.resize(len, 0);
         Some(Self { bytes })
     }
 
-    fn capacity(&self) -> usize {
+    pub(crate) fn capacity(&self) -> usize {
         self.bytes.len()
     }
 
-    fn as_mut_ptr(&mut self) -> *mut c_uchar {
+    pub(crate) fn as_mut_ptr(&mut self) -> *mut c_uchar {
         self.bytes.as_mut_ptr()
     }
 
-    fn as_ptr(&self) -> *const c_uchar {
+    pub(crate) fn as_ptr(&self) -> *const c_uchar {
         self.bytes.as_ptr()
     }
 }
