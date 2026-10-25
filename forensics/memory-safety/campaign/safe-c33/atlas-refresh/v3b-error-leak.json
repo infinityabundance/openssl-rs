@@ -1,0 +1,158 @@
+{
+  "schema": "safe-c33/atlas-refresh/v3b/v1",
+  "receipt": "V3B-ERROR-STATE-THREAD-EXIT-LEAK",
+  "subphase": "V3b: release the per-thread ERR_STATE buffers at thread exit",
+  "date": "2026-10-25",
+  "branch": "integrate/safe-c33",
+  "source_head": "31b6d1cbe",
+  "source_head_full": "31b6d1cbe",
+  "worktree": "dirty: src/runtime/err.rs, src/runtime/dso_shared.rs and this receipt; no commit, no push (subagent)",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court container via docker/openssl-rs-court.sh exec",
+    "docker_changed": false,
+    "note": "Every cargo invocation ran in the court container with CARGO_BUILD_JOBS=4, TMPDIR=/work/court/tmp. The host ran no cargo, rustc, test or project script. The host only ran `free -g` (44 GiB available before building) and the staging `git diff`."
+  },
+  "finding": {
+    "source": "V3 BOUNDARY instrument matrix (v3-boundary-instruments.json, ASan failures[1])",
+    "symptom": "LeakSanitizer: Direct leak of 84 byte(s) in 1 object(s); SUMMARY: AddressSanitizer: 84 byte(s) leaked in 1 allocation(s). The test's assertions all passed.",
+    "allocation_stack": "raise_site_dynamic_data (src/runtime/err.rs:1230) <- inner_evp_generic_fetch (src/evp/fetch.rs:1134) <- EVP_MD_fetch <- ssl_load_ciphers <- SSL_CTX_new_ex (src/ssl/ssl_lib.rs:3205)",
+    "note_on_path": "V3 named src/provider/fetch.rs:1134; the tree's file is src/evp/fetch.rs:1134. Same function (`inner_evp_generic_fetch`) and same call."
+  },
+  "what_was_leaked": {
+    "precise_object": "One per-slot owned data buffer: the 83-character fetch-failure message formatted by inner_evp_generic_fetch plus its NUL (84 bytes), allocated by message_copy -> slot_buf_alloc (CRYPTO_malloc at (NULL, 0)) and stored in the thread's ERR_STATE slot with ERR_TXT_MALLOCED | ERR_TXT_STRING.",
+    "state_that_owned_it": "The thread-local STATE (ERR_STATE) at src/runtime/err.rs. The ERR_STATE block itself is thread-local storage, not a heap allocation, so it is not an LSan object; the container Vec PENDING_RELEASES was empty at exit. The other two buffers of the same entry (err_file/err_func) had already been released by an ERR_clear_error on the path (clear frees debug strings but, with deall=false, keeps and truncates a MALLOCED data buffer), which is why exactly one 84-byte object remained.",
+    "root_cause": "STATE was `UnsafeCell<ErrState>`, which needs no drop, so `thread_local!` registered no destructor. Nothing ran the authority's per-thread ERR_STATE teardown when the thread ended, so buffers the ring still owned at exit were never handed to CRYPTO_free.",
+    "authority_behaviour_preserved": "The OpenSSL error queue is per-thread, bounded (15 usable slots in a 16-slot ring) and released when the thread ends. The fix restores the last element: the state's owned buffers are released at thread exit through the same seam and at the same err_local.h release coordinates; the state block itself is TLS and needs no release."
+  },
+  "fix": {
+    "files": [
+      "src/runtime/err.rs",
+      "src/runtime/dso_shared.rs"
+    ],
+    "mechanism": "Wrap the thread-local cell in `struct StateCell(UnsafeCell<ErrState>)` with a `Drop` that runs the authority's own `OSSL_ERR_STATE_free` opening move, `ErrState::clear_all(true)`. `thread_local!` now registers a destructor (const init with a Drop type uses std's EagerStorage path, which registers and runs the dtor). The enclosing block is deliberately not freed: it is the TLS object. `ERR_get_state` reaches the state through `s.0.get()`; its signature, the `#[repr(C)]` layout and the stable per-thread address are unchanged.",
+    "exactly_once": "Every release path NULLs the slot it released: clear()/clear_data() free and NULL err_data/err_file/err_func, OSSL_ERR_STATE_save() and save_to_mark() move pointers out and zero the thread state, and ERR_clear_error()/ERR_pop()/ERR_get_error() keep a MALLOCED data buffer but truncate it in place. A thread-exit clear therefore frees each block exactly once, and running it after any explicit clear frees only what the clear left owned. No path frees the same block twice.",
+    "reentrancy": "Slot releases go through dso_shared::crypto_free, which may run an application free hook. During StateCell::drop the TLS key is already in std's Destroyed state, so a hook that re-enters ERR observes ERR_get_state == NULL and with_state refuses; it can never form a second reference to the state being released. SlotStr::drop's borrow-flag check reads STATE_IN_USE (a no-Drop Cell that stays readable), which is false because no with_state frame can survive into TLS teardown; even the pathological queueing arm would be flushed by PENDING_RELEASES' own destructor, which is registered later and therefore runs earlier."
+  },
+  "regression_test": {
+    "name": "runtime::err::tests::err_thread_exit_releases_the_queued_data_buffer",
+    "location": "src/runtime/err.rs (test module)",
+    "method": "A spawned thread raises `raise_site_dynamic_data(EVP_FETCH_376, ...)`, reads the address of the owned data buffer from the live ERR_STATE (public repr(C) layout), and arms a test-only seam observer for that one address. A test-side thread-local reporter is initialized before the first ERR call, so its destructor runs after the state's (std's TLS destructors run LIFO); the main thread waits for that report and then asserts the exact address was passed to CRYPTO_free. Assertion is by address identity, not by counting releases in a window.",
+    "pre_fix_control": "With `StateCell::drop` temporarily made a no-op, the test fails: \"the per-thread error state must release the buffer at 0x... it still owned at thread exit\". With the destructor restored it passes. The experiment was reverted before the gates.",
+    "seam_hook": "src/runtime/dso_shared.rs: `note_free` now receives the released pointer under `#[cfg(test)]`; an AtomicUsize/AtomicBool pair records one armed address. No test-only code is compiled into a release build."
+  },
+  "asan": {
+    "toolchain": "nightly 1.101.0-nightly (12433c307 2026-10-24), `cargo +nightly test -Zbuild-std`, target x86_64-unknown-linux-gnu, CARGO_TARGET_DIR=/work/.asan-v3b, OPENSSL_RS_COURT_DATA=unlimited",
+    "build_command": "RUSTFLAGS='-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16' CC=/work/court/tmp/asan-cc ASAN_OPTIONS='detect_leaks=1:halt_on_error=1' cargo +nightly test -Zbuild-std --lib --target x86_64-unknown-linux-gnu --no-run",
+    "before": {
+      "command": "same build with StateCell::drop temporarily a no-op, filter ssl::ssl_lib::downstream_compat_tests::set1_groups_list_accepts_the_authority_grammar --exact --test-threads=1",
+      "test_result": "test ssl::ssl_lib::downstream_compat_tests::set1_groups_list_accepts_the_authority_grammar ... ok",
+      "leak_lines": [
+        "==113547==ERROR: LeakSanitizer: detected memory leaks",
+        "Direct leak of 84 byte(s) in 1 object(s) allocated from:",
+        "SUMMARY: AddressSanitizer: 84 byte(s) leaked in 1 allocation(s)."
+      ]
+    },
+    "after": {
+      "commands_and_results": [
+        {
+          "filter": "ssl::ssl_lib::downstream_compat_tests::set1_groups_list_accepts_the_authority_grammar",
+          "test_result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2196 filtered out; finished in 0.03s",
+          "leak_lines": "none (no LeakSanitizer/AddressSanitizer report)"
+        },
+        {
+          "filter": "ssl::ssl_sess::cache_lifecycle_tests::ssl_sess_lookup_uses_a_key_value_not_a_zeroed_session",
+          "test_result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2196 filtered out; finished in 0.03s",
+          "leak_lines": "none (no LeakSanitizer/AddressSanitizer report)"
+        },
+        {
+          "filter": "runtime::err::tests::err_thread_exit_releases_the_queued_data_buffer",
+          "test_result": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2196 filtered out; finished in 0.00s",
+          "leak_lines": "none (no LeakSanitizer/AddressSanitizer report)"
+        }
+      ]
+    },
+    "conclusion": "The reported 84-byte direct leak is gone on the SSL_CTX_new path and on the original repro test, the new regression test is clean under ASan, and no new leak was reported. Scope: three focused filters in one instrumented binary; this is not a full-suite LSan result."
+  },
+  "gates": {
+    "fmt": {
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0,
+      "output": "no diff"
+    },
+    "check_lib": {
+      "command": "cargo check --lib",
+      "exit_code": 0,
+      "output": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.30s"
+    },
+    "focused_err_tests": {
+      "command": "cargo test --lib runtime::err -- --test-threads=4",
+      "exit_code": 0,
+      "output": "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2175 filtered out; finished in 0.04s"
+    },
+    "library_tests": {
+      "command": "cargo test --lib -- --test-threads=4",
+      "exit_code": 0,
+      "output": "test result: ok. 2152 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 132.13s"
+    },
+    "clippy_all_targets": {
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "exit_code": 0,
+      "output": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.29s"
+    }
+  },
+  "test_count": {
+    "passed": 2152,
+    "failed": 0,
+    "ignored": 45,
+    "delta": "+1 test (the regression test); no test removed or newly ignored",
+    "note": "The AGENTS floor is 1962 passed / 42 ignored; the observed count has grown since, and the rule applied is no unexplained removals and no newly ignored tests."
+  },
+  "mechanism_accounting": {
+    "eliminated": [
+      "Thread-exit retention of every buffer the per-thread error ring still owns (the V3 84-byte data buffer and, symmetrically, any err_file/err_func buffer a raise leaves queued)."
+    ],
+    "relocated": [
+      "The teardown release runs through the existing `ErrState::clear_all(true)` / SlotStr release path at the existing err_local.h coordinates; it does not introduce a new allocation, free coordinate or release mechanism."
+    ],
+    "hidden": [],
+    "unsafe_ops": {
+      "added": "one expression in StateCell::drop (`(*self.0.get()).clear_all(true)`) with a SAFETY contract; no new unsafe fn and no new safe-looking constructor",
+      "removed": 0,
+      "note": "The test-only seam observer is safe code; note_free's pointer parameter is recorded, never dereferenced."
+    }
+  },
+  "structural_guards": {
+    "allocator_seam": "unchanged: no allocation size/file/line changed; releases reuse the existing err_local.h coordinates (25/92/94) and the block-release constant is not used by the TLS destructor because TLS owns the block",
+    "repr_c_layouts": "unchanged: ErrState and every packed field are untouched",
+    "exported_symbols": "unchanged: ERR_get_state has the same #[no_mangle] name and signature; no exported symbol added or removed",
+    "unsafe_lints": "unchanged: unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks and missing_safety_doc remain enforced; no allow added",
+    "bounded_queue": "unchanged: 16 slots, one gap, 15 usable; no index or eviction logic touched",
+    "error_codes_and_strings": "unchanged: no lib/reason code, site table or string registry change"
+  },
+  "obligations": {
+    "discharged": [
+      "The per-thread error state's thread-exit release obligation: every owned slot buffer now has exactly one release path and it runs at thread end.",
+      "The new unsafe expression carries an explicit validity contract; safe callers cannot cause UB through it."
+    ],
+    "retained": [
+      "StateCell::drop runs under no explicit borrow guard by construction: it cannot form a second reference because ERR_get_state answers NULL once the TLS key is Destroyed. This argument is documented at the Drop site and exercised by the new test, but not model-checked (no Miri run here).",
+      "Full-suite LSan/ASan, TSan, Miri and authority differentials were not run for this subphase."
+    ],
+    "newly_introduced": []
+  },
+  "not_established": [
+    "Not a full-suite leak result: ASan covered three focused lib tests only.",
+    "Not a SAFETY_DISCHARGED claim for the ERR mechanism as a whole and not a SAFE_COMPATIBLE claim for any consumer family.",
+    "The authority's exact free sequence at thread exit was preserved in kind (buffers released, block reclaimed by TLS); the seam's recorded file/line of the teardown releases is the existing err_local.h clear coordinates, not newly measured against the authority in this subphase.",
+    "No independent reviewer; this is a single-agent conversion plus its own evidence."
+  ],
+  "files_changed": [
+    "src/runtime/err.rs",
+    "src/runtime/dso_shared.rs",
+    "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v3b-error-leak.json"
+  ]
+}
