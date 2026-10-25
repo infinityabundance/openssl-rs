@@ -1,0 +1,105 @@
+{
+  "receipt": "c3-cms-kari",
+  "branch": "integrate/safe-c33",
+  "source_head": "922288d4d",
+  "worktree": true,
+  "date": "2026-10-25",
+  "verification_level": "FAST plus the full library suite and four focused allocator probes. One bounded mechanism change in cms_kari.rs: the KEK output is one owner with a capacity established before provider dispatch and a length validated against both the declared update extent and the authority's allocation; CMS_RecipientInfo_kari_decrypt has one publication point. No ABI/layout/export change and no allocator-seam size/file/line change. The cms_env.rs edit is visibility-only (C1 helpers reused, no behaviour change).",
+  "scope": "src/cms/cms_kari.rs: cms_kek_cipher, the new cipher_output helper, CipherOutput, CMS_RecipientInfo_kari_decrypt, the encryption arm's transfer, and DerivedKek's cleansing bound. src/cms/cms_env.rs: pub(crate) visibility for declared_update_extent, reported_extent and SecretScratch. Not a whole-file conversion.",
+  "files": [
+    "src/cms/cms_kari.rs",
+    "src/cms/cms_env.rs",
+    "scripts/adv-probe.sh"
+  ],
+  "mechanism": {
+    "id": "C3-CMS-KARI-OUTPUT",
+    "class": "HEAP_OOB_WRITE / content-key ownership / provider-length trust",
+    "trigger": "cms_kek_cipher queried an output length, allocated `max(outlen, inlen)` at cms_kari.c:235, then called EVP_CipherUpdate again. The provider arm of EVP_CipherUpdate declares `inlen + block_size` writable (exactly `inlen` for a one-byte block). For a decrypt-like query the allocation is `inlen` while the declared extent is `inlen + block_size`, so a provider may write past the block, including on its integrity-failure path where it writes and cleanses up to `inlen + block_size`. The second report was used as `ec->keylen` without any capacity check.",
+    "capacity_before_dispatch": [
+      "cipher_output establishes the declared update extent with declared_update_extent(in_len, EVP_CIPHER_CTX_get_block_size(ctx)) -- `in_len + block_size`, or `in_len` for a one-byte block -- exactly what EVP_CipherUpdate passes to cupdate. A frame-private SecretScratch of exactly that extent is allocated before the second dispatch, so the provider is told the truth about the block it can fill.",
+      "The authority's allocation is unchanged: `capacity = max(queried, in_len)` at cms_kari.c:235 (same size derivation, same file/line). The query report is first required to be non-negative.",
+      "The second report is accepted only through reported_extent(report, stage_capacity), then required to be <= capacity. A larger report is refused, never used as a copy offset or as a published length. This applies even when the cipher call returned success.",
+      "The failed-call path is covered by the same staging extent: a provider that writes and cleanses up to the declared extent before reporting failure writes into SecretScratch, not into the smaller authority block. Both owners cleanse on drop.",
+      "Malformed inputs are refused before any dispatch: in_len == 0, in_len > c_int::MAX, and a NULL input with a positive length."
+    ],
+    "owner_design": {
+      "helper": "CipherOutput { block: OwnedBuf, capacity, produced } is the whole output contract: the seam block's only owner, the authority's allocation extent, and the validated initialised prefix (`produced <= capacity`). It is not constructible with produced > capacity. The block is a cleansing-release OwnedBuf at cms_kari.c:235 (release NULL/0), so every failure before publication cleanses the whole allocation exactly once.",
+      "decrypt": "CMS_RecipientInfo_kari_decrypt holds the CipherOutput as the single owner from allocation to publication. After the content-info target is established (and checked non-NULL), CipherOutput::publish_into consumes it and performs the incumbent release, the store and the keylen assignment in one non-fallible step. The raw `adopt_plain_nullable` re-adoption at cms_kari.c:281 is gone; no raw pointer is published before that point, and an ec-NULL refusal drops the owner exactly once.",
+      "encrypt": "The same owner is consumed by into_raw_parts() once per rek and handed to ASN1_STRING_set0 with the validated length (<= the allocation, itself <= c_int::MAX).",
+      "kek": "DerivedKek::drop now bounds the cleansing write by the EVP_MAX_KEY_LENGTH buffer rather than by a provider-reported length, closing an over-report cleanse overrun."
+    }
+  },
+  "unsafe_before_after": {
+    "eliminated": [
+      "Production trust that the second EVP_CipherUpdate report fits the authority's allocation (it became ec->keylen and the extent OPENSSL_clear_free cleanses).",
+      "Direct provider writes into the `max(outlen,inlen)` authority block, which could be smaller than the declared update extent, including on the provider's failure path.",
+      "CMS_RecipientInfo_kari_decrypt's raw out-parameter handoff and the plain re-adoption of a helper block (two ownership states for one block).",
+      "The authority's unconditional `ec` dereference in the publication step (ec NULL is now refused).",
+      "A provider-reported derivation length enlarging DerivedKek's cleansing write past its 64-byte buffer."
+    ],
+    "relocated": [
+      "Provider writes are confined to SecretScratch and cipher_output, sharing the C1 (cms_env.rs) audited staging abstraction; its # Safety contract fixes the ctx, the declared stage extent, input readability and the c_int bound.",
+      "Publication is confined to CipherOutput::publish_into, whose # Safety contract fixes the target liveness and the single ownership transfer."
+    ],
+    "hidden": 0,
+    "new_unsafe_operations": [
+      "cipher_output's # Safety contract and its two provider calls (narrow, documented; callers establish the extent relations).",
+      "CipherOutput::publish_into's incumbent release and ec->key store (narrow, documented; the handle is the sole owner).",
+      "Test-only extern \"C\" fake provider callbacks (scripted_update, refusing_init); no production symbol."
+    ],
+    "removed_from_production": [
+      "OwnedBuf::adopt_plain_nullable in the KARI decrypt error path and the raw (pout, poutlen) pair."
+    ]
+  },
+  "preserved": {
+    "exported_symbols": "none added, removed or re-signed; no #[no_mangle] diff.",
+    "repr_c_layouts": "none changed.",
+    "allocator_seam": "same allocation size derivation and coordinates: `max(queried, in_len)` at cms_kari.c:235, cleansing release NULL/0. The added SecretScratch is a Rust allocation, not a CRYPTO_* event, so a caller-installed CRYPTO_set_mem_functions hook sees the same seam event stream on the normal paths.",
+    "error_reason_codes": "unchanged; cms_kek_cipher still reports failures through the existing return-value/err paths and callers' reason codes.",
+    "cleansing": "DerivedKek cleanses on every exit (now bounded); SecretScratch cleanses its whole staged extent; the seam block is cleansed on failure and later by cms_ec_cb at ec.keylen on publication."
+  },
+  "deviations": [
+    "An empty (inlen == 0) or NULL-input KEK operation is refused before dispatch. The authority would query or dispatch such a length; for key wrap it has no valid output and a provider may fault on a NULL input. Refusal is the safe deviation.",
+    "A successful provider report larger than the authority's allocation is refused rather than published; the authority would install it as ec->keylen. A provider that does not support the NULL-output length query and thus reports 0 on the first call is refused when its second report exceeds `in_len` (the authority would allocate `in_len` and overflow).",
+    "A NULL `ec` from ossl_cms_get0_env_enc_content is refused instead of dereferenced.",
+    "The helper-owned block's pre-publication failure release is its cleansing owner (capacity extent) rather than the authority's plain OPENSSL_free(cek) at cms_kari.c:281. The authority cannot reach that path with a non-NULL cek; the cleansing release is a safety improvement."
+  ],
+  "tests": {
+    "filtered": "cargo test --lib cms::cms_kari -- --test-threads=4: 6 passed / 0 failed / 4 ignored (2210 filtered).",
+    "new": [
+      "cms_kari_provider_reports_more_output_than_capacity ... ok",
+      "cms_kari_provider_output_length_disagreement_on_success ... ok",
+      "cms_kari_malformed_encrypted_key_lengths_are_refused ... ok",
+      "cms_kari_negative_control_pre_fix_undersized_output_is_detected ... ok"
+    ],
+    "ignored_probes_observed": [
+      "cms_kari_output_allocation_refusal_is_a_refused_operation ... ok (1 passed)",
+      "cms_kari_derivation_failure_releases_the_agreement_context_once_by_address ... ok (1 passed)",
+      "cms_kari_cipher_init_failure_releases_the_agreement_context_once_by_address ... ok (1 passed)",
+      "cms_kari_recipient_processing_failure_releases_the_incumbent_once_by_address ... ok (1 passed)"
+    ],
+    "negative_control": "cms_kari_negative_control_pre_fix_undersized_output_is_detected ... ok. It reconstructs the pre-fix pairing (declared extent `in_len + block_size` against the authority's `max(in_len - 8, in_len)` block), asserts declared > pre-fix capacity, and asserts the new detector reported_extent refuses the pre-fix report. Test-only; no production path reaches it.",
+    "probe_notes": "The cipher-init probe generates a real EC P-256 key pair and agreement context, so derivation succeeds and EVP_CipherInit_ex (a refusing fake legacy init) is the failing step; it asserts the agreement context is freed exactly once by address and the cipher context is reset in place, not freed. The recipient-processing probe enters through the exported CMS_RecipientInfo_kari_decrypt and asserts the incumbent content key is untouched by address and released exactly once by the container.",
+    "full_lib_threads4": "2168 passed / 0 failed / 52 ignored, 147.15 s."
+  },
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean.",
+    "check_lib": "cargo check --lib clean.",
+    "clippy_lib": "cargo clippy --lib -- -D warnings clean (finished, no warnings).",
+    "clippy_all_targets": "NOT_RUN successfully: `cargo clippy --all-targets -- -D warnings` stops on a pre-existing undocumented-unsafe-block in src/cms/cms_enc.rs:956 (a #[cfg(test)] item outside this batch). Our test code raises no diagnostics; `--lib` (the batch gate) is clean.",
+    "structural": "git diff contains no #[no_mangle], #[repr(C)] or exported-signature change; the only new extern \"C\" fns are test-local fake provider callbacks. The allocator-seam allocation remains `max(queried, in_len)` at cms_kari.c:235.",
+    "affected_probes": "The four cms_kari probes ran one per process under OPENSSL_RS_ADV_PROBE=1 and all passed. Miri/ASan/Loom/const-time were not run (no aliasing, concurrency or secret-dependent-control mechanism changed)."
+  },
+  "residuals": [
+    "The staged ciphertext/CEK duplicates the transient output (declared update extent alongside the authority allocation). It is a Rust allocation, so the CRYPTO_* seam event stream is unchanged on normal paths, and it is cleansed on drop.",
+    "A provider that ignores the declared output extent can still write past SecretScratch; that is undetectable without a guard-page/sanitizer instrument. The conforming-provider boundary now guarantees the buffer is at least the extent the provider was told.",
+    "Derivation and cipher-initialisation failures are exercised at the cms_kek_cipher helper boundary (the agreement context and reset guard are asserted by address); the exported decrypt entrypoint is exercised end-to-end for recipient-processing failure. Reaching derivation/cipher-init through the exported entrypoint needs a complete ECDH envelope fixture and is retained.",
+    "The KEM KARI sibling in cms_kemri.rs has the same two-pass output shape and was not in this target's scope. Its report is still trusted after success.",
+    "Miri/ASan/Loom and a differential allocator transcript against the authority were not run at this level (BATCH evidence only for the focused probes)."
+  ],
+  "non_claims": [
+    "This does not discharge the whole src/cms unsafe surface or any consumer family's dependency closure.",
+    "The provider boundary is sound against a conforming provider and detects over-reports; it is not a claim that a hostile in-process provider cannot corrupt memory through unrelated callbacks.",
+    "The ECDH envelope construction (cms_ec.rs / cms_dh.rs) and the KEM sibling are unchanged."
+  ]
+}
