@@ -942,6 +942,16 @@ unsafe fn get0_best_issuer_sk(
     let mut issuer: *mut X509 = ptr::null_mut();
     // SAFETY: `sk` is live per the contract.
     let num = unsafe { OPENSSL_sk_num(sk) };
+    if num > 0 {
+        // Publication edge for the unlocked `x->ex_flags` read below (S70). This is the same
+        // `X509` write lock the builder takes, not a second lock: if another thread completed the
+        // cache, this acquire/release orders the read after its release; if this thread is first,
+        // the build's own writes happen before the read. `get1_best_issuer_other_sk` reaches this
+        // helper with `no_dup != 0` and no earlier `check_issued` on `x`, so without this edge the
+        // read races a concurrent first build (`X509_STORE_CTX_set0_trusted_stack` path).
+        // SAFETY: `x` is live per the contract.
+        let _ = unsafe { ossl_x509v3_cache_extensions(x) };
+    }
     for i in 0..num {
         // SAFETY: `sk` is live and `i` is in range.
         let candidate = unsafe { OPENSSL_sk_value(sk, i) }.cast::<X509>();
@@ -5925,12 +5935,15 @@ mod tests {
     impl Drop for Chain {
         fn drop(&mut self) {
             // SAFETY: each pointer is this fixture's own reference. Every test frees its context
-            // before the fixture drops, so the context's up-refs are already released.
+            // before the fixture drops, so the context's up-refs are already released. The
+            // untrusted stack is the **sole** owner of the intermediate's reference: `OPENSSL_sk_push`
+            // does not up-ref, so `self.inter` is a borrow of that entry, not a second reference.
+            // Freeing it again here was a latent double free that TSan reports as a
+            // heap-use-after-free (the read of the freed refcount).
             unsafe {
                 OPENSSL_sk_pop_free(self.untrusted, Some(x509_free_void));
                 X509_STORE_free(self.store);
                 X509_free(self.leaf);
-                X509_free(self.inter);
                 X509_free(self.root);
                 EVP_PKEY_free(self.leaf_key);
                 EVP_PKEY_free(self.inter_key);
@@ -6426,6 +6439,212 @@ mod tests {
             X509_CRL_free(out);
             X509_CRL_free(base);
             X509_CRL_free(newer);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // S70: the extension cache published by one thread while `x509_vfy` reads it in others
+    // -----------------------------------------------------------------------------------------
+
+    /// S56's outstanding obligation, exercised on the production verify path rather than a model.
+    ///
+    /// A freshly built chain shares its `X509` objects across contexts. Every thread runs the real
+    /// `X509_verify_cert`, whose `build_chain` reads `ex_flags` in `get0_best_issuer_sk` and whose
+    /// `check_extensions` reads `ex_flags`/`altname`/`akid`/`skid`/`nc`/`crldp` unlocked, while one
+    /// of them performs the first `ossl_x509v3_cache_extensions` build under the `X509` write lock.
+    /// The test itself asserts only completion; TSan is the instrument that observes an unordered
+    /// access. Contexts are built single-threaded so the only shared mutable state under test is the
+    /// extension cache.
+    #[test]
+    fn s70_s56_concurrent_first_cache_build_with_x509_vfy_readers() {
+        const THREADS: usize = 8;
+        const CONTEXTS_PER_THREAD: usize = 12;
+        // SAFETY: the fixture owns every object; each context is used by exactly one thread and
+        // every context is freed after all threads have joined.
+        unsafe {
+            let chain = Chain::new((0, 86_400));
+            let total = THREADS * CONTEXTS_PER_THREAD;
+            let mut ctxs: Vec<usize> = Vec::with_capacity(total);
+            for _ in 0..total {
+                ctxs.push(chain.ctx() as usize);
+            }
+            let barrier = std::sync::Barrier::new(THREADS);
+            let barrier = &barrier;
+            std::thread::scope(|scope| {
+                for t in 0..THREADS {
+                    let chunk =
+                        ctxs[t * CONTEXTS_PER_THREAD..(t + 1) * CONTEXTS_PER_THREAD].to_vec();
+                    scope.spawn(move || {
+                        barrier.wait();
+                        for addr in chunk {
+                            // SAFETY: this thread owns `addr` for the duration of the call and the
+                            // context's store, certificate and untrusted-stack objects outlive it.
+                            X509_verify_cert(addr as *mut X509StoreCtx);
+                        }
+                    });
+                }
+            });
+            for addr in ctxs {
+                // SAFETY: every worker joined; each context is live and owned by this frame.
+                X509_STORE_CTX_free(addr as *mut X509StoreCtx);
+            }
+            drop(chain);
+        }
+    }
+
+    /// The one `x509_vfy` path that reads `ex_flags` **before** any cache build in the reading
+    /// thread: `get0_best_issuer_sk`'s duplicate check, reached from the public
+    /// `X509_STORE_CTX_get1_issuer` when the store lookup finds a same-subject candidate whose
+    /// `check_issued` then rejects it (a bogus CA sharing the issuer's name). Each reader owns its
+    /// own store and context so the only shared mutable object under test is the leaf's extension
+    /// cache; one writer performs the first build through `X509_check_purpose`.
+    #[test]
+    fn s70_s56_get_issuer_reads_ex_flags_before_the_first_build() {
+        const READERS: usize = 4;
+        const ITERS: usize = 20_000;
+        // SAFETY: the fixture owns every object; the leaf is read by every thread, each reader's
+        // store/context is private, and everything is released after the threads join.
+        unsafe {
+            let leaf_key = key();
+            let decoy_key = key();
+            let leaf = make_cert(c"leaf", c"inter", leaf_key, leaf_key, false, 0, 86_400, 11);
+            // A certificate with the issuer name the leaf expects but a different key, so the
+            // store lookup finds it and `check_issued` then rejects it. Put it in the **published
+            // invalid state**, which is exactly what the cache stores for a certificate whose
+            // extensions fail (`EXFLAG_SET | EXFLAG_INVALID`): `check_issued` then returns without
+            // building the *subject's* cache at all, which is the path that reads the leaf's
+            // `ex_flags` before any build in this thread.
+            let decoy = make_cert(
+                c"inter", c"inter", decoy_key, decoy_key, true, 0, 86_400, 12,
+            );
+            // `EXFLAG_SET` (0x100) | `EXFLAG_INVALID` (0x80) -- `include/openssl/x509v3.h:676`.
+            (*decoy).ex_flags = 0x100 | 0x80;
+            let mut stores: Vec<usize> = Vec::with_capacity(READERS);
+            let mut ctxs: Vec<usize> = Vec::with_capacity(READERS);
+            for _ in 0..READERS {
+                let store = X509_STORE_new();
+                assert!(!store.is_null());
+                assert_eq!(X509_STORE_add_cert(store, decoy), 1);
+                let ctx = X509_STORE_CTX_new();
+                assert!(!ctx.is_null());
+                assert_eq!(X509_STORE_CTX_init(ctx, store, leaf, ptr::null_mut()), 1);
+                stores.push(store as usize);
+                ctxs.push(ctx as usize);
+            }
+            let leaf_addr = leaf as usize;
+            let barrier = std::sync::Barrier::new(READERS + 1);
+            let barrier = &barrier;
+            let ctxs = &ctxs;
+            std::thread::scope(|scope| {
+                scope.spawn(move || {
+                    let leaf = leaf_addr as *mut X509;
+                    barrier.wait();
+                    for _ in 0..ITERS {
+                        // SAFETY: `leaf` is live and shared read-only by this contract.
+                        X509_check_purpose(leaf, -1, 0);
+                    }
+                });
+                for ctx_addr in ctxs {
+                    scope.spawn(move || {
+                        let ctx = *ctx_addr as *mut X509StoreCtx;
+                        let leaf = leaf_addr as *mut X509;
+                        barrier.wait();
+                        for _ in 0..ITERS {
+                            let mut issuer: *mut X509 = ptr::null_mut();
+                            // SAFETY: `ctx` is this reader's own; `leaf` is live; the returned
+                            // issuer reference (if any) is released here.
+                            let got = X509_STORE_CTX_get1_issuer(&raw mut issuer, ctx, leaf);
+                            if got == 1 && !issuer.is_null() {
+                                X509_free(issuer);
+                            }
+                        }
+                    });
+                }
+            });
+            for ctx in ctxs.iter() {
+                // SAFETY: every reader joined; `ctx` is live and owned here.
+                X509_STORE_CTX_free(*ctx as *mut X509StoreCtx);
+            }
+            for store in stores {
+                // SAFETY: every context is gone, so each store's reference is the only one here.
+                X509_STORE_free(store as *mut X509Store);
+            }
+            X509_free(leaf);
+            X509_free(decoy);
+            EVP_PKEY_free(leaf_key);
+            EVP_PKEY_free(decoy_key);
+        }
+    }
+
+    /// The reachable pre-build read: an application-supplied trusted stack installs
+    /// `get1_best_issuer_other_sk`, which calls `get0_best_issuer_sk` with `no_dup != 0` and so
+    /// evaluates `x->ex_flags` **before** any `check_issued` builds the leaf's cache. Each reader
+    /// runs the real `X509_verify_cert` with no untrusted chain (the trusted-first path), and one
+    /// writer performs the first cache build through `X509_check_purpose`.
+    #[test]
+    fn s70_s56_trusted_stack_reads_ex_flags_before_the_first_build() {
+        const READERS: usize = 4;
+        const ITERS: usize = 20_000;
+        // SAFETY: the fixture owns every object; the leaf and trusted stack are read by every
+        // thread, each reader's context is private, and everything is released after the join.
+        unsafe {
+            let leaf_key = key();
+            let decoy_key = key();
+            let leaf = make_cert(c"leaf", c"inter", leaf_key, leaf_key, false, 0, 86_400, 21);
+            let decoy = make_cert(
+                c"inter", c"inter", decoy_key, decoy_key, true, 0, 86_400, 22,
+            );
+            let trusted = OPENSSL_sk_new_null();
+            assert!(!trusted.is_null());
+            assert_eq!(OPENSSL_sk_push(trusted, decoy.cast()), 1);
+            let store = X509_STORE_new();
+            assert!(!store.is_null());
+            let mut ctxs: Vec<usize> = Vec::with_capacity(READERS);
+            for _ in 0..READERS {
+                let ctx = X509_STORE_CTX_new();
+                assert!(!ctx.is_null());
+                assert_eq!(X509_STORE_CTX_init(ctx, store, leaf, ptr::null_mut()), 1);
+                // The stack is borrowed: its ownership stays with this frame.
+                X509_STORE_CTX_set0_trusted_stack(ctx, trusted);
+                ctxs.push(ctx as usize);
+            }
+            let leaf_addr = leaf as usize;
+            let barrier = std::sync::Barrier::new(READERS + 1);
+            let barrier = &barrier;
+            let ctxs = &ctxs;
+            std::thread::scope(|scope| {
+                scope.spawn(move || {
+                    let leaf = leaf_addr as *mut X509;
+                    barrier.wait();
+                    for _ in 0..ITERS {
+                        // SAFETY: `leaf` is live and shared read-only by this contract.
+                        X509_check_purpose(leaf, -1, 0);
+                    }
+                });
+                for ctx_addr in ctxs {
+                    scope.spawn(move || {
+                        let ctx = *ctx_addr as *mut X509StoreCtx;
+                        barrier.wait();
+                        for _ in 0..ITERS {
+                            // SAFETY: `ctx` is this reader's own and every object it borrows is
+                            // live for the scope.
+                            X509_verify_cert(ctx);
+                        }
+                    });
+                }
+            });
+            for ctx in ctxs.iter() {
+                // SAFETY: every reader joined; `ctx` is live and owned here.
+                X509_STORE_CTX_free(*ctx as *mut X509StoreCtx);
+            }
+            // SAFETY: every context is gone; the store and stack are this frame's. The trusted
+            // stack is the **sole** owner of the decoy's reference (`OPENSSL_sk_push` does not
+            // up-ref), so `pop_free` releases it and it must not be freed again here.
+            X509_STORE_free(store);
+            OPENSSL_sk_pop_free(trusted, Some(x509_free_void));
+            X509_free(leaf);
+            EVP_PKEY_free(leaf_key);
+            EVP_PKEY_free(decoy_key);
         }
     }
 }

@@ -17,6 +17,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_void};
+use core::sync::atomic::Ordering;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::bss_file::BIO_s_file;
@@ -183,16 +184,15 @@ pub unsafe extern "C" fn SSL_SESSION_print(bp: *mut Bio, x: *const SslSession) -
                     return 0;
                 }
             }
-            if s.time != 0 && BIO_printf(bp, c"\n    Start Time: %lld".as_ptr(), s.time as i64) <= 0
+            let start_time = s.time.load(Ordering::Relaxed);
+            if start_time != 0
+                && BIO_printf(bp, c"\n    Start Time: %lld".as_ptr(), start_time as i64) <= 0
             {
                 return 0;
             }
-            if s.timeout != 0
-                && BIO_printf(
-                    bp,
-                    c"\n    Timeout   : %lld (sec)".as_ptr(),
-                    s.timeout as i64,
-                ) <= 0
+            let timeout = s.timeout.load(Ordering::Relaxed);
+            if timeout != 0
+                && BIO_printf(bp, c"\n    Timeout   : %lld (sec)".as_ptr(), timeout as i64) <= 0
             {
                 return 0;
             }
