@@ -3,9 +3,9 @@
   "kind": "safe-c33-campaign-status",
   "generated_date": "2026-10-25",
   "branch": "integrate/safe-c33",
-  "source_head": "73f786410",
-  "source_head_subject": "Merge stage/p25/charybdis",
-  "source_head_note": "S62 release preparation on top of 73f786410. The source tree now includes S16-S61: the earlier mechanism and downstream work, the S39-S41 boundary conversions, the S44-S46 downstream/distribution work, the S48/S55 releases, the S49-S53 ownership and corpus wave, S54 documentation reconciliation, and the S56-S61 conversion/measurement batch. S56 rebuilt X.509 extension-cache ownership in src/x509/v3_purp.rs around CacheBuild/CacheValue and one publication point (v3_purp unsafe blocks 276 -> 207), preserved the CVE-2026-35189 lazy-CRLDP repair, and closed a previously leaked cache teardown. S57 gave the internal session cache one structural reference owner (SessionRef) and replaced the zeroed-session lookup probe with SessionKey; it records reference lifetime as established but data-race freedom as NOT established. S58 made the peer/shared signature-algorithm lists single-owner (OwnedSigalgs/SigalgsSlot), made the (ptr,len) fields private, and ran the last full library suite: 2148 passed / 0 failed / 45 ignored. S59 re-measured every loaded family with no reuse and preserved 198/198 L7 with zero candidate-only drops. S60 admitted 30 further corpus families: 307 recipes, 221 loaded, 205 L7, 693 no recipe, and exposed a candidate-only charybdis TLS handshake failure. S61 reproduced and repaired that failure in the default security callback's SSL_SECOP_VERSION floor: candidate functional 206, authority 205, below_baseline 0. S62 bumps the tree to 0.0.38, rebuilds the Phase-2 install from this exact source, rebinds the runtime atlas while carrying every measured row (including charybdis) forward, and updates the documentation. The published release is now 0.0.38 (checksum fc5cbc4e, artefact libcrypto b56ac6bf / libssl e0c9ba33); 0.0.37 remains the previous release. The pinned census remains c09eef8b; S56-S58 and S61 edited existing PARTIAL files without adding a src/*.rs file, so the 877-file delta is unchanged and no full census regeneration is claimed.",
+  "source_head": "6860a3049",
+  "source_head_subject": "Merge pull request #68 from infinityabundance/integrate/safe-c33",
+  "source_head_note": "S62 release preparation on top of 73f786410. The source tree now includes S16-S61: the earlier mechanism and downstream work, the S39-S41 boundary conversions, the S44-S46 downstream/distribution work, the S48/S55 releases, the S49-S53 ownership and corpus wave, S54 documentation reconciliation, and the S56-S61 conversion/measurement batch. S56 rebuilt X.509 extension-cache ownership in src/x509/v3_purp.rs around CacheBuild/CacheValue and one publication point (v3_purp unsafe blocks 276 -> 207), preserved the CVE-2026-35189 lazy-CRLDP repair, and closed a previously leaked cache teardown. S57 gave the internal session cache one structural reference owner (SessionRef) and replaced the zeroed-session lookup probe with SessionKey; it records reference lifetime as established but data-race freedom as NOT established. S58 made the peer/shared signature-algorithm lists single-owner (OwnedSigalgs/SigalgsSlot), made the (ptr,len) fields private, and ran the last full library suite: 2148 passed / 0 failed / 45 ignored. S59 re-measured every loaded family with no reuse and preserved 198/198 L7 with zero candidate-only drops. S60 admitted 30 further corpus families: 307 recipes, 221 loaded, 205 L7, 693 no recipe, and exposed a candidate-only charybdis TLS handshake failure. S61 reproduced and repaired that failure in the default security callback's SSL_SECOP_VERSION floor: candidate functional 206, authority 205, below_baseline 0. S62 bumps the tree to 0.0.38, rebuilds the Phase-2 install from this exact source, rebinds the runtime atlas while carrying every measured row (including charybdis) forward, and updates the documentation. The published release is now 0.0.38 (checksum fc5cbc4e, artefact libcrypto b56ac6bf / libssl e0c9ba33); 0.0.37 remains the previous release. The pinned census remains c09eef8b; S56-S58 and S61 edited existing PARTIAL files without adding a src/*.rs file, so the 877-file delta is unchanged and no full census regeneration is claimed. S67 (2026-10-25) prepares 0.0.39 on top of 6860a3049: a crate version bump, a Phase-2 rebuild from that exact source (libcrypto eb0d7c03 / libssl 069c2cb1, legacy.so 57dc86fd, openssl 412324e6), 11/11 ABI courts, the legacy-provider RUNPATH/load/MD4 proof, an atlas identity rebind carrying every measured row forward, and documentation regeneration. 0.0.39 is NOT published; 0.0.38 (checksum fc5cbc4e, libcrypto b56ac6bf / libssl e0c9ba33) remains the published release and does not contain the V3-C4 work.",
   "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
   "census": {
     "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
@@ -640,19 +640,19 @@
       "failed": 0,
       "ignored": 45,
       "total": 2193,
-      "source": "S58 BATCH: cargo test --lib -- --test-threads=4 (147.17s) on the S58 working tree (90107ceda plus the five-file sigalg change, committed as 7bdc53d83 and merged at aeeb5a83a). This is the latest full library run.",
+      "source": "S58 BATCH: cargo test --lib -- --test-threads=4 (147.17s) on the S58 working tree (90107ceda plus the five-file sigalg change, committed as 7bdc53d83 and merged at aeeb5a83a). This is the committed full-suite baseline in atlas-refresh/test-baseline.json. The later CMS checkpoint records 2168 passed / 0 failed / 52 ignored (parallel and serial) in atlas-refresh/c4-cms-checkpoint.json; S67 did not re-run or promote it.",
       "parallel": "2148 passed; 0 failed; 45 ignored",
       "serial": "NOT_RUN in S58; the S21 serial run remains the last serial full-run record",
       "ignored_note": "The 45 ignored tests are probes run separately by design; no test was newly ignored and none was removed.",
-      "source_tree_note": "FLOOR FOR THE CURRENT 0.0.38 TREE: S58 is the latest full run, and S59-S61 later changed no src/ in S59/S60 but S61 did change src/ssl/ssl_lib.rs and src/ssl/statem/statem_lib.rs (test-only) and statem_srvr.rs (test-only). S62 changed only the crate version and rebuilt. No full library run exists after S58, so 2148 is a floor, not the current total; atlas-refresh/test-baseline.json records the S58 run."
+      "source_tree_note": "FLOOR FOR THE CURRENT 0.0.39 TREE: S58 is the committed baseline, and S59-S61 later changed no src/ in S59/S60 but S61 did change src/ssl/ssl_lib.rs and src/ssl/statem/statem_lib.rs (test-only) and statem_srvr.rs (test-only). S62 and S67 changed only the crate version and rebuilt. The later V3-C4 batch changed src/ in its error-leak and CMS arms and records a 2168/0/52 full run in atlas-refresh/c4-cms-checkpoint.json, which S67 did not re-run or promote. No full library run exists for the 0.0.39 tree, so 2148 remains the committed baseline floor; atlas-refresh/test-baseline.json records the S58 run."
     },
     "phase2_abi_courts": {
       "courts_total": 11,
       "passed": 11,
       "all_pass": true,
       "artifact": "artifacts/phase2/COURTS.json",
-      "source": "S62 rebuilt the Phase-2 install from the exact 0.0.38 source and re-ran the Phase-2 ABI courts; 11/11 pass including ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT and libcrypto-contamination. S61 had also run 11/11 at the previous install.",
-      "candidate_identity": "libcrypto b56ac6bf / libssl e0c9ba33"
+      "source": "S67 rebuilt the Phase-2 install from the exact 0.0.39 source and re-ran the Phase-2 ABI courts; 11/11 pass including ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT and libcrypto-contamination. S62 had also run 11/11 at the 0.0.38 install.",
+      "candidate_identity": "libcrypto eb0d7c03 / libssl 069c2cb1"
     },
     "boundary_gate": {
       "state": "NOT_RUN",
@@ -670,14 +670,14 @@
       "source": "M89 receipt"
     },
     "this_batch": {
-      "batch": "S56-S62: the X.509 extension-cache rebuild, the session-cache reference/key ownership, the single-owner peer sigalgs, the S59 no-reuse re-measurement, the S60 corpus batch, the S61 charybdis security-level repair, and the S62 0.0.38 release preparation",
+      "batch": "S56-S62: the X.509 extension-cache rebuild, the session-cache reference/key ownership, the single-owner peer sigalgs, the S59 no-reuse re-measurement, the S60 corpus batch, the S61 charybdis security-level repair, and the S62 0.0.38 release preparation; S67 prepares 0.0.39 (version bump, rebuild, identity rebind, documentation; no src/ change)",
       "rust_source_changed": true,
       "cargo_fmt": "S56/S57/S58/S61 FAST: cargo fmt clean; S59/S60/S62 changed no Rust source and ran no fmt",
       "cargo_check": "S56/S57/S58/S61 FAST: cargo check --lib clean; S59/S60/S62 changed no Rust source",
       "adversarial_probes": "41/41 recorded in S24; NOT_RUN in S39-S61",
-      "full_library_suite": "S58 ran the latest full suite: 2148 passed / 0 failed / 45 ignored (7bdc53d83, merged aeeb5a83a). It predates S61's src/ edits and is a floor for the 0.0.38 tree; no full run exists for S59-S62.",
-      "docs": "S62: CAMPAIGN-STATUS.json updated through S61; render_docs.py --write; render_docs.py --check clean after regeneration; render_status.py executed. S54 performed the previous documentation pass.",
-      "release_readiness": "0.0.38 IS published (crates.io 2026-10-25T02:02:36Z, checksum fc5cbc4e57dde48d5df3f634a7be374c1adbdc085a9525fadb91de8e70b3fb71, 8876806 bytes, 1010 files) from a clean tree at a4e511865 with libcrypto b56ac6bf / libssl e0c9ba33. That artefact contains S49-S61. 0.0.37 remains the previous release and contains S49-S54 but NOT S56-S61. Publishing added no assurance: BOUNDARY and SEAL remain NOT_RUN and SAFE_COMPATIBLE remains 0/33.",
+      "full_library_suite": "S58 is the committed full-suite baseline: 2148 passed / 0 failed / 45 ignored (7bdc53d83, merged aeeb5a83a). It predates S61's src/ edits and the V3-C4 batch and is a floor for the 0.0.39 tree. The later CMS checkpoint records 2168/0/52 in atlas-refresh/c4-cms-checkpoint.json; S67 did not re-run or promote it, so no full run exists for the 0.0.39 tree.",
+      "docs": "S67: CAMPAIGN-STATUS.json identity/release fields updated; render_docs.py --write; render_docs.py --check clean after regeneration; render_status.py executed. S62 performed the previous documentation pass.",
+      "release_readiness": "0.0.39 is NOT published. The working tree is 0.0.39 (Cargo.toml and the openssl-rs Cargo.lock entry), rebuilt from 6860a3049 with libcrypto eb0d7c03 / libssl 069c2cb1 / legacy.so 57dc86fd / openssl 412324e6; 11/11 ABI courts pass, legacy.so carries RUNPATH $ORIGIN/.. and resolves the install libcrypto, and the legacy provider loads under OPENSSL_MODULES with MD4(abc)=a448017aaf21d8525fc10ae87aa6729d. The published release remains 0.0.38 (crates.io 2026-10-25T02:02:36Z, checksum fc5cbc4e57dde48d5df3f634a7be374c1adbdc085a9525fadb91de8e70b3fb71, 8876806 bytes, 1010 files) from a4e511865 with libcrypto b56ac6bf / libssl e0c9ba33; it contains S49-S61 but NOT the V3-C4 work. 0.0.37 is the release before it and does not contain S56-S61. Publishing added no assurance: BOUNDARY and SEAL remain NOT_RUN and SAFE_COMPATIBLE remains 0/33.",
       "not_run": [
         "BOUNDARY gate for the S16-S61 cluster (independent caller/dependency-closure audit, Miri/ASan/Loom/mutation controls, authority differential)",
         "SEAL gate (full forensic regeneration, held-out compatibility, complete probe/court evidence set)",
@@ -687,7 +687,7 @@
         "dudect/ctgrind for the S49 record path, the S50 TLS 1.3 key schedule/AEAD path and the S61 security-callback version floor",
         "Miri (Stacked and Tree Borrows), ASan and Loom for the S49/S50/S51, S56, S57 and S58 boundaries",
         "an ASan-venue rebuild of the S45 legacy.so RUNPATH parity change (build_phase2_asan.sh was edited, not exercised)",
-        "a downstream re-measurement at the 0.0.38 identity; every row is carried forward"
+        "a downstream re-measurement at the 0.0.39 identity; every row is carried forward from dc17cfdd/75cc3979"
       ]
     }
   },
@@ -696,7 +696,7 @@
     "l7_functional": 33,
     "l4_only": 0,
     "safe_compatible": 0,
-    "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. S59 re-measured every loaded family with evidence_reuse=null and preserved 198/198 L7 at libcrypto c8a99c59 / libssl 5992c29d, with zero candidate-only drops. S60 admitted 30 further families: 307 recipes, 221 loaded, 205 candidate = 205 authority L7, 693 with no recipe, zero candidate-specific patches, and exposed a candidate-only charybdis TLS handshake failure. S61 repaired it: candidate 206 L7, authority 205, below_baseline 0. The atlas now records evidence_reuse=mode 'committed-rows-carried-forward' with 307 of 307 recipe-backed families carried forward from the S59/S60/S61 identities at candidate_identity_match=false; charybdis is explicitly carried forward too, having been measured at the S61 identity (e907c2d8 / bdb4265f). Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim.",
+    "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; S67 carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim.",
     "l7_families": [
       "curl",
       "cyrus-sasl",
@@ -1308,8 +1308,8 @@
     "S21 is a BATCH checkpoint and S24 is a FAST probe/docs pass: BOUNDARY and SEAL are NOT_RUN, and passing either local gate does not graduate any mechanism or consumer.",
     "The S24 DSA/DH probe corrections change test assertions only: the old window-wide release count included a transient error-queue formatting allocation that is not an object member. No production behaviour, allocator seam or ownership model changed.",
     "The S20 unsafe-operation increase (1817 -> 1992) is restored authority dispatch at contracted FFI boundaries, not a widened unsafe abstraction.",
-    "The current 206 candidate / 205 authority L7 result (221 loaded, 307 recipes) is compatibility evidence, not a safety or cryptographic discharge (AGENTS.md section 8). Every row is carried forward from the S59/S60/S61 identities; no row is a fresh measurement at the 0.0.38 identity. S59 is the last full re-measurement (198/198 over 216 loaded at c8a99c59/5992c29d), and S52 remains the last full no-reuse measurement.",
-    "0.0.38 is the published release and contains S49-S61. Publishing is not a memory-safety result: the BOUNDARY and SEAL gates for the cluster remain NOT_RUN and no consumer family has graduated.",
+    "The current 207 candidate / 209 authority L7 result (223 loaded, 307 recipes) was measured at dc17cfdd/75cc3979 and is compatibility evidence, not a safety or cryptographic discharge (AGENTS.md section 8). Every row is carried forward from that identity at the 0.0.39 candidate identity; no row is a fresh measurement at 0.0.39. The post-CMS no-reuse run at dc17cfdd/75cc3979 is the latest full measurement; the earlier S52 (196 of 200) and S59 (198 of 216) results remain history.",
+    "0.0.38 is the published release and contains S49-S61 but not the later V3-C4 work. 0.0.39 is the working tree and is NOT published. Publishing is not a memory-safety result: the BOUNDARY and SEAL gates for the cluster remain NOT_RUN and no consumer family has graduated.",
     "S49-S51, S56-S58 and S61 are FAST (S58 also ran one full suite); S48/S55/S62 are release rebuilds and S52/S53/S59/S60 are downstream measurements. BOUNDARY and SEAL remain NOT_RUN for the whole S16-S61 cluster.",
     "S49-S51 are OWNERSHIP_RECONSTRUCTED at their scoped boundaries, not SAFETY_DISCHARGED: Miri/ASan and independent review are NOT_RUN, and caller-region, BIO non-reentrancy, checked-at-site and raw-ABI-edge conditions remain.",
     "S50's production unsafe count rose 76 -> 77. That is honest and not a safety regression: OutRegion::new (a contracted caller-region constructor) and the cleansed-block drop (an unsafe impl) replace dozens of scattered raw operations; from_raw_parts fell 20 -> 9 and copy_nonoverlapping 8 -> 3.",
@@ -1322,12 +1322,12 @@
     "No full census or attribution regeneration was made after the S27-S58 and S61 edits to existing PARTIAL files.",
     "S48/S55/S62 are release rebuilds; S52/S53/S59/S60 are downstream compatibility measurements; S49-S51, S56-S58 and S61 are FAST ownership/compatibility reconstructions. None is a memory-safety discharge, and none makes any family SAFE_COMPATIBLE.",
     "S49 retains a deliberate divergence: MAX_EMPTY_RECORDS exhaustion returns -1 instead of the authority's fatal SSL_R_RECORD_TOO_SMALL. It is recorded, not silently reproduced or reclassified.",
-    "The current atlas carries 307 of 307 recipe-backed rows forward from the S59/S60/S61 identities (candidate_identity_match=false); it is not a fresh no-reuse run at 0.0.38. S52 remains the last full no-reuse measurement and S59 the last full re-measurement.",
+    "The current atlas carries 307 of 307 recipe-backed rows forward from the dc17cfdd/75cc3979 identity (candidate_identity_match=false); it is not a fresh no-reuse run at 0.0.39. That same identity's no-reuse run (207 candidate / 209 authority L7 over 223 loaded) is the latest full measurement.",
     "S56 is OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED: the XstandardTable Sync claim is conditional on single-threaded purpose-table use, the unlocked x509_vfy readers are not proven race-free against a concurrent first build, policy_cache remains unmanaged, and no Miri/ASan or independent review ran.",
     "S57 is OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED: reference lifetime is established, but data-race freedom of the session bookkeeping and payload reads is NOT established, and no independent reviewer, Miri, Loom or authority differential ran.",
     "S58 is OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED: the private-list invariant has one producer family and the callback re-entrancy copy is structural, but provider-row availability, non-default sigalg configurations, the constant-false ssl_cert_is_disabled stub and the remaining permissive security-callback arms are recorded reductions.",
     "S61's charybdis repair is FIXED (compatibility), not a SAFETY_DISCHARGED claim; the other SSL_SECOP_* arms remain permissive, and no Miri/ASan/Loom, full serial suite or independent review ran for the change.",
-    "0.0.38 is published; the tracked install and atlases are nonetheless carried-forward evidence measured at earlier identities. The published 0.0.38 crate contains S49-S61."
+    "0.0.39 is not published; the tracked install and atlases are carried-forward evidence measured at the superseded dc17cfdd/75cc3979 identity. The published 0.0.38 crate contains S49-S61 but not the V3-C4 work."
   ],
   "reduction_census": {
     "artifact": "atlas-refresh/s19-reduction-census.json",
