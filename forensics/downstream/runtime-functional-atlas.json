@@ -353,7 +353,7 @@
     },
     "evidence_reuse": {
       "candidate_identity_match": false,
-      "families_reused": 304,
+      "families_reused": 305,
       "mode": "committed-rows-carried-forward",
       "reused_families": [
         "afflib",
@@ -380,6 +380,7 @@
         "canl-c-examples",
         "carbon-c-relay",
         "casync",
+        "charybdis",
         "cjose",
         "ckermit",
         "conserver-client",
@@ -394,7 +395,6 @@
         "cyrus-sasl-scram",
         "davix",
         "dcap-tunnel-ssl",
-        "dcmtk",
         "dma",
         "dmg2img",
         "dnsdist",
@@ -470,7 +470,6 @@
         "kannel",
         "kea",
         "keepalived",
-        "kmod",
         "kore",
         "krb5",
         "krb5-k5tls",
@@ -543,6 +542,7 @@
         "makepasswd",
         "medusa",
         "megatools",
+        "memcached",
         "mini-httpd",
         "minizip-ng",
         "mktorrent",
@@ -569,6 +569,7 @@
         "nrpe",
         "nsca-ng-client",
         "nsca-ng-server",
+        "nsd",
         "nzbget",
         "opendkim",
         "openfortivpn",
@@ -661,16 +662,13 @@
         "yara",
         "znc"
       ],
-      "superseded_identity": {
-        "libcrypto_so_3_sha256": {
-          "committed": "6cc932b25b6c8f66a69dafadbc043cf3cbac213d88e687038ff39f0f88335ff2",
-          "current": "c6a15e470ea866ecc76f7dd469df6b538a98a50317ccdc646e9bd21156c7a4e8"
-        },
-        "libssl_so_3_sha256": {
-          "committed": "f5431a18e5d41b39d725ad8764275bbb4daf8f5919e0c9683d72a8e488d52418",
-          "current": "abb3163f2a8863dde822ec7524d903eef8f34f81f96dd1a1e357a13c3f809fb5"
+      "superseded_identity": [
+        {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "6cc932b25b6c8f66a69dafadbc043cf3cbac213d88e687038ff39f0f88335ff2",
+          "libssl_so_3_sha256": "f5431a18e5d41b39d725ad8764275bbb4daf8f5919e0c9683d72a8e488d52418"
         }
-      }
+      ]
     },
     "non_claims": [
       "a selected population is not a random sample: the 1,000 families chosen from frozen ranking evidence are a selected population, and their rates do not generalise to all downstream software",
@@ -34589,12 +34587,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "3677656:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "3677656:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "3677656:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
-            "3677656:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
-            "3677656:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
-            "3677656:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
+            "74599:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "74599:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "74599:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+            "74599:\tcalling init: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+            "74599:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3 [0]",
+            "74599:\tcalling fini: /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -34647,11 +34645,6 @@
           "pids_max": "2048",
           "platform": "linux"
         },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "6cc932b25b6c8f66a69dafadbc043cf3cbac213d88e687038ff39f0f88335ff2",
-          "libssl_so_3_sha256": "f5431a18e5d41b39d725ad8764275bbb4daf8f5919e0c9683d72a8e488d52418"
-        },
         "run_id": "run:runtime:authority:dcmtk",
         "source_root_hash": "cb438dcb71195d926c87772889f136df199575ff35397927e3d68e4ff2ab9b76",
         "source_sha256": "17705dcdb2047d1266bb4e92dbf4aa6d4967819e8e3e94f39b7df697661b4860",
@@ -34687,20 +34680,20 @@
           "exit=0",
           "== dcmsign --verify ==",
           "exit=0",
-          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.3677668.1792915045.963598",
+          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.74611.1792922847.921644",
           "W:   Signature Verification : OK",
           "== unrelated CA (must fail) ==",
           "exit=101",
-          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.3677668.1792915045.963598",
+          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.74611.1792922847.921644",
           "W:   Signature Verification : signature is OK but certificate verification failed: self-signed certificate",
           "== dcmodify tamper ==",
           "exit=0",
           "== tampered dataset (must fail) ==",
           "exit=101",
-          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.3677668.1792915045.963598",
+          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.74611.1792922847.921644",
           "W:   Signature Verification : signature verification failed: signature is invalid (document corrupted)"
         ],
-        "transcript_sha256": "cd817df11d274458160037067e20d258bd85397bd45731dcde67c46f88e6ed01",
+        "transcript_sha256": "54c0e389bc643ec0155164f75de23e5e2e0f50f2a8da3c72500064ef11917b4c",
         "variant_id": "variant:dcmtk:3.6.7:pristine",
         "workload": "DCMTK dcmsign: CMS SignedData (SHA-256) over a DICOM dataset, with tampered-dataset and unrelated-CA controls",
         "workload_result": {
@@ -34753,12 +34746,12 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "3677681:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
-            "3677681:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "3677681:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
-            "3677681:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
-            "3677681:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
-            "3677681:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
+            "74624:\t  trying file=/work/artifacts/phase2/install/lib/libssl.so.3",
+            "74624:\t  trying file=/work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "74624:\tcalling init: /work/artifacts/phase2/install/lib/libcrypto.so.3",
+            "74624:\tcalling init: /work/artifacts/phase2/install/lib/libssl.so.3",
+            "74624:\tcalling fini: /work/artifacts/phase2/install/lib/libssl.so.3 [0]",
+            "74624:\tcalling fini: /work/artifacts/phase2/install/lib/libcrypto.so.3 [0]"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -34811,11 +34804,6 @@
           "pids_max": "2048",
           "platform": "linux"
         },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "6cc932b25b6c8f66a69dafadbc043cf3cbac213d88e687038ff39f0f88335ff2",
-          "libssl_so_3_sha256": "f5431a18e5d41b39d725ad8764275bbb4daf8f5919e0c9683d72a8e488d52418"
-        },
         "run_id": "run:runtime:candidate:dcmtk",
         "source_root_hash": "cb438dcb71195d926c87772889f136df199575ff35397927e3d68e4ff2ab9b76",
         "source_sha256": "17705dcdb2047d1266bb4e92dbf4aa6d4967819e8e3e94f39b7df697661b4860",
@@ -34851,20 +34839,20 @@
           "exit=0",
           "== dcmsign --verify ==",
           "exit=0",
-          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.3677693.1792915046.197475",
+          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.74636.1792922848.225286",
           "W:   Signature Verification : OK",
           "== unrelated CA (must fail) ==",
           "exit=101",
-          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.3677693.1792915046.197475",
+          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.74636.1792922848.225286",
           "W:   Signature Verification : signature is OK but certificate verification failed: self-signed certificate",
           "== dcmodify tamper ==",
           "exit=0",
           "== tampered dataset (must fail) ==",
           "exit=101",
-          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.3677693.1792915046.197475",
+          "W: Signature #1 UID={addr}.7230010.3.1.4.296485632.74636.1792922848.225286",
           "W:   Signature Verification : signature verification failed: signature is invalid (document corrupted)"
         ],
-        "transcript_sha256": "91d1f1cca98a09977e6f1f8475f04b4f61edaa8c85da98f85907c59764817953",
+        "transcript_sha256": "ef35616efb7bdb826948036bfe1ab9c12bddfe75f5bdb289a972bace0d1700d3",
         "variant_id": "variant:dcmtk:3.6.7:pristine",
         "workload": "DCMTK dcmsign: CMS SignedData (SHA-256) over a DICOM dataset, with tampered-dataset and unrelated-CA controls",
         "workload_result": {
@@ -96299,14 +96287,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1795128:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
-            "1795128:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
-            "1795128:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
-            "1795128:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
-            "1795128:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
-            "1795128:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
-            "1795128:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
-            "1795128:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
+            "49029:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "49029:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "49029:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "49029:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "49029:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "49029:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/x86_64/libcrypto.so.3",
+            "49029:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/tls/libcrypto.so.3",
+            "49029:\t  trying file=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/x86_64/x86_64/libcrypto.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -96354,11 +96342,6 @@
           "memory_swap_max": "max",
           "pids_max": "2048",
           "platform": "linux"
-        },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "6cc932b25b6c8f66a69dafadbc043cf3cbac213d88e687038ff39f0f88335ff2",
-          "libssl_so_3_sha256": "f5431a18e5d41b39d725ad8764275bbb4daf8f5919e0c9683d72a8e488d52418"
         },
         "run_id": "run:runtime:authority:kmod",
         "source_root_hash": "90891a25274d31e7d4b7bfbe41948950735867d7d0a1d48b7095bc06ad9621de",
@@ -96447,14 +96430,14 @@
         "load_proof": {
           "all_under_prefix": true,
           "dynamic_load_trace": [
-            "1795149:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
-            "1795149:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
-            "1795149:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
-            "1795149:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
-            "1795149:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
-            "1795149:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
-            "1795149:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
-            "1795149:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
+            "49050:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v4/libcrypto.so.3",
+            "49050:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v3/libcrypto.so.3",
+            "49050:\t  trying file=/work/artifacts/phase2/install/lib/glibc-hwcaps/x86-64-v2/libcrypto.so.3",
+            "49050:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/x86_64/libcrypto.so.3",
+            "49050:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "49050:\t  trying file=/work/artifacts/phase2/install/lib/tls/x86_64/libcrypto.so.3",
+            "49050:\t  trying file=/work/artifacts/phase2/install/lib/tls/libcrypto.so.3",
+            "49050:\t  trying file=/work/artifacts/phase2/install/lib/x86_64/x86_64/libcrypto.so.3"
           ],
           "ldd_exit": 0,
           "proven": true,
@@ -96502,11 +96485,6 @@
           "memory_swap_max": "max",
           "pids_max": "2048",
           "platform": "linux"
-        },
-        "reused_from_candidate_identity": {
-          "install_prefix": "artifacts/phase2/install",
-          "libcrypto_so_3_sha256": "6cc932b25b6c8f66a69dafadbc043cf3cbac213d88e687038ff39f0f88335ff2",
-          "libssl_so_3_sha256": "f5431a18e5d41b39d725ad8764275bbb4daf8f5919e0c9683d72a8e488d52418"
         },
         "run_id": "run:runtime:candidate:kmod",
         "source_root_hash": "90891a25274d31e7d4b7bfbe41948950735867d7d0a1d48b7095bc06ad9621de",
@@ -191017,7 +190995,7 @@
       }
     ]
   },
-  "body_hash": "0ee33bee01b525248fe6b37e35bb2f64245d183b4f83b005471cd0740962f74e",
+  "body_hash": "99f900c7a766001843b7e379702e8fa71a2f6acd3fbeb5af309ce86c35c364cb",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
@@ -191033,7 +191011,7 @@
     {
       "name": "build-link-atlas",
       "path": "forensics/downstream/build-link-atlas.json",
-      "sha256": "97e09f15b6a2a0d3ff3dd52e052e362072e5c1195f55f8fdbf0172fd7248c355"
+      "sha256": "66ca682d617ec5e46ee84eee4e1476af5489adcfd17c89e032ba65e9cfc9f73b"
     },
     {
       "name": "downstream-build-link",
