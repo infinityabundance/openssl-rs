@@ -1,0 +1,334 @@
+{
+  "schema": "safe-c33/atlas-refresh/s68-safe-islands/v1",
+  "kind": "compiler-enforced-safe-islands",
+  "subphase": "S0+S1",
+  "branch": "main",
+  "source_head": "5001e8f8ce8273f7b416ef214afb6bdd73f7c73a",
+  "source_head_short": "5001e8f8c",
+  "crate_version": "0.0.39",
+  "date": "2026-10-25",
+  "status": "ATTRIBUTES_ADDED_VERIFIED_NOT_COMMITTED",
+  "purpose": "First attribute cohort of the compiler-enforced safe-interior programme: discover five candidate islands on the exact source, then mark each declaration with #[forbid(unsafe_code)] so the compiler, not a review checklist, keeps the island free of unsafe constructs. Attribute-only edits; no body changes, no new dependencies, no commit or push.",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "docker_changed": false,
+    "venue": "openssl-rs-court (docker/openssl-rs-court.sh exec)",
+    "command_prefix": "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:$PATH && export TMPDIR=/work/court/tmp && export CARGO_BUILD_JOBS=4 && export CARGO_TARGET_DIR=/work/court/target && <cmd>'",
+    "oom_guard": "One heavy command at a time; CARGO_BUILD_JOBS=4; TMPDIR on /work/court/tmp; host/container memory checked before the first build.",
+    "host_memory_at_start": {
+      "MemTotal_kB": 131565232,
+      "MemAvailable_kB": 63957724,
+      "decision": "proceed"
+    }
+  },
+  "toolchain": {
+    "channel": "1.98.1",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "edition": "2021",
+    "pin": "rust-toolchain.toml: channel = \"1.98.1\"; components rustfmt, clippy; profile minimal"
+  },
+  "s0_discovery": {
+    "result": "ALL_FIVE_CONFIRMED",
+    "method": "grep over each source file for unsafe / no_mangle / export_name / link_section / extern / repr( / #[path / include! / include_str! / include_bytes! / global_asm! / asm!, plus grep of the parent declarations and readlink/file-type checks; no island was dropped.",
+    "dropped_islands": [],
+    "islands": [
+      {
+        "module": "crate::status",
+        "rust_path": "openssl_rs::status",
+        "source_path": "src/status.rs",
+        "source_lines": 168,
+        "declaration": "src/lib.rs:228",
+        "declaration_form": "pub mod status;",
+        "exists": true,
+        "declared_from_stated_parent": true,
+        "unsafe_constructs": 0,
+        "export_attributes": 0,
+        "nested_modules": "none",
+        "path_or_include_aliasing": false,
+        "generated": false,
+        "dropped": false
+      },
+      {
+        "module": "crate::cipher_tables",
+        "rust_path": "openssl_rs::cipher_tables",
+        "source_path": "src/cipher_tables.rs",
+        "source_lines": 1095,
+        "declaration": "src/lib.rs:81",
+        "declaration_form": "pub(crate) mod cipher_tables;",
+        "exists": true,
+        "declared_from_stated_parent": true,
+        "unsafe_constructs": 0,
+        "export_attributes": 0,
+        "nested_modules": "mod tests (cfg(test))",
+        "path_or_include_aliasing": false,
+        "generated": true,
+        "generator": "forensics/tools/gen_phase8_cipher_tables.py (OUT_RS = src/cipher_tables.rs)",
+        "generated_file_note": "Only the island body is generated; the #[forbid] attribute sits on the hand-written parent declaration in src/lib.rs and is therefore not rewritten by regeneration.",
+        "dropped": false
+      },
+      {
+        "module": "crate::digest::tables",
+        "rust_path": "openssl_rs::digest::tables",
+        "source_path": "src/digest/tables.rs",
+        "source_lines": 562,
+        "declaration": "src/digest/mod.rs:59",
+        "declaration_form": "pub mod tables;",
+        "exists": true,
+        "declared_from_stated_parent": true,
+        "unsafe_constructs": 0,
+        "export_attributes": 0,
+        "nested_modules": "mod tests (cfg(test))",
+        "path_or_include_aliasing": false,
+        "generated": true,
+        "generator": "forensics/tools/gen_phase8_tables.py (src/digest/tables.rs)",
+        "generated_file_note": "Only the island body is generated; the attribute is on the hand-written parent declaration in src/digest/mod.rs.",
+        "dropped": false
+      },
+      {
+        "module": "crate::runtime::ctype_table",
+        "rust_path": "openssl_rs::runtime::ctype_table",
+        "source_path": "src/runtime/ctype_table.rs",
+        "source_lines": 49,
+        "declaration": "src/runtime/mod.rs:35",
+        "declaration_form": "pub mod ctype_table;",
+        "exists": true,
+        "declared_from_stated_parent": true,
+        "unsafe_constructs": 0,
+        "export_attributes": 0,
+        "nested_modules": "pub(crate) mod mask (constants only; also unsafe-free)",
+        "path_or_include_aliasing": false,
+        "generated": true,
+        "generator": "forensics/tools/gen_ctype_table.py (OUT_RS = src/runtime/ctype_table.rs)",
+        "generated_file_note": "Only the island body is generated; the attribute is on the hand-written parent declaration in src/runtime/mod.rs. The generator's --check tier is unaffected by a parent-declaration attribute.",
+        "dropped": false
+      },
+      {
+        "module": "crate::runtime::constant_time",
+        "rust_path": "openssl_rs::runtime::constant_time",
+        "source_path": "src/runtime/constant_time.rs",
+        "source_lines": 496,
+        "declaration": "src/runtime/mod.rs:32",
+        "declaration_form": "pub mod constant_time;",
+        "exists": true,
+        "declared_from_stated_parent": true,
+        "unsafe_constructs": 0,
+        "export_attributes": 0,
+        "nested_modules": "mod tests (cfg(test))",
+        "path_or_include_aliasing": false,
+        "include_macros": "include_str!(\"../../courts/phase8/ct_expectations.txt\") inside #[cfg(test)] only: a data fixture, not a module/source alias",
+        "generated": false,
+        "dropped": false
+      }
+    ],
+    "aliasing_checks": {
+      "path_attributes_on_these_five": "none; the only #[path] declarations in src/lib.rs are async/mod.rs, txt_db/txt_db.rs and sm3/legacy_sm3.rs",
+      "include_bang_on_these_five": "none",
+      "include_str_or_include_bytes": "only the test-only data fixture in runtime/constant_time.rs",
+      "symlinks": "none of the five sources or their three parents is a symlink",
+      "hand_written_parents": "src/lib.rs, src/digest/mod.rs and src/runtime/mod.rs are not generated"
+    },
+    "pre_existing_unsafe_in_island_trees": 0
+  },
+  "s1_edits": {
+    "attribute": "#[forbid(unsafe_code)]",
+    "placement": "immediately before each module declaration in the hand-written parent",
+    "body_changes": 0,
+    "new_crates_or_dependencies": 0,
+    "edits": [
+      {
+        "module": "crate::cipher_tables",
+        "file": "src/lib.rs",
+        "attribute_line": 80,
+        "declaration_line": 81,
+        "before": "pub(crate) mod cipher_tables;",
+        "after": "#[forbid(unsafe_code)]\npub(crate) mod cipher_tables;"
+      },
+      {
+        "module": "crate::status",
+        "file": "src/lib.rs",
+        "attribute_line": 227,
+        "declaration_line": 228,
+        "before": "pub mod status;",
+        "after": "#[forbid(unsafe_code)]\npub mod status;"
+      },
+      {
+        "module": "crate::digest::tables",
+        "file": "src/digest/mod.rs",
+        "attribute_line": 58,
+        "declaration_line": 59,
+        "before": "pub mod tables;",
+        "after": "#[forbid(unsafe_code)]\npub mod tables;"
+      },
+      {
+        "module": "crate::runtime::constant_time",
+        "file": "src/runtime/mod.rs",
+        "attribute_line": 31,
+        "declaration_line": 32,
+        "before": "pub mod constant_time;",
+        "after": "#[forbid(unsafe_code)]\npub mod constant_time;"
+      },
+      {
+        "module": "crate::runtime::ctype_table",
+        "file": "src/runtime/mod.rs",
+        "attribute_line": 34,
+        "declaration_line": 35,
+        "before": "pub mod ctype_table;",
+        "after": "#[forbid(unsafe_code)]\npub mod ctype_table;"
+      }
+    ],
+    "diff": "3 files changed, 5 insertions(+), 0 deletions(-); every added line is exactly #[forbid(unsafe_code)]"
+  },
+  "registry": [
+    {
+      "module": "crate::status",
+      "declaration_path": "src/lib.rs:228",
+      "attribute_path": "src/lib.rs:227",
+      "source_path": "src/status.rs",
+      "attribute": "#[forbid(unsafe_code)]",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "generated": false
+    },
+    {
+      "module": "crate::cipher_tables",
+      "declaration_path": "src/lib.rs:81",
+      "attribute_path": "src/lib.rs:80",
+      "source_path": "src/cipher_tables.rs",
+      "attribute": "#[forbid(unsafe_code)]",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "generated": true
+    },
+    {
+      "module": "crate::digest::tables",
+      "declaration_path": "src/digest/mod.rs:59",
+      "attribute_path": "src/digest/mod.rs:58",
+      "source_path": "src/digest/tables.rs",
+      "attribute": "#[forbid(unsafe_code)]",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "generated": true
+    },
+    {
+      "module": "crate::runtime::constant_time",
+      "declaration_path": "src/runtime/mod.rs:32",
+      "attribute_path": "src/runtime/mod.rs:31",
+      "source_path": "src/runtime/constant_time.rs",
+      "attribute": "#[forbid(unsafe_code)]",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "generated": false
+    },
+    {
+      "module": "crate::runtime::ctype_table",
+      "declaration_path": "src/runtime/mod.rs:35",
+      "attribute_path": "src/runtime/mod.rs:34",
+      "source_path": "src/runtime/ctype_table.rs",
+      "attribute": "#[forbid(unsafe_code)]",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "generated": true
+    }
+  ],
+  "verification": {
+    "uncapped_build": {
+      "command": "cargo check --lib   (no --cap-lints)",
+      "result": "PASS",
+      "output_tail": "Compiling openssl-rs v0.0.39 (/work)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.88s",
+      "warnings": 0
+    },
+    "test_compile": {
+      "command": "cargo test --lib --no-run   (no --cap-lints; compiles #[cfg(test)] modules inside the islands)",
+      "result": "PASS",
+      "output_tail": "Compiling openssl-rs v0.0.39 (/work)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 20.69s\n  Executable unittests src/lib.rs (court/target/debug/deps/openssl_rs-509f05691d67c7e0)",
+      "warnings": 0
+    },
+    "negative_controls": {
+      "venue": "court-local disposable copy /tmp/s68-negctl (outside the repository working tree, never shipped); pristine copy baseline first: BASELINE_OK (Finished dev in 9.58s); separate CARGO_TARGET_DIR=/tmp/s68-negctl-target; source restored between cases.",
+      "cases": [
+        {
+          "id": "A-unsafe-block",
+          "insertion": "fn with an `unsafe {}` block appended to src/status.rs (designated island)",
+          "expected": "compilation FAILS",
+          "observed": "FAILS",
+          "compiler_error": "error: usage of an `unsafe` block --> src/status.rs:171:5; note: the lint level is defined here --> src/lib.rs:227:10 #[forbid(unsafe_code)]; error: could not compile `openssl-rs` (lib) due to 1 previous error"
+        },
+        {
+          "id": "B-allow-override",
+          "insertion": "#[allow(unsafe_code)] on an item appended inside src/status.rs",
+          "expected": "compilation FAILS (allow cannot override forbid)",
+          "observed": "FAILS",
+          "compiler_error": "error[E0453]: allow(unsafe_code) incompatible with previous forbid --> src/status.rs:170:9; `forbid` level set at src/lib.rs:227:10"
+        },
+        {
+          "id": "C-unsafe-no-mangle",
+          "insertion": "#[unsafe(no_mangle)] on a function appended inside src/status.rs",
+          "expected": "compilation FAILS",
+          "observed": "FAILS",
+          "compiler_error": "error: usage of the unsafe `#[no_mangle]` attribute --> src/status.rs:170:10; note: the lint level is defined here --> src/lib.rs:227:10 #[forbid(unsafe_code)]"
+        }
+      ]
+    },
+    "scoping_proof": {
+      "claim": "the lint is scoped to the five module trees, not global",
+      "fresh_unsafe_outside_islands": {
+        "insertion": "fn with an `unsafe {}` block appended to src/runtime/mod.rs (outside every island)",
+        "observed": "PASS",
+        "output_tail": "warning: unnecessary `unsafe` block --> src/runtime/mod.rs:99:5; warning: `openssl-rs` (lib) generated 1 warning; Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.22s"
+      },
+      "pre_existing_unsafe_outside_islands": "the uncapped cargo check --lib compiled the rest of the crate, which contains unsafe operations (e.g. src/runtime/mem.rs:515 `pub unsafe extern \"C\" fn CRYPTO_zalloc`), with zero errors"
+    },
+    "cap_lints_not_enforcement": {
+      "command": "RUSTFLAGS=\"--cap-lints=warn\" cargo check --lib on the same unsafe-in-island copy",
+      "observed": "PASS with warnings only: `warning: unnecessary `unsafe` block` and a downgraded unsafe-code diagnostic; Finished dev in 8.84s",
+      "verdict": "NOT ENFORCEMENT: --cap-lints=warn hides the forbid diagnostic, so this receipt does not rely on any capped run as evidence."
+    },
+    "gates": {
+      "fmt": {
+        "command": "cargo fmt --all -- --check",
+        "result": "PASS",
+        "summary_line": "FMT_OK"
+      },
+      "clippy": {
+        "command": "cargo clippy --all-targets -- -D warnings",
+        "result": "PASS",
+        "summary_line": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 21.67s / CLIPPY_OK",
+        "warnings": 0
+      },
+      "tests": {
+        "command": "cargo test --lib -- --test-threads=4",
+        "result": "PASS",
+        "summary_line": "test result: ok. 2168 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 156.37s",
+        "floor_note": "above the recorded 1962-pass floor; no test newly ignored by this change (the change adds no test attributes)"
+      }
+    },
+    "symbol_parity": {
+      "method": "same disposable path and target dir; built the edited tree and the HEAD-parent tree with identical package identity; compared `nm -g --defined-only --format=posix` 4-field symbol names, sorted unique",
+      "edited_defined_symbols": 30925,
+      "head_defined_symbols": 30925,
+      "set_diff": 0,
+      "result": "IDENTICAL"
+    },
+    "invariants": {
+      "exported_symbols": "unchanged: no item was added, removed or re-exported; 30925/30925 defined-symbol set-identical",
+      "repr_c_layouts": "unchanged: the diff contains no repr(C) or struct item; src/compat/layout_generated.rs untouched",
+      "allocator_seam": "unchanged: src/runtime/mem.rs:515 CRYPTO_zalloc and every other CRYPTO_* seam site are outside the diff",
+      "error_coordinates": "unchanged: no error-raise site, file/line coordinate or generated error artefact is in the diff",
+      "binary_hashes": "not claimed identical; lint attributes enter the build fingerprint, so binary/object hashes may legitimately differ. Symbol sets are identical."
+    }
+  },
+  "residuals": {
+    "retained_obligations": [
+      "The compiler forbids unsafe constructs and unsafe attributes in these five module trees only; other modules still contain unsafe code and are not covered.",
+      "The attribute is on the parent declaration, so any future island that moves under a different parent must receive the attribute there."
+    ],
+    "deferred": [
+      "Independent BOUNDARY review of the cohort (reviewer must not be the author) - NOT_RUN.",
+      "Miri/aliasing instrumentation for these islands - NOT_RUN (no unsafe code to instrument; out of scope for an attribute-only cohort).",
+      "Release/SEAL rebuild and binary-identity rebind - NOT_RUN; hashes intentionally not claimed for attribute-only edits."
+    ],
+    "not_claimed": [
+      "SAFETY_DISCHARGED: forbid(unsafe_code) is one structural guard, not a discharge of the islands' behavioural contracts.",
+      "Global unsafe-free status: NOT claimed; this cohort covers five modules."
+    ]
+  }
+}

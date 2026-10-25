@@ -77,6 +77,7 @@ pub mod chacha;
 // The generated cipher tables (Phase 8.2). `gen_phase8_cipher_tables.py` derives every
 // number from the pinned authority's `crypto/` tree; the modules that read them carry the
 // structure.
+#[forbid(unsafe_code)]
 pub(crate) mod cipher_tables;
 // Phase 12.3 — `crypto/cms/`: the CMS container, its item groups and the signer/recipient
 // engines. `crypto/asn1/asn_mime.c`'s `SMIME_*` hand-off (Phase 12.9) and the ESS item groups
@@ -223,6 +224,7 @@ pub(crate) mod srp;
 // constructor that slice's court needs. See `src/ssl/mod.rs` for the slice record and the measured
 // divergences.
 pub mod ssl;
+#[forbid(unsafe_code)]
 pub mod status;
 // Phase 10 (10.5) — `crypto/store/`: the `OSSL_STORE_LOADER` object and its registry, the
 // provider-side loader method fetched over slot 15, and `store_lib.c`'s `OSSL_STORE_CTX` state
