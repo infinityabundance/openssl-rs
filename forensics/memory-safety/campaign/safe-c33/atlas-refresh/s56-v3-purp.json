@@ -1,0 +1,172 @@
+{
+  "receipt": "s56-v3-purp-cache-ownership",
+  "date": "2026-10-24",
+  "subphase": "S56",
+  "target": "src/x509/v3_purp.rs — extension-cache ownership and publication boundary",
+  "candidate": {
+    "repo": "/mnt/1tb_kingston/openssl-rs",
+    "branch": "main",
+    "base_head": "da5b1094a",
+    "committed": false,
+    "changed_files": [
+      "src/x509/v3_purp.rs",
+      "src/x509/x_x509.rs",
+      "src/x509/v3_addr.rs"
+    ],
+    "diffstat": "3 files changed, 928 insertions(+), 362 deletions(-)"
+  },
+  "authority": {
+    "source": "openssl-3.6.5 crypto/x509/v3_purp.c (cache + purpose table) and crypto/x509/x_x509.c (x509_cb cache releases)",
+    "compat_contract": "openssl-3.6.4 public behaviour; the 3.6.5 CVE-2026-35189 lazy-CRLDP repair is preserved",
+    "abi": "no exported symbol, signature or #[repr(C)] layout changed: #[no_mangle] 31 before/after in v3_purp.rs, #[repr(C)] 2 before/after",
+    "allocator_seam": "unchanged: no new CRYPTO_malloc/CRYPTO_free/CRYPTO_zalloc call site was added, and src/runtime/mem.rs + mem_coords.rs have no diff"
+  },
+  "cache_lifecycle_reconstructed": {
+    "before": "ossl_x509v3_cache_extensions wrote each cache slot into the X509 at the point of decode (crldp, skid, akid, altname, nc, rfc3779_addr, rfc3779_asid), and wrote ex_pathlen/ex_kusage/ex_xkusage/ex_nscert/sha1_hash/ex_flags incrementally. A lock-free reader could observe a half-built cache, and setup_crldp installed the decoded stack before validating its points.",
+    "after": "CacheBuild::build decodes and derives every output into local owned state and touches no cache member of X509. Each decoded value is owned by CacheValue<T> (NonNull + the authority's release) or is None on a failed decode. CacheBuild::publish installs all seven slots and all scalars in one place while the write lock is held; ossl_x509_init_sig_info runs next; the final ex_flags store (flags | EXFLAG_SET) is the single publication point. A certificate whose extensions are invalid is published as the authority's complete invalid state (successfully decoded slots + EXFLAG_INVALID), because x509_vfy consumes those slots even when the cache call returns 0 — 'no partially installed state' means no partially built slot and no pre-publication cache write, not zero installed slots.",
+    "teardown": "ossl_x509v3_cache_free re-adopts each installed slot with the same CacheValue owner, releases it, and clears the slot. It is called by X509's ASN1_OP_D2I_PRE and ASN1_OP_FREE_POST arms, replacing the previous partial skid-only release. A second call is a no-op.",
+    "owner_count": "one owner per slot: the staging CacheValue is consumed by publish (into_raw) or by the teardown re-adoption; no value has two live owners"
+  },
+  "sync_unsafecell_contract": {
+    "guaranteed_by_types": "XstandardTable is #[repr(transparent)] over UnsafeCell<[X509Purpose; 10]>, and its unsafe impl Sync makes XSTANDARD usable as a static and permits X509_PURPOSE_add to rewrite a reserved row in place. XPTABLE is an AtomicPtr<OpenSslStack>, so the stack pointer slot itself is race-free.",
+    "not_guaranteed_by_types": "Neither type enforces single-threaded use. AtomicPtr orders pointer publication only; it does not make the stack elements or a reserved row safe to mutate concurrently. The accessors hand out *mut rows, so a caller can hold a raw borrow while another thread rewrites or frees the table. The Sync claim is therefore conditional on the authority's unlocked, single-threaded purpose-table discipline, now stated explicitly on XstandardTable, XPTABLE and X509_PURPOSE_add's # Safety section.",
+    "enforcement_choice": "not enforced with a lock: the authority takes none, adding one would serialise callbacks and cannot be dropped into the C ABI without a behavioural change; the obligation is recorded as an explicit caller obligation"
+  },
+  "lock_coverage_findings": {
+    "writes": "every cache-slot write now happens inside ossl_x509v3_cache_extensions under CRYPTO_THREAD_write_lock, except the single publication store of ex_flags. X509_set_proxy_flag locks; X509_set_proxy_pathlen writes ex_pcpathlen with no lock (authority behaviour, pre-existing).",
+    "covered_reads": "all public cache accessors (X509_get_extension_flags/key_usage/extended_key_usage/get0_* identifiers/path lengths, X509_get_signature_info) call X509_check_purpose first, which takes the write lock; the lock acquire/release gives them a happens-before view of the completed cache.",
+    "uncovered_reads": "x509_vfy deliberately reads crldp, nc, altname, akid, skid and ex_flags without a lock (crl_crldp_check, check_name_constraints, check_id). This is safe only when the cache was completed before the certificate was shared, or when the same thread completed it (check_extensions/X509_check_purpose runs before those readers). No lock was added, matching the authority; cross-thread safety of a lock-free read that races the first build is NOT established.",
+    "crldp_name": "crldp_full_name builds a fresh X509_NAME on demand and never stores it in the published distribution point, so the one post-publication write that would have raced readers (dpname) is absent.",
+    "verified": "lock acquisition and publication order read back from the final source; no runtime race detector was run"
+  },
+  "crldp_mitigation_confirmation": {
+    "status": "preserved exactly",
+    "mechanism": "setup_crldp no longer expands relative names; setup_dp validates reason flags only; crldp_full_name (x509_vfy.c 3.6.5 shape) builds the derived name on demand and the caller frees it",
+    "measurement": "64 relative DPs x 4818 B expanded issuer name = 308352 B (eager cost that was avoided); every dpname is NULL after ossl_x509v3_cache_extensions",
+    "compat_note": "setup_crldp can no longer return -1; it returns a Decoded value whose valid=false on a malformed/invalid point, matching the 3.6.5 divergence already recorded in cve-crldp-2026-35189.json"
+  },
+  "tests": {
+    "new_or_renamed": [
+      "x509::v3_purp::crldp_lazy_tests::v3_purp_lazy_crldp_expands_no_relative_name_at_parse",
+      "x509::v3_purp::crldp_lazy_tests::v3_purp_on_demand_full_name_matches_the_eager_expansion",
+      "x509::v3_purp::crldp_lazy_tests::v3_purp_malformed_crldp_is_refused_without_expansion",
+      "x509::v3_purp::crldp_lazy_tests::v3_purp_decode_failure_installs_no_slot",
+      "x509::v3_purp::crldp_lazy_tests::v3_purp_purpose_table_answers",
+      "x509::v3_purp::crldp_lazy_tests::v3_purp_cache_values_released_exactly_once",
+      "x509::v3_purp::crldp_lazy_tests::v3_purp_negative_control_eager_crldp_is_detectable"
+    ],
+    "filtered_pass_lines": [
+      "test x509::v3_purp::crldp_lazy_tests::v3_purp_cache_values_released_exactly_once ... ok",
+      "test x509::v3_purp::crldp_lazy_tests::v3_purp_decode_failure_installs_no_slot ... ok",
+      "test x509::v3_purp::crldp_lazy_tests::v3_purp_lazy_crldp_expands_no_relative_name_at_parse ... ok",
+      "test x509::v3_purp::crldp_lazy_tests::v3_purp_malformed_crldp_is_refused_without_expansion ... ok",
+      "test x509::v3_purp::zero_state_sweep_x509_purpose ... ok",
+      "test x509::v3_purp::crldp_lazy_tests::v3_purp_negative_control_eager_crldp_is_detectable ... ok",
+      "test x509::v3_purp::crldp_lazy_tests::v3_purp_on_demand_full_name_matches_the_eager_expansion ... ok",
+      "test x509::v3_purp::crldp_lazy_tests::v3_purp_purpose_table_answers ... ok",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 2163 filtered out; finished in 0.01s"
+    ],
+    "failure_slot_assertion": "v3_purp_decode_failure_installs_no_slot compares addresses: a valid fixture installs a non-NULL crldp address, then a malformed-CRLDP certificate (whose SKID still decodes) must have a NULL crldp address and no stale address may survive",
+    "release_assertion": "v3_purp_cache_values_released_exactly_once records the teardown release address in a test-only thread-local map and asserts each of the seven installed addresses is released exactly once, stays at one after a second teardown, and stays at one after X509_free; a second certificate released only through X509_free shows the same exactly-once counts",
+    "purpose_assertion": "v3_purp_purpose_table_answers checks ids 1..10, trust ids, short names and X509_PURPOSE_set accept/refuse for the standard table",
+    "x509_filter": "138 passed; 0 failed; 0 ignored; 0 measured; 2033 filtered out"
+  },
+  "negative_control": {
+    "name": "v3_purp_negative_control_eager_crldp_is_detectable",
+    "cfg": "#[cfg(test)] only (the whole crldp_lazy_tests module)",
+    "fires_on": "the pre-fix (3.6.4) eager name expansion in setup_crldp",
+    "mechanism": "canary_eager_expand replays DIST_POINT_set_dpname for every relative point after caching, then asserts every dpname became non-NULL; the positive test asserts the opposite for the unmodified cache path",
+    "output": "negative control: the 3.6.4 eager path wrote 4 dpname values; the cache leaves them NULL",
+    "note": "not compiled into a release build"
+  },
+  "unsafe": {
+    "before_after": "v3_purp.rs unsafe keyword occurrences 339 -> 283; unsafe { } blocks 276 -> 207; unsafe fn declarations 15 -> 24 (new narrow owners/release adapters/teardown/build helpers). x_x509.rs unchanged at 57 occurrences (two call sites changed, no new unsafe syntax).",
+    "eliminated": "the seven independent contract-wide decode writes into X509 cache members, the pre-decode installation in setup_crldp, and the per-extension raw-pointer release/free arms that each owned a value ad hoc; the skid-only partial release in x509_cb",
+    "relocated": "raw decoded-value ownership now converges on CacheValue::adopt (one audited adoption boundary per slot) and on the teardown re-adoption; raw pointer extraction remains only at into_raw/publish and at the C ABI accessors",
+    "hidden_new": 0,
+    "retained": "pre-existing raw field reads/writes in the C accessors and purpose-table accessors; X509::policy_cache remains an unmanaged withheld slot outside this cache's seven owners",
+    "contracts": "every new unsafe fn has a # Safety contract and every new unsafe block a SAFETY comment; clippy -D warnings (including undocumented_unsafe_blocks) passes"
+  },
+  "obligations": {
+    "discharged": [
+      "each of the seven decoded cache values has one owner at a time (staging CacheValue or X509 slot, never both)",
+      "construction completes before any cache member of X509 is written; ex_flags|EXFLAG_SET is the last write and the publication point",
+      "cache teardown releases each installed slot exactly once and is idempotent",
+      "a failed decode leaves that slot NULL rather than a partially built object",
+      "relative CRLDP names are not expanded during caching (CVE-2026-35189 preserved)"
+    ],
+    "retained": [
+      "XSTANDARD/XPTABLE single-threaded access is a caller obligation, not a type guarantee",
+      "x509_vfy's lock-free reads of published cache slots require the cache to be complete before sharing; not proven for a racing first build",
+      "X509_set_proxy_pathlen mutates ex_pcpathlen without the cache lock (authority behaviour)",
+      "policy_cache teardown remains withheld in x509_cb (separate lock-guarded owner)",
+      "invalid-certificate cache retention is deliberate authority-compatible behaviour"
+    ],
+    "introduced": [
+      "x509_cb now calls ossl_x509v3_cache_free in D2I_PRE and FREE_POST, so X509_free/X509 re-decode release the seven cache slots; the teardown's precondition is the v3_purp cache invariant (every non-NULL slot was installed by this module)"
+    ],
+    "hidden": 0
+  },
+  "compatibility_delta": "No exported symbol, signature, repr(C) layout, allocator coordinate, error reason code or lazy-CRLDP behaviour changed. Observable difference: re-decoding or freeing an X509 now releases the cached extension values (previously leaked); a malformed extension leaves its own slot NULL (authority also leaves NULL there) while other decoded slots remain installed as before.",
+  "safety_checks": {
+    "cargo_fmt": "cargo fmt --all -- --check -> no output (clean)",
+    "cargo_check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.25s",
+    "cargo_clippy_lib": "cargo clippy --lib -- -D warnings -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.00s",
+    "cargo_clippy_all_targets": "NOT_CLEAN, PRE-EXISTING: cargo clippy --all-targets -- -D warnings reports 10 undocumented_unsafe_blocks in src/cms/cms_pwri.rs, src/pkcs7/pk7_doit.rs, src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs and src/ssl/tls13_enc.rs — none of those files is touched by this subphase; the lib-only gate is clean",
+    "structural_guards": "#[no_mangle] 31 before / 31 after; #[repr(C)] 2 before / 2 after; no allocator seam diff",
+    "filtered_tests": "8/8 v3_purp pass (see tests.filtered_pass_lines); 138/138 x509 pass",
+    "full_library_suite": "test result: ok. 2127 passed; 0 failed; 44 ignored; 0 measured; 0 filtered out; finished in 127.45s",
+    "miri": "NOT_RUN — no focused Miri run in this subphase",
+    "asan_ubsan": "NOT_RUN",
+    "cryptographic_courts": "NOT_APPLICABLE — no algorithm/constant-time change",
+    "allocator_transcript": "NOT_RUN — the normal suite cannot install the global counting allocator; the test-only thread-local teardown audit is the exactly-once observable"
+  },
+  "graduation": {
+    "state": "OWNERSHIP_RECONSTRUCTED",
+    "why_not_safety_discharged": [
+      "the XSTANDARD/XPTABLE Sync/single-threaded obligation is documented but not enforced by the type system, and safe-Rust callers cannot use those APIs (they are unsafe extern), yet the static's Sync claim depends on the caller discipline",
+      "lock-free x509_vfy reads are not proven race-free against a concurrent first build; no runtime race detector was run",
+      "the cache teardown's 'only v3_purp-installed values' precondition is documented but not type-enforced",
+      "no Miri/ASan evidence for the new aliasing/ownership boundary",
+      "policy_cache remains an unmanaged cache slot outside this boundary"
+    ],
+    "discharged_within_scope": "cache construction is staged and published once; the seven extension values are single-owner and released exactly once; the lazy-CRLDP repair is preserved"
+  },
+  "residuals": [
+    {
+      "id": "S56-R1",
+      "finding": "XSTANDARD is a #[repr(transparent)] UnsafeCell whose Sync impl is only true under the authority's unlocked single-threaded table discipline",
+      "disposition": "documented as an explicit caller obligation on XstandardTable, XPTABLE and X509_PURPOSE_add; not enforced (no lock added, matching the authority)"
+    },
+    {
+      "id": "S56-R2",
+      "finding": "x509_vfy reads crldp/nc/altname/akid/skid/ex_flags without the cache lock",
+      "disposition": "deliberate authority behaviour; safe only after a completed cache. Not claimed race-free across threads that share a certificate while its first cache build is in progress"
+    },
+    {
+      "id": "S56-R3",
+      "finding": "X509_set_proxy_pathlen writes ex_pcpathlen without a lock, so a concurrent accessor read can race it",
+      "disposition": "pre-existing authority behaviour; not changed in this subphase"
+    },
+    {
+      "id": "S56-R4",
+      "finding": "X509::policy_cache is not released by x509_cb or by ossl_x509v3_cache_free",
+      "disposition": "outside the seven v3_purp cache owners; its builder is lock-guarded and its teardown needs a separate audit"
+    },
+    {
+      "id": "S56-R5",
+      "finding": "An invalid certificate retains the slots that decoded successfully (authority-compatible invalid-cache state)",
+      "disposition": "deliberate: x509_vfy consumes those slots; 'nothing partially installed' is enforced per slot and before publication, not as a zero-slot failure state"
+    },
+    {
+      "id": "S56-R6",
+      "finding": "exactly-once release is asserted by a test-only thread-local address audit, not by an allocator transcript",
+      "disposition": "structural owner consumption + slot clearing + the audit; ASan/Miri evidence is NOT_RUN"
+    },
+    {
+      "id": "S56-R7",
+      "finding": "CacheBuild::publish uses debug_assert! that slots are NULL before publication",
+      "disposition": "diagnostic only; the safety argument is the EXFLAG_SET gate plus d2i pre-zeroing, not the assertion"
+    }
+  ]
+}

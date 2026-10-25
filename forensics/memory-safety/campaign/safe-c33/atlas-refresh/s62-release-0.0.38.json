@@ -1,0 +1,286 @@
+{
+  "schema": "safe-c33/atlas-refresh/s62/v1",
+  "kind": "s62-release-0.0.38",
+  "subphase": "S62",
+  "branch": "integrate/safe-c33",
+  "source_head": "73f786410",
+  "source_head_subject": "Merge stage/p25/charybdis",
+  "date": "2026-10-25",
+  "purpose": "Move the working tree to 0.0.38 because the published 0.0.37 predates S56-S61: the X.509 extension-cache ownership rebuild (v3_purp unsafe blocks 276 -> 207), the structural session-cache reference ownership (SessionRef, SessionKey), the single-owner peer sigalg list (OwnedSigalgs), the S59 no-reuse re-measurement (198/198 preserved), the S60 corpus batch (307 recipes, 221 loaded, 205 L7, 693 no-recipe) and the S61 charybdis security-level protocol-floor repair (candidate functional 206). Rebuild the Phase-2 install from this exact source, re-run the ABI courts, re-prove the legacy-provider RUNPATH/load/MD4 path, rebind the runtime atlas while carrying every measured row (including charybdis) forward explicitly, and regenerate the documentation so the published and unpublished states cannot be confused. No publication, no downstream re-measurement and no full test suite.",
+  "version_bump": {
+    "from": "0.0.37",
+    "to": "0.0.38",
+    "cargo_toml": "version = \"0.0.38\"",
+    "cargo_lock": "the openssl-rs package entry is 0.0.38",
+    "dependency_versions_changed": false,
+    "note": "Only the openssl-rs package version changed. Cargo.lock dependency entries are untouched."
+  },
+  "published_release": {
+    "version": "0.0.37",
+    "status": "PUBLISHED",
+    "registry": "crates-io",
+    "published_at": "2026-10-24T20:40:19Z",
+    "checksum": "d7e75f6977af7e7616d90ef132a088fbb50a28d84f0defabc5054ec8cfe6a01c",
+    "checksum_prefix": "d7e75f69",
+    "source_commit": "ae99a561b",
+    "files": 1010,
+    "artefacts": {
+      "libcrypto.so.3": "4870ebd39d05eb30b0c82c6b6ab1d94283ac04ad1d6572f11db4d134cdcf4a9c",
+      "libssl.so.3": "0db35845367c85dbdd2d1cec92a05eae77321488e29213604c97fbab8d2b436a",
+      "legacy.so": "dca5e98cade504bf7c3e688763330e18644b40683d61eeaf4d4c3f81180c049a",
+      "openssl": "cfe198e805786119f773cdba90971259c6c405c879b4886c24b80aa6ef80ab63"
+    },
+    "receipt": "atlas-refresh/publish-0.0.37.json",
+    "contains": "S49-S54: the typed record-layer ReadStatus, the slice-based TLS 1.3 key schedule with owned cleansed secrets, the ASN.1 ContentHandoff/cursor work, the S52 no-reuse re-measurement, the S53 corpus batch and the S54 documentation pass.",
+    "does_not_contain": "S56-S61: the X.509 extension-cache rebuild, the session-cache SessionRef/SessionKey ownership, the single-owner peer sigalgs, the S59 re-measurement, the S60 corpus batch and the S61 charybdis security-floor repair."
+  },
+  "working_tree_release": {
+    "version": "0.0.38",
+    "status": "NOT_PUBLISHED",
+    "publish_receipt_exists": false,
+    "cargo_publish_run": false,
+    "note": "The tree is explicitly unreleased. No published artefact contains S56-S61 or the 0.0.38 rebuild."
+  },
+  "rebuild": {
+    "command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh (CARGO_TARGET_DIR unset)",
+    "exit_code": 0,
+    "log": "court/tmp/s62-build.log",
+    "log_sha256": "2fd1760c0997882a4a330683029c71a1c43c7b03f0cc0cf01425c82ebed7f1f4",
+    "target_dir_note": "build_phase2.sh hardwires CRATE=/work/target/release/libopenssl_rs.a and the rlib/--extern paths, so CARGO_TARGET_DIR was unset and the script's own /work/target was used. /work/target is the host bind-mounted NVMe tree, not the court overlay and not tmpfs; using /work/court/target would have linked a stale pre-bump archive. TMPDIR stayed on /work/court/tmp. Host MemAvailable was 56 GB before the build.",
+    "environment_deviation": "The subphase brief's default command line names CARGO_TARGET_DIR=/work/court/target. That target dir cannot be used for build_phase2.sh without linking a stale archive, because the script does not consult CARGO_TARGET_DIR for CRATE. /work/target was used as the script requires; this is recorded, not hidden.",
+    "artefacts": {
+      "libcrypto.so.3": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+      "libssl.so.3": "e0c9ba33cb5d417cee0f93ac72f941bb3048c7f3a4e910ce2b940a6c4f07676d",
+      "legacy.so": "fa0c29f00e93077fbedf974fa8f8ed1fb02bc273b0d1622841a7779e2460a9d7",
+      "openssl": "216d448a77992f974078bb1c9c95b491ec2330f34a8550305fce77b153d3d104"
+    },
+    "install_copy_hashes_match_top_level": true,
+    "previous_identity": {
+      "label": "S61 build at 0.0.37, carried by S62",
+      "libcrypto.so.3": "e907c2d83d43e633a6b3d6cec17633a89a7d767b333324c05cb8ee8b85f1cf77",
+      "libssl.so.3": "bdb4265f758f5561e250ed4ea8ec99a228b7d514120954dd4d74f24d9617a18b",
+      "legacy.so": "not recorded as a full digest in the S61 receipt",
+      "openssl": "not recorded as a full digest in the S61 receipt"
+    },
+    "identity_delta_cause": "The version string participates in rustc crate metadata, so every linked object changes even though S62 changes no src/. The rebuild also regenerated forensics/atlas/implemented-surface.json (crate-archive sha256 and compiler-emitted counts), which is a build-product observation, not contract evidence.",
+    "legacy_provider_runpath": {
+      "readelf_d": [
+        "NEEDED libcrypto.so.3",
+        "NEEDED libm.so.6",
+        "NEEDED libgcc_s.so.1",
+        "NEEDED libc.so.6",
+        "NEEDED ld-linux-x86-64.so.2",
+        "RUNPATH [$ORIGIN/..]"
+      ],
+      "ldd_without_env": "libcrypto.so.3 => /work/artifacts/phase2/install/lib/ossl-modules/../libcrypto.so.3",
+      "verdict": "legacy.so still carries RUNPATH $ORIGIN/.. and resolves the install's own libcrypto without LD_LIBRARY_PATH"
+    },
+    "abi_courts": {
+      "all_pass": true,
+      "passed": 11,
+      "total": 11,
+      "courts": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "ABI_INSTALL_LAYOUT_result": "pass; the court asserts the 14 required install entries and that the provider module declares NEEDED libcrypto.so.3",
+      "libcrypto_contamination_result": "pass; the court's libssl closure resolves libcrypto.so.3 to the candidate install and reports no OpenSSL soname outside the candidate",
+      "artifact": "artifacts/phase2/COURTS.json",
+      "file_sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e",
+      "body_hash": "d4b9e82420753db75260424af6865214a4bcd6384d701d13a757d83fa29b1d53"
+    }
+  },
+  "provider_proof": {
+    "probe": "artifacts/s48/provider-probe.c recompiled against artifacts/phase2/install/include with -L.../lib and -Wl,-rpath,/work/artifacts/phase2/install/lib; ldd resolves libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3",
+    "without_OPENSSL_MODULES": {
+      "log": "court/tmp/s62-provider-without.log",
+      "log_sha256": "2f02ac73814f9d68f21a98627b4ffcc69ef24087c8fd3ebd2885a3953a8dbf80",
+      "observed": ["modulesdir=(null)", "default=loaded", "legacy=NULL", "fetch_md4=NULL", "exit=1"],
+      "meaning": "the compiled-in MODULESDIR remains the empty sentinel (the recorded distribution divergence); the module is not discovered without the environment variable"
+    },
+    "with_OPENSSL_MODULES": {
+      "command": "OPENSSL_MODULES=<install>/lib/ossl-modules ./provider-probe",
+      "log": "court/tmp/s62-provider-with.log",
+      "log_sha256": "0d0b8860805ab0a379f15d320e44c6efd025dc0207280536c0592cd0aea83fc2",
+      "observed": ["modulesdir=(null)", "default=loaded", "legacy=loaded", "fetch_md4=ok", "md4_abc=a448017aaf21d8525fc10ae87aa6729d", "exit=0"],
+      "verdict": "OSSL_PROVIDER_load(NULL,\"legacy\") returns non-NULL and MD4(abc) works after the 0.0.38 rebuild"
+    }
+  },
+  "atlas_rebind": {
+    "atlas": "forensics/downstream/runtime-functional-atlas.json",
+    "candidate_identity": {
+      "install_prefix": "artifacts/phase2/install",
+      "libcrypto_so_3_sha256": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+      "libssl_so_3_sha256": "e0c9ba33cb5d417cee0f93ac72f941bb3048c7f3a4e910ce2b940a6c4f07676d"
+    },
+    "superseded_identity": {
+      "libcrypto_so_3_sha256": {
+        "committed": "e907c2d83d43e633a6b3d6cec17633a89a7d767b333324c05cb8ee8b85f1cf77",
+        "current": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae"
+      },
+      "libssl_so_3_sha256": {
+        "committed": "bdb4265f758f5561e250ed4ea8ec99a228b7d514120954dd4d74f24d9617a18b",
+        "current": "e0c9ba33cb5d417cee0f93ac72f941bb3048c7f3a4e910ce2b940a6c4f07676d"
+      }
+    },
+    "per_row_superseded_identities": "306 carried rows keep their original marker at libcrypto c8a99c59 / libssl 5992c29d (the S59/S60 measurement identity). The two charybdis rows were measured at the S61 identity e907c2d8 / bdb4265f and now carry that marker explicitly. No level, outcome, reason, transcript or baseline field was changed.",
+    "evidence_reuse": {
+      "mode": "committed-rows-carried-forward",
+      "families_reused": 307,
+      "candidate_identity_match": false,
+      "rows_marked_reused_from_candidate_identity": 614,
+      "charybdis_carried_forward": true,
+      "counts_after": {
+        "candidate_loaded": 221,
+        "candidate_runtime": 208,
+        "candidate_functional": 206,
+        "authority_loaded": 221,
+        "authority_runtime": 207,
+        "authority_functional": 205,
+        "recipes": 307,
+        "no_recipe": 693
+      },
+      "candidate_levels_after": {
+        "L0-catalogued": 693,
+        "L1-admitted-source": 33,
+        "L2-configured": 22,
+        "L3-built": 7,
+        "L4-linked": 24,
+        "L5-loaded": 13,
+        "L6-runtime": 2,
+        "L7-functional": 206
+      },
+      "note": "206 candidate / 205 authority L7 over 221 loaded and 307 recipes was measured at the S59/S60 identities (c8a99c59/5992c29d), with charybdis re-measured at the S61 identity (e907c2d8/bdb4265f). Every recipe-backed row now names a superseded identity and is carried forward, not re-measured at 0.0.38. The 2000-row key set and all level/outcome/baseline fields are unchanged (0 differences); no family's evidence status was upgraded."
+    },
+    "evidence_status_upgraded": false,
+    "remeasurement": "none. No downstream build or workload was run in S62.",
+    "build_link_atlas_note": "forensics/downstream/build-link-atlas.json is deliberately left at libcrypto c8a99c59 / libssl 5992c29d, the S60 build/link measurement identity. Rebinding it without re-running that measurement would claim work that was not done. The documentation generator reads candidate identity from the runtime atlas.",
+    "body_hash": "4d0b885fe65132a07cba337d1bbac25bc5172e947e5d6d812bc38b3bd90c556a",
+    "file_sha256": "7e8554dfc8c43ac2c265ea7bd17baa463bb94fc7b183cde6b50aaa83c5142ab4",
+    "self_check": {
+      "command": "python3 forensics/tools/downstream_runtime.py --check",
+      "exit_code": 0,
+      "result": "with_recipe=307 cand_loaded=221 cand_functional=206 reaches_baseline=306 findings=0 control honest=True"
+    }
+  },
+  "documentation": {
+    "generator": "forensics/tools/render_docs.py",
+    "changes": [
+      "README.md generated blocks: identity 0.0.38 not published, new hashes, 206/307 corpus over 307 recipes and 221 loaded, measured candidate-only tinc asymmetry disclosed, 307 of 307 carried forward",
+      "STATUS-2026-10-20.md generated blocks: working-tree 0.0.38 not published, published release 0.0.37 checksum d7e75f69, evidence bound to 0.0.38, 2,148/0/45 test floor, S56-S61 outcomes and gap entries",
+      "STATUS-2026-10-20.md hand-written Source identity, S27-S61 defect, library-test, downstream and Release sections rewritten to the same facts",
+      "CAMPAIGN-STATUS.json: source_head 73f786410, S56-S61 outcomes and defects, gates, consumers, obligations, non-claims, known gaps and per-file unsafe counts",
+      "atlas-refresh/test-baseline.json moved from the S34 run to the S58 full run (2,148/0/45)",
+      "render_docs.py: the candidate/authority L7 set comparison now discloses a measured asymmetry instead of aborting; it does not reconcile any row",
+      "forensics/STATUS.md regenerated by render_status.py"
+    ],
+    "hand_written_corrections": [
+      {
+        "file": "README.md",
+        "before": "All 198 `L7-functional` rows are **carried forward** from the superseded identity `cd71d401…`/`efd460de…` ... 277 of 277 recipe-backed families are carried forward ... the 79 recipe-backed families below L7 ... 723 families have no admitted recipe.",
+        "after": "All 206 `L7-functional` rows are **carried forward** from the superseded identities `c8a99c59…`/`5992c29d…` (and `charybdis` from `e907c2d8…`/`bdb4265f…`) ... 307 of 307 recipe-backed families are carried forward ... the 101 recipe-backed families below L7 ... 693 families have no admitted recipe."
+      },
+      {
+        "file": "STATUS-2026-10-20.md",
+        "before": "`CAMPAIGN-STATUS.json` records `source_head` **`235ad4c71`** ... The source tree includes S16–S54 ... The current **0.0.37 tree** is `4870ebd3`/`0db35845`, which is the **published 0.0.37 crate**",
+        "after": "`CAMPAIGN-STATUS.json` records `source_head` **`73f786410`** ... The source tree includes S16–S61 ... The current **0.0.38 tree** is `b56ac6bf`/`e0c9ba33`, **not published**"
+      },
+      {
+        "file": "STATUS-2026-10-20.md",
+        "before": "**The published 0.0.37 artefact contains the S49–S54 code** ... It was published with `--no-verify`; ... **no full library suite was run for 0.0.37**.",
+        "after": "**The published 0.0.37 artefact contains the S49–S54 code** ... It does **not** contain S56–S61: the X.509 extension-cache rebuild, the session-cache `SessionRef`/`SessionKey` ownership, the single-owner peer sigalgs, the S59 re-measurement, the S60 corpus batch or the S61 `charybdis` security-floor fix."
+      },
+      {
+        "file": "STATUS-2026-10-20.md",
+        "before": "This document's evidence is bound to the **current 0.0.37 tree** ... which **is the published 0.0.37 crate** ... The current downstream atlas is **198 candidate = 198 authority `L7-functional` of 216 loaded over 277 recipes** ... 79 recipe-backed rows below L7 ... 723 no-recipe rows.",
+        "after": "This document's evidence is bound to the current 0.0.38 tree ... **not to the published 0.0.37 crate** ... **206 candidate = 205 authority `L7-functional` of 221 loaded over 307 recipes** ... 101 recipe-backed rows below L7 ... 693 no-recipe rows."
+      },
+      {
+        "file": "STATUS-2026-10-20.md",
+        "before": "The last full library run remains **S34**: **2,089 passed / 0 failed / 44 ignored** ... **No full library run exists for S39–S53.**",
+        "after": "The latest full library run is **S58**: **2,148 passed / 0 failed / 45 ignored** ... **The S58 run predates S61's `src/` edits**, so **2,148 is a floor for the 0.0.38 tree, not its current total**."
+      },
+      {
+        "file": "STATUS-2026-10-20.md",
+        "before": "79 below-L7 recipe-backed families (32 HARNESS + 25 FIXTURE + 20 ENVIRONMENT + 2 SOURCE-UNREACHABLE) and 723 no-recipe families",
+        "after": "101 below-L7 recipe-backed families (33 L1, 22 L2, 7 L3, 24 L4, 13 L5, 2 L6) and 693 no-recipe families"
+      },
+      {
+        "file": "STATUS-2026-10-20.md",
+        "before": "The published 0.0.36 does not contain S49–S54; they are in the published 0.0.37 (`4870ebd3`/`0db35845`) crate.",
+        "after": "The published 0.0.37 (`4870ebd3`/`0db35845`) contains S49–S54 and does **not** contain S56–S61. The current tree is **0.0.38** (`b56ac6bf`/`e0c9ba33`) and is **not published**."
+      }
+    ],
+    "published_release_statement": "The published release is 0.0.37 (checksum d7e75f69..., built at ae99a561b with libcrypto 4870ebd3 / libssl 0db35845); it contains S49-S54 and does not contain S56-S61.",
+    "working_tree_statement": "The working tree is 0.0.38 and is not published.",
+    "evidence_binding_statement": "The evidence is bound to the 0.0.38 tree, not to the published 0.0.37 crate; all 307 of 307 recipe-backed downstream families are carried forward at candidate_identity_match=false, including charybdis from the S61 identity.",
+    "render_docs_check": {
+      "exit_code": 0,
+      "result": "render_docs: clean - all generated blocks match their evidence"
+    },
+    "render_status": {
+      "exit_code": 0,
+      "result": "wrote forensics/STATUS.md"
+    },
+    "docs_consistency": {
+      "exit_code": 1,
+      "result": "2 stale hand-written claims, both pre-existing and unrelated to S62: docs/CI.md asserts 507 plain C identifiers while implemented-surface.json holds 508; docs/PHASE-7-EVP-SEAL.md names candidate openssl-rs 0.0.27 while Cargo.toml now holds 0.0.38. Neither file was edited by S62; the seal document is a historical 0.0.27 record and the CI figure is a separate census claim.",
+      "blocking_for_s62": false
+    }
+  },
+  "packaging": {
+    "command": "cargo package --list --offline --allow-dirty",
+    "exit_code": 0,
+    "version_reported": "path+file:///work#openssl-rs@0.0.38 (cargo pkgid)",
+    "files": 1010,
+    "previous_published_packaging_files": 1010,
+    "shape_unchanged": true,
+    "list_sha256": "aa9692fea97045f9f20e7771841f2a8273a5c295c853eeda27d138567199c62f",
+    "warnings": "four pre-existing reserved-Windows-filename warnings for src/{dsa,rsa,ec,dh}/prn.rs",
+    "cargo_publish_run": false
+  },
+  "ledger": {
+    "downstream_at_previous_identity": "205 authority L7 of 221 loaded over 307 recipes (candidate 206 after the S61 charybdis repair), measured at libcrypto c8a99c59 / libssl 5992c29d for 306 families and e907c2d8 / bdb4265f for charybdis; no row was re-measured at 0.0.38.",
+    "no_recipe": 693,
+    "safe_compatible": "0/33",
+    "boundary_gate": "NOT_RUN",
+    "seal_gate": "NOT_RUN",
+    "residuals": [
+      "S56: conditional Sync for XSTANDARD/XPTABLE; x509_vfy's unlocked cache reads are not proven race-free against a concurrent first build; X509_set_proxy_pathlen writes ex_pcpathlen unlocked; X509::policy_cache remains unmanaged; exactly-once release is a test-only address audit; the publish NULL check is a debug_assert!.",
+      "S57: reference lifetime is established, but data-race freedom of not_resumable/owner and the session payload reads is NOT established; no Miri/Loom/authority differential ran.",
+      "S58: ssl_cert_is_disabled is a constant false stub; the remaining SSL_SECOP_CIPHER_*, SSL_SECOP_SIGALG_*, key-strength and level>0 TMP_DH arms are permissive; provider-row availability and non-default configured sigalg lists are model reductions.",
+      "S61: only the SSL_SECOP_VERSION floor and the level-0 TMP_DH refusal are enforced; the other callback arms remain permissive, and no Miri/ASan/Loom, full serial suite or independent reviewer ran for the repair."
+    ]
+  },
+  "infrastructure": {
+    "court_image": "openssl-rs-court:1; no file under docker/ was edited.",
+    "writable_host_bind_mount": "The documented read-write /work bind mount remains a standing infrastructure task; S62 did not change it."
+  },
+  "not_run": [
+    "full library test suite at 0.0.38 (the S58 2,148/0/45 run remains the latest full run and a floor)",
+    "the 41 adversarial probes at 0.0.38",
+    "any downstream family re-measurement at the 0.0.38 identity (all 307 rows are carried forward)",
+    "the ASan sibling install (build_phase2_asan.sh) at 0.0.38",
+    "BOUNDARY and SEAL gates (unchanged: NOT_RUN)",
+    "cargo publish / any registry write"
+  ],
+  "non_claims": [
+    "The version bump and rebuild add no assurance; they only prevent the published 0.0.37 from being confused with the newer tree.",
+    "The 206/205 L7 result is not a measurement at the 0.0.38 identity; every downstream row is carried forward at candidate_identity_match=false, including charybdis.",
+    "The 11 ABI courts are structural only; passing them is not parity or memory safety.",
+    "The provider-load and MD4 probe prove module discovery and one legacy digest, not general legacy-provider compatibility.",
+    "SAFE_COMPATIBLE remains 0/33; no consumer family has graduated.",
+    "The provider module still needs OPENSSL_MODULES because libcrypto's compiled-in MODULESDIR is the empty sentinel; this is a harness/discovery fix, not a baked distribution path.",
+    "0.0.38 is not published; the tracked install and atlases are working-tree evidence.",
+    "No evidence status was upgraded and no family was re-measured in S62."
+  ]
+}

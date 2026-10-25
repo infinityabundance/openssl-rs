@@ -3363,8 +3363,8 @@ mod tests {
             // SAFETY: `blocks` is live and the prefix is IPv4.
             assert_eq!(unsafe { push_prefix(blocks, addr, prefixlen) }, 1);
         }
-        // SAFETY: `x` is live and its cache slot is writable. `X509_free` does not release the
-        // cached extension, so the test releases `blocks` separately.
+        // SAFETY: `x` is live and its cache slot is writable. `X509_free` now releases the cached
+        // extension through the cache teardown, so the test must not release `blocks` separately.
         unsafe { (*x).rfc3779_addr = blocks.cast::<c_void>() };
         x
     }
@@ -3644,10 +3644,9 @@ mod tests {
             assert_eq!(FREE_CHAIN_CALLS.load(Ordering::SeqCst), 2);
             assert!((*ctx).chain.is_null());
             X509_STORE_CTX_free(ctx);
-            let first_ext = (*first).rfc3779_addr.cast::<OpenSslStack>();
+            // `X509_free` releases the cached RFC 3779 extension through the cache teardown.
             X509_free(first);
             X509_free(second);
-            free_blocks(first_ext);
         }
     }
 
