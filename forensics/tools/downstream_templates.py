@@ -675,9 +675,16 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
             except OSError:
                 pass
             time.sleep(0.1)
-        good = _tls_exchange(b["port"], cert_path, str(wl.get("payload", "")), verify_host=True)
+        good = _tls_exchange(b["port"], cert_path, str(wl.get("payload", "")),
+                             verify_host=True,
+                             read_once=bool(wl.get("read_once")),
+                             payload_bytes=(bytes.fromhex(str(wl["payload_hex"]))
+                                            if wl.get("payload_hex") else None))
         wrong = _tls_exchange(b["port"], b["wrong_ca"],
-                              str(wl.get("payload", "")), verify_host=True)
+                              str(wl.get("payload", "")), verify_host=True,
+                              read_once=bool(wl.get("read_once")),
+                              payload_bytes=(bytes.fromhex(str(wl["payload_hex"]))
+                                             if wl.get("payload_hex") else None))
     finally:
         server.terminate()
         try:
@@ -716,7 +723,8 @@ def _tpl_tls_server(entry: dict, ctx: dict) -> dict:
 
 
 def _tls_exchange(port: int, ca: Path, payload: str, *, verify_host: bool,
-                 server_hostname: str = "localhost") -> dict:
+                 server_hostname: str = "localhost", read_once: bool = False,
+                 payload_bytes: bytes | None = None) -> dict:
     try:
         sctx = ssl.create_default_context(cafile=str(ca))
         sctx.check_hostname = verify_host
@@ -726,7 +734,15 @@ def _tls_exchange(port: int, ca: Path, payload: str, *, verify_host: bool,
                 # forked worker that never closes its copy) must not hang the court. The
                 # timeout is evidence-neutral: it only turns a stall into a measured error.
                 tls.settimeout(10)
-                tls.sendall(payload.encode("utf-8"))
+                tls.sendall(payload_bytes if payload_bytes is not None
+                            else payload.encode("utf-8"))
+                if read_once:
+                    # A protocol whose server greets and then holds the connection open (IRC)
+                    # never sends EOF; one bounded read is the whole response the contract
+                    # promises, so return it rather than reading until the timeout.
+                    chunk = tls.recv(4096)
+                    return {"ok": True, "data": chunk.decode("utf-8", "replace"),
+                            "error": ""}
                 chunks: list[bytes] = []
                 while True:
                     chunk = tls.recv(4096)
