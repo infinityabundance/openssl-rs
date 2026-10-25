@@ -211,6 +211,10 @@ const SSL_KEY_UPDATE_REQUESTED: c_int = 1;
 const SSL_OP_NO_RENEGOTIATION: u64 = 1 << 30;
 /// `TLS1_VERSION` — `tls1.h:199`.
 const TLS1_VERSION: c_int = 0x0301;
+/// `TLS1_1_VERSION` — `tls1.h:200`.
+const TLS1_1_VERSION: c_int = 0x0302;
+/// `SSL_SECOP_VERSION` — `ssl.h:2730` (`9 | SSL_SECOP_OTHER_NONE`).
+const SSL_SECOP_VERSION: c_int = 9;
 /// `DTLS1_BAD_VER` — `ssl3.h:231`.
 const DTLS1_BAD_VER: c_int = 0x0100;
 /// `SSL_SENT_SHUTDOWN` — `ssl.h:216`.
@@ -272,21 +276,95 @@ const ERR_R_CRYPTO_LIB: c_int = 15 | (2 << 18);
 /// `ERR_R_PASSED_INVALID_ARGUMENT` — `err.h.in:360` (`262 | ERR_RFLAG_COMMON`).
 const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 262 | (2 << 18);
 
-/// `ssl_security_default_callback` — the level check the certificate's `sec_cb` is initialised
-/// to (`ssl_cert.c:83`).
+/// `ssl_get_security_level_bits` — `ssl/ssl_cert.c:1219-1245`.
 ///
-/// Slice 1 stores the pointer so `SSL_CTX_get_security_callback`'s default matches the
-/// authority's non-NULL answer; the callback's body is the certificate path's (14.7) and it is
-/// never invoked here.
+/// # Safety
+/// Exactly one of `s`/`ctx` must be live (the authority's callback is handed a connection or a
+/// context, never both); `levelp` may be NULL.
+unsafe fn ssl_get_security_level_bits(
+    s: *const Ssl,
+    ctx: *const SslCtx,
+    levelp: *mut c_int,
+) -> c_int {
+    /// `minbits_table[5 + 1]` — `ssl/ssl_cert.c:1226`.
+    const MINBITS: [c_int; 6] = [0, 80, 112, 128, 192, 256];
+    // SAFETY: exactly one of the two is live per the contract; both getters read
+    // `cert->sec_level`, which `cert_new` initialises.
+    let mut level = if !ctx.is_null() {
+        // SAFETY: `ctx` is the live context per the branch condition and the contract.
+        unsafe { SSL_CTX_get_security_level(ctx) }
+    } else {
+        // SAFETY: `s` is the live connection per the contract.
+        unsafe { SSL_get_security_level(s) }
+    };
+    level = level.clamp(0, 5);
+    // SAFETY: `levelp` is writable or NULL per the contract.
+    if !levelp.is_null() {
+        // SAFETY: the branch established `levelp` is writable.
+        unsafe { *levelp = level };
+    }
+    MINBITS[level as usize]
+}
+
+/// `dtls_ver_ordinal(v)` — `ssl_local.h:57`.
+const fn dtls_ver_ordinal(v: c_int) -> c_int {
+    if v == DTLS1_BAD_VER {
+        0xff00
+    } else {
+        v
+    }
+}
+
+/// `ssl_security_default_callback` — `ssl/ssl_cert.c:1247-1312`.
+///
+/// The `SSL_SECOP_VERSION` arm is modelled in full. It is the version floor
+/// `ssl_method_error` consults (`statem_lib.c:1937`), and the security level is what keeps
+/// SSLv3/TLS1.0/TLS1.1 disabled *after* `SSL_OP_NO_TLSv1` opens a hole in the version table.
+/// Without it `ssl_get_min_max_version` sees those versions as enabled, selects SSLv3 as the
+/// maximum, and every ClientHello is rejected with `SSL_R_UNSUPPORTED_PROTOCOL` (the charybdis
+/// `SSLV3_ALERT_HANDSHAKE_FAILURE`).
+///
+/// The remaining operations keep the permissive answer S58 recorded as a residual. Their level
+/// checks are a separate boundary: modelling them changes cipher and signature-algorithm
+/// availability (`ssl_cipher_disabled`, `tls12_sigalg_allowed`), so this subphase does not
+/// silently widen or narrow those lists.
 unsafe extern "C" fn ssl_security_default_callback(
-    _s: *const Ssl,
-    _ctx: *const SslCtx,
-    _op: c_int,
-    _bits: c_int,
-    _nid: c_int,
+    s: *const Ssl,
+    ctx: *const SslCtx,
+    op: c_int,
+    bits: c_int,
+    nid: c_int,
     _other: *mut c_void,
     _ex: *mut c_void,
 ) -> c_int {
+    let mut level = 0;
+    // SAFETY: exactly one of `s`/`ctx` is live (see `ssl_security`/`ssl_ctx_security`).
+    let _minbits = unsafe { ssl_get_security_level_bits(s, ctx, &mut level) };
+    if level == 0 {
+        // The authority's level-0 arm refuses temporary DH keys below 80 bits; every other
+        // operation keeps the permissive answer recorded above.
+        if op == SSL_SECOP_TMP_DH && bits < 80 {
+            return 0;
+        }
+        return 1;
+    }
+    if op == SSL_SECOP_VERSION {
+        // `SSL_CONNECTION_FROM_CONST_SSL(s) == NULL` answers 0: a context-only query has no
+        // connection version to judge.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is the live connection per the branch above.
+        if unsafe { SSL_is_dtls(s) } == 0 {
+            // SSLv3, TLSv1.0 and TLSv1.1 are only allowed at level 0.
+            if nid <= TLS1_1_VERSION {
+                return 0;
+            }
+        } else if dtls_ver_ordinal(nid) > dtls_ver_ordinal(DTLS1_2_VERSION) {
+            // DTLS1.0 and DTLS1.BAD_VER are only allowed at level 0.
+            return 0;
+        }
+    }
     1
 }
 

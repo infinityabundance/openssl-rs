@@ -7660,6 +7660,40 @@ mod tls12_group_tests {
         assert_group_handshake(o::NID_X25519);
     }
 
+    /// charybdis sets `SSL_OP_NO_TLSv1` on a version-flexible `TLS_method()` context and leaves
+    /// the min/max protocol bounds unset. With the security level's version floor missing, the
+    /// server's walk treated SSLv3 as the maximum and answered the ClientHello with
+    /// `SSL_R_UNSUPPORTED_PROTOCOL` (`SSLV3_ALERT_HANDSHAKE_FAILURE`); with it, TLS1.2 is both
+    /// bounds and the handshake completes.
+    #[test]
+    fn charybdis_tls12_handshake_with_no_tlsv1() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"AES128-GCM-SHA256", TLS1_2_VERSION, None, None);
+            // The authority configuration: no explicit bounds, `SSL_OP_NO_TLSv1` only.
+            (*p.s).min_proto_version = 0;
+            (*p.s).max_proto_version = 0;
+            (*p.s).options |= crate::ssl::ssl_ciph_table::SSL_OP_NO_TLSv1;
+            let (client_ok, server_ok) = drive(&p);
+            let server_version = (*p.s).version;
+            let reasons = if server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "TLS1.2 handshake with SSL_OP_NO_TLSv1 failed \
+                 (client={client_ok} server={server_ok}, server version={server_version:#06x}, \
+                 reasons={reasons:?})"
+            );
+            assert_eq!(server_version, TLS1_2_VERSION);
+        }
+    }
+
     // --- ECDSA scheme selection -------------------------------------------------------------
 
     /// `find_sig_alg` (`t1_lib.c:4551-4592`): the scheme follows the signing key's curve and
