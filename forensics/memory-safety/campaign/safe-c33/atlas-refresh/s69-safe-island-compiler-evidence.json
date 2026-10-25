@@ -1,0 +1,521 @@
+{
+  "builds": [
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--lib",
+        "--message-format=json"
+      ],
+      "command": "check --lib --message-format=json",
+      "crate": {
+        "lib_path": "src/lib.rs",
+        "name": "openssl-rs",
+        "version": "0.0.39"
+      },
+      "env": {
+        "CARGO_BUILD_RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTFLAGS": null
+      },
+      "error_count": 0,
+      "exit_code": 0,
+      "id": "baseline-lib",
+      "kind": "baseline",
+      "lint_cap": {
+        "capped": false,
+        "reasons": []
+      },
+      "probes": [],
+      "profile": "dev-lib",
+      "result": "PASS",
+      "stderr_tail": "Checking openssl-rs v0.0.39 (/work/court/s69/repo)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.15s",
+      "unmatched_targets": [],
+      "warning_count": 0
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--lib",
+        "--no-run",
+        "--message-format=json"
+      ],
+      "command": "test --lib --no-run --message-format=json",
+      "crate": {
+        "lib_path": "src/lib.rs",
+        "name": "openssl-rs",
+        "version": "0.0.39"
+      },
+      "env": {
+        "CARGO_BUILD_RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTFLAGS": null
+      },
+      "error_count": 0,
+      "exit_code": 0,
+      "id": "baseline-test",
+      "kind": "baseline",
+      "lint_cap": {
+        "capped": false,
+        "reasons": []
+      },
+      "probes": [],
+      "profile": "test-lib",
+      "result": "PASS",
+      "stderr_tail": "Compiling openssl-rs v0.0.39 (/work/court/s69/repo)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.70s",
+      "unmatched_targets": [],
+      "warning_count": 0
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--lib",
+        "--message-format=json"
+      ],
+      "command": "check --lib --message-format=json",
+      "crate": {
+        "lib_path": "src/lib.rs",
+        "name": "openssl-rs",
+        "version": "0.0.39"
+      },
+      "env": {
+        "CARGO_BUILD_RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTFLAGS": null
+      },
+      "error_count": 5,
+      "exit_code": 101,
+      "id": "canary-lib",
+      "kind": "canary",
+      "lint_cap": {
+        "capped": false,
+        "reasons": []
+      },
+      "probes": [
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 5,
+            "file": "src/cipher_tables.rs",
+            "level": "error",
+            "line": 1101,
+            "lint_source": {
+              "column": 10,
+              "file": "src/lib.rs",
+              "line": 80,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n    --> src/cipher_tables.rs:1101:5\n     |\n1101 |     unsafe {}\n     |     ^^^^^^^^^\n     |\nnote: the lint level is defined here\n    --> src/lib.rs:80:10\n     |\n  80 | #[forbid(unsafe_code)]\n     |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::cipher_tables"
+        },
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 5,
+            "file": "src/digest/tables.rs",
+            "level": "error",
+            "line": 568,
+            "lint_source": {
+              "column": 10,
+              "file": "src/digest/mod.rs",
+              "line": 58,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n   --> src/digest/tables.rs:568:5\n    |\n568 |     unsafe {}\n    |     ^^^^^^^^^\n    |\nnote: the lint level is defined here\n   --> src/digest/mod.rs:58:10\n    |\n 58 | #[forbid(unsafe_code)]\n    |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::digest::tables"
+        },
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 5,
+            "file": "src/runtime/constant_time.rs",
+            "level": "error",
+            "line": 502,
+            "lint_source": {
+              "column": 10,
+              "file": "src/runtime/mod.rs",
+              "line": 31,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n   --> src/runtime/constant_time.rs:502:5\n    |\n502 |     unsafe {}\n    |     ^^^^^^^^^\n    |\nnote: the lint level is defined here\n   --> src/runtime/mod.rs:31:10\n    |\n 31 | #[forbid(unsafe_code)]\n    |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::runtime::constant_time"
+        },
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 5,
+            "file": "src/runtime/ctype_table.rs",
+            "level": "error",
+            "line": 55,
+            "lint_source": {
+              "column": 10,
+              "file": "src/runtime/mod.rs",
+              "line": 34,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n  --> src/runtime/ctype_table.rs:55:5\n   |\n55 |     unsafe {}\n   |     ^^^^^^^^^\n   |\nnote: the lint level is defined here\n  --> src/runtime/mod.rs:34:10\n   |\n34 | #[forbid(unsafe_code)]\n   |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::runtime::ctype_table"
+        },
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 5,
+            "file": "src/status.rs",
+            "level": "error",
+            "line": 174,
+            "lint_source": {
+              "column": 10,
+              "file": "src/lib.rs",
+              "line": 227,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n   --> src/status.rs:174:5\n    |\n174 |     unsafe {}\n    |     ^^^^^^^^^\n    |\nnote: the lint level is defined here\n   --> src/lib.rs:227:10\n    |\n227 | #[forbid(unsafe_code)]\n    |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::status"
+        }
+      ],
+      "profile": "dev-lib",
+      "result": "REJECTED_AS_EXPECTED",
+      "stderr_tail": "Checking openssl-rs v0.0.39 (/work/court/s69/repo)\nerror: could not compile `openssl-rs` (lib) due to 5 previous errors; 5 warnings emitted",
+      "unmatched_targets": [],
+      "warning_count": 5
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--lib",
+        "--no-run",
+        "--message-format=json"
+      ],
+      "command": "test --lib --no-run --message-format=json",
+      "crate": {
+        "lib_path": "src/lib.rs",
+        "name": "openssl-rs",
+        "version": "0.0.39"
+      },
+      "env": {
+        "CARGO_BUILD_RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTFLAGS": null
+      },
+      "error_count": 5,
+      "exit_code": 101,
+      "id": "canary-test",
+      "kind": "canary",
+      "lint_cap": {
+        "capped": false,
+        "reasons": []
+      },
+      "probes": [
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 9,
+            "file": "src/cipher_tables.rs",
+            "level": "error",
+            "line": 1103,
+            "lint_source": {
+              "column": 10,
+              "file": "src/lib.rs",
+              "line": 80,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n    --> src/cipher_tables.rs:1103:9\n     |\n1103 |         unsafe {}\n     |         ^^^^^^^^^\n     |\nnote: the lint level is defined here\n    --> src/lib.rs:80:10\n     |\n  80 | #[forbid(unsafe_code)]\n     |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::cipher_tables"
+        },
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 9,
+            "file": "src/digest/tables.rs",
+            "level": "error",
+            "line": 570,
+            "lint_source": {
+              "column": 10,
+              "file": "src/digest/mod.rs",
+              "line": 58,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n   --> src/digest/tables.rs:570:9\n    |\n570 |         unsafe {}\n    |         ^^^^^^^^^\n    |\nnote: the lint level is defined here\n   --> src/digest/mod.rs:58:10\n    |\n 58 | #[forbid(unsafe_code)]\n    |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::digest::tables"
+        },
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 9,
+            "file": "src/runtime/constant_time.rs",
+            "level": "error",
+            "line": 504,
+            "lint_source": {
+              "column": 10,
+              "file": "src/runtime/mod.rs",
+              "line": 31,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n   --> src/runtime/constant_time.rs:504:9\n    |\n504 |         unsafe {}\n    |         ^^^^^^^^^\n    |\nnote: the lint level is defined here\n   --> src/runtime/mod.rs:31:10\n    |\n 31 | #[forbid(unsafe_code)]\n    |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::runtime::constant_time"
+        },
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 9,
+            "file": "src/runtime/ctype_table.rs",
+            "level": "error",
+            "line": 57,
+            "lint_source": {
+              "column": 10,
+              "file": "src/runtime/mod.rs",
+              "line": 34,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n  --> src/runtime/ctype_table.rs:57:9\n   |\n57 |         unsafe {}\n   |         ^^^^^^^^^\n   |\nnote: the lint level is defined here\n  --> src/runtime/mod.rs:34:10\n   |\n34 | #[forbid(unsafe_code)]\n   |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::runtime::ctype_table"
+        },
+        {
+          "diagnostic": {
+            "code": "unsafe_code",
+            "column": 9,
+            "file": "src/status.rs",
+            "level": "error",
+            "line": 176,
+            "lint_source": {
+              "column": 10,
+              "file": "src/lib.rs",
+              "line": 227,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "usage of an `unsafe` block",
+            "rendered": "error: usage of an `unsafe` block\n   --> src/status.rs:176:9\n    |\n176 |         unsafe {}\n    |         ^^^^^^^^^\n    |\nnote: the lint level is defined here\n   --> src/lib.rs:227:10\n    |\n227 | #[forbid(unsafe_code)]\n    |          ^^^^^^^^^^^"
+          },
+          "observed": "REJECTED",
+          "target": "crate::status"
+        }
+      ],
+      "profile": "test-lib",
+      "result": "REJECTED_AS_EXPECTED",
+      "stderr_tail": "Compiling openssl-rs v0.0.39 (/work/court/s69/repo)\nerror: could not compile `openssl-rs` (lib test) due to 5 previous errors; 5 warnings emitted",
+      "unmatched_targets": [],
+      "warning_count": 5
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--lib",
+        "--message-format=json"
+      ],
+      "command": "check --lib --message-format=json",
+      "crate": {
+        "lib_path": "src/lib.rs",
+        "name": "openssl-rs",
+        "version": "0.0.39"
+      },
+      "env": {
+        "CARGO_BUILD_RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTFLAGS": null
+      },
+      "error_count": 1,
+      "exit_code": 101,
+      "id": "override-lib",
+      "kind": "override",
+      "lint_cap": {
+        "capped": false,
+        "reasons": []
+      },
+      "probes": [
+        {
+          "diagnostic": {
+            "code": "E0453",
+            "column": 9,
+            "file": "src/status.rs",
+            "level": "error",
+            "line": 172,
+            "lint_source": {
+              "column": 10,
+              "file": "src/lib.rs",
+              "line": 227,
+              "text": "#[forbid(unsafe_code)]"
+            },
+            "message": "allow(unsafe_code) incompatible with previous forbid",
+            "rendered": "error[E0453]: allow(unsafe_code) incompatible with previous forbid\n   --> src/status.rs:172:9\n    |\n172 | #[allow(unsafe_code)]\n    |         ^^^^^^^^^^^ overruled by previous forbid\n    |\n   ::: src/lib.rs:227:10\n    |\n227 | #[forbid(unsafe_code)]\n    |          ----------- `forbid` level set here"
+          },
+          "observed": "REJECTED",
+          "target": "crate::status"
+        }
+      ],
+      "profile": "dev-lib",
+      "result": "REJECTED_AS_EXPECTED",
+      "stderr_tail": "Checking openssl-rs v0.0.39 (/work/court/s69/repo)\nerror: could not compile `openssl-rs` (lib) due to 1 previous error",
+      "unmatched_targets": [],
+      "warning_count": 0
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--lib",
+        "--message-format=json"
+      ],
+      "command": "check --lib --message-format=json",
+      "crate": {
+        "lib_path": "src/lib.rs",
+        "name": "openssl-rs",
+        "version": "0.0.39"
+      },
+      "env": {
+        "CARGO_BUILD_RUSTFLAGS": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTFLAGS": null
+      },
+      "error_count": 0,
+      "exit_code": 0,
+      "id": "scope-proof",
+      "kind": "scope",
+      "lint_cap": {
+        "capped": false,
+        "reasons": []
+      },
+      "probes": [],
+      "profile": "dev-lib",
+      "result": "PASS",
+      "stderr_tail": "Checking openssl-rs v0.0.39 (/work/court/s69/repo)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.18s",
+      "unmatched_targets": [],
+      "warning_count": 1
+    }
+  ],
+  "crate": {
+    "lib_path": "src/lib.rs",
+    "name": "openssl-rs",
+    "version": "0.0.39"
+  },
+  "files": {
+    "Cargo.lock": "782176a26ae1d33f57c487cd412b1711fc6cb8d05af551eab8ff216e9510a925",
+    "Cargo.toml": "d14996df5a1a327bc18e1d4a15fd4689841571e6041e327161d4474ac46c57ac",
+    "build.rs": "33d80345497d54478b1aa80355f08348395d8dbaaa30d7f346d79ef4c664b391",
+    "rust-toolchain.toml": "51b89aac2174179a4470434e6666f9f54d52309005332324154cdeeb1f66dd58",
+    "src/cipher_tables.rs": "37957eb0b12ac34f800ec618f74f0cfa5ea9cd9860d82909e04d587af83eefde",
+    "src/digest/mod.rs": "2aa8a9392a900b35cefb2882a66f6d8dbbe9f6dd195fa0d3be7c4215bd43afb8",
+    "src/digest/tables.rs": "043782db685b293a13b855067f4669d2493f6428e266800ca5eddb69d2295d19",
+    "src/lib.rs": "512f7b995084281956dd9b82dc63c32bdc16a959d7294e2ae9aab62450e9a581",
+    "src/runtime/constant_time.rs": "866ce8fc174697c3f43878fc6409b4a4c81e77e4edaa80f10ba0c6ae0c958ead",
+    "src/runtime/ctype_table.rs": "e50d931fadf2d347605555218e76d3ce79c0d3c4fab3282e4cfa80c030a22134",
+    "src/runtime/mod.rs": "0876f8fd2746bf5f6722959700fc626d7adbc9686e1460b675cadd692cf80b32",
+    "src/status.rs": "b0c0ac9aeb2eadf43c1f4ea476573eb2ee271cb27163145b45157c6e76133dbd"
+  },
+  "generators": {
+    "crate::cipher_tables": {
+      "argv_check": [
+        "/usr/bin/python3",
+        "forensics/tools/gen_phase8_cipher_tables.py",
+        "--check"
+      ],
+      "byte_identical": false,
+      "check_exit_code": 1,
+      "check_output": "gen-phase8-cipher-tables: src/cipher_tables.rs differs from a fresh derivation; run `python3 forensics/tools/gen_phase8_cipher_tables.py`",
+      "committed_sha256": "37957eb0b12ac34f800ec618f74f0cfa5ea9cd9860d82909e04d587af83eefde",
+      "committed_token_sha256": "8ab6524cc97f40a8c17ca506ee3fbe5bbac19fefdbc2f5d7cd726fbf278f4485",
+      "generator": "forensics/tools/gen_phase8_cipher_tables.py",
+      "generator_sha256": "6270cb22ac6812abbaf684ad57a3ba02596249869916093036cf169e5fcaaed9",
+      "normalization": "whitespace, comments and rustfmt trailing commas",
+      "rendered_sha256": "24554cf20543f42d333d70fc46d0c558b84946e3bfc568460e60a24cd8748d0f",
+      "rendered_token_sha256": "8ab6524cc97f40a8c17ca506ee3fbe5bbac19fefdbc2f5d7cd726fbf278f4485",
+      "token_identical": true
+    },
+    "crate::digest::tables": {
+      "argv_check": [
+        "/usr/bin/python3",
+        "forensics/tools/gen_phase8_tables.py",
+        "--check"
+      ],
+      "byte_identical": false,
+      "check_exit_code": 1,
+      "check_output": "gen-phase8-tables: src/digest/tables.rs differs from a fresh derivation; run `python3 forensics/tools/gen_phase8_tables.py`",
+      "committed_sha256": "043782db685b293a13b855067f4669d2493f6428e266800ca5eddb69d2295d19",
+      "committed_token_sha256": "df0ff3809ae39390858679a0e5e99ea3e18c38ebffd6a8f92834658a4f0013d3",
+      "generator": "forensics/tools/gen_phase8_tables.py",
+      "generator_sha256": "9ea0895ccd3d2ec476c36ad1f4aaea6596b0f69fa1a5e19d797d715be090af0b",
+      "normalization": "whitespace, comments and rustfmt trailing commas",
+      "rendered_sha256": "c5358170e0a0f84e0ed8b1ae6ba11d2bb5653528882e1e5d2068f4f913c717df",
+      "rendered_token_sha256": "df0ff3809ae39390858679a0e5e99ea3e18c38ebffd6a8f92834658a4f0013d3",
+      "token_identical": true
+    },
+    "crate::runtime::ctype_table": {
+      "argv_check": [
+        "/usr/bin/python3",
+        "forensics/tools/gen_ctype_table.py",
+        "--check"
+      ],
+      "byte_identical": true,
+      "check_exit_code": 0,
+      "check_output": "[ctype-table] ok (weak tier, authority source absent): src/runtime/ctype_table.rs matches forensics/atlas/ctype-table.json",
+      "committed_sha256": "e50d931fadf2d347605555218e76d3ce79c0d3c4fab3282e4cfa80c030a22134",
+      "committed_token_sha256": "ce7f852a11018e7cb2a02bb0daa84404e7bf7de3c8e390406fd93c9b1faa6500",
+      "generator": "forensics/tools/gen_ctype_table.py",
+      "generator_sha256": "377ee4dd3dc395a4c69b80fcb214722cb6e293d5adb5dd07d2e1c1806bf24782",
+      "normalization": "whitespace, comments and rustfmt trailing commas",
+      "rendered_sha256": "e50d931fadf2d347605555218e76d3ce79c0d3c4fab3282e4cfa80c030a22134",
+      "rendered_token_sha256": "ce7f852a11018e7cb2a02bb0daa84404e7bf7de3c8e390406fd93c9b1faa6500",
+      "token_identical": true
+    }
+  },
+  "kind": "compiler-enforced-safe-islands-evidence",
+  "notes": [
+    "The canary is inserted into a disposable copy and removed before the recorded hashes are taken; the source checkout is never modified.",
+    "Only the exact `cargo check --lib` and `cargo test --lib --no-run` product compilations are recorded; no --cap-lints, no RUSTFLAGS cap, no rustc wrapper.",
+    "The generator render was produced in the copy (weak tier, from the committed artefact); byte equality is checked against the committed file, and token identity is the formatting-normalized comparison."
+  ],
+  "recorded_at_utc": "2026-10-25T13:51:23Z",
+  "recorder": "forensics/tools/safe_islands_court_record.py",
+  "schema": "openssl-rs/safe-islands-compiler-evidence/v1",
+  "source_head": "8a8943aa4cc412364b76c1b8b27b62414f196e7e",
+  "toolchain": {
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "channel": "1.98.1",
+    "edition": "2021",
+    "pin_sha256": "51b89aac2174179a4470434e6666f9f54d52309005332324154cdeeb1f66dd58",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+  },
+  "venue": "openssl-rs-court (docker/openssl-rs-court.sh exec)"
+}
