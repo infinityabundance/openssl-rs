@@ -11,23 +11,21 @@
 //! ## What the court drives
 //!
 //! Nothing: the whole `engine` surface is recorded. The body is landed and its
-//! parse, listing, `-c`, `-t`, `-pre`/`-post` and `-v` arms are transcribed, but
-//! the candidate's `ENGINE_load_builtin_engines` calls
-//! `OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN)`, which the crate's
-//! `crypto/init.c` arm still refuses (the engine bits `eng_openssl.c`/
-//! `eng_rdrand.c` are unlanded, as `docs/PHASE-16-CLI-SEAL.md` records), so
-//! `engine` exits with `OPENSSL_init_crypto:init fail` on stderr and an empty
-//! listing where the authority prints the two built-in engines. Both the listing
-//! arms and the pointer-bearing `-pre foo` failure are recorded in the court's
-//! `recorded_divergences`.
+//! parse, listing, `-c`, `-t`, `-pre`/`-post` and `-v` arms are transcribed, but the
+//! candidate's `ENGINE_load_builtin_engines` calls
+//! `OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN)`, which since D565 succeeds as
+//! it does in the authority but registers only the one built-in loader this crate
+//! carries (`dynamic`); `rdrand` and the platform engines are absent, so the listing is
+//! shorter than the authority's even though the initialisation no longer fails. Before
+//! D565 the call answered 0 with `init fail` (the bind9 V5b witness); the arms are still
+//! recorded rather than diffed because of the remaining contents divergence.
 //!
 //! ## Recorded divergences (module header)
 //!
 //! * **The listing arms are not drivable.** `ENGINE_load_builtin_engines`
-//!   (`apps/engine.c:387-392`) fails the candidate's `OPENSSL_init_crypto` with
-//!   the engine bits unlanded, so `engine`, `-c`, `-t` and `-post foo` produce an
-//!   empty listing plus the pointer-bearing init-fail error; the whole surface is
-//!   recorded rather than diffed.
+//!   (`apps/engine.c:387-392`) now succeeds, but registers only `dynamic`, so `engine`,
+//!   `-c`, `-t` and `-post foo` produce a listing that is shorter than the authority's
+//!   (which also has `rdrand`); the whole surface is recorded rather than diffed.
 //! * **The cipher/digest/pkey-method capability enumeration is not landed.**
 //!   `append_buf` over `ENGINE_get_ciphers`/`_digests`/`_pkey_meths`
 //!   (`apps/engine.c:433-457`) and the `OSSL_STORE`-loader scan

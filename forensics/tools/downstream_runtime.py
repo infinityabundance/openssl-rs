@@ -13531,6 +13531,16 @@ def _runtime_row(fam: dict, recipe: dict | None, subject: str, *, level: str, ou
         "tag": NORMALISATION_TAG, "normalises": list(NORMALISATION_ALLOWED),
         "never": list(NORMALISATION_NEVER),
     }
+    # The registry's contribution to the launch root, recorded in the same
+    # {capability, bundle_id, sha256} shape the build/link row uses. This is evidence for the
+    # V5b repair: the runtime harness now resolves exactly the bundles the build extracted, so
+    # a capability-migrated recipe's pinned runtime libraries are on LD_LIBRARY_PATH.
+    if recipe and recipe.get("capabilities"):
+        row["aux_bundles"] = [
+            {"capability": b["capability"], "bundle_id": b["bundle_id"],
+             "sha256": b["sha256"]}
+            for b in bl.deps.resolve_recipe(recipe["capabilities"])
+        ]
     if extra:
         row.update(extra)
     return row
@@ -13561,19 +13571,38 @@ def _specimen_variant(recipe: dict, name: str) -> tuple[str, str]:
     return f"specimen:{name}:{recipe['version']}", f"variant:{name}:{recipe['version']}:pristine"
 
 
+def _aux_runtime_specs(recipe: dict) -> list[dict]:
+    """The auxiliary package specs a recipe's build materialised in `<work>/aux/root`.
+
+    `bl._prepare_aux` accepts two expressions for the same thing: capability bundles
+    (resolved from the S64 registry) and the legacy per-family `aux_sources` pins. Both are
+    extracted into the one aux root and both expose `library_dirs`/`bin_dirs`. Reading only
+    `aux_sources` here made every capability-migrated recipe's runtime launch miss its pinned
+    libraries: V5b measured `libevent-2.1.so.7` and `libltdl.so.7` unresolved for memcached,
+    nsd and charybdis under both subjects, dropping L7 to L4. The order matches
+    `_prepare_aux` (capabilities first) so the launch root is deterministic.
+    """
+    specs = list(recipe.get("aux_sources") or [])
+    requests = recipe.get("capabilities") or []
+    if requests:
+        specs = bl.deps.merge_specs(bl.deps.resolve_recipe(requests)) + specs
+    return specs
+
+
 def _aux_runtime_lib_dirs(recipe: dict, root: Path) -> list[str]:
     """The extracted auxiliary libraries the program needs at load time, in order, deduplicated.
 
     `bl._prepare_aux` extracts each pinned dependency under `<family work>/aux/root`; the source
     root is `<family work>/<subject>/src/<archive>`, so the auxiliary root is two directories above
     it. Only directories that exist are added, so a recipe with non-library auxiliary sources is
-    unaffected.
+    unaffected. Capability bundles contribute exactly as legacy pins do (V5b).
     """
-    if not recipe.get("aux_sources"):
+    specs = _aux_runtime_specs(recipe)
+    if not specs:
         return []
     aux_root = root.parents[1] / "aux" / "root"
     dirs: list[str] = []
-    for spec in recipe["aux_sources"]:
+    for spec in specs:
         for entry in spec.get("library_dirs") or []:
             candidate = aux_root / entry
             if candidate.is_dir() and str(candidate) not in dirs:
@@ -13583,11 +13612,12 @@ def _aux_runtime_lib_dirs(recipe: dict, root: Path) -> list[str]:
 
 def _aux_runtime_bin_dirs(recipe: dict, root: Path) -> list[str]:
     """The extracted auxiliary programs a workload invokes (u-boot-tools' mkimage runs dtc)."""
-    if not recipe.get("aux_sources"):
+    specs = _aux_runtime_specs(recipe)
+    if not specs:
         return []
     aux_root = root.parents[1] / "aux" / "root"
     dirs: list[str] = []
-    for spec in recipe["aux_sources"]:
+    for spec in specs:
         for entry in spec.get("bin_dirs") or []:
             candidate = aux_root / entry
             if candidate.is_dir() and str(candidate) not in dirs:
@@ -13639,13 +13669,14 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
     evidence = [f"family:{fam.get('family_id')}", f"recipe:{recipe['recipe_id']}",
                 f"artifact:{prog['program']}", "local_only:loopback"]
     aux_root = root.parents[1] / "aux" / "root"
+    aux_specs = _aux_runtime_specs(recipe)
     build_env = dict(os.environ, PKG_CONFIG_PATH=f"{prefix}/lib/pkgconfig",
                      CPPFLAGS=f"-I{prefix}/include", LDFLAGS=f"-L{prefix}/lib")
-    aux_include = [str(aux_root / d) for spec in recipe.get("aux_sources") or []
+    aux_include = [str(aux_root / d) for spec in aux_specs
                    for d in spec.get("include_dirs") or []]
-    aux_lib = [str(aux_root / d) for spec in recipe.get("aux_sources") or []
+    aux_lib = [str(aux_root / d) for spec in aux_specs
                for d in spec.get("library_dirs") or []]
-    aux_pc = [str(aux_root / d) for spec in recipe.get("aux_sources") or []
+    aux_pc = [str(aux_root / d) for spec in aux_specs
               for d in spec.get("pkgconfig_dirs") or []]
     if aux_include:
         build_env["CPPFLAGS"] += "".join(f" -I{d}" for d in aux_include)
