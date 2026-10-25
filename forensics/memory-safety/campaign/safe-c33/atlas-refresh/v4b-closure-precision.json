@@ -1,0 +1,4321 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v2",
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "version": 3,
+    "sha256": "cfb083d2ebd6834d9100056493f1b16d6395ed0c0560a74aeb6be9f8256804f3"
+  },
+  "generated_utc": "2026-10-25T17:00:39Z",
+  "family": "cyrus-sasl",
+  "source_identity": {
+    "repository_head": "1dd241777952cffc115c9a329df9288174e56bd0",
+    "branch": "integrate/safe-c33",
+    "tracked_tree_dirty": true,
+    "inventory_path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1-candidate-freeze.json",
+    "inventory_source_head": "22ecf665d6ee719825ace69c7cfe08ee7474f364",
+    "inventory_is_ancestor_or_equal": true,
+    "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+  },
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48",
+    "libssl_so_3_sha256": null,
+    "all_openssl_under_install": true
+  },
+  "artifact_identity": {
+    "path": "court/tmp/v4-sasl2/cyrus-sasl-2.1.28/plugins/.libs/libdigestmd5.so.3.0.0",
+    "sha256": "ff25dc0db17ba285a0be5397431695662db2052765fb32a411c7ab6e3b1c1feb",
+    "dynamic": {
+      "soname": "libdigestmd5.so.3",
+      "needed": [
+        "libcrypto.so.3",
+        "libc.so.6"
+      ],
+      "runpath": [
+        "/work/artifacts/phase2/install/lib64"
+      ],
+      "rpath": []
+    },
+    "build_provenance": {
+      "path": "court/tmp/v4-sasl2/build-record.json",
+      "record": {
+        "family": "cyrus-sasl",
+        "recipe_id": "recipe:cyrus-sasl:2.1.28",
+        "source_url": "https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz",
+        "source_sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c",
+        "source_root_hash": "6150c1d0a94de8e5616b422ff0bb2851c579e2a7e81d763c248bc6e1894ce700",
+        "source_root_hash_rule": "sha256(canonical_json(sorted [[relpath, size, sha256], ...])) over the freshly extracted pristine tree",
+        "source_extraction": "fresh extract of the digest-verified archive; 995 files; no patch applied",
+        "build_system": "autotools",
+        "configure_argv": [
+          "./configure",
+          "--with-openssl=/work/artifacts/phase2/install",
+          "--disable-static",
+          "--enable-shared",
+          "--disable-otp",
+          "--disable-ldapdb",
+          "--without-pam",
+          "--disable-sql"
+        ],
+        "make_argv": [
+          "make",
+          "-j4"
+        ],
+        "env": {
+          "PKG_CONFIG_PATH": "/work/artifacts/phase2/install/lib/pkgconfig",
+          "CPPFLAGS": "-I/work/artifacts/phase2/install/include",
+          "LDFLAGS": "-L/work/artifacts/phase2/install/lib",
+          "LD_LIBRARY_PATH": "/work/artifacts/phase2/install/lib"
+        },
+        "install_prefix": "artifacts/phase2/install",
+        "artifact_rel": "plugins/.libs/libdigestmd5.so.3.0.0",
+        "artifact_sha256": "ff25dc0db17ba285a0be5397431695662db2052765fb32a411c7ab6e3b1c1feb",
+        "court_image": "openssl-rs-court-expand:1",
+        "court_name": "openssl-rs-court-expand",
+        "repo_head": "cd18315a505c15cf7911672dcadfe9ed1746fc2b",
+        "note": "The build-link atlas candidate artefact was not retained. This rebuild uses the admitted recipe against the admitted V1 install, from a fresh extraction of the pinned archive whose digest and pristine tree hash both match the atlas row. It is a rebuild of the same source, not the atlas artefact."
+      },
+      "checks": {
+        "artifact_sha256_matches": true,
+        "install_prefix_matches": true,
+        "source_root_hash_matches_atlas": true
+      }
+    }
+  },
+  "loader_resolution": {
+    "method": "ldd with LD_LIBRARY_PATH=<install>/lib, LD_PRELOAD unset",
+    "command_exit": 0,
+    "environment": {
+      "LD_LIBRARY_PATH": "/work/artifacts/phase2/install/lib",
+      "OPENSSL_MODULES": "/work/artifacts/phase2/install/lib/ossl-modules",
+      "LC_ALL": "C"
+    },
+    "resolved": [
+      {
+        "soname": "libcrypto.so.3",
+        "path": "/work/artifacts/phase2/install/lib/libcrypto.so.3"
+      },
+      {
+        "soname": "libc.so.6",
+        "path": "/lib/x86_64-linux-gnu/libc.so.6"
+      },
+      {
+        "soname": "libgcc_s.so.1",
+        "path": "/lib/x86_64-linux-gnu/libgcc_s.so.1"
+      },
+      {
+        "soname": "ld-linux-x86-64.so.2",
+        "path": "/lib64/ld-linux-x86-64.so.2"
+      }
+    ],
+    "openssl_sonames": {
+      "libcrypto.so.3": {
+        "resolved_path": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+        "resolved_sha256": "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48",
+        "under_admitted_install": true,
+        "requested_by_dt_needed": "libcrypto.so.3",
+        "inventory_sha256": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+        "matches_inventory": false
+      }
+    },
+    "raw_ldd": "\tlinux-vdso.so.1 (0x00007f0f417d4000)\n\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f0f40e00000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f0f40c1e000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f0f41799000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007f0f417d6000)\n"
+  },
+  "ledger_record": {
+    "run_id": "run:build-link:candidate:cyrus-sasl",
+    "level": "L4-linked",
+    "outcome": "reached",
+    "recipe_id": "recipe:cyrus-sasl:2.1.28",
+    "source_sha256": "7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c",
+    "source_root_hash": "6150c1d0a94de8e5616b422ff0bb2851c579e2a7e81d763c248bc6e1894ce700",
+    "artifact_rel": "plugins/.libs/libdigestmd5.so.3.0.0",
+    "artifact_sha256_recorded": "b891b8ad8eca74f81e69e8aceaa9e65e852c333b3f162bec4ba75880540c2141",
+    "recorded_candidate_install": "dc17cfdd187614a8cdffe13c2072bdf15ac5e7f7a78cc6cddac7bf1c68a8c63b",
+    "artifact_matches_this_build": false
+  },
+  "symbol_evidence": {
+    "imported_symbol_count": 12,
+    "imported_symbols": [
+      {
+        "name": "DES_cbc_encrypt",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/des/mod.rs",
+        "all_defining_files": [
+          "src/des/mod.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/des/mod.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "DES_ede3_cbc_encrypt",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/des/mod.rs",
+        "all_defining_files": [
+          "src/des/mod.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/des/mod.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "DES_key_sched",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/des/mod.rs",
+        "all_defining_files": [
+          "src/des/mod.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/des/mod.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_CIPHER_CTX_free",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/cipher_ctx.rs",
+        "all_defining_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_CIPHER_CTX_new",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/cipher_ctx.rs",
+        "all_defining_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_DecryptFinal_ex",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/cipher_ctx.rs",
+        "all_defining_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/evp/cipher_ctx.rs",
+          "src/runtime/err.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_DecryptInit_ex",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/cipher_ctx.rs",
+        "all_defining_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/context/mod.rs",
+          "src/context/namemap.rs",
+          "src/decoder_pkey.rs",
+          "src/evp/algorithm.rs",
+          "src/evp/cipher_ctx.rs",
+          "src/evp/fetch.rs",
+          "src/property/store.rs",
+          "src/provider/activate.rs",
+          "src/provider/init.rs",
+          "src/provider/mod.rs",
+          "src/runtime/err.rs",
+          "src/runtime/sparse_array.rs",
+          "src/runtime/thread_events.rs"
+        ],
+        "direct_reachable_obligation_ids": [
+          "V1:src/context/namemap.rs:1067:UNSAFE_FN_DEF",
+          "V1:src/decoder_pkey.rs:548:UNSAFE_FN_DEF",
+          "V1:src/property/store.rs:1605:UNSAFE_FN_DEF"
+        ],
+        "direct_reachable_obligation_count": 3,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_DecryptUpdate",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/cipher_ctx.rs",
+        "all_defining_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/evp/cipher_ctx.rs",
+          "src/runtime/err.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_EncryptFinal_ex",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/cipher_ctx.rs",
+        "all_defining_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/evp/cipher_ctx.rs",
+          "src/runtime/err.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_EncryptInit_ex",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/cipher_ctx.rs",
+        "all_defining_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/context/mod.rs",
+          "src/context/namemap.rs",
+          "src/decoder_pkey.rs",
+          "src/evp/algorithm.rs",
+          "src/evp/cipher_ctx.rs",
+          "src/evp/fetch.rs",
+          "src/property/store.rs",
+          "src/provider/activate.rs",
+          "src/provider/init.rs",
+          "src/provider/mod.rs",
+          "src/runtime/err.rs",
+          "src/runtime/sparse_array.rs",
+          "src/runtime/thread_events.rs"
+        ],
+        "direct_reachable_obligation_ids": [
+          "V1:src/context/namemap.rs:1067:UNSAFE_FN_DEF",
+          "V1:src/decoder_pkey.rs:548:UNSAFE_FN_DEF",
+          "V1:src/property/store.rs:1605:UNSAFE_FN_DEF"
+        ],
+        "direct_reachable_obligation_count": 3,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_EncryptUpdate",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/cipher_ctx.rs",
+        "all_defining_files": [
+          "src/evp/cipher_ctx.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/evp/cipher_ctx.rs",
+          "src/runtime/err.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      },
+      {
+        "name": "EVP_rc4",
+        "version": "OPENSSL_3.0.0",
+        "lib": "libcrypto.so.3",
+        "defining_file": "src/evp/e_rc4.rs",
+        "all_defining_files": [
+          "src/evp/e_rc4.rs"
+        ],
+        "definition_resolved": true,
+        "direct_reachable_files": [
+          "src/evp/e_rc4.rs"
+        ],
+        "direct_reachable_obligation_ids": [],
+        "direct_reachable_obligation_count": 0,
+        "direct_view_basis": "direct call/PLT edges only; a narrow view, not an upper bound and not a proof that the listed sites are the only reachable ones"
+      }
+    ]
+  },
+  "graph": {
+    "method": "function-level static graph over the exact candidate DSOs: nm-defined functions; objdump direct call edges; and an intraprocedural abstract interpreter that resolves indirect control transfers from relocations (GOT/PLT), immutable dispatch tables, relative jump tables, literal callback stores, field-offset stores in reachable code, and an interprocedural argument summary.  A site that cannot be resolved keeps its evidence class; only a site with no class admits the global address-taken union",
+    "upper_bound_rule": "direct edges + the resolver's per-site target sets + the residual class (functions address-materialised in reachable code, consumer-imported symbols, values stored into object fields by reachable code, and values passed at unresolved call sites); the global address-taken union is admitted only for an unclassified site, and any such site is listed in precision.unclassified_reachable_sites",
+    "direct_reachable_functions": 1859,
+    "upper_bound_reachable_functions": 1859,
+    "address_taken_functions": 5225,
+    "reachable_functions_with_indirect_calls": 77,
+    "reachable_export_symbols": {
+      "count": 70,
+      "sample": [
+        "ASN1_BIT_STRING_free",
+        "ASN1_INTEGER_get",
+        "ASN1_OBJECT_free",
+        "ASN1_generate_nconf",
+        "AUTHORITY_INFO_ACCESS_it",
+        "BN_to_ASN1_INTEGER",
+        "CTLOG_free",
+        "DES_cbc_encrypt",
+        "DES_ede3_cbc_encrypt",
+        "DES_key_sched",
+        "DES_string_to_key",
+        "ERR_load_CT_strings",
+        "ERR_load_ENGINE_strings",
+        "ERR_peek_last_error_line_data",
+        "EVP_ASYM_CIPHER_up_ref",
+        "EVP_CIPHER_CTX_free",
+        "EVP_CIPHER_CTX_new",
+        "EVP_CIPHER_free",
+        "EVP_CIPHER_up_ref",
+        "EVP_DecryptFinal_ex",
+        "EVP_DecryptInit_ex",
+        "EVP_DecryptUpdate",
+        "EVP_EncryptFinal_ex",
+        "EVP_EncryptInit_ex",
+        "EVP_EncryptUpdate",
+        "EVP_KDF_free",
+        "EVP_KDF_up_ref",
+        "EVP_KEYEXCH_free",
+        "EVP_KEYMGMT_free",
+        "EVP_KEYMGMT_up_ref",
+        "EVP_MAC_free",
+        "EVP_MAC_settable_ctx_params",
+        "EVP_MAC_up_ref",
+        "EVP_MD_free",
+        "EVP_MD_up_ref",
+        "EVP_PKEY_CTX_set_group_name",
+        "EVP_PKEY_CTX_set_kem_op",
+        "EVP_PKEY_CTX_set_mac_key",
+        "EVP_PKEY_CTX_set_rsa_oaep_md_name",
+        "EVP_PKEY_meth_free",
+        "EVP_RAND_free",
+        "EVP_RAND_uninstantiate",
+        "EVP_RAND_up_ref",
+        "EVP_SIGNATURE_free",
+        "EVP_SKEYMGMT_free",
+        "EVP_SKEYMGMT_up_ref",
+        "EVP_rc4",
+        "OSSL_PARAM_merge",
+        "OSSL_STORE_load",
+        "PKCS12_add_safe_ex",
+        "PKCS8_PRIV_KEY_INFO_it",
+        "PKCS8_pkey_add1_attr",
+        "POLICYQUALINFO_free",
+        "RSA_print_fp",
+        "SCT_free",
+        "TS_REQ_set_policy_id",
+        "TS_RESP_verify_signature",
+        "X509_ATTRIBUTE_create_by_NID",
+        "X509_new",
+        "X509_policy_level_get0_node",
+        "d2i_OSSL_ATAV",
+        "d2i_OSSL_ATTRIBUTE_MAPPING",
+        "d2i_OSSL_ATTRIBUTE_TYPE_MAPPING",
+        "d2i_RSA_PSS_PARAMS",
+        "i2a_ACCESS_DESCRIPTION",
+        "i2d_OSSL_DAY_TIME",
+        "i2d_OSSL_NAMED_DAY",
+        "i2d_OSSL_TIME_SPEC_MONTH",
+        "i2d_PBKDF2PARAM",
+        "i2d_X509_EXTENSION"
+      ],
+      "note": "candidate DSO exports reached by the graph, including the 12 consumer imports; the consumer-imported set is in symbol_evidence"
+    },
+    "special_edges": {
+      "constructor_destructor_roots": 3,
+      "address_taken_global_union": 5225,
+      "residual_class_admitted": 772,
+      "reachable_residual_sites": 122,
+      "unclassified_reachable_sites": [],
+      "address_taken_data_pointers": 3699,
+      "allocator_hook_registrars_reachable": [],
+      "callback_registrars_reachable_count": 1,
+      "callback_registrars_reachable_sample": [
+        "ossl_pw_set_ossl_passphrase_cb"
+      ],
+      "dynamic_name_lookup_reachable": [],
+      "consumer_imported_provider_registration": [],
+      "provider_registration_or_selection_reachable": [],
+      "provider_narrowing": "the consumer imports no provider installation/selection symbol and no dynamic name lookup, and the reachable set contains 0 provider/engine selection symbol(s); provider dispatch is therefore limited to built-in providers whose tables are reached through the resolver, not to a dynamically registered provider",
+      "note": "each listed class was checked against the reachable set of the exact candidate code; an empty list is an observed absence on this closure, not an assumption.  A reachable dynamic name lookup would be an unmodelled edge class because the static graph cannot resolve names"
+    },
+    "direct_reachable_files": 305,
+    "upper_bound_reachable_files": 305,
+    "reachable_files": [
+      "src/aes.rs",
+      "src/apps/ciphers.rs",
+      "src/apps/info.rs",
+      "src/apps/keyio.rs",
+      "src/apps/opt.rs",
+      "src/apps/passwd.rs",
+      "src/apps/req.rs",
+      "src/apps/srp.rs",
+      "src/apps/verify.rs",
+      "src/aria.rs",
+      "src/asn1/a_digest.rs",
+      "src/asn1/a_mbstr.rs",
+      "src/asn1/a_strex.rs",
+      "src/asn1/a_strnid.rs",
+      "src/asn1/asn1_gen.rs",
+      "src/asn1/asn_mime.rs",
+      "src/asn1/asn_mstbl.rs",
+      "src/asn1/bio_asn1.rs",
+      "src/asn1/bitstr.rs",
+      "src/asn1/d2i.rs",
+      "src/asn1/d2i_pr.rs",
+      "src/asn1/fre.rs",
+      "src/asn1/i2d.rs",
+      "src/asn1/new.rs",
+      "src/asn1/owned.rs",
+      "src/asn1/p5_scrypt.rs",
+      "src/asn1/prim.rs",
+      "src/asn1/utl.rs",
+      "src/asn1/x_info.rs",
+      "src/asn1/x_pkey.rs",
+      "src/async/arch/async_posix.rs",
+      "src/bn/bignum.rs",
+      "src/bn/limbs.rs",
+      "src/bn/rand.rs",
+      "src/camellia.rs",
+      "src/cmp/cmp_asn.rs",
+      "src/cmp/cmp_client.rs",
+      "src/cmp/cmp_ctx.rs",
+      "src/cmp/cmp_genm.rs",
+      "src/cmp/cmp_http.rs",
+      "src/cmp/cmp_msg.rs",
+      "src/cmp/cmp_server.rs",
+      "src/cmp/cmp_status.rs",
+      "src/cmp/cmp_util.rs",
+      "src/cmp/cmp_vfy.rs",
+      "src/cms/cms_asn1.rs",
+      "src/cms/cms_enc.rs",
+      "src/cms/cms_env.rs",
+      "src/cms/cms_ess.rs",
+      "src/cms/cms_io.rs",
+      "src/cms/cms_lib.rs",
+      "src/cms/cms_sd.rs",
+      "src/cms/cms_smime.rs",
+      "src/context/mod.rs",
+      "src/context/namemap.rs",
+      "src/context/thread_data.rs",
+      "src/crmf/crmf_lib.rs",
+      "src/ct/ct_log.rs",
+      "src/decoder_lib.rs",
+      "src/decoder_meth.rs",
+      "src/decoder_pkey.rs",
+      "src/der_writer.rs",
+      "src/des/mod.rs",
+      "src/dh/key.rs",
+      "src/digest/md32.rs",
+      "src/digest/md4.rs",
+      "src/digest/md5.rs",
+      "src/digest/ripemd.rs",
+      "src/digest/sha1.rs",
+      "src/digest/sha2.rs",
+      "src/dsa/ossl.rs",
+      "src/dso/dlfcn.rs",
+      "src/dso/mod.rs",
+      "src/ec/ameth.rs",
+      "src/ec/curve448.rs",
+      "src/ec/ecx_meth.rs",
+      "src/ec/kmeth.rs",
+      "src/ec/lib.rs",
+      "src/ec/mod.rs",
+      "src/ec/pmeth.rs",
+      "src/encoder_lib.rs",
+      "src/encoder_meth.rs",
+      "src/encoder_pkey.rs",
+      "src/engine/eng_cnf.rs",
+      "src/engine/eng_dyn.rs",
+      "src/engine/eng_fat.rs",
+      "src/engine/eng_init.rs",
+      "src/engine/eng_lib.rs",
+      "src/engine/eng_list.rs",
+      "src/engine/eng_table.rs",
+      "src/engine/tb_asnmth.rs",
+      "src/engine/tb_cipher.rs",
+      "src/engine/tb_dh.rs",
+      "src/engine/tb_digest.rs",
+      "src/engine/tb_dsa.rs",
+      "src/engine/tb_eckey.rs",
+      "src/engine/tb_pkmeth.rs",
+      "src/engine/tb_rand.rs",
+      "src/engine/tb_rsa.rs",
+      "src/evp/algorithm.rs",
+      "src/evp/asymcipher.rs",
+      "src/evp/bio_enc.rs",
+      "src/evp/bio_ok.rs",
+      "src/evp/cipher.rs",
+      "src/evp/cipher_ctx.rs",
+      "src/evp/digest.rs",
+      "src/evp/e_aes.rs",
+      "src/evp/e_aria.rs",
+      "src/evp/e_camellia.rs",
+      "src/evp/e_rc4.rs",
+      "src/evp/e_sm4.rs",
+      "src/evp/evp_cnf.rs",
+      "src/evp/evp_pbe.rs",
+      "src/evp/evp_pkey.rs",
+      "src/evp/exchange.rs",
+      "src/evp/fetch.rs",
+      "src/evp/kdf.rs",
+      "src/evp/kem.rs",
+      "src/evp/keymgmt.rs",
+      "src/evp/keymgmt_lib.rs",
+      "src/evp/legacy_evp.rs",
+      "src/evp/legacy_sha.rs",
+      "src/evp/mac.rs",
+      "src/evp/method_store.rs",
+      "src/evp/p5_crpt2.rs",
+      "src/evp/pkey.rs",
+      "src/evp/pkey_asn1.rs",
+      "src/evp/pkey_ctx.rs",
+      "src/evp/pmeth_check.rs",
+      "src/evp/pmeth_gn.rs",
+      "src/evp/rand.rs",
+      "src/evp/signature.rs",
+      "src/evp/skeymgmt.rs",
+      "src/ffc/dh.rs",
+      "src/ffc/params_validate.rs",
+      "src/ffi/mod.rs",
+      "src/hpke/mod.rs",
+      "src/mac/cmac.rs",
+      "src/mac/hmac.rs",
+      "src/mac/ssl3_cbc.rs",
+      "src/ml_dsa/encoders.rs",
+      "src/ml_dsa/key.rs",
+      "src/ml_dsa/sample.rs",
+      "src/ml_kem/arith.rs",
+      "src/ml_kem/key.rs",
+      "src/ocsp/ocsp_ext.rs",
+      "src/packet.rs",
+      "src/params/dup.rs",
+      "src/params/mod.rs",
+      "src/passphrase.rs",
+      "src/pem/key_legacy.rs",
+      "src/pem/pem_all.rs",
+      "src/pem/pem_info.rs",
+      "src/pem/pem_lib.rs",
+      "src/pem/pem_pk8.rs",
+      "src/pem/pem_pkey.rs",
+      "src/pem/pem_x509.rs",
+      "src/pem/pem_xaux.rs",
+      "src/pkcs12/p12_add.rs",
+      "src/pkcs12/p12_crt.rs",
+      "src/pkcs12/p12_kiss.rs",
+      "src/pkcs12/p12_mutl.rs",
+      "src/pkcs7/pk7_doit.rs",
+      "src/pkcs7/pk7_smime.rs",
+      "src/property/defn_cache.rs",
+      "src/property/parse.rs",
+      "src/property/query.rs",
+      "src/property/store.rs",
+      "src/property/strings.rs",
+      "src/provider/activate.rs",
+      "src/provider/child.rs",
+      "src/provider/cipher.rs",
+      "src/provider/cipher_gcm.rs",
+      "src/provider/conf.rs",
+      "src/provider/decode_epki2pki.rs",
+      "src/provider/decode_pem2der.rs",
+      "src/provider/der_rsa_key.rs",
+      "src/provider/digest.rs",
+      "src/provider/digest_to_nid.rs",
+      "src/provider/dsa_kmgmt.rs",
+      "src/provider/encode_key2any.rs",
+      "src/provider/encode_key2blob.rs",
+      "src/provider/file_store.rs",
+      "src/provider/init.rs",
+      "src/provider/kdf.rs",
+      "src/provider/keymgmt.rs",
+      "src/provider/mac.rs",
+      "src/provider/ml_common_codecs.rs",
+      "src/provider/ml_dsa_codecs.rs",
+      "src/provider/ml_kem_codecs.rs",
+      "src/provider/mlx_kem.rs",
+      "src/provider/mlx_kmgmt.rs",
+      "src/provider/mod.rs",
+      "src/provider/rand.rs",
+      "src/provider/rsa_enc.rs",
+      "src/provider/rsa_kmgmt.rs",
+      "src/provider/rsa_sig.rs",
+      "src/provider/securitycheck.rs",
+      "src/provider/securitycheck_default.rs",
+      "src/provider/seeding.rs",
+      "src/provider/stores.rs",
+      "src/rand/rand_lib.rs",
+      "src/rand/unix.rs",
+      "src/rsa/backend.rs",
+      "src/rsa/ctrl.rs",
+      "src/rsa/gen.rs",
+      "src/rsa/mod.rs",
+      "src/rsa/mp.rs",
+      "src/rsa/ossl.rs",
+      "src/rsa/pmeth.rs",
+      "src/runtime/bio/bf_buff.rs",
+      "src/runtime/bio/bss_acpt.rs",
+      "src/runtime/bio/bss_bio.rs",
+      "src/runtime/bio/dump.rs",
+      "src/runtime/bio/method.rs",
+      "src/runtime/bio/owned.rs",
+      "src/runtime/conf/api.rs",
+      "src/runtime/conf/conf_ssl.rs",
+      "src/runtime/conf/def.rs",
+      "src/runtime/conf/lib.rs",
+      "src/runtime/confmod/asn1.rs",
+      "src/runtime/confmod/mod.rs",
+      "src/runtime/dso_shared.rs",
+      "src/runtime/err.rs",
+      "src/runtime/ex_data.rs",
+      "src/runtime/foreign.rs",
+      "src/runtime/init.rs",
+      "src/runtime/lhash.rs",
+      "src/runtime/mem.rs",
+      "src/runtime/obj.rs",
+      "src/runtime/owned_buf.rs",
+      "src/runtime/owned_str.rs",
+      "src/runtime/rcu.rs",
+      "src/runtime/sparse_array.rs",
+      "src/runtime/thread.rs",
+      "src/runtime/thread_arch.rs",
+      "src/runtime/thread_events.rs",
+      "src/runtime/threads_common.rs",
+      "src/seed.rs",
+      "src/slh_dsa/key.rs",
+      "src/sm4.rs",
+      "src/ssl/record/rec_layer_s3.rs",
+      "src/ssl/ssl_asn1.rs",
+      "src/ssl/ssl_cert.rs",
+      "src/ssl/ssl_ciph.rs",
+      "src/ssl/ssl_conf.rs",
+      "src/ssl/ssl_lib.rs",
+      "src/ssl/ssl_rsa.rs",
+      "src/ssl/ssl_sess.rs",
+      "src/ssl/statem/extensions_clnt.rs",
+      "src/ssl/statem/extensions_srvr.rs",
+      "src/ssl/statem/statem.rs",
+      "src/ssl/statem/statem_clnt.rs",
+      "src/ssl/statem/statem_lib.rs",
+      "src/ssl/statem/statem_srvr.rs",
+      "src/ssl/t1_enc.rs",
+      "src/ssl/t1_lib.rs",
+      "src/ssl/t1_trce.rs",
+      "src/ssl/tls13_enc.rs",
+      "src/ssl/tls_srp.rs",
+      "src/store/store_lib.rs",
+      "src/store/store_meth.rs",
+      "src/store/store_register.rs",
+      "src/store/store_result.rs",
+      "src/ts/ts_conf.rs",
+      "src/ts/ts_req_utils.rs",
+      "src/ts/ts_rsp_print.rs",
+      "src/ts/ts_rsp_sign.rs",
+      "src/ts/ts_rsp_verify.rs",
+      "src/ui/ui_lib.rs",
+      "src/ui/ui_openssl.rs",
+      "src/ui/ui_util.rs",
+      "src/x509/by_dir.rs",
+      "src/x509/by_store.rs",
+      "src/x509/dane.rs",
+      "src/x509/pcy_cache.rs",
+      "src/x509/pcy_data.rs",
+      "src/x509/pcy_node.rs",
+      "src/x509/pcy_tree.rs",
+      "src/x509/t_req.rs",
+      "src/x509/t_x509.rs",
+      "src/x509/v3_addr.rs",
+      "src/x509/v3_admis.rs",
+      "src/x509/v3_asid.rs",
+      "src/x509/v3_conf.rs",
+      "src/x509/v3_cpols.rs",
+      "src/x509/v3_crld.rs",
+      "src/x509/v3_extku.rs",
+      "src/x509/v3_lib.rs",
+      "src/x509/v3_prn.rs",
+      "src/x509/v3_purp.rs",
+      "src/x509/v3_san.rs",
+      "src/x509/v3_tlsf.rs",
+      "src/x509/v3_utl.rs",
+      "src/x509/x509_att.rs",
+      "src/x509/x509_cmp.rs",
+      "src/x509/x509_lu.rs",
+      "src/x509/x509_req.rs",
+      "src/x509/x509_trust.rs",
+      "src/x509/x509_vfy.rs",
+      "src/x509/x509_vpm.rs",
+      "src/x509/x_crl.rs",
+      "src/x509/x_name.rs",
+      "src/x509/x_pubkey.rs",
+      "src/x509/x_x509.rs"
+    ],
+    "unmapped_crate_functions": {
+      "count": 2,
+      "samples": [
+        {
+          "symbol": "_RNvNtNtCshTICeGyHlpS_10openssl_rs12crypto_async3job16async_start_func",
+          "demangled": "openssl_rs[d07a2e78014f88a2]::crypto_async::job::async_start_func"
+        },
+        {
+          "symbol": "_RNvNtNtCshTICeGyHlpS_10openssl_rs12crypto_async3job25async_delete_thread_state",
+          "demangled": "openssl_rs[d07a2e78014f88a2]::crypto_async::job::async_delete_thread_state"
+        }
+      ],
+      "note": "crate-namespace functions with no module-path mapping; they are a coverage limit of the demangler, not a claim of unreachability"
+    },
+    "per_dso": {
+      "libcrypto.so.3": {
+        "function_symbols": 16229,
+        "direct_edges": 13162,
+        "indirect_sites": 52230,
+        "resolved_indirect_sites": 51536,
+        "unresolved_indirect_sites": 694,
+        "functions_with_unresolved_indirect_calls": 358,
+        "address_taken_code_refs": 743,
+        "address_taken_data_pointers": 3699,
+        "site_classes": {
+          "('field', True)": 210,
+          "('got-or-table', False)": 38874,
+          "('materialised', True)": 484,
+          "('resolved', False)": 12654,
+          "('table', False)": 8
+        }
+      }
+    },
+    "observed_trace": {
+      "available": false,
+      "note": "no observed execution trace was supplied; the closure is the static upper bound alone"
+    },
+    "limits": [
+      "inlined callees have no out-of-line function node; their code is attributed to the caller, so a source file whose only contribution is inlined has no node of its own",
+      "the resolver is an over-approximation: an unresolved site is admitted at its evidence class, and every unclassified site is listed rather than silently dropped",
+      "a dynamic trace proves execution, not unreachability, and never narrowed this graph",
+      "function-level reachability is not a proof that a site is safe; it bounds which obligations apply"
+    ]
+  },
+  "precision": {
+    "purpose": "replace the global address-taken collapse with per-site, evidence-bound target sets; every residual site states why it remains unresolved",
+    "totals": {
+      "indirect_sites": 52230,
+      "resolved_sites": 51536,
+      "unresolved_sites": 694,
+      "reachable_unresolved_sites": 122,
+      "unclassified_reachable_sites": 0
+    },
+    "classes": {
+      "got_or_table": {
+        "mechanism": "call/jump through an absolute slot",
+        "evidence": "readelf -rW relocation (RELATIVE/GLOB_DAT/JUMP_SLOT) or raw pointer",
+        "invariant": "the slot's value is fixed by the dynamic loader and the slot lies in .got/.got.plt/.data.rel.ro/.rodata, which are immutable after relocation; a writable .data/.bss slot is used only with the union of all stores performed by reachable code"
+      },
+      "table": {
+        "mechanism": "static dispatch/vtable table read with a known base",
+        "evidence": ".data.rel.ro relocation runs",
+        "invariant": "the base address is a link-time constant (lea or a relocated pointer), so every entry is a relocation-resolved function address; an unfilled or open entry makes the site unresolved"
+      },
+      "switch": {
+        "mechanism": "compiler relative jump table",
+        "evidence": "4-byte relative entries from a known .rodata base",
+        "invariant": "the table base is a link-time constant and every entry is decoded; targets that are function starts are admitted, intra-function targets add no new node"
+      },
+      "field": {
+        "mechanism": "object-field dispatch (callback or method pointer)",
+        "evidence": "stores to that offset by reachable code, consumer-imported values and the return values of consumer-imported constructors, and code-materialised addresses when the field is open",
+        "invariant": "a function value installed in a reachable object at a known offset is either written by reachable code (store summary), supplied by the consumer (its imported symbols and their returns, since the artefact has no dynamic name lookup), or address-materialised in reachable code; an open field adds the code-materialised set"
+      },
+      "materialised": {
+        "mechanism": "direct call through a value with no static table provenance",
+        "evidence": "address-of materialisations in reachable code + consumer imports",
+        "invariant": "after GOT/table/switch/field resolution, a remaining value can only be an address taken in reachable code or a value supplied by the consumer; a site that cannot be assigned even this class is listed as unclassified and admits the global union"
+      }
+    },
+    "invariants_summary": "Each class is narrowed only by evidence that fixes the possible values at the site.  A trace never narrows anything.  Functions that are not observed remain reachable if any bound admits them.  The residual class is a bound, not a claim that every listed function is called.",
+    "residual_sites": [
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5ecab0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5eca20",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5fcba0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x20(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5fcba0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x20(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x2aeeb0",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "jmp    *0x40(%rsi)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x24c710",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *0x28(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x379090",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x2562a0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x2562a0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5eb800",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5f6e50",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x20(%r12)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x602a50",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%r12)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x209c50",
+        "reason": "field-of-unknown-base",
+        "class": "field",
+        "text": "call   *(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x4c3300",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *(%r12)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5c0370",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x20(%rsi)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x4c9470",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *(%rbx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x4c9470",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *0x10(%rbx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x4c9470",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *0x8(%rbx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x4c9470",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *0x10(%rbx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x186540",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *0x20(%rsi)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x28acc0",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *0x20(%rbx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x28b5e0",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *0x20(%r12)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x25fb80",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x25fb80",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x25fb80",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5ee260",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5ee260",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5f7f10",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5f7f10",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5aadd0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x20(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x25e3b0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x57a690",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x10(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5ea3d0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rcx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5ea3d0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rcx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5e9eb0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5e9eb0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5e9eb0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5e9eb0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5e9eb0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rcx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5e9eb0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5e9eb0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5f9f10",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x2565e0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x2565e0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x2565e0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x2565e0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x25b3f0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x191460",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5ad540",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5ad540",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5f7eb0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%r15)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x28c100",
+        "reason": "reg-value-partial[]",
+        "class": "materialised",
+        "text": "call   *%rcx"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x28c100",
+        "reason": "field-of-unknown-base",
+        "class": "field",
+        "text": "call   *0x20(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x28c100",
+        "reason": "field-of-unknown-base",
+        "class": "field",
+        "text": "call   *0x20(%r13)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x28c100",
+        "reason": "field-of-unknown-base",
+        "class": "field",
+        "text": "call   *0x20(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x579760",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x38(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5a9b40",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%r15)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x25e5a0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x57aa88",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x48(%r12)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x28adc0",
+        "reason": "field-of-unknown-base",
+        "class": "field",
+        "text": "call   *0x20(%rbx)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x256cf0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x256cf0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x201020",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rcx"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x59e076",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x28(%r12)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x59e076",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x28(%r12)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x59e076",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x28(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x59e076",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x30(%r15)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5bf650",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x10(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x3ad6b0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "jmp    *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x3ad6b0",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "jmp    *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x255f60",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5ea040",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x20aea0",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "call   *(%rsi)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x5bf820",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x10(%rax)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x218cd0",
+        "reason": "reg-value-partial[int]",
+        "class": "materialised",
+        "text": "call   *%rbp"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x6025f0",
+        "reason": "stack-slot-open",
+        "class": "materialised",
+        "text": "call   *0x18(%r13)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x504100",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rax"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x504100",
+        "reason": "reg-top",
+        "class": "materialised",
+        "text": "call   *%rcx"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x6020d0",
+        "reason": "base-slot-partial",
+        "class": "field",
+        "text": "jmp    *0x18(%rdi)"
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "0x28b440",
+        "reason": "field-of-unknown-base",
+        "class": "field",
+        "text": "call   *0x20(%rax)"
+      }
+    ],
+    "unclassified_reachable_sites": [],
+    "settled": "the only reachable unresolved sites are field- or materialised-class sites; no unclassified site is reachable",
+    "relro": {
+      "source": "readelf -lW/-SW on the exact resolved libcrypto.so.3",
+      "gnu_relro_segment": {
+        "vaddr": "0x7b0498",
+        "filesz": "0xdfb68",
+        "end": "0x890000"
+      },
+      "data_rel_ro": {
+        "vaddr": "0x7b08b0",
+        "size": "0xdaae0",
+        "end": "0x88b390"
+      },
+      "got": {
+        "vaddr": "0x88b5a0",
+        "size": "0x4a48",
+        "end": "0x88ffe8"
+      },
+      "covered": true,
+      "invariant": ".data.rel.ro and .got lie inside PT_GNU_RELRO, so after the loader applies relocations they are not writable; their target sets are fixed.  .data and .bss are writable and are read only through the union of static initialisation and all stores performed by reachable code."
+    }
+  },
+  "obligations": [
+    {
+      "id": "V1:src/apps/verify.rs:104:UNSAFE_FN_DEF",
+      "file": "src/apps/verify.rs",
+      "line": 104,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/asn1/a_mbstr.rs:243:UNSAFE_FN_DEF",
+      "file": "src/asn1/a_mbstr.rs",
+      "line": 243,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "ASN1_OCSP",
+      "mechanism_basis": "directory-rule:^src/(?:asn1|ocsp|ts|objects)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "UNSAFE_OPEN",
+      "mechanism_state_source": "state.json#/mechanisms[id=ASN1_OCSP]"
+    },
+    {
+      "id": "V1:src/async/arch/async_posix.rs:52:UNSAFE_EXTERN_BLOCK",
+      "file": "src/async/arch/async_posix.rs",
+      "line": 52,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "partition": "production",
+      "v1_reason": "no SAFETY on UNSAFE_EXTERN_BLOCK",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/cms/cms_asn1.rs:495:UNSAFE_FN_DEF",
+      "file": "src/cms/cms_asn1.rs",
+      "line": 495,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "mechanism_basis": "directory-rule:^src/(?:rand|cms|store|pem|pkcs7|pkcs12|cmp|crmf)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]"
+    },
+    {
+      "id": "V1:src/cms/cms_sd.rs:2211:UNSAFE_FN_DEF",
+      "file": "src/cms/cms_sd.rs",
+      "line": 2211,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "mechanism_basis": "directory-rule:^src/(?:rand|cms|store|pem|pkcs7|pkcs12|cmp|crmf)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]"
+    },
+    {
+      "id": "V1:src/context/namemap.rs:1067:UNSAFE_FN_DEF",
+      "file": "src/context/namemap.rs",
+      "line": 1067,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B9-NAME-1",
+        "B9-NAME-2"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RUNTIME_CONCURRENCY]"
+    },
+    {
+      "id": "V1:src/decoder_meth.rs:767:UNSAFE_FN_DEF",
+      "file": "src/decoder_meth.rs",
+      "line": 767,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:decoder_lib|decoder_meth|decoder_pkey|encoder_meth|encoder_pkey)\\.rs$",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/decoder_pkey.rs:548:UNSAFE_FN_DEF",
+      "file": "src/decoder_pkey.rs",
+      "line": 548,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:decoder_lib|decoder_meth|decoder_pkey|encoder_meth|encoder_pkey)\\.rs$",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/digest/sha2.rs:417:UNSAFE_FN_DEF",
+      "file": "src/digest/sha2.rs",
+      "line": 417,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/digest/sha2.rs:441:UNSAFE_FN_DEF",
+      "file": "src/digest/sha2.rs",
+      "line": 441,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/dso/mod.rs:885:UNSAFE_FN_DEF",
+      "file": "src/dso/mod.rs",
+      "line": 885,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/encoder_meth.rs:269:UNSAFE_FN_DEF",
+      "file": "src/encoder_meth.rs",
+      "line": 269,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:decoder_lib|decoder_meth|decoder_pkey|encoder_meth|encoder_pkey)\\.rs$",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/engine/eng_dyn.rs:576:UNSAFE_FN_DEF",
+      "file": "src/engine/eng_dyn.rs",
+      "line": 576,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no mechanism state could be established for this reachable file",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B20-DYN-1",
+        "B20-DYN-2",
+        "B20-DYN-3",
+        "B20-DYN-4"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/engine/eng_table.rs:148:UNSAFE_FN_DEF",
+      "file": "src/engine/eng_table.rs",
+      "line": 148,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no mechanism state could be established for this reachable file",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B20-TBL-1",
+        "B20-TBL-2",
+        "B20-TBL-3",
+        "B20-TBL-4",
+        "B20-TBL-5"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/engine/tb_asnmth.rs:330:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_asnmth.rs",
+      "line": 330,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no mechanism state could be established for this reachable file",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B16-ASN1-1",
+        "B16-ASN1-2",
+        "B16-ASN1-3"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/evp/legacy_sha.rs:181:UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 181,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/evp/legacy_sha.rs:224:UNSAFE_FN_DEF",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 224,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/ocsp/ocsp_ext.rs:685:UNSAFE_FN_DEF",
+      "file": "src/ocsp/ocsp_ext.rs",
+      "line": 685,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "ASN1_OCSP",
+      "mechanism_basis": "directory-rule:^src/(?:asn1|ocsp|ts|objects)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "UNSAFE_OPEN",
+      "mechanism_state_source": "state.json#/mechanisms[id=ASN1_OCSP]"
+    },
+    {
+      "id": "V1:src/passphrase.rs:499:UNSAFE_FN_DEF",
+      "file": "src/passphrase.rs",
+      "line": 499,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/pem/pem_info.rs:73:UNSAFE_EXTERN_BLOCK",
+      "file": "src/pem/pem_info.rs",
+      "line": 73,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "partition": "production",
+      "v1_reason": "no SAFETY on UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "mechanism_basis": "directory-rule:^src/(?:rand|cms|store|pem|pkcs7|pkcs12|cmp|crmf)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]"
+    },
+    {
+      "id": "V1:src/pem/pem_pk8.rs:67:UNSAFE_EXTERN_BLOCK",
+      "file": "src/pem/pem_pk8.rs",
+      "line": 67,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "partition": "production",
+      "v1_reason": "no SAFETY on UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "mechanism_basis": "directory-rule:^src/(?:rand|cms|store|pem|pkcs7|pkcs12|cmp|crmf)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]"
+    },
+    {
+      "id": "V1:src/pem/pem_pkey.rs:110:UNSAFE_EXTERN_BLOCK",
+      "file": "src/pem/pem_pkey.rs",
+      "line": 110,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "partition": "production",
+      "v1_reason": "no SAFETY on UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "mechanism_basis": "directory-rule:^src/(?:rand|cms|store|pem|pkcs7|pkcs12|cmp|crmf)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]"
+    },
+    {
+      "id": "V1:src/property/store.rs:1605:UNSAFE_FN_DEF",
+      "file": "src/property/store.rs",
+      "line": 1605,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B9-PROP-1",
+        "B9-PROP-2",
+        "B9-PROP-3"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:967:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 967,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:11077:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 11077,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:11082:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 11082,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:11092:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 11092,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:11097:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 11097,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:11102:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 11102,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:21686:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 21686,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:21712:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 21712,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/cipher.rs:22168:UNSAFE_FN_DEF",
+      "file": "src/provider/cipher.rs",
+      "line": 22168,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:300:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 300,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:407:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 407,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:418:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 418,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:559:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 559,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:567:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 567,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:599:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 599,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:610:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 610,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:895:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 895,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:900:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 900,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:908:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 908,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:912:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 912,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:923:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 923,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1054:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1054,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1063:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1063,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1095:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1095,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1106:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1106,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1255:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1255,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1281:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1281,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1377:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1377,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1391:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1391,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1463:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1463,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1471:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1471,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1548:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1548,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1781:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1781,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1793:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1793,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:1804:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 1804,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/digest.rs:2356:UNSAFE_FN_DEF",
+      "file": "src/provider/digest.rs",
+      "line": 2356,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/encode_key2any.rs:170:UNSAFE_EXTERN_BLOCK",
+      "file": "src/provider/encode_key2any.rs",
+      "line": 170,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "partition": "production",
+      "v1_reason": "no SAFETY on UNSAFE_EXTERN_BLOCK",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/encode_key2any.rs:2230:UNSAFE_FN_DEF",
+      "file": "src/provider/encode_key2any.rs",
+      "line": 2230,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/keymgmt.rs:843:UNSAFE_FN_DEF",
+      "file": "src/provider/keymgmt.rs",
+      "line": 843,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/keymgmt.rs:920:UNSAFE_FN_DEF",
+      "file": "src/provider/keymgmt.rs",
+      "line": 920,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/keymgmt.rs:929:UNSAFE_FN_DEF",
+      "file": "src/provider/keymgmt.rs",
+      "line": 929,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/keymgmt.rs:1764:UNSAFE_FN_DEF",
+      "file": "src/provider/keymgmt.rs",
+      "line": 1764,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/mlx_kmgmt.rs:116:UNSAFE_FN_DEF",
+      "file": "src/provider/mlx_kmgmt.rs",
+      "line": 116,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/rsa_sig.rs:462:UNSAFE_FN_DEF",
+      "file": "src/provider/rsa_sig.rs",
+      "line": 462,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/provider/rsa_sig.rs:3183:UNSAFE_FN_DEF",
+      "file": "src/provider/rsa_sig.rs",
+      "line": 3183,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/rand/rand_lib.rs:660:UNSAFE_FN_DEF",
+      "file": "src/rand/rand_lib.rs",
+      "line": 660,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "mechanism_basis": "directory-rule:^src/(?:rand|cms|store|pem|pkcs7|pkcs12|cmp|crmf)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]"
+    },
+    {
+      "id": "V1:src/rsa/ossl.rs:298:UNSAFE_FN_DEF",
+      "file": "src/rsa/ossl.rs",
+      "line": 298,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=EVP_PKEY_PROVIDER]"
+    },
+    {
+      "id": "V1:src/runtime/conf/conf_ssl.rs:546:UNSAFE_FN_DEF",
+      "file": "src/runtime/conf/conf_ssl.rs",
+      "line": 546,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no mechanism state could be established for this reachable file",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B7-CONF-2"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/runtime/ex_data.rs:239:UNSAFE_FN_DEF",
+      "file": "src/runtime/ex_data.rs",
+      "line": 239,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "mechanism_basis": "directory-rule:^src/runtime/(?:mem|owned_buf|member_slot|foreign|mem_coords|lhash|ex_data|init)\\.rs$|^src/runtime/stack|^src/runtime/buffer",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "UNSAFE_OPEN",
+      "mechanism_state_source": "state.json#/mechanisms[id=RUNTIME_ALLOC_OWNERSHIP]"
+    },
+    {
+      "id": "V1:src/runtime/ex_data.rs:251:UNSAFE_FN_DEF",
+      "file": "src/runtime/ex_data.rs",
+      "line": 251,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "mechanism_basis": "directory-rule:^src/runtime/(?:mem|owned_buf|member_slot|foreign|mem_coords|lhash|ex_data|init)\\.rs$|^src/runtime/stack|^src/runtime/buffer",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "UNSAFE_OPEN",
+      "mechanism_state_source": "state.json#/mechanisms[id=RUNTIME_ALLOC_OWNERSHIP]"
+    },
+    {
+      "id": "V1:src/runtime/init.rs:1258:UNSAFE_EXTERN_BLOCK",
+      "file": "src/runtime/init.rs",
+      "line": 1258,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "partition": "production",
+      "v1_reason": "no SAFETY on UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "mechanism_basis": "directory-rule:^src/runtime/(?:mem|owned_buf|member_slot|foreign|mem_coords|lhash|ex_data|init)\\.rs$|^src/runtime/stack|^src/runtime/buffer",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is UNSAFE_OPEN: no ownership reconstruction and no SAFETY_DISCHARGED receipt",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B15-IN-1",
+        "B15-IN-2",
+        "B15-IN-3",
+        "B15-IN-4",
+        "B15-IN-5"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "UNSAFE_OPEN",
+      "mechanism_state_source": "state.json#/mechanisms[id=RUNTIME_ALLOC_OWNERSHIP]"
+    },
+    {
+      "id": "V1:src/runtime/thread.rs:2100:UNSAFE_EXTERN_BLOCK",
+      "file": "src/runtime/thread.rs",
+      "line": 2100,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "partition": "production",
+      "v1_reason": "no SAFETY on UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "mechanism_basis": "directory-rule:^src/runtime/thread|^src/context/namemap\\.rs$|^src/runtime/rcu\\.rs$",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B11-THR-1",
+        "B11-THR-2",
+        "B11-THR-3",
+        "B11-THR-4"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RUNTIME_CONCURRENCY]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_ciph.rs:709:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 709,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_ciph.rs:759:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 759,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_ciph.rs:810:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 810,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:167:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "line": 167,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B11-SSL-1",
+        "B11-SSL-2",
+        "B11-SSL-3"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:584:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "line": 584,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B11-SSL-1",
+        "B11-SSL-2",
+        "B11-SSL-3"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:981:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "line": 981,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B11-SSL-1",
+        "B11-SSL-2",
+        "B11-SSL-3"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:1061:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "line": 1061,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B11-SSL-1",
+        "B11-SSL-2",
+        "B11-SSL-3"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:1438:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "line": 1438,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B11-SSL-1",
+        "B11-SSL-2",
+        "B11-SSL-3"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_lib.rs:331:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_lib.rs",
+      "line": 331,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B17-SSL-1",
+        "B17-SSL-2",
+        "B17-SSL-3",
+        "B17-SSL-4",
+        "B3-SL-1",
+        "B3-SL-2",
+        "B3-SL-3",
+        "B3-SL-4",
+        "B3-SL-5",
+        "B3-SL-6",
+        "B3-SL-7",
+        "B3-SL-8",
+        "B3-SL-9",
+        "B7-SSL-1"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_lib.rs:8830:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_lib.rs",
+      "line": 8830,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B17-SSL-1",
+        "B17-SSL-2",
+        "B17-SSL-3",
+        "B17-SSL-4",
+        "B3-SL-1",
+        "B3-SL-2",
+        "B3-SL-3",
+        "B3-SL-4",
+        "B3-SL-5",
+        "B3-SL-6",
+        "B3-SL-7",
+        "B3-SL-8",
+        "B3-SL-9",
+        "B7-SSL-1"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/ssl_rsa.rs:1061:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_rsa.rs",
+      "line": 1061,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B7-SSL-2",
+        "B7-SSL-3",
+        "B8-SSL-1"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/statem/statem_clnt.rs:3596:UNSAFE_FN_DEF",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "line": 3596,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B4-SC-1",
+        "B4-SC-2",
+        "B4-SC-3",
+        "B4-SC-4",
+        "B4-SC-5",
+        "B4-SC-6",
+        "B4-SC-7"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/statem/statem_srvr.rs:2932:UNSAFE_FN_DEF",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "line": 2932,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B3-SS-1",
+        "B3-SS-2",
+        "B3-SS-3",
+        "B3-SS-4",
+        "B3-SS-5",
+        "B3-SS-6",
+        "B3-SS-7",
+        "B3-SS-8",
+        "B3-SS-9"
+      ],
+      "boundary_dispositions": [
+        "CONTRACTED"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/ssl/t1_trce.rs:1052:UNSAFE_FN_DEF",
+      "file": "src/ssl/t1_trce.rs",
+      "line": 1052,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "SSL_SESSION",
+      "mechanism_basis": "directory-rule:^src/ssl/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=SSL_SESSION]"
+    },
+    {
+      "id": "V1:src/store/store_lib.rs:557:UNSAFE_FN_DEF",
+      "file": "src/store/store_lib.rs",
+      "line": 557,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "mechanism_basis": "converted_files_on_branch",
+      "status": "BLOCKED",
+      "discharge_receipt": null,
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is SAFETY_DISCHARGED (scope: the fetched_loader error-path release; the rest of the file's M1 boundaries are unchanged)/SAFETY_DISCHARGED (scope: the refused loader_set_params path in OSSL_STORE_attach; B26-X1 and the rest of the file's M1 boundaries are unchanged); the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it. A scoped SAFETY_DISCHARGED boundary exists for this file but its disposition does not name this line; blanket discharge is refused.",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "B26-X1",
+        "B27-X2"
+      ],
+      "boundary_dispositions": [
+        "SAFETY_DISCHARGED (scope: the fetched_loader error-path release; the rest of the file's M1 boundaries are unchanged)",
+        "SAFETY_DISCHARGED (scope: the refused loader_set_params path in OSSL_STORE_attach; B26-X1 and the rest of the file's M1 boundaries are unchanged)"
+      ],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=RAND_CMS_STORE_KEYFMT]",
+      "scoped_discharge_attempts": [
+        {
+          "boundary": "B26-X1",
+          "receipt": "boundary-sweep-B27",
+          "declared_ranges": {},
+          "covers_site": false
+        }
+      ]
+    },
+    {
+      "id": "V1:src/ui/ui_util.rs:145:UNSAFE_FN_DEF",
+      "file": "src/ui/ui_util.rs",
+      "line": 145,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/ui/ui_util.rs:161:UNSAFE_FN_DEF",
+      "file": "src/ui/ui_util.rs",
+      "line": 161,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/ui/ui_util.rs:310:UNSAFE_FN_DEF",
+      "file": "src/ui/ui_util.rs",
+      "line": 310,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": null,
+      "mechanism_basis": "unmapped",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": null,
+      "mechanism_state_source": null
+    },
+    {
+      "id": "V1:src/x509/v3_asid.rs:797:UNSAFE_FN_DEF",
+      "file": "src/x509/v3_asid.rs",
+      "line": 797,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "X509_VERIFY_POLICY",
+      "mechanism_basis": "directory-rule:^src/x509/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=X509_VERIFY_POLICY]"
+    },
+    {
+      "id": "V1:src/x509/v3_asid.rs:841:UNSAFE_FN_DEF",
+      "file": "src/x509/v3_asid.rs",
+      "line": 841,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "X509_VERIFY_POLICY",
+      "mechanism_basis": "directory-rule:^src/x509/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=X509_VERIFY_POLICY]"
+    },
+    {
+      "id": "V1:src/x509/v3_asid.rs:1083:UNSAFE_FN_DEF",
+      "file": "src/x509/v3_asid.rs",
+      "line": 1083,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "X509_VERIFY_POLICY",
+      "mechanism_basis": "directory-rule:^src/x509/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=X509_VERIFY_POLICY]"
+    },
+    {
+      "id": "V1:src/x509/v3_lib.rs:359:UNSAFE_FN_DEF",
+      "file": "src/x509/v3_lib.rs",
+      "line": 359,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "block-level SAFETY present but no # Safety fn contract",
+      "mechanism": "X509_VERIFY_POLICY",
+      "mechanism_basis": "directory-rule:^src/x509/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=X509_VERIFY_POLICY]"
+    },
+    {
+      "id": "V1:src/x509/v3_tlsf.rs:146:UNSAFE_FN_DEF",
+      "file": "src/x509/v3_tlsf.rs",
+      "line": 146,
+      "kind": "UNSAFE_FN_DEF",
+      "partition": "production",
+      "v1_reason": "no # Safety / SAFETY: contract on the unsafe fn",
+      "mechanism": "X509_VERIFY_POLICY",
+      "mechanism_basis": "directory-rule:^src/x509/",
+      "status": "UNKNOWN",
+      "discharge_receipt": null,
+      "status_reason": "no boundary-sweep receipt owns this reachable file; the unsafe site is reachable and its ownership boundary is unrecorded",
+      "boundary_receipt_present": false,
+      "boundary_ids": [],
+      "boundary_dispositions": [],
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "mechanism_state_source": "state.json#/mechanisms[id=X509_VERIFY_POLICY]"
+    }
+  ],
+  "closure_scope": {
+    "v1_production_operations": 198,
+    "included_in_upper_bound": 98,
+    "excluded_from_upper_bound": [
+      {
+        "file": "src/ec/asn1.rs",
+        "line": 280,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/e_rc2.rs",
+        "line": 348,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/legacy_blake2.rs",
+        "line": 152,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/legacy_md4.rs",
+        "line": 122,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/legacy_md5.rs",
+        "line": 147,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/legacy_mdc2.rs",
+        "line": 123,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/legacy_ripemd.rs",
+        "line": 123,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/legacy_sha3.rs",
+        "line": 198,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/legacy_sha3.rs",
+        "line": 237,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/evp/legacy_wp.rs",
+        "line": 125,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/ocsp/v3_ocsp.rs",
+        "line": 113,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/ocsp/v3_ocsp.rs",
+        "line": 200,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/ocsp/v3_ocsp.rs",
+        "line": 221,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/ocsp/v3_ocsp.rs",
+        "line": 312,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/ocsp/v3_ocsp.rs",
+        "line": 326,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/pkcs7/pk7_asn1.rs",
+        "line": 489,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/pkcs7/pk7_asn1.rs",
+        "line": 578,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/base.rs",
+        "line": 149,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/core_dispatch.rs",
+        "line": 366,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/decode_der2key.rs",
+        "line": 190,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/decode_pvk2key.rs",
+        "line": 54,
+        "kind": "UNSAFE_EXTERN_BLOCK",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/dsa_sig.rs",
+        "line": 1510,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 238,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 247,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 910,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 929,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 1231,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 1254,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 1271,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 1279,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 1881,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ec_kmgmt.rs",
+        "line": 1894,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ecdsa_sig.rs",
+        "line": 1550,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ecx_kmgmt.rs",
+        "line": 591,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ecx_kmgmt.rs",
+        "line": 911,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ecx_kmgmt.rs",
+        "line": 916,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ecx_kmgmt.rs",
+        "line": 1094,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ecx_kmgmt.rs",
+        "line": 1099,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ecx_kmgmt.rs",
+        "line": 1104,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/ecx_kmgmt.rs",
+        "line": 1356,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/eddsa_sig.rs",
+        "line": 940,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/encode_key2ms.rs",
+        "line": 65,
+        "kind": "UNSAFE_EXTERN_BLOCK",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/encode_key2text.rs",
+        "line": 179,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/encode_key2text.rs",
+        "line": 185,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/legacyprov.rs",
+        "line": 151,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/legacyprov.rs",
+        "line": 297,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/legacyprov.rs",
+        "line": 308,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/legacyprov.rs",
+        "line": 454,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/legacyprov.rs",
+        "line": 497,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/legacyprov.rs",
+        "line": 508,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/mac_legacy_kmgmt.rs",
+        "line": 653,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/mac_legacy_kmgmt.rs",
+        "line": 670,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/mac_legacy_kmgmt.rs",
+        "line": 705,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/provider/mac_legacy_kmgmt.rs",
+        "line": 920,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/rsa/ameth.rs",
+        "line": 606,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/runtime/uid.rs",
+        "line": 54,
+        "kind": "UNSAFE_EXTERN_BLOCK",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/adrs.rs",
+        "line": 119,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 179,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 212,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 240,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 301,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 332,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 531,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 558,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 586,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 618,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/slh_dsa/hash.rs",
+        "line": 649,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/sm3/legacy_sm3.rs",
+        "line": 125,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_audit_id.rs",
+        "line": 30,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_bcons.rs",
+        "line": 192,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_enum.rs",
+        "line": 120,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_group_ac.rs",
+        "line": 33,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_group_ac.rs",
+        "line": 43,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_group_ac.rs",
+        "line": 53,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_ia5.rs",
+        "line": 180,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_ind_iss.rs",
+        "line": 33,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_ind_iss.rs",
+        "line": 43,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_ind_iss.rs",
+        "line": 53,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_int.rs",
+        "line": 29,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_iobo.rs",
+        "line": 42,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_no_ass.rs",
+        "line": 36,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_no_ass.rs",
+        "line": 47,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_no_ass.rs",
+        "line": 61,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_no_rev_avail.rs",
+        "line": 33,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_no_rev_avail.rs",
+        "line": 43,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_no_rev_avail.rs",
+        "line": 53,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_pcons.rs",
+        "line": 179,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_pmaps.rs",
+        "line": 200,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_single_use.rs",
+        "line": 34,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_single_use.rs",
+        "line": 44,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_single_use.rs",
+        "line": 54,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_soa_id.rs",
+        "line": 33,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_soa_id.rs",
+        "line": 43,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_soa_id.rs",
+        "line": 53,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_timespec.rs",
+        "line": 1326,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_timespec.rs",
+        "line": 1468,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_timespec.rs",
+        "line": 1554,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_timespec.rs",
+        "line": 1572,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_usernotice.rs",
+        "line": 287,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      },
+      {
+        "file": "src/x509/v3_utf8.rs",
+        "line": 164,
+        "kind": "UNSAFE_FN_DEF",
+        "reason": "file is not in the conservative upper-bound reachable set"
+      }
+    ],
+    "exclusion_basis": "a production operation is excluded only when its file has no function whose address is reachable in the exact candidate linked code; this is the same static upper bound used for every obligation, not a separate narrowing"
+  },
+  "counts": {
+    "reachable_files": 305,
+    "reachable_production_obligations": 98,
+    "DISCHARGED": 0,
+    "BLOCKED": 15,
+    "UNKNOWN": 83,
+    "by_mechanism": {
+      "<unmapped>": 11,
+      "ASN1_OCSP": 2,
+      "EVP_PKEY_PROVIDER": 54,
+      "RAND_CMS_STORE_KEYFMT": 7,
+      "RUNTIME_ALLOC_OWNERSHIP": 3,
+      "RUNTIME_CONCURRENCY": 2,
+      "SSL_SESSION": 14,
+      "X509_VERIFY_POLICY": 5
+    },
+    "v1_production_operations_total": 198,
+    "v1_uncontracted_operations_total": 381
+  },
+  "boundary_coverage": {
+    "reachable_files_with_receipt": [
+      "src/context/namemap.rs",
+      "src/engine/eng_dyn.rs",
+      "src/engine/eng_table.rs",
+      "src/engine/tb_asnmth.rs",
+      "src/property/store.rs",
+      "src/runtime/conf/conf_ssl.rs",
+      "src/runtime/init.rs",
+      "src/runtime/thread.rs",
+      "src/ssl/ssl_conf.rs",
+      "src/ssl/ssl_lib.rs",
+      "src/ssl/ssl_rsa.rs",
+      "src/ssl/statem/statem_clnt.rs",
+      "src/ssl/statem/statem_srvr.rs",
+      "src/store/store_lib.rs"
+    ],
+    "reachable_files_without_receipt": [
+      "src/apps/verify.rs",
+      "src/asn1/a_mbstr.rs",
+      "src/async/arch/async_posix.rs",
+      "src/cms/cms_asn1.rs",
+      "src/cms/cms_sd.rs",
+      "src/decoder_meth.rs",
+      "src/decoder_pkey.rs",
+      "src/digest/sha2.rs",
+      "src/dso/mod.rs",
+      "src/encoder_meth.rs",
+      "src/evp/legacy_sha.rs",
+      "src/ocsp/ocsp_ext.rs",
+      "src/passphrase.rs",
+      "src/pem/pem_info.rs",
+      "src/pem/pem_pk8.rs",
+      "src/pem/pem_pkey.rs",
+      "src/provider/cipher.rs",
+      "src/provider/digest.rs",
+      "src/provider/encode_key2any.rs",
+      "src/provider/keymgmt.rs",
+      "src/provider/mlx_kmgmt.rs",
+      "src/provider/rsa_sig.rs",
+      "src/rand/rand_lib.rs",
+      "src/rsa/ossl.rs",
+      "src/runtime/ex_data.rs",
+      "src/ssl/ssl_ciph.rs",
+      "src/ssl/t1_trce.rs",
+      "src/ui/ui_util.rs",
+      "src/x509/v3_asid.rs",
+      "src/x509/v3_lib.rs",
+      "src/x509/v3_tlsf.rs"
+    ]
+  },
+  "refusals": [
+    {
+      "code": "STALE_HASH",
+      "detail": "libcrypto.so.3: loader resolved eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48 but the inventory records b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae"
+    },
+    {
+      "code": "MISSING_BOUNDARY_RECEIPT",
+      "detail": "31 reachable file(s) carry production obligations but no boundary-sweep receipt owns them",
+      "files": [
+        "src/apps/verify.rs",
+        "src/asn1/a_mbstr.rs",
+        "src/async/arch/async_posix.rs",
+        "src/cms/cms_asn1.rs",
+        "src/cms/cms_sd.rs",
+        "src/decoder_meth.rs",
+        "src/decoder_pkey.rs",
+        "src/digest/sha2.rs",
+        "src/dso/mod.rs",
+        "src/encoder_meth.rs",
+        "src/evp/legacy_sha.rs",
+        "src/ocsp/ocsp_ext.rs",
+        "src/passphrase.rs",
+        "src/pem/pem_info.rs",
+        "src/pem/pem_pk8.rs",
+        "src/pem/pem_pkey.rs",
+        "src/provider/cipher.rs",
+        "src/provider/digest.rs",
+        "src/provider/encode_key2any.rs",
+        "src/provider/keymgmt.rs",
+        "src/provider/mlx_kmgmt.rs",
+        "src/provider/rsa_sig.rs",
+        "src/rand/rand_lib.rs",
+        "src/rsa/ossl.rs",
+        "src/runtime/ex_data.rs",
+        "src/ssl/ssl_ciph.rs",
+        "src/ssl/t1_trce.rs",
+        "src/ui/ui_util.rs",
+        "src/x509/v3_asid.rs",
+        "src/x509/v3_lib.rs",
+        "src/x509/v3_tlsf.rs"
+      ]
+    },
+    {
+      "code": "UNKNOWN_OBLIGATION",
+      "detail": "83 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED",
+      "obligations": [
+        "V1:src/apps/verify.rs:104:UNSAFE_FN_DEF",
+        "V1:src/asn1/a_mbstr.rs:243:UNSAFE_FN_DEF",
+        "V1:src/async/arch/async_posix.rs:52:UNSAFE_EXTERN_BLOCK",
+        "V1:src/cms/cms_asn1.rs:495:UNSAFE_FN_DEF",
+        "V1:src/cms/cms_sd.rs:2211:UNSAFE_FN_DEF",
+        "V1:src/decoder_meth.rs:767:UNSAFE_FN_DEF",
+        "V1:src/decoder_pkey.rs:548:UNSAFE_FN_DEF",
+        "V1:src/digest/sha2.rs:417:UNSAFE_FN_DEF",
+        "V1:src/digest/sha2.rs:441:UNSAFE_FN_DEF",
+        "V1:src/dso/mod.rs:885:UNSAFE_FN_DEF",
+        "V1:src/encoder_meth.rs:269:UNSAFE_FN_DEF",
+        "V1:src/engine/eng_dyn.rs:576:UNSAFE_FN_DEF",
+        "V1:src/engine/eng_table.rs:148:UNSAFE_FN_DEF",
+        "V1:src/engine/tb_asnmth.rs:330:UNSAFE_FN_DEF",
+        "V1:src/evp/legacy_sha.rs:181:UNSAFE_FN_DEF",
+        "V1:src/evp/legacy_sha.rs:224:UNSAFE_FN_DEF",
+        "V1:src/ocsp/ocsp_ext.rs:685:UNSAFE_FN_DEF",
+        "V1:src/passphrase.rs:499:UNSAFE_FN_DEF",
+        "V1:src/pem/pem_info.rs:73:UNSAFE_EXTERN_BLOCK",
+        "V1:src/pem/pem_pk8.rs:67:UNSAFE_EXTERN_BLOCK",
+        "V1:src/pem/pem_pkey.rs:110:UNSAFE_EXTERN_BLOCK",
+        "V1:src/provider/cipher.rs:967:UNSAFE_FN_DEF",
+        "V1:src/provider/cipher.rs:11077:UNSAFE_FN_DEF",
+        "V1:src/provider/cipher.rs:11082:UNSAFE_FN_DEF",
+        "V1:src/provider/cipher.rs:11092:UNSAFE_FN_DEF",
+        "V1:src/provider/cipher.rs:11097:UNSAFE_FN_DEF",
+        "V1:src/provider/cipher.rs:11102:UNSAFE_FN_DEF",
+        "V1:src/provider/cipher.rs:21686:UNSAFE_FN_DEF",
+        "V1:src/provider/cipher.rs:21712:UNSAFE_FN_DEF",
+        "V1:src/provider/cipher.rs:22168:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:300:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:407:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:418:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:559:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:567:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:599:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:610:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:895:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:900:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:908:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:912:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:923:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1054:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1063:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1095:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1106:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1255:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1281:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1377:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1391:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1463:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1471:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1548:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1781:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1793:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:1804:UNSAFE_FN_DEF",
+        "V1:src/provider/digest.rs:2356:UNSAFE_FN_DEF",
+        "V1:src/provider/encode_key2any.rs:170:UNSAFE_EXTERN_BLOCK",
+        "V1:src/provider/encode_key2any.rs:2230:UNSAFE_FN_DEF",
+        "V1:src/provider/keymgmt.rs:843:UNSAFE_FN_DEF",
+        "V1:src/provider/keymgmt.rs:920:UNSAFE_FN_DEF",
+        "V1:src/provider/keymgmt.rs:929:UNSAFE_FN_DEF",
+        "V1:src/provider/keymgmt.rs:1764:UNSAFE_FN_DEF",
+        "V1:src/provider/mlx_kmgmt.rs:116:UNSAFE_FN_DEF",
+        "V1:src/provider/rsa_sig.rs:462:UNSAFE_FN_DEF",
+        "V1:src/provider/rsa_sig.rs:3183:UNSAFE_FN_DEF",
+        "V1:src/rand/rand_lib.rs:660:UNSAFE_FN_DEF",
+        "V1:src/rsa/ossl.rs:298:UNSAFE_FN_DEF",
+        "V1:src/runtime/conf/conf_ssl.rs:546:UNSAFE_FN_DEF",
+        "V1:src/runtime/ex_data.rs:239:UNSAFE_FN_DEF",
+        "V1:src/runtime/ex_data.rs:251:UNSAFE_FN_DEF",
+        "V1:src/ssl/ssl_ciph.rs:709:UNSAFE_FN_DEF",
+        "V1:src/ssl/ssl_ciph.rs:759:UNSAFE_FN_DEF",
+        "V1:src/ssl/ssl_ciph.rs:810:UNSAFE_FN_DEF",
+        "V1:src/ssl/t1_trce.rs:1052:UNSAFE_FN_DEF",
+        "V1:src/ui/ui_util.rs:145:UNSAFE_FN_DEF",
+        "V1:src/ui/ui_util.rs:161:UNSAFE_FN_DEF",
+        "V1:src/ui/ui_util.rs:310:UNSAFE_FN_DEF",
+        "V1:src/x509/v3_asid.rs:797:UNSAFE_FN_DEF",
+        "V1:src/x509/v3_asid.rs:841:UNSAFE_FN_DEF",
+        "V1:src/x509/v3_asid.rs:1083:UNSAFE_FN_DEF",
+        "V1:src/x509/v3_lib.rs:359:UNSAFE_FN_DEF",
+        "V1:src/x509/v3_tlsf.rs:146:UNSAFE_FN_DEF"
+      ]
+    },
+    {
+      "code": "UNKNOWN_MECHANISM",
+      "detail": "9 reachable file(s) with production obligations map to no registered mechanism",
+      "files": [
+        "src/apps/verify.rs",
+        "src/async/arch/async_posix.rs",
+        "src/dso/mod.rs",
+        "src/engine/eng_dyn.rs",
+        "src/engine/eng_table.rs",
+        "src/engine/tb_asnmth.rs",
+        "src/passphrase.rs",
+        "src/runtime/conf/conf_ssl.rs",
+        "src/ui/ui_util.rs"
+      ]
+    }
+  ],
+  "verdict": {
+    "state": "REFUSED",
+    "safe_compatible": false,
+    "reason": "closure refused: STALE_HASH (libcrypto.so.3: loader resolved eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48 but the inventory records b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae); MISSING_BOUNDARY_RECEIPT (31 reachable file(s) carry production obligations but no boundary-sweep receipt owns them); UNKNOWN_OBLIGATION (83 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED); UNKNOWN_MECHANISM (9 reachable file(s) with production obligations map to no registered mechanism)"
+  },
+  "notes": [
+    "the build-link atlas row was produced against a different candidate install, so its artefact digest does not match this rebuild; the admitted install digest is the authority used for freshness",
+    "Precision change: 52,230 indirect sites classified; 51,536 resolved; 694 unresolved in the whole DSO; 122 unresolved sites are reachable; 0 reachable sites are unclassified.  The global address-taken union (5,225) is recorded but is not used for any reachable site.  The residual class admits 772 functions, all of which are also on resolved direct/site paths.",
+    "Residual classes remain: 210 field-class and 484 materialised-class sites in the DSO (122 reachable).  Field dispatch through an opaque object is bounded by the field offset (stores from reachable code plus consumer-import/return values and, when the field is open, code-materialised addresses), not resolved to one table. This is the class the receipt deliberately keeps coarse.",
+    "Provider registration: the consumer imports no provider installation/selection symbol; the reachable set contains none; no dynamic name lookup is reachable. Provider dispatch is therefore limited to the built-in providers whose tables the resolver reaches.  One callback registrar (ossl_pw_set_ossl_passphrase_cb) is reachable; its installed value is an argument, so the materialised class is retained for that edge.",
+    "The V1 inventory records 198 production operations; 98 are now on reachable files (before: 193).  No new obligation was discharged: DISCHARGED remains 0."
+  ],
+  "non_claims": [
+    "This is a reachability measurement, not a memory-safety proof and not a SAFE_COMPATIBLE promotion.",
+    "DISCHARGED means an existing committed receipt covers the exact site; this tool did not re-audit, re-run or independently review that receipt.",
+    "The upper bound is a function-level linked-code over-approximation, not a whole-program or source-level call graph.",
+    "No crate build, test, Miri, ASan or cryptographic court was run by this tool.",
+    "The dynamic-trace axis is absent unless a trace is supplied; its absence is recorded, not treated as evidence."
+  ],
+  "comparison": {
+    "basis": "The recorded V4 receipt and the current baseline are both reported.  The recorded V4 figure (5,639 functions / 491 files) was produced against the V1 frozen libcrypto (sha256 b56ac6...).  The currently admitted install at artifacts/phase2/install is a different build (sha256 eb0d7c...), so a fresh, cache-corrected baseline was re-run on the same install used for the after measurement (5,618 functions / 491 files).  All before/after deltas use that same-install baseline.",
+    "recorded_v4_receipt": {
+      "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v4-consumer-closure.json",
+      "reachable_functions": 5639,
+      "reachable_files": 491,
+      "reachable_production_obligations": 193,
+      "DISCHARGED": 0,
+      "BLOCKED": 30,
+      "UNKNOWN": 163,
+      "verdict": "REFUSED"
+    },
+    "current_baseline_same_install": {
+      "path": null,
+      "basis": "unmodified tool, fresh disassembly cache, same admitted install as the after measurement",
+      "reachable_functions": 5618,
+      "reachable_files": 491,
+      "reachable_production_obligations": 193,
+      "DISCHARGED": 0,
+      "BLOCKED": 30,
+      "UNKNOWN": 163,
+      "verdict": "REFUSED",
+      "embedded": true,
+      "note": "values re-run from the unmodified tool in court/tmp/v4b-baseline-fresh.json; snapshot embedded here"
+    },
+    "after": {
+      "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v4b-closure-precision.json",
+      "reachable_functions": 1859,
+      "reachable_files": 305,
+      "reachable_production_obligations": 98,
+      "DISCHARGED": 0,
+      "BLOCKED": 15,
+      "UNKNOWN": 83,
+      "verdict": "REFUSED"
+    },
+    "delta_vs_current_baseline": {
+      "reachable_functions": -3759,
+      "reachable_files": -186,
+      "reachable_production_obligations": -95,
+      "DISCHARGED": 0,
+      "BLOCKED": -15,
+      "UNKNOWN": -80
+    },
+    "verdict_changed": false,
+    "verdict_statement": "The adjudication verdict is unchanged: REFUSED.  The closure refuses on a stale install hash, 31 reachable files with production obligations and no boundary receipt, 83 UNKNOWN obligations, and 9 files with no registered mechanism.  It was REFUSED before as well; narrowing removed obligations, it did not discharge a consumer.",
+    "install_drift": {
+      "inventory_libcrypto_sha256": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+      "admitted_install_libcrypto_sha256": "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48",
+      "consequence": "STALE_HASH is expected and correct for every run against the current install; it is independent of the precision change."
+    },
+    "cache_correction": "The pre-change tool keyed its cached objdump by DSO basename only.  After the admitted install was rebuilt, a stale cache silently mixed old disassembly with new nm symbols (2,789 apparent functions, 235 files).  The precision tool keys both the disassembly and this receipt by the DSO SHA-256; the same-install baseline above was re-run with a fresh cache."
+  },
+  "controls": {
+    "self_test": {
+      "command": "python3 forensics/tools/consumer_closure.py --self-test",
+      "result": "PASS",
+      "negative_control": "a synthetic unclassified indirect site admits the global address-taken set; a materialised-class site admits the address-of set but not the global table entry"
+    },
+    "stale_hash": {
+      "verdict": "REFUSED",
+      "refusal_codes": [
+        "STALE_HASH"
+      ],
+      "details": [
+        "libcrypto.so.3: loader resolved eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48 but the inventory records b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae"
+      ],
+      "graph_evaluated": false
+    },
+    "dangling_edge": {
+      "verdict": "REFUSED",
+      "refusal_codes": [
+        "DANGLING_EDGE",
+        "STALE_HASH"
+      ],
+      "details": [
+        "libcrypto.so.3: loader resolved eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48 but the inventory records b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+        "imported EVP_rr4 is not exported by any resolved candidate OpenSSL DSO"
+      ],
+      "graph_evaluated": false
+    },
+    "wrong_install": {
+      "verdict": "REFUSED",
+      "refusal_codes": [
+        "STALE_HASH"
+      ],
+      "details": [
+        "libcrypto.so.3 resolved to /usr/lib/x86_64-linux-gnu/libcrypto.so.3, outside the admitted install /work/court/tmp/v4b-wronginstall",
+        "libcrypto.so.3: loader resolved 76dd3d93e5ee48950a92a58d59b94de8143847f91a80d9682c938767b991577d but the inventory records b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae"
+      ],
+      "graph_evaluated": false
+    },
+    "tampered_build_record": {
+      "verdict": "REFUSED",
+      "refusal_codes": [
+        "STALE_HASH"
+      ],
+      "details": [
+        "libcrypto.so.3: loader resolved eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48 but the inventory records b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+        "build record artefact digest does not match the analysed artefact"
+      ],
+      "graph_evaluated": false
+    },
+    "stale_hash_note": "the full after run also refused on STALE_HASH (libcrypto.so.3 resolved eb0d7c..., inventory b56ac6...)"
+  },
+  "negative_control": {
+    "class": "unclassified",
+    "construction": "synthetic graph: root 0x10 contains call *%rax with no resolved target, no field offset, no argument summary, and no address materialisation; the only other functions are 0x20 (address-of materialised) and 0x30 (static table entry)",
+    "expected": "both 0x20 and 0x30 are admitted (global address-taken set)",
+    "observed": "both admitted",
+    "contrast": "the same graph with class=materialised admits 0x20 but not the global table entry 0x30, demonstrating that narrowing is class-based, not trace-based"
+  }
+}
