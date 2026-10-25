@@ -55,5 +55,6 @@ pub mod sha1;
 pub mod sha2;
 pub mod sha3;
 pub mod sm3;
+#[forbid(unsafe_code)]
 pub mod tables;
 pub mod wp;
