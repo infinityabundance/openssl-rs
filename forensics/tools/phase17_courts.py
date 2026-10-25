@@ -36,7 +36,7 @@ text/re-encode/check arms over fixed keys), `pkey` (`noout`/`check`/`pubout`/`pu
 `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and
 `rsautl` (the refusal arms). 17.1e adds ten more: `gendsa` (the missing-argument refusal), `rand`
 (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal),
-`engine` (recorded: the candidate's engine init fails), `storeutl` (the `-noout` type/`Total
+`engine` (recorded: the candidate's engine init succeeds and lists only `dynamic`), `storeutl` (the `-noout` type/`Total
 found` status over fixed fixtures), `dhparam` (the `-in` text/`-noout`/`-check` arms),
 `genpkey` (the no-algorithm refusal), `passwd` (the `-1`/`-5`/`-6`-`-salt` and `-table`/`-reverse`
 hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt`) and `enc` (the raw-key AES-CBC
@@ -65,7 +65,8 @@ prefix on an otherwise identical config error), `genrsa -bogus`
 tail), `rsa`/`dsa -modulus` (the `BN_print` rendering) and the `rsautl` operation arm
 (random/binary output), plus 17.1e's: the `rand` random-stream arms, the `gendsa`/`genpkey`/
 `dhparam` generation arms (not landed; random or pointer-bearing), the `passwd` random-salt arm,
-and the `engine` listing/`-pre` arms (the candidate's engine init fails), plus 17.1f's: the
+and the `engine` listing/`-pre` arms (the candidate's engine init succeeds but its
+built-in registry is shorter), plus 17.1f's: the
 `dgst -bogus`/`-list`/`-mac` arms, `pkcs7 -print`, `ocsp -bogus` and its responder/verification
 arms, a `ts` query without `-no_nonce` and `-reply`/`-verify`, the whole `speed` benchmark (and
 its `-evp`/`-hmac` pointer-bearing refusals), `fipsinstall -module`/`-config` and the `srp`
@@ -780,29 +781,29 @@ RECORDED_DIVERGENCES: list[dict] = [
     {
         "argv": "engine -pre foo",
         "authority": "(rdrand) Intel RDRAND engine|[Failure]: foo|<ptr>:error:13000089:engine routines:ENGINE_ctrl_cmd_string:invalid cmd name:...",
-        "candidate": "(rdrand) Intel RDRAND engine|[Failure]: foo|<ptr>:error:...",
+        "candidate": "(dynamic) Dynamic engine loading support|[Failure]: foo|<ptr>:error:...",
         "reason": (
             "The failing `-pre` control command prints a pointer-bearing "
             "`ERR_print_errors` tail on both sides. This arm is recorded with the "
-            "engine listing: the candidate's engine init fails first (see the next "
-            "entry), so the whole `engine` surface is recorded rather than diffed. "
+            "engine listing: since D565 the candidate initialises and lists `dynamic` "
+            "(the one built-in loader it carries), where the authority also lists "
+            "`rdrand`, so the whole `engine` surface is recorded rather than diffed. "
             "See `src/apps/engine.rs`."
         ),
     },
     {
         "argv": "engine / engine -c / engine -t / engine -post foo",
         "authority": "(rdrand) Intel RDRAND engine| [RAND]|...|     [ available ]|(dynamic) ...|     [ unavailable ]|",
-        "candidate": "",
+        "candidate": "(dynamic) Dynamic engine loading support",
         "reason": (
-            "The candidate's `ENGINE_load_builtin_engines` calls "
-            "`OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN)`, which the crate's "
-            "`crypto/init.c` arm still refuses (the engine bits `eng_openssl.c`/"
-            "`eng_rdrand.c` are unlanded, as `docs/PHASE-16-CLI-SEAL.md` records), so "
-            "`engine` exits with `OPENSSL_init_crypto:init fail` on stderr and an empty "
-            "listing where the authority prints the two built-in engines. The body is "
-            "landed and its parse/listing/`-c`/`-t`/`-pre`/`-post` arms are transcribed; "
-            "only this init-fail surface is the engine stratum's. Recorded here rather "
-            "than diffed; see `src/apps/engine.rs`."
+            "The candidate's `ENGINE_load_builtin_engines` now answers 1 (D565): every "
+            "authority `ossl_init_engine_*` body returns 1 unconditionally, so refusing "
+            "the bit was a return-value divergence that aborted bind9's configure test. "
+            "Only `engine_dynamic` has a loader in the crate, so the listing prints "
+            "`(dynamic)` where the authority prints `(rdrand)` and `(dynamic)`; the "
+            "remaining contents divergence is recorded rather than diffed. The body is "
+            "landed and its parse/listing/`-c`/`-t`/`-pre`/`-post` arms are transcribed. "
+            "See `src/apps/engine.rs`."
         ),
     },
     {
@@ -2223,7 +2224,7 @@ def main(argv: list[str]) -> int:
             "`-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` "
             "over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/"
             "`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the "
-            "candidate's engine init fails. 17.1f adds seven more bodies over fixed "
+            "candidate's engine init succeeds but lists only `dynamic` (D565). 17.1f adds seven more bodies over fixed "
             "fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, "
             "`-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` "
             "arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/"
