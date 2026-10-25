@@ -1,0 +1,239 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S65-WORKLOAD-TEMPLATES",
+  "date": "2026-10-25",
+  "subphase": "S65: mechanism-oriented workload templates, an enforced consumer-API invariant, and a typed library-harness path",
+  "branch": "integrate/safe-c33",
+  "source_head": "3dc5deedd795da2584479507ad36790bde5aa90c",
+  "source_head_short": "3dc5deedd",
+  "source_head_subject": "Merge stage/p25/dep-registry",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+    "src_changed_this_subphase": true,
+    "docker_changed_this_subphase": false,
+    "note": "all builds, workloads and probes ran inside the expansion court container; the host ran no project command"
+  },
+  "deliverables": {
+    "template_layer": "forensics/tools/downstream_templates.py",
+    "template_config": "forensics/tools/downstream_template_families.json",
+    "runtime": "forensics/tools/downstream_runtime.py",
+    "typed_harness_example": "forensics/tools/l7_poco_aead.cpp",
+    "modified_files": [
+      "forensics/tools/downstream_templates.py",
+      "forensics/tools/downstream_template_families.json",
+      "forensics/tools/downstream_runtime.py"
+    ],
+    "new_files": [
+      "forensics/tools/l7_poco_aead.cpp"
+    ],
+    "hashes": {
+      "downstream_templates.py": "c39ae585d2ded4a3cbbf960e3c18a200d56a7c2b7a6a1fbf3282485fbd64b688",
+      "downstream_template_families.json": "d7fe6001f107ff9c133505ba85aa6d6168c619920629a5e4c61bd73d122225f7",
+      "downstream_runtime.py": "3fd88a272302367eadbcb0afec9929128bf05f609fb8c7fa21ee5f762a6feb7f",
+      "l7_poco_aead.cpp": "302da8d1a072748bad9451ea46389cb967dc4529cd7f16cd8bda0dcf60d3d295"
+    },
+    "template_cohort": {
+      "families_before": 16,
+      "families_after": 19,
+      "handlers_before": 7,
+      "handlers_after": 11,
+      "new_families": ["gftp-text", "xilinx-bootgen", "poco"],
+      "new_handlers": ["x509_verification", "evp_signing", "aead_roundtrip", "hmac_kdf"]
+    },
+    "recipe_reuse": {
+      "field": "recipe: \"admitted\"",
+      "effect": "recipe_specs() emits no recipe for these rows, so the family's existing admitted pristine recipe (with its auxiliary pins) is not shadowed; the template row contributes only runtime intent + workload",
+      "families": ["gftp-text", "xilinx-bootgen", "poco"]
+    }
+  },
+  "templates": [
+    {
+      "name": "x509_verification",
+      "family": "gftp-text",
+      "bucket": "TLS generic client",
+      "positive": "gftp-text performs an explicit-AUTH-TLS FTPS transfer with SSL_CERT_FILE=<fixture CA>; the downloaded payload equals the fixture",
+      "negative": "the same peer and URL with SSL_CERT_FILE=<unrelated CA>; the peer's chain must be rejected and no payload delivered",
+      "fixture_note": "the released master gftprc ships verify_ssl_peer=0; the workload re-enables the secure upstream default in the installed master config (family scratch, not a source patch) before either run",
+      "result": {
+        "authority": "L7-functional",
+        "candidate": "L7-functional"
+      }
+    },
+    {
+      "name": "evp_signing",
+      "family": "xilinx-bootgen",
+      "bucket": "signature/cert tool",
+      "positive": "bootgen signs a 4096-bit RSA authenticated boot image and its own verifier reports 'Authentication is verified'",
+      "negative": "one byte at offset -100 of the signed image is flipped; the verifier must report 'Authentication verification failed' (exit 1) and must not report success",
+      "result": {
+        "authority": "L7-functional",
+        "candidate": "L5-loaded",
+        "candidate_cause": "bootgen signing segfaults against the candidate libcrypto (sign exit=-11, no image); the authority signs and verifies, so the fixture is sound"
+      }
+    },
+    {
+      "name": "aead_roundtrip",
+      "family": "poco",
+      "bucket": "crypto library (typed harness)",
+      "positive": "the typed harness drives Poco's AES-256-GCM encryptor/decryptor through the public API; the decrypted payload equals the input (aead_roundtrip=ok)",
+      "negative": "the same ciphertext with the GCM tag's first byte flipped must be rejected (aead_tamper=rejected; Poco's finalize throws)",
+      "result": {
+        "authority": "L7-functional",
+        "candidate": "L7-functional"
+      }
+    },
+    {
+      "name": "hmac_kdf",
+      "family": "xilinx-bootgen",
+      "bucket": "signature/cert tool",
+      "positive": "bootgen's SP 800-108 counter-mode KDF reproduces the published KO F67D17DDF07D3579CCED1CE404E9854C12C25F8CFB2B6EE74508F13C7797F8E1 and prints 'Verified with given Ko'",
+      "negative": "the same vector with a one-bit-different KI prints KO 86BE87F36A3E5CACA0BC8A060B62239D6296AA3A3B7C4E9B984D81ED4CAC45D7, which differs from the published output",
+      "mechanism_note": "the configured PRF is the consumer's own (Bootgen uses AES-CMAC counter mode, not HMAC); the template contract is a keyed-KDF known output plus a wrong-key difference, and the family's PRF is not relabelled",
+      "result": {
+        "authority": "L7-functional",
+        "candidate": "pass (evidenced in the family transcript)",
+        "candidate_cause": "the family row is L5 because the evp_signing workload in the same entry segfaults; the KDF workload itself reproduced the vector and the wrong-key control"
+      }
+    }
+  ],
+  "consumer_api_invariant": {
+    "entry_point": "forensics/tools/downstream_templates.py::verify_consumer_boundary",
+    "enforcement": "every mechanism handler calls it before returning; a false result is returned as failure_class=harness-failure with reason 'false-L7 rejected by the consumer-API invariant: ...' and can never be promoted to L7",
+    "verified_rule": [
+      "limb 1: the consumer artifact (the family's program, or each named consumer shared library) must have at least one undefined OpenSSL symbol in its own dynamic symbol table (nm -D -u); a program that merely links OpenSSL without calling it is refused",
+      "limb 2 (library mode): the workload must resolve the configured consumer library in its ldd closure; the typed harness must reference at least one symbol that library exports; and the harness's own undefined symbols must contain zero OpenSSL symbols",
+      "self mode: the family's executable is the consumer, so its OpenSSL imports are the workload's OpenSSL calls; the Python fixture peer is recorded separately as fixture_openssl and is never counted as the consumer"
+    ],
+    "false_l7_outcome": "the harness is rejected, the row records harness-failure/out-of-scope, and no functional result is produced",
+    "negative_control": {
+      "setup": "a synthetic libconsumer.so imports EVP_sha256 and exports consumer_do; good calls only consumer_do, bad calls consumer_do and EVP_sha256",
+      "good": {"ok": true, "consumer_symbols_referenced": 1, "harness_openssl_imports": []},
+      "bad": {"ok": false, "reason": "the typed harness itself imports OpenSSL (EVP_sha256); the workload must exercise the consumer's OpenSSL path, not reimplement it in the harness", "harness_openssl_imports": ["EVP_sha256"]}
+    },
+    "evidence_persisted": "downstream_runtime.py writes the gate verdict into each measured row as consumer_evidence beside the level it gated"
+  },
+  "typed_library_harness": {
+    "purpose": "a minimal, shared shape for a library-only consumer: initialisation -> context construction -> input processing -> output validation -> cleanup -> an explicit error-handling case",
+    "example": "forensics/tools/l7_poco_aead.cpp",
+    "consumer_api_only": "includes only Poco public headers; imports zero OpenSSL symbols (verified by nm -D -u on the compiled harness)",
+    "shape": {
+      "initialisation": "Poco::Crypto::OpenSSLInitializer",
+      "context": "CipherFactory::defaultFactory().createCipher(CipherKey(\"aes-256-gcm\", key, iv))",
+      "input": "CryptoTransform::transform + finalize",
+      "output_validation": "decrypt with the tag and compare to the input payload",
+      "cleanup": "Poco::AutoPtr / SharedPtr RAII",
+      "error_handling": "--tamper flips the GCM tag and requires finalize to throw/return non-success"
+    },
+    "runtime_wiring": "downstream_runtime._build_harness honors harness.compiler (new: c++); templates.programs() passes through harness and make_steps",
+    "measured_evidence": {
+      "consumer_library": "b/lib/libPocoCrypto.so",
+      "consumer_openssl_imports": 128,
+      "harness_openssl_imports": 0,
+      "harness_consumer_symbols_referenced": 6,
+      "workload_ldd_names_consumer": true
+    },
+    "generality": "the path is language-agnostic; existing harnesses use compiler=cc (C), and a C library can be added without changing the runtime or the gate"
+  },
+  "proof": {
+    "command": "cd /work && python3 forensics/tools/downstream_runtime.py --measure --only <family> --reuse-committed",
+    "tool_summary_lines": [
+      "  [p1000  435] xilinx-bootgen authority L7-functional",
+      "  [p1000  435] xilinx-bootgen candidate L5-loaded        the consumer did not sign the fixture",
+      "  [p1000  751] gftp-text  authority L7-functional",
+      "  [p1000  751] gftp-text  candidate L7-functional",
+      "  [p1000  361] poco       authority L7-functional",
+      "  [p1000  361] poco       candidate L7-functional"
+    ],
+    "per_family": [
+      {
+        "family": "gftp-text",
+        "before": {"authority": "L4-linked", "candidate": "L4-linked"},
+        "after": {"authority": "L7-functional", "candidate": "L7-functional"},
+        "reached_l7": true
+      },
+      {
+        "family": "poco",
+        "before": {"authority": "L4-linked", "candidate": "L4-linked"},
+        "after": {"authority": "L7-functional", "candidate": "L7-functional"},
+        "reached_l7": true
+      },
+      {
+        "family": "xilinx-bootgen",
+        "before": {"authority": "L4-linked", "candidate": "L4-linked"},
+        "after": {"authority": "L7-functional", "candidate": "L5-loaded"},
+        "reached_l7": false,
+        "cause": "the evp_signing workload segfaults in the candidate (exit=-11); the hmac_kdf workload in the same entry passes"
+      }
+    ],
+    "candidate_transcript_bootgen": [
+      "== sign ==",
+      "exit=-11",
+      "== verify signed artifact ==",
+      "exit=-1 sign failed",
+      "== published vector ==",
+      "exit=0 ... KO = F67D17DDF07D3579CCED1CE404E9854C12C25F8CFB2B6EE74508F13C7797F8E1 ... Verified with given Ko",
+      "== wrong key (must differ) ==",
+      "exit=0 ... KO = 86BE87F36A3E5CACA0BC8A060B62239D6296AA3A3B7C4E9B984D81ED4CAC45D7"
+    ],
+    "atlas_disposition": "the measured rows were recorded in the receipt and the committed runtime-functional-atlas.json was restored to its committed bytes so this subphase's diff is limited to the template layer, runtime wiring and this receipt"
+  },
+  "counts": {
+    "authority": {
+      "before": {"loaded": 221, "functional": 205},
+      "after_measured": {"loaded": 224, "functional": 208}
+    },
+    "candidate": {
+      "before": {"loaded": 221, "functional": 206},
+      "after_measured": {"loaded": 224, "functional": 208}
+    },
+    "note": "the measured +3 loaded families under each subject are gftp-text, poco and xilinx-bootgen; the authority gains +3 functional (all three) while the candidate gains +2 (gftp-text and poco), because bootgen's candidate remains below L7 for the stated reason"
+  },
+  "gates": {
+    "template_py_compile": {
+      "command": "python3 -m py_compile forensics/tools/downstream_templates.py forensics/tools/downstream_runtime.py",
+      "result": "PASS"
+    },
+    "runtime_check": {
+      "command": "python3 forensics/tools/downstream_runtime.py --check",
+      "result": "PASS",
+      "output": "[downstream-runtime] with_recipe=307 cand_loaded=221 cand_functional=206 reaches_baseline=306 findings=0 control honest=True"
+    },
+    "build_link_self_test": {
+      "command": "python3 forensics/tools/downstream_build_link.py --self-test",
+      "result": "PASS",
+      "output": "[downstream-build-link] self-test ok: the guard refuses a host invocation ... every seeded mutation ... is caught with specificity holding"
+    },
+    "build_link_check": {
+      "command": "python3 forensics/tools/downstream_build_link.py --check",
+      "result": "PASS",
+      "output": "[downstream-build-link] with_recipe=307 candidate_linked=245 linkage_proven=245 findings=0 control honest=True"
+    },
+    "consumer_gate_negative_control": {
+      "command": "synthetic libconsumer.so + good/bad harnesses through verify_consumer_boundary",
+      "result": "PASS: good admissibility true (1 consumer symbol, 0 harness OpenSSL imports); bad rejected with the harness-OpenSSL reason"
+    },
+    "runtime_self_test": {
+      "command": "python3 forensics/tools/downstream_runtime.py --self-test",
+      "result": "FAIL (pre-existing, unrelated)",
+      "output": "the runtime intent for 'vsftpd' is incomplete; the runtime intent for 'postfix' is incomplete",
+      "note": "both entries carry launch: [] at HEAD (git show HEAD:forensics/tools/downstream_runtime.py lines 1274-1275); this subphase did not change them"
+    }
+  },
+  "unresolved": [
+    "xilinx-bootgen's candidate evp_signing workload segfaults (exit=-11) during bootgen signing; the authority signs/verifies and the candidate KDF path passes, so this is a candidate-side L7 failure rather than a harness failure. It stays L5 and is not promoted.",
+    "the runtime --self-test reports vsftpd/postfix as incomplete because their admitted intents use launch: [] (pre-existing at HEAD); --check is green",
+    "the gftp-text workload re-enables verify_ssl_peer=1 because the released sample gftprc disables verification; this is a fixture precondition and a deliberate safety deviation from the sample default",
+    "the hmac_kdf template's only demonstrated family is Bootgen's SP 800-108 CMAC counter-mode KDF; it is a keyed KDF, not HMAC, and is recorded as such rather than relabelled",
+    "the typed-harness example is C++ (Poco); the path itself is compiler-neutral and the existing C harnesses use cc, but no below-L7 C library was driven through the new aead template in this subphase"
+  ],
+  "non_claims": [
+    "L7-functional is a local deterministic functional exercise, not a security proof or a cryptographic validation",
+    "the consumer-API invariant proves which artifact calls OpenSSL and which symbols are referenced; it does not prove the specific code path executed by a multi-path program",
+    "the new templates do not graduate any consumer family to SAFE_COMPATIBLE; that still requires the full dependency-closure rule of AGENTS.md section 7",
+    "the restored runtime-functional-atlas.json does not contain the measured rows; the proof is this receipt and the tool summary lines above"
+  ]
+}
