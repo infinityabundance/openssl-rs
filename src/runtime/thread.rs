@@ -1434,6 +1434,10 @@ mod tests {
         static FREE_FILE: AtomicUsize = AtomicUsize::new(0);
         static FREE_LINE: AtomicI32 = AtomicI32::new(0);
 
+        /// # Safety
+        /// The allocator seam calls this hook with the requested size and a `file` coordinate
+        /// that is NULL or NUL-terminated. The coordinate is stored as an address and never
+        /// dereferenced, so its contents are irrelevant.
         unsafe extern "C" fn hook_malloc(
             n: usize,
             file: *const c_char,

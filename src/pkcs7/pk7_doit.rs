@@ -2470,8 +2470,8 @@ mod tests {
         // SAFETY: no preconditions; the constructor allocates and writes its fields.
         let cipher = unsafe { EVP_CIPHER_meth_new(nid, 16, 16) };
         assert!(!cipher.is_null(), "the method allocation succeeds");
-        // SAFETY: `cipher` is this caller's live method.
         assert_eq!(
+            // SAFETY: `cipher` is this caller's live method.
             unsafe { EVP_CIPHER_meth_set_iv_length(cipher, ivlen) },
             1,
             "a fresh method has no IV length yet"
