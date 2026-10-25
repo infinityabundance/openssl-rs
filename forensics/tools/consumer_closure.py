@@ -9,13 +9,18 @@ For a named downstream family it:
 1. takes the exact downstream artefact and resolves the loader's *observed*
    library resolution for every ``DT_NEEDED`` OpenSSL soname, recording the
    artefact and each resolved DSO by SHA-256;
-2. builds a conservative reachable-call graph over the exact candidate DSOs:
-   imported versioned symbols are the roots, direct call edges come from the
-   linked machine code, and function pointers, callbacks, provider dispatch
-   tables, constructors/destructors and allocator hooks enter through
-   address-taken code/data references.  A dynamic trace, when supplied, is
-   recorded as observed execution only; it never narrows the graph, because
-   executing a function does not prove unobserved paths unreachable;
+2. builds a reachable-call graph over the exact candidate DSOs: imported versioned
+   symbols are the roots, direct call edges come from the linked machine code, and
+   indirect control transfers are resolved per site from static evidence:
+   GOT/PLT relocations, immutable dispatch and vtable tables (`.data.rel.ro`),
+   compiler relative jump tables, literal callback stores, field-offset store
+   summaries for reachable code, and an interprocedural argument summary for
+   callback parameters.  A site that cannot be resolved is admitted at its
+   evidence class (field / materialised / argument); only a site with no class at
+   all admits the global address-taken union, and every such site is listed in the
+   receipt.  A dynamic trace, when supplied, is recorded as observed execution
+   only; it never narrows the graph, because executing a function does not prove
+   unobserved paths unreachable.
 3. joins every reachable source file to the safety obligations recorded in the
    V1 candidate freeze (production uncontracted unsafe operations) and to the
    boundary receipts that own them;
@@ -27,15 +32,14 @@ For a named downstream family it:
 What this establishes, and what it does not
 -------------------------------------------
 The static graph is an upper bound at linked-function granularity: every
-direct call in the exact candidate machine code and every function whose
-address is materialised in an executable or data section.  Functions never
-called indirectly are not reachable; functions called indirectly are all
-admitted once any reachable function performs an unresolved indirect call.
-Inlining is not represented: an inlined callee's unsafe sites are attributed
-to the caller's file only when the compiler emitted no out-of-line function
-for it.  This is a reachability analysis, not a proof of memory safety, and
-``DISCHARGED`` here means only that an existing receipt covers the exact site;
-it does not re-audit the receipt.
+direct call in the exact candidate machine code and the target set resolved for
+every indirect control transfer.  A function is reachable when any resolved
+edge or evidence-class bound admits it.  Functions never observed are still
+reachable if a bound admits them.  Inlining is not represented: an inlined
+callee's unsafe sites are attributed to the caller's file only when the compiler
+emitted no out-of-line function for it.  This is a reachability analysis, not a
+proof of memory safety, and ``DISCHARGED`` here means only that an existing
+receipt covers the exact site; it does not re-audit the receipt.
 
 Run inside the court container.  Nothing in this tool builds the crate or
 modifies source; it reads the admitted install, the committed inventory and
@@ -255,6 +259,7 @@ class DsoGraph:
     def __init__(self, path: Path, workdir: Path):
         self.path = path
         self.name = path.name
+        self.sha256 = sha256_file(path)
         self.workdir = workdir
         self.funcs = self._function_symbols()
         self.starts = sorted(self.funcs)
@@ -264,7 +269,23 @@ class DsoGraph:
         self.indirect_funcs = collections.Counter()
         self.taken_code = set()
         self.taken_data = set()
+        self.functions = []
+        self.sections = self._elf_sections()
+        self.relocs = self._elf_relocs()
+        self.dynamic_defs = defined_symbols(path, dynamic=True)
+        self.slot_funcs = {}
+        self.slot_data = {}
+        self.slot_syms = {}
+        self._build_slots()
+        self.runs = self._reloc_runs()
+        self.static_offset_class = {}
+        for run in self.runs:
+            base = run[0]
+            for slot in run:
+                self.static_offset_class.setdefault(slot - base, set()).update(
+                    self.slot_funcs.get(slot, ()))
         self._disassemble()
+        self.precision = None
 
     def _function_symbols(self) -> dict:
         out = run(["nm", "--defined-only", str(self.path)]).stdout
@@ -279,24 +300,135 @@ class DsoGraph:
         return funcs
 
     def _section_bytes(self, wanted: str):
-        out = run(["readelf", "-SW", str(self.path)]).stdout
-        for line in out.splitlines():
-            parts = line.split()
-            if len(parts) < 7 or parts[1] != wanted:
+        sec = self.sections.get(wanted)
+        if not sec:
+            return b""
+        _addr, off, size = sec
+        with open(self.path, "rb") as fh:
+            fh.seek(off)
+            return fh.read(size)
+
+    def _elf_sections(self) -> dict:
+        out = {}
+        for line in run(["readelf", "-SW", str(self.path)]).stdout.splitlines():
+            toks = line.split()
+            if not toks or not toks[0].startswith("["):
                 continue
-            try:
-                off = int(parts[4], 16)
-                size = int(parts[5], 16)
-            except ValueError:
+            if toks[0] == "[":
+                name = toks[2]
+                try:
+                    addr, off, size = int(toks[4], 16), int(toks[5], 16), int(toks[6], 16)
+                except (ValueError, IndexError):
+                    continue
+            else:
+                name = toks[1]
+                try:
+                    addr, off, size = int(toks[3], 16), int(toks[4], 16), int(toks[5], 16)
+                except (ValueError, IndexError):
+                    continue
+            out[name] = (addr, off, size)
+        return out
+
+    def _elf_relocs(self) -> list:
+        out = []
+        for line in run(["readelf", "-rW", str(self.path)]).stdout.splitlines():
+            m = re.match(r"^([0-9a-f]{16})\s+([0-9a-f]{16})\s+(R_X86_64_\w+)\s*(.*)$", line)
+            if not m:
                 continue
-            with open(self.path, "rb") as fh:
-                fh.seek(off)
-                return fh.read(size)
-        return b""
+            off, typ, rest = int(m.group(1), 16), m.group(3), m.group(4).strip()
+            sym, add, symval = None, None, None
+            parts = rest.split()
+            if len(parts) == 1 and re.fullmatch(r"[0-9a-f]+", parts[0]):
+                add = int(parts[0], 16)
+            elif parts:
+                try:
+                    symval = int(parts[0], 16)
+                except ValueError:
+                    symval = None
+                if len(parts) > 1 and not parts[1].startswith("+"):
+                    sym = parts[1]
+                if len(parts) > 3:
+                    try:
+                        add = int(parts[3], 16)
+                    except ValueError:
+                        add = 0
+            out.append((off, typ, sym, add, symval))
+        return out
+
+    def _build_slots(self) -> None:
+        for off, typ, sym, add, symval in self.relocs:
+            if typ == "R_X86_64_RELATIVE":
+                v = add
+                if v is None:
+                    continue
+                if v in self.start_set:
+                    self.slot_funcs.setdefault(off, set()).add(v)
+                elif self.section_of(v):
+                    self.slot_data.setdefault(off, set()).add(v)
+            elif typ in ("R_X86_64_GLOB_DAT", "R_X86_64_JUMP_SLOT"):
+                if sym:
+                    self.slot_syms.setdefault(off, set()).add(sym)
+            elif typ == "R_X86_64_64":
+                v = (symval or 0) + (add or 0)
+                if v in self.start_set:
+                    self.slot_funcs.setdefault(off, set()).add(v)
+                elif symval is None and sym:
+                    self.slot_syms.setdefault(off, set()).add(sym)
+                elif self.section_of(v):
+                    self.slot_data.setdefault(off, set()).add(v)
+
+    def _reloc_runs(self) -> list:
+        runs = []
+        for off in sorted(self.slot_funcs):
+            if runs and off - runs[-1][-1] <= 24:
+                runs[-1].append(off)
+            else:
+                runs.append([off])
+        return runs
+
+    def section_of(self, addr: int):
+        for name, (a, _o, s) in self.sections.items():
+            if a <= addr < a + s:
+                return name
+        return None
+
+    def is_data(self, addr: int) -> bool:
+        sec = self.section_of(addr)
+        return sec is not None and sec not in (".text", ".plt", ".plt.got")
+
+    def containing(self, addr: int):
+        import bisect
+        i = bisect.bisect_right(self.starts, addr) - 1
+        return self.starts[i] if i >= 0 else None
+
+    def static_slot(self, addr: int):
+        """Values fixed by load time (relocation, raw pointer, or BSS zero)."""
+        if addr in self.slot_funcs:
+            return frozenset(self.slot_funcs[addr])
+        if addr in self.slot_data:
+            return frozenset(self.slot_data[addr])
+        if addr in self.slot_syms:
+            return frozenset(("sym", s) for s in self.slot_syms[addr])
+        sec = self.section_of(addr)
+        if sec == ".bss":
+            return frozenset({0})
+        if sec in (".data", ".data.rel.ro", ".rodata", ".got", ".got.plt"):
+            a, off, size = self.sections[sec]
+            if 0 <= addr - a <= size - 8:
+                with open(self.path, "rb") as fh:
+                    fh.seek(off + (addr - a))
+                    v = struct.unpack("<Q", fh.read(8))[0]
+                if v in self.start_set:
+                    return frozenset({v})
+                if self.section_of(v):
+                    return frozenset({v})
+            return frozenset({0})
+        return None
 
     def _disassemble(self) -> None:
         self.workdir.mkdir(parents=True, exist_ok=True)
-        dis = self.workdir / (self.name + ".dis")
+        dis = self.workdir / (self.name + "." + self.sha256[:16] + ".dis")
+        self.dis_path = dis
         if not dis.exists():
             with open(dis, "w") as fh:
                 subprocess.run(["objdump", "-d", "--no-show-raw-insn", str(self.path)],
@@ -306,17 +438,23 @@ class DsoGraph:
         pat_direct = re.compile(r"^(?:call|jmp)\w*\s+([0-9a-f]+) <")
         pat_comment = re.compile(r"#\s*([0-9a-f]+)\s+<")
         cur = None
+        cur_insns = None
         with open(dis, "r", errors="replace") as fh:
             for line in fh:
                 line = line.rstrip("\n")
                 m = pat_head.match(line)
                 if m:
                     cur = int(m.group(1), 16)
+                    cur_insns = []
+                    self.functions.append((cur, cur_insns))
                     continue
                 m = pat_ins.match(line)
                 if not m or cur is None:
                     continue
-                text = m.group(2)
+                ins_addr = int(m.group(1), 16)
+                text = m.group(2).strip()
+                if cur_insns is not None:
+                    cur_insns.append((ins_addr, text))
                 toks = text.split()
                 op = toks[0] if toks else ""
                 if op.startswith("call"):
@@ -375,68 +513,1024 @@ class DsoGraph:
         return self.taken_code | self.taken_data
 
 
-def build_graph(graphs: dict, roots: set, export_index: dict) -> dict:
-    """Union reachability over all candidate DSOs.
+# --------------------------------------------------------------------------- #
+# precision resolver: per-site indirect-call resolution
+# --------------------------------------------------------------------------- #
 
-    ``roots`` is a set of (dso_name, address).  Direct edges stay inside one
-    DSO; a call/PLT reference to an exported symbol of another candidate DSO is
-    carried across.  Any unresolved indirect call reachable anywhere admits the
-    union of all address-taken functions (the conservative upper bound)."""
-    reach = set(roots)
-    frontier = list(roots)
-    taken_all = set()
+MAX_SET = 64
+_TOP = None
+_REGS = ["%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%rdi", "%rbp", "%rsp",
+         "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"]
+_SUBREG = {}
+for _p, _subs in {
+    "%rax": ("%eax", "%ax", "%al", "%ah"),
+    "%rbx": ("%ebx", "%bx", "%bl", "%bh"),
+    "%rcx": ("%ecx", "%cx", "%cl", "%ch"),
+    "%rdx": ("%edx", "%dx", "%dl", "%dh"),
+    "%rsi": ("%esi", "%si", "%sil"),
+    "%rdi": ("%edi", "%di", "%dil"),
+    "%rbp": ("%ebp", "%bp", "%bpl"),
+    "%rsp": ("%esp", "%sp", "%spl"),
+}.items():
+    for _s in _subs:
+        _SUBREG[_s] = _p
+for _p in ("%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"):
+    for _suf in ("d", "w", "b"):
+        _SUBREG[_p + _suf] = _p
+_CALLER_SAVED = {"%rax", "%rcx", "%rdx", "%rsi", "%rdi", "%r8", "%r9", "%r10", "%r11"}
+_ARGREGS = ("%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9")
+
+
+def _canon(reg):
+    return _SUBREG.get(reg, reg)
+
+
+def _split_ops(text):
+    ops, depth, cur = [], 0, []
+    for ch in text:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch == "," and depth == 0:
+            ops.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        ops.append("".join(cur).strip())
+    return ops
+
+
+class PValue:
+    """A finite set of concrete values (ints or symbolic tuples), or TOP."""
+    __slots__ = ("s",)
+
+    def __init__(self, s=_TOP):
+        self.s = s
+
+    @staticmethod
+    def one(v):
+        return PValue(frozenset({v}))
+
+    def is_top(self):
+        return self.s is None
+
+    def union(self, other):
+        other = _as_value(other)
+        if self.s is None or other.s is None:
+            return PValue()
+        u = self.s | other.s
+        if len(u) > MAX_SET:
+            return PValue()
+        return PValue(u)
+
+
+def _as_value(x):
+    if isinstance(x, PValue):
+        return x
+    if x is None:
+        return PValue()
+    return PValue(x)
+
+
+class _Frame:
+    __slots__ = ("regs", "stack", "escaped", "rsp", "comment_addr", "fstart",
+                 "rbp_delta")
+
+    def __init__(self):
+        self.regs = {r: PValue() for r in _REGS}
+        self.regs["%rsp"] = PValue.one(("rspbase",))
+        for i, r in enumerate(_ARGREGS):
+            self.regs[r] = PValue.one(("arg", i))
+        self.stack = {}
+        self.escaped = set()
+        self.rsp = 0
+        self.comment_addr = None
+        self.fstart = None
+        self.rbp_delta = None
+
+    def copy(self):
+        f = _Frame.__new__(_Frame)
+        f.regs = dict(self.regs)
+        f.stack = dict(self.stack)
+        f.escaped = set(self.escaped)
+        f.rsp = self.rsp
+        f.comment_addr = self.comment_addr
+        f.fstart = self.fstart
+        f.rbp_delta = self.rbp_delta
+        return f
+
+    def merge(self, other):
+        changed = False
+        for r, v in other.regs.items():
+            cur = _as_value(self.regs.get(r))
+            u = cur.union(v)
+            if u.s != cur.s:
+                self.regs[r] = u
+                changed = True
+        for k, v in other.stack.items():
+            cur = self.stack.get(k)
+            u = _as_value(v) if cur is None else cur.union(v)
+            if cur is None or u.s != cur.s:
+                self.stack[k] = u
+                changed = True
+        if not other.escaped <= self.escaped:
+            self.escaped |= other.escaped
+            changed = True
+        if other.rsp != self.rsp:
+            if self.stack:
+                self.stack.clear()
+                changed = True
+        return changed
+
+
+class PrecisionResolver:
+    """Resolve indirect control transfers with static evidence.
+
+    Every site is assigned the set of candidate callees it can actually reach,
+    or an explicit unresolved reason.  The resolver never uses an observed
+    trace and never treats "not observed" as unreachable.
+    """
+
+    def __init__(self, g: "DsoGraph", imports: set | None = None):
+        self.g = g
+        self.sites = {}
+        self.store_slots = collections.defaultdict(set)
+        self.field_stores = collections.defaultdict(set)
+        self.field_open = set()
+        self.switch_cache = {}
+        self.calls = []
+        self.summary = collections.defaultdict(lambda: [set() for _ in _ARGREGS])
+        self.summary_open = collections.defaultdict(set)
+        self.exports = set(g.dynamic_defs.values())
+        self.import_addrs = set(imports or ())
+        self.class_counts = collections.Counter()
+        self.unknown_call_args = set()
+        self.returns = collections.defaultdict(set)
+
+    # ---- values ---------------------------------------------------------- #
+
+    def slot_value(self, addr):
+        base = _as_value(self.g.static_slot(addr))
+        if addr in self.store_slots:
+            extra = self.store_slots[addr]
+            if extra is None:
+                return PValue()
+            base = _as_value(base.s | extra) if not base.is_top() else PValue()
+        return base
+
+    def table_read(self, addr, scale, limit=256):
+        out, complete = set(), True
+        for k in range(limit):
+            v = self.slot_value(addr + k * scale)
+            if v.is_top():
+                complete = False
+                break
+            ints = {x for x in v.s if isinstance(x, int)}
+            if not ints:
+                break
+            out |= {x for x in ints if x in self.g.start_set}
+        return out, complete
+
+    def field_bound(self, off):
+        out = {v for v in self.field_stores.get(off, ())
+               if isinstance(v, int) and v in self.g.start_set}
+        if off in self.field_open:
+            out |= set(self.g.taken_code) | set(self.import_addrs)
+        return out
+
+    def field_bases(self, off):
+        return {v for v in self.field_stores.get(off, ())
+                if isinstance(v, int) and self.g.is_data(v)}
+
+    def switch_targets(self, base):
+        if base in self.switch_cache:
+            return self.switch_cache[base]
+        sec = self.g.section_of(base)
+        targets = set()
+        if sec:
+            a, _off, size = self.g.sections[sec]
+            data = self.g._section_bytes(sec)
+            start = base - a
+            end = min(len(data) - 3, start + 65536)
+            for i in range(start, end, 4):
+                v = struct.unpack_from("<i", data, i)[0]
+                tgt = base + v
+                if tgt in self.g.start_set:
+                    targets.add(tgt)
+        self.switch_cache[base] = targets
+        return targets
+
+    def resolve_set(self, f, vals):
+        if vals is None:
+            return set(), True
+        out = set()
+        for b in vals:
+            if isinstance(b, tuple) and b[0] == "arg":
+                out |= self.summary[f][b[1]]
+            else:
+                out.add(b)
+        return out, False
+
+    def build_summary(self):
+        consumer_obtainable = set(self.import_addrs)
+        for f in self.import_addrs:
+            consumer_obtainable |= self.returns.get(f, set())
+        for f in self.exports:
+            for k in range(len(_ARGREGS)):
+                self.summary[f][k] |= consumer_obtainable
+        changed, rounds = True, 0
+        while changed and rounds < 8:
+            changed = False
+            rounds += 1
+            for caller, callee, args in self.calls:
+                if callee is None:
+                    continue
+                for k, vs in enumerate(args):
+                    vals = None if vs.is_top() else vs.s
+                    res, bad = self.resolve_set(caller, vals)
+                    if bad:
+                        self.summary_open[callee].add(k)
+                    new = {v for v in res if isinstance(v, int)}
+                    if new - self.summary[callee][k]:
+                        self.summary[callee][k] |= new
+                        changed = True
+        return rounds
+
+    # ---- intraprocedural abstract interpretation ------------------------- #
+
+    def frame_key(self, frame, opnd):
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%rsp|%rbp)\)", opnd)
+        if not m:
+            return None
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if m.group(2) == "%rsp":
+            return ("rsp", frame.rsp + off)
+        if frame.rbp_delta is not None:
+            return ("rsp", frame.rbp_delta + off)
+        return None
+
+    def eval(self, frame, opnd):
+        opnd = opnd.strip()
+        if opnd in frame.regs:
+            return _as_value(frame.regs[opnd])
+        if opnd.startswith("$"):
+            try:
+                return PValue.one(int(opnd[1:], 16))
+            except ValueError:
+                return PValue()
+        key = self.frame_key(frame, opnd)
+        if key is not None:
+            return _as_value(frame.stack.get(key))
+        if "(%rip)" in opnd and re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)", opnd):
+            addr = frame.comment_addr
+            return self.slot_value(addr) if addr is not None else PValue()
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+),(%r[a-z0-9]+),([148])\)", opnd)
+        if m:
+            off = int(m.group(1), 16) if m.group(1) else 0
+            scale = int(m.group(4))
+            base = frame.regs.get(m.group(2), PValue())
+            if base.is_top():
+                return PValue(frozenset({("field", off)}))
+            out, fieldish = set(), False
+            for b in base.s:
+                if isinstance(b, int) and b != 0:
+                    vals, complete = self.table_read(b + off, scale)
+                    out |= vals
+                    if not complete:
+                        fieldish = True
+                elif isinstance(b, int) and b == 0:
+                    continue
+                else:
+                    fieldish = True
+            if fieldish:
+                out.add(("field", off))
+            return PValue(frozenset(out)) if out else PValue()
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", opnd)
+        if m:
+            base = frame.regs.get(m.group(2), PValue())
+            off = int(m.group(1), 16) if m.group(1) else 0
+            if base.is_top():
+                return PValue(frozenset({("field", off)}))
+            out, fieldish = set(), False
+            for b in base.s:
+                if isinstance(b, tuple) and b[0] in ("arg", "field"):
+                    fieldish = True
+                elif isinstance(b, tuple):
+                    if b[0] == "rspbase":
+                        v = _as_value(frame.stack.get(("rsp", frame.rsp + off)))
+                    elif b[0] == "rbpbase":
+                        k = ("rsp", frame.rbp_delta + off) if frame.rbp_delta is not None \
+                            else ("rbp", off)
+                        v = _as_value(frame.stack.get(k))
+                    else:
+                        fieldish = True
+                        continue
+                    if v.is_top():
+                        fieldish = True
+                    else:
+                        out |= v.s or {0}
+                elif isinstance(b, int):
+                    if b == 0:
+                        continue
+                    if self.g.section_of(b) is None:
+                        fieldish = True
+                        continue
+                    v = self.slot_value(b + off)
+                    if v.is_top():
+                        fieldish = True
+                    else:
+                        out |= v.s or {0}
+                else:
+                    fieldish = True
+            if fieldish:
+                out.add(("field", off))
+            return PValue(frozenset(out)) if out else PValue()
+        return PValue()
+
+    def addr_of(self, frame, opnd):
+        if "(%rip)" in opnd:
+            tgt = frame.comment_addr
+            return PValue.one(tgt) if tgt is not None else PValue()
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", opnd)
+        if m:
+            base = frame.regs.get(m.group(2), PValue())
+            off = int(m.group(1), 16) if m.group(1) else 0
+            if base.is_top():
+                return PValue()
+            out = set()
+            for b in base.s:
+                if isinstance(b, tuple) and b[0] == "rspbase":
+                    out.add(("rsp", frame.rsp + off))
+                elif isinstance(b, tuple) and b[0] == "rbpbase":
+                    if frame.rbp_delta is not None:
+                        out.add(("rsp", frame.rbp_delta + off))
+                    else:
+                        out.add(("rbp", off))
+                elif isinstance(b, int):
+                    out.add(b + off)
+                else:
+                    return PValue()
+            return PValue(frozenset(out))
+        return PValue()
+
+    def eval_indexed(self, frame, opnd):
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+),(%r[a-z0-9]+),([148])\)", opnd)
+        if not m:
+            return PValue()
+        base = frame.regs.get(m.group(2), PValue())
+        if base.is_top() or len(base.s) != 1:
+            return PValue()
+        b = next(iter(base.s))
+        if isinstance(b, int):
+            off = int(m.group(1), 16) if m.group(1) else 0
+            return PValue(frozenset({("rel32", b + off)}))
+        return PValue()
+
+    # ---- site classification --------------------------------------------- #
+
+    def note_site(self, kind, fstart, addr, text, targets, unresolved, reason,
+                  klass, field_offsets=()):
+        key = (fstart, addr, kind)
+        prev = self.sites.get(key)
+        if prev is None:
+            self.sites[key] = {
+                "kind": kind, "func": fstart, "addr": addr, "text": text,
+                "targets": set(targets), "unresolved": unresolved,
+                "reason": reason, "class": klass,
+                "field_offsets": set(field_offsets),
+            }
+            return
+        prev["targets"] |= targets
+        prev["field_offsets"] |= set(field_offsets)
+        if unresolved and not prev["unresolved"]:
+            prev["unresolved"] = True
+            prev["reason"] = reason
+            prev["class"] = klass
+
+    def analyze_transfer(self, kind, frame, fstart, addr, text, opnd):
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+),(%r[a-z0-9]+),([148])\)", opnd)
+        if m:
+            off = int(m.group(1), 16) if m.group(1) else 0
+            scale = int(m.group(4))
+            base = _as_value(frame.regs.get(m.group(2)))
+            if base.is_top():
+                self.note_site(kind, fstart, addr, text,
+                               self.field_bound(off), True, "field-of-unknown-base",
+                               "field", field_offsets={off})
+                return self.field_bound(off), True
+            targets, unresolved = set(), False
+            for b in base.s:
+                if isinstance(b, int) and b != 0:
+                    vals, complete = self.table_read(b + off, scale)
+                    targets |= vals
+                    if not complete:
+                        unresolved = True
+                elif isinstance(b, int) and b == 0:
+                    continue
+                else:
+                    targets |= self.field_bound(off)
+            self.note_site(kind, fstart, addr, text, targets, unresolved,
+                           "indexed-table" if not unresolved else "indexed-table-partial",
+                           "table" if not unresolved else "field")
+            return targets, unresolved
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\(%rip\)", opnd)
+        if m:
+            slot = frame.comment_addr
+            v = self.slot_value(slot) if slot is not None else PValue()
+            if v.is_top():
+                self.note_site(kind, fstart, addr, text, set(), True,
+                               "rip-slot-open", "unclassified")
+                return set(), True
+            targets = set()
+            for x in v.s:
+                if isinstance(x, int) and x in self.g.start_set:
+                    targets.add(x)
+                elif isinstance(x, tuple) and x[0] == "sym":
+                    targets.add(x)
+            self.note_site(kind, fstart, addr, text, targets, False, "rip-slot",
+                           "got-or-table")
+            return targets, False
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", opnd)
+        if m:
+            off = int(m.group(1), 16) if m.group(1) else 0
+            if m.group(2) == "%rsp" or frame.rbp_delta is not None:
+                key = self.frame_key(frame, opnd)
+                sv = _as_value(frame.stack.get(key)) if key is not None else PValue()
+                if sv.is_top():
+                    self.note_site(kind, fstart, addr, text, set(), True,
+                                   "stack-slot-open", "materialised")
+                    return set(), True
+                targets = set()
+                unresolved = False
+                for x in sv.s:
+                    if isinstance(x, tuple) and x[0] == "arg":
+                        targets |= self.summary[fstart][x[1]]
+                    elif isinstance(x, tuple) and x[0] == "field":
+                        targets |= self.field_bound(x[1])
+                    elif isinstance(x, tuple) and x[0] == "sym":
+                        targets.add(x)
+                    elif isinstance(x, int) and x in self.g.start_set:
+                        targets.add(x)
+                    elif isinstance(x, int) and x == 0:
+                        pass
+                    else:
+                        unresolved = True
+                self.note_site(kind, fstart, addr, text, targets, unresolved,
+                               "stack-slot" if not unresolved else "stack-slot-partial",
+                               "resolved" if not unresolved else "materialised")
+                return targets, unresolved
+            base = _as_value(frame.regs.get(m.group(2)))
+            if base.is_top():
+                self.note_site(kind, fstart, addr, text, self.field_bound(off),
+                               True, "field-of-unknown-base", "field",
+                               field_offsets={off})
+                return self.field_bound(off), True
+            targets, unresolved = set(), False
+            for b in base.s:
+                if isinstance(b, tuple) and b[0] == "arg":
+                    targets |= self.field_bound(off)
+                    for tb in {x for x in self.summary[fstart][b[1]]
+                               if isinstance(x, int) and self.g.is_data(x)}:
+                        v = self.slot_value(tb + off)
+                        if v.is_top():
+                            unresolved = True
+                        else:
+                            targets |= {x for x in v.s if isinstance(x, int)
+                                        and x in self.g.start_set}
+                elif isinstance(b, tuple) and b[0] == "field":
+                    if b[1] in self.field_open:
+                        unresolved = True
+                    for tb in self.field_bases(b[1]):
+                        v = self.slot_value(tb + off)
+                        if v.is_top():
+                            unresolved = True
+                        else:
+                            targets |= {x for x in v.s if isinstance(x, int)
+                                        and x in self.g.start_set}
+                elif isinstance(b, int):
+                    v = self.slot_value(b + off)
+                    if v.is_top():
+                        unresolved = True
+                    else:
+                        targets |= {x for x in v.s if isinstance(x, int)
+                                    and x in self.g.start_set}
+                elif isinstance(b, tuple) and b[0] in ("rsp", "rbp"):
+                    v = _as_value(frame.stack.get(b))
+                    if v.is_top():
+                        unresolved = True
+                    else:
+                        targets |= {x for x in v.s if isinstance(x, int)
+                                    and x in self.g.start_set}
+                elif isinstance(b, tuple) and b[0] == "sym":
+                    pass
+                else:
+                    unresolved = True
+            klass = "resolved" if not unresolved else "field"
+            self.note_site(kind, fstart, addr, text, targets, unresolved,
+                           "base-slot" if not unresolved else "base-slot-partial",
+                           klass, field_offsets={off})
+            return targets, unresolved
+        if opnd in frame.regs:
+            v = _as_value(frame.regs[opnd])
+            if v.is_top():
+                self.note_site(kind, fstart, addr, text, set(), True, "reg-top",
+                               "materialised")
+                return set(), True
+            resolved, arg_open = set(), False
+            for b in v.s:
+                if isinstance(b, tuple) and b[0] == "arg":
+                    vals = self.summary[fstart][b[1]]
+                    resolved |= vals
+                    if not vals and b[1] in self.summary_open[fstart]:
+                        arg_open = True
+                else:
+                    resolved.add(b)
+            v = PValue(frozenset(resolved))
+            targets, unresolved, switch, partial = set(), arg_open, set(), set()
+            field_offsets = set()
+            for b in v.s:
+                if isinstance(b, int):
+                    if b in self.g.start_set:
+                        targets.add(b)
+                    elif b == 0:
+                        pass
+                    elif self.g.is_data(b):
+                        pass
+                    else:
+                        unresolved = True
+                        partial.add("int")
+                elif isinstance(b, tuple) and b[0] == "switch":
+                    switch.add(b[1])
+                elif isinstance(b, tuple) and b[0] == "field":
+                    targets |= self.field_bound(b[1])
+                    field_offsets.add(b[1])
+                elif isinstance(b, tuple) and b[0] == "arg":
+                    unresolved = True
+                    partial.add("arg")
+                elif isinstance(b, tuple) and b[0] == "sym":
+                    targets.add(b)
+                elif isinstance(b, tuple) and b[0] in ("rsp", "rbp"):
+                    sv = _as_value(frame.stack.get(b))
+                    if sv.is_top():
+                        unresolved = True
+                        partial.add("stack")
+                    else:
+                        for x in sv.s:
+                            if isinstance(x, int) and x in self.g.start_set:
+                                targets.add(x)
+                            elif isinstance(x, tuple) and x[0] in ("sym",):
+                                targets.add(x)
+                            elif isinstance(x, tuple) and x[0] == "field":
+                                targets |= self.field_bound(x[1])
+                                field_offsets.add(x[1])
+                            elif isinstance(x, tuple) and x[0] == "arg":
+                                unresolved = True
+                                partial.add("arg")
+                            elif isinstance(x, int) and x == 0:
+                                pass
+                            else:
+                                unresolved = True
+                                partial.add("other")
+                else:
+                    unresolved = True
+                    partial.add("other")
+            for t in switch:
+                targets |= self.switch_targets(t)
+            klass = "resolved" if not unresolved else "materialised"
+            self.note_site(kind, fstart, addr, text, targets, unresolved,
+                           "reg-value" if not unresolved else
+                           "reg-value-partial[" + ",".join(sorted(partial)) + "]",
+                           klass, field_offsets=field_offsets)
+            return targets, unresolved
+        self.note_site(kind, fstart, addr, text, set(), True,
+                       "unsupported-operand:" + opnd, "unclassified")
+        return set(), True
+
+    # ---- instruction semantics ------------------------------------------- #
+
+    def assign(self, frame, dst, v):
+        if dst in frame.regs:
+            frame.regs[dst] = v
+            return
+        key = self.frame_key(frame, dst)
+        if key is not None:
+            frame.stack[key] = v
+            return
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)\(%rip\)", dst)
+        if m:
+            slot = frame.comment_addr
+            if slot is not None:
+                self.record_store(slot, self.resolve_store_value(frame.fstart, v))
+            return
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)\((%r[a-z0-9]+)\)", dst)
+        if m and m.group(2) not in ("%rsp", "%rbp"):
+            off = int(m.group(1), 16)
+            v = self.resolve_store_value(frame.fstart, v)
+            if v.is_top():
+                self.field_open.add(off)
+            else:
+                self.field_stores[off] |= v.s
+
+    def record_store(self, slot, v):
+        cur = self.store_slots.get(slot)
+        if cur is None:
+            self.store_slots[slot] = set() if not v.is_top() else None
+        elif cur is not None:
+            if v.is_top():
+                self.store_slots[slot] = None
+            else:
+                cur |= v.s
+
+    def resolve_store_value(self, f, v):
+        if v.is_top():
+            return v
+        out = set()
+        for b in v.s:
+            if isinstance(b, tuple) and b[0] == "arg":
+                out |= self.summary[f][b[1]]
+            elif isinstance(b, tuple) and b[0] == "field":
+                out |= self.field_bound(b[1])
+            elif isinstance(b, tuple) and b[0] == "sym":
+                addr = self.g.dynamic_defs.get(b[1])
+                out.add(addr if addr is not None else 0)
+            elif isinstance(b, int):
+                out.add(b)
+        return PValue(frozenset(out)) if out else PValue.one(0)
+
+    def escape(self, frame, v):
+        if v.is_top():
+            return
+        for b in v.s:
+            if isinstance(b, tuple) and b[0] in ("rsp", "rbp"):
+                frame.escaped.add(b)
+
+    def step(self, frame, fstart, insns, i):
+        addr, text = insns[i]
+        comment = None
+        if "#" in text:
+            c = text.split("#", 1)[1].strip()
+            m = re.match(r"^([0-9a-f]+)", c)
+            if m:
+                comment = int(m.group(1), 16)
+        frame.comment_addr = comment
+        body = text.split("#", 1)[0].strip()
+        toks = body.split(None, 1)
+        mn = toks[0]
+        rest = toks[1].strip() if len(toks) > 1 else ""
+        raw_ops = _split_ops(rest)
+        ops = [_canon(o) if o in _SUBREG else o for o in raw_ops]
+        sub_dst = bool(raw_ops) and raw_ops[-1] in _SUBREG
+
+        if mn.startswith("call") and rest.startswith("*"):
+            opnd = rest.lstrip("*").strip()
+            args = [_as_value(frame.regs[r]) for r in _ARGREGS]
+            targets, _unres = self.analyze_transfer(
+                "call", frame, fstart, addr, text, opnd)
+            retvals = set()
+            for t in targets:
+                if isinstance(t, int):
+                    self.calls.append((fstart, t, args))
+                    retvals |= self.returns.get(t, set())
+            if _unres:
+                for a in args:
+                    vals = None if a.is_top() else a.s
+                    res, _bad = self.resolve_set(fstart, vals)
+                    for v in res:
+                        if isinstance(v, int):
+                            self.unknown_call_args.add(v)
+            for r in _CALLER_SAVED:
+                frame.regs[r] = PValue()
+            frame.regs["%rax"] = PValue(frozenset(retvals)) if retvals and not _unres \
+                else PValue()
+            for k in list(frame.stack):
+                if k in frame.escaped:
+                    frame.stack[k] = PValue()
+            return
+        if mn.startswith("call"):
+            args = [_as_value(frame.regs[r]) for r in _ARGREGS]
+            m = re.match(r"^([0-9a-f]+)", rest)
+            callee = None
+            if m:
+                callee = self.g.containing(int(m.group(1), 16))
+                if callee is not None:
+                    self.calls.append((fstart, callee, args))
+            for r in _CALLER_SAVED:
+                frame.regs[r] = PValue()
+            if callee is not None and self.returns.get(callee):
+                frame.regs["%rax"] = PValue(frozenset(self.returns[callee]))
+            for k in list(frame.stack):
+                if k in frame.escaped:
+                    frame.stack[k] = PValue()
+            return
+        if mn.startswith("jmp") and rest.startswith("*"):
+            opnd = rest.lstrip("*").strip()
+            self.analyze_transfer("jmp", frame, fstart, addr, text, opnd)
+            return
+        if mn.startswith(("ret", "iret")):
+            v = _as_value(frame.regs.get("%rax"))
+            if not v.is_top():
+                for b in v.s:
+                    if isinstance(b, int):
+                        self.returns[fstart].add(b)
+            return
+        if mn in ("nop", "nopw", "nopl") or mn.startswith("data16") or mn.startswith("cs"):
+            return
+        if mn in ("cmp", "test", "ucomiss", "comiss", "ptest", "bt"):
+            return
+        if mn.startswith(("push", "pop")):
+            if mn == "push":
+                frame.rsp -= 8
+                if ops:
+                    self.escape(frame, self.eval(frame, ops[0]))
+            else:
+                frame.rsp += 8
+                if ops:
+                    frame.regs[ops[0]] = PValue()
+            return
+        if mn == "mov" and len(ops) == 2 and ops[0] == "%rsp" and ops[1] == "%rbp":
+            frame.regs["%rbp"] = PValue()
+            frame.rbp_delta = frame.rsp
+            return
+        if mn == "mov" and len(ops) == 2:
+            src, dst = ops
+            if sub_dst and not src.startswith("$"):
+                self.assign(frame, dst, PValue())
+                return
+            self.assign(frame, dst, self.eval(frame, src))
+            return
+        if mn == "lea" and len(ops) == 2:
+            src, dst = ops
+            self.assign(frame, dst, PValue() if sub_dst else self.addr_of(frame, src))
+            return
+        if mn in ("movzbl", "movzwl", "movslq", "movsbl", "movswl", "movsbq",
+                  "movzwq", "movzbq") and len(ops) == 2:
+            src, dst = ops
+            v = self.eval_indexed(frame, src)
+            if v.is_top():
+                v = self.eval(frame, src)
+                if not v.is_top():
+                    v = PValue()
+            self.assign(frame, dst, v)
+            return
+        if mn.startswith("cmov") and len(ops) == 2:
+            src, dst = ops
+            if sub_dst:
+                frame.regs[dst] = PValue()
+                return
+            frame.regs[dst] = frame.regs.get(dst, PValue()).union(self.eval(frame, src))
+            return
+        if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1] and ops[0] in frame.regs:
+            frame.regs[ops[0]] = PValue.one(0)
+            return
+        if mn in ("add", "sub") and len(ops) == 2:
+            src, dst = ops
+            if dst == "%rsp" and src.startswith("$"):
+                off = int(src[1:], 16)
+                frame.rsp += -off if mn == "sub" else off
+                return
+            if sub_dst:
+                frame.regs[dst] = PValue()
+                return
+            if dst in frame.regs:
+                base = frame.regs[dst]
+                if src.startswith("$") and not base.is_top():
+                    off = int(src[1:], 16)
+                    if mn == "sub":
+                        off = -off
+                    out = set()
+                    for b in base.s:
+                        if isinstance(b, tuple) and b[0] == "rel32":
+                            out.add(("switch", b[1]))
+                        elif isinstance(b, int):
+                            out.add(b + off)
+                        else:
+                            out.add(b)
+                    frame.regs[dst] = PValue(frozenset(out))
+                    return
+                if src in frame.regs and not base.is_top() and not frame.regs[src].is_top():
+                    other = frame.regs[src]
+                    out = set()
+                    for a in base.s:
+                        for b in other.s:
+                            if isinstance(a, tuple) and a[0] == "rel32" and isinstance(b, int):
+                                out.add(("switch", a[1]))
+                            elif isinstance(b, tuple) and b[0] == "rel32" and isinstance(a, int):
+                                out.add(("switch", b[1]))
+                            elif isinstance(a, int) and isinstance(b, int):
+                                out.add(a + b)
+                            else:
+                                out.add(a)
+                    frame.regs[dst] = PValue(frozenset(out))
+                    return
+            frame.regs[dst] = PValue()
+            return
+        if mn in ("inc", "dec") and len(ops) == 1 and ops[0] in frame.regs:
+            base = frame.regs[ops[0]]
+            if base.is_top():
+                frame.regs[ops[0]] = PValue()
+            else:
+                off = 1 if mn == "inc" else -1
+                frame.regs[ops[0]] = PValue(frozenset(
+                    b + off if isinstance(b, int) else b for b in base.s))
+            return
+        if ops:
+            dst = ops[-1]
+            if dst in frame.regs:
+                frame.regs[dst] = PValue()
+            else:
+                key = self.frame_key(frame, dst)
+                if key is not None:
+                    frame.stack[key] = PValue()
+
+    def analyze_function(self, fstart, insns):
+        if not insns:
+            return
+        addr_index = {a: i for i, (a, _t) in enumerate(insns)}
+        leaders = {0}
+        for i, (_a, text) in enumerate(insns):
+            m = re.match(r"^j\w+\s+([0-9a-f]+)", text)
+            if m:
+                t = int(m.group(1), 16)
+                if t in addr_index:
+                    leaders.add(addr_index[t])
+                if i + 1 < len(insns):
+                    leaders.add(i + 1)
+            elif text.startswith("jmp") or text.startswith("ret"):
+                if i + 1 < len(insns):
+                    leaders.add(i + 1)
+        leaders = sorted(leaders)
+        block_of, blocks = {}, []
+        for bi, lo in enumerate(leaders):
+            hi = leaders[bi + 1] if bi + 1 < len(leaders) else len(insns)
+            blocks.append((lo, hi))
+            for i in range(lo, hi):
+                block_of[i] = bi
+        succ = collections.defaultdict(list)
+        for bi, (_lo, hi) in enumerate(blocks):
+            _la, last = insns[hi - 1]
+            m = re.match(r"^(j\w+)\s+([0-9a-f]+)", last)
+            if m:
+                t = int(m.group(2), 16)
+                if t in addr_index:
+                    succ[bi].append(block_of[addr_index[t]])
+                if not last.startswith("jmp") and hi < len(insns):
+                    succ[bi].append(bi + 1)
+            elif last.startswith("ret"):
+                pass
+            elif last.startswith("jmp"):
+                pass
+            elif hi < len(insns):
+                succ[bi].append(bi + 1)
+        entry = {0: _Frame()}
+        entry[0].fstart = fstart
+        work, iters = [0], 0
+        while work:
+            bi = work.pop()
+            iters += 1
+            if iters > 200000:
+                break
+            frame = entry[bi].copy()
+            lo, hi = blocks[bi]
+            for i in range(lo, hi):
+                self.step(frame, fstart, insns, i)
+            for s in succ[bi]:
+                if s not in entry:
+                    entry[s] = frame.copy()
+                    work.append(s)
+                elif entry[s].merge(frame):
+                    work.append(s)
+
+    def run(self):
+        for pass_no in (1, 2, 3):
+            if pass_no == 2:
+                self.build_summary()
+                self.sites = {}
+                self.store_slots = collections.defaultdict(set)
+                self.field_stores = collections.defaultdict(set)
+                self.field_open = set()
+                self.unknown_call_args = set()
+            elif pass_no == 3:
+                self.build_summary()
+                self.sites = {}
+                self.store_slots = collections.defaultdict(set)
+                self.field_stores = collections.defaultdict(set)
+                self.field_open = set()
+                self.unknown_call_args = set()
+            self.calls = []
+            for fstart, insns in self.g.functions:
+                self.analyze_function(fstart, insns)
+        return self.sites
+
+    def publish(self):
+        g = self.g
+        g.sites = self.sites
+        g.field_stores = self.field_stores
+        g.field_open = self.field_open
+        g.unknown_call_arg_targets = set(self.unknown_call_args)
+        g.precision_counts = collections.Counter(
+            (s["class"], s["unresolved"]) for s in self.sites.values())
+        g.site_reasons = collections.Counter(
+            s["reason"] for s in self.sites.values())
+        g.resolved_targets = {t for s in self.sites.values()
+                              for t in s["targets"]}
+        g.residual_sites = [s for s in self.sites.values() if s["unresolved"]]
+        g.address_taken_union = (set(g.taken_code) | set(g.taken_data)
+                                 | {v for vs in g.slot_funcs.values() for v in vs})
+        return g.sites
+
+
+def build_graph(graphs: dict, roots: set, export_index: dict,
+                import_nodes: set | None = None) -> dict:
+    """Union reachability over all candidate DSOs, with per-site targets.
+
+    Direct call edges come from the linked machine code.  Indirect sites carry
+    the target set the precision resolver established.  A site whose value is
+    genuinely data-dependent is admitted at its **evidence class** (a field
+    offset, an argument summary, or a code-materialised address), never from a
+    trace.  Only a site whose operand cannot be classified at all admits the
+    global address-taken union; the receipt records every such site.
+    """
+    import_nodes = import_nodes or set()
+    site_edges = collections.defaultdict(set)
+    sites_by_func = collections.defaultdict(list)
     for g in graphs.values():
-        taken_all |= {(g.name, a) for a in g.taken}
-    while frontier:
-        nxt = []
-        for dso_name, addr in frontier:
-            g = graphs[dso_name]
-            for target in g.direct.get(addr, ()):
-                node = (dso_name, target)
-                if node not in reach:
-                    reach.add(node)
-                    nxt.append(node)
-            # a PLT/direct target that is an exported symbol of another DSO
-            sym = g.funcs.get(addr)
-            if sym:
-                base = sym.split("@")[0]
-                other = export_index.get(base)
-                if other and other not in reach:
-                    reach.add(other)
-                    nxt.append(other)
-        frontier = nxt
-    indirect_reachable = sum(
-        1 for dso_name, addr in reach
-        if graphs[dso_name].indirect_funcs.get(addr))
-    upper = set(reach)
-    if indirect_reachable:
-        # An unresolved indirect call can target any address-taken function.
-        # Those functions are not leaves: their own direct callees must also be
-        # admitted, otherwise the "upper bound" would silently drop code that a
-        # reachable indirect target calls directly.
-        upper |= taken_all
-        frontier = list(upper)
+        for key, s in getattr(g, "sites", {}).items():
+            fstart = key[0]
+            sites_by_func[g.name].append((fstart, s))
+            for t in s["targets"]:
+                node = None
+                if isinstance(t, int):
+                    node = (g.name, t)
+                elif isinstance(t, tuple) and t[0] == "sym":
+                    node = export_index.get(t[1])
+                if node is not None:
+                    site_edges[(g.name, fstart)].add(node)
+
+    def walk(initial, extra_for):
+        reach = set(initial)
+        frontier = list(initial)
         while frontier:
             nxt = []
             for dso_name, addr in frontier:
                 g = graphs[dso_name]
-                for target in g.direct.get(addr, ()):
-                    node = (dso_name, target)
-                    if node not in upper:
-                        upper.add(node)
+                targets = set(g.direct.get(addr, ()))
+                for t in g.direct.get(addr, ()):
+                    node = (dso_name, t)
+                    if node not in reach:
+                        reach.add(node)
+                        nxt.append(node)
+                for node in site_edges.get((dso_name, addr), ()):
+                    if node not in reach:
+                        reach.add(node)
                         nxt.append(node)
                 sym = g.funcs.get(addr)
                 if sym:
                     other = export_index.get(sym.split("@")[0])
-                    if other and other not in upper:
-                        upper.add(other)
+                    if other and other not in reach:
+                        reach.add(other)
                         nxt.append(other)
             frontier = nxt
+        return reach
+
+    direct_reach = walk(roots, None)
+
+    # residual bounds, computed per DSO from evidence classes
+    residual_bound = set()
+    unclassified = set()
+    reachable_residual_sites = []
+    for dso_name, addr in direct_reach:
+        g = graphs[dso_name]
+        for fstart, s in sites_by_func.get(dso_name, ()):
+            if fstart != addr or not s["unresolved"]:
+                continue
+            reachable_residual_sites.append((dso_name, addr, s))
+            if s["class"] == "unclassified":
+                unclassified.add((dso_name, addr, s["reason"]))
+                residual_bound |= {(dso_name, a) for a in g.address_taken_union}
+            else:
+                residual_bound |= {(dso_name, a) for a in g.taken_code}
+                for vals in getattr(g, "field_stores", {}).values():
+                    residual_bound |= {(dso_name, v) for v in vals
+                                      if isinstance(v, int) and v in g.start_set}
+                residual_bound |= {(dso_name, v) for v in
+                                   getattr(g, "unknown_call_arg_targets", ())
+                                   if v in g.start_set}
+    residual_bound |= {n for n in import_nodes if n[0] in graphs}
+
+    upper = walk(set(direct_reach) | residual_bound, None)
     return {
-        "direct_reachable": reach,
+        "direct_reachable": direct_reach,
         "upper_reachable": upper,
-        "indirect_reachable_functions": indirect_reachable,
-        "address_taken_union": taken_all,
+        "address_taken_union": {(g.name, a) for g in graphs.values()
+                                for a in g.address_taken_union},
+        "resolved_site_targets": {n for edges in site_edges.values() for n in edges},
+        "residual_bound": residual_bound,
+        "reachable_residual_sites": reachable_residual_sites,
+        "unclassified_sites": sorted(unclassified, key=lambda x: (x[0], x[1])),
+        "indirect_reachable_functions": len({f for dso_name, f, _s in
+                                             reachable_residual_sites}),
     }
 
 
@@ -921,10 +2015,78 @@ def build_receipt(args) -> dict:
                                  "detail": f"imported {imp['name']} is not exported by any "
                                            f"resolved candidate OpenSSL DSO"})
 
+    if getattr(args, "skip_graph_on_refusal", False) and args.build_record:
+        bp = Path(args.build_record)
+        if not bp.is_absolute():
+            bp = (repo / bp).resolve()
+        if not bp.is_file():
+            refusals.append({"code": "STALE_HASH",
+                             "detail": f"build record {bp} does not exist"})
+        else:
+            rec = json.loads(bp.read_text())
+            if rec.get("artifact_sha256") not in (None, artifact_sha):
+                refusals.append({"code": "STALE_HASH",
+                                 "detail": "build record artefact digest does not match "
+                                           "the analysed artefact"})
+            if rec.get("install_prefix") not in (None, rel(install, repo)):
+                refusals.append({"code": "STALE_HASH",
+                                 "detail": "build record install prefix does not match the "
+                                           "admitted install"})
+
+    if getattr(args, "skip_graph_on_refusal", False) and refusals:
+        return {
+            "schema": SCHEMA,
+            "tool": {"path": TOOL, "version": 3},
+            "generated_utc": now_utc(),
+            "family": args.family,
+            "artifact_identity": {
+                "path": rel(artifact, repo),
+                "sha256": artifact_sha,
+                "dynamic": dynamic,
+            },
+            "candidate_identity": {
+                "install_prefix": rel(install, repo),
+                "libcrypto_so_3_sha256": classification["openssl_sonames"].get(
+                    "libcrypto.so.3", {}).get("resolved_sha256"),
+                "all_openssl_under_install": classification["all_openssl_under_install"],
+            },
+            "loader_resolution": {
+                "method": resolution["method"],
+                "resolved": resolution["rows"],
+                "openssl_sonames": classification["openssl_sonames"],
+            },
+            "refusals": refusals,
+            "verdict": {
+                "state": "REFUSED",
+                "safe_compatible": False,
+                "reason": "closure refused: " + "; ".join(
+                    f"{r['code']} ({r['detail']})" for r in refusals),
+            },
+            "counts": {"reachable_files": 0, "reachable_production_obligations": 0,
+                       "DISCHARGED": 0, "BLOCKED": 0, "UNKNOWN": 0},
+            "note": "graph evaluation skipped by --skip-graph-on-refusal; the refusal is "
+                    "itself the control result",
+            "non_claims": [
+                "This control run proves only that the named refusal fires; it does not "
+                "exercise the precision resolver.",
+            ],
+        }
+
     for p in dso_paths.values():
         graphs[p.name] = DsoGraph(p, workdir)
 
-    root_nodes = set()
+    import_nodes = set()
+    for imp in imported:
+        target = export_index.get(imp["name"])
+        if target:
+            import_nodes.add(target)
+    for g in graphs.values():
+        g.precision = PrecisionResolver(
+            g, imports={addr for dso, addr in import_nodes if dso == g.name})
+        g.precision.run()
+        g.precision.publish()
+
+    root_nodes = set(import_nodes)
     for imp in imported:
         target = export_index.get(imp["name"])
         if target and target[0] in graphs:
@@ -933,7 +2095,7 @@ def build_receipt(args) -> dict:
         for addr in g.init_roots():
             root_nodes.add((g.name, addr))
 
-    closure = build_graph(graphs, root_nodes, export_index)
+    closure = build_graph(graphs, root_nodes, export_index, import_nodes)
     direct_reach = closure["direct_reachable"]
     upper_reach = closure["upper_reachable"]
 
@@ -960,14 +2122,39 @@ def build_receipt(args) -> dict:
     cb_re = re.compile(r"(?:^|_)(?:set|ctl)[A-Za-z0-9_]*(?:cb|callback)", re.I)
     callback_registrars = matching(
         lambda n: bool(cb_re.search(n)) or n.startswith("BIO_meth_set_"))
+    provider_symbols = {
+        "OSSL_PROVIDER_load", "OSSL_PROVIDER_try_load", "OSSL_PROVIDER_unload",
+        "OSSL_PROVIDER_add_builtin", "OSSL_PROVIDER_set_default_search_path",
+        "OSSL_PROVIDER_available", "OSSL_PROVIDER_do_all",
+        "OSSL_LIB_CTX_load_config", "OSSL_LIB_CTX_set0_default",
+        "EVP_set_default_properties", "EVP_add_cipher", "EVP_add_digest",
+        "EVP_add_alg_module", "ENGINE_by_id", "ENGINE_load_builtin_engines",
+        "OPENSSL_init_crypto", "OPENSSL_MODULES",
+    }
+    provider_reachable = matching(lambda n: n in provider_symbols)
+    consumer_provider_imports = sorted(imp["name"] for imp in imported
+                                       if imp["name"] in provider_symbols)
     special_edges = {
         "constructor_destructor_roots": sum(len(g.init_roots()) for g in graphs.values()),
-        "address_taken_functions_admitted": len(closure["address_taken_union"]),
+        "address_taken_global_union": len(closure["address_taken_union"]),
+        "residual_class_admitted": len(closure["residual_bound"]),
+        "reachable_residual_sites": len(closure["reachable_residual_sites"]),
+        "unclassified_reachable_sites": [
+            {"dso": d, "function": hex(a), "reason": r}
+            for d, a, r in closure["unclassified_sites"]],
         "address_taken_data_pointers": sum(len(g.taken_data) for g in graphs.values()),
         "allocator_hook_registrars_reachable": allocator_hooks,
         "callback_registrars_reachable_count": len(callback_registrars),
         "callback_registrars_reachable_sample": callback_registrars[:40],
         "dynamic_name_lookup_reachable": dynamic_lookup,
+        "consumer_imported_provider_registration": consumer_provider_imports,
+        "provider_registration_or_selection_reachable": provider_reachable,
+        "provider_narrowing": (
+            "the consumer imports no provider installation/selection symbol and no "
+            "dynamic name lookup, and the reachable set contains "
+            f"{len(provider_reachable)} provider/engine selection symbol(s); provider "
+            "dispatch is therefore limited to built-in providers whose tables are "
+            "reached through the resolver, not to a dynamically registered provider"),
         "note": ("each listed class was checked against the reachable set of the exact "
                  "candidate code; an empty list is an observed absence on this closure, "
                  "not an assumption.  A reachable dynamic name lookup would be an "
@@ -1187,7 +2374,7 @@ def build_receipt(args) -> dict:
     verdict_state = "REFUSED" if refusals else "ACCEPTED"
     receipt = {
         "schema": SCHEMA,
-        "tool": {"path": TOOL, "version": 2},
+        "tool": {"path": TOOL, "version": 3},
         "generated_utc": now_utc(),
         "family": args.family,
         "source_identity": {
@@ -1232,15 +2419,21 @@ def build_receipt(args) -> dict:
         },
         "graph": {
             "method": (
-                "function-level static graph over the exact candidate DSOs: "
-                "nm-defined functions, objdump direct call edges, address-taken code "
-                "references, function pointers in .data.rel.ro/.data/.rodata, "
-                ".init_array/.fini_array roots; unresolved indirect calls admit all "
-                "address-taken functions (conservative upper bound)"),
+                "function-level static graph over the exact candidate DSOs: nm-defined "
+                "functions; objdump direct call edges; and an intraprocedural abstract "
+                "interpreter that resolves indirect control transfers from relocations "
+                "(GOT/PLT), immutable dispatch tables, relative jump tables, literal "
+                "callback stores, field-offset stores in reachable code, and an "
+                "interprocedural argument summary.  A site that cannot be resolved keeps "
+                "its evidence class; only a site with no class admits the global "
+                "address-taken union"),
             "upper_bound_rule": (
-                "once any reachable function performs an unresolved indirect call, every "
-                "function whose address is materialised anywhere in the candidate DSOs "
-                "is admitted; the upper bound is the reachable set used for adjudication"),
+                "direct edges + the resolver's per-site target sets + the residual class "
+                "(functions address-materialised in reachable code, consumer-imported "
+                "symbols, values stored into object fields by reachable code, and values "
+                "passed at unresolved call sites); the global address-taken union is "
+                "admitted only for an unclassified site, and any such site is listed "
+                "in precision.unclassified_reachable_sites"),
             "direct_reachable_functions": len(direct_reach),
             "upper_bound_reachable_functions": len(upper_reach),
             "address_taken_functions": len(closure["address_taken_union"]),
@@ -1267,10 +2460,17 @@ def build_receipt(args) -> dict:
                 name: {
                     "function_symbols": len(g.funcs),
                     "direct_edges": sum(len(v) for v in g.direct.values()),
-                    "unresolved_indirect_sites": g.indirect_sites,
-                    "functions_with_unresolved_indirect_calls": len(g.indirect_funcs),
+                    "indirect_sites": len(getattr(g, "sites", {})),
+                    "resolved_indirect_sites": sum(
+                        1 for s in getattr(g, "sites", {}).values() if not s["unresolved"]),
+                    "unresolved_indirect_sites": sum(
+                        1 for s in getattr(g, "sites", {}).values() if s["unresolved"]),
+                    "functions_with_unresolved_indirect_calls": len(
+                        {k[0] for k, s in getattr(g, "sites", {}).items() if s["unresolved"]}),
                     "address_taken_code_refs": len(g.taken_code),
                     "address_taken_data_pointers": len(g.taken_data),
+                    "site_classes": dict(sorted(
+                        (str(k), v) for k, v in getattr(g, "precision_counts", {}).items())),
                 } for name, g in graphs.items()
             },
             "observed_trace": trace,
@@ -1278,13 +2478,96 @@ def build_receipt(args) -> dict:
                 "inlined callees have no out-of-line function node; their code is "
                 "attributed to the caller, so a source file whose only contribution is "
                 "inlined has no node of its own",
-                "unresolved indirect calls are not resolved per call site; the bound "
-                "admits the global address-taken set instead of guessing a target",
+                "the resolver is an over-approximation: an unresolved site is admitted "
+                "at its evidence class, and every unclassified site is listed rather "
+                "than silently dropped",
                 "a dynamic trace proves execution, not unreachability, and never "
                 "narrowed this graph",
                 "function-level reachability is not a proof that a site is safe; it "
                 "bounds which obligations apply",
             ],
+        },
+        "precision": {
+            "purpose": (
+                "replace the global address-taken collapse with per-site, "
+                "evidence-bound target sets; every residual site states why it remains "
+                "unresolved"),
+            "totals": {
+                "indirect_sites": sum(len(getattr(g, "sites", {})) for g in graphs.values()),
+                "resolved_sites": sum(
+                    1 for g in graphs.values()
+                    for s in getattr(g, "sites", {}).values() if not s["unresolved"]),
+                "unresolved_sites": sum(
+                    1 for g in graphs.values()
+                    for s in getattr(g, "sites", {}).values() if s["unresolved"]),
+                "reachable_unresolved_sites": len(closure["reachable_residual_sites"]),
+                "unclassified_reachable_sites": len(closure["unclassified_sites"]),
+            },
+            "classes": {
+                "got_or_table": {
+                    "mechanism": "call/jump through an absolute slot",
+                    "evidence": "readelf -rW relocation (RELATIVE/GLOB_DAT/JUMP_SLOT) or raw pointer",
+                    "invariant": (
+                        "the slot's value is fixed by the dynamic loader and the slot "
+                        "lies in .got/.got.plt/.data.rel.ro/.rodata, which are immutable "
+                        "after relocation; a writable .data/.bss slot is used only with "
+                        "the union of all stores performed by reachable code"),
+                },
+                "table": {
+                    "mechanism": "static dispatch/vtable table read with a known base",
+                    "evidence": ".data.rel.ro relocation runs",
+                    "invariant": (
+                        "the base address is a link-time constant (lea or a relocated "
+                        "pointer), so every entry is a relocation-resolved function "
+                        "address; an unfilled or open entry makes the site unresolved"),
+                },
+                "switch": {
+                    "mechanism": "compiler relative jump table",
+                    "evidence": "4-byte relative entries from a known .rodata base",
+                    "invariant": (
+                        "the table base is a link-time constant and every entry is "
+                        "decoded; targets that are function starts are admitted, "
+                        "intra-function targets add no new node"),
+                },
+                "field": {
+                    "mechanism": "object-field dispatch (callback or method pointer)",
+                    "evidence": (
+                        "stores to that offset by reachable code, consumer-imported "
+                        "values and the return values of consumer-imported constructors, "
+                        "and code-materialised addresses when the field is open"),
+                    "invariant": (
+                        "a function value installed in a reachable object at a known "
+                        "offset is either written by reachable code (store summary), "
+                        "supplied by the consumer (its imported symbols and their "
+                        "returns, since the artefact has no dynamic name lookup), or "
+                        "address-materialised in reachable code; an open field adds the "
+                        "code-materialised set"),
+                },
+                "materialised": {
+                    "mechanism": "direct call through a value with no static table provenance",
+                    "evidence": "address-of materialisations in reachable code + consumer imports",
+                    "invariant": (
+                        "after GOT/table/switch/field resolution, a remaining value can "
+                        "only be an address taken in reachable code or a value supplied "
+                        "by the consumer; a site that cannot be assigned even this class "
+                        "is listed as unclassified and admits the global union"),
+                },
+            },
+            "invariants_summary": (
+                "Each class is narrowed only by evidence that fixes the possible values "
+                "at the site.  A trace never narrows anything.  Functions that are not "
+                "observed remain reachable if any bound admits them.  The residual class "
+                "is a bound, not a claim that every listed function is called."),
+            "residual_sites": [
+                {"dso": d, "function": hex(f), "reason": s["reason"],
+                 "class": s["class"], "text": s["text"][:160]}
+                for d, f, s in closure["reachable_residual_sites"][:80]],
+            "unclassified_reachable_sites": closure["unclassified_sites"],
+            "settled": ("the only reachable unresolved sites are field- or "
+                        "materialised-class sites; no unclassified site is reachable"
+                        if not closure["unclassified_sites"] else
+                        "at least one reachable site has no evidence class and admits "
+                        "the global address-taken union"),
         },
         "obligations": obligations,
         "closure_scope": {
@@ -1413,6 +2696,40 @@ def self_test() -> int:
         "SAFETY_DISCHARGED (scope: src/ui/ui_openssl.rs:111-124, 269-290)"),
         {"src/ui/ui_openssl.rs": [(111, 124), (269, 290)]})
 
+    # ---- negative control: an unclassified indirect site is broad ---------- #
+    class _FakeG:
+        name = "control.so"
+        funcs = {0x10: "root", 0x20: "materialised", 0x30: "table_entry"}
+        start_set = set(funcs)
+        direct = {0x10: set()}
+        taken_code = {0x20}
+        taken_data = {0x30}
+        address_taken_union = {0x20, 0x30}
+        field_stores = {}
+        static_offset_class = {}
+        sites = {}
+
+        def init_roots(self):
+            return set()
+
+    g = _FakeG()
+    g.sites = {(0x10, 0x11, "call"): {
+        "kind": "call", "func": 0x10, "addr": 0x11, "text": "call *%rax",
+        "targets": set(), "unresolved": True, "reason": "unsupported-operand",
+        "class": "unclassified"}}
+    broad = build_graph({g.name: g}, {(g.name, 0x10)}, {})
+    check("negative control unclassified admits global set",
+          (g.name, 0x30) in broad["upper_reachable"], True)
+    g.sites = {(0x10, 0x11, "call"): {
+        "kind": "call", "func": 0x10, "addr": 0x11, "text": "call *%rax",
+        "targets": set(), "unresolved": True, "reason": "reg-top",
+        "class": "materialised"}}
+    narrow = build_graph({g.name: g}, {(g.name, 0x10)}, {})
+    check("materialised class admits address-of set",
+          (g.name, 0x20) in narrow["upper_reachable"], True)
+    check("materialised class does not admit global table entry",
+          (g.name, 0x30) in narrow["upper_reachable"], False)
+
     # module -> file mapping needs a real tree; use the tool's own repo when present
     repo = Path(__file__).resolve().parents[2]
     if (repo / "src").is_dir():
@@ -1442,7 +2759,8 @@ def self_test() -> int:
             print("  -", f)
         return 1
     print(f"[consumer-closure] self-test ok: parsing, adjudication truth table, "
-          f"module/file mapping, export-site index, mechanism routing")
+          f"module/file mapping, export-site index, mechanism routing, precision "
+          f"narrowing and unclassified-site negative control")
     return 0
 
 
@@ -1472,6 +2790,8 @@ def main(argv=None) -> int:
     ap.add_argument("--build-record",
                     help="optional provenance JSON for a rebuilt downstream artefact")
     ap.add_argument("--workdir", default="court/tmp/v4-consumer-closure")
+    ap.add_argument("--skip-graph-on-refusal", action="store_true",
+                    help="stop after identity/import refusals; used for negative controls")
     ap.add_argument("--output")
     ap.add_argument("--summary", action="store_true")
     args = ap.parse_args(argv)
