@@ -28,8 +28,10 @@ pub mod bsearch;
 pub mod buffer;
 pub mod conf;
 pub mod confmod;
+#[forbid(unsafe_code)]
 pub mod constant_time;
 pub mod ctype;
+#[forbid(unsafe_code)]
 pub mod ctype_table;
 pub mod defaults;
 pub mod dir;
