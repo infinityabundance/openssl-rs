@@ -1058,6 +1058,15 @@ unsafe extern "C" fn serverinfoex_srv_add_cb(
 }
 
 /// `static int serverinfo_srv_add_cb(...)` — `ssl/ssl_rsa.c:698-704`.
+///
+/// # Safety
+/// No caller-independent precondition on the pointer values: the body forwards to
+/// [`serverinfoex_srv_add_cb`], which ignores `_s`, `_out`, `_outlen`, `_al` and `_arg`
+/// and returns 0, so none of them is dereferenced and NULL, dangling or unaligned values
+/// are harmless. The obligation is the ABI: it may only be installed as the add callback
+/// of `SSL_CTX_add_server_custom_ext` (or reached from `serverinfo_process_buffer`),
+/// whose `int (*)(SSL *s, unsigned int ext_type, const unsigned char **out,
+/// size_t *outlen, int *al, void *arg)` signature this function has.
 unsafe extern "C" fn serverinfo_srv_add_cb(
     s: *mut Ssl,
     ext_type: c_uint,

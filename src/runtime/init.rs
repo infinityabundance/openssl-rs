@@ -1237,6 +1237,12 @@ pub extern "C" fn OPENSSL_fork_parent() {}
 #[no_mangle]
 pub extern "C" fn OPENSSL_fork_child() {}
 
+// SAFETY: `abort` is the C standard library's `void abort(void)`, resolved from the
+// same process libc that supplies the crate's other `extern "C"` system symbols. It
+// takes no arguments and dereferences no memory, so no pointer validity, alignment,
+// extent, initialisation or ownership precondition applies, and it never returns —
+// which is what the `-> !` declaration states. The `<stdlib.h>` signature is the ABI
+// contract; the symbol must not be interposed by a definition with a different one.
 unsafe extern "C" {
     /// `void abort(void)`, from `<stdlib.h>`.
     fn abort() -> !;

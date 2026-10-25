@@ -1,0 +1,279 @@
+{
+  "schema": "openssl-rs/safe-c33/openSSH-contracts/v1",
+  "kind": "contract_receipt",
+  "subphase": "openssh-closure BLOCKED contracts (15 sites)",
+  "generated_utc": "2026-10-25",
+  "source_identity": {
+    "repository_head": "ede1a4afe0c2545438805d3c83f3a09587f3837e",
+    "checked_out_branch": "main",
+    "note": "The prompt named integrate/safe-c33; the checkout is `main` at ede1a4afe, which is the merge of integrate/safe-c33 (5ad307383). The source identity is the exact HEAD the task named.",
+    "worktree_dirty_before_task": false
+  },
+  "scope": {
+    "closure_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-closure.json",
+    "blocked_sites": 15,
+    "contract_kinds_required": {
+      "block-level SAFETY present but no # Safety fn contract": 12,
+      "no # Safety / SAFETY: contract on the unsafe fn": 1,
+      "no SAFETY on UNSAFE_EXTERN_BLOCK": 2
+    },
+    "claim": "Documentation-only: every site received an honest, site-specific # Safety contract (13 unsafe fns) or SAFETY: comment (2 unsafe extern blocks). No executable statement, signature, layout or exported symbol changed.",
+    "non_claim": "Adding a contract does not discharge the site. The owning mechanisms remain OWNERSHIP_RECONSTRUCTED (or UNSAFE_OPEN for RUNTIME_ALLOC_OWNERSHIP); the closure will only move these sites when a mechanism-level discharge names them."
+  },
+  "sites": [
+    {
+      "id": "V1:src/context/namemap.rs:1067:UNSAFE_FN_DEF",
+      "file": "src/context/namemap.rs",
+      "old_line": 1067,
+      "new_line": 1076,
+      "operation": "raise_too_many_names()",
+      "contract_kind": "# Safety fn contract (added; fn had no doc)",
+      "contract": "No caller-independent precondition: no arguments, no caller pointer dereferenced; the sole unsafe call (raise_site_dynamic) is discharged internally by the constant CORE_NAMEMAP_288 site and reason.",
+      "preconditions": [],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/property/store.rs:1605:UNSAFE_FN_DEF",
+      "file": "src/property/store.rs",
+      "old_line": 1605,
+      "new_line": 1614,
+      "operation": "unused_free(_method: *mut c_void)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "Sentinel freefunc: may only be installed in the stack-built QUERY key whose callbacks the store never invokes; _method is never dereferenced (any value, including NULL/dangling, is inert) and the body aborts at the extern-C boundary rather than unwinding. ABI: void (*)(void *).",
+      "preconditions": [
+        "installed only as the QUERY key's method.free, which the store never calls",
+        "ABI void (*)(void *)"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/runtime/init.rs:1240:UNSAFE_EXTERN_BLOCK",
+      "file": "src/runtime/init.rs",
+      "old_line": 1240,
+      "new_line": 1246,
+      "operation": "unsafe extern \"C\" { fn abort() -> !; }",
+      "contract_kind": "SAFETY: comment on unsafe extern block (added)",
+      "contract": "abort is libc's void abort(void) from the same process libc as the crate's other system symbols; no arguments, no memory dereferenced, so no pointer/alignment/extent/init/ownership precondition; -> ! states it never returns; <stdlib.h> signature is the ABI.",
+      "preconditions": [
+        "symbol resolves to libc abort with the <stdlib.h> signature"
+      ],
+      "hidden_obligations": 0,
+      "mechanism_note": "RUNTIME_ALLOC_OWNERSHIP is still UNSAFE_OPEN. This receipt contracts the extern block only; the mechanism mapping/discharge remains a separate decision per the closure roadmap step 3."
+    },
+    {
+      "id": "V1:src/runtime/thread.rs:2104:UNSAFE_EXTERN_BLOCK",
+      "file": "src/runtime/thread.rs",
+      "old_line": 2104,
+      "new_line": 2113,
+      "operation": "unsafe extern \"C\" { fn nanosleep(req: *const Timespec, rem: *mut Timespec) -> c_int; }",
+      "contract_kind": "SAFETY: comment on unsafe extern block (added)",
+      "contract": "libc nanosleep; Timespec is #[repr(C)] with c_long fields so it has the libc layout. req must be non-NULL, aligned, initialised and readable for the call; rem must be NULL (the crate passes NULL) or aligned and writable. Reads only *req, writes only *rem; int return is errno, not a pointer.",
+      "preconditions": [
+        "req: non-NULL, aligned, initialised, readable *const struct timespec",
+        "rem: NULL or aligned, writable *mut struct timespec",
+        "symbol resolves to libc nanosleep with the <time.h> signature"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:167:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "old_line": 167,
+      "new_line": 178,
+      "operation": "ssl_set_option(cctx, name_flags, option_value, onoff)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "cctx non-NULL, aligned, live, initialised and exclusively accessible for the call; each flag pointer used by the selected class is NULL or points to a live, aligned field of the exact type (poptions *mut u64, pvfy_flags *mut c_int, pcert_flags *mut c_long) in an SSL/SSL_CTX that outlives the call and is not concurrently written; option_value must fit the field width (guaranteed by the crate tables); NULL slots are a documented no-op.",
+      "preconditions": [
+        "cctx: live, aligned, exclusively borrowed, fully initialised",
+        "poptions/pvfy_flags/pcert_flags: NULL or live aligned field of the matching type, not concurrently mutated",
+        "option_value fits the selected field width"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:584:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "old_line": 584,
+      "new_line": 604,
+      "operation": "cmd_NumTickets(cctx, value)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "cctx non-NULL, aligned, live and initialised, with ctx/ssl each NULL or a live context/connection; the setters it forwards to require neither object to be concurrently written. value NULL or a NUL-terminated string readable for the whole call. ABI: ConfCmdFn int (*)(SSL_CONF_CTX *, const char *).",
+      "preconditions": [
+        "cctx: live, aligned, initialised; ctx/ssl NULL or live and not concurrently written",
+        "value: NULL or NUL-terminated, readable for the call",
+        "ABI ConfCmdFn"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:981:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "old_line": 981,
+      "new_line": 1011,
+      "operation": "skip_prefix(cctx, pcmd)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "cctx non-NULL, aligned, live and initialised (read-only). cctx.prefix NULL or prefixlen readable initialised bytes with prefixlen <= isize::MAX. pcmd NULL or a writable aligned *const c_char slot whose value is NULL or the start of a NUL-terminated allocation; prefix stripping advances that slot within the same allocation.",
+      "preconditions": [
+        "cctx: live, aligned, initialised (read-only)",
+        "cctx.prefix: NULL or prefixlen readable bytes; prefixlen <= isize::MAX",
+        "pcmd: NULL or writable aligned slot holding NULL or a NUL-terminated allocation; strip stays inside it"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:1061:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "old_line": 1061,
+      "new_line": 1099,
+      "operation": "ctrl_switch_option(cctx, idx)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "cctx must satisfy ssl_set_option's full contract (non-NULL, aligned, live, initialised, exclusive, flag pointers valid fields). idx needs no precondition: it is bounds-checked against the private switch table and an out-of-range value returns 0 without touching cctx.",
+      "preconditions": [
+        "cctx as for ssl_set_option"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/ssl_conf.rs:1438:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_conf.rs",
+      "old_line": 1438,
+      "new_line": 1486,
+      "operation": "free_cert_filename(c: &mut SslConfCtx)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "c is a live, initialised, exclusively borrowed SslConfCtx (&mut states exclusivity). cert_filename is NULL or the base of a CRYPTO_* seam allocation of at least num_cert_filename * size_of::<*mut c_char>() bytes; each slot is NULL or an exclusively owned, unreleased CRYPTO_* string allocation. Frees each slot and the array exactly once and clears both fields.",
+      "preconditions": [
+        "cert_filename: NULL or CRYPTO_* allocation with num_cert_filename slots",
+        "each slot: NULL or an exclusively owned unreleased CRYPTO_* allocation",
+        "extent at least num_cert_filename * size_of::<*mut c_char>()"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/ssl_lib.rs:331:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_lib.rs",
+      "old_line": 331,
+      "new_line": 342,
+      "operation": "ssl_security_default_callback(s, ctx, op, bits, nid, _other, _ex)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "ABI: security callback int (*)(const SSL *, const SSL_CTX *, int, int, int, void *, void *). s may be NULL; non-NULL s must be live and initialised (SSL_is_dtls dereferences it in the VERSION arm). ctx may be NULL; non-NULL ctx must be live with a non-NULL, live cert container (SSL_CTX_get_security_level dereferences it unchecked). No concurrent mutation; _other/_ex are never read (any value).",
+      "preconditions": [
+        "non-NULL s: live, initialised connection",
+        "non-NULL ctx: live context with non-NULL live cert",
+        "no concurrent mutation of s/ctx",
+        "ABI security callback"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/ssl_lib.rs:8845:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_lib.rs",
+      "old_line": 8845,
+      "new_line": 8864,
+      "operation": "ct_strict(_ctx, scts, _arg)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "No caller-independent precondition on argument values: _ctx, scts and _arg are never read (empty SCT model; only the SSL_R_NO_VALID_SCTS raise and 0 remain), so NULL/dangling/unaligned values are inert. Only the ABI applies: int (*)(void *, void *, void *).",
+      "preconditions": [
+        "ABI CT validation callback int (*)(void *, void *, void *)"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/ssl_rsa.rs:1061:UNSAFE_FN_DEF",
+      "file": "src/ssl/ssl_rsa.rs",
+      "old_line": 1061,
+      "new_line": 1070,
+      "operation": "serverinfo_srv_add_cb(s, ext_type, out, outlen, al, arg)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "No caller-independent precondition on pointer values: the body forwards to serverinfoex_srv_add_cb, which ignores _s/_out/_outlen/_al/_arg and returns 0, so none is dereferenced and NULL/dangling/unaligned values are inert. Only the ABI applies: custom-extension add callback int (*)(SSL *, unsigned int, const unsigned char **, size_t *, int *, void *).",
+      "preconditions": [
+        "ABI custom-extension add callback"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/statem/statem_clnt.rs:3597:UNSAFE_FN_DEF",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "old_line": 3597,
+      "new_line": 3610,
+      "operation": "tls12_client_drive(s)",
+      "contract_kind": "# Safety fn contract (added; fn had no doc)",
+      "contract": "s non-NULL, aligned, live, fully initialised and exclusively accessible. The driver re-enters the application certificate hook (invoke_cert_cb) at the CertificateRequest/TLS_ST_CW_CERT transition, and that hook may mutate s, so the caller must hold no Rust reference (shared or exclusive) into s across the call; cert, rbio/wbio and transcript fields must satisfy the connection invariants on entry.",
+      "preconditions": [
+        "s: non-NULL, aligned, live, initialised, exclusive",
+        "no Rust reference into s held across the call (application cert hook may mutate it)",
+        "connection fields satisfy crate invariants on entry"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/ssl/statem/statem_srvr.rs:2933:UNSAFE_FN_DEF",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "old_line": 2933,
+      "new_line": 2946,
+      "operation": "tls12_construct_cert_status(s)",
+      "contract_kind": "# Safety fn contract (added; fn had no doc)",
+      "contract": "s non-NULL, aligned, live, initialised and exclusive. Non-NULL ext_ocsp_resp must be the base of a CRYPTO_* seam allocation holding exactly ext_ocsp_resp_len readable initialised bytes, owned by s and not concurrently freed/mutated. NULL/zero length is a no-op; length > 0xff_ffff is refused; the bytes are copied into a frame buffer and not retained.",
+      "preconditions": [
+        "s: non-NULL, aligned, live, initialised, exclusive",
+        "ext_ocsp_resp: NULL or CRYPTO_* allocation of exactly ext_ocsp_resp_len readable initialised bytes, owned by s, not concurrently mutated"
+      ],
+      "hidden_obligations": 0
+    },
+    {
+      "id": "V1:src/store/store_lib.rs:557:UNSAFE_FN_DEF",
+      "file": "src/store/store_lib.rs",
+      "old_line": 557,
+      "new_line": 568,
+      "operation": "store_info_free_thunk(p)",
+      "contract_kind": "# Safety fn contract (added)",
+      "contract": "p NULL or the base of an OSSL_STORE_INFO_new* allocation from the CRYPTO_* seam at the authority's size/file/line, aligned for OsslStoreInfo, fully initialised and exclusively owned by the freeing stack (not already released). Ownership transfers to OSSL_STORE_INFO_free; p must not be used afterwards. ABI: OPENSSL_sk_freefunc void (*)(void *).",
+      "preconditions": [
+        "p: NULL or CRYPTO_* allocation of an initialised OSSL_STORE_INFO, exclusively owned, unreleased",
+        "ownership transfers to OSSL_STORE_INFO_free",
+        "ABI OPENSSL_sk_freefunc"
+      ],
+      "hidden_obligations": 0
+    }
+  ],
+  "vanished_or_moved": {
+    "vanished": [],
+    "moved": "All 15 moved forward by the inserted comment lines (recorded as old_line -> new_line per site); each was located by its operation, not its line number.",
+    "unrelated_doc_defect_noted": "src/ssl/statem/statem_clnt.rs has a pre-existing misplaced doc block: the driver description at ~L3556 is attached to enum CertStatusReject. It was not edited (out of scope); the new contract is on tls12_client_drive itself."
+  },
+  "gates": {
+    "venue": "docker/openssl-rs-court.sh exec, container /work, CARGO_BUILD_JOBS=4, CARGO_TARGET_DIR=/work/court/target",
+    "fmt": {
+      "command": "cargo fmt --all -- --check",
+      "result": "PASS"
+    },
+    "check": {
+      "command": "cargo check --lib",
+      "result": "PASS",
+      "summary": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.97s"
+    },
+    "clippy": {
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "result": "PASS",
+      "summary": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.82s"
+    },
+    "test": {
+      "command": "cargo test --lib -- --test-threads=4",
+      "result": "PASS",
+      "summary": "test result: ok. 2173 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 133.01s",
+      "floor_check": "1962 library tests at a8676158f; 2173 passed, 0 failed, 52 ignored is growth, no unexplained removals and no newly ignored tests"
+    }
+  },
+  "behaviour_change": {
+    "executable_change": "none",
+    "detail": "Only doc comments and one SAFETY comment were added; no code, signature, #[repr(C)] layout, allocator seam coordinate or exported symbol changed. cargo check/clippy/test exercised the same code paths as before.",
+    "unsafe_ops_removed": 0,
+    "unsafe_ops_relocated": 0,
+    "unsafe_ops_introduced": 0,
+    "hidden_obligations_introduced": 0
+  },
+  "residuals": [
+    "Contracting is not discharge: the 10 SSL_SESSION sites, the 2 RUNTIME_CONCURRENCY sites, the EVP_PKEY_PROVIDER site and the RAND_CMS_STORE_KEYFMT site still need a mechanism-level SAFETY_DISCHARGED disposition that names each file and line.",
+    "src/runtime/init.rs remains in an UNSAFE_OPEN mechanism (RUNTIME_ALLOC_OWNERSHIP); the contract is written but the mechanism mapping/discharge is still owed (closure roadmap step 3).",
+    "No independent reviewer has adjudicated these contracts; per AGENTS.md §15/§21 the author of a safety claim is not its sole authority."
+  ]
+}

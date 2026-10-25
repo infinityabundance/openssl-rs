@@ -164,6 +164,17 @@ fn flag_vfy_srv(name: &'static [u8], value: u64) -> SslFlagTbl {
 }
 
 /// `ssl_set_option` — `ssl_conf.c:111-144`.
+///
+/// # Safety
+/// `cctx` must be non-NULL, aligned, and point to a live, fully initialised
+/// `SslConfCtx` that this call has exclusive access to for its duration (no other
+/// shared/exclusive reference and no racing raw access). Each flag pointer the selected
+/// `name_flags` class uses must be NULL or point to a live, aligned field of the
+/// matching type — `poptions: *mut u64`, `pvfy_flags: *mut c_int`,
+/// `pcert_flags: *mut c_long` — inside an SSL/SSL_CTX that outlives the call and is not
+/// concurrently written. `option_value` must fit the selected field's width; the crate's
+/// own flag tables guarantee that. A NULL pointer in any of those slots is the
+/// authority's documented no-op, not an error.
 unsafe fn ssl_set_option(
     cctx: *mut SslConfCtx,
     name_flags: c_uint,
@@ -581,6 +592,15 @@ fn atoi_prefix(text: &str) -> c_int {
 }
 
 /// `cmd_NumTickets` — `ssl_conf.c:723-735`.
+///
+/// # Safety
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` whose
+/// `ctx`/`ssl` fields are each NULL or a live context/connection of this crate; the call
+/// only reads `cctx`, but it hands those handles to the `SSL_CTX_set_num_tickets` /
+/// `SSL_set_num_tickets` setters, so neither object may be concurrently written.
+/// `value` must be NULL or point to a NUL-terminated byte string readable for the whole
+/// call. ABI: the `ConfCmdFn` (`int (*)(SSL_CONF_CTX *, const char *)`) signature the
+/// command table stores.
 unsafe extern "C" fn cmd_NumTickets(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     // SAFETY: `value` is NUL-terminated.
     let v = unsafe { core::ffi::CStr::from_ptr(value) }.to_bytes();
@@ -978,6 +998,16 @@ fn switches() -> [SslSwitchTbl; 31] {
 }
 
 /// `ssl_conf_cmd_skip_prefix` — `ssl_conf.c:893-912`.
+///
+/// # Safety
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
+/// (read-only for this call). `cctx.prefix` must be NULL or point to `cctx.prefixlen`
+/// readable, initialised bytes, with `prefixlen <= isize::MAX`. `pcmd` must be NULL or
+/// point to a writable, aligned `*const c_char` slot whose current value is NULL or a
+/// NUL-terminated string that stays valid for the call; when the prefix is stripped the
+/// slot is advanced by `prefixlen` (or by one for `-`) bytes *within that same string*,
+/// so the original pointer must name the start of a NUL-terminated allocation, not a
+/// sub-slice of one.
 unsafe fn skip_prefix(cctx: *mut SslConfCtx, pcmd: *mut *const c_char) -> bool {
     // SAFETY: `cctx` is live.
     let c = unsafe { &*cctx };
@@ -1058,6 +1088,14 @@ fn cmd_lookup(cctx: &SslConfCtx, cmd: &[u8], table: &[SslConfCmdTbl]) -> Option<
 }
 
 /// `ctrl_switch_option` — `ssl_conf.c:953-968`.
+///
+/// # Safety
+/// `cctx` must satisfy [`ssl_set_option`]'s whole contract: non-NULL, aligned, live,
+/// initialised, exclusively accessible for this call, with each flag pointer the
+/// selected switch row uses either NULL or pointing to a live, aligned field of the
+/// right type in an object that outlives the call. `idx` needs no precondition: it is
+/// bounds-checked against the private switch table and an out-of-range value returns 0
+/// without touching `cctx`.
 unsafe fn ctrl_switch_option(cctx: *mut SslConfCtx, idx: usize) -> c_int {
     let sw = switches();
     if idx >= sw.len() {
@@ -1435,6 +1473,16 @@ pub unsafe extern "C" fn SSL_CONF_CTX_set_ssl_ctx(cctx: *mut SslConfCtx, ctx: *m
 }
 
 /// `free_cert_filename` — `ssl_conf.c:1103-1112`.
+///
+/// # Safety
+/// `c` is a live, initialised `SslConfCtx` borrowed exclusively for the call (the `&mut`
+/// states that). `c.cert_filename` must be NULL or the base pointer of an allocation from
+/// this crate's `CRYPTO_zalloc`/`CRYPTO_malloc` seam of at least
+/// `c.num_cert_filename * size_of::<*mut c_char>()` bytes; every one of those
+/// `num_cert_filename` slots must be NULL or the base of a `CRYPTO_*` string allocation
+/// that `c` exclusively owns and that has not already been released. The function frees
+/// each non-NULL slot and then the array, once, and clears both fields; a pointer from a
+/// different allocator, a short extent, or a slot owned elsewhere is undefined behaviour.
 unsafe fn free_cert_filename(c: &mut SslConfCtx) {
     if c.cert_filename.is_null() {
         return;
