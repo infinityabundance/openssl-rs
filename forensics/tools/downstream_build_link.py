@@ -129,6 +129,12 @@ import downstream_close_batch as close_batch  # noqa: E402
 # bespoke one.  The module executes nothing at import time (it reads one small JSON file).
 import downstream_templates as templates  # noqa: E402
 
+# The capability dependency registry: a recipe names a capability (`libevent`, `ncurses`) and
+# this resolver supplies the pinned package bundle, enforcing subject isolation, version
+# coherence, source immutability and content addressing.  The legacy `aux_sources` path stays
+# supported so an unmigrated recipe builds exactly as before.
+import downstream_deps as deps  # noqa: E402
+
 # The stratum's four non-claims, imported from 24.4 so the atlas and the freeze cannot drift about
 # what the model never claims.
 from downstream_freeze import NON_CLAIMS as STRATUM_NON_CLAIMS  # noqa: E402
@@ -643,7 +649,8 @@ _L7_SERVER_SPECS: tuple[dict, ...] = (
         "sha256": "4ab234219865191e8d1ba57a2f9167d8b573248fa4ff00b4d8296be13d24a82c",
         "configure": ["--enable-tls"], "make": [MAKE_JOBS],
         "artifact": "memcached", "launch": ["-h"],
-        "aux_sources": list(_LIBEVENT_AUX),
+        "capabilities": [{"capability": "libevent",
+                          "bundle": "cap:libevent@2.1.12-stable-8"}],
         "note": ("memcached 1.6.32 with --enable-tls against the subject prefix; libevent comes "
                  "from the pinned bookworm packages above (headers, libevent.so and the runtime "
                  "libevent-2.1.so.7 the configure version probe executes)"),
@@ -802,7 +809,8 @@ _L7_UTILITY_SPECS: tuple[dict, ...] = (
                       "--disable-env", "--disable-mime-magic"],
         "make": [MAKE_JOBS, "-C", "support", "ab"],
         "artifact": "support/ab", "launch": ["-V"],
-        "aux_sources": list(_PCRE2_AUX),
+        "capabilities": [{"capability": "pcre2",
+                          "bundle": "cap:pcre2@10.42-1"}],
         "note": ("apache2-utils' `ab` from httpd 2.4.63: configure links it with --with-ssl"
                  " against the subject prefix (ab_LIBS = -lssl -lcrypto), and only support/ab "
                  "is built; PCRE2 comes from the pinned bookworm packages"),
@@ -1765,7 +1773,8 @@ _L7_EXPAND3_SPECS: tuple[dict, ...] = (
         "configure": ["--with-ssl={prefix}", "--with-libevent={aux}/usr",
                       "--prefix={root}/.l7-install"],
         "make": [MAKE_JOBS], "artifact": "nsd", "launch": ["-v"],
-        "aux_sources": list(_LIBEVENT_AUX),
+        "capabilities": [{"capability": "libevent",
+                          "bundle": "cap:libevent@2.1.12-stable-8"}],
         "note": ("NSD 4.10.1's DNS-over-TLS listener (tls-service-key/tls-service-pem) linked "
                  "against the subject libssl; libevent is the pinned bookworm package"),
     },
@@ -3731,7 +3740,8 @@ _L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
         "make": [MAKE_JOBS],
         "pre_build": [["sh", "-c", _B16_CHARYBDIS_BOOTSTRAP], ["sh", "autogen.sh"]],
         "env_extra": dict(_B16_CHARYBDIS_ENV),
-        "aux_sources": list(_B16_AUTOTOOLS_AUX),
+        "capabilities": [{"capability": "autotools-ltdl",
+                          "bundle": "cap:autotools-ltdl@bookworm-libtool-2.4.7"}],
         "artifact": "librb/src/.libs/librb.so*", "launch": ["--version"],
         "note": ("charybdis 4.1.2 listens with a TLS listener; the admitted workload completes "
                  "the IRC greeting over a verified TLS session, and an unrelated CA is refused"),
@@ -3787,7 +3797,8 @@ _L7_ONBOARD_SPECS_E: tuple[dict, ...] = (
         "make": [MAKE_JOBS, "YACC=bison -y", "LEX=flex"],
         "env_extra": {"BISON_PKGDATADIR": "{aux}/usr/share/bison",
                       "M4": "{aux}/usr/bin/m4"},
-        "aux_sources": list(_B16_AUTOTOOLS_AUX),
+        "capabilities": [{"capability": "autotools-ltdl",
+                          "bundle": "cap:autotools-ltdl@bookworm-libtool-2.4.7"}],
         "artifact": "dma", "launch": ["-h"],
         "note": ("DMA 0.14 submits a message to a local SMTPS peer over verified TLS; an "
                  "unrelated CA is refused and no message is delivered"),
@@ -5597,7 +5608,8 @@ _S53_SPECS: tuple[dict, ...] = (
                       "-L{aux}/usr/lib/x86_64-linux-gnu "
                       "-Wl,-rpath,{aux}/usr/lib/x86_64-linux-gnu"],
         "make": [MAKE_JOBS], "artifact": "build/njs", "launch": ["-v"],
-        "aux_sources": list(_PCRE2_AUX),
+        "capabilities": [{"capability": "pcre2",
+                          "bundle": "cap:pcre2@10.42-1"}],
         "note": ("nginx njs 0.7.9: its crypto module (EVP hash/HMAC) linked to the subject "
                  "libcrypto; pcre2 is the venue's pinned regex engine"),
     },
@@ -6372,7 +6384,8 @@ def _subject_row(fam: dict, recipe: dict | None, subject: str, *, level: str, ou
                  residual: str, failure_class: str | None, reason: str | None,
                  specimen_id: str | None, variant_id: str | None, source_sha256: str | None,
                  evidence: list[str], steps: list[dict] | None, canvas: dict | None,
-                 limits: dict, prefix: Path, source_root_hash: str | None = None) -> dict:
+                 limits: dict, prefix: Path, source_root_hash: str | None = None,
+                 aux_bundles: list[dict] | None = None) -> dict:
     """One build/link run row: a schema-valid `run` record plus the build/link extension."""
     c = canvas or {}
     return {
@@ -6398,6 +6411,7 @@ def _subject_row(fam: dict, recipe: dict | None, subject: str, *, level: str, ou
         "source_sha256": source_sha256,
         "source_root_hash": source_root_hash,
         "source_url": recipe["url"] if recipe else None,
+        "aux_bundles": aux_bundles or None,
         "linkage_proven": bool(c.get("linkage_proven")),
         "resolved_under_authority": bool(c.get("resolved_under_authority")),
         "candidate_specific_patch_count": 0,
@@ -6427,19 +6441,38 @@ def _no_recipe_row(fam: dict, subject: str, limits: dict) -> dict:
         limits=limits, prefix=Path("/"))
 
 
-def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
+def _prepare_aux(recipe: dict, work: Path, source_root: Path) -> tuple[dict, str | None]:
     """Acquire and extract a recipe's pinned auxiliary dependency packages.
 
-    A recipe may name `aux_sources` (a non-subject dependency the venue does not ship as a
-    development package). Each is fetched by URL, refused unless its bytes match the authored
-    SHA-256, extracted under the family's scratch directory, and exposed to the build through
-    include/library/pkg-config paths. The subject OpenSSL is still the only OpenSSL: nothing here
-    provides or replaces libssl/libcrypto.
+    A recipe may name `capabilities` (a dependency the registry resolves to a pinned bundle) or
+    `aux_sources` (the legacy per-family pin list). Each package is fetched by URL, refused
+    unless its bytes match the authored SHA-256, extracted under the family's scratch directory,
+    and exposed to the build through include/library/pkg-config paths. The subject OpenSSL is
+    still the only OpenSSL: the resolver refuses a bundle that names libssl/libcrypto, and the
+    install root is proven disjoint from the consumer's source tree before anything is written.
     """
-    specs = recipe.get("aux_sources") or []
+    specs = list(recipe.get("aux_sources") or [])
+    bundles: list[dict] = []
+    resolved_bundles: list[dict] = []
+    requests = recipe.get("capabilities") or []
+    if requests:
+        try:
+            resolved = deps.resolve_recipe(requests)
+        except deps.DependencyError as exc:
+            return {}, f"resolving the recipe's capabilities failed: {exc}"
+        resolved_bundles = resolved
+        bundles = [{"capability": r["capability"], "bundle_id": r["bundle_id"],
+                    "sha256": r["sha256"]} for r in resolved]
+        # Capability specs lead, legacy pins follow: each recipe normally uses one path, and the
+        # order is fixed so the build environment is deterministic.
+        specs = deps.merge_specs(resolved) + specs
     if not specs:
         return {}, None
     aux_root = work / "aux"
+    try:
+        deps.assert_isolated_install_root(aux_root, source_root)
+    except deps.DependencyError as exc:
+        return {}, str(exc)
     include_dirs: list[str] = []
     library_dirs: list[str] = []
     pkgconfig_dirs: list[str] = []
@@ -6487,6 +6520,13 @@ def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
                 # this recipe does not pin; it carries no information we use.
                 if not pc.exists():
                     continue
+                # A .pc symlink may point anywhere; rewriting it must never follow a link out of
+                # the install root and into the consumer's source tree or the venue.
+                try:
+                    deps.assert_within_install_root(pc, root)
+                except deps.DependencyError as exc:
+                    return {}, (f"the auxiliary package {name} ships a pkg-config link that "
+                                f"escapes the install root: {exc}")
                 rewritten_pc.add(str(pc))
                 pc.write_text(pc.read_text(encoding="utf-8").replace("/usr", f"{root}/usr"),
                               encoding="utf-8")
@@ -6501,8 +6541,17 @@ def _prepare_aux(recipe: dict, work: Path) -> tuple[dict, str | None]:
                 # multiarch Qt mkspecs); the pinned link is the complete replacement.
                 shutil.rmtree(link_path)
             link_path.symlink_to(str(target))
+    # The filesystem half of version coherence: the pinned runtime's SONAME, the development
+    # symlink, the pkg-config Version and the header version macro must agree in the tree that
+    # was just materialised. A registry bundle that cannot prove it is refused before a build.
+    if bundles:
+        try:
+            deps.verify_installed(aux_root / "root", resolved_bundles)
+        except deps.DependencyError as exc:
+            return {}, f"the auxiliary bundle failed version coherence: {exc}"
     return {"include_dirs": include_dirs, "library_dirs": library_dirs,
-            "pkgconfig_dirs": pkgconfig_dirs, "bin_dirs": bin_dirs}, None
+            "pkgconfig_dirs": pkgconfig_dirs, "bin_dirs": bin_dirs,
+            "bundles": bundles}, None
 
 
 def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, subject: str,
@@ -6553,7 +6602,7 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
         shim = templates.write_pkgconfig_shim(work, prefix)
         env["PKG_CONFIG_PATH"] = os.pathsep.join([str(shim), env["PKG_CONFIG_PATH"]])
 
-    aux, aux_err = _prepare_aux(recipe, work)
+    aux, aux_err = _prepare_aux(recipe, work, root)
     if aux_err:
         return _subject_row(
             fam, recipe, subject, level=L1, outcome="failed", residual="unavailable",
@@ -6761,7 +6810,7 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
                     "was not consumed"),
             specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
             evidence=evidence, steps=steps, canvas=canvas, limits=limits, prefix=prefix,
-            source_root_hash=root_hash)
+            source_root_hash=root_hash, aux_bundles=aux.get("bundles"))
     if not linkage_proven:
         reason = ("the built artifact declares " + ", ".join(openssl_needed) +
                   " but it did not resolve to the subject prefix")
@@ -6773,13 +6822,14 @@ def _measure_subject(fam: dict, recipe: dict, archive_sha: str, archive: Path, s
             failure_class="link-failure", reason=reason,
             specimen_id=specimen_id, variant_id=variant_id, source_sha256=archive_sha,
             evidence=evidence, steps=steps, canvas=canvas, limits=limits, prefix=prefix,
-            source_root_hash=root_hash)
+            source_root_hash=root_hash, aux_bundles=aux.get("bundles"))
 
     return _subject_row(
         fam, recipe, subject, level=L4, outcome="reached", residual="none",
         failure_class=None, reason=None, specimen_id=specimen_id, variant_id=variant_id,
         source_sha256=archive_sha, evidence=evidence, steps=steps, canvas=canvas,
-        limits=limits, prefix=prefix, source_root_hash=root_hash)
+        limits=limits, prefix=prefix, source_root_hash=root_hash,
+        aux_bundles=aux.get("bundles"))
 
 
 def _acquisition_failure_rows(fam: dict, recipe: dict, reason: str, limits: dict,
@@ -7053,6 +7103,8 @@ def derive_atlas(families_body: dict, freeze_body: dict, authority_id: str,
              "archive": r["archive"], "sha256": r.get("sha256"),
              "build_system": r["build_system"], "artifact": r["artifact"],
              "env_extra": r.get("env_extra"),
+             "capabilities": r.get("capabilities"),
+             "aux_source_count": len(r.get("aux_sources") or []),
              "recipe_id": r["recipe_id"], "note": r.get("note")}
             for r in RECIPES
         ],
@@ -7130,6 +7182,12 @@ def write_outputs(body: dict, authority_id: str) -> None:
         InputRef(name="families", path=FAMILIES),
         InputRef(name="downstream-census",
                  path=REPO_ROOT / "forensics" / "tools" / "downstream_census.py"),
+        InputRef(name="downstream-templates",
+                 path=REPO_ROOT / "forensics" / "tools" / "downstream_templates.py"),
+        InputRef(name="downstream-deps",
+                 path=REPO_ROOT / "forensics" / "tools" / "downstream_deps.py"),
+        InputRef(name="downstream-deps-registry",
+                 path=REPO_ROOT / "forensics" / "tools" / "downstream_deps.json"),
         InputRef(name="downstream-freeze",
                  path=REPO_ROOT / "forensics" / "tools" / "downstream_freeze.py"),
         InputRef(name="phase24-guard",
@@ -7478,6 +7536,30 @@ def cmd_measure(authority_id: str, only: set[str] | None = None,
     return 0
 
 
+def _dependency_registry_findings() -> list[str]:
+    """Re-resolve every capability bundle: subject isolation and content addressing are checked
+    by the resolver itself, not only by a court that reads the JSON."""
+    try:
+        registry = deps.load_registry()
+    except deps.DependencyError as exc:
+        return [f"the dependency registry does not load: {exc}"]
+    findings: list[str] = []
+    for capability in deps.capability_names(registry):
+        for bundle in registry["capabilities"][capability]["bundles"]:
+            try:
+                deps.resolve(registry, capability, bundle_id=bundle["bundle_id"])
+            except deps.DependencyError as exc:
+                findings.append(f"capability {capability!r} does not resolve: {exc}")
+    for recipe in RECIPES:
+        if not recipe.get("capabilities"):
+            continue
+        try:
+            deps.resolve_recipe(recipe["capabilities"], registry=registry)
+        except deps.DependencyError as exc:
+            findings.append(f"recipe {recipe['recipe_id']} does not resolve: {exc}")
+    return findings
+
+
 def cmd_check(authority_id: str) -> int:
     del authority_id
     if not (FAMILY_FREEZE.is_file() and OUT.is_file()):
@@ -7488,6 +7570,7 @@ def cmd_check(authority_id: str) -> int:
                      if FAMILIES.is_file() else {})
     atlas_body = _load_atlas()
     findings = build_link_findings(families_body, freeze_body, atlas_body)
+    findings += _dependency_registry_findings()
     control = build_link_sensitivity_control(families_body, freeze_body, atlas_body)
     if findings:
         print(f"[downstream-build-link] {len(findings)} finding(s):")
@@ -7524,6 +7607,25 @@ def self_test() -> int:
     for r in RECIPES:
         if not r.get("sha256"):
             failures.append(f"the recipe for {r['family']!r} pins no archive SHA-256")
+    # A recipe names either capability bundles or the legacy per-family pins; each capability
+    # request must resolve through the registry's enforced invariants.
+    try:
+        registry = deps.load_registry()
+    except deps.DependencyError as exc:
+        failures.append(f"the dependency registry does not load: {exc}")
+        registry = None
+    if registry is not None:
+        for r in RECIPES:
+            if not r.get("capabilities") and not r.get("aux_sources"):
+                continue
+            if r.get("capabilities"):
+                try:
+                    deps.resolve_recipe(r["capabilities"], registry=registry)
+                except deps.DependencyError as exc:
+                    failures.append(f"the recipe for {r['family']!r} does not resolve: {exc}")
+            if r.get("capabilities") and r.get("aux_sources"):
+                failures.append(f"the recipe for {r['family']!r} mixes the capability and "
+                                f"legacy dependency paths")
 
     # 3. Acquisition failure is a measured outcome, not a court abort: a missing source tree is
     #    `None` (never a raised `FileNotFoundError`) and the failure rows name the source host while

@@ -6321,7 +6321,7 @@ mod dhe_tests {
                 return None;
             }
             let n = BIO_ctrl_pending(b);
-            if n <= 0 {
+            if n == 0 {
                 return None;
             }
             let mut v = vec![0u8; n];
@@ -6421,6 +6421,9 @@ mod dhe_tests {
             BN_free(by);
         }
         assert!(!params.is_null());
+        // SAFETY: `c"DH"` is NUL-terminated; a null library context selects the default one and
+        // a null property query means none. The returned context is this frame's own allocation
+        // and is checked non-null immediately below.
         let ctx = unsafe {
             EVP_PKEY_CTX_new_from_name(core::ptr::null_mut(), c"DH".as_ptr(), core::ptr::null())
         };
