@@ -62,6 +62,7 @@
 
 use core::ffi::{c_int, c_uint};
 use core::ptr;
+use core::sync::atomic::Ordering;
 
 use crate::packet::Wpacket;
 use crate::runtime::foreign::OwnedCtx;
@@ -4373,7 +4374,7 @@ unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         if (*s).hit != 0 {
             0u32
         } else {
-            (*sess).timeout as u32
+            (*sess).timeout.load(Ordering::Relaxed) as u32
         }
     };
     let mut body = [0u8; 4 + 2 + TLS12_TICKET_LEN];
@@ -4396,7 +4397,7 @@ unsafe fn tls12_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         // `tp` is this call's fresh block of `TLS12_TICKET_LEN` bytes; the member is empty.
         (*sess).ext_tick_slot().store(tp, TLS12_TICKET_LEN);
         (*sess).ext_tick_lifetime_hint = hint as core::ffi::c_ulong;
-        (*sess).not_resumable = 0;
+        (*sess).not_resumable.store(0, Ordering::Relaxed);
         let mut digest = [0u8; 32];
         crate::digest::sha2::SHA256(ticket.as_ptr(), TLS12_TICKET_LEN, digest.as_mut_ptr());
         (*sess).session_id_length = 32;
@@ -4732,7 +4733,9 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         }
         (*sess).master_key_length = (*s).hs_md_len;
         // `s->session->time = ossl_time_now(); ssl_session_calculate_timeout(s->session)`.
-        (*sess).time = crate::ssl::ssl_sess::time_now_secs();
+        (*sess)
+            .time
+            .store(crate::ssl::ssl_sess::time_now_secs(), Ordering::Relaxed);
         crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
         (*sess).ext_max_early_data = (*s).max_early_data;
         if !(*s).pending_cipher.is_null() {
@@ -4741,7 +4744,7 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         }
         // `create_ticket_prequel` (`statem_srvr.c:4093-4108`): the hint is the session timeout,
         // capped at one week per RFC 8446.
-        let mut hint = (*sess).timeout;
+        let mut hint = (*sess).timeout.load(Ordering::Relaxed);
         if hint > ONE_WEEK_SEC {
             hint = ONE_WEEK_SEC;
         }
@@ -4793,7 +4796,7 @@ unsafe fn tls13_construct_new_session_ticket(s: *mut Ssl) -> c_int {
         // `tp` is this call's fresh block of `ticket.len()` bytes; the member is empty.
         (*sess).ext_tick_slot().store(tp, ticket.len());
         (*sess).ext_tick_lifetime_hint = hint as core::ffi::c_ulong;
-        (*sess).not_resumable = 0;
+        (*sess).not_resumable.store(0, Ordering::Relaxed);
 
         // `tls_update_ticket_counts` (`statem_srvr.c:4355-4368`).
         (*s).sent_tickets += 1;
