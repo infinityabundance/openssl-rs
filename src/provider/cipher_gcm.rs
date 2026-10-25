@@ -2530,6 +2530,10 @@ mod tests {
         aad
     }
 
+    /// # Safety
+    /// `key` is a valid AES key length, `fixed_iv` is at most `EVP_GCM_TLS_FIXED_IV_LEN`
+    /// bytes, `explicit` is at most `EVP_GCM_TLS_EXPLICIT_IV_LEN` bytes, and `plain` may be
+    /// any slice. All are live for the call; the helper owns the fixture context it builds.
     unsafe fn tls_seal(key: &[u8], fixed_iv: &[u8], explicit: &[u8], plain: &[u8]) -> Vec<u8> {
         let mut rec = vec![0u8; EVP_GCM_TLS_EXPLICIT_IV_LEN + plain.len() + GCM_TAG_MAX_SIZE];
         rec[EVP_GCM_TLS_EXPLICIT_IV_LEN..EVP_GCM_TLS_EXPLICIT_IV_LEN + plain.len()]
@@ -2551,6 +2555,10 @@ mod tests {
         rec
     }
 
+    /// # Safety
+    /// `key` is a valid AES key length and `fixed_iv` is at most `EVP_GCM_TLS_FIXED_IV_LEN`
+    /// bytes. `rec` must be a record `tls_seal` produced (its length drives the AAD) and is
+    /// live for the call; the helper owns the fixture context it builds.
     unsafe fn tls_open(key: &[u8], fixed_iv: &[u8], mut rec: Vec<u8>) -> (c_int, Vec<u8>) {
         let aad = tls_aad(23, rec.len());
         // SAFETY: the fixture context and frame buffers are this test's own.
@@ -2598,9 +2606,13 @@ mod tests {
         let fixed = [0xa1, 0xa2, 0xa3, 0xa4];
         let explicit = [0x01u8; 8];
         let plain = b"authenticated record";
+        // SAFETY: the helper contract holds: `key`/`fixed` are test-owned AES key and IV
+        // bytes, `explicit` is 8 bytes, and `plain` is a live slice.
         let mut rec = unsafe { tls_seal(&key, &fixed, &explicit, plain) };
         let last = rec.len() - 1;
         rec[last] ^= 1;
+        // SAFETY: `rec` is the record `tls_seal` just produced and `key`/`fixed` are the same
+        // test-owned bytes.
         let (rc, out) = unsafe { tls_open(&key, &fixed, rec) };
         assert_eq!(rc, 0, "tag failure is the same refusal code");
         assert!(
@@ -2615,8 +2627,12 @@ mod tests {
     fn tls_gcm_truncated_tag_is_refused() {
         let key = [0x22u8; 16];
         let fixed = [0xb1, 0xb2, 0xb3, 0xb4];
+        // SAFETY: test-owned key and IV bytes; `explicit` is 8 bytes and `b""` is a live
+        // empty slice.
         let mut rec = unsafe { tls_seal(&key, &fixed, &[0u8; 8], b"") };
         rec.pop();
+        // SAFETY: `rec` is the record `tls_seal` just produced and `key`/`fixed` are the same
+        // test-owned bytes.
         let (rc, _) = unsafe { tls_open(&key, &fixed, rec) };
         assert_eq!(rc, 0);
     }
@@ -2627,8 +2643,11 @@ mod tests {
         let fixed = [0xc1, 0xc2, 0xc3, 0xc4];
         let explicit = [9u8; 8];
         let plain = b"in place";
+        // SAFETY: test-owned key and IV bytes; `explicit` is 8 bytes and `plain` is live.
         let rec = unsafe { tls_seal(&key, &fixed, &explicit, plain) };
         assert_eq!(&rec[..8], &explicit);
+        // SAFETY: `rec` is a clone of the record `tls_seal` produced; `key`/`fixed` are the
+        // same test-owned bytes.
         let (rc, out) = unsafe { tls_open(&key, &fixed, rec.clone()) };
         assert_eq!(rc, 1);
         assert_eq!(&out[8..8 + plain.len()], plain);
@@ -2653,8 +2672,11 @@ mod tests {
     fn tls_gcm_zero_length_plaintext_round_trips() {
         let key = [0x44u8; 16];
         let fixed = [0xd1, 0xd2, 0xd3, 0xd4];
+        // SAFETY: test-owned key and IV bytes; `explicit` is 8 bytes and `b""` is live.
         let rec = unsafe { tls_seal(&key, &fixed, &[0u8; 8], b"") };
         assert_eq!(rec.len(), EVP_GCM_TLS_EXPLICIT_IV_LEN + GCM_TAG_MAX_SIZE);
+        // SAFETY: `rec` is the record `tls_seal` just produced and `key`/`fixed` are the same
+        // test-owned bytes.
         let (rc, out) = unsafe { tls_open(&key, &fixed, rec) };
         assert_eq!(rc, 1);
         assert_eq!(out.len(), EVP_GCM_TLS_EXPLICIT_IV_LEN + GCM_TAG_MAX_SIZE);
@@ -2665,7 +2687,10 @@ mod tests {
         let key = [0x55u8; 16];
         let fixed = [0xe1, 0xe2, 0xe3, 0xe4];
         let plain: Vec<u8> = (0..16384).map(|i| (i % 251) as u8).collect();
+        // SAFETY: test-owned key and IV bytes; `explicit` is 8 bytes and `plain` is live.
         let rec = unsafe { tls_seal(&key, &fixed, &[0u8; 8], &plain) };
+        // SAFETY: `rec` is the record `tls_seal` just produced and `key`/`fixed` are the same
+        // test-owned bytes.
         let (rc, out) = unsafe { tls_open(&key, &fixed, rec) };
         assert_eq!(rc, 1);
         assert_eq!(&out[8..8 + plain.len()], &plain[..]);

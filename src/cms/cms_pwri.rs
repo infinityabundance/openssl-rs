@@ -1060,8 +1060,8 @@ mod tests {
         let cipher = unsafe { EVP_CIPHER_meth_new(nid, block_size, key_len) };
         assert!(!cipher.is_null(), "the method allocation succeeds");
         if iv_len != 0 {
-            // SAFETY: `cipher` is this caller's live method.
             assert_eq!(
+                // SAFETY: `cipher` is this caller's live method.
                 unsafe { EVP_CIPHER_meth_set_iv_length(cipher, iv_len) },
                 1,
                 "a fresh method has no IV length yet"

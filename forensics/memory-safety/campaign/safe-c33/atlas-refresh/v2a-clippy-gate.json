@@ -1,0 +1,200 @@
+{
+  "schema": "safe-c33/atlas-refresh/v2a/v1",
+  "receipt": "V2A-CLIPPY-GATE",
+  "subphase": "V2a: repair the Clippy gate at the V1-frozen candidate",
+  "date": "2026-10-25",
+  "branch": "integrate/safe-c33",
+  "source_head": "748c085e8c693d91083c2e2387f589ab900d87f5",
+  "source_head_short": "748c085e8",
+  "worktree": "dirty: nine src files plus this receipt; no commit, no push (subagent)",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court:1 / openssl-rs-court",
+    "docker_changed": false,
+    "note": "Every cargo invocation ran in the court container with CARGO_BUILD_JOBS=4, TMPDIR=/work/court/tmp and CARGO_TARGET_DIR=/work/court/target. The host ran no cargo, rustc, test or project script."
+  },
+  "baseline": {
+    "command": "cargo clippy --lib --tests -- -D warnings",
+    "exit_code": 101,
+    "error_count": 10,
+    "source": "V1 freeze record, gates.v1_clippy_all_targets (reproduced identically at this identity)"
+  },
+  "errors": [
+    {
+      "n": 1,
+      "file": "src/cms/cms_pwri.rs",
+      "line": 1065,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "macro_position_comment",
+      "outcome": "comment_moved",
+      "detail": "The SAFETY text ('cipher is this caller's live method') genuinely documents EVP_CIPHER_meth_set_iv_length(cipher, iv_len). It sat above the multi-line assert_eq! name, while the unsafe token began on the following line. Moved to the line immediately above the unsafe token inside the macro argument. No allow was added."
+    },
+    {
+      "n": 2,
+      "file": "src/pkcs7/pk7_doit.rs",
+      "line": 2475,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "macro_position_comment",
+      "outcome": "comment_moved",
+      "detail": "Same pattern and same truthful contract ('cipher is this caller's live method') for EVP_CIPHER_meth_set_iv_length. Comment moved inside the assert_eq! argument, immediately above unsafe."
+    },
+    {
+      "n": 3,
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "line": 6324,
+      "lint": "clippy::absurd_extreme_comparisons",
+      "class": "real_bound_expressed_wrongly",
+      "outcome": "expression_fixed",
+      "detail": "BIO_ctrl_pending returns usize. `n <= 0` is not dead as a guard: it guards the empty-BIO `return None` path. The `< 0` half is unrepresentable for usize, so the guard's actual condition is `n == 0`. Changed to `n == 0`; semantically identical for usize."
+    },
+    {
+      "n": 4,
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "line": 6424,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "genuinely_missing_safety",
+      "outcome": "contract_added",
+      "detail": "EVP_PKEY_CTX_new_from_name had no SAFETY contract. Added the true one: c\"DH\" is NUL-terminated; a null library context selects the default; a null property query means none; the returned context is this frame's own allocation and is checked non-null immediately below."
+    },
+    {
+      "n": 5,
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "line": 9428,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "macro_position_comment",
+      "outcome": "comment_moved",
+      "detail": "The SAFETY text ('s is live') genuinely documents ossl_statem_in_error(s). It sat above assert_ne! with unsafe on the next line. Moved inside the macro argument, immediately above unsafe."
+    },
+    {
+      "n": 6,
+      "file": "src/ssl/tls13_enc.rs",
+      "line": 2554,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "macro_position_comment",
+      "outcome": "comment_moved",
+      "detail": "The SAFETY text ('md is the live SHA-256 method table; every buffer is a live slice') genuinely documents tls13_psk_do_binder. Moved from above the assert_eq! name to immediately above the unsafe token inside the macro argument."
+    },
+    {
+      "n": 7,
+      "file": "src/ssl/tls13_enc.rs",
+      "line": 2561,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "macro_position_comment",
+      "outcome": "comment_moved",
+      "detail": "Same pattern; the 'as above' contract refers to the preceding binder call. Comment moved inside the macro argument."
+    },
+    {
+      "n": 8,
+      "file": "src/ssl/tls13_enc.rs",
+      "line": 2571,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "macro_position_comment",
+      "outcome": "comment_moved",
+      "detail": "Same pattern; contract ('md is live; short is a 31-byte slice the callee must not read past') is genuine. Comment moved inside the macro argument."
+    },
+    {
+      "n": 9,
+      "file": "src/ssl/tls13_enc.rs",
+      "line": 2582,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "macro_position_comment",
+      "outcome": "comment_moved",
+      "detail": "Same pattern; 'as above' contract. Comment moved inside the macro argument."
+    },
+    {
+      "n": 10,
+      "file": "src/ssl/tls13_enc.rs",
+      "line": 2588,
+      "lint": "clippy::undocumented_unsafe_blocks",
+      "class": "macro_position_comment",
+      "outcome": "comment_moved",
+      "detail": "Same pattern; 'as above' contract. The explanatory line ('An empty binder is the shortest invalid case.') was retained above the assert_eq!, and the SAFETY text moved inside the macro argument."
+    }
+  ],
+  "real_fixes": {
+    "6424": {
+      "what_was_wrong": "A real missing contract, not a span artefact. The call has preconditions (NUL-terminated name; null default libctx and null propquery are deliberate) and returns a new owned context.",
+      "repair": "Three-line SAFETY comment stating exactly those preconditions and the frame ownership checked by the following assert!."
+    },
+    "6324": {
+      "what_was_wrong": "A real bound expressed wrongly for an unsigned type, not dead code. The guard is the empty-write-BIO case; the `< 0` arm can never occur because BIO_ctrl_pending returns usize.",
+      "repair": "`if n <= 0` -> `if n == 0`. Behaviour is unchanged on every path."
+    },
+    "eight_macro_reports": {
+      "diagnosis": "All eight were the same Clippy lookback limitation: the SAFETY comment was placed above the macro name while the unsafe block began on the next line. The text was accurate for the operation in every case.",
+      "empirical_control": "A minimal crate with #![deny(clippy::undocumented_unsafe_blocks)] reproduced the failure for `// SAFETY:` above a multi-line assert_eq! and passed when the same comment was placed immediately above the unsafe token. The probe was run in the court container and removed from the tree.",
+      "chosen_repair": "Move the comment, not add an allow. Moving satisfies Clippy's actual rule (line adjacency), removes the diagnostic rather than suppressing it, and avoids weakening the lint at any scope. No #[allow] was added anywhere in this subphase."
+    }
+  },
+  "module_rationale_decision": {
+    "reconstruction": "No committed V1 artifact enumerates '22' directly. The committed V1 receipt records exactly 22 test_only blockers across the five modules that carry a module-level #[allow(clippy::undocumented_unsafe_blocks)]: cipher_gcm 12 (10 blocks + 2 unsafe fn defs), obj 9 (5 blocks + 4 unsafe fn defs), thread 1 (one unsafe fn def). The seven allocator_seam blockers are all in secure.rs. That exact sum is the set decided here; it is not asserted independently of the V1 artifact.",
+    "per_operation_added": {
+      "src/provider/cipher_gcm.rs": "10 blocks now carry per-operation SAFETY contracts (the module allow had no rationale text at all); tls_seal and tls_open gained # Safety sections.",
+      "src/runtime/obj.rs": "5 callback blocks (Ctx reborrow, nested registry lookup, snapshot-entry field reads, removal) now carry per-operation SAFETY; count_cb, counting_free, walk_cb and observing_free gained # Safety callback-ABI sections.",
+      "src/runtime/thread.rs": "hook_malloc gained a # Safety section describing the allocator-hook ABI and that the file coordinate is stored, never dereferenced.",
+      "src/runtime/secure.rs": "all 7 allocator-seam blocks (malloc, clear_free, two overflow refusals, two in-range array allocations, the paired free) now carry per-operation SAFETY contracts."
+    },
+    "why_the_module_rationale_covers_the_rest": "The five module rationales say that every test-side block is a direct call to the API under test with pointers to values the test owns. That is true of the remaining direct-call sites: the arguments are test-owned arrays/Vecs, static C literals, or literals/null whose validity the rationale states. No per-operation text was invented for them.",
+    "not_claimed": "This is not a claim that the five modules are discharged. After the additions, Clippy --force-warn still cannot associate 19 sites in those modules (obj 14, thread 5; secure 0, cipher_gcm 0, store_lib 0). Source inspection shows all 19 are the same macro-position pattern (SAFETY immediately above the macro name, unsafe on the following line), i.e. false positives rather than missing rationale. The pre-existing module-level allows remain in place; none was added, removed or weakened in this subphase."
+  },
+  "gates": {
+    "fmt": {
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0,
+      "output": "FMT_EXIT=0 (no diff)"
+    },
+    "clippy_lib": {
+      "command": "cargo clippy --lib -- -D warnings",
+      "exit_code": 0,
+      "output": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.61s"
+    },
+    "clippy_all_targets": {
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "exit_code": 0,
+      "output": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 14.97s"
+    },
+    "library_tests": {
+      "command": "cargo test --lib -- --test-threads=4",
+      "exit_code": 0,
+      "output": "test result: ok. 2151 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 128.10s"
+    }
+  },
+  "test_count": {
+    "passed": 2151,
+    "failed": 0,
+    "ignored": 45,
+    "note": "No test was added, removed or newly ignored in this subphase. The count is the V1-candidate count; the AGENTS floor is 1962/42, and the only requirement is no unexplained removals or new ignores."
+  },
+  "remaining_red": [],
+  "obligations": {
+    "discharged": [
+      "The configured -D warnings Clippy gate at the V1-frozen identity (both --lib and --all-targets)."
+    ],
+    "retained": [
+      "19 Clippy-hidden sites under the pre-existing module-level allows in obj.rs and thread.rs; all are macro-position false positives, not missing rationale, and remain covered by the module statement plus the comment immediately above each macro call.",
+      "No Miri, ASan, Loom, authority differential or independent review was run. V2a is a FAST/BATCH gate repair, not a safety or cryptographic result."
+    ],
+    "newly_introduced": []
+  },
+  "files_changed": [
+    "src/cms/cms_pwri.rs",
+    "src/pkcs7/pk7_doit.rs",
+    "src/provider/cipher_gcm.rs",
+    "src/runtime/obj.rs",
+    "src/runtime/secure.rs",
+    "src/runtime/thread.rs",
+    "src/ssl/statem/statem_clnt.rs",
+    "src/ssl/statem/statem_srvr.rs",
+    "src/ssl/tls13_enc.rs"
+  ],
+  "structural_guards": {
+    "allocator_seam": "unchanged (comments only in the seam modules)",
+    "repr_c_layouts": "unchanged (no type or field changed)",
+    "exported_symbols": "unchanged (no signature or #[no_mangle] changed)",
+    "unsafe_lints": "unchanged: unsafe_op_in_unsafe_fn, undocumented_unsafe_blocks and missing_safety_doc remain enforced; no allow was added",
+    "semantic_change": "one, at statem_clnt.rs:6324: `n <= 0` -> `n == 0`, equivalent for usize"
+  }
+}

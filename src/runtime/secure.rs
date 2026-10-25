@@ -1204,6 +1204,8 @@ mod tests {
         reset();
         init_ok(1 << 20, 16);
 
+        // SAFETY: the secure heap is initialised above; `file()` is a static NUL-terminated
+        // literal and the result is this test's own allocation, checked below.
         let p = unsafe { CRYPTO_secure_malloc(100, file(), 1) } as *mut u8;
         assert!(!p.is_null());
         let size = CRYPTO_secure_actual_size(p.cast());
@@ -1215,6 +1217,8 @@ mod tests {
         assert!(test_arena_bytes(off, size).iter().all(|&b| b == 0xAB));
 
         // `num` is deliberately 1: the authority still cleanses all 128 bytes.
+        // SAFETY: `p` is the live allocation established above, released exactly once with a
+        // length within that allocation.
         unsafe { CRYPTO_secure_clear_free(p.cast(), 1, file(), 1) };
 
         let bytes = test_arena_bytes(off, size);
@@ -1238,6 +1242,8 @@ mod tests {
         reset();
         init_ok(1 << 20, 16);
 
+        // SAFETY: the secure heap is initialised above; `file()` is a static NUL-terminated
+        // literal and the result is this test's own allocation.
         let p = unsafe { CRYPTO_secure_malloc(100, file(), 1) } as *mut u8;
         let size = CRYPTO_secure_actual_size(p.cast());
         let off = test_offset_of(p.cast()).unwrap();
@@ -1245,6 +1251,7 @@ mod tests {
         unsafe { core::ptr::write_bytes(p, 0xCD, size) };
         assert!(test_arena_bytes(off, size).iter().all(|&b| b == 0xCD));
 
+        // SAFETY: `p` is the live allocation established above, released exactly once.
         unsafe { CRYPTO_secure_free(p.cast(), file(), 1) };
 
         let bytes = test_arena_bytes(off, size);
@@ -1262,23 +1269,29 @@ mod tests {
         init_ok(1 << 20, 16);
 
         crate::runtime::err::ERR_clear_error();
+        // SAFETY: no live pointer is involved; an overflowing element count must be refused.
         let p = unsafe { CRYPTO_secure_malloc_array(usize::MAX, 2, file(), 1) };
         assert!(p.is_null());
         assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
 
         crate::runtime::err::ERR_clear_error();
+        // SAFETY: no live pointer is involved; an overflowing element count must be refused.
         let q = unsafe { CRYPTO_secure_calloc(usize::MAX, 2, file(), 1) };
         assert!(q.is_null());
         assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
 
         // A valid array allocation behaves like the scalar form.
+        // SAFETY: in-range element counts; the result is this test's own allocation.
         let r = unsafe { CRYPTO_secure_malloc_array(4, 8, file(), 1) };
         assert!(!r.is_null());
         assert_eq!(CRYPTO_secure_actual_size(r), 32);
+        // SAFETY: in-range element counts; the result is this test's own allocation.
         let c = unsafe { CRYPTO_secure_calloc(4, 8, file(), 1) };
         assert!(!c.is_null());
         assert_eq!(CRYPTO_secure_actual_size(c), 32);
         assert_eq!(CRYPTO_secure_used(), 64);
+        // SAFETY: `r` and `c` are the two live allocations established above, each released
+        // exactly once.
         unsafe {
             CRYPTO_secure_free(r, file(), 1);
             CRYPTO_secure_free(c, file(), 1);
