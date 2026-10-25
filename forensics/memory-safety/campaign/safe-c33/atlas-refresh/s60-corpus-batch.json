@@ -1,0 +1,651 @@
+{
+ "schema": "safe-c33/subphase-receipt/v1",
+ "receipt": "S60-CORPUS-BATCH",
+ "date": "2026-10-25",
+ "subphase": "S60: admit 30 further corpus families and lift the tractable below-L7 fixture families",
+ "branch": "integrate/safe-c33",
+ "source_head": "4f03177bd8cb9be4422fa6407d2c2d102dc8b4d2",
+ "source_head_short": "4f03177bd",
+ "source_head_subject": "Merge stage/p25/reverify-198",
+ "execution": {
+  "role": "subagent",
+  "committed": false,
+  "pushed": false,
+  "host_execution": false,
+  "venue": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+  "src_changed_this_subphase": false,
+  "docker_changed_this_subphase": false,
+  "cargo_build_jobs": 4,
+  "tmpdir": "/work/court/tmp",
+  "memory_note": "One heavy command at a time; MemAvailable stayed above 58 GiB on the host and the 8 GiB court cgroup was never exhausted."
+ },
+ "candidate_identity": {
+  "install_prefix": "artifacts/phase2/install",
+  "libcrypto_so_3_sha256": "c8a99c59cb69b83ae52bb5d6c19dcd4644ca57b161190892923a84a99bef1694",
+  "libssl_so_3_sha256": "5992c29da4ffb6dc162acae5c429da515182dc3e48051bb1821fdf0c7ab3ce9a"
+ },
+ "measurement": {
+  "note": "Both atlases were measured at the identity above with --reuse-committed and --only for the changed/new rows. The two --check runs report zero findings and honest sensitivity controls.",
+  "checks": [
+   "[downstream-build-link] with_recipe=307 candidate_linked=245 linkage_proven=245 findings=0 control honest=True",
+   "[downstream-runtime] with_recipe=307 cand_loaded=221 cand_functional=205 reaches_baseline=305 findings=0 control honest=True"
+  ]
+ },
+ "before_after": {
+  "before": {
+   "with_recipe": 277,
+   "no_recipe": 723,
+   "candidate_loaded": 216,
+   "candidate_l7": 198,
+   "candidate_linked": 239
+  },
+  "after": {
+   "with_recipe": 307,
+   "no_recipe": 693,
+   "candidate_loaded": 221,
+   "candidate_l7": 205,
+   "candidate_linked": 245
+  },
+  "delta": {
+   "with_recipe": 30,
+   "no_recipe": -30,
+   "candidate_loaded": 5,
+   "candidate_l7": 7,
+   "candidate_linked": 6
+  },
+  "below_l7": {
+   "before": 79,
+   "lifted": 3,
+   "remaining": 76,
+   "note": "The 79 is S59's recipe-backed below-L7 accounting (43 fixture + 25 harness + 10 environment + 1 source-extraction). imapfilter, carbon-c-relay and nmh were lifted; fdm improved L5 to L6 but remains below L7."
+  }
+ },
+ "tool_summaries": {
+  "build_link_measure": [
+   "[downstream-build-link] elapsed=452s with_recipe=307 no_recipe=693",
+   "  authority configured=274 built=253 linked=245 failed=62",
+   "  candidate configured=274 built=252 linked=245 failed=62",
+   "  candidate_linkage_proven=245 candidate_specific_patch_count=0"
+  ],
+  "runtime_measure": [
+   "[downstream-runtime] elapsed=253s with_recipe=307 no_recipe=693",
+   "  authority loaded=221 runtime=207 functional=205 failed=6 not_attempted=755",
+   "  candidate loaded=221 runtime=207 functional=205 failed=6 not_attempted=755",
+   "  candidate_reaches_baseline=305 reaches_linked_baseline=244 below_baseline=1 baseline_not_linked=62",
+   "  candidate_failures={'acquire-failure': 693, 'link-failure': 62, 'runtime-failure': 2, 'functional-failure': 2, 'load-failure': 2}"
+  ]
+ },
+ "added_families": [
+  {
+   "family": "atheme-services",
+   "version": "7.2.12",
+   "recipe_id": "recipe:atheme-services:7.2.12",
+   "url": "https://deb.debian.org/debian/pool/main/a/atheme-services/atheme-services_7.2.12.orig.tar.xz",
+   "sha256": "600d5ba0e25d80307818021fd9b85e49b07f245932b3c8e04e16fe312dd60fba",
+   "kind": "new-upstream",
+   "build_level": "L3-built",
+   "runtime_level": "L3-built",
+   "failure_class": "link-failure",
+   "build_reason": "the build produced no artifact matching 'src/services/.libs/services'"
+  },
+  {
+   "family": "epic4",
+   "version": "2.10.10",
+   "recipe_id": "recipe:epic4:2.10.10",
+   "url": "https://deb.debian.org/debian/pool/main/e/epic4/epic4_2.10.10.orig.tar.xz",
+   "sha256": "d12271bcbfd827e9e759c32bba60ece805ae978d33ed91d9207de436d071fbc5",
+   "kind": "new-upstream",
+   "build_level": "L2-configured",
+   "runtime_level": "L2-configured",
+   "failure_class": "link-failure",
+   "build_reason": "the build failed: make: *** [Makefile:112: epic] Error 2"
+  },
+  {
+   "family": "weex",
+   "version": "2.8.4.2",
+   "recipe_id": "recipe:weex:2.8.4.2",
+   "url": "https://deb.debian.org/debian/pool/main/w/weex/weex_2.8.4.2.tar.gz",
+   "sha256": "29db3f990dc332ae003807db28b234e11f791d0bd15281e2d16fac09481ac132",
+   "kind": "new-upstream",
+   "build_level": "L2-configured",
+   "runtime_level": "L2-configured",
+   "failure_class": "link-failure",
+   "build_reason": "the build failed: checking for strerror... yes"
+  },
+  {
+   "family": "openiked",
+   "version": "7.2",
+   "recipe_id": "recipe:openiked:7.2",
+   "url": "https://deb.debian.org/debian/pool/main/o/openiked/openiked_7.2.orig.tar.gz",
+   "sha256": "55dc270bc40a121f855d949a25a5ffaeb11e7607e8198ec52160ef54b6946845",
+   "kind": "new-upstream",
+   "build_level": "L2-configured",
+   "runtime_level": "L2-configured",
+   "failure_class": "link-failure",
+   "build_reason": "the build failed: gmake: *** [Makefile:136: all] Error 2"
+  },
+  {
+   "family": "jabberd2",
+   "version": "2.7.0",
+   "recipe_id": "recipe:jabberd2:2.7.0",
+   "url": "https://deb.debian.org/debian/pool/main/j/jabberd2/jabberd2_2.7.0.orig.tar.gz",
+   "sha256": "8ed7ae5952819d9e5bf1efb45735bfff3786b60144d9f60f8fe2788f552f1989",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: ./configure: line 13330: syntax error near unexpected token `-fdiagnostics-color,'"
+  },
+  {
+   "family": "ipmitool",
+   "version": "1.8.19",
+   "recipe_id": "recipe:ipmitool:1.8.19",
+   "url": "https://deb.debian.org/debian/pool/main/i/ipmitool/ipmitool_1.8.19.orig.tar.gz",
+   "sha256": "48b010e7bcdf93e4e4b6e43c53c7f60aa6873d574cbd45a8d86fa7aaeebaff9c",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: ** Unable to build Solaris 9 x86 IPMI interface support!"
+  },
+  {
+   "family": "partimage",
+   "version": "0.6.9",
+   "recipe_id": "recipe:partimage:0.6.9",
+   "url": "https://deb.debian.org/debian/pool/main/p/partimage/partimage_0.6.9.orig.tar.bz2",
+   "sha256": "753a6c81f4be18033faed365320dc540fe5e58183eaadcd7a5b69b096fec6635",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: checking for strerror in -lcposix... no"
+  },
+  {
+   "family": "ophcrack",
+   "version": "3.8.0",
+   "recipe_id": "recipe:ophcrack:3.8.0",
+   "url": "https://deb.debian.org/debian/pool/main/o/ophcrack/ophcrack_3.8.0.orig.tar.bz2",
+   "sha256": "048a6df57983a3a5a31ac7c4ec12df16aa49e652a29676d93d4ef959d50aeee0",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: configure: error: Cannot find ssl libraries"
+  },
+  {
+   "family": "kannel",
+   "version": "1.4.5",
+   "recipe_id": "recipe:kannel:1.4.5",
+   "url": "https://deb.debian.org/debian/pool/main/k/kannel/kannel_1.4.5.orig.tar.gz",
+   "sha256": "f279606ea8317fd2c8fa6b0f591c084fdfa954612f1e7c9cb667a5f6b77387f3",
+   "kind": "new-upstream",
+   "build_level": "L2-configured",
+   "runtime_level": "L2-configured",
+   "failure_class": "link-failure",
+   "build_reason": "the build failed: make: *** [Makefile:219: wmlscript/wsgram.c] Error 127"
+  },
+  {
+   "family": "xrdp",
+   "version": "0.9.21.1",
+   "recipe_id": "recipe:xrdp:0.9.21.1",
+   "url": "https://deb.debian.org/debian/pool/main/x/xrdp/xrdp_0.9.21.1.orig.tar.gz",
+   "sha256": "7c6c42dce7d3201efe4481e0d388e00094bf8f15224ddad9e47b402a672e08e3",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: checking whether C compiler accepts -Werror... yes"
+  },
+  {
+   "family": "bind9",
+   "version": "9.18.49",
+   "recipe_id": "recipe:bind9:9.18.49",
+   "url": "https://deb.debian.org/debian/pool/main/b/bind9/bind9_9.18.49.orig.tar.xz",
+   "sha256": "c43ce4548ebed788cd9df63658a7de105ceafba43fcd63fa352b1093e525cd24",
+   "kind": "new-upstream",
+   "build_level": "L2-configured",
+   "runtime_level": "L2-configured",
+   "failure_class": "link-failure",
+   "build_reason": "the build failed: CC       libisc_la-error.lo"
+  },
+  {
+   "family": "dnsdist",
+   "version": "1.7.3",
+   "recipe_id": "recipe:dnsdist:1.7.3",
+   "url": "https://deb.debian.org/debian/pool/main/d/dnsdist/dnsdist_1.7.3.orig.tar.bz2",
+   "sha256": "7eaf6fac2f26565c5d8658d42a213799e05f4d3bc68e7c716e7174df41315886",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: Package 'libedit', required by 'virtual:world', not found"
+  },
+  {
+   "family": "pdns",
+   "version": "4.7.3",
+   "recipe_id": "recipe:pdns:4.7.3",
+   "url": "https://deb.debian.org/debian/pool/main/p/pdns/pdns_4.7.3.orig.tar.bz2",
+   "sha256": "8bad351b2e09426f6d4fb0346881a5155fe555497c3d85071e531e7c7afe3e76",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: checking whether strerror_r returns char *... yes"
+  },
+  {
+   "family": "pdns-recursor",
+   "version": "4.8.8",
+   "recipe_id": "recipe:pdns-recursor:4.8.8",
+   "url": "https://deb.debian.org/debian/pool/main/p/pdns-recursor/pdns-recursor_4.8.8.orig.tar.bz2",
+   "sha256": "d25c0a1689027b055e7fd6b20b6aaeadf866f67c68a2112f756d70c13e94dee4",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: checking for library containing clock_gettime... none required"
+  },
+  {
+   "family": "rspamd",
+   "version": "3.4",
+   "recipe_id": "recipe:rspamd:3.4",
+   "url": "https://deb.debian.org/debian/pool/main/r/rspamd/rspamd_3.4.orig.tar.xz",
+   "sha256": "a7dad761aa6bbc666b7977dfd741b240bf02cff8779e088f17dbfa74d5429f8a",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "cmake configure failed: -- Configuring incomplete, errors occurred!"
+  },
+  {
+   "family": "vboot-utils",
+   "version": "R106-15054.B",
+   "recipe_id": "recipe:vboot-utils:R106-15054.B",
+   "url": "https://deb.debian.org/debian/pool/main/v/vboot-utils/vboot-utils_0~R106-15054.B.orig.tar.gz",
+   "sha256": "0c5a66237cf3ab10c9640645b6793a9e749acf7dfa98257d1e56b6c0906a2444",
+   "kind": "new-upstream",
+   "build_level": "L3-built",
+   "runtime_level": "L3-built",
+   "failure_class": "link-failure",
+   "build_reason": "the build produced no artifact matching 'build/futility/futility'"
+  },
+  {
+   "family": "globus-gsi-cert-utils",
+   "version": "10.10",
+   "recipe_id": "recipe:globus-gsi-cert-utils:10.10",
+   "url": "https://deb.debian.org/debian/pool/main/g/globus-gsi-cert-utils/globus-gsi-cert-utils_10.10.orig.tar.gz",
+   "sha256": "21e5f0b2a7dfd1352e113858b0025ec230edcfe542d7808d55da153e89960187",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: checking for globus-common >= 14, globus-openssl-module >= 3, globus-gsi-openssl-error >= 2... no"
+  },
+  {
+   "family": "gridsite-clients",
+   "version": "3.0.0",
+   "recipe_id": "recipe:gridsite-clients:3.0.0",
+   "url": "https://deb.debian.org/debian/pool/main/g/gridsite/gridsite_3.0.0~20230214gitee81151.orig.tar.gz",
+   "sha256": "89f34283e143791d6552a5c1a8024b105d08e5f6567d6b18e25e7281e7d6f620",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: [Errno 2] No such file or directory: './configure'"
+  },
+  {
+   "family": "lcmaps-plugins-verify-proxy",
+   "version": "1.5.10",
+   "recipe_id": "recipe:lcmaps-plugins-verify-proxy:1.5.10",
+   "url": "https://deb.debian.org/debian/pool/main/l/lcmaps-plugins-verify-proxy/lcmaps-plugins-verify-proxy_1.5.10.orig.tar.gz",
+   "sha256": "6bdab5f1c6a9c154c647d023262c48f5f8f3446e73b829fb28d835666fbd7ee4",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "the build failed: make: *** No targets specified and no makefile found.  Stop."
+  },
+  {
+   "family": "i2pd",
+   "version": "2.45.1",
+   "recipe_id": "recipe:i2pd:2.45.1",
+   "url": "https://deb.debian.org/debian/pool/main/i/i2pd/i2pd_2.45.1.orig.tar.gz",
+   "sha256": "a84b1e3cb5ac45f39af98e63291d34725ef67337e11acbe0e245acde7a5b2b72",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "cmake configure failed: CMake Error: The source directory \"/work/court/phase24-build-link/i2pd/candidate/src/i2pd-2.45.1\" does not appear to contain CMakeLists.txt."
+  },
+  {
+   "family": "tpm2-tools",
+   "version": "5.4",
+   "recipe_id": "recipe:tpm2-tools:5.4",
+   "url": "https://deb.debian.org/debian/pool/main/t/tpm2-tools/tpm2-tools_5.4.orig.tar.gz",
+   "sha256": "33321bb22fa7af9c5da0f4c8446d17fcc073ae9f254f224fa218cb827b451720",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "the pre-build step failed: autoreconf: error: /work/court/phase24-build-link/tpm2-tools/candidate/aux/root/usr/bin/autoconf failed with exit status: 1"
+  },
+  {
+   "family": "trousers",
+   "version": "0.3.15",
+   "recipe_id": "recipe:trousers:0.3.15",
+   "url": "https://deb.debian.org/debian/pool/main/t/trousers/trousers_0.3.15.orig.tar.gz",
+   "sha256": "1e5be93e518372acf1d92d2f567d01a46fdb0b730487e544e6fb896c59cac77f",
+   "kind": "new-upstream",
+   "build_level": "L4-linked",
+   "runtime_level": "L5-loaded",
+   "failure_class": null,
+   "build_reason": ""
+  },
+  {
+   "family": "dnsperf",
+   "version": "2.10.0",
+   "recipe_id": "recipe:dnsperf:2.10.0",
+   "url": "https://deb.debian.org/debian/pool/main/d/dnsperf/dnsperf_2.10.0.orig.tar.xz",
+   "sha256": "68bbbcea0934d8f215719b7ebf7199e70ca4d932a544597be0f769c4d73dd49d",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "configure failed: checking whether more special flags are required for pthreads... no"
+  },
+  {
+   "family": "galera-3",
+   "version": "25.3.37",
+   "recipe_id": "recipe:galera-3:25.3.37",
+   "url": "https://deb.debian.org/debian/pool/main/g/galera-3/galera-3_25.3.37.orig.tar.gz",
+   "sha256": "8997e80dd8afbc9c335ebb00ad68dfe799a917e3144f6befb76678e8f1be8cda",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "cmake configure failed: See also \"/work/court/phase24-build-link/galera-3/candidate/src/galera-3-25.3.37/b/CMakeFiles/CMakeError.log\"."
+  },
+  {
+   "family": "galera-4",
+   "version": "26.4.23",
+   "recipe_id": "recipe:galera-4:26.4.23",
+   "url": "https://deb.debian.org/debian/pool/main/g/galera-4/galera-4_26.4.23.orig.tar.gz",
+   "sha256": "25f30633f2d6d950c5edd1b3d504d367dd9c42c7815bf6bde9292b3b8489dfd6",
+   "kind": "new-upstream",
+   "build_level": "L1-admitted-source",
+   "runtime_level": "L1-admitted-source",
+   "failure_class": "link-failure",
+   "build_reason": "cmake configure failed: See also \"/work/court/phase24-build-link/galera-4/candidate/src/galera-4-26.4.23/b/CMakeFiles/CMakeError.log\"."
+  },
+  {
+   "family": "afftools",
+   "version": "3.7.20",
+   "recipe_id": "recipe:afftools:3.7.20",
+   "url": "https://deb.debian.org/debian/pool/main/a/afflib/afflib_3.7.20.orig.tar.gz",
+   "sha256": "7264d705ff53185f0847c69abdfce072779c0b907257e087a6372c7608108f65",
+   "kind": "package-split",
+   "build_level": "L4-linked",
+   "runtime_level": "L7-functional",
+   "failure_class": null,
+   "build_reason": ""
+  },
+  {
+   "family": "ewftools",
+   "version": "20140813",
+   "recipe_id": "recipe:ewftools:20140813",
+   "url": "https://deb.debian.org/debian/pool/main/libe/libewf/libewf_20140813.orig.tar.gz",
+   "sha256": "dbfdf1bbea5944b014c2311cce4615d92b2b6b91c8401eef8640de9f3e75845b",
+   "kind": "package-split",
+   "build_level": "L4-linked",
+   "runtime_level": "L7-functional",
+   "failure_class": null,
+   "build_reason": ""
+  },
+  {
+   "family": "libdcmtk17",
+   "version": "3.6.7",
+   "recipe_id": "recipe:libdcmtk17:3.6.7",
+   "url": "https://deb.debian.org/debian/pool/main/d/dcmtk/dcmtk_3.6.7.orig.tar.gz",
+   "sha256": "17705dcdb2047d1266bb4e92dbf4aa6d4967819e8e3e94f39b7df697661b4860",
+   "kind": "package-split",
+   "build_level": "L4-linked",
+   "runtime_level": "L7-functional",
+   "failure_class": null,
+   "build_reason": ""
+  },
+  {
+   "family": "apache2-http2",
+   "version": "2.4.62",
+   "recipe_id": "recipe:apache2-http2:2.4.62",
+   "url": "https://archive.apache.org/dist/httpd/httpd-2.4.62.tar.gz",
+   "sha256": "3e2404d762a2da03560d7ada379ba1599d32f04a0d70ad6ff86f44325f2f062d",
+   "kind": "package-split",
+   "build_level": "L4-linked",
+   "runtime_level": "L7-functional",
+   "failure_class": null,
+   "build_reason": ""
+  },
+  {
+   "family": "krb5-pkinit",
+   "version": "1.20.1",
+   "recipe_id": "recipe:krb5-pkinit:1.20.1",
+   "url": "https://deb.debian.org/debian/pool/main/k/krb5/krb5_1.20.1.orig.tar.gz",
+   "sha256": "704aed49b19eb5a7178b34b2873620ec299db08752d6a8574f95d41879ab8851",
+   "kind": "package-split",
+   "build_level": "L4-linked",
+   "runtime_level": "L4-linked",
+   "failure_class": null,
+   "build_reason": ""
+  }
+ ],
+ "new_l7_families": [
+  {
+   "family": "afftools",
+   "level": "L7-functional",
+   "evidence": "afflib's affsign/affverify over a signed AFF image, tampered image rejected; same source, program and workload as libafflib0v5"
+  },
+  {
+   "family": "apache2-http2",
+   "level": "L7-functional",
+   "evidence": "Apache httpd static mod_ssl serves the fixture over verified TLS and refuses the unrelated CA; same recipe intent as apache2-bin"
+  },
+  {
+   "family": "ewftools",
+   "level": "L7-functional",
+   "evidence": "ewfverify re-verifies the MD5/SHA-256 acquisition and rejects a tampered image; same source as ewf-tools"
+  },
+  {
+   "family": "libdcmtk17",
+   "level": "L7-functional",
+   "evidence": "dcmsign CMS SignedData over a DICOM dataset, tampered-dataset and unrelated-CA controls; same source as dcmtk"
+  }
+ ],
+ "lifted_from_below_l7": [
+  {
+   "family": "imapfilter",
+   "before": "L5-loaded, no workload",
+   "after": "L7-functional",
+   "barrier": "FIXTURE: the module's Lua support files were compiled into /usr/local/share/imapfilter and never installed; the recipe now configures PREFIX under {root}/.l7-install and the workload stages src/*.lua there, then reads STATUS over verified IMAPS.",
+   "evidence": "exist=1 from the fixture mailbox; a truststore containing only the unrelated CA aborts the check"
+  },
+  {
+   "family": "carbon-c-relay",
+   "before": "L5-loaded, no workload",
+   "after": "L7-functional",
+   "barrier": "FIXTURE: the config grammar is one-line cluster declarations (not the angle-bracket meta syntax), and a TLS sink needed to be driven; the workload forwards phase60.metric to a verified TLS sink and a wrong-CA relay forwards nothing.",
+   "evidence": "metric received by the TLS sink; the unrelated-CA relay does not deliver it"
+  },
+  {
+   "family": "nmh",
+   "before": "L5-loaded, no workload",
+   "after": "L7-functional",
+   "barrier": "FIXTURE: the recipe builds but does not install mts.conf/mhbuild/post, and send treats a file as a drafts-folder message unless -nodraftfolder is given. The workload stages the install layout and submits over SMTP STARTTLS.",
+   "evidence": "body accepted by the STARTTLS stub; a run trusting only the unrelated CA is refused"
+  }
+ ],
+ "other_changed_families": [
+  {
+   "family": "fdm",
+   "before": "L5-loaded, runtime-failure (harness deadlocked on the IMAP LOGIN literal)",
+   "after": "L6-runtime",
+   "note": "The IMAP fixture now answers literal continuations generically, so fdm logs in, selects INBOX, fetches and delivers the fixture message over verified IMAPS. The negative CA run reaches the listener but the current run reuses a stopped fixture port (Connection refused), so the wrong-CA abort is not yet asserted; the row is recorded at L6, not promoted."
+  },
+  {
+   "family": "libshout",
+   "before": "L5-loaded, runtime-failure",
+   "after": "L5-loaded, runtime-failure",
+   "note": "Diagnosis narrowed: the rfc2818 source path is a poke (Content-Length: 0) plus an authenticated source; the fixture answers both, but the client waits on the challenge connection and never sends the body before the socket timeout. No level change; the payload assertion was not weakened."
+  },
+  {
+   "family": "perl-net-dns-sec",
+   "before": "L5-loaded, functional-failure",
+   "after": "L5-loaded, functional-failure",
+   "note": "The workload is unchanged: Net::DNS::SEC rejects the embedded BIND private key before signing. The fixture needs a module-shipped key pair rather than the hand-written blob; not asserted as a subject result."
+  },
+  {
+   "family": "charybdis",
+   "before": "L5-loaded for both subjects",
+   "after": "authority L7-functional, candidate L5-loaded",
+   "note": "The added bounded single read lets the IRC greeting be read without waiting for EOF. The authority then completes the verified TLS greeting; the candidate server fails the same handshake with SSLV3_ALERT_HANDSHAKE_FAILURE. This is a candidate-only runtime divergence."
+  },
+  {
+   "family": "bind9",
+   "before": "no recipe",
+   "after": "authority L3-built, candidate L2-configured",
+   "note": "The recipe builds BIND's libisc under the authority but the candidate configure/build stops at libisc_la-error.lo. Both are below L4, so no runtime row exists; the build-level asymmetry is recorded, not promoted to an implementation claim."
+  }
+ ],
+ "implementation_gaps": [
+  {
+   "family": "charybdis",
+   "authority_level": "L7-functional",
+   "candidate_level": "L5-loaded",
+   "failure": "the candidate IRC server fails the fixture TLS handshake with SSLV3_ALERT_HANDSHAKE_FAILURE while the authority accepts it with the same certificate, config and client",
+   "smallest_causal_region": "not isolated in this subphase; the divergence is at the TLS server handshake and no src/ line was narrowed from the available transcript",
+   "status": "OPEN (candidate-only); no src/ change made"
+  }
+ ],
+ "unresolved_build_divergences": [
+  {
+   "family": "bind9",
+   "authority_level": "L3-built",
+   "candidate_level": "L2-configured",
+   "note": "candidate compile failure at libisc_la-error.lo; no src/ region isolated"
+  }
+ ],
+ "new_families_below_l7": {
+  "count": 26,
+  "by_level": {
+   "L5-loaded": [
+    "trousers"
+   ],
+   "L4-linked": [
+    "krb5-pkinit"
+   ],
+   "L3-built": [
+    "atheme-services",
+    "vboot-utils"
+   ],
+   "L2-configured": [
+    "epic4",
+    "weex",
+    "openiked",
+    "kannel",
+    "bind9"
+   ],
+   "L1-admitted-source": [
+    "jabberd2",
+    "ipmitool",
+    "partimage",
+    "ophcrack",
+    "xrdp",
+    "dnsdist",
+    "pdns",
+    "pdns-recursor",
+    "rspamd",
+    "globus-gsi-cert-utils",
+    "gridsite-clients",
+    "lcmaps-plugins-verify-proxy",
+    "i2pd",
+    "tpm2-tools",
+    "dnsperf",
+    "galera-3",
+    "galera-4"
+   ]
+  },
+  "grouped_reason": {
+   "no_admitted_workload": [
+    "trousers (L5, TPM daemon needs a TPM device)",
+    "krb5-pkinit (L4, library-only PKINIT surface)"
+   ],
+   "venue_dependency_missing": [
+    "dnsdist (libedit)",
+    "pdns/pdns-recursor (boost closure)",
+    "rspamd (full CMake closure)",
+    "galera-3/4 (CMake closure)",
+    "globus-gsi-cert-utils (Globus stack)",
+    "ophcrack (SSL detection/libraries)",
+    "partimage (configure closure)",
+    "kannel (configure/build)"
+   ],
+   "recipe_build_failure": [
+    "ipmitool",
+    "xrdp",
+    "dnsperf",
+    "i2pd",
+    "tpm2-tools",
+    "jabberd2",
+    "gridsite-clients",
+    "lcmaps-plugins-verify-proxy",
+    "atheme-services (artifact)",
+    "epic4 (wserv/epic link)",
+    "weex (make)",
+    "openiked (make)",
+    "vboot-utils (artifact)"
+   ],
+   "candidate_build_asymmetry": [
+    "bind9"
+   ]
+  }
+ },
+ "remaining_below_l7_old": {
+  "count": 76,
+  "groups": {
+   "FIXTURE": {
+    "count": 40,
+    "note": "the S59 fixture cohort minus imapfilter, carbon-c-relay and nmh; fdm is now L6, charybdis/libshout/perl-net-dns-sec keep their diagnosed harness/runtime failures"
+   },
+   "HARNESS": {
+    "count": 25,
+    "note": "unchanged from S59"
+   },
+   "ENVIRONMENT": {
+    "count": 10,
+    "note": "unchanged from S59; no venue capability was added"
+   },
+   "SOURCE_EXTRACTION": {
+    "count": 1,
+    "note": "unchanged from S59"
+   }
+  }
+ },
+ "skipped_no_recipe": {
+  "count": 693,
+  "note": "Carried at S52/S53's SOURCE-UNREACHABLE classification; this batch did not re-litigate them and did not manufacture a source URL. Groups are the S53 interactive/GUI, TUN/device, live-service/database, heavy-dependency, duplicate-package and unreachable-source sets."
+ },
+ "urls_and_pins": {
+  "sources": "All 30 source URLs were fetched in the court; each SHA-256 was computed there and equals the Debian bookworm Sources index entry (or the upstream archive for the two non-Debian tarballs).",
+  "aux": "Existing pinned auxiliary packages only: ncurses/readline (epic4, weex), libevent/libbsd (openiked), libuv (bind9), libxml2 (kannel), autotools (the four autotools rows). No auxiliary package supplies or replaces libssl/libcrypto."
+ },
+ "residuals": [
+  "This is a FAST/BATCH downstream measurement. No BOUNDARY or SEAL evidence was generated: no Miri, sanitizers, dudect/ctgrind, FFI negative controls or caller-closure audit.",
+  "The honest L7 yield is 7: three lifted fixtures and four package-split rows of already-admitted sources. The 25 genuinely new upstreams yielded zero L7; 24 stopped at L1-L3 for venue/build reasons and two are admitted at L4/L5 with no admitted workload.",
+  "charybdis is a candidate-only runtime divergence (authority L7, candidate L5). It is reported as an open implementation gap and was not repaired in src/ by this conversion batch.",
+  "bind9 is a candidate build asymmetry (authority L3, candidate L2) with no runtime row; it is unresolved and unclassified beyond that observation.",
+  "No marker or assertion was weakened: the split rows reuse the parent's exact program and workload, and every non-L7 row keeps its measured level."
+ ],
+ "non_claims": [
+  "Exactly 30 families were added, not more; the exact added L7 count is 4 and the exact lifted count is 3.",
+  "A fresh candidate-bound L7 count is not safety or cryptographic evidence (AGENTS.md section 8).",
+  "The candidate identity is unchanged from S59; no src/ or docker/ file was modified."
+ ]
+}

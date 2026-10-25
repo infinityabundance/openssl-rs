@@ -2278,7 +2278,7 @@ _IMAP_MESSAGE = (
 )
 
 
-def _imap_serve_one(tls, stop: threading.Event) -> None:
+def _imap_serve_one(tls, stop: threading.Event, log: list[str] | None = None) -> None:
     """Serve the one-mailbox IMAP4rev1 subset mbsync needs, over the already-TLS socket."""
     f = tls.makefile("rwb", buffering=0)
     f.write(b"* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN UIDPLUS] phase24 isync fixture ready\r\n")
@@ -2287,6 +2287,8 @@ def _imap_serve_one(tls, stop: threading.Event) -> None:
         if not raw:
             break
         line = raw.decode("utf-8", "ignore").rstrip("\r\n")
+        if log is not None:
+            log.append(line)
         if not line:
             continue
         parts = line.split(" ", 2)
@@ -2295,14 +2297,14 @@ def _imap_serve_one(tls, stop: threading.Event) -> None:
         tag = parts[0]
         cmd = parts[1].upper()
         rest = parts[2] if len(parts) > 2 else ""
-        # handle a trailing literal ({n}) on LOGIN/APPEND if the client sends one
-        if rest.endswith("}") and "{" in rest:
-            try:
-                n = int(rest.rsplit("{", 1)[1].rstrip("}"))
-                literal = f.read(n + 2)
-                rest = rest + " " + literal.decode("utf-8", "ignore")
-            except Exception:  # noqa: BLE001
-                pass
+        # IMAP literals: a command ending in {n} is answered with a continuation and the
+        # client's next line is the literal (which may itself carry another {m}).
+        while rest.endswith("}") and "{" in rest:
+            f.write(b"+ \r\n")
+            literal = f.readline().decode("utf-8", "ignore").rstrip("\r\n")
+            if log is not None:
+                log.append("<literal> " + literal)
+            rest = rest[:rest.rfind("{")] + literal
         upper = rest.upper()
         if cmd in ("CAPABILITY",):
             f.write(b"* CAPABILITY IMAP4rev1 AUTH=PLAIN UIDPLUS\r\n")
@@ -2445,7 +2447,7 @@ def _imap_serve_starttls(conn, sctx, stop: threading.Event) -> None:
 
 
 def _imaps_server(cert_pem: Path, port: int, ready: threading.Event, stop: threading.Event,
-                  starttls: bool = False) -> None:
+                  starttls: bool = False, log: list[str] | None = None) -> None:
     """Accept IMAPS (or STARTTLS-upgraded IMAP) on loopback and serve the fixture until `stop`."""
     try:
         sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -2477,7 +2479,7 @@ def _imaps_server(cert_pem: Path, port: int, ready: threading.Event, stop: threa
                 _imap_serve_starttls(conn, sctx, stop)
             else:
                 tls = sctx.wrap_socket(conn, server_side=True)
-                _imap_serve_one(tls, stop)
+                _imap_serve_one(tls, stop, log)
         except Exception:  # noqa: BLE001
             pass
         finally:
@@ -11483,9 +11485,9 @@ def _wl_charybdis(ctx: dict) -> dict:
         listening = _wait_tcp("127.0.0.1", port, timeout=20)
         good = templates._tls_exchange(port, pki["ca_crt"],
                                       "NICK fixture\r\nUSER fixture 0 * :x\r\n",
-                                      verify_host=True)
+                                      verify_host=True, read_once=True)
         wrong = templates._tls_exchange(port, pki["other_crt"], "NICK fixture\r\n",
-                                       verify_host=True)
+                                       verify_host=True, read_once=True)
     finally:
         out, err = _stop_workload_group(server)
     greeted = bool(good.get("ok")) and bool(re.search(r"(NOTICE|020|AUTH|001)",
@@ -11810,38 +11812,57 @@ def _wl_libshout(ctx: dict) -> dict:
         str(pki["ca_key"]), "-CAcreateserial", "-out", str(wh_crt), "-days", "7",
         "-extfile", str(ext)], cwd=d)
 
-    def stream(cert: Path, key: Path) -> tuple[dict, str]:
+    def stream(cert: Path, key: Path) -> tuple[dict, str, dict]:
         got = {"data": ""}
         listener = socket.socket()
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind(("127.0.0.1", port))
-        listener.listen(1)
+        listener.listen(4)
         listener.settimeout(20)
         sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         sctx.load_cert_chain(str(cert), str(key))
 
         def serve() -> None:
             try:
-                conn, _ = listener.accept()
-                with conn, sctx.wrap_socket(conn, server_side=True) as tls:
-                    tls.settimeout(10)
-                    blob = b""
-                    while b"\r\n\r\n" not in blob:
-                        chunk = tls.recv(4096)
-                        if not chunk:
-                            break
-                        blob += chunk
-                    got["data"] = blob.decode("utf-8", "replace")
-                    tls.sendall(b"HTTP/1.0 200 OK\r\n\r\n")
-                    # Drain until the client closes: closing early makes libshout's next
-                    # write fail with SIGPIPE, which would mask the TLS result.
-                    body = b""
-                    while True:
-                        chunk = tls.recv(4096)
-                        if not chunk:
-                            break
-                        body += chunk
-                        got["data"] += chunk.decode("utf-8", "replace")
+                # libshout's rfc2818 path probes with a Content-Length: 0 SOURCE, then (because
+                # the fixture answers HTTP/1.0) opens a fresh connection for the authenticated
+                # SOURCE and sends the stream body on that one. Serve each sequentially.
+                deadline = time.monotonic() + 35
+                while time.monotonic() < deadline and "body" not in got:
+                    conn, _ = listener.accept()
+                    got["conns"] = got.get("conns", 0) + 1
+                    with conn, sctx.wrap_socket(conn, server_side=True) as tls:
+                        tls.settimeout(15)
+                        blob = b""
+                        while b"\r\n\r\n" not in blob:
+                            chunk = tls.recv(4096)
+                            if not chunk:
+                                break
+                            blob += chunk
+                        head, _, rest = blob.partition(b"\r\n\r\n")
+                        got["data"] = got.get("data", "") + head.decode("utf-8", "replace")
+                        tls.sendall(b"HTTP/1.0 200 OK\r\n\r\n")
+                        if b"Content-Length: 0" in head:
+                            # the capability probe: answer and let the client reconnect
+                            continue
+                        # The authenticated SOURCE is answered and the body may follow on this
+                        # connection (keep-alive) or on a fresh one (HTTP/1.0).  Bound the wait
+                        # so the server can accept the fresh connection instead of blocking.
+                        tls.settimeout(8)
+                        body = rest
+                        try:
+                            while True:
+                                chunk = tls.recv(4096)
+                                if not chunk:
+                                    break
+                                body += chunk
+                        except socket.timeout:
+                            if not body:
+                                continue
+                        if not body:
+                            continue
+                        got["body"] = body
+                        got["data"] += body.decode("utf-8", "replace")
             except OSError as exc:
                 got["error"] = repr(exc)
             finally:
@@ -11855,17 +11876,19 @@ def _wl_libshout(ctx: dict) -> dict:
                              "--mount", "/stream", "--tls-mode", "rfc2818"], cwd=d, env=env,
                             timeout=40, stdin_text=payload)
         thread.join(timeout=25)
-        return res, got.get("data", "")
+        return res, got.get("data", ""), {"conns": got.get("conns", 0),
+                                                    "error": got.get("error", "")}
 
-    good, good_data = stream(pki["srv_crt"], pki["srv_key"])
-    bad, bad_data = stream(wh_crt, wh_key)
+    good, good_data, good_meta = stream(pki["srv_crt"], pki["srv_key"])
+    bad, bad_data, _ = stream(wh_crt, wh_key)
     ok = bool(wh_req["ok"] and wh_sign["ok"] and good["ok"] and "SOURCE" in good_data.upper()
               and "template-payload" in good_data)
     functional = ok and not bad["ok"] and "bad certificate" in (bad["stderr"] + bad["stdout"])
     return _b16_out(ok, functional,
                     _transcript(("SOURCE over TLS", good),
                                 ("peer transcript", {"exit_code": 0, "stdout": good_data[:600],
-                                                       "stderr": ""}),
+                                                       "stderr": str(good_meta.get("error", "")) +
+                                                                 f" conns={good_meta.get('conns', 0)}"}),
                                 ("wrong-host certificate (must fail)", bad),
                                 ("negative transcript", {"exit_code": 0,
                                                           "stdout": bad_data[:200],
@@ -13050,6 +13073,377 @@ RUNNERS.update({"casync": _wl_casync})
 
 
 # --------------------------------------------------------------------------------------------
+# S60 corpus batch: recipe-backed families that reached L5 but had no admitted workload.
+# Each workload is a deterministic local exercise of the family's own OpenSSL consumer path
+# and is identical for both subjects.
+# --------------------------------------------------------------------------------------------
+
+def _wl_fdm(ctx: dict) -> dict:
+    """fdm fetches a message from a local IMAPS peer over a verified session.
+
+    The peer is the courtroom's own IMAP4rev1 fixture over TLS with the authority-generated
+    certificate.  fdm verifies the chain through the OpenSSL default verify paths, so the
+    fixture CA is supplied as SSL_CERT_FILE; a fetch trusting only the unrelated CA must
+    abort without delivering a message.
+    """
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    # fdm drops to its compiled-in unprivileged account (`_fdm`, fdm.h) even when the
+    # delivery user is overridden; the venue does not ship that account.  Creating the
+    # same system account for both subjects is fixture setup, not a source or policy change.
+    if subprocess.run(["id", "-u", "_fdm"], capture_output=True).returncode != 0:
+        _run_captured(["useradd", "-r", "-s", "/usr/sbin/nologin", "_fdm"], timeout=30)
+    maildir = d / "maildir"
+    for sub in ("cur", "new", "tmp"):
+        (maildir / sub).mkdir(parents=True, exist_ok=True)
+    conf = d / "fdm.conf"
+    conf.write_text(
+        f'set verify-certificates\nset timeout 30\nset lock-file "{d}/fdm.lock"\n'
+        f'action "inbox" maildir "{maildir}"\n'
+        f'account "phase" imaps server "127.0.0.1" port {port} '
+        f'user "runtime" pass "runtime"\n'
+        'match all action "inbox"\n', encoding="utf-8")
+    ready, stop = threading.Event(), threading.Event()
+    imap_log: list[str] = []
+    thr = threading.Thread(target=_imaps_server,
+                           args=(pki["srv_pem"], port, ready, stop, False, imap_log),
+                           daemon=True)
+    thr.start()
+    ready.wait(timeout=10)
+    try:
+        if not _wait_tcp("127.0.0.1", port, timeout=10):
+            return _wl_fail([], "the local IMAP peer did not listen", "runtime-failure", d)
+        env = dict(ctx["env"], HOME=str(d), TMPDIR=str(d))
+        # fdm drops to its unprivileged account before delivering, so the fixture tree must
+        # be writable by that account (a fixture permission, not a subject difference).
+        os.system(f"chmod -R a+rwX {d} 2>/dev/null")
+        good = _run_captured([str(ctx["program"]), "-u", "nobody", "-v", "-f", str(conf),
+                              "fetch"],
+                             cwd=d, env=dict(env, SSL_CERT_FILE=str(pki["ca_crt"])), timeout=60)
+        neg = _run_captured([str(ctx["program"]), "-u", "nobody", "-f", str(conf), "fetch"],
+                            cwd=d, env=dict(env, SSL_CERT_FILE=str(pki["other_crt"])), timeout=60)
+    finally:
+        stop.set()
+        thr.join(timeout=5)
+        _kill_comm("fdm")
+    msgs = [p for p in maildir.rglob("*") if p.is_file() and p.parent.name in ("new", "cur")]
+    delivered = any(_IMAP_MESSAGE.split(b"\r\n\r\n", 1)[1].strip() in p.read_bytes()
+                    for p in msgs)
+    runtime_ok = good["exit_code"] == 0 and bool(msgs)
+    # fdm exits 0 even when the fetch aborts, so the negative control is the absence of a
+    # delivered message plus the certificate-verification failure in its own log.
+    neg_text = neg["stdout"] + neg["stderr"]
+    neg_rejected = (not [p for p in maildir.rglob("*")
+                         if p.is_file() and p.parent.name in ("new", "cur")]
+                    and "certificate verification failed" in neg_text)
+    # The positive fetch has already delivered; remove it so the negative is measured alone.
+    if runtime_ok:
+        for p in msgs:
+            p.unlink()
+        neg = _run_captured([str(ctx["program"]), "-u", "nobody", "-f", str(conf), "fetch"],
+                            cwd=d, env=dict(env, SSL_CERT_FILE=str(pki["other_crt"])), timeout=60)
+        neg_text = neg["stdout"] + neg["stderr"]
+        neg_rejected = (not [p for p in maildir.rglob("*")
+                             if p.is_file() and p.parent.name in ("new", "cur")]
+                        and "certificate verification failed" in neg_text)
+    functional_ok = bool(runtime_ok and delivered and neg_rejected)
+    return {"runtime_ok": runtime_ok, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else
+            ("functional-failure" if runtime_ok else "runtime-failure"),
+            "residual": "none" if functional_ok else
+            ("functional-divergence" if runtime_ok else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the IMAPS fetch did not deliver the fixture message" if not delivered else
+             "the unrelated CA did not abort the IMAPS fetch"),
+            "transcript": _transcript(("fdm fetch (fixture CA)", good),
+                                      ("fdm fetch (unrelated CA, must fail)", neg),
+                                      ("IMAP peer commands", {"exit_code": 0,
+                                                              "stdout": "\n".join(imap_log[-40:])})),
+            "workload": "fdm: IMAPS fetch from a local peer + unrelated-CA abort",
+            "local_only": True}
+
+
+def _wl_imapfilter(ctx: dict) -> dict:
+    """imapfilter checks a mailbox's status over a verified IMAPS session."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    # imapfilter loads its Lua support modules from the compiled-in sharedir; the recipe
+    # configures PREFIX under the extracted root but does not install, so stage them.
+    share = ctx["root"] / ".l7-install" / "share" / "imapfilter"
+    share.mkdir(parents=True, exist_ok=True)
+    for lua in (ctx["root"] / "src").glob("*.lua"):
+        shutil.copy2(lua, share / lua.name)
+    conf = d / "imapfilter.lua"
+    conf.write_text(
+        "options.timeout = 20\n"
+        f"account = IMAP {{ server = '127.0.0.1', port = {port}, username = 'runtime', "
+        "password = 'runtime', ssl = 'auto' }\n"
+        "exist, unread, unseen, uidnext = account.INBOX:check_status()\n"
+        "print('exist=' .. tostring(exist) .. ' uidnext=' .. tostring(uidnext))\n",
+        encoding="utf-8")
+    ready, stop = threading.Event(), threading.Event()
+    thr = threading.Thread(target=_imaps_server, args=(pki["srv_pem"], port, ready, stop),
+                           daemon=True)
+    thr.start()
+    ready.wait(timeout=10)
+    try:
+        if not _wait_tcp("127.0.0.1", port, timeout=10):
+            return _wl_fail([], "the local IMAP peer did not listen", "runtime-failure", d)
+        env = dict(ctx["env"], HOME=str(d), TMPDIR=str(d))
+        good = _run_captured([str(ctx["program"]), "-c", str(conf), "-t", str(pki["ca_crt"])],
+                             cwd=d, env=env, timeout=60)
+        neg = _run_captured([str(ctx["program"]), "-c", str(conf), "-t",
+                             str(pki["other_crt"])], cwd=d, env=env, timeout=60)
+    finally:
+        stop.set()
+        thr.join(timeout=5)
+    text = good["stdout"] + good["stderr"]
+    status_ok = good["exit_code"] == 0 and re.search(r"exist=1\b", text) is not None
+    neg_rejected = neg["exit_code"] != 0 and "exist=" not in (neg["stdout"] + neg["stderr"])
+    functional_ok = bool(status_ok and neg_rejected)
+    return {"runtime_ok": good["exit_code"] == 0, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else
+            ("functional-failure" if good["exit_code"] == 0 else "runtime-failure"),
+            "residual": "none" if functional_ok else
+            ("functional-divergence" if good["exit_code"] == 0 else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("imapfilter did not report the fixture mailbox status" if not status_ok else
+             "the unrelated CA did not abort the IMAPS check"),
+            "transcript": _transcript(("imapfilter status (fixture CA)", good),
+                                      ("imapfilter status (unrelated CA, must fail)", neg)),
+            "workload": "imapfilter: IMAPS STATUS of the fixture mailbox + unrelated-CA abort",
+            "local_only": True}
+
+
+def _wl_nmh(ctx: dict) -> dict:
+    """nmh's send submits a draft over SMTP STARTTLS to a local stub."""
+    ap, port, d = ctx["authority_prefix"], ctx["port"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    body = "phase60-nmh-body"
+    state: dict = {}
+    stop = threading.Event()
+    thread = _smtp_starttls_stub(port, pki, state, stop)
+    draft = d / "draft.txt"
+    draft.write_text(
+        "From: phase60@example.invalid\nTo: phase60@example.invalid\n"
+        "Subject: phase60-nmh\n\n"
+        f"{body}\n", encoding="utf-8")
+    home = d / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    # nmh's send reads its compiled-in mts.conf; the recipe builds but does not install, so
+    # stage the file the same way the build layout expects it.
+    etc = ctx["root"] / ".l7-install" / "etc" / "nmh"
+    etc.mkdir(parents=True, exist_ok=True)
+    (etc / "mts.conf").write_text("mts: smtp\nhostname: phase60.invalid\n",
+                                  encoding="utf-8")
+    bindir = ctx["root"] / ".l7-install" / "bin"
+    bindir.mkdir(parents=True, exist_ok=True)
+    libexec = ctx["root"] / ".l7-install" / "libexec" / "nmh"
+    libexec.mkdir(parents=True, exist_ok=True)
+    for helper in ("mhbuild", "post"):
+        real = ctx["root"] / "uip" / helper
+        for link in (bindir / helper, libexec / helper):
+            if real.is_file() and not link.exists():
+                link.symlink_to(real)
+    init = _run_captured([str(ctx["root"] / "uip" / "install-mh"), "-auto"], cwd=d,
+                         env=dict(ctx["env"], HOME=str(home)), timeout=30,
+                         stdin_text="n\n")
+    for sub in ("Mail", "Mail/drafts", "Mail/inbox"):
+        (home / sub).mkdir(parents=True, exist_ok=True)
+
+    def submit(ca: Path) -> dict:
+        return _run_captured([str(ctx["root"] / "uip" / "send"), "-server", "127.0.0.1",
+                              "-port", str(port), "-tls", "-certverify", "-mts", "smtp",
+                              "-nodraftfolder", str(draft)],
+                             cwd=d, env=dict(ctx["env"], HOME=str(home),
+                                             SSL_CERT_FILE=str(ca)), timeout=60)
+
+    try:
+        if not _wait_tcp("127.0.0.1", port):
+            return _wl_fail([("install-mh", init)],
+                            "the SMTP STARTTLS stub did not open its port",
+                            "runtime-failure", d)
+        good = submit(pki["ca_crt"])
+        accepted = state.get("message") or b""
+        state.pop("message", None)
+        # send removes the draft after a successful delivery; restore it for the negative.
+        draft.write_text(
+            "From: phase60@example.invalid\nTo: phase60@example.invalid\n"
+            "Subject: phase60-nmh\n\n"
+            f"{body}\n", encoding="utf-8")
+        neg = submit(pki["other_crt"])
+        rejected_after_neg = state.get("message") is None
+    finally:
+        stop.set()
+        state.get("listener", socket.socket()).close()
+        thread.join(timeout=2)
+    delivered = body.encode() in accepted
+    neg_rejected = (neg["exit_code"] != 0 and rejected_after_neg
+                    and "certificate" in (neg["stdout"] + neg["stderr"]).lower())
+    functional_ok = bool(good["exit_code"] == 0 and delivered and neg_rejected)
+    return {"runtime_ok": good["exit_code"] == 0, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else
+            ("functional-failure" if good["exit_code"] == 0 else "runtime-failure"),
+            "residual": "none" if functional_ok else
+            ("functional-divergence" if good["exit_code"] == 0 else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the draft was not accepted over STARTTLS" if not delivered else
+             "the unrelated CA was not rejected"),
+            "transcript": _transcript(("install-mh", init),
+                                      ("nmh send over STARTTLS (fixture CA)", good),
+                                      ("nmh send (unrelated CA, must fail)", neg)),
+            "workload": "nmh: send over SMTP STARTTLS + unrelated-CA reject",
+            "local_only": True}
+
+
+def _wl_carbon_c_relay(ctx: dict) -> dict:
+    """carbon-c-relay forwards a metric to a TLS sink it verifies with the fixture CA."""
+    ap, d = ctx["authority_prefix"], ctx["workdir"]
+    pki = _gen_pki(ap, d)
+    sink_port = _free_port()
+    received: dict = {}
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", sink_port))
+    listener.listen(4)
+    listener.settimeout(20)
+    sctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    sctx.load_cert_chain(str(pki["srv_pem"]))
+
+    def serve() -> None:
+        try:
+            conn, _ = listener.accept()
+            with conn, sctx.wrap_socket(conn, server_side=True) as tls:
+                tls.settimeout(15)
+                data = b""
+                while b"phase60.metric" not in data:
+                    chunk = tls.recv(4096)
+                    if not chunk:
+                        break
+                    data += chunk
+                received["data"] = data
+        except OSError as exc:
+            received["error"] = repr(exc)
+        finally:
+            listener.close()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    conf = d / "relay.conf"
+    conf.write_text(
+        f'cluster "sink" forward 127.0.0.1:{sink_port} proto tcp transport plain ssl;\n'
+        'match * send to sink;\n', encoding="utf-8")
+    env = dict(ctx["env"], TMPDIR=str(d))
+
+    def forward(ca: Path, tag: str) -> tuple[dict, str]:
+        received.pop("data", None)
+        received.pop("error", None)
+        listen_port = _free_port()
+        proc = subprocess.Popen([str(ctx["program"]), "-f", str(conf), "-p",
+                                 str(listen_port), "-C", str(ca), "-s", "-w", "1"],
+                                cwd=str(d), env=env, start_new_session=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            if not _wait_tcp("127.0.0.1", listen_port, timeout=15):
+                return {"exit_code": 1, "stdout": "", "stderr": "relay did not listen"}, ""
+            sent = _run_captured([
+                sys.executable, "-c",
+                "import socket; s=socket.create_connection(('127.0.0.1', "
+                f"{listen_port}), timeout=5); "
+                "s.sendall(b'phase60.metric 1 1700000000\\n'); s.close()"],
+                cwd=d, env=env, timeout=15)
+            deadline = time.monotonic() + 12
+            while time.monotonic() < deadline and "data" not in received:
+                time.sleep(0.1)
+            return sent, (received.get("data") or b"").decode("utf-8", "replace")
+        finally:
+            out, err = _stop_workload_group(proc)
+            received.setdefault("relay", (out or "") + (err or ""))
+
+    good, good_data = forward(pki["ca_crt"], "good")
+    bad, bad_data = forward(pki["other_crt"], "bad")
+    delivered = "phase60.metric" in good_data
+    neg_rejected = "phase60.metric" not in bad_data
+    functional_ok = bool(good["exit_code"] == 0 and delivered and neg_rejected)
+    return {"runtime_ok": good["exit_code"] == 0, "functional_ok": functional_ok,
+            "failure_class": None if functional_ok else
+            ("functional-failure" if good["exit_code"] == 0 else "runtime-failure"),
+            "residual": "none" if functional_ok else
+            ("functional-divergence" if good["exit_code"] == 0 else "runtime-failure"),
+            "reason": None if functional_ok else
+            ("the metric was not forwarded over verified TLS" if not delivered else
+             "the unrelated CA did not stop the TLS forward"),
+            "transcript": _transcript(("relay -> TLS sink (fixture CA)", good),
+                                      ("sink transcript", {"exit_code": 0,
+                                                           "stdout": good_data[:400]}),
+                                      ("relay -> TLS sink (unrelated CA, must fail)", bad),
+                                      ("sink transcript (negative)", {"exit_code": 0,
+                                                                      "stdout": bad_data[:200]})),
+            "workload": "carbon-c-relay: metric forwarded to a verified TLS sink + unrelated-CA reject",
+            "local_only": True}
+
+
+RUNNERS.update({
+    "fdm": _wl_fdm,
+    "imapfilter": _wl_imapfilter,
+    "nmh": _wl_nmh,
+    "carbon-c-relay": _wl_carbon_c_relay,
+})
+
+
+# S60 corpus batch: the program each new recipe builds. A family whose recipe reached L4 but
+# whose program is not admitted here keeps its build/link row honestly.
+_S60_PROGRAMS: dict[str, dict] = {
+    "jabberd2": {"program": "jabberd/jabberd", "launch": ["-V"],
+                 "version_re": r"jabberd", "lib_paths": []},
+    "atheme-services": {"program": "src/services/.libs/services", "launch": ["--version"],
+                        "version_re": r"atheme|services", "lib_paths": ["src/services/.libs"]},
+    "epic4": {"program": "src/epic", "launch": ["-v"], "version_re": r"EPIC|epic",
+              "lib_paths": []},
+    "weex": {"program": "src/weex", "launch": ["--version"], "version_re": r"weex|WeeX",
+             "lib_paths": []},
+    "ipmitool": {"program": "src/ipmitool", "launch": ["-V"],
+                 "version_re": r"ipmitool|IPMI", "lib_paths": []},
+    "partimage": {"program": "src/partimage", "launch": ["--version"],
+                  "version_re": r"partimage|Partimage", "lib_paths": []},
+    "ophcrack": {"program": "src/ophcrack", "launch": ["--version"],
+                 "version_re": r"ophcrack|Ophcrack", "lib_paths": []},
+    "kannel": {"program": "gw/bearerbox", "launch": ["--version"],
+               "version_re": r"bearerbox|Kannel", "lib_paths": ["gw"]},
+    "xrdp": {"program": "xrdp/xrdp", "launch": ["--version"], "version_re": r"xrdp",
+             "lib_paths": ["common/.libs"]},
+    "bind9": {"program": "bin/named/named", "launch": ["-v"], "version_re": r"BIND 9",
+              "lib_paths": ["lib/isc/.libs", "lib/dns/.libs", "lib/isccfg/.libs",
+                            "lib/isccc/.libs", "lib/bind9/.libs"]},
+    "dnsperf": {"program": "src/dnsperf", "launch": ["-h"],
+                "version_re": r"dnsperf|DNS Performance", "lib_paths": []},
+    "i2pd": {"program": "i2pd", "launch": ["--version"], "version_re": r"i2pd",
+             "lib_paths": []},
+    "trousers": {"program": "src/tcsd/tcsd", "launch": ["--version"],
+                 "version_re": r"tcsd|TrouSerS", "lib_paths": ["src/tspi/.libs"]},
+    "tpm2-tools": {"program": "tools/tpm2_getrandom", "launch": ["--version"],
+                   "version_re": r"tpm2_getrandom", "lib_paths": ["tools/.libs"]},
+    "galera-3": {"program": "garb/garbd", "launch": ["--version"],
+                 "version_re": r"garbd|Galera", "lib_paths": ["garb"]},
+    "galera-4": {"program": "garb/garbd", "launch": ["--version"],
+                 "version_re": r"garbd|Galera", "lib_paths": ["garb"]},
+    "vboot-utils": {"program": "build/futility/futility", "launch": ["--version"],
+                    "version_re": r"futility|vboot", "lib_paths": []},
+    "rspamd": {"program": "src/rspamd", "launch": ["--version"], "version_re": r"rspamd",
+               "lib_paths": ["src"]},
+}
+PROGRAMS.update(_S60_PROGRAMS)
+
+
+# S60 package rows: the same pristine source, program and workload as the admitted parent.
+for _new, _base in (("afftools", "libafflib0v5"), ("ewftools", "ewf-tools"),
+                    ("libdcmtk17", "dcmtk"), ("apache2-http2", "apache2-bin")):
+    if _base in PROGRAMS:
+        PROGRAMS[_new] = dict(PROGRAMS[_base])
+    if _base in RUNNERS:
+        RUNNERS[_new] = RUNNERS[_base]
+
+
 # the load proof (L5): the subject's libssl/libcrypto are actually loaded
 # --------------------------------------------------------------------------------------------
 
