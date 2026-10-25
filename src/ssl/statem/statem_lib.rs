@@ -256,3 +256,68 @@ pub(crate) unsafe fn ssl_get_min_max_version(
     }
     0
 }
+
+#[cfg(test)]
+mod version_floor_tests {
+    use super::*;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_ciph_table::SSL_OP_NO_TLSv1;
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new};
+
+    /// charybdis sets `SSL_OP_NO_TLSv1` on a `TLS_method()` context. At the default security
+    /// level the authority's default callback refuses SSLv3/TLSv1.0/TLSv1.1, so the version walk
+    /// keeps TLS1.2 as the floor and TLS1.3 as the maximum. While the callback answered 1 for
+    /// `SSL_SECOP_VERSION`, the walk treated the versions below the `SSL_OP_NO_TLSv1` hole as
+    /// enabled, selected SSLv3 as the maximum, and the server rejected every ClientHello with
+    /// `SSL_R_UNSUPPORTED_PROTOCOL` (`SSLV3_ALERT_HANDSHAKE_FAILURE`).
+    #[test]
+    fn charybdis_no_tlsv1_keeps_tls12_floor_and_tls13_maximum() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the context and connection are created and released in this frame, and the
+        // option is this process's own default-method state.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            assert_eq!((*(*s).cert).sec_level, 2, "the authority's default level");
+            (*s).options |= SSL_OP_NO_TLSv1;
+            let (mut min, mut max) = (0, 0);
+            assert_eq!(
+                ssl_get_min_max_version(s, &mut min, &mut max, core::ptr::null_mut()),
+                0
+            );
+            assert_eq!(min, TLS1_2_VERSION, "the security level sets the floor");
+            assert_eq!(
+                max,
+                crate::ssl::ssl_lib::TLS1_3_VERSION,
+                "SSLv3 must not become the maximum"
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// The same walk without the option must still pick TLS1.3, so the correction is the floor and
+    /// not a blanket downgrade.
+    #[test]
+    fn charybdis_default_context_keeps_tls13_as_maximum() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: as above.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            let (mut min, mut max) = (0, 0);
+            assert_eq!(
+                ssl_get_min_max_version(s, &mut min, &mut max, core::ptr::null_mut()),
+                0
+            );
+            assert_eq!(min, TLS1_2_VERSION);
+            assert_eq!(max, crate::ssl::ssl_lib::TLS1_3_VERSION);
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+}

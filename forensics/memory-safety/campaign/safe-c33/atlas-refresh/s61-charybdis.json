@@ -1,0 +1,184 @@
+{
+  "schema": "safe-c33/atlas-refresh/s61/v1",
+  "receipt": "s61-charybdis",
+  "subphase": "S61: reproduce and repair the candidate-only charybdis TLS handshake failure",
+  "branch": "integrate/safe-c33",
+  "source_head": "aa7a665835e34ea6e4762f1d7149b068318bef9a",
+  "source_head_short": "aa7a66583",
+  "worktree": "dirty: src/ssl/ssl_lib.rs, src/ssl/statem/statem_lib.rs, src/ssl/statem/statem_srvr.rs, the regenerated artifacts/phase2 install tree and the two derived atlases; no commit, no push (subagent)",
+  "date": "2026-10-25",
+  "verification_level": "FAST (fmt, check, focused tests, clippy --lib) plus a Phase 2 ABI court run and a charybdis-only downstream re-measure in the expansion container. BATCH full-suite serial run, Miri/ASan and independent review NOT_RUN.",
+  "reported_defect": "charybdis loads and runs under the authority (L7-functional) but the candidate's TLS listener answers the fixture client with SSLV3_ALERT_HANDSHAKE_FAILURE for the same certificate, configuration and client. The candidate row was L5-loaded / runtime-failure. The failure became visible only when S60 repaired the workload's fixture barrier.",
+  "reproduction": {
+    "harness": "court/p25/s61-repro/server.c (a minimal server using the library's own SSL_accept), driven by court/p25/s61-repro/trial.sh",
+    "configuration": "Transcribed from charybdis-4.1.2 librb/src/openssl.c:rb_setup_ssl_server and librb/src/openssl_ratbox.h: SSL_CTX_new(TLS_method()); certificate chain + private key; PEM_read_DHparams + SSL_CTX_set_tmp_dh(2048-bit); rb_default_ciphers; SSL_SESS_CACHE_OFF; SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE with an accept-all callback; SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS cleared; SSL_OP_NO_TLSv1, SSL_OP_NO_TICKET, SSL_OP_CIPHER_SERVER_PREFERENCE, SSL_OP_SINGLE_DH_USE, SSL_OP_SINGLE_ECDH_USE; SSL_CTX_set1_curves_list(\"P-521:P-384:P-256\"). The PKI is the fixture's: RSA-2048 server certificate with SAN IP:127.0.0.1/DNS:localhost from an RSA-2048 CA.",
+    "client": "the authority's openssl s_client 3.6.4 (-CAfile fixture CA, default TLS1.3 negotiation and explicit -tls1_2)",
+    "subjects": {
+      "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production",
+      "candidate_before": "artifacts/phase2/install at libssl.so.3 sha256 5992c29da4ffb6dc162acae5c429da515182dc3e48051bb1821fdf0c7ab3ce9a / libcrypto.so.3 sha256 c8a99c59cb69b83ae52bb5d6c19dcd4644ca57b161190892923a84a99bef1694",
+      "candidate_after": "artifacts/phase2/install at libssl.so.3 sha256 bdb4265f758f5561e250ed4ea8ec99a228b7d514120954dd4d74f24d9617a18b / libcrypto.so.3 sha256 e907c2d83d43e633a6b3d6cec17633a89a7d767b333324c05cb8ee8b85f1cf77"
+    },
+    "observation_before_fix": [
+      "candidate, s_client default: client sends TLS 1.3 ClientHello; server answers with a TLS 1.2 record-layer header carrying 'Alert [length 0002], fatal handshake_failure' (alert 40). No ServerHello is emitted.",
+      "candidate, s_client -tls1_2: identical, in response to the TLS 1.2 ClientHello.",
+      "server side: SSL_accept returns -1, SSL_get_error = SSL_ERROR_SSL (1), reason 0x0A000102 = SSL_R_UNSUPPORTED_PROTOCOL, raised by commit_client_hello with SSL_AD_HANDSHAKE_FAILURE.",
+      "authority, both -tls1_2 and default: SSL_accept returns 1; TLSv1.2 selects ECDHE-RSA-CHACHA20-POLY1305 and TLSv1.3 selects TLS_AES_256_GCM_SHA384."
+    ],
+    "stage": "ClientHello processing, before version negotiation completes: the server selects the session version, clamps it to the computed maximum, and fatals because the maximum was SSLv3.",
+    "observation_after_fix": [
+      "candidate, -tls1_2: SSL_accept 1, TLSv1.2, ECDHE-RSA-AES256-GCM-SHA384.",
+      "candidate, default: SSL_accept 1, TLSv1.3, TLS_AES_256_GCM_SHA384.",
+      "The wrong-CA negative control in the charybdis workload still fails, so L7-functional is not a weakened check."
+    ]
+  },
+  "regression_determination": {
+    "verdict": "NOT a regression from S57 or S58. It is a long-standing gap in the default security callback, first reachable in this consumer once S60 repaired the workload.",
+    "evidence": [
+      "ssl_get_min_max_version (src/ssl/statem/statem_lib.rs) and ssl_security_default_callback (src/ssl/ssl_lib.rs) are byte-identical at pre-S58 commit 90107ceda and at HEAD aa7a66583 (SHA-256 of the extracted function bodies match: min/max 88cc1b322e2ffd5b..., callback 5d1b5554859da53b...).",
+      "git blame places the version-selection block and its two SSL_R_UNSUPPORTED_PROTOCOL fatals in ce686ee36 (2026-10-04), and the default callback in 0da2ee0ea (2026-10-03); both predate S57 and S58.",
+      "git diff 90107ceda..HEAD -- src/ssl/statem/statem_lib.rs is empty.",
+      "S57 (4304cccb9) touches only src/ssl/ssl_sess.rs; S58 (7bdc53d83) changes peer/shared sigalg ownership and does not touch the callback or the version walk. The S58 sigalg path is exercised by the same reproduction with SSL_OP_NO_TLSv1 removed and completes on the pre-fix candidate, so S58's changes are not implicated.",
+      "The authority has the same version-option configuration and succeeds, so the consumer's configuration is valid."
+    ]
+  },
+  "root_cause": "ssl_security_default_callback answered 1 for every operation, so ssl_method_error's SSL_SECOP_VERSION check never enforced the security level's TLS1.2 floor; with SSL_OP_NO_TLSv1 opening a hole in the version table, ssl_get_min_max_version selected SSLv3 as the maximum and commit_client_hello rejected every ClientHello as SSL_R_UNSUPPORTED_PROTOCOL.",
+  "mechanism": {
+    "authority_rule": "ssl/ssl_cert.c:1285-1297 (ssl_security_default_callback): non-DTLS versions <= TLS1_1_VERSION are refused at level > 0; DTLS versions below DTLS1.2 are refused at level > 0; a context-only VERSION query answers 0. OpenSSL's default level is 2 (include/openssl/tls1.h OPENSSL_TLS_SECURITY_LEVEL), matching the crate's cert_new.",
+    "walk": "ssl/statem/statem_lib.c:2481-2576 (ssl_get_min_max_version) treats an enabled method below a hole as the new selected version. With the permissive callback, TLS1.1 and SSLv3 were 'enabled' below the SSL_OP_NO_TLSv1 hole, so the final selected version was SSLv3 and max_version became SSLv3.",
+    "consumer_path": "charybdis sets SSL_OP_NO_TLSv1 on a version-flexible TLS_method() context, which is exactly the hole this needs; S60 made the workload reach the TLS listener, so the resulting SSLV3_ALERT_HANDSHAKE_FAILURE became observable."
+  },
+  "fix": {
+    "files": [
+      {
+        "file": "src/ssl/ssl_lib.rs",
+        "change": "Implemented ssl_get_security_level_bits (level clamp 0..5 and the authority's minbits table) and the full SSL_SECOP_VERSION arm of ssl_security_default_callback, including the DTLS ordering and the authority's 0 answer for a context-only VERSION query. Also modelled the authority's level-0 SSL_SECOP_TMP_DH <80-bit refusal. The other operations keep the permissive answer S58 recorded as a residual; their level checks would change cipher and sigalg availability and are a separate boundary, so they were deliberately not widened or narrowed here.",
+        "location": "src/ssl/ssl_lib.rs:284 (ssl_get_security_level_bits), :331 (ssl_security_default_callback)"
+      },
+      {
+        "file": "src/ssl/statem/statem_lib.rs",
+        "change": "Added the focused version-floor regression tests (test-only).",
+        "location": "src/ssl/statem/statem_lib.rs:261-329"
+      },
+      {
+        "file": "src/ssl/statem/statem_srvr.rs",
+        "change": "Added the end-to-end handshake regression test (test-only).",
+        "location": "src/ssl/statem/statem_srvr.rs:7661-7695"
+      }
+    ],
+    "preserved": [
+      "No exported symbol added or removed; no #[no_mangle] diff lines and no #[repr(C)] diff lines.",
+      "Allocator seam untouched (src/runtime/mem.rs is not in the diff).",
+      "Error codes and coordinates preserved: the fatals still raise SSL_AD_HANDSHAKE_FAILURE with SSL_R_UNSUPPORTED_PROTOCOL (258) at the pre-existing sites; the authority's own SSL_R_UNSUPPORTED_PROTOCOL path is now reached for the correct reason.",
+      "Every new unsafe block has a SAFETY comment; no lint attribute was weakened."
+    ],
+    "rejected_alternative": "Recording a §17 divergence instead of fixing it was not appropriate: this is documented authority behaviour that the candidate did not reproduce, not a consumer-specific behaviour we deliberately decline."
+  },
+  "unsafe": {
+    "definition": "Lexical counts over the whole file (tests included), matching forensics/tools/unsafe_footprint.py's unsafe_blocks/unsafe_fns metrics.",
+    "per_file": [
+      {
+        "file": "src/ssl/ssl_lib.rs",
+        "before": {"unsafe_blocks": 864, "unsafe_fns": 78},
+        "after": {"unsafe_blocks": 869, "unsafe_fns": 79},
+        "note": "production increase: one unsafe fn (ssl_get_security_level_bits) with three unsafe blocks (two level getters, the out-pointer write) and two unsafe blocks in the callback (helper call, SSL_is_dtls). Every block carries a SAFETY contract; the callback's existing unsafe extern ABI is unchanged."
+      },
+      {
+        "file": "src/ssl/statem/statem_lib.rs",
+        "before": {"unsafe_blocks": 11, "unsafe_fns": 3},
+        "after": {"unsafe_blocks": 13, "unsafe_fns": 3},
+        "note": "test-only: one unsafe block per test."
+      },
+      {
+        "file": "src/ssl/statem/statem_srvr.rs",
+        "before": {"unsafe_blocks": 379, "unsafe_fns": 70},
+        "after": {"unsafe_blocks": 380, "unsafe_fns": 70},
+        "note": "test-only: one unsafe block in the new handshake test."
+      }
+    ],
+    "eliminated": [
+      "The false permissive answer for SSL_SECOP_VERSION: callers can no longer obtain 'version allowed' for SSLv3/TLS1.0/TLS1.1 at security level > 0 through the default callback."
+    ],
+    "relocated": [
+      "Level clamping and the minbits table live in ssl_get_security_level_bits, outside the callback, matching the authority's helper."
+    ],
+    "hidden": 0
+  },
+  "tests": [
+    {
+      "name": "ssl::statem::statem_lib::version_floor_tests::charybdis_no_tlsv1_keeps_tls12_floor_and_tls13_maximum",
+      "location": "src/ssl/statem/statem_lib.rs:274",
+      "before_fix": "FAILED: assertion 'the security level sets the floor' left 768 (SSL3) right 771 (TLS1.2)",
+      "after_fix": "ok"
+    },
+    {
+      "name": "ssl::statem::statem_lib::version_floor_tests::charybdis_default_context_keeps_tls13_as_maximum",
+      "location": "src/ssl/statem/statem_lib.rs:304",
+      "before_fix": "FAILED: left 768 (SSL3) right 771 (TLS1.2) for the minimum",
+      "after_fix": "ok"
+    },
+    {
+      "name": "ssl::statem::statem_srvr::tls12_group_tests::charybdis_tls12_handshake_with_no_tlsv1",
+      "location": "src/ssl/statem/statem_srvr.rs:7669",
+      "before_fix": "FAILED: TLS1.2 handshake with SSL_OP_NO_TLSv1 failed (client=false server=false, server version=0x0304, reasons=[258])",
+      "after_fix": "ok"
+    }
+  ],
+  "test_run_lines": {
+    "focused_after_fix": "cargo test --lib charybdis_ -- --test-threads=4 -> test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2193 filtered out; finished in 0.84s",
+    "focused_before_fix": "same command with the VERSION arm disabled -> test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 2193 filtered out; finished in 2.41s",
+    "t1_lib": "cargo test --lib t1_lib -- --test-threads=4 -> test result: ok. 15 passed; 0 failed; 1 ignored; 2180 filtered out",
+    "ssl_sess": "cargo test --lib ssl_sess -- --test-threads=4 -> test result: ok. 22 passed; 0 failed; 1 ignored; 2173 filtered out",
+    "statem": "cargo test --lib statem -- --test-threads=4 -> test result: ok. 194 passed; 0 failed; 5 ignored; 1997 filtered out"
+  },
+  "gate": {
+    "fmt": "cargo fmt --all -- --check -> exit 0",
+    "check": "cargo check --lib -> Finished `dev` profile in 3.66s",
+    "clippy_lib": "cargo clippy --lib -- -D warnings -> Finished `dev` profile in 7.74s, no warnings",
+    "phase2_abi_courts": "forensics/tools/build_phase2.sh -> ABI-SYMBOL, ABI-VERSION, ABI-DYNAMIC, ABI-LAYOUT, ABI-LINK, ABI-LOAD, ABI-CONSTANTS, ABI-MATRIX, ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT and libcrypto-contamination all pass; artifacts/phase2/COURTS.json all_pass=True",
+    "structural": {
+      "no_mangle_diff_lines": 0,
+      "repr_c_diff_lines": 0,
+      "allocator_seam": "src/runtime/mem.rs is not in the diff; CRYPTO_malloc/CRYPTO_zalloc/CRYPTO_free and their file/line coordinates are unchanged",
+      "exported_symbols": "unchanged (ABI-SYMBOL/ABI-DYNAMIC pass against the authority)"
+    },
+    "environment": "All project commands ran inside docker/openssl-rs-court.sh exec (minimal court for the Rust gates, openssl-rs-court-expand:1 named openssl-rs-court-expand for the downstream re-measure) with CARGO_BUILD_JOBS=4 and TMPDIR=/work/court/tmp. The release distribution build used the script's own /work/target (CARGO_TARGET_DIR unset) because build_phase2.sh links that fixed archive path. docker/ was not edited. Host MemAvailable was 56 GiB before the builds."
+  },
+  "downstream_remeasure": {
+    "command": "OPENSSL_RS_COURT_IMAGE=openssl-rs-court-expand:1 OPENSSL_RS_COURT_NAME=openssl-rs-court-expand bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && python3 forensics/tools/downstream_runtime.py --measure --only charybdis --reuse-committed --reuse-previous-candidate'",
+    "before": {
+      "charybdis_candidate_level": "L5-loaded",
+      "charybdis_candidate_outcome": "runtime-failure",
+      "charybdis_candidate_reason": "charybdis did not listen or greet over TLS",
+      "client_error": "[SSL: SSLV3_ALERT_HANDSHAKE_FAILURE] sslv3 alert handshake failure (_ssl.c:992)",
+      "candidate_runtime": 207,
+      "candidate_functional": 205,
+      "candidate_below_baseline": 1
+    },
+    "after": {
+      "charybdis_candidate_level": "L7-functional",
+      "charybdis_candidate_outcome": "reached",
+      "charybdis_authority_level": "L7-functional",
+      "candidate_runtime": 208,
+      "candidate_functional": 206,
+      "candidate_reaches_baseline": 306,
+      "candidate_reaches_linked_baseline": 245,
+      "candidate_below_baseline": 0,
+      "candidate_failures": "acquire-failure 693, link-failure 62, functional-failure 2, runtime-failure 1, load-failure 2"
+    },
+    "transcript": "== client == exit=0 ... ':irc.fixture NOTICE * :*** Checking Ident' and the unrelated-CA control still fails to verify."
+  },
+  "grading": {
+    "mechanism": "the default security callback's version floor and ssl_get_min_max_version's maximum",
+    "state": "FIXED (compatibility); not a SAFETY_DISCHARGED claim",
+    "residuals": [
+      "SSL_SECOP_CIPHER_*, SSL_SECOP_SIGALG_*, key-strength and the level>0 TMP_DH arms of the default callback remain permissive, exactly as S58 recorded; implementing them is a separate boundary that changes cipher and sigalg availability.",
+      "No Miri/ASan/Loom run, no full BATCH serial suite, no independent reviewer for this change.",
+      "The candidate binary identity in the re-measured atlas is the new install hash; no held-out cryptographic court was rerun."
+    ],
+    "not_established": [
+      "That other applications setting SSL_OP_NO_TLSv1 on a version-flexible method and relying on cipher/sigalg security-level filtering see authority-identical behaviour (their arms remain permissive).",
+      "A pre-S58 *binary* comparison of the reproduction: the pre-S58 source identity of the implicated functions is byte-identical to HEAD (body hashes), and the same reproduction with SSL_OP_NO_TLSv1 removed succeeds on the pre-fix binary, which is the measured substitute.",
+      "No §17 divergence was required or recorded."
+    ]
+  }
+}
