@@ -1,0 +1,322 @@
+{
+  "schema": "openssl-rs/safe-c33/v3-boundary-instruments/v1",
+  "generated": "2026-10-25",
+  "source": {
+    "head": "3d762d8fb166365b5d6a1b0abe13283765b0535d",
+    "short_head": "3d762d8fb",
+    "branch": "main",
+    "dirty_paths_at_finish": 0,
+    "note": "Every instrument ran in the court container against this tree. Three temporary in-tree canaries (Miri, Loom, MSan) were added, detected, and reverted with git checkout; the final tree is byte-identical to 3d762d8fb. No commit or push was made."
+  },
+  "venue": {
+    "launcher": "docker/openssl-rs-court.sh exec (docker/ was not edited)",
+    "container_image": "openssl-rs-court:1",
+    "cgroup_memory_max_bytes": 8589934592,
+    "nproc": 16,
+    "default_data_limit_kib": 4194304,
+    "sanitizer_data_limit_override": "OPENSSL_RS_COURT_DATA=unlimited (supported by the launcher; required for ASan/TSan shadow)",
+    "distinct_target_dirs": {
+      "miri_stacked": "/work/.miri-v3-stacked",
+      "miri_tree": "/work/.miri-v3-tree",
+      "asan": "/work/.asan-v3",
+      "tsan": "/work/.tsan-v3",
+      "msan": "/work/.msan-v3 (removed after the run)",
+      "loom": "/work/.loom-v3 (removed after the run)",
+      "kani": "/work/court/tmp/kani-v3"
+    },
+    "toolchains": {
+      "court_stable": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "pinned_nightly": "nightly-2026-10-01 = rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+      "miri": "miri 0.1.0 (21b707e3f9 2026-09-30)",
+      "kani": "Kani Rust Verifier 0.68.0 (standalone), CBMC backend, pinned toolchain nightly-2026-08-21"
+    }
+  },
+  "instruments": [
+    {
+      "instrument": "Miri",
+      "status": "RAN",
+      "scope_covered": [
+        "Both borrow models over the 9-test Miri-admitted TCB suite (runtime::miri_tcb): allocator seam, CRYPTO_* ownership, X.509 refcount/lifetime, STACK, LHASH, BUF_MEM, object registry.",
+        "Default (Stacked Borrows), MIRIFLAGS='-Zmiri-strict-provenance': 9 passed, 0 failed.",
+        "Tree Borrows, MIRIFLAGS='-Zmiri-strict-provenance -Zmiri-tree-borrows': 9 passed, 0 failed.",
+        "Focused pass under Stacked Borrows: asn1::owned::release_family_tests::release_is_plain_at_the_instance_coordinates; evp::digest::tests::a_legacy_copy_does_not_alias_the_sources_owned_state; ssl::record::rec_layer_s3::boundary_tests::a_zero_length_record_delivers_zero_bytes."
+      ],
+      "scope_not_covered": [
+        "ml_dsa::tests::the_public_key_encoding_round_trips: UNSUPPORTED, pthread_once.",
+        "ssl::ssl_sess::cache_lifecycle_tests::ssl_sess_lookup_uses_a_key_value_not_a_zeroed_session: UNSUPPORTED, pthread_once.",
+        "No full-library Miri run; no aliasing model is the normative aliasing spec."
+      ],
+      "commands": [
+        "MIRIFLAGS='-Zmiri-strict-provenance' cargo miri test --lib miri_tcb",
+        "MIRIFLAGS='-Zmiri-strict-provenance -Zmiri-tree-borrows' cargo miri test --lib miri_tcb",
+        "MIRIFLAGS='-Zmiri-strict-provenance' cargo miri test --lib <focused filter>"
+      ],
+      "failures": [
+        {
+          "command": "rustup component add miri --toolchain 1.98.1 / cargo miri --version on 1.98.1",
+          "error": "error: the 'miri' component which provides the command 'cargo-miri' is not available for the '1.98.1-x86_64-unknown-linux-gnu' toolchain",
+          "classification": "the previous subphase record is confirmed for stable 1.98.1; it is NOT true for the pinned nightly-2026-10-01, which supplies miri."
+        },
+        {
+          "command": "MIRIFLAGS='-Zmiri-strict-provenance -Zmiri-stacked-borrows' cargo miri test --lib miri_tcb",
+          "error": "error: unknown unstable option: 'miri-stacked-borrows'",
+          "classification": "Stacked Borrows is the default in this Miri; the explicit flag no longer exists. The default run is the Stacked Borrows run."
+        },
+        {
+          "test": "ml_dsa::tests::the_public_key_encoding_round_trips",
+          "error": "error: unsupported operation: can't call foreign function `pthread_once` on OS `linux`",
+          "location": "src/runtime/thread.rs:606:21 (CRYPTO_THREAD_run_once)"
+        },
+        {
+          "test": "ssl::ssl_sess::cache_lifecycle_tests::ssl_sess_lookup_uses_a_key_value_not_a_zeroed_session",
+          "error": "error: unsupported operation: can't call foreign function `pthread_once` on OS `linux`",
+          "location": "src/runtime/thread.rs:606:21 (CRYPTO_THREAD_run_once)"
+        }
+      ],
+      "control": {
+        "kind": "temporary in-tree canary, reverted",
+        "test": "runtime::miri_tcb::miri_negative_control_detects_heap_use_after_free",
+        "detected_under_stacked": "error: Undefined Behavior: memory access failed: alloc... has been freed, so this pointer is dangling (src/runtime/miri_tcb.rs:428)",
+        "detected_under_tree": "error: Undefined Behavior: memory access failed: alloc... has been freed, so this pointer is dangling (src/runtime/miri_tcb.rs:428)",
+        "conclusion": "the Miri detector fires in both borrow models on the same invocation path as the suite."
+      },
+      "establishes": "For the executed admitted and focused inputs, no pointer-provenance, use-after-free, out-of-bounds or borrow-model violation was observed under either Stacked Borrows or Tree Borrows.",
+      "does_not_establish": "Nothing about the ML-DSA owner path or the SessionRef/session-cache path (both blocked by pthread_once), and nothing about paths not executed."
+    },
+    {
+      "instrument": "ASan",
+      "status": "RAN",
+      "scope_covered": [
+        "Rust crate and std rebuilt with -Zbuild-std under -Zsanitizer=address; the first-party C adapters were compiled through a CC wrapper that injects -fsanitize=address.",
+        "Five named lib tests executed instrumented: ASN.1 owner, EVP digest owner, ML-DSA vector owner, record-layer ReadStatus, SessionRef/session-cache lookup.",
+        "Four of the five passed with no ASan report: asn1::owned::release_family_tests; evp::digest::tests::a_legacy_copy_does_not_alias_the_sources_owned_state; ml_dsa::tests::the_public_key_encoding_round_trips; ssl::record::rec_layer_s3::boundary_tests::a_zero_length_record_delivers_zero_bytes."
+      ],
+      "scope_not_covered": [
+        "Only the five named tests executed; the other ~2196 lib tests were compiled but filtered out.",
+        "src/dso/dlfcn.rs (dlopen'd modules) is not instrumentable and was not exercised.",
+        "The first-party C adapters are instrumented; system glibc is not."
+      ],
+      "commands": [
+        "RUSTFLAGS='-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16' CC=/work/court/tmp/asan-cc ASAN_OPTIONS='detect_leaks=1:halt_on_error=1' cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu --no-run",
+        "RUSTFLAGS='-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16' CC=/work/court/tmp/asan-cc ASAN_OPTIONS='detect_leaks=1:halt_on_error=1' cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu <focused filter>"
+      ],
+      "artifact": {
+        "test_binary_sha256": "e0304406a552848cf81a90e4a72014c77cec85d2af90ae3bcb4ea4f1c5c141ed",
+        "test_binary_path": "/work/.asan-v3/x86_64-unknown-linux-gnu/debug/build/openssl-rs/a0063420b7a010a5/out/openssl_rs-a0063420b7a010a5"
+      },
+      "failures": [
+        {
+          "command": "same build with the court default RLIMIT_DATA=4 GiB",
+          "error": "rustc-LLVM ERROR: out of memory / Allocation failed / error: could not compile `openssl-rs` (lib test) (signal 6, SIGABRT)",
+          "classification": "venue limit, not a candidate defect; retried with OPENSSL_RS_COURT_DATA=unlimited and CARGO_BUILD_JOBS=2, which built in 22.8 s."
+        },
+        {
+          "test": "ssl::ssl_sess::cache_lifecycle_tests::ssl_sess_lookup_uses_a_key_value_not_a_zeroed_session",
+          "finding": "LeakSanitizer: Direct leak of 84 byte(s) in 1 object(s); SUMMARY: AddressSanitizer: 84 byte(s) leaked in 1 allocation(s). The test's assertions all passed.",
+          "allocation_stack": "raise_site_dynamic_data (src/runtime/err.rs:1230) <- inner_evp_generic_fetch (src/evp/fetch.rs:1134) <- EVP_MD_fetch <- ssl_load_ciphers <- SSL_CTX_new_ex (src/ssl/ssl_lib.rs:3205) <- the test",
+          "reproduced_on": "ssl::ssl_lib::downstream_compat_tests::set1_groups_list_accepts_the_authority_grammar (unrelated SSL_CTX_new test, even though it calls ERR_clear_error)",
+          "classification": "error-state retention/leak at thread exit, not a SessionRef ownership defect. src/runtime/err.rs:822-823 documents that the thread-local STATE has no Drop, so an error-message buffer installed by an internal failed fetch is not released at thread exit. Recorded as a finding to adjudicate, not as a pass. It is not S56/S57 and not a SAFETY_DISCHARGE."
+        }
+      ],
+      "control": {
+        "kind": "committed canary",
+        "source": "forensics/tools/asan_canary.rs",
+        "detection": "ERROR: AddressSanitizer: heap-use-after-free; SUMMARY: AddressSanitizer: heap-use-after-free",
+        "conclusion": "the ASan instrument fires with the same -Zsanitizer=address used for the crate."
+      },
+      "establishes": "No memory-safety error was observed in four focused instrumented paths, and the instrument is proven active.",
+      "does_not_establish": "Full-suite memory safety, the SessionRef test's clean leak status, or anything about uninstrumented glibc/dlopened modules. The 84-byte leak is an open finding, not a cleared path."
+    },
+    {
+      "instrument": "TSan",
+      "status": "RAN",
+      "scope_covered": [
+        "Rust crate and std rebuilt with -Zbuild-std under -Zsanitizer=thread; first-party C adapters instrumented through a CC wrapper.",
+        "Five concurrent tests executed instrumented and serially (--test-threads=1): runtime::refcount::tests::many_threads_last_release_is_unique; runtime::refcount::tests::concurrent_increments_and_decrements_conserve_ownership; runtime::refcount::tests::up_ref_racing_last_release_never_resurrects; x509::x509_lu::tests::store_refcount_is_atomic_under_concurrent_up_ref; x509::x509_set::tests::concurrent_up_ref_and_free_runs_one_destructor.",
+        "All five passed with no TSan report."
+      ],
+      "scope_not_covered": [
+        "No concurrent session-cache test exists in src/ssl (grep for thread::spawn/thread::scope returns none), so the S57 data-race obligation was not exercised.",
+        "No concurrent X.509 extension-cache publication test exists, so the S56 unlocked-reader-vs-publisher obligation was not exercised.",
+        "Only the five named tests executed; src/dso/dlfcn.rs is not instrumentable; asm! is opaque to TSan."
+      ],
+      "commands": [
+        "RUSTFLAGS='-Zsanitizer=thread -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16' CC=/work/court/tmp/tsan-cc TSAN_OPTIONS='halt_on_error=1:exit_code=66' cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu --no-run",
+        "RUSTFLAGS='-Zsanitizer=thread -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16' CC=/work/court/tmp/tsan-cc TSAN_OPTIONS='halt_on_error=1:exit_code=66' cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu <focused filter> -- --test-threads=1"
+      ],
+      "artifact": {
+        "test_binary_sha256": "d49acae20db3320fdb52e3015a3c5d7bc79f5e82a5caabcc08e7fdb869abb858",
+        "test_binary_path": "/work/.tsan-v3/x86_64-unknown-linux-gnu/debug/build/openssl-rs/4f8ab33413b59cb6/out/openssl_rs-4f8ab33413b59cb6"
+      },
+      "failures": [],
+      "control": {
+        "kind": "committed canary",
+        "source": "forensics/tools/tsan_canary.rs",
+        "detection": "WARNING: ThreadSanitizer: data race (Read of size 4 ... in core::ptr::read_volatile); SUMMARY: ThreadSanitizer: data race",
+        "conclusion": "the TSan instrument fires with the same -Zsanitizer=thread used for the crate."
+      },
+      "establishes": "No data race was observed in the five exercised refcount/store/certificate concurrent tests; the instrument is proven active.",
+      "does_not_establish": "S56 or S57 data-race freedom. The unresolved S57 race is on plain not_resumable/owner/payload fields read without the lock, and there is no test that drives a concurrent reader against the locked mutators."
+    },
+    {
+      "instrument": "Loom",
+      "status": "RAN",
+      "scope_covered": [
+        "Existing cfg(loom) model of the real refcount transition functions: the same generic up_ref/down_ref used by SSL_SESSION, X509 and X509_STORE, instantiated over loom::sync::atomic::AtomicI32 through the RefAtomic trait.",
+        "Four models passed: loom_base_reference_yields_one_last; loom_last_release_race_never_resurrects; loom_sentinel_absorbs_a_second_release; loom_up_ref_refuses_i32_max.",
+        "This is a model of the transition logic, not a hand-written simplification: the Loom module implements RefAtomic for loom's AtomicI32 and calls the production up_ref/down_ref."
+      ],
+      "scope_not_covered": [
+        "No Loom model exists for S56 X.509 cache publication.",
+        "No Loom model exists for the S57 not_resumable/owner/payload data race.",
+        "No model of the C pthread rwlock (CRYPTO_THREAD_read_lock/write_lock) or of plain C field memory."
+      ],
+      "commands": [
+        "RUSTFLAGS='--cfg loom' cargo test --lib runtime::refcount::loom_tests"
+      ],
+      "failures": [],
+      "control": {
+        "kind": "temporary in-tree canary, reverted",
+        "test": "runtime::refcount::loom_tests::loom_negative_control_detects_a_data_race",
+        "detection": "thread panicked: Causality violation: Concurrent write accesses to `UnsafeCell`; test result: FAILED",
+        "conclusion": "Loom's race detector fires on the same invocation path as the models."
+      },
+      "establishes": "The atomic reference-count protocol used by sessions and X.509 is exhaustively interleaving-checked for the modelled operations, with the instrument proven active.",
+      "does_not_establish": "Either unresolved S56/S57 concurrency obligation. See s56_s57_loom."
+    },
+    {
+      "instrument": "Kani",
+      "status": "RAN",
+      "scope_covered": [
+        "Positive control: kani_positive_control_deliberate_failure -> VERIFICATION:- FAILED, as required.",
+        "blake2b_param_init_sets_the_documented_prefix -> VERIFICATION:- SUCCESSFUL (bounded over an arbitrary 64-byte starting block).",
+        "blake2b_param_set_personal_is_bounded_and_zero_filled -> VERIFICATION:- SUCCESSFUL (bounded over all n <= PERSONALBYTES, including offset arithmetic)."
+      ],
+      "scope_not_covered": [
+        "No harness exists or is expressible for the EVP/ASN.1 owner types, the ML-DSA vector owner, or SessionRef: every such path crosses ffi::guard_ffi/catch_unwind.",
+        "The committed ASN.1 pointer/length harness (asn1_object_size_always_has_encoding_overhead) is UNSUPPORTED under this Kani."
+      ],
+      "commands": [
+        "cargo-kani kani --tests --harness <name> --manifest-path /work/Cargo.toml --target-dir /work/court/tmp/kani-v3 --output-format terse"
+      ],
+      "failures": [
+        {
+          "harness": "asn1_object_size_always_has_encoding_overhead",
+          "error": "Kani unexpectedly panicked during compilation. error: internal compiler error: Kani unexpectedly panicked at panicked at kani-compiler/src/intrinsics.rs:243:17; error: could not compile `openssl-rs` (test \"kani_proofs\") due to an internal compiler error",
+          "classification": "UNSUPPORTED. ASN1_object_size runs inside guard_ffi; Kani 0.68.0 cannot lower this toolchain's catch_unwind intrinsic. This is the pointer/length-arithmetic target and it remains unproved."
+        }
+      ],
+      "control": {
+        "kind": "committed canary harness",
+        "harness": "kani_positive_control_deliberate_failure",
+        "detection": "VERIFICATION:- FAILED",
+        "conclusion": "Kani detects a violated assertion in this venue."
+      },
+      "establishes": "Two pure bounded state/length invariants are proved for all inputs in their domains, and the prover is proven active.",
+      "does_not_establish": "Any owner-state proof for the EVP/ASN.1/ML-DSA/SessionRef types, or the ASN.1 pointer/length property."
+    },
+    {
+      "instrument": "MSan",
+      "status": "RAN_BOUNDED_NOT_ADMISSIBLE",
+      "scope_covered": [
+        "Rust crate and std rebuilt with -Zbuild-std under -Zsanitizer=memory; first-party C adapters instrumented through a CC wrapper.",
+        "Two focused paths executed clean: asn1::owned::release_family_tests and ml_dsa::tests::the_public_key_encoding_round_trips.",
+        "The instrument is proven active by the control below."
+      ],
+      "scope_not_covered": [
+        "No path is fully instrumented: the venue links the uninstrumented system glibc, and the crate's allocator and thread primitives call it directly.",
+        "A clean MSan run cannot be read as a proof of initialisation soundness across that boundary; the committed ASan/TSan canaries are not MSan controls."
+      ],
+      "commands": [
+        "RUSTFLAGS='-Zsanitizer=memory -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16' CC=/work/court/tmp/msan-cc MSAN_OPTIONS='halt_on_error=1:exit_code=86' cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu <focused filter>"
+      ],
+      "failures": [],
+      "control": {
+        "kind": "temporary in-tree canary, reverted",
+        "test": "asn1::owned::release_family_tests::msan_negative_control_detects_uninitialised_read",
+        "detection": "WARNING: MemorySanitizer: use-of-uninitialized-value; SUMMARY: MemorySanitizer: use-of-uninitialized-value; exit status 86",
+        "conclusion": "the MSan instrument fires on this build, but instrument activity does not make the crate's initialisation question admissible."
+      },
+      "establishes": "The MSan instrument is active and two focused instrumented paths ran without a diagnostic.",
+      "does_not_establish": "Initialisation soundness of the crate or of any path that crosses libc. The C-runtime dependency cannot be fully instrumented, so the result is not counted as a pass."
+    }
+  ],
+  "s56_s57_loom": {
+    "s56_x509_cache_publication": {
+      "faithful_model_expressible": false,
+      "why": "The production transition logic is ossl_x509v3_cache_extensions: it takes (*x).lock through CRYPTO_THREAD_write_lock (a pthread rwlock), builds CacheBuild, installs seven raw NonNull slots plus scalar c_ulong/c_long fields on a #[repr(C)] X509, and publishes with ex_flags|EXFLAG_SET. The unresolved race is that x509_vfy readers read crldp/nc/altname/akid/skid/ex_flags without any lock. Loom can model its own AtomicUsize/RwLock/UnsafeCell, but production has no loom seam for the C rwlock or for the plain field memory. A faithful model would require parameterising X509, its lock and every field access over loom types (a production change), not a toy re-implementation.",
+      "what_a_toy_would_hide": "A hand-written model with an AtomicUsize ex_flags and a loom RwLock would prove a property of the toy, not of the code: the actual defect is the reader that takes no lock at all, and the C lock is outside Loom's control.",
+      "evidence": "No Loom module exists for x509/v3_purp.rs; the only cfg(loom) module is runtime/refcount.rs."
+    },
+    "s57_tls_session_bookkeeping": {
+      "faithful_model_expressible": false,
+      "refcount_subobligation_modelled": true,
+      "why": "The unresolved obligation is a data race: eviction/removal/flush write (*c).not_resumable and (*c).owner and mutate the session payload under the context's CRYPTO_RWLOCK, while a thread that already holds a reference reads them with no lock. Those fields are plain (non-atomic) members of #[repr(C)] SslSession, and the lock is a C pthread rwlock; neither has a loom seam. The reference-count sub-obligation IS faithfully modelled: SessionRef lowering and the shared up_ref/down_ref use the RefAtomic trait, and the existing loom_tests instantiate the production functions over loom::sync::atomic::AtomicI32 and pass 4/4.",
+      "what_a_toy_would_hide": "A model of not_resumable as a loom::AtomicU8 would change the production representation and would not model the unlocked read of the actual field; it would answer a different question.",
+      "evidence": "runtime::refcount::loom_tests 4/4; no cfg(loom) module in ssl/ssl_sess.rs."
+    },
+    "conclusion": "Loom can and does model the S57 reference-count transition logic, and it passes. It cannot faithfully model either unresolved obligation (S56 cache publication or S57 not_resumable/owner/payload bookkeeping) with the current code shape, so no toy model was produced."
+  },
+  "failed_commands": [
+    {
+      "instrument": "Miri",
+      "command": "cargo miri --version with RUSTUP_TOOLCHAIN=1.98.1",
+      "error": "error: the 'miri' component which provides the command 'cargo-miri' is not available for the '1.98.1-x86_64-unknown-linux-gnu' toolchain"
+    },
+    {
+      "instrument": "Miri",
+      "command": "MIRIFLAGS='-Zmiri-strict-provenance -Zmiri-stacked-borrows' cargo miri test --lib miri_tcb",
+      "error": "error: unknown unstable option: 'miri-stacked-borrows'"
+    },
+    {
+      "instrument": "Miri",
+      "command": "cargo miri test --lib ml_dsa::tests::the_public_key_encoding_round_trips",
+      "error": "error: unsupported operation: can't call foreign function `pthread_once` on OS `linux` (src/runtime/thread.rs:606:21)"
+    },
+    {
+      "instrument": "Miri",
+      "command": "cargo miri test --lib ssl::ssl_sess::cache_lifecycle_tests::ssl_sess_lookup_uses_a_key_value_not_a_zeroed_session",
+      "error": "error: unsupported operation: can't call foreign function `pthread_once` on OS `linux` (src/runtime/thread.rs:606:21)"
+    },
+    {
+      "instrument": "ASan",
+      "command": "ASan build under the court default RLIMIT_DATA=4 GiB",
+      "error": "rustc-LLVM ERROR: out of memory / Allocation failed / could not compile `openssl-rs` (lib test), signal 6 (SIGABRT)"
+    },
+    {
+      "instrument": "ASan",
+      "command": "ssl_sess_lookup_uses_a_key_value_not_a_zeroed_session with ASAN_OPTIONS=detect_leaks=1:halt_on_error=1",
+      "error": "Direct leak of 84 byte(s) in 1 object(s); SUMMARY: AddressSanitizer: 84 byte(s) leaked in 1 allocation(s); exit status 1"
+    },
+    {
+      "instrument": "Kani",
+      "command": "cargo-kani kani --tests --harness asn1_object_size_always_has_encoding_overhead ...",
+      "error": "error: internal compiler error: Kani unexpectedly panicked at panicked at kani-compiler/src/intrinsics.rs:243:17; error: could not compile `openssl-rs` (test \"kani_proofs\") due to an internal compiler error"
+    }
+  ],
+  "matrix_establishes": [
+    "Every instrument that ran was proven active by a deliberate failure on the same invocation path (Miri UAF under both borrow models; ASan heap-use-after-free; TSan data race; Loom concurrent-write causality violation; Kani false assertion FAILED; MSan use-of-uninitialized-value).",
+    "Miri: the 9-test admitted TCB suite and three focused owner/lifetime tests are UB-free under both Stacked and Tree Borrows for the executed inputs.",
+    "ASan: four focused owner/record paths are free of memory errors; one 84-byte error-state leak at thread exit is an open finding.",
+    "TSan: five concurrent refcount/store/certificate tests show no data race.",
+    "Loom: the production refcount transition logic is model-checked 4/4 over modelled atomics.",
+    "Kani: two pure bounded state/length invariants are proved for their full domains.",
+    "MSan: the instrument is active; two focused instrumented paths produced no diagnostic (a bounded observation only)."
+  ],
+  "matrix_does_not_establish": [
+    "S56 X.509 extension-cache publication safety against the documented unlocked x509_vfy readers: no Loom model, no concurrent test, and TSan did not exercise it.",
+    "S57 session-bookkeeping data-race freedom: no Loom model of the plain not_resumable/owner/payload fields, and no concurrent session-cache test exists.",
+    "Any full-library Miri/ASan/TSan result. Only named tests executed; 2196 lib tests were filtered out in the sanitizer runs.",
+    "Any BOUNDARY or SEAL gate, any SAFETY_DISCHARGED or SAFE_COMPATIBLE claim, any consumer graduation.",
+    "Any cryptographic, constant-time, authority-differential or compatibility result (these instruments do not measure those axes).",
+    "That the 84-byte ASan leak is or is not a product defect; it is recorded at its exact allocation site and requires adjudication.",
+    "ASN.1 pointer/length arithmetic: the Kani harness is UNSUPPORTED (internal compiler error), so no proof exists there.",
+    "Initialisation soundness across libc: MSan cannot instrument the system glibc, and no MSan control over that boundary exists."
+  ],
+  "non_claims": [
+    "A green instrument run is not a safety certificate under the AGENTS.md FAST/BATCH/BOUNDARY/SEAL schedule.",
+    "A source-level clean result is not constant-time evidence.",
+    "Miri's borrow model is a research instrument, not the normative aliasing specification.",
+    "The temporary canaries were test-only, never present in a release configuration, and were reverted before this receipt was written."
+  ]
+}
