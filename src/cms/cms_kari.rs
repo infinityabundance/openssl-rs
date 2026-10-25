@@ -14,7 +14,8 @@ use crate::asn1::layout::Asn1String;
 use crate::asn1::string::{ASN1_OCTET_STRING_new, ASN1_STRING_set0};
 use crate::asn1::x_algor::X509Algor;
 use crate::evp::cipher_ctx::{
-    EVP_CIPHER_CTX_get_key_length, EVP_CIPHER_CTX_reset, EVP_CipherInit_ex, EVP_CipherUpdate,
+    EVP_CIPHER_CTX_get_block_size, EVP_CIPHER_CTX_get_key_length, EVP_CIPHER_CTX_reset,
+    EVP_CipherInit_ex, EVP_CipherUpdate, EvpCipherCtx,
 };
 use crate::evp::exchange::{EVP_PKEY_derive, EVP_PKEY_derive_init, EVP_PKEY_derive_set_peer};
 use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
@@ -27,6 +28,7 @@ use crate::x509::x509_cmp::X509_get0_pubkey;
 use crate::x509::x_x509::X509;
 
 use super::cms_asn1::*;
+use super::cms_env::{declared_update_extent, reported_extent, SecretScratch};
 use super::cms_lib::{
     ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq, ossl_cms_ias_cert_cmp,
     ossl_cms_keyid_cert_cmp, ossl_cms_set1_ias, ossl_cms_set1_keyid, raise_cms,
@@ -491,31 +493,153 @@ struct DerivedKek {
 
 impl Drop for DerivedKek {
     fn drop(&mut self) {
-        // SAFETY: `bytes` is a live `EVP_MAX_KEY_LENGTH` buffer and `len` never exceeds it.
-        unsafe { OPENSSL_cleanse(self.bytes.as_mut_ptr().cast(), self.len) };
+        // The buffer extent, not a provider report, bounds the cleansing write: a derivation
+        // that reports more than the `EVP_MAX_KEY_LENGTH` buffer it was given must not enlarge
+        // the cleanse past this frame's allocation.
+        let len = self.len.min(self.bytes.len());
+        // SAFETY: `bytes` is a live `EVP_MAX_KEY_LENGTH` buffer and `len` is bounded by it.
+        unsafe { OPENSSL_cleanse(self.bytes.as_mut_ptr().cast(), len) };
     }
+}
+
+/// The block produced by one KEK cipher operation.
+///
+/// This is the whole output contract in one value: the authority's allocation
+/// (`cms_kari.c:235`, its extent recorded in `capacity`), the provider's reported and
+/// validated initialised prefix (`produced`, never larger than `capacity`), and the single
+/// owner of the seam block. Nothing is published until [`Self::publish_into`] consumes it;
+/// every earlier failure drops it through the authority's cleansing release.
+struct CipherOutput {
+    block: OwnedBuf,
+    /// The authority's allocation extent, `max(queried, in_len)`.
+    capacity: usize,
+    /// The validated initialised prefix, never larger than `capacity`.
+    produced: usize,
+}
+
+impl CipherOutput {
+    fn new(block: OwnedBuf, capacity: usize, produced: usize) -> Option<Self> {
+        (produced <= capacity).then_some(Self {
+            block,
+            capacity,
+            produced,
+        })
+    }
+
+    /// The validated output length. This, never a bare provider report, is what becomes the
+    /// published key length.
+    fn produced(&self) -> usize {
+        self.produced
+    }
+
+    /// Give the block to a raw consumer (`ASN1_STRING_set0`) together with its length.
+    fn into_raw_parts(self) -> (*mut c_uchar, usize) {
+        (self.block.into_raw(), self.produced)
+    }
+
+    /// Publish this block as the container's content key.
+    ///
+    /// This is the single publication point for the recipient handoff: the incumbent is
+    /// released and the new block and its validated length are installed in one non-fallible
+    /// step, so exactly one owner exists before and after.
+    ///
+    /// # Safety
+    /// `ec` is live; this handle owns the whole seam block and `produced <= capacity`.
+    unsafe fn publish_into(self, ec: *mut CmsEncryptedContentInfo) {
+        let (ptr_, len) = self.into_raw_parts();
+        // SAFETY: `ec` is live; ownership of this frame's block moves into `ec->key` exactly
+        // once, and `len` is the validated prefix no larger than the block.
+        unsafe {
+            super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
+            (*ec).key = ptr_;
+            (*ec).keylen = len;
+        }
+    }
+}
+
+/// Run the two-pass cipher over `input` and return the single-owned, validated output.
+///
+/// The first call only queries the length. The block the provider is actually told it may
+/// fill (`in_len + block_size`, exactly `in_len` for a one-byte block) is allocated
+/// **before** the second call, and the authority's own allocation is sized from the query as
+/// before. The second call's report is accepted only if it fits both extents; it is never
+/// used as an offset or a published length merely because the call returned success. That
+/// includes the primitive's integrity-failure path, where a provider may write and cleanse up
+/// to `in_len + block_size` bytes before reporting failure: the writes land in the staging
+/// block, not in the smaller authority allocation.
+///
+/// # Safety
+/// `ctx` is live and initialised for `enc`; `input` is readable for `in_len`, which fits
+/// `c_int`.
+unsafe fn cipher_output(
+    ctx: *mut EvpCipherCtx,
+    input: *const c_uchar,
+    in_len: usize,
+) -> Option<CipherOutput> {
+    if in_len == 0 || in_len > c_int::MAX as usize || input.is_null() {
+        return None;
+    }
+    // SAFETY: `ctx` is live per this function's contract.
+    let block_size = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) };
+    let stage_capacity = declared_update_extent(in_len, block_size)?;
+    let mut stage = SecretScratch::new(stage_capacity)?;
+
+    let in_len = in_len as c_int;
+    let mut reported: c_int = 0;
+    // SAFETY: `ctx` is live; a NULL output is the authority's length query.
+    if unsafe { EVP_CipherUpdate(ctx, ptr::null_mut(), &mut reported, input, in_len) } == 0 {
+        return None;
+    }
+    let queried = reported_extent(reported, usize::MAX)?;
+    // The authority's allocation extent (`cms_kari.c:234`): `max(outlen, in_len)`. A refused
+    // allocation is a refused operation, exactly as it was before the staging block.
+    let capacity = queried.max(in_len as usize);
+    // SAFETY: `capacity > 0` because `in_len > 0`.
+    let block = OwnedBuf::new_cleansed_released(
+        capacity,
+        SeamFile::new(c"cms_kari.c"),
+        235,
+        SeamFile::NULL,
+        0,
+    )?;
+
+    // SAFETY: `ctx` is live, and `stage` holds exactly the extent the provider is told it may
+    // fill, so a conforming provider cannot write past what it was told.
+    if unsafe { EVP_CipherUpdate(ctx, stage.as_mut_ptr(), &mut reported, input, in_len) } == 0 {
+        // `stage` and `block` cleanse and release themselves on drop.
+        return None;
+    }
+    let produced = reported_extent(reported, stage_capacity)?;
+    if produced > capacity {
+        // A report past the authority's allocation would make the published length exceed the
+        // block its destructor cleanses; refuse it rather than use it as `keylen`.
+        return None;
+    }
+    // Only the validated prefix is the key. `stage` cleanses the whole staged extent on its
+    // way out; the authority's block keeps its exact extent and the validated length.
+    // SAFETY: `produced` fits both `stage` and `block`, and the two are distinct allocations.
+    unsafe { ptr::copy_nonoverlapping(stage.as_ptr(), block.as_ptr(), produced) };
+    CipherOutput::new(block, capacity, produced)
 }
 
 /// `int cms_kek_cipher(unsigned char **pout, size_t *poutlen, const unsigned char *in,``
 /// `size_t inlen, CMS_KeyAgreeRecipientInfo *kari, int enc)` — `cms_kari.c:204-254`.
 ///
+/// The authority's out-parameters become one [`CipherOutput`]: capacity, validated length,
+/// owner and transfer state cannot be separated from each other by a caller.
+///
 /// # Safety
-/// `pout`/`poutlen` are writable; `in` is readable for `inlen`; `kari` is live.
+/// `input` is readable for `inlen`; `kari` is live.
 unsafe fn cms_kek_cipher(
-    pout: *mut *mut c_uchar,
-    poutlen: *mut usize,
     input: *const c_uchar,
     inlen: usize,
     kari: *mut CmsKeyAgreeRecipientInfo,
     enc: c_int,
-) -> c_int {
-    let mut outlen: c_int = 0;
-    let mut outsize = 0usize;
-
+) -> Option<CipherOutput> {
     // SAFETY: `kari` is live.
     let keklen = unsafe { EVP_CIPHER_CTX_get_key_length((*kari).ctx.cast()) } as usize;
-    if keklen > EVP_MAX_KEY_LENGTH || inlen > c_int::MAX as usize {
-        return 0;
+    if keklen > EVP_MAX_KEY_LENGTH || inlen == 0 || inlen > c_int::MAX as usize || input.is_null() {
+        return None;
     }
     // Every exit below cleanses the KEK, resets the cipher context and releases the agreement
     // context in the authority's order -- reverse declaration order does it: KEK, cipher, pkey.
@@ -530,7 +654,7 @@ unsafe fn cms_kek_cipher(
     // Derive KEK.
     // SAFETY: `kari` is live; `kek` is writable for `kek.len`.
     if unsafe { EVP_PKEY_derive((*kari).pctx.cast(), kek.bytes.as_mut_ptr(), &mut kek.len) } <= 0 {
-        return 0;
+        return None;
     }
     // Set KEK in context.
     // SAFETY: `kari` is live; `kek` is readable for `kek.len`.
@@ -545,60 +669,11 @@ unsafe fn cms_kek_cipher(
         )
     } == 0
     {
-        return 0;
+        return None;
     }
-    // Obtain output length of ciphered key.
-    // SAFETY: `kari` is live.
-    if unsafe {
-        EVP_CipherUpdate(
-            (*kari).ctx.cast(),
-            ptr::null_mut(),
-            &mut outlen,
-            input,
-            inlen as c_int,
-        )
-    } == 0
-    {
-        return 0;
-    }
-    // Size the buffer for the worst case the primitive cleanses on failure.
-    outsize = if (outlen as usize) < inlen {
-        inlen
-    } else {
-        outlen as usize
-    };
-    // The ciphered key is this frame's scratch, allocated through the crate's allocator seam at
-    // `outsize`; its release is the authority's cleansing `OPENSSL_clear_free`, run by `Drop`.
-    // SAFETY: `outsize > 0`.
-    let Some(out) = OwnedBuf::new_cleansed_released(
-        outsize,
-        SeamFile::new(c"cms_kari.c"),
-        235,
-        SeamFile::NULL,
-        0,
-    ) else {
-        return 0;
-    };
-    // SAFETY: `kari` is live; `out` is writable.
-    if unsafe {
-        EVP_CipherUpdate(
-            (*kari).ctx.cast(),
-            out.as_ptr(),
-            &mut outlen,
-            input,
-            inlen as c_int,
-        )
-    } == 0
-    {
-        // `out` clears and releases its own block on drop; the guards release the rest.
-        return 0;
-    }
-    // SAFETY: `pout`/`poutlen` are writable; ownership of the block transfers to the caller.
-    unsafe {
-        *pout = out.into_raw();
-        *poutlen = outlen as usize;
-    }
-    1
+    // SAFETY: the context is initialised by the two calls above, and the length and input were
+    // validated above.
+    unsafe { cipher_output((*kari).ctx.cast(), input, inlen) }
 }
 
 /// `int CMS_RecipientInfo_kari_decrypt(CMS_ContentInfo *cms, CMS_RecipientInfo *ri,`
@@ -612,10 +687,6 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kari_decrypt(
     ri: *mut CmsRecipientInfo,
     rek: *mut CmsRecipientEncryptedKey,
 ) -> c_int {
-    let mut rv = 0;
-    let mut cek: *mut c_uchar = ptr::null_mut();
-    let mut ceklen = 0usize;
-
     // SAFETY: `rek` is live.
     let enckeylen = unsafe { (*(*rek).encrypted_key).length } as usize;
     // SAFETY: `rek` is live.
@@ -623,44 +694,35 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_kari_decrypt(
     // Setup all parameters to derive KEK.
     // SAFETY: `ri` is live.
     if unsafe { super::cms_env::ossl_cms_env_asn1_ctrl(ri, 1) } == 0 {
-        return rv;
+        return 0;
     }
-    // Attempt to decrypt CEK.
-    // SAFETY: `ri` is live.
-    if unsafe {
+    // The helper hands back the single owner of the CEK block. It remains the only owner until
+    // the publication point below; derivation, cipher-initialisation and candidate-processing
+    // failures all drop it through the authority's cleansing release, and no raw pointer is
+    // ever published into the slot on those paths.
+    // SAFETY: `ri` is live; `enckey` is readable for `enckeylen` (both come from the
+    // decrypted-key field).
+    let Some(key) = (unsafe {
         cms_kek_cipher(
-            &mut cek,
-            &mut ceklen,
             enckey,
             enckeylen,
             (*ri).d.cast::<CmsKeyAgreeRecipientInfo>(),
             0,
         )
-    } == 0
-    {
-        // The helper leaves no block in the slot on failure; the authority's `err:` release is a
-        // plain `CRYPTO_free`, run here by `Drop`.
-        // SAFETY: `cek` is NULL or a live block the helper allocated and no one else owns.
-        let cek_owned =
-            unsafe { OwnedBuf::adopt_plain_nullable(cek, SeamFile::new(c"cms_kari.c"), 281) };
-        drop(cek_owned);
-        return rv;
-    }
-    // The decrypted CEK is the helper's block; its release is the authority's plain `CRYPTO_free`.
-    // SAFETY: `cek` is a live block the helper allocated and no one else owns.
-    let cek_owned =
-        unsafe { OwnedBuf::adopt_plain_nullable(cek, SeamFile::new(c"cms_kari.c"), 281) };
+    }) else {
+        return 0;
+    };
     // SAFETY: `cms` is live.
     let ec = unsafe { super::cms_env::ossl_cms_get0_env_enc_content(cms) };
-    // SAFETY: `ec` is live.
-    unsafe { super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen) };
-    // SAFETY: `ec` is live; ownership of the block moves into `ec->key`.
-    unsafe {
-        (*ec).key = cek_owned.into_raw();
-        (*ec).keylen = ceklen;
+    if ec.is_null() {
+        // The authority dereferences this unconditionally; refusing is the safe deviation. The
+        // candidate owner releases the CEK exactly once on this path.
+        return 0;
     }
-    rv = 1;
-    rv
+    // SAFETY: `ec` is live; `key` is the only owner of the block and is consumed by the
+    // single publication point.
+    unsafe { key.publish_into(ec) };
+    1
 }
 
 /// `int cms_kari_create_ephemeral_key(CMS_KeyAgreeRecipientInfo *kari, EVP_PKEY *pk)` —
@@ -979,24 +1041,14 @@ pub(crate) unsafe extern "C" fn ossl_cms_RecipientInfo_kari_encrypt(
         if unsafe { EVP_PKEY_derive_set_peer((*kari).pctx.cast(), (*rek).pkey) } <= 0 {
             return 0;
         }
-        let mut enckey: *mut c_uchar = ptr::null_mut();
-        let mut enckeylen = 0usize;
         // SAFETY: `ec`/`kari` are live.
-        if unsafe {
-            cms_kek_cipher(
-                &mut enckey,
-                &mut enckeylen,
-                (*ec).key,
-                (*ec).keylen,
-                kari,
-                1,
-            )
-        } == 0
-        {
+        let Some(enckey) = (unsafe { cms_kek_cipher((*ec).key, (*ec).keylen, kari, 1) }) else {
             return 0;
-        }
-        // SAFETY: `rek`/`enckey` are live; ownership transfers.
-        unsafe { ASN1_STRING_set0((*rek).encrypted_key, enckey.cast(), enckeylen as c_int) };
+        };
+        let (ptr_, len) = enckey.into_raw_parts();
+        // SAFETY: `rek`/`ptr_` are live; ownership transfers. `len` is the validated produced
+        // length and is at most the authority's allocation, itself at most `c_int::MAX`.
+        unsafe { ASN1_STRING_set0((*rek).encrypted_key, ptr_.cast(), len as c_int) };
     }
 
     1
@@ -1010,8 +1062,9 @@ const ERR_CMS_R_NOT_KEY_AGREEMENT: c_int =
 #[allow(clippy::panic, clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::evp::cipher::{EVP_CIPHER_meth_free, EVP_CIPHER_meth_new, EvpCipher};
     use crate::evp::pkey::EVP_PKEY_new;
-    use crate::evp::pkey_ctx::EVP_PKEY_CTX_new_from_name;
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_new_from_name, EVP_PKEY_CTX_set_group_name};
 
     /// A live `CMS_RecipientInfo` in the AGREE arm with no agreement context installed.
     ///
@@ -1051,6 +1104,473 @@ mod tests {
             );
             // The recipient's destructor now has nothing to release.
             m_asn1_free(ri.cast(), cms_recipientinfo_it());
+        }
+    }
+
+    // -------------------------------------------------------------------------------------
+    // KEK cipher output: capacity established before dispatch, one owner, one publication
+    // -------------------------------------------------------------------------------------
+
+    /// What one fake provider call does: the length it reports for the NULL-output query and,
+    /// for the real call, how much it writes (bounded by the declared extent) and reports.
+    #[derive(Clone, Copy)]
+    struct UpdateScript {
+        query_report: usize,
+        write: usize,
+        report: usize,
+    }
+
+    // SAFETY: `out` is writable for `outsize` bytes per the dispatch contract; `state` is this
+    // test's own plain-old-data record.
+    unsafe extern "C" fn scripted_update(
+        state: *mut c_void,
+        out: *mut c_uchar,
+        outl: *mut usize,
+        outsize: usize,
+        _input: *const c_uchar,
+        _inl: usize,
+    ) -> c_int {
+        // SAFETY: the dispatch contract gives `out` `outsize` writable bytes.
+        unsafe {
+            let s = *state.cast::<UpdateScript>();
+            if out.is_null() {
+                *outl = s.query_report;
+            } else {
+                let write = s.write.min(outsize);
+                if write > 0 {
+                    ptr::write_bytes(out, 0x5A, write);
+                }
+                *outl = s.report;
+            }
+        }
+        1
+    }
+
+    /// A hand-built provider method and context for [`cipher_output`].
+    ///
+    /// # Safety
+    /// The returned method must be released with `EVP_CIPHER_meth_free` after its `prov`
+    /// marker is cleared, and the context is a plain-old-data value whose callback reads only
+    /// `state`.
+    unsafe fn scripted_ctx(state: *mut UpdateScript) -> (*mut EvpCipher, EvpCipherCtx) {
+        // SAFETY: the constructor answers a fresh `EVP_ORIG_METH` method or NULL.
+        let cipher = unsafe { EVP_CIPHER_meth_new(0, 8, 16) };
+        assert!(!cipher.is_null());
+        // SAFETY: `cipher` is this test's live method; every field write is to it.
+        unsafe {
+            // A non-NULL marker selects the provider arm; the method is released with it
+            // cleared below so nothing dereferences the marker.
+            (*cipher).prov = state.cast();
+            (*cipher).cupdate = Some(scripted_update);
+        }
+        // SAFETY: an all-zero `EvpCipherCtx` is its constructed empty state.
+        let mut ctx: EvpCipherCtx = unsafe { core::mem::zeroed() };
+        ctx.cipher = cipher;
+        ctx.encrypt = 0;
+        ctx.algctx = state.cast();
+        (cipher, ctx)
+    }
+
+    /// A provider whose report exceeds the extent it was told it could fill is refused, and the
+    /// staging block is not enlarged to accommodate the lie.
+    #[test]
+    fn cms_kari_provider_reports_more_output_than_capacity() {
+        let in_len = 24usize;
+        assert_eq!(declared_update_extent(in_len, 8), Some(32));
+        let data = [0x33u8; 24];
+        // SAFETY: every pointer is this frame's; the fixture meets `cipher_output`'s contract.
+        unsafe {
+            // The report itself is one past the 32-byte extent the provider was told it may
+            // fill (the write is clamped there by the fixture, as a conforming provider would).
+            let mut state = UpdateScript {
+                query_report: 32,
+                write: 32,
+                report: 33,
+            };
+            let (cipher, mut ctx) = scripted_ctx(&mut state);
+            assert!(
+                cipher_output(&mut ctx, data.as_ptr(), in_len).is_none(),
+                "a report past the declared output extent is refused"
+            );
+            (*cipher).prov = ptr::null_mut();
+            EVP_CIPHER_meth_free(cipher);
+
+            // A large report without a write is refused just the same.
+            let mut state = UpdateScript {
+                query_report: 32,
+                write: 0,
+                report: 4096,
+            };
+            let (cipher, mut ctx) = scripted_ctx(&mut state);
+            assert!(
+                cipher_output(&mut ctx, data.as_ptr(), in_len).is_none(),
+                "the report is validated, not trusted because the call succeeded"
+            );
+            (*cipher).prov = ptr::null_mut();
+            EVP_CIPHER_meth_free(cipher);
+        }
+    }
+
+    /// The query and the successful update disagree: the second report fits the staging extent
+    /// but not the authority's allocation, which would make the published key length exceed the
+    /// block its destructor cleanses. An honest pair is accepted with the validated length.
+    #[test]
+    fn cms_kari_provider_output_length_disagreement_on_success() {
+        let in_len = 24usize;
+        let data = [0x44u8; 24];
+        // SAFETY: every pointer is this frame's; the fixture meets `cipher_output`'s contract.
+        unsafe {
+            // Query says 16, so the authority allocates `max(16, 24) = 24`; the successful
+            // update reports 32, which fits the staging extent but not the allocation.
+            let mut state = UpdateScript {
+                query_report: 16,
+                write: 32,
+                report: 32,
+            };
+            let (cipher, mut ctx) = scripted_ctx(&mut state);
+            assert!(
+                cipher_output(&mut ctx, data.as_ptr(), in_len).is_none(),
+                "a produced length past the authority's block is refused"
+            );
+            (*cipher).prov = ptr::null_mut();
+            EVP_CIPHER_meth_free(cipher);
+
+            // Honest pair: the validated length is the reported one and fits the allocation.
+            let mut state = UpdateScript {
+                query_report: 32,
+                write: 32,
+                report: 32,
+            };
+            let (cipher, mut ctx) = scripted_ctx(&mut state);
+            let out = cipher_output(&mut ctx, data.as_ptr(), in_len)
+                .unwrap_or_else(|| panic!("an honest two-pass output is accepted"));
+            assert_eq!(out.produced(), 32);
+            assert_eq!(out.capacity, 32);
+            drop(out);
+            (*cipher).prov = ptr::null_mut();
+            EVP_CIPHER_meth_free(cipher);
+        }
+    }
+
+    /// Malformed encrypted-key lengths are refused before any provider dispatch: zero length, a
+    /// NULL data pointer with a positive length, a length the C ABI cannot represent, and an
+    /// extent whose arithmetic overflows.
+    #[test]
+    fn cms_kari_malformed_encrypted_key_lengths_are_refused() {
+        let data = [0x55u8; 32];
+        // SAFETY: every pointer is this frame's; no scripted call is reached for the refused
+        // lengths, and the honest fixture meets `cipher_output`'s contract.
+        unsafe {
+            let mut state = UpdateScript {
+                query_report: 32,
+                write: 32,
+                report: 32,
+            };
+            let (cipher, mut ctx) = scripted_ctx(&mut state);
+            assert!(
+                cipher_output(&mut ctx, data.as_ptr(), 0).is_none(),
+                "a zero-length encrypted key is refused"
+            );
+            assert!(
+                cipher_output(&mut ctx, ptr::null(), 24).is_none(),
+                "a NULL encrypted key with a positive length is refused"
+            );
+            assert!(
+                cipher_output(&mut ctx, data.as_ptr(), c_int::MAX as usize + 1).is_none(),
+                "a length the C ABI cannot represent is refused"
+            );
+            (*cipher).prov = ptr::null_mut();
+            EVP_CIPHER_meth_free(cipher);
+        }
+        assert!(
+            declared_update_extent(usize::MAX, 8).is_none(),
+            "overflowing extent arithmetic is refused"
+        );
+    }
+
+    /// §16 negative control (test-only): the pre-fix pairing -- a provider told it may write
+    /// `in_len + block_size` bytes into the authority's `max(queried, in_len)` block, which for
+    /// a decrypt-like query is `in_len` -- is exactly what the capacity detector refuses. The
+    /// canary fires on the old shape, not on the new one.
+    #[test]
+    fn cms_kari_negative_control_pre_fix_undersized_output_is_detected() {
+        let in_len = 24usize;
+        let block = 8;
+        let declared = declared_update_extent(in_len, block).unwrap();
+        let queried = in_len - 8;
+        let pre_fix_capacity = queried.max(in_len);
+        assert!(
+            declared > pre_fix_capacity,
+            "the pre-fix block is smaller than the extent the provider is told it may fill"
+        );
+        assert!(
+            reported_extent(declared as c_int, pre_fix_capacity).is_none(),
+            "the capacity detector must fire on the pre-fix report/buffer pairing"
+        );
+    }
+
+    /// Count the seam releases of one address in the current probe window.
+    #[cfg(test)]
+    fn frees(p: *const c_void) -> usize {
+        crate::ssl::adv_alloc::events()
+            .into_iter()
+            .filter(|e| matches!(e, crate::ssl::adv_alloc::Ev::Free { p: q } if *q == p as usize))
+            .count()
+    }
+
+    /// A refused output allocation is a refused operation and leaves no partially built output;
+    /// a retry succeeds.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn cms_kari_output_allocation_refusal_is_a_refused_operation() {
+        let _g = crate::test_support::lock_global_state();
+        assert!(crate::ssl::adv_alloc::install());
+        crate::ssl::adv_alloc::assert_instrument_live();
+        let data = [0x66u8; 24];
+        // SAFETY: the fixture meets `cipher_output`'s contract and the armed refusal is this
+        // test's own.
+        unsafe {
+            let mut state = UpdateScript {
+                query_report: 32,
+                write: 32,
+                report: 32,
+            };
+            let (cipher, mut ctx) = scripted_ctx(&mut state);
+            // The authority's block is `max(32, 24) = 32` bytes.
+            crate::ssl::adv_alloc::arm_any(32);
+            assert!(
+                cipher_output(&mut ctx, data.as_ptr(), 24).is_none(),
+                "a refused output allocation fails the operation"
+            );
+            crate::ssl::adv_alloc::disarm_any();
+            crate::ssl::adv_alloc::assert_no_double_free();
+            assert!(
+                cipher_output(&mut ctx, data.as_ptr(), 24).is_some(),
+                "a retry after the refusal succeeds"
+            );
+            crate::ssl::adv_alloc::assert_no_double_free();
+            crate::ssl::adv_alloc::reset();
+            (*cipher).prov = ptr::null_mut();
+            EVP_CIPHER_meth_free(cipher);
+        }
+    }
+
+    /// A key-agreement recipient and a live enveloped container with a known content key.
+    ///
+    /// # Safety
+    /// The caller owns `ri`/`rek`/`cms` and releases them with the matching ASN.1/CMS free.
+    unsafe fn agree_cms_fixture() -> (
+        *mut CmsContentInfo,
+        *mut CmsEncryptedContentInfo,
+        *mut CmsRecipientInfo,
+        *mut CmsKeyAgreeRecipientInfo,
+        *mut CmsRecipientEncryptedKey,
+    ) {
+        // SAFETY: every block below is owned and transferred to the caller.
+        unsafe {
+            let cms =
+                crate::cms::cms_env::CMS_EnvelopedData_create(crate::evp::e_aes::EVP_aes_128_cbc());
+            assert!(!cms.is_null());
+            let ec = crate::cms::cms_env::ossl_cms_get0_env_enc_content(cms);
+            assert!(!ec.is_null());
+            let (ri, kari) = agree_recipient();
+            let rek = m_asn1_new(cms_recipientencryptedkey_it()).cast::<CmsRecipientEncryptedKey>();
+            assert!(!rek.is_null());
+            if (*rek).encrypted_key.is_null() {
+                (*rek).encrypted_key = ASN1_OCTET_STRING_new();
+            }
+            assert!(!(*rek).encrypted_key.is_null());
+            let blob = OwnedBuf::new(24, SeamFile::NULL, 0)
+                .unwrap_or_else(|| panic!("the fixture allocation must succeed"))
+                .into_raw();
+            ASN1_STRING_set0((*rek).encrypted_key, blob.cast(), 24);
+            (cms, ec, ri, kari, rek)
+        }
+    }
+
+    /// Derivation fails (an agreement context with no key). The agreement context is released
+    /// exactly once by address and the slot is cleared; nothing else is touched.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn cms_kari_derivation_failure_releases_the_agreement_context_once_by_address() {
+        let _g = crate::test_support::lock_global_state();
+        assert!(crate::ssl::adv_alloc::install());
+        crate::ssl::adv_alloc::assert_instrument_live();
+        let data = [0x77u8; 24];
+        // SAFETY: the fixture is live; the probe observes only the installed seam.
+        unsafe {
+            let (cms, _ec, ri, kari, rek) = agree_cms_fixture();
+            let pctx = EVP_PKEY_CTX_new_from_name(ptr::null_mut(), c"EC".as_ptr(), ptr::null());
+            assert!(!pctx.is_null());
+            let pctx_addr = pctx.cast::<c_void>();
+            (*kari).pctx = pctx_addr;
+            crate::ssl::adv_alloc::reset();
+            assert!(
+                cms_kek_cipher(data.as_ptr(), data.len(), kari, 0).is_none(),
+                "an agreement context with no key cannot derive"
+            );
+            assert!(
+                (*kari).pctx.is_null(),
+                "the slot cleared the field it released"
+            );
+            assert_eq!(
+                frees(pctx_addr),
+                1,
+                "the agreement context is released once"
+            );
+            crate::ssl::adv_alloc::assert_no_double_free();
+            crate::ssl::adv_alloc::reset();
+            m_asn1_free(rek.cast(), cms_recipientencryptedkey_it());
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+            crate::cms::cms_lib::CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// A refusing legacy cipher init makes cipher initialisation the failing step after a real
+    /// key agreement. The agreement context is released exactly once and the cipher context is
+    /// reset in place, not released.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn cms_kari_cipher_init_failure_releases_the_agreement_context_once_by_address() {
+        let _g = crate::test_support::lock_global_state();
+        assert!(crate::ssl::adv_alloc::install());
+        crate::ssl::adv_alloc::assert_instrument_live();
+        let data = [0x88u8; 24];
+        // SAFETY: the fixture is live; the probe observes only the installed seam.
+        unsafe {
+            let (cms, _ec, ri, kari, rek) = agree_cms_fixture();
+            let (key_a, key_b) = ec_keypair();
+            let pctx = deriving_pctx(key_a, key_b);
+            let pctx_addr = pctx.cast::<c_void>();
+            (*kari).pctx = pctx_addr;
+
+            // A cipher with a positive key length and an init that refuses: derivation succeeds
+            // and `EVP_CipherInit_ex` is the failing step.
+            // SAFETY: the constructor answers a fresh method or NULL; every write is to it.
+            let cipher = EVP_CIPHER_meth_new(0, 8, 16);
+            assert!(!cipher.is_null());
+            (*cipher).prov = data.as_ptr().cast_mut().cast();
+            (*cipher).init = Some(refusing_init);
+            let ctx = (*kari).ctx.cast::<EvpCipherCtx>();
+            (*ctx).cipher = cipher;
+            (*ctx).key_len = 16;
+            (*ctx).encrypt = 0;
+            let ctx_addr = (*kari).ctx;
+
+            crate::ssl::adv_alloc::reset();
+            assert!(
+                cms_kek_cipher(data.as_ptr(), data.len(), kari, 0).is_none(),
+                "a refused cipher initialisation fails the operation"
+            );
+            assert!(
+                (*kari).pctx.is_null(),
+                "the slot cleared the field it released"
+            );
+            assert_eq!(
+                frees(pctx_addr),
+                1,
+                "the agreement context is released once"
+            );
+            assert_eq!(
+                (*kari).ctx,
+                ctx_addr,
+                "the cipher context is reset in place, not reallocated"
+            );
+            assert_eq!(frees(ctx_addr), 0, "the failed operation keeps the context");
+            crate::ssl::adv_alloc::assert_no_double_free();
+
+            crate::ssl::adv_alloc::reset();
+            EVP_PKEY_free(key_a);
+            EVP_PKEY_free(key_b);
+            EVP_CIPHER_meth_free(cipher);
+            m_asn1_free(rek.cast(), cms_recipientencryptedkey_it());
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+            crate::cms::cms_lib::CMS_ContentInfo_free(cms);
+        }
+    }
+
+    // SAFETY: the legacy `EVP_CIPHER::init` contract; this test method always refuses.
+    unsafe extern "C" fn refusing_init(
+        _ctx: *mut c_void,
+        _key: *const u8,
+        _iv: *const u8,
+        _enc: c_int,
+    ) -> c_int {
+        0
+    }
+
+    /// One real EC key pair generated through the keymgmt path.
+    ///
+    /// # Safety
+    /// The caller owns both keys and releases them with `EVP_PKEY_free`.
+    unsafe fn ec_keypair() -> (*mut EvpPkey, *mut EvpPkey) {
+        // SAFETY: each context is this frame's and is released below on every path taken.
+        unsafe {
+            let mut keys = [ptr::null_mut(), ptr::null_mut()];
+            for slot in keys.iter_mut() {
+                let kctx = EVP_PKEY_CTX_new_from_name(ptr::null_mut(), c"EC".as_ptr(), ptr::null());
+                assert!(!kctx.is_null());
+                assert!(EVP_PKEY_keygen_init(kctx) > 0);
+                assert!(EVP_PKEY_CTX_set_group_name(kctx, c"P-256".as_ptr()) > 0);
+                assert!(EVP_PKEY_keygen(kctx, slot) > 0);
+                EVP_PKEY_CTX_free(kctx);
+            }
+            (keys[0], keys[1])
+        }
+    }
+
+    /// An agreement context over `key` with `peer` installed.
+    ///
+    /// # Safety
+    /// `key`/`peer` are live and outlive the returned context.
+    unsafe fn deriving_pctx(key: *mut EvpPkey, peer: *mut EvpPkey) -> *mut EvpPkeyCtx {
+        // SAFETY: the constructor answers a fresh context; each call is given live operands.
+        unsafe {
+            let pctx = EVP_PKEY_CTX_new_from_pkey(ptr::null_mut(), key, ptr::null());
+            assert!(!pctx.is_null());
+            assert!(EVP_PKEY_derive_init(pctx) > 0);
+            assert!(EVP_PKEY_derive_set_peer(pctx, peer) > 0);
+            pctx
+        }
+    }
+
+    /// Recipient processing (`ossl_cms_env_asn1_ctrl`) fails before any agreement work. The
+    /// incumbent content key is not released by the failed call, is untouched by address, and
+    /// the container later releases it exactly once.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn cms_kari_recipient_processing_failure_releases_the_incumbent_once_by_address() {
+        let _g = crate::test_support::lock_global_state();
+        assert!(crate::ssl::adv_alloc::install());
+        crate::ssl::adv_alloc::assert_instrument_live();
+        // SAFETY: the fixture is live; the probe observes only the installed seam.
+        unsafe {
+            let (cms, ec, ri, kari, rek) = agree_cms_fixture();
+            assert!((*kari).pctx.is_null());
+            let incumbent = OwnedBuf::new(16, SeamFile::NULL, 0)
+                .unwrap_or_else(|| panic!("the fixture allocation must succeed"))
+                .into_raw();
+            (*ec).key = incumbent;
+            (*ec).keylen = 16;
+            crate::ssl::adv_alloc::reset();
+            assert_eq!(
+                CMS_RecipientInfo_kari_decrypt(cms, ri, rek),
+                0,
+                "a recipient with no agreement context is refused"
+            );
+            assert_eq!(frees(incumbent.cast()), 0, "the incumbent is kept");
+            assert_eq!((*ec).key, incumbent, "the slot is untouched");
+            crate::ssl::adv_alloc::assert_no_double_free();
+            crate::ssl::adv_alloc::reset();
+            m_asn1_free(rek.cast(), cms_recipientencryptedkey_it());
+            m_asn1_free(ri.cast(), cms_recipientinfo_it());
+            crate::cms::cms_lib::CMS_ContentInfo_free(cms);
+            assert_eq!(
+                frees(incumbent.cast()),
+                1,
+                "the container releases the incumbent exactly once"
+            );
+            crate::ssl::adv_alloc::assert_no_double_free();
         }
     }
 
