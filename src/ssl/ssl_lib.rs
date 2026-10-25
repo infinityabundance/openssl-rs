@@ -38,7 +38,7 @@
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
 use core::mem::MaybeUninit;
 use core::ptr;
-use core::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};
 
 use crate::asn1::string::ASN1_STRING_free;
 use crate::bn::bignum::BigNum;
@@ -2657,7 +2657,13 @@ pub struct SslSession {
     /// [`SslSession::psk_identity_slot`]); **private** for the same reason.
     psk_identity: *mut c_char,
     /// `int not_resumable`.
-    pub not_resumable: c_int,
+    ///
+    /// Written by cache eviction/removal/flush under the context write lock and read by threads
+    /// that already own a session reference and take no lock. It is atomic (layout-identical to the
+    /// authority's `int`) so those accesses are not a data race; the value is advisory, so a
+    /// `Relaxed` load/store is the authority's own best-effort visibility rather than a stronger
+    /// synchronisation the authority does not provide.
+    pub not_resumable: AtomicI32,
     /// `EVP_PKEY *peer_rpk`.
     pub peer_rpk: *mut c_void,
     /// `X509 *peer`.
@@ -2666,12 +2672,14 @@ pub struct SslSession {
     pub peer_chain: *mut OpenSslStack,
     /// `long verify_result`.
     pub verify_result: c_long,
-    /// `OSSL_TIME time`, in seconds (see the type note).
-    pub time: u64,
-    /// `OSSL_TIME timeout`, in seconds.
-    pub timeout: u64,
-    /// `OSSL_TIME calc_timeout`, in seconds.
-    pub calc_timeout: u64,
+    /// `OSSL_TIME time`, in seconds (see the type note). Atomic for the same reason as
+    /// `not_resumable`: `SSL_CTX_add_session`'s `UPDATE_TIME` arm and the public time setters write
+    /// it while reference-holding readers read it unlocked.
+    pub time: AtomicU64,
+    /// `OSSL_TIME timeout`, in seconds. Atomic as `time`.
+    pub timeout: AtomicU64,
+    /// `OSSL_TIME calc_timeout`, in seconds. Atomic as `time`.
+    pub calc_timeout: AtomicU64,
     /// `unsigned int compress_meth`.
     pub compress_meth: c_uint,
     /// `const SSL_CIPHER *cipher`.
@@ -2720,7 +2728,14 @@ pub struct SslSession {
     /// `uint32_t flags`.
     pub flags: u32,
     /// `SSL_CTX *owner` — the cache context the session is linked into.
-    pub owner: *mut SslCtx,
+    ///
+    /// Written under the context write lock by insert/eviction/removal/flush and read unlocked by
+    /// `SSL_SESSION_set_timeout`/`_set_time_ex`. `AtomicPtr` has the authority's pointer layout; the
+    /// load in those accessors is `Relaxed` because the context lock they then take (when the load
+    /// is non-NULL) is what orders the protected state. Clearing it to NULL before a context is
+    /// released is still the authority's lifetime discipline: a caller must not free an `SSL_CTX`
+    /// while another thread is using a session whose `owner` names it.
+    pub owner: AtomicPtr<SslCtx>,
     /// `struct ssl_session_st *prev`.
     pub prev: *mut SslSession,
     /// `struct ssl_session_st *next`.

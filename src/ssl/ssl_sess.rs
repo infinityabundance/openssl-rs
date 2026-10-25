@@ -54,12 +54,23 @@
 //! After the unlock the returned guard is the caller's own reference and survives any later
 //! eviction or flush.
 //!
-//! What is **not** established, and is recorded rather than asserted: eviction, removal and
-//! flushing write the session's non-atomic bookkeeping fields (`not_resumable`, `owner`) under
-//! the write lock, while a thread that already owns a reference reads them without any lock.
-//! Those accesses are a data race in the Rust memory model (and formally in C too); the authority
-//! has the same structure. Making them sound needs a design change (atomic fields or protecting
-//! every reader), which S57 does not make; no lock is added that the authority does not take.
+//! The *bookkeeping data races* are removed (S70). Eviction, removal and flushing write
+//! `not_resumable` and `owner` under the write lock, and `SSL_CTX_add_session`'s `UPDATE_TIME`
+//! arm and the public time setters write `time`/`timeout`/`calc_timeout`; a thread that already
+//! owns a reference reads those fields through `SSL_SESSION_is_resumable`, the time accessors and
+//! `ssl_update_cache` without taking any lock. The five fields are therefore atomics that are
+//! **layout-identical** to the authority's (`AtomicI32`, `AtomicPtr`, `AtomicU64`), written and
+//! read with `Relaxed` ordering: the values are advisory, and the context lock (where the
+//! accessor takes it) is what orders the protected state. This removes the data race without
+//! adding a lock the authority does not take, and without changing the C ABI or the struct layout.
+//! `SSL_SESSION_set_timeout`/`_set_time_ex` also load `owner` exactly once, so a concurrent
+//! eviction can no longer clear the pointer between the check and the unlock.
+//!
+//! What remains is the authority's own object-lifetime contract, not an internal data race: an
+//! application must not free an `SSL_CTX` while another thread dereferences a session's `owner`,
+//! and the session **payload** (id, keys, ticket) is immutable only once the session is published
+//! into the cache. A caller that mutates a shared, uncached session's payload concurrently is
+//! outside the contract, exactly as in the authority.
 //!
 //! ## Measured divergences, recorded rather than hidden
 //!
@@ -215,7 +226,13 @@ unsafe fn session_new_ex_data(ss: *mut SslSession) -> c_int {
 /// `ss` must be a live session.
 pub(crate) unsafe fn ssl_session_calculate_timeout(ss: *mut SslSession) {
     // SAFETY: `ss` is live per the contract.
-    unsafe { (*ss).calc_timeout = (*ss).time.wrapping_add((*ss).timeout) };
+    unsafe {
+        let time = (*ss).time.load(Ordering::Relaxed);
+        let timeout = (*ss).timeout.load(Ordering::Relaxed);
+        (*ss)
+            .calc_timeout
+            .store(time.wrapping_add(timeout), Ordering::Relaxed);
+    }
 }
 
 /// `static ossl_inline int sess_timedout(OSSL_TIME t, SSL_SESSION *ss)` — `ssl/ssl_sess.c:30-33`.
@@ -224,7 +241,7 @@ pub(crate) unsafe fn ssl_session_calculate_timeout(ss: *mut SslSession) {
 /// `ss` must be a live session.
 unsafe fn sess_timedout(t: u64, ss: *const SslSession) -> bool {
     // SAFETY: `ss` is live per the contract.
-    t > unsafe { (*ss).calc_timeout }
+    t > unsafe { (*ss).calc_timeout.load(Ordering::Relaxed) }
 }
 
 /// `static ossl_inline int timeoutcmp(SSL_SESSION *a, SSL_SESSION *b)` — `ssl/ssl_sess.c:39-42`.
@@ -237,7 +254,12 @@ unsafe fn sess_timedout(t: u64, ss: *const SslSession) -> bool {
 #[allow(dead_code)]
 unsafe fn timeoutcmp(a: *const SslSession, b: *const SslSession) -> c_int {
     // SAFETY: both are live per the contract.
-    let (x, y) = unsafe { ((*a).calc_timeout, (*b).calc_timeout) };
+    let (x, y) = unsafe {
+        (
+            (*a).calc_timeout.load(Ordering::Relaxed),
+            (*b).calc_timeout.load(Ordering::Relaxed),
+        )
+    };
     if x < y {
         -1
     } else if x > y {
@@ -270,8 +292,8 @@ pub unsafe extern "C" fn SSL_SESSION_new() -> *mut SslSession {
         unsafe {
             (*ss).max_fragment_len_mode = TLSEXT_MAX_FRAGMENT_LENGTH_UNSPECIFIED;
             (*ss).verify_result = 1;
-            (*ss).timeout = 60 * 5 + 4;
-            (*ss).time = time_now_secs();
+            (*ss).timeout.store(60 * 5 + 4, Ordering::Relaxed);
+            (*ss).time.store(time_now_secs(), Ordering::Relaxed);
             ssl_session_calculate_timeout(ss);
             (*ss).references = AtomicI32::new(1);
         }
@@ -321,11 +343,19 @@ unsafe fn ssl_session_dup_intern(src: *const SslSession, ticket: c_int) -> *mut 
         (*dest).session_id = s.session_id;
         (*dest).sid_ctx_length = s.sid_ctx_length;
         (*dest).sid_ctx = s.sid_ctx;
-        (*dest).not_resumable = s.not_resumable;
+        (*dest)
+            .not_resumable
+            .store(s.not_resumable.load(Ordering::Relaxed), Ordering::Relaxed);
         (*dest).verify_result = s.verify_result;
-        (*dest).time = s.time;
-        (*dest).timeout = s.timeout;
-        (*dest).calc_timeout = s.calc_timeout;
+        (*dest)
+            .time
+            .store(s.time.load(Ordering::Relaxed), Ordering::Relaxed);
+        (*dest)
+            .timeout
+            .store(s.timeout.load(Ordering::Relaxed), Ordering::Relaxed);
+        (*dest)
+            .calc_timeout
+            .store(s.calc_timeout.load(Ordering::Relaxed), Ordering::Relaxed);
         (*dest).compress_meth = s.compress_meth;
         (*dest).cipher = s.cipher;
         (*dest).cipher_id = s.cipher_id;
@@ -477,7 +507,7 @@ pub(crate) unsafe fn ssl_session_dup(src: *const SslSession, ticket: c_int) -> *
     let sess = unsafe { ssl_session_dup_intern(src, ticket) };
     if !sess.is_null() {
         // SAFETY: `sess` is a fresh session owned here.
-        unsafe { (*sess).not_resumable = 0 };
+        unsafe { (*sess).not_resumable.store(0, Ordering::Relaxed) };
     }
     sess
 }
@@ -752,7 +782,7 @@ unsafe fn cache_delete_ptr(ctx: *mut SslCtx, s: *mut SslSession) -> c_int {
             // (`ssl_sess.c:1349`). The session may outlive the context through an independent
             // reference, so leaving `owner` pointing at the context is a dangling reference.
             // SAFETY: `s` is live per the contract.
-            unsafe { (*s).owner = ptr::null_mut() };
+            unsafe { (*s).owner.store(ptr::null_mut(), Ordering::Relaxed) };
             return i;
         }
     }
@@ -785,7 +815,7 @@ unsafe fn remove_session_locked(ctx: *mut SslCtx, c: *mut SslSession) -> Option<
             }
         }
         // SAFETY: `c` is live.
-        unsafe { (*c).not_resumable = 1 };
+        unsafe { (*c).not_resumable.store(1, Ordering::Relaxed) };
     }
     r
 }
@@ -824,7 +854,7 @@ pub unsafe extern "C" fn SSL_CTX_add_session(ctx: *mut SslCtx, c: *mut SslSessio
         // SAFETY: `ctx` and `c` are live per the caller's contract.
         unsafe {
             if (*ctx).session_cache_mode & SSL_SESS_CACHE_UPDATE_TIME != 0 {
-                (*c).time = time_now_secs();
+                (*c).time.store(time_now_secs(), Ordering::Relaxed);
                 ssl_session_calculate_timeout(c);
             }
         }
@@ -864,7 +894,7 @@ pub unsafe extern "C" fn SSL_CTX_add_session(ctx: *mut SslCtx, c: *mut SslSessio
                 // SAFETY: `ctx`/`c`/`existing` are live, and `existing` (when non-NULL) is the
                 // cache's entry under the same key.
                 unsafe {
-                    (*c).owner = ctx;
+                    (*c).owner.store(ctx, Ordering::Relaxed);
                     ret = 1;
                     if !existing.is_null() && cache_delete_ptr(ctx, existing) >= 0 {
                         // SAFETY: the incumbent's cache reference was just detached.
@@ -973,10 +1003,10 @@ pub unsafe extern "C" fn SSL_CTX_flush_sessions_ex(s: *mut SslCtx, t: i64) {
                     if !current.is_null() && (t == 0 || (t > 0 && sess_timedout(t as u64, current)))
                     {
                         OPENSSL_sk_delete(st, i);
-                        (*current).not_resumable = 1;
+                        (*current).not_resumable.store(1, Ordering::Relaxed);
                         // `SSL_SESSION_list_remove` clears the cache back-pointer
                         // (`ssl_sess.c:1349`); a caller-held reference outlives the context.
-                        (*current).owner = ptr::null_mut();
+                        (*current).owner.store(ptr::null_mut(), Ordering::Relaxed);
                         // SAFETY: the entry was just deleted from the live stack; this guard
                         // becomes the sole releaser of its cache reference.
                         removed.push(SessionRef::adopt_cache_entry(current));
@@ -1040,7 +1070,7 @@ pub(crate) unsafe fn ssl_ctx_session_cache_free(ctx: *mut SslCtx) {
             if !session.is_null() {
                 // `SSL_CTX_flush_sessions_ex` removes each cache entry from the list before the
                 // context is released, so a session still held by an application has no owner.
-                (*session).owner = ptr::null_mut();
+                (*session).owner.store(ptr::null_mut(), Ordering::Relaxed);
                 // SAFETY: the container is released below, so the entry's cache reference is
                 // leaving the cache's bookkeeping; this guard is its sole releaser.
                 removed.push(SessionRef::adopt_cache_entry(session));
@@ -1168,7 +1198,7 @@ pub(crate) unsafe fn ssl_get_new_session(s: *mut Ssl, session: c_int) -> c_int {
         } else {
             (*ctx).session_timeout
         };
-        (*ss).timeout = timeout;
+        (*ss).timeout.store(timeout, Ordering::Relaxed);
         ssl_session_calculate_timeout(ss);
 
         SSL_SESSION_free((*s).session);
@@ -1383,7 +1413,7 @@ pub(crate) unsafe fn ssl_update_cache(s: *mut Ssl, mode: c_long) {
         let i = (*ctx).session_cache_mode;
         // `not_resumable` is an additional guard over the authority's test: a session the cache
         // has already retired must not be re-inserted by a finishing handshake.
-        if (i & mode) != 0 && (*s).hit == 0 && (*sess).not_resumable == 0 {
+        if (i & mode) != 0 && (*s).hit == 0 && (*sess).not_resumable.load(Ordering::Relaxed) == 0 {
             if (i & SSL_SESS_CACHE_NO_INTERNAL_STORE) == 0 {
                 SSL_CTX_add_session(ctx, sess);
             }
@@ -1667,15 +1697,19 @@ pub unsafe extern "C" fn SSL_SESSION_set_timeout(s: *mut SslSession, t: c_long) 
             if s.is_null() || t < 0 {
                 return 0;
             }
-            if !(*s).owner.is_null() {
-                if CRYPTO_THREAD_write_lock((*(*s).owner).lock) == 0 {
+            // Load the back-pointer **once**: a concurrent eviction/flush clears it under the
+            // context write lock, and re-reading it for the unlock could dereference NULL (or a
+            // different context) between the check and the unlock.
+            let owner = (*s).owner.load(Ordering::Relaxed);
+            if !owner.is_null() {
+                if CRYPTO_THREAD_write_lock((*owner).lock) == 0 {
                     return 0;
                 }
-                (*s).timeout = t as u64;
+                (*s).timeout.store(t as u64, Ordering::Relaxed);
                 ssl_session_calculate_timeout(s);
-                CRYPTO_THREAD_unlock((*(*s).owner).lock);
+                CRYPTO_THREAD_unlock((*owner).lock);
             } else {
-                (*s).timeout = t as u64;
+                (*s).timeout.store(t as u64, Ordering::Relaxed);
                 ssl_session_calculate_timeout(s);
             }
             1
@@ -1695,7 +1729,7 @@ pub unsafe extern "C" fn SSL_SESSION_get_timeout(s: *const SslSession) -> c_long
             if s.is_null() {
                 0
             } else {
-                (*s).timeout as c_long
+                (*s).timeout.load(Ordering::Relaxed) as c_long
             }
         }
     })
@@ -1725,7 +1759,7 @@ pub unsafe extern "C" fn SSL_SESSION_get_time_ex(s: *const SslSession) -> i64 {
             if s.is_null() {
                 0
             } else {
-                (*s).time as i64
+                (*s).time.load(Ordering::Relaxed) as i64
             }
         }
     })
@@ -1743,15 +1777,18 @@ pub unsafe extern "C" fn SSL_SESSION_set_time_ex(s: *mut SslSession, t: i64) -> 
             if s.is_null() {
                 return 0;
             }
-            if !(*s).owner.is_null() {
-                if CRYPTO_THREAD_write_lock((*(*s).owner).lock) == 0 {
+            // As `SSL_SESSION_set_timeout`: a single load of the cache back-pointer, used for both
+            // the lock and the unlock.
+            let owner = (*s).owner.load(Ordering::Relaxed);
+            if !owner.is_null() {
+                if CRYPTO_THREAD_write_lock((*owner).lock) == 0 {
                     return 0;
                 }
-                (*s).time = t as u64;
+                (*s).time.store(t as u64, Ordering::Relaxed);
                 ssl_session_calculate_timeout(s);
-                CRYPTO_THREAD_unlock((*(*s).owner).lock);
+                CRYPTO_THREAD_unlock((*owner).lock);
             } else {
-                (*s).time = t as u64;
+                (*s).time.store(t as u64, Ordering::Relaxed);
                 ssl_session_calculate_timeout(s);
             }
             t
@@ -2147,7 +2184,9 @@ pub unsafe extern "C" fn SSL_SESSION_is_resumable(s: *const SslSession) -> c_int
         }
         // SAFETY: `s` is live per the caller's contract.
         unsafe {
-            if (*s).not_resumable == 0 && ((*s).session_id_length > 0 || (*s).ext_tick().1 > 0) {
+            if (*s).not_resumable.load(Ordering::Relaxed) == 0
+                && ((*s).session_id_length > 0 || (*s).ext_tick().1 > 0)
+            {
                 1
             } else {
                 0
@@ -2813,7 +2852,7 @@ mod alias_ownership_tests {
             (*session).session_id_length = 4;
             (&mut (*session).session_id)[..4].copy_from_slice(b"test");
             assert_eq!(SSL_CTX_add_session(ctx, session), 1);
-            assert_eq!((*session).owner, ctx);
+            assert_eq!((*session).owner.load(Ordering::Relaxed), ctx);
         }
         assert_eq!(session_refs(session), 2);
         session
@@ -2829,7 +2868,7 @@ mod alias_ownership_tests {
         // SAFETY: both pointers are live and the session is in `ctx`'s cache.
         assert_eq!(unsafe { SSL_CTX_remove_session(ctx, session) }, 1);
         // SAFETY: `session` survives through this frame's reference.
-        assert!(unsafe { (*session).owner }.is_null());
+        assert!(unsafe { (*session).owner.load(Ordering::Relaxed) }.is_null());
         assert_eq!(session_refs(session), 1);
 
         // SAFETY: this releases the caller's remaining session reference.
@@ -2848,7 +2887,7 @@ mod alias_ownership_tests {
         // SAFETY: both pointers are live; a timestamp of 0 flushes every cached session.
         unsafe { SSL_CTX_flush_sessions_ex(ctx, 0) };
         // SAFETY: `session` survives through this frame's reference.
-        assert!(unsafe { (*session).owner }.is_null());
+        assert!(unsafe { (*session).owner.load(Ordering::Relaxed) }.is_null());
         assert_eq!(session_refs(session), 1);
 
         // SAFETY: this releases the caller's remaining session reference.
@@ -2902,7 +2941,7 @@ mod alias_ownership_tests {
         // longer points at the retired context.
         assert_eq!(session_refs(session), 1);
         // SAFETY: `session` is live through this frame's reference.
-        assert!(unsafe { (*session).owner }.is_null());
+        assert!(unsafe { (*session).owner.load(Ordering::Relaxed) }.is_null());
         // SAFETY: this releases the caller's remaining reference.
         unsafe { SSL_SESSION_free(session) };
     }
@@ -2918,7 +2957,7 @@ mod alias_ownership_tests {
         // still alive through this frame's reference.
         unsafe { SSL_CTX_free(ctx) };
         // SAFETY: `session` is live and must no longer point at the freed context.
-        assert!(unsafe { (*session).owner }.is_null());
+        assert!(unsafe { (*session).owner.load(Ordering::Relaxed) }.is_null());
         assert_eq!(session_refs(session), 1);
 
         // This reader dereferences `owner->lock`; before the fix it read freed memory.
@@ -3325,7 +3364,7 @@ mod cache_lifecycle_tests {
             assert_eq!(EVICT_CALLS.load(Ordering::Relaxed), 1);
             assert_eq!(EVICT_LAST.load(Ordering::Relaxed), a as usize);
             assert_eq!(session_refs(a), 1, "only the caller's reference remains");
-            assert_eq!((*a).owner, ptr::null_mut());
+            assert_eq!((*a).owner.load(Ordering::Relaxed), ptr::null_mut());
             assert_eq!((*ctx).stats.sess_cache_full.load(Ordering::Relaxed), 1);
             assert_eq!(
                 SSL_CTX_ctrl(ctx, SSL_CTRL_SESS_NUMBER, 0, ptr::null_mut()),
@@ -3349,8 +3388,8 @@ mod cache_lifecycle_tests {
             let ctx = SSL_CTX_new(TLS_method());
             assert!(!ctx.is_null());
             let s = new_session(b"exp1");
-            (*s).time = 1;
-            (*s).timeout = 1;
+            (*s).time.store(1, Ordering::Relaxed);
+            (*s).timeout.store(1, Ordering::Relaxed);
             ssl_session_calculate_timeout(s);
             assert_eq!(SSL_CTX_add_session(ctx, s), 1);
             assert_eq!(cache_len(ctx), 1);
@@ -3372,7 +3411,7 @@ mod cache_lifecycle_tests {
             assert_eq!(EVICT_CALLS.load(Ordering::Relaxed), 1);
             assert_eq!(EVICT_LAST.load(Ordering::Relaxed), s as usize);
             assert_eq!(session_refs(s), 1);
-            assert!((*s).owner.is_null());
+            assert!((*s).owner.load(Ordering::Relaxed).is_null());
 
             // A subsequent lookup by the same id misses.
             let ssl = SSL_new(ctx);
@@ -3489,9 +3528,9 @@ mod cache_lifecycle_tests {
             assert_eq!(cache_len(ctx), 2);
             assert!(cache_has(ctx, b"r003") && cache_has(ctx, b"r004"));
             assert!(!cache_has(ctx, b"r001") && !cache_has(ctx, b"r002"));
-            assert_eq!((*a).owner, ptr::null_mut());
-            assert_eq!((*b).owner, ptr::null_mut());
-            assert_eq!((*fresh).owner, ctx);
+            assert_eq!((*a).owner.load(Ordering::Relaxed), ptr::null_mut());
+            assert_eq!((*b).owner.load(Ordering::Relaxed), ptr::null_mut());
+            assert_eq!((*fresh).owner.load(Ordering::Relaxed), ctx);
             assert_eq!(session_refs(a), 1);
             assert_eq!(session_refs(b), 1);
             assert_eq!(
@@ -3563,8 +3602,11 @@ mod cache_lifecycle_tests {
             assert_eq!(cache_len(ctx), 2);
             assert!(cache_has(ctx, b"x003") && cache_has(ctx, b"x004"));
             assert!(!cache_has(ctx, b"x001") && !cache_has(ctx, b"x002"));
-            assert!((*a).owner.is_null() && (*b).owner.is_null());
-            assert_eq!((*fresh).owner, ctx);
+            assert!(
+                (*a).owner.load(Ordering::Relaxed).is_null()
+                    && (*b).owner.load(Ordering::Relaxed).is_null()
+            );
+            assert_eq!((*fresh).owner.load(Ordering::Relaxed), ctx);
             assert_eq!(session_refs(a), 1);
             assert_eq!(session_refs(b), 1);
             assert_eq!(session_refs(fresh), 2);
@@ -3706,8 +3748,8 @@ mod cache_lifecycle_tests {
                 SSL_SESS_CACHE_SERVER
             );
             let old = new_session(b"old!");
-            (*old).time = 1;
-            (*old).timeout = 1;
+            (*old).time.store(1, Ordering::Relaxed);
+            (*old).timeout.store(1, Ordering::Relaxed);
             ssl_session_calculate_timeout(old);
             assert_eq!(SSL_CTX_add_session(ctx, old), 1);
 
@@ -3724,12 +3766,19 @@ mod cache_lifecycle_tests {
             (*ctx).stats.sess_accept_good.store(0xfe, Ordering::Relaxed);
             ssl_update_cache(ssl, SSL_SESS_CACHE_SERVER);
             assert_eq!(cache_len(ctx), 2, "0xfe must not trigger the flush");
-            assert_eq!((*old).owner, ctx, "the expired entry is still cached");
+            assert_eq!(
+                (*old).owner.load(Ordering::Relaxed),
+                ctx,
+                "the expired entry is still cached"
+            );
 
             (*ctx).stats.sess_accept_good.store(0xff, Ordering::Relaxed);
             ssl_update_cache(ssl, SSL_SESS_CACHE_SERVER);
             assert_eq!(cache_len(ctx), 1, "only the current session remains");
-            assert!((*old).owner.is_null(), "the expired entry must be flushed");
+            assert!(
+                (*old).owner.load(Ordering::Relaxed).is_null(),
+                "the expired entry must be flushed"
+            );
             assert!(cache_has(ctx, b"cur!"));
             assert!(!cache_has(ctx, b"old!"));
             assert_eq!(
@@ -3876,7 +3925,7 @@ mod cache_lifecycle_tests {
                 "the refused callback must not change the cache"
             );
             assert!(cache_has(ctx, b"n003"));
-            assert_eq!((*current).owner, ctx);
+            assert_eq!((*current).owner.load(Ordering::Relaxed), ctx);
             assert_eq!(
                 session_refs(current),
                 2,
@@ -3914,7 +3963,7 @@ mod cache_lifecycle_tests {
             assert_eq!(SSL_CTX_add_session(ctx, replacement), 1);
 
             assert_eq!(session_refs(first), 2, "test and lookup");
-            assert!((*first).owner.is_null());
+            assert!((*first).owner.load(Ordering::Relaxed).is_null());
             let key = SessionKey::from_id(TLS1_2_VERSION_CODE, b"same");
             assert_eq!(cache_find(ctx, &key), replacement);
             // The in-flight object is still usable at its own address.
@@ -3965,7 +4014,7 @@ mod cache_lifecycle_tests {
                 "the partially acquired reference was released"
             );
             assert_eq!(cache_len(ctx), 0);
-            assert!((*s).owner.is_null());
+            assert!((*s).owner.load(Ordering::Relaxed).is_null());
 
             RELEASED_COUNT.store(0, Ordering::Relaxed);
             RELEASED_TARGET.store(s as usize, Ordering::Relaxed);
@@ -4316,6 +4365,164 @@ mod cache_lifecycle_tests {
             free_hs_pair(first);
             SSL_CTX_free(cctx);
             SSL_CTX_free(sctx);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // S70: cache-mutator writes against reference-holding readers on the real SSL_CTX cache
+    // -----------------------------------------------------------------------------------------
+
+    /// Build a real context, a real connection for `lookup_sess_in_cache`, and a fixed set of
+    /// sessions the frame keeps a reference to. The cache is seeded with half of them.
+    ///
+    /// # Safety
+    /// Every object is live for the caller's frame; the caller releases the returned pointers with
+    /// [`s70_free_fixture`].
+    unsafe fn s70_fixture() -> (*mut SslCtx, *mut Ssl, Vec<*mut SslSession>) {
+        // SAFETY: constructors return owned objects; every field write is to a fresh object.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            assert_eq!(
+                SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_SIZE, 4, ptr::null_mut()),
+                DEFAULT_CACHE_SIZE
+            );
+            let ssl = SSL_new(ctx);
+            assert!(!ssl.is_null());
+            // `lookup_sess_in_cache` keys on the connection's version; use the sessions' TLS1.2
+            // version so the production lookup can hit.
+            (*ssl).version = TLS1_2_VERSION_CODE;
+            let sessions: Vec<*mut SslSession> =
+                (0..8u8).map(|i| new_session(&[b'a' + i])).collect();
+            for s in sessions.iter().take(4) {
+                assert_eq!(SSL_CTX_add_session(ctx, *s), 1);
+            }
+            (ctx, ssl, sessions)
+        }
+    }
+
+    /// Release a fixture after the cache has been flushed.
+    ///
+    /// # Safety
+    /// `ctx`, `ssl` and every session are live and no other thread is using them.
+    unsafe fn s70_free_fixture(ctx: *mut SslCtx, ssl: *mut Ssl, sessions: Vec<*mut SslSession>) {
+        // SAFETY: the caller owns every object and the cache holds no reference after the flush.
+        unsafe {
+            SSL_CTX_flush_sessions_ex(ctx, 0);
+            for s in sessions {
+                SSL_SESSION_free(s);
+            }
+            SSL_free(ssl);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// S57's `not_resumable` obligation: eviction/removal/flush write it under the cache write
+    /// lock while a thread that already owns a session reference (the lookup result or the frame's
+    /// own reference) reads it through the production `SSL_SESSION_is_resumable` accessor with no
+    /// lock. The lookup itself is the real `lookup_sess_in_cache`.
+    #[test]
+    fn s70_s57_lookup_reader_reads_not_resumable_during_eviction() {
+        const MUTATOR_ITERS: usize = 30_000;
+        const READERS: usize = 4;
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the fixture owns every object; threads only borrow the context, connection and
+        // sessions, and the fixture is released after every thread has joined.
+        unsafe {
+            let (ctx, ssl, sessions) = s70_fixture();
+            let ctx_addr = ctx as usize;
+            let ssl_addr = ssl as usize;
+            let addrs: Vec<usize> = sessions.iter().map(|s| *s as usize).collect();
+            let barrier = std::sync::Barrier::new(READERS + 1);
+            let barrier = &barrier;
+            let addrs = &addrs;
+            std::thread::scope(|scope| {
+                scope.spawn(move || {
+                    let ctx = ctx_addr as *mut SslCtx;
+                    barrier.wait();
+                    for i in 0..MUTATOR_ITERS {
+                        let s = addrs[i % addrs.len()] as *mut SslSession;
+                        // SAFETY: `ctx`/`s` are live and the frame owns its session reference.
+                        SSL_CTX_add_session(ctx, s);
+                        if i % 3 == 0 {
+                            SSL_CTX_remove_session(ctx, s);
+                        }
+                        if i % 7 == 0 {
+                            SSL_CTX_flush_sessions_ex(ctx, 0);
+                        }
+                    }
+                });
+                for t in 0..READERS {
+                    scope.spawn(move || {
+                        let ssl = ssl_addr as *mut Ssl;
+                        barrier.wait();
+                        for i in 0..MUTATOR_ITERS {
+                            let id = [b'a' + ((i + t) % 8) as u8];
+                            // SAFETY: the lookup and the fallback session are live; the returned
+                            // guard owns its reference.
+                            if let Some(r) = lookup_sess_in_cache(ssl, &id) {
+                                let _ = SSL_SESSION_is_resumable(r.as_ptr());
+                            } else {
+                                let p = addrs[(i + t) % addrs.len()] as *mut SslSession;
+                                let _ = SSL_SESSION_is_resumable(p);
+                            }
+                        }
+                    });
+                }
+            });
+            s70_free_fixture(ctx, ssl, sessions);
+        }
+    }
+
+    /// S57's `owner` obligation: eviction/removal/flush clear the back-pointer under the cache
+    /// write lock while `SSL_SESSION_set_timeout` uses it with no lock. The reader is a single
+    /// thread so the only multi-writer field in the test is the one under examination.
+    #[test]
+    fn s70_s57_owner_back_pointer_read_during_eviction() {
+        const MUTATOR_ITERS: usize = 30_000;
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: as `s70_s57_lookup_reader_reads_not_resumable_during_eviction`.
+        unsafe {
+            let (ctx, ssl, sessions) = s70_fixture();
+            let ctx_addr = ctx as usize;
+            let ssl_addr = ssl as usize;
+            let addrs: Vec<usize> = sessions.iter().map(|s| *s as usize).collect();
+            let barrier = std::sync::Barrier::new(2);
+            let barrier = &barrier;
+            let addrs = &addrs;
+            std::thread::scope(|scope| {
+                scope.spawn(move || {
+                    let ctx = ctx_addr as *mut SslCtx;
+                    barrier.wait();
+                    for i in 0..MUTATOR_ITERS {
+                        let s = addrs[i % addrs.len()] as *mut SslSession;
+                        // SAFETY: `ctx`/`s` are live and the frame owns its session reference.
+                        SSL_CTX_add_session(ctx, s);
+                        if i % 3 == 0 {
+                            SSL_CTX_remove_session(ctx, s);
+                        }
+                        if i % 7 == 0 {
+                            SSL_CTX_flush_sessions_ex(ctx, 0);
+                        }
+                    }
+                });
+                scope.spawn(move || {
+                    let ssl = ssl_addr as *mut Ssl;
+                    barrier.wait();
+                    for i in 0..MUTATOR_ITERS {
+                        let id = [b'a' + (i % 8) as u8];
+                        // SAFETY: the lookup and the fallback session are live; `set_timeout`
+                        // reads the cache back-pointer and writes through its lock when present.
+                        if let Some(r) = lookup_sess_in_cache(ssl, &id) {
+                            let _ = SSL_SESSION_set_timeout(r.as_ptr(), 42);
+                        } else {
+                            let p = addrs[i % addrs.len()] as *mut SslSession;
+                            let _ = SSL_SESSION_set_timeout(p, 42);
+                        }
+                    }
+                });
+            });
+            s70_free_fixture(ctx, ssl, sessions);
         }
     }
 }
