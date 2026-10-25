@@ -1,0 +1,187 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S64-DEPENDENCY-REGISTRY",
+  "date": "2026-10-25",
+  "subphase": "S64: replace per-recipe auxiliary-package pins with a versioned, content-addressed dependency registry",
+  "branch": "integrate/safe-c33",
+  "source_head": "cf6a3e5847e1113eafb5b101b9cef6f6c56f5c43",
+  "source_head_short": "cf6a3e584",
+  "source_head_subject": "Merge stage/p25/admission-discover",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+    "src_changed_this_subphase": true,
+    "docker_changed_this_subphase": false,
+    "note": "all fetches, extractions, installs and builds ran inside the court container; no project build ran on the host"
+  },
+  "deliverables": {
+    "resolver": "forensics/tools/downstream_deps.py",
+    "registry": "forensics/tools/downstream_deps.json",
+    "executor": "forensics/tools/downstream_build_link.py",
+    "modified_files": [
+      "forensics/tools/downstream_build_link.py"
+    ],
+    "new_files": [
+      "forensics/tools/downstream_deps.py",
+      "forensics/tools/downstream_deps.json"
+    ],
+    "hashes": {
+      "downstream_deps.py": "afdfce2422e99dcce3dbb78dc950643686e8e117c8b007b5ebeab2dfd949dd83",
+      "downstream_deps.json": "f7f85a95b27e37004117e57d8a3f110e8a9d3af9dc1a96ed47b4dc5b16987978",
+      "downstream_build_link.py": "0165c40201d9721d909140ec0d1c01231fccd41ecf8602bb85f9ec018f8e0776",
+      "build-link-atlas.json": "eb36d62fcc8a68256517948a16ea228babf3606bdb2f40e6b5b72810213d4ab0"
+    }
+  },
+  "capability_model": {
+    "request": "a recipe names {\"capability\": <name>, \"bundle\": \"cap:<name>@<version>\"}; it never repeats a URL list",
+    "bundle_contents": "runtime library packages, development packages (headers and .so symlinks), pkg-config metadata and build tools, extracted into one install root",
+    "capabilities": 8,
+    "bundles": 8,
+    "package_definitions": 30,
+    "unique_package_urls": 25,
+    "capability_names": [
+      "autotools",
+      "autotools-ltdl",
+      "libevent",
+      "libudev",
+      "libxml2",
+      "ncurses",
+      "pcre1",
+      "pcre2"
+    ],
+    "bundle_hashes": {
+      "cap:autotools@bookworm-autoconf-2.71-3": "sha256:e774c25546a3f73d0209841ffdb143618827a1e95fb1ff831ad94f15d0d460b0",
+      "cap:autotools-ltdl@bookworm-libtool-2.4.7": "sha256:d02380f4cda7cb0a670c74278ba809c22448f308e1e7a9687ebe4633166d638a",
+      "cap:libevent@2.1.12-stable-8": "sha256:2154b8fd78e8284a6a111803d7d47b6293d490e5c600b3937eb18c0a3fd7b123",
+      "cap:libudev@252.39-1~deb12u2": "sha256:30e391ec6514edfdde7ab1b56629fd97e987547ad6ab5ebec78dc44976e59054",
+      "cap:libxml2@2.9.14+dfsg-1.3~deb12u6": "sha256:d9d7c903a75e0e7293d81f8e03cd163e3a2a8f858eef98b811005df97ba4edd1",
+      "cap:ncurses@6.4-4": "sha256:4bb8e841087b91de4baf681c0ca3374d8eb4ba7903b8f40674494b8277dcead2",
+      "cap:pcre1@8.39-15": "sha256:b2174491a864e54eac33f8488a6b9838a0763f2edf2f1cbf56c076cddece69ee",
+      "cap:pcre2@10.42-1": "sha256:6cedd2fd532012a993bc35da72cab1498767075adbb25cec6c136c5899ddffea"
+    }
+  },
+  "invariants_enforced": {
+    "subject_isolation": {
+      "where": "downstream_deps.resolve -> _assert_subject_isolated on every resolve; build_link_findings/_dependency_registry_findings re-resolves every capability from --check",
+      "mechanism": "anchored basename match for libssl*/libcrypto*/openssl* over package names, URL basenames, the OpenSSL Debian pool path, declared include/library/pkg-config/bin dirs, link paths and link targets; libevent_openssl.so remains admissible as a subject consumer",
+      "negative_control": "a synthetic bundle containing libcrypto3 was refused by the resolver"
+    },
+    "version_coherence": {
+      "static": "validate_bundle: every component package's Debian filename version equals the declared debian_version and has the declared upstream_version prefix; runtime path basename equals the declared SONAME; the development link lies under a declared library dir; pkg-config and header expected versions match the declared relation; the bundle content hash is recomputed",
+      "dynamic": "verify_installed, called by _prepare_aux after extraction: the pinned runtime exposes the declared SONAME; the development symlink resolves to the same ELF (or the declared external runtime); the installed .pc Version equals the pinned version; the header version macro equals the pinned version; declared tools exist and are executable",
+      "negative_controls": [
+        "header version changed to 9.9.9 -> refused",
+        "libevent.pc Version changed to 9.9.9 -> refused",
+        "libevent.so repointed away from libevent-2.1.so.7 -> refused",
+        "all eight bundles installed and verified clean before the controls"
+      ]
+    },
+    "source_immutability": {
+      "where": "assert_isolated_install_root before any extraction; assert_within_install_root before rewriting each .pc",
+      "mechanism": "the install root may not equal, contain or sit inside the consumer source tree after symlink resolution; a .pc link that resolves outside the install root is refused",
+      "negative_control": "an install root inside the source tree was refused; after all eight capability installs the sentinel source file was unchanged"
+    },
+    "reproducibility": {
+      "mechanism": "sha256 over canonical JSON of bundle id/version, package URLs and published SHA-256 digests, extraction argv, include/library/pkg-config/bin dirs, links and component evidence; resolve recomputes it and refuses a mismatch; each recipe names its exact bundle and each measured run records aux_bundles {capability, bundle_id, sha256}",
+      "negative_control": "mutating one package digest invalidated the bundle content hash"
+    }
+  },
+  "reuse_proof": {
+    "migrated_families": [
+      {"family": "memcached", "capability": "libevent", "bundle": "cap:libevent@2.1.12-stable-8", "grade": "L4-linked", "subjects": ["authority", "candidate"], "steps_identical_to_legacy_pin": true},
+      {"family": "nsd", "capability": "libevent", "bundle": "cap:libevent@2.1.12-stable-8", "grade": "L4-linked", "subjects": ["authority", "candidate"], "steps_identical_to_legacy_pin": true},
+      {"family": "apache2-utils", "capability": "pcre2", "bundle": "cap:pcre2@10.42-1", "grade": "L4-linked", "subjects": ["authority", "candidate"], "steps_identical_to_legacy_pin": true},
+      {"family": "njs", "capability": "pcre2", "bundle": "cap:pcre2@10.42-1", "grade": "L4-linked", "subjects": ["authority", "candidate"], "steps_identical_to_legacy_pin": true},
+      {"family": "charybdis", "capability": "autotools-ltdl", "bundle": "cap:autotools-ltdl@bookworm-libtool-2.4.7", "grade": "L4-linked", "subjects": ["authority", "candidate"], "steps_identical_to_legacy_pin": true},
+      {"family": "dma", "capability": "autotools-ltdl", "bundle": "cap:autotools-ltdl@bookworm-libtool-2.4.7", "grade": "L4-linked", "subjects": ["authority", "candidate"], "steps_identical_to_legacy_pin": true}
+    ],
+    "comparison_method": "before/after atlas rows compared field by field: level, outcome, residual, DT_NEEDED, linkage (resolved paths and artifact SHA-256), evidence and every step's name/ok/exit_code/argv are identical; only elapsed_seconds and the new aux_bundles field differ",
+    "capabilities_used_by_several_admitted_families": {
+      "libevent": ["memcached", "nsd", "sslsplit", "coturn", "libevhtp"],
+      "pcre2": ["apache2-utils", "njs"],
+      "autotools-ltdl": ["charybdis", "dma", "shellinabox", "afflib", "krb5", "jabberd2", "ipmitool", "tpm2-tools", "trousers", "afftools", "krb5-pkinit", "libafflib0v5", "krb5-k5tls"]
+    }
+  },
+  "url_deduplication": {
+    "before": {
+      "recipes_with_aux": 153,
+      "aux_url_occurrences": 973,
+      "unique_url_sha_pairs": 247
+    },
+    "after": {
+      "recipes_with_capabilities": 6,
+      "recipes_on_legacy_aux": 147,
+      "legacy_aux_url_occurrences": 947,
+      "unique_url_sha_pairs": 247,
+      "migrated_recipe_url_occurrences": 0,
+      "migrated_recipe_capability_references": 6
+    },
+    "registry": {
+      "package_definitions": 30,
+      "unique_package_urls": 25,
+      "note": "the five autotools packages are defined once each and shared by the autotools and autotools-ltdl bundles"
+    },
+    "projected_full_dedup": "if all 147 legacy recipes migrated, 973 URL references become 247 registry references (74.6% fewer URL literals)"
+  },
+  "executor_compatibility": {
+    "executor_unchanged_role": "forensics/tools/downstream_build_link.py remains the executor; the registry is a pure resolver it imports",
+    "legacy_path": "aux_sources still fetches, digest-checks and extracts exactly as before; a recipe may not mix capabilities and aux_sources (self-test and --check refuse it)",
+    "families_remaining_on_legacy_path": 147,
+    "families_migrated": 6
+  },
+  "gates": {
+    "registry_self_test": {
+      "command": "python3 forensics/tools/downstream_deps.py --self-test",
+      "result": "PASS",
+      "output": "[downstream-deps] self-test ok: 8 capabilities, 8 bundles, 30 package definitions (25 unique URLs), subject isolation, version coherence, source immutability and content addressing enforced"
+    },
+    "executor_self_test": {
+      "command": "python3 forensics/tools/downstream_build_link.py --self-test",
+      "result": "PASS",
+      "output": "[downstream-build-link] self-test ok: the guard refuses a host invocation ... and a candidate row that built a different pristine source tree) is caught with specificity holding"
+    },
+    "check": {
+      "command": "python3 forensics/tools/downstream_build_link.py --check",
+      "result": "PASS",
+      "output": "[downstream-build-link] with_recipe=307 candidate_linked=245 linkage_proven=245 findings=0 control honest=True"
+    },
+    "remeasure": {
+      "command": "python3 forensics/tools/downstream_build_link.py --measure --only memcached,nsd,apache2-utils,njs,charybdis,dma --reuse-committed --reuse-previous-candidate",
+      "result": "PASS",
+      "output": [
+        "  [p1000   33] nsd          auth=L4-linked        cand=L4-linked",
+        "  [p1000  149] memcached    auth=L4-linked        cand=L4-linked",
+        "  [p1000  177] apache2-utils auth=L4-linked        cand=L4-linked",
+        "  [p1000  208] dma          auth=L4-linked        cand=L4-linked",
+        "  [p1000  315] njs          auth=L4-linked        cand=L4-linked",
+        "  [p1000  604] charybdis    auth=L4-linked        cand=L4-linked",
+        "[downstream-build-link] elapsed=83s with_recipe=307 no_recipe=693",
+        "  authority configured=274 built=253 linked=245 failed=62",
+        "  candidate configured=274 built=252 linked=245 failed=62",
+        "  candidate_linkage_proven=245 candidate_specific_patch_count=0"
+      ],
+      "note": "--reuse-previous-candidate was required because the committed atlas was bound to a previous candidate install; the six target families were rebuilt, the other rows were reused with the explicit superseded-identity marker. The measurement was repeated against the final edited resolver (same six L4 grades, identical step argv/exit codes and artifact digests). The shared atlas was restored to its committed bytes afterwards so this subphase's diff is limited to the registry and executor."
+    },
+    "install_verification": {
+      "command": "bl._prepare_aux on each of the eight capabilities with a disjoint source root",
+      "result": "PASS: all eight bundles installed, verify_installed returned no problems, and the sentinel source file was unchanged"
+    }
+  },
+  "unresolved": [
+    "147 recipes remain on the legacy aux_sources path; they are compatible but not deduplicated by this subphase",
+    "cap:pcre1@8.39-15 records three UNRESOLVED coherence axes: libpcre3 extracts its SONAME under lib/x86_64-linux-gnu while the legacy pin exposes usr/lib/x86_64-linux-gnu; Debian's libpcre.so is an absolute symlink to the venue; libpcre.pc is not on the legacy PKG_CONFIG_PATH. It is expressed but not migrated.",
+    "cap:libudev@252.39-1~deb12u2 records the runtime SONAME as the venue's libudev.so.1 (not a pinned runtime package) and libudev.h publishes no version macro; the development symlink and runtime presence are verified",
+    "cap:ncurses@6.4-4 tinfo component records that libtinfo-dev ships no separate version header; the pinned tinfo.pc Version and libtinfo SONAME are the evidence",
+    "cap:autotools-ltdl's libltdl component records that Debian ships no ltdl.pc and ltdl.h has no version macro; runtime/development package versions and the SONAME are the evidence",
+    "no package digest is UNRESOLVED: every package in every bundle has a published SHA-256, and none was invented",
+    "no bundle fetches or provides libssl, libcrypto or openssl"
+  ],
+  "non_claims": [
+    "a build/link result is not a functional proof; L4-linked is not L7",
+    "the three demonstrated capabilities prove these six families; they do not by themselves graduate the wider cohort",
+    "the registry validates dependency metadata and install layout, not the upstream packages' cryptographic correctness"
+  ]
+}

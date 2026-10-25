@@ -1,0 +1,1064 @@
+{
+  "schema": "openssl-rs/downstream-deps/v1",
+  "registry_id": "openssl-rs/downstream-deps",
+  "generated": "2026-10-25",
+  "distro": "debian-bookworm",
+  "architecture": "amd64",
+  "multiarch": "x86_64-linux-gnu",
+  "policy": {
+    "subject_isolation": "a bundle may never provide or replace libssl/libcrypto/openssl; enforced by downstream_deps.resolve on every request",
+    "version_coherence": "runtime SONAME, development symlink, pkg-config Version and header version macro agree per component; statically in validate_bundle and against the extracted tree in verify_installed",
+    "source_immutability": "the install root must be disjoint from the consumer source tree (assert_isolated_install_root) and package files may not escape it through symlinks (assert_within_install_root)",
+    "reproducibility": "each bundle is content-addressed over its package URLs, published SHA-256 digests and install layout; a recipe names the exact bundle",
+    "unresolved": "a package digest with no published evidence is marked UNRESOLVED and refused, never invented; a coherence axis with no published evidence is recorded in the component's unresolved list and is not counted as verified"
+  },
+  "capabilities": {
+    "libevent": {
+      "description": "libevent 2.1 (memcached, nsd, sslsplit, coturn, libevhtp)",
+      "bundles": [
+        {
+          "bundle_id": "cap:libevent@2.1.12-stable-8",
+          "version": "2.1.12-stable-8",
+          "packages": [
+            {
+              "name": "libevent-2.1-7",
+              "url": "http://deb.debian.org/debian/pool/main/libe/libevent/libevent-2.1-7_2.1.12-stable-8_amd64.deb",
+              "sha256": "ca8858a7095ade7776c9f73437812423a45ccd90de2079e8c34830d291df290f",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libevent-2.1-7_2.1.12-stable-8_amd64.deb"
+            },
+            {
+              "name": "libevent-dev",
+              "url": "http://deb.debian.org/debian/pool/main/libe/libevent/libevent-dev_2.1.12-stable-8_amd64.deb",
+              "sha256": "ed7f550d6cc03f3cf7dfa80d739e13350d8a2cdb25f9dfcbf11fbe66cd1d4b89",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libevent-dev_2.1.12-stable-8_amd64.deb",
+              "include_dirs": [
+                "usr/include"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ],
+              "pkgconfig_dirs": [
+                "usr/lib/x86_64-linux-gnu/pkgconfig"
+              ]
+            }
+          ],
+          "components": [
+            {
+              "name": "libevent",
+              "kind": "library",
+              "packages": [
+                "libevent-2.1-7",
+                "libevent-dev"
+              ],
+              "debian_version": "2.1.12-stable-8",
+              "upstream_version": "2.1.12-stable",
+              "abi_series": "2.1",
+              "runtime": {
+                "package": "libevent-2.1-7",
+                "soname": "libevent-2.1.so.7",
+                "path": "usr/lib/x86_64-linux-gnu/libevent-2.1.so.7"
+              },
+              "development": {
+                "package": "libevent-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libevent.so"
+              },
+              "pkgconfig": {
+                "path": "usr/lib/x86_64-linux-gnu/pkgconfig/libevent.pc",
+                "version": "2.1.12-stable",
+                "match": "exact"
+              },
+              "header": {
+                "path": "usr/include/event2/event-config.h",
+                "regex": "#define\\s+EVENT__VERSION\\s+\"([^\"]+)\"",
+                "version": "2.1.12-stable"
+              }
+            }
+          ],
+          "description": "libevent 2.1 runtime, headers, libevent.so and libevent.pc",
+          "sha256": "sha256:2154b8fd78e8284a6a111803d7d47b6293d490e5c600b3937eb18c0a3fd7b123"
+        }
+      ]
+    },
+    "pcre2": {
+      "description": "PCRE2 10.42 (apache2-utils, njs and the wider cohort)",
+      "bundles": [
+        {
+          "bundle_id": "cap:pcre2@10.42-1",
+          "version": "10.42-1",
+          "packages": [
+            {
+              "name": "libpcre2-8-0",
+              "url": "http://deb.debian.org/debian/pool/main/p/pcre2/libpcre2-8-0_10.42-1_amd64.deb",
+              "sha256": "030db54f4d76cdfe2bf0e8eb5f9efea0233ab3c7aa942d672c7b63b52dbaf935",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libpcre2-8-0_10.42-1_amd64.deb"
+            },
+            {
+              "name": "libpcre2-dev",
+              "url": "http://deb.debian.org/debian/pool/main/p/pcre2/libpcre2-dev_10.42-1_amd64.deb",
+              "sha256": "f0ff485a26daae8f742a1566426f0d98f06cdaf19ee0cc24764e09eff1c99257",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libpcre2-dev_10.42-1_amd64.deb",
+              "include_dirs": [
+                "usr/include"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ],
+              "pkgconfig_dirs": [
+                "usr/lib/x86_64-linux-gnu/pkgconfig"
+              ],
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            }
+          ],
+          "components": [
+            {
+              "name": "pcre2-8",
+              "kind": "library",
+              "packages": [
+                "libpcre2-8-0",
+                "libpcre2-dev"
+              ],
+              "debian_version": "10.42-1",
+              "upstream_version": "10.42",
+              "abi_series": "0",
+              "runtime": {
+                "package": "libpcre2-8-0",
+                "soname": "libpcre2-8.so.0",
+                "path": "usr/lib/x86_64-linux-gnu/libpcre2-8.so.0"
+              },
+              "development": {
+                "package": "libpcre2-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libpcre2-8.so"
+              },
+              "pkgconfig": {
+                "path": "usr/lib/x86_64-linux-gnu/pkgconfig/libpcre2-8.pc",
+                "version": "10.42",
+                "match": "exact"
+              },
+              "header": {
+                "path": "usr/include/pcre2.h",
+                "regex": "#define\\s+PCRE2_MAJOR\\s+(\\d+)\\s*\\n\\s*#define\\s+PCRE2_MINOR\\s+(\\d+)",
+                "version": "10.42"
+              }
+            }
+          ],
+          "description": "PCRE2 10.42 8-bit runtime, headers, libpcre2-8.so and libpcre2-8.pc",
+          "sha256": "sha256:6cedd2fd532012a993bc35da72cab1498767075adbb25cec6c136c5899ddffea"
+        }
+      ]
+    },
+    "ncurses": {
+      "description": "ncurses 6.4 wide/narrow and tinfo (lynx, epic4, irssi, mutt)",
+      "bundles": [
+        {
+          "bundle_id": "cap:ncurses@6.4-4",
+          "version": "6.4-4",
+          "packages": [
+            {
+              "name": "libncurses-dev",
+              "url": "http://deb.debian.org/debian/pool/main/n/ncurses/libncurses-dev_6.4-4_amd64.deb",
+              "sha256": "2ad228835756feb118bb131b32834bd23a09047e4de408cc5204cbb5dce0e4bb",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libncurses-dev_6.4-4_amd64.deb",
+              "include_dirs": [
+                "usr/include"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ],
+              "pkgconfig_dirs": [
+                "usr/lib/x86_64-linux-gnu/pkgconfig"
+              ],
+              "links": {
+                "usr/lib/x86_64-linux-gnu/libncurses.so": "../../../lib/x86_64-linux-gnu/libncurses.so.6.4",
+                "usr/lib/x86_64-linux-gnu/libncursesw.so": "../../../lib/x86_64-linux-gnu/libncursesw.so.6.4"
+              }
+            },
+            {
+              "name": "libtinfo-dev",
+              "url": "http://deb.debian.org/debian/pool/main/n/ncurses/libtinfo-dev_6.4-4_amd64.deb",
+              "sha256": "e1935c2006661f1cda0bfd35f12ea30f9d64a110f30a074d512efe6c9466bf86",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libtinfo-dev_6.4-4_amd64.deb",
+              "include_dirs": [
+                "usr/include"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ],
+              "links": {
+                "usr/lib/x86_64-linux-gnu/libtinfo.so": "../../../lib/x86_64-linux-gnu/libtinfo.so.6.4"
+              }
+            },
+            {
+              "name": "libncurses6",
+              "url": "http://deb.debian.org/debian/pool/main/n/ncurses/libncurses6_6.4-4_amd64.deb",
+              "sha256": "72300f09f02669c06c99b641ea795d52300ec7eb65eaccddf7bc3b72934f0ef5",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libncurses6_6.4-4_amd64.deb",
+              "library_dirs": [
+                "lib/x86_64-linux-gnu"
+              ]
+            },
+            {
+              "name": "libtinfo6",
+              "url": "http://deb.debian.org/debian/pool/main/n/ncurses/libtinfo6_6.4-4_amd64.deb",
+              "sha256": "072d908f38f51090ca28ca5afa3b46b2957dc61fe35094c0b851426859a49a51",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libtinfo6_6.4-4_amd64.deb",
+              "library_dirs": [
+                "lib/x86_64-linux-gnu"
+              ]
+            },
+            {
+              "name": "libncursesw6",
+              "url": "http://deb.debian.org/debian/pool/main/n/ncurses/libncursesw6_6.4-4_amd64.deb",
+              "sha256": "98fa7a53dc565a38b65fb70422ad08001bf5361d8fbc74255280c329996a6bec",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libncursesw6_6.4-4_amd64.deb",
+              "library_dirs": [
+                "lib/x86_64-linux-gnu"
+              ]
+            }
+          ],
+          "components": [
+            {
+              "name": "ncurses",
+              "kind": "library",
+              "packages": [
+                "libncurses-dev",
+                "libncurses6"
+              ],
+              "debian_version": "6.4-4",
+              "upstream_version": "6.4",
+              "abi_series": "6",
+              "runtime": {
+                "package": "libncurses6",
+                "soname": "libncurses.so.6",
+                "path": "lib/x86_64-linux-gnu/libncurses.so.6"
+              },
+              "development": {
+                "package": "libncurses-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libncurses.so"
+              },
+              "pkgconfig": {
+                "path": "usr/lib/x86_64-linux-gnu/pkgconfig/ncurses.pc",
+                "version": "6.4.20221231",
+                "match": "prefix"
+              },
+              "header": {
+                "path": "usr/include/curses.h",
+                "regex": "#define\\s+NCURSES_VERSION\\s+\"([^\"]+)\"",
+                "version": "6.4"
+              }
+            },
+            {
+              "name": "ncursesw",
+              "kind": "library",
+              "packages": [
+                "libncurses-dev",
+                "libncursesw6"
+              ],
+              "debian_version": "6.4-4",
+              "upstream_version": "6.4",
+              "abi_series": "6",
+              "runtime": {
+                "package": "libncursesw6",
+                "soname": "libncursesw.so.6",
+                "path": "lib/x86_64-linux-gnu/libncursesw.so.6"
+              },
+              "development": {
+                "package": "libncurses-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libncursesw.so"
+              },
+              "pkgconfig": {
+                "path": "usr/lib/x86_64-linux-gnu/pkgconfig/ncursesw.pc",
+                "version": "6.4.20221231",
+                "match": "prefix"
+              },
+              "header": {
+                "path": "usr/include/ncurses.h",
+                "regex": "#define\\s+NCURSES_VERSION\\s+\"([^\"]+)\"",
+                "version": "6.4"
+              }
+            },
+            {
+              "name": "tinfo",
+              "kind": "library",
+              "packages": [
+                "libtinfo-dev",
+                "libtinfo6"
+              ],
+              "debian_version": "6.4-4",
+              "upstream_version": "6.4",
+              "abi_series": "6",
+              "runtime": {
+                "package": "libtinfo6",
+                "soname": "libtinfo.so.6",
+                "path": "lib/x86_64-linux-gnu/libtinfo.so.6"
+              },
+              "development": {
+                "package": "libtinfo-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libtinfo.so"
+              },
+              "pkgconfig": {
+                "path": "usr/lib/x86_64-linux-gnu/pkgconfig/tinfo.pc",
+                "version": "6.4.20221231",
+                "match": "prefix"
+              },
+              "unresolved": [
+                "header: libtinfo-dev ships no separate version header; the ncurses.pc/tinfo.pc version and the libtinfo SONAME are the pinned evidence"
+              ]
+            }
+          ],
+          "description": "ncurses 6.4 wide/narrow terminal libraries, headers, dev symlinks and pkg-config",
+          "sha256": "sha256:4bb8e841087b91de4baf681c0ca3374d8eb4ba7903b8f40674494b8277dcead2"
+        }
+      ]
+    },
+    "libudev": {
+      "description": "libudev headers/dev symlink over the venue runtime (fido2)",
+      "bundles": [
+        {
+          "bundle_id": "cap:libudev@252.39-1~deb12u2",
+          "version": "252.39-1~deb12u2",
+          "packages": [
+            {
+              "name": "libudev-dev",
+              "url": "http://deb.debian.org/debian/pool/main/s/systemd/libudev-dev_252.39-1~deb12u2_amd64.deb",
+              "sha256": "b8795a05b96799cb25ed3677eef8e8b1f1facdf07ad4527e06ef8f82ca164fbd",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "include_dirs": [
+                "usr/include"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ],
+              "pkgconfig_dirs": [
+                "usr/lib/x86_64-linux-gnu/pkgconfig"
+              ],
+              "links": {
+                "usr/lib/x86_64-linux-gnu/libudev.so.1": "/usr/lib/x86_64-linux-gnu/libudev.so.1"
+              },
+              "note": "matching bookworm libudev-dev 252.39-1~deb12u2; libudev.so.1 itself is the venue's already-installed runtime library"
+            }
+          ],
+          "components": [
+            {
+              "name": "libudev",
+              "kind": "library",
+              "packages": [
+                "libudev-dev"
+              ],
+              "debian_version": "252.39-1~deb12u2",
+              "upstream_version": "252",
+              "abi_series": "252",
+              "runtime": {
+                "package": "libudev-dev",
+                "soname": "libudev.so.1",
+                "path": "usr/lib/x86_64-linux-gnu/libudev.so.1",
+                "external": true,
+                "external_path": "/usr/lib/x86_64-linux-gnu/libudev.so.1"
+              },
+              "development": {
+                "package": "libudev-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libudev.so"
+              },
+              "pkgconfig": {
+                "path": "usr/lib/x86_64-linux-gnu/pkgconfig/libudev.pc",
+                "version": "252",
+                "match": "exact"
+              },
+              "unresolved": [
+                "header: libudev.h publishes no version macro",
+                "runtime: the SONAME is the venue's libudev.so.1, not a pinned runtime package; only its presence and the development symlink target are verified"
+              ]
+            }
+          ],
+          "description": "libudev development headers, libudev.so and libudev.pc over the venue runtime",
+          "sha256": "sha256:30e391ec6514edfdde7ab1b56629fd97e987547ad6ab5ebec78dc44976e59054"
+        }
+      ]
+    },
+    "pcre1": {
+      "description": "PCRE1 8.39 (httest and the b16 regex cohort)",
+      "bundles": [
+        {
+          "bundle_id": "cap:pcre1@8.39-15",
+          "version": "8.39-15",
+          "packages": [
+            {
+              "name": "libpcre3",
+              "url": "http://deb.debian.org/debian/pool/main/p/pcre3/libpcre3_8.39-15_amd64.deb",
+              "sha256": "993ea623ce5b42d67f653f2faaa7ef15e7c9d72bfcb93e22a1eaff7aa3532303",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libpcre3_8.39-15_amd64.deb",
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ]
+            },
+            {
+              "name": "libpcre3-dev",
+              "url": "http://deb.debian.org/debian/pool/main/p/pcre3/libpcre3-dev_8.39-15_amd64.deb",
+              "sha256": "a2bd77ac61b2dbbbc6cac3f7238780a591cf23774f9f0b1fc79d1c07b6d7f0c4",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libpcre3-dev_8.39-15_amd64.deb",
+              "include_dirs": [
+                "usr/include"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ],
+              "bin_dirs": [
+                "usr/bin"
+              ],
+              "links": {
+                "usr/include/pcre": "."
+              }
+            }
+          ],
+          "components": [
+            {
+              "name": "pcre",
+              "kind": "library",
+              "packages": [
+                "libpcre3",
+                "libpcre3-dev"
+              ],
+              "debian_version": "8.39-15",
+              "upstream_version": "8.39",
+              "abi_series": "3",
+              "header": {
+                "path": "usr/include/pcre.h",
+                "regex": "#define\\s+PCRE_MAJOR\\s+(\\d+)\\s*\\n\\s*#define\\s+PCRE_MINOR\\s+(\\d+)",
+                "version": "8.39"
+              },
+              "unresolved": [
+                "runtime: libpcre3 extracts libpcre.so.3 under lib/x86_64-linux-gnu while the legacy pin exposes only usr/lib/x86_64-linux-gnu; SONAME verification is deferred",
+                "development: Debian's libpcre.so is an absolute symlink to the venue, so it is not resolved against the pinned runtime",
+                "pkgconfig: libpcre3-dev ships libpcre.pc but the legacy pin does not expose its directory; its Version is not a build input and is verified only when the file is readable"
+              ]
+            }
+          ],
+          "description": "PCRE1 8.39 runtime, headers, libpcre.so and libpcre.pc",
+          "sha256": "sha256:b2174491a864e54eac33f8488a6b9838a0763f2edf2f1cbf56c076cddece69ee"
+        }
+      ]
+    },
+    "libxml2": {
+      "description": "libxml2 2.9.14 + ICU 72.1 (icecast, davix, kannel and peers)",
+      "bundles": [
+        {
+          "bundle_id": "cap:libxml2@2.9.14+dfsg-1.3~deb12u6",
+          "version": "2.9.14+dfsg-1.3~deb12u6",
+          "packages": [
+            {
+              "name": "libxml2",
+              "url": "http://deb.debian.org/debian/pool/main/libx/libxml2/libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+              "sha256": "4460e39dda10a815881374217cde08474747cfa018358cd8612c14b390eff53b",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libxml2_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ]
+            },
+            {
+              "name": "libxml2-dev",
+              "url": "http://deb.debian.org/debian/pool/main/libx/libxml2/libxml2-dev_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+              "sha256": "e8ceacf656b1720e7a310e1d159439a356bfcb9f5fb0325907f26aa8590e5f70",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libxml2-dev_2.9.14+dfsg-1.3~deb12u6_amd64.deb",
+              "include_dirs": [
+                "usr/include",
+                "usr/include/libxml2"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ],
+              "pkgconfig_dirs": [
+                "usr/lib/x86_64-linux-gnu/pkgconfig"
+              ],
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "libicu72",
+              "url": "http://deb.debian.org/debian/pool/main/i/icu/libicu72_72.1-3+deb12u1_amd64.deb",
+              "sha256": "f7f6f99c6d7b025914df2447fc93e11d22c44c0c8bdd8b6f36691c9e7ddcef88",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libicu72_72.1-3+deb12u1_amd64.deb",
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ]
+            },
+            {
+              "name": "libicu-dev",
+              "url": "http://deb.debian.org/debian/pool/main/i/icu/libicu-dev_72.1-3+deb12u1_amd64.deb",
+              "sha256": "08bd4e3f4bd4fc725cf25e739edf0e7df5ac1826bdac9a7d990eea8f93b2d7a0",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libicu-dev_72.1-3+deb12u1_amd64.deb",
+              "include_dirs": [
+                "usr/include"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ],
+              "pkgconfig_dirs": [
+                "usr/lib/x86_64-linux-gnu/pkgconfig"
+              ]
+            }
+          ],
+          "components": [
+            {
+              "name": "libxml2",
+              "kind": "library",
+              "packages": [
+                "libxml2",
+                "libxml2-dev"
+              ],
+              "debian_version": "2.9.14+dfsg-1.3~deb12u6",
+              "upstream_version": "2.9.14",
+              "abi_series": "2",
+              "runtime": {
+                "package": "libxml2",
+                "soname": "libxml2.so.2",
+                "path": "usr/lib/x86_64-linux-gnu/libxml2.so.2"
+              },
+              "development": {
+                "package": "libxml2-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libxml2.so"
+              },
+              "pkgconfig": {
+                "path": "usr/lib/x86_64-linux-gnu/pkgconfig/libxml-2.0.pc",
+                "version": "2.9.14",
+                "match": "exact"
+              },
+              "header": {
+                "path": "usr/include/libxml2/libxml/xmlversion.h",
+                "regex": "#define\\s+LIBXML_DOTTED_VERSION\\s+\"([^\"]+)\"",
+                "version": "2.9.14"
+              }
+            },
+            {
+              "name": "icu",
+              "kind": "library",
+              "packages": [
+                "libicu72",
+                "libicu-dev"
+              ],
+              "debian_version": "72.1-3+deb12u1",
+              "upstream_version": "72.1",
+              "abi_series": "72",
+              "runtime": {
+                "package": "libicu72",
+                "soname": "libicuuc.so.72",
+                "path": "usr/lib/x86_64-linux-gnu/libicuuc.so.72"
+              },
+              "development": {
+                "package": "libicu-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libicuuc.so"
+              },
+              "pkgconfig": {
+                "path": "usr/lib/x86_64-linux-gnu/pkgconfig/icu-uc.pc",
+                "version": "72.1",
+                "match": "exact"
+              },
+              "header": {
+                "path": "usr/include/unicode/uvernum.h",
+                "regex": "#define\\s+U_ICU_VERSION\\s+\"([^\"]+)\"",
+                "version": "72.1"
+              }
+            }
+          ],
+          "description": "libxml2 2.9.14 and its pinned ICU 72.1 dependency: runtime, headers, dev symlinks and pkg-config",
+          "sha256": "sha256:d9d7c903a75e0e7293d81f8e03cd163e3a2a8f858eef98b811005df97ba4edd1"
+        }
+      ]
+    },
+    "autotools": {
+      "description": "autotools bootstrap tools (11 recipes)",
+      "bundles": [
+        {
+          "bundle_id": "cap:autotools@bookworm-autoconf-2.71-3",
+          "version": "bookworm-autoconf-2.71-3",
+          "packages": [
+            {
+              "name": "m4",
+              "url": "http://deb.debian.org/debian/pool/main/m/m4/m4_1.4.19-3_amd64.deb",
+              "sha256": "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm m4_1.4.19-3_amd64.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "autoconf",
+              "url": "http://deb.debian.org/debian/pool/main/a/autoconf/autoconf_2.71-3_all.deb",
+              "sha256": "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm autoconf_2.71-3_all.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "automake",
+              "url": "http://deb.debian.org/debian/pool/main/a/automake-1.16/automake_1.16.5-1.3_all.deb",
+              "sha256": "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm automake_1.16.5-1.3_all.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "autotools-dev",
+              "url": "http://deb.debian.org/debian/pool/main/a/autotools-dev/autotools-dev_20220109.1_all.deb",
+              "sha256": "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm autotools-dev_20220109.1_all.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "libtool",
+              "url": "http://deb.debian.org/debian/pool/main/libt/libtool/libtool_2.4.7-7~deb12u1_all.deb",
+              "sha256": "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libtool_2.4.7-7~deb12u1_all.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            }
+          ],
+          "components": [
+            {
+              "name": "m4",
+              "kind": "tool",
+              "packages": [
+                "m4"
+              ],
+              "debian_version": "1.4.19-3",
+              "upstream_version": "1.4.19",
+              "tools": [
+                "usr/bin/m4"
+              ]
+            },
+            {
+              "name": "autoconf",
+              "kind": "tool",
+              "packages": [
+                "autoconf"
+              ],
+              "debian_version": "2.71-3",
+              "upstream_version": "2.71",
+              "tools": [
+                "usr/bin/autoconf",
+                "usr/bin/autoheader",
+                "usr/bin/autom4te",
+                "usr/bin/autoreconf",
+                "usr/bin/autoscan",
+                "usr/bin/autoupdate",
+                "usr/bin/ifnames"
+              ]
+            },
+            {
+              "name": "automake",
+              "kind": "tool",
+              "packages": [
+                "automake"
+              ],
+              "debian_version": "1.16.5-1.3",
+              "upstream_version": "1.16.5",
+              "tools": [
+                "usr/bin/automake-1.16",
+                "usr/bin/aclocal-1.16"
+              ]
+            },
+            {
+              "name": "autotools-dev",
+              "kind": "tool",
+              "packages": [
+                "autotools-dev"
+              ],
+              "debian_version": "20220109.1",
+              "upstream_version": "20220109.1",
+              "tools": [
+                "usr/bin/dh_autotools-dev_updateconfig",
+                "usr/bin/dh_autotools-dev_restoreconfig"
+              ]
+            },
+            {
+              "name": "libtool",
+              "kind": "tool",
+              "packages": [
+                "libtool"
+              ],
+              "debian_version": "2.4.7-7~deb12u1",
+              "upstream_version": "2.4.7",
+              "tools": [
+                "usr/bin/libtoolize"
+              ]
+            }
+          ],
+          "description": "the pinned bookworm autotools a pristine upstream without a generated configure is bootstrapped with",
+          "sha256": "sha256:e774c25546a3f73d0209841ffdb143618827a1e95fb1ff831ad94f15d0d460b0"
+        }
+      ]
+    },
+    "autotools-ltdl": {
+      "description": "autotools + libltdl + bison/flex (13 recipes)",
+      "bundles": [
+        {
+          "bundle_id": "cap:autotools-ltdl@bookworm-libtool-2.4.7",
+          "version": "bookworm-libtool-2.4.7",
+          "packages": [
+            {
+              "name": "m4",
+              "url": "http://deb.debian.org/debian/pool/main/m/m4/m4_1.4.19-3_amd64.deb",
+              "sha256": "b2dd7bfca426712416e651bb5ff6dabe7d05e4caebbac61d714dbe261b31e4c3",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm m4_1.4.19-3_amd64.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "autoconf",
+              "url": "http://deb.debian.org/debian/pool/main/a/autoconf/autoconf_2.71-3_all.deb",
+              "sha256": "7d798ed8c21fc7387127de1dfdb4640003d8ba033ae5a1ff29559610cbd0c323",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm autoconf_2.71-3_all.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "automake",
+              "url": "http://deb.debian.org/debian/pool/main/a/automake-1.16/automake_1.16.5-1.3_all.deb",
+              "sha256": "f9a5758d87b5389bf2dbb00cc9c48e0cf59bb0ac842c5ce25d41e4bfa3f2f962",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm automake_1.16.5-1.3_all.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "autotools-dev",
+              "url": "http://deb.debian.org/debian/pool/main/a/autotools-dev/autotools-dev_20220109.1_all.deb",
+              "sha256": "4d66dcb9c312566f1ca8d46ef0fb06fa4d4786c20b072c81f9d313b64ef981d0",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm autotools-dev_20220109.1_all.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "libtool",
+              "url": "http://deb.debian.org/debian/pool/main/libt/libtool/libtool_2.4.7-7~deb12u1_all.deb",
+              "sha256": "1c2e74f06b1d5d9a2c75e04ce87a99a8633058684439504ae8d715a4a088926c",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libtool_2.4.7-7~deb12u1_all.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "libltdl-dev",
+              "url": "http://deb.debian.org/debian/pool/main/libt/libtool/libltdl-dev_2.4.7-7~deb12u1_amd64.deb",
+              "sha256": "60ad26b3007d4304a1141649d4e764a27735ff4f1835a62c845d51bd734932b0",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libltdl-dev_2.4.7-7~deb12u1_amd64.deb",
+              "include_dirs": [
+                "usr/include"
+              ],
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ]
+            },
+            {
+              "name": "libltdl7",
+              "url": "http://deb.debian.org/debian/pool/main/libt/libtool/libltdl7_2.4.7-7~deb12u1_amd64.deb",
+              "sha256": "8070b550321d4bd1c298f52f75374898d39112b709026d2ea5362ef1277b775a",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm libltdl7_2.4.7-7~deb12u1_amd64.deb",
+              "library_dirs": [
+                "usr/lib/x86_64-linux-gnu"
+              ]
+            },
+            {
+              "name": "bison",
+              "url": "http://deb.debian.org/debian/pool/main/b/bison/bison_3.8.2+dfsg-1+b1_amd64.deb",
+              "sha256": "a414afd7519c53bfa33415ba5b951bc8b4906877004c49723ffda50a6033c3e8",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm bison_3.8.2+dfsg-1+b1_amd64.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            },
+            {
+              "name": "flex",
+              "url": "http://deb.debian.org/debian/pool/main/f/flex/flex_2.6.4-8_amd64.deb",
+              "sha256": "6e356fec04533fb809a1d332ac74cd5f10e86841694e2fde69fcb1ef35ecbde5",
+              "archive": "deb",
+              "extract": [
+                "dpkg-deb",
+                "-x"
+              ],
+              "note": "pinned bookworm flex_2.6.4-8_amd64.deb",
+              "bin_dirs": [
+                "usr/bin"
+              ]
+            }
+          ],
+          "components": [
+            {
+              "name": "m4",
+              "kind": "tool",
+              "packages": [
+                "m4"
+              ],
+              "debian_version": "1.4.19-3",
+              "upstream_version": "1.4.19",
+              "tools": [
+                "usr/bin/m4"
+              ]
+            },
+            {
+              "name": "autoconf",
+              "kind": "tool",
+              "packages": [
+                "autoconf"
+              ],
+              "debian_version": "2.71-3",
+              "upstream_version": "2.71",
+              "tools": [
+                "usr/bin/autoconf",
+                "usr/bin/autoheader",
+                "usr/bin/autom4te",
+                "usr/bin/autoreconf",
+                "usr/bin/autoscan",
+                "usr/bin/autoupdate",
+                "usr/bin/ifnames"
+              ]
+            },
+            {
+              "name": "automake",
+              "kind": "tool",
+              "packages": [
+                "automake"
+              ],
+              "debian_version": "1.16.5-1.3",
+              "upstream_version": "1.16.5",
+              "tools": [
+                "usr/bin/automake-1.16",
+                "usr/bin/aclocal-1.16"
+              ]
+            },
+            {
+              "name": "autotools-dev",
+              "kind": "tool",
+              "packages": [
+                "autotools-dev"
+              ],
+              "debian_version": "20220109.1",
+              "upstream_version": "20220109.1",
+              "tools": [
+                "usr/bin/dh_autotools-dev_updateconfig",
+                "usr/bin/dh_autotools-dev_restoreconfig"
+              ]
+            },
+            {
+              "name": "libtool",
+              "kind": "tool",
+              "packages": [
+                "libtool"
+              ],
+              "debian_version": "2.4.7-7~deb12u1",
+              "upstream_version": "2.4.7",
+              "tools": [
+                "usr/bin/libtoolize"
+              ]
+            },
+            {
+              "name": "libltdl",
+              "kind": "library",
+              "packages": [
+                "libltdl-dev",
+                "libltdl7"
+              ],
+              "debian_version": "2.4.7-7~deb12u1",
+              "upstream_version": "2.4.7",
+              "abi_series": "7",
+              "runtime": {
+                "package": "libltdl7",
+                "soname": "libltdl.so.7",
+                "path": "usr/lib/x86_64-linux-gnu/libltdl.so.7"
+              },
+              "development": {
+                "package": "libltdl-dev",
+                "link": "usr/lib/x86_64-linux-gnu/libltdl.so"
+              },
+              "unresolved": [
+                "pkgconfig: Debian ships no ltdl.pc",
+                "header: ltdl.h publishes no version macro; the runtime/development package version and SONAME are the pinned evidence"
+              ]
+            },
+            {
+              "name": "bison",
+              "kind": "tool",
+              "packages": [
+                "bison"
+              ],
+              "debian_version": "3.8.2+dfsg-1+b1",
+              "upstream_version": "3.8.2",
+              "tools": [
+                "usr/bin/bison",
+                "usr/bin/bison.yacc"
+              ]
+            },
+            {
+              "name": "flex",
+              "kind": "tool",
+              "packages": [
+                "flex"
+              ],
+              "debian_version": "2.6.4-8",
+              "upstream_version": "2.6.4",
+              "tools": [
+                "usr/bin/flex",
+                "usr/bin/flex++"
+              ]
+            }
+          ],
+          "description": "autotools plus libltdl, bison and flex for upstreams whose build links libltdl or regenerates a parser",
+          "sha256": "sha256:d02380f4cda7cb0a670c74278ba809c22448f308e1e7a9687ebe4633166d638a"
+        }
+      ]
+    }
+  }
+}
