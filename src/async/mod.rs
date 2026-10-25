@@ -32,7 +32,7 @@
 //!
 //! ## The init bit this framework needs, and where it is enabled
 //!
-//! `OPENSSL_INIT_ASYNC` was on `src/runtime/init.rs`'s `INIT_UNSUPPORTED` list while
+//! `OPENSSL_INIT_ASYNC` was on `src/runtime/init.rs`'s refusal list while
 //! `crypto/async` had no home. The authority's `ossl_init_async` runs `async_init()`, and
 //! `ossl_init_async` is what every `ASYNC_*` entry point reaches through
 //! `OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, NULL)`, so landing this stratum retires the bit

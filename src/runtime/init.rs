@@ -29,28 +29,25 @@
 //! | `OPENSSL_INIT_NO_ATEXIT` | fully honoured: it suppresses the `atexit` registration |
 //! | `OPENSSL_INIT_BASE_ONLY` | internal flag; base init is all this build has |
 //! | `OPENSSL_INIT_ASYNC` | **implemented** (13.7): runs `async_init()`, which creates the fibre-memory lock. The authority's `ossl_init_async` runs it at the authority's own position, after the config step and before the engine steps; `crypto/async` landed with 13.7, so the bit left the refused set |
-//! | `OPENSSL_INIT_ENGINE_DYNAMIC` | **implemented** (16.2): runs `engine_load_dynamic_int()`, which registers the `dynamic` engine. The authority's `ossl_init_engine_dynamic` runs it after the `engine_openssl`/`engine_rdrand` steps and before the platform engines (`crypto/init.c:660-662`); `crypto/engine/eng_dyn.c` landed with 16.2, so this one bit left the refused set. `OPENSSL_INIT_ENGINE_ALL_BUILTIN` still trips the remaining engine bits below |
+//! | `OPENSSL_INIT_ENGINE_DYNAMIC` | **implemented** (16.2): runs `engine_load_dynamic_int()`, which registers the `dynamic` engine. The authority's `ossl_init_engine_dynamic` runs it after the `engine_openssl`/`engine_rdrand` steps and before the platform engines (`crypto/init.c:660-662`); `crypto/engine/eng_dyn.c` landed with 16.2 |
+//! | `ADD_ALL_CIPHERS`, `ADD_ALL_DIGESTS` | **implemented**: `add_all_legacy_methods` runs the authority's two `RUN_ONCE` adders at their own positions (D161) |
+//! | `OPENSSL_INIT_ENGINE_OPENSSL`, `_RDRAND`, `_CRYPTODEV`, `_PADLOCK`, `_CAPI`, `_AFALG` | **accepted** (D565): every authority `ossl_init_engine_*` body returns 1 unconditionally (`crypto/init.c:312-380`), so the step cannot fail the initialisation. The crate does not carry those engine loaders yet, so the step is a successful no-op and **no engine is registered** — a recorded contents divergence, not a return-value divergence. Refusing the bits was itself the divergence bind9 measured: `OPENSSL_init_ssl(ENGINE_ALL_BUILTIN \| LOAD_CONFIG)` answered 0 with `ERR_R_INIT_FAIL` where the authority answers 1 (V5b) |
+//! | `OPENSSL_INIT_ENGINE_ALL_BUILTIN` | the union of the seven engine bits above. As in the authority it additionally runs `ENGINE_register_all_complete()` after the engine steps (`crypto/init.c:685-688`); this crate's walk sees only engines a caller registered, because the built-in loaders are absent |
 //! | unknown bits | the authority ORs unknown bits into its done-mask and ignores them |
 //!
-//! **Refused** with `ERR_LIB_CRYPTO`/`ERR_R_INIT_FAIL` and a `0` return. Each of
-//! these names a subsystem that does not exist yet *and* whose action is not a
-//! no-op in the authority, so accepting it would silently change observable
-//! behaviour:
+//! **No option is refused any more.** The refusal machinery (`ERR_LIB_CRYPTO`/
+//! `ERR_R_INIT_FAIL` plus a `0` return) had been the honest answer while an option's
+//! authority action was observable and its subsystem absent. D161 retired it for the
+//! two legacy-adder bits; D565 retires it for the engine bits, because the authority
+//! answers 1 for both families whatever the subsystem does. A caller that requires an
+//! actual built-in engine (`ENGINE_by_id("rdrand")`, say) still observes the contents
+//! divergence, and that is recorded rather than disguised as an initialisation failure.
 //!
-//! | option | subsystem (phase) | authority's non-no-op action |
-//! |---|---|---|
-//! | `ADD_ALL_CIPHERS` | EVP/OBJ (4, 7) | registers the legacy cipher methods in the `OBJ_NAME` database |
-//! | `ADD_ALL_DIGESTS` | EVP/OBJ (4, 7) | registers the legacy digest methods |
-//! | `ENGINE_*` (the remaining bits) | ENGINE (13) | loads/registers `openssl`, `rdrand` and the platform engines; `DYNAMIC` is landed, but `eng_openssl.c`/`eng_rdrand.c` and the platform units are not, so those bits stay refused |
-//!
-//! Refusals happen *after* the `atexit` step and **before** the config step,
-//! matching the authority's ordering: `init.c` tests `ADD_ALL_*` and the
-//! `ENGINE_*` bits ahead of its `OPENSSL_INIT_LOAD_CONFIG` block, so a refused call
-//! still has the side effects the authority would have had by that point and does
-//! **not** have the ones it would not. That distinction was unobservable while the
-//! config step loaded nothing; it stopped being unobservable in 6.10c, and the
-//! position below is the correction. The `OPENSSL_INIT_ASYNC` step the authority
-//! places *after* config is now taken, since 13.7 landed `crypto/async`.
+//! The engine steps keep the authority's ordering: `engine_openssl`, `engine_rdrand`,
+//! `engine_dynamic`, the platform engines, and finally `ENGINE_register_all_complete`.
+//! Of those, only `engine_dynamic` has a body in this crate; the others are the recorded
+//! no-ops above. The `OPENSSL_INIT_ASYNC` step the authority places *after* config and
+//! *before* the engines remains where 13.7 put it (D565).
 //!
 //! ## Idempotency, and being safe from a constructor or `atexit` frame
 //!
@@ -168,8 +165,8 @@ use crate::runtime::thread::{
 // ---------------------------------------------------------------------------
 
 // The accepted-only options below are referenced by the tests and by the module
-// documentation table; the product path classifies options by the complementary
-// `INIT_UNSUPPORTED` mask, so they are `dead_code` in a non-test build.
+// documentation table. The product path now classifies options by the steps it runs,
+// not by a complementary refusal mask (D565 retired the last one).
 /// `OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS` — the authority's alternative
 /// initialiser is empty, and this registry starts empty, so nothing is needed.
 const OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS: u64 = 0x0000_0001;
@@ -210,6 +207,16 @@ const OPENSSL_INIT_ENGINE_CAPI: u64 = 0x0000_2000;
 const OPENSSL_INIT_ENGINE_PADLOCK: u64 = 0x0000_4000;
 /// `OPENSSL_INIT_ENGINE_AFALG`
 const OPENSSL_INIT_ENGINE_AFALG: u64 = 0x0000_8000;
+/// `OPENSSL_INIT_ENGINE_ALL_BUILTIN` — the union of the seven engine bits above
+/// (`crypto.h`). The authority also registers every engine after these steps when this
+/// bit, `_OPENSSL` or `_AFALG` is set (`crypto/init.c:685-688`).
+const OPENSSL_INIT_ENGINE_ALL_BUILTIN: u64 = OPENSSL_INIT_ENGINE_RDRAND
+    | OPENSSL_INIT_ENGINE_DYNAMIC
+    | OPENSSL_INIT_ENGINE_OPENSSL
+    | OPENSSL_INIT_ENGINE_CRYPTODEV
+    | OPENSSL_INIT_ENGINE_CAPI
+    | OPENSSL_INIT_ENGINE_PADLOCK
+    | OPENSSL_INIT_ENGINE_AFALG;
 // The libssl string flags come from `ssl.h`: `NO_LOAD_SSL_STRINGS` 0x00100000
 // and `LOAD_SSL_STRINGS` 0x00200000. The SSL reason table lives in libcrypto
 // (`crypto/ssl_err.c`) but is loaded by its own flag, which is why they are not
@@ -237,7 +244,7 @@ pub(crate) const OPENSSL_INIT_BASE_ONLY: u64 = 0x0004_0000;
 /// nothing raised, and `OpenSSL_add_all_algorithms_noconf()` is a macro over exactly these two
 /// bits -- so a refusal here is a caller-visible failure where the authority has none.
 ///
-/// They were on `INIT_UNSUPPORTED` until D161, which is the decision entry that retired them and
+/// They were refused until D161, which is the decision entry that retired them and
 /// the one that records why: the table staying empty is a contents divergence recorded in
 /// `docs/PHASE-7-SUBPHASES.md`, and the call *failing* was a behaviour divergence that no record
 /// named. `RT-EVP-NAMES` measured the difference, because `EVP_CIPHER_do_all`'s first statement is
@@ -256,33 +263,6 @@ fn add_all_legacy_methods(opts: u64) {
 
 /// `OPENSSL_INIT_NO_ATEXIT` — fully honoured: suppresses the `atexit` handler.
 const OPENSSL_INIT_NO_ATEXIT: u64 = 0x0008_0000;
-
-/// Options whose subsystem is absent and whose authority action is observable.
-///
-/// Do not add to this list without reading the module note: refusal is the
-/// honest choice *because* these are not no-ops in the authority.
-///
-/// `OPENSSL_INIT_ASYNC` left this list in Phase 13.7, when `crypto/async` landed and its
-/// `ossl_init_async` step could be added at the authority's own position (below).
-///
-/// `OPENSSL_INIT_LOAD_CONFIG` was on this list until Phase 5 needed it, and it left
-/// the list for good in Phase 6.10c: the authority's config step is
-/// `CONF_modules_load_file_ex(global_default, NULL, NULL, DEFAULT_CONF_MFLAGS)`,
-/// and `DEFAULT_CONF_MFLAGS` includes `CONF_MFLAGS_IGNORE_MISSING_FILE`, so a
-/// profile with no default config file gets a *successful* no-op — which is what
-/// `ASN1_STRING_TABLE_get` observes first and what the RT-ASN1-STR court measured.
-/// See `docs/DECISIONS.md` D86 for the phase in which the loader was absent, and
-/// the entry that supersedes it for the phase in which it arrived.
-const INIT_UNSUPPORTED: u64 = OPENSSL_INIT_ENGINE_RDRAND
-    | OPENSSL_INIT_ENGINE_OPENSSL
-    | OPENSSL_INIT_ENGINE_CRYPTODEV
-    | OPENSSL_INIT_ENGINE_CAPI
-    | OPENSSL_INIT_ENGINE_PADLOCK
-    | OPENSSL_INIT_ENGINE_AFALG;
-
-// ---------------------------------------------------------------------------
-// Error codes, from the authority's `err.h` / `cryptoerr.h`
-// ---------------------------------------------------------------------------
 
 /// `ERR_LIB_CRYPTO` (`err.h`).
 const ERR_LIB_CRYPTO: c_int = 15;
@@ -799,16 +779,6 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSet
             opts & (OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS),
         );
 
-        // The refusal, at the authority's own position in the sequence: after the
-        // `atexit` registration and the two string loads, and **before** the config
-        // step. A caller who asks for `ADD_ALL_CIPHERS | LOAD_CONFIG` is therefore
-        // refused without a configuration having been read, which is what the
-        // authority does — see the module note.
-        if opts & INIT_UNSUPPORTED != 0 {
-            raise_init_fail();
-            return 0;
-        }
-
         // The config step, in the authority's own two-part shape.
         //
         // The two tests are **not** symmetric, and the asymmetry is observable. The
@@ -858,17 +828,29 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSet
             return 0;
         }
 
-        if opts & INIT_UNSUPPORTED != 0 {
-            raise_init_fail();
+        // The engine steps, in the authority's own order (`crypto/init.c:652-682`):
+        // `engine_openssl`, `engine_rdrand`, `engine_dynamic`, `engine_devcrypto`,
+        // `engine_padlock`, `engine_capi`, `engine_afalg`. Every authority body returns 1
+        // unconditionally, so none of these steps can fail the initialisation. Only
+        // `engine_dynamic` has a loader in this crate; the other bits are accepted and
+        // their steps are successful no-ops, which is a recorded contents divergence
+        // (D565), never a return-value divergence.
+        if opts & OPENSSL_INIT_ENGINE_DYNAMIC != 0 && run_engine_dynamic_once() == 0 {
             return 0;
         }
 
-        // The dynamic-engine step, at the authority's own position: after the
-        // `engine_openssl` and `engine_rdrand` steps and before the platform engines
-        // (`crypto/init.c:660-662`). Phase 16.2 landed `engine_load_dynamic_int`, so the
-        // `DYNAMIC` bit left `INIT_UNSUPPORTED`; the other engine bits stay refused.
-        if opts & OPENSSL_INIT_ENGINE_DYNAMIC != 0 && run_engine_dynamic_once() == 0 {
-            return 0;
+        // `if (opts & (ENGINE_ALL_BUILTIN | ENGINE_OPENSSL | ENGINE_AFALG))
+        //      ENGINE_register_all_complete();` (`crypto/init.c:685-688`). `ALL_BUILTIN`
+        // already contains the other two bits, so the authority's condition reduces to this
+        // union test. The walk visits this crate's registry, so it registers only engines a
+        // caller added: the built-in loaders that would populate the authority's registry
+        // are precisely the absent ones above.
+        if opts & OPENSSL_INIT_ENGINE_ALL_BUILTIN != 0 {
+            // SAFETY: `ENGINE_register_all_complete` is a safe C entry point over the
+            // registry's own iteration contract, which `ENGINE_get_first`/`ENGINE_get_next`
+            // publish; it validates each engine it visits and reports through its return
+            // value.
+            unsafe { crate::engine::eng_fat::ENGINE_register_all_complete() };
         }
 
         // Everything remaining is accepted and recorded.
@@ -1586,6 +1568,59 @@ mod tests {
         });
     }
 
+    /// `bind9`'s `lib/isc/tls.c:88` calls
+    /// `OPENSSL_init_ssl(OPENSSL_INIT_ENGINE_ALL_BUILTIN | OPENSSL_INIT_LOAD_CONFIG, NULL)`.
+    /// The authority answers 1: every `ossl_init_engine_*` body in `crypto/init.c` returns 1, and
+    /// a missing default configuration file is a successful no-op under `DEFAULT_CONF_MFLAGS`.
+    ///
+    /// This is the measured V5b defect, so the test names the exact pair rather than an
+    /// approximation of it.
+    #[test]
+    fn init_engine_all_builtin_with_load_config_succeeds_like_the_authority() {
+        with_init_lock(|| {
+            ERR_clear_error();
+            const ALL_BUILTIN: u64 = 0x0000_FE00;
+            // SAFETY: a NULL settings pointer is the argument the authority's own callers pass
+            // and is explicitly accepted by `OPENSSL_init_ssl`.
+            let ret =
+                unsafe { crate::ssl::ssl_init::OPENSSL_init_ssl(ALL_BUILTIN, core::ptr::null()) };
+            assert_eq!(
+                ret, 1,
+                "ENGINE_ALL_BUILTIN | LOAD_CONFIG must succeed, as it does in the authority"
+            );
+            assert_eq!(
+                ERR_peek_error(),
+                0,
+                "a successful initialisation raises nothing"
+            );
+        });
+    }
+
+    /// `LOAD_CONFIG` must not fail merely because the named configuration file does not exist:
+    /// `DEFAULT_CONF_MFLAGS` carries `CONF_MFLAGS_IGNORE_MISSING_FILE`, so
+    /// `CONF_modules_load_file_ex` answers 1 after the `CONF_R_NO_SUCH_FILE` failure.
+    #[test]
+    fn init_load_config_succeeds_when_the_file_is_missing() {
+        with_init_lock(|| {
+            ERR_clear_error();
+            // SAFETY: both strings are static NUL-terminated literals and the context is NULL,
+            // which asks for the global default context.
+            let ret = unsafe {
+                crate::runtime::confmod::CONF_modules_load_file_ex(
+                    core::ptr::null_mut(),
+                    c"/nonexistent/openssl-rs-v5b-missing.cnf".as_ptr(),
+                    core::ptr::null(),
+                    crate::runtime::confmod::DEFAULT_CONF_MFLAGS,
+                )
+            };
+            assert_eq!(
+                ret, 1,
+                "a missing configuration file is a successful no-op under IGNORE_MISSING_FILE"
+            );
+            assert_eq!(ERR_peek_error(), 0);
+        });
+    }
+
     #[test]
     fn the_async_bit_is_accepted_and_raises_nothing() {
         with_init_lock(|| {
@@ -1624,8 +1659,13 @@ mod tests {
         });
     }
 
+    /// The remaining engine bits are **accepted**, for the reason D565 records: every
+    /// authority `ossl_init_engine_*` body answers 1 whatever the engine does, so refusing
+    /// the bit was a return-value divergence (bind9's `ENGINE_ALL_BUILTIN | LOAD_CONFIG`
+    /// was the measured witness). The contents divergence that remains — no built-in engine
+    /// is registered — is named in the module note instead of being encoded as a failure.
     #[test]
-    fn unsupported_options_fail_with_init_fail_and_do_not_get_recorded() {
+    fn the_remaining_engine_bits_are_accepted_and_raise_nothing() {
         with_init_lock(|| {
             let cases = [
                 OPENSSL_INIT_ENGINE_RDRAND,
@@ -1634,22 +1674,19 @@ mod tests {
                 OPENSSL_INIT_ENGINE_CAPI,
                 OPENSSL_INIT_ENGINE_PADLOCK,
                 OPENSSL_INIT_ENGINE_AFALG,
+                OPENSSL_INIT_ENGINE_ALL_BUILTIN,
             ];
             for opts in cases {
                 ERR_clear_error();
                 assert_eq!(
                     OPENSSL_init_crypto(opts, core::ptr::null()),
-                    0,
-                    "option {opts:#x} must be refused"
+                    1,
+                    "option {opts:#x} must be accepted"
                 );
-                let e = ERR_peek_error();
-                assert_ne!(e, 0, "a refusal must raise an error");
-                assert_eq!((e >> 23) & 0xFF, ERR_LIB_CRYPTO as c_ulong);
-                assert_eq!(e & 0x7F_FFFF, (ERR_R_INIT_FAIL as c_ulong) & 0x7F_FFFF);
-                ERR_clear_error();
-                // Recording a refused option would make the fast path return 1.
-                assert_eq!(OPENSSL_init_crypto(opts, core::ptr::null()), 0);
-                ERR_clear_error();
+                assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
+                // Recording an accepted option makes the second call a fast path answering 1.
+                assert_eq!(OPENSSL_init_crypto(opts, core::ptr::null()), 1);
+                assert_eq!(ERR_peek_error(), 0);
             }
         });
     }
