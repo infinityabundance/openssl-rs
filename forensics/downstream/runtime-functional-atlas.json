@@ -5,8 +5,8 @@
     "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
     "candidate_identity": {
       "install_prefix": "artifacts/phase2/install",
-      "libcrypto_so_3_sha256": "e907c2d83d43e633a6b3d6cec17633a89a7d767b333324c05cb8ee8b85f1cf77",
-      "libssl_so_3_sha256": "bdb4265f758f5561e250ed4ea8ec99a228b7d514120954dd4d74f24d9617a18b"
+      "libcrypto_so_3_sha256": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+      "libssl_so_3_sha256": "e0c9ba33cb5d417cee0f93ac72f941bb3048c7f3a4e910ce2b940a6c4f07676d"
     },
     "counts": {
       "authority_applicable_level": {
@@ -353,7 +353,7 @@
     },
     "evidence_reuse": {
       "candidate_identity_match": false,
-      "families_reused": 306,
+      "families_reused": 307,
       "mode": "committed-rows-carried-forward",
       "reused_families": [
         "afflib",
@@ -380,6 +380,7 @@
         "canl-c-examples",
         "carbon-c-relay",
         "casync",
+        "charybdis",
         "cjose",
         "ckermit",
         "conserver-client",
@@ -665,12 +666,12 @@
       ],
       "superseded_identity": {
         "libcrypto_so_3_sha256": {
-          "committed": "c8a99c59cb69b83ae52bb5d6c19dcd4644ca57b161190892923a84a99bef1694",
-          "current": "e907c2d83d43e633a6b3d6cec17633a89a7d767b333324c05cb8ee8b85f1cf77"
+          "committed": "e907c2d83d43e633a6b3d6cec17633a89a7d767b333324c05cb8ee8b85f1cf77",
+          "current": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae"
         },
         "libssl_so_3_sha256": {
-          "committed": "5992c29da4ffb6dc162acae5c429da515182dc3e48051bb1821fdf0c7ab3ce9a",
-          "current": "bdb4265f758f5561e250ed4ea8ec99a228b7d514120954dd4d74f24d9617a18b"
+          "committed": "bdb4265f758f5561e250ed4ea8ec99a228b7d514120954dd4d74f24d9617a18b",
+          "current": "e0c9ba33cb5d417cee0f93ac72f941bb3048c7f3a4e910ce2b940a6c4f07676d"
         }
       }
     },
@@ -24329,6 +24330,11 @@
           "pids_max": "2048",
           "platform": "linux"
         },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "e907c2d83d43e633a6b3d6cec17633a89a7d767b333324c05cb8ee8b85f1cf77",
+          "libssl_so_3_sha256": "bdb4265f758f5561e250ed4ea8ec99a228b7d514120954dd4d74f24d9617a18b"
+        },
         "run_id": "run:runtime:authority:charybdis",
         "source_root_hash": "a26b987f0589009076743ee280b34897106fca2c4fcd4442c697e38baecc69c8",
         "source_sha256": "a3f4e572877c5a3abdab3af652746c0682f0c41b3f9e3c9866315f5d03f2bb57",
@@ -24477,6 +24483,11 @@
           "memory_swap_max": "max",
           "pids_max": "2048",
           "platform": "linux"
+        },
+        "reused_from_candidate_identity": {
+          "install_prefix": "artifacts/phase2/install",
+          "libcrypto_so_3_sha256": "e907c2d83d43e633a6b3d6cec17633a89a7d767b333324c05cb8ee8b85f1cf77",
+          "libssl_so_3_sha256": "bdb4265f758f5561e250ed4ea8ec99a228b7d514120954dd4d74f24d9617a18b"
         },
         "run_id": "run:runtime:candidate:charybdis",
         "source_root_hash": "a26b987f0589009076743ee280b34897106fca2c4fcd4442c697e38baecc69c8",
@@ -188089,7 +188100,7 @@
       }
     ]
   },
-  "body_hash": "90eeae8acf4a6883217ce60a7e84c5a6cae3480e02937fad4a5301cb1bb774ba",
+  "body_hash": "4d0b885fe65132a07cba337d1bbac25bc5172e947e5d6d812bc38b3bd90c556a",
   "generator": "forensics/tools/downstream_runtime.py",
   "inputs": [
     {
