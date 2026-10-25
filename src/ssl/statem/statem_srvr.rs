@@ -9423,8 +9423,8 @@ mod client_hello_parse_tests {
             &[2, alert as u8],
             "fatal (2) alert {alert}"
         );
-        // SAFETY: `s` is live.
         assert_ne!(
+            // SAFETY: `s` is live.
             unsafe { ossl_statem_in_error(s) },
             0,
             "a fatal rejection must poison the state machine"
