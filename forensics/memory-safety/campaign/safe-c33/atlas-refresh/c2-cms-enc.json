@@ -1,0 +1,160 @@
+{
+  "receipt": "c2-cms-enc",
+  "branch": "integrate/safe-c33",
+  "source_head": "6be5b9e9034e3b834d45a0457750551c9448e4be",
+  "source_head_short": "6be5b9e90",
+  "worktree": true,
+  "date": "2026-10-25",
+  "verification_level": "FAST plus the full library suite. Two bounded mechanisms in src/cms/cms_enc.rs: AEAD parameters become one validated type and the fetched cipher/BIO get scoped ownership. No cms_enc.rs file outside those mechanisms was touched; src/evp/cipher_ctx.rs unchanged. No new hidden obligation, no ABI/layout/export change, no allocator-seam size/file/line change.",
+  "scope": "src/cms/cms_enc.rs: ossl_cms_EncryptedContent_init_bio, its AEAD parameter handling and its fetched-cipher/BIO ownership. The decode parameter staging struct (EvpCipherAeadAsn1Params) remains the cipher_ctx bridge shape and is never used for a copy or provider call before validation.",
+  "files": [
+    "src/cms/cms_enc.rs"
+  ],
+  "mechanisms": [
+    {
+      "id": "C2-CMS-ENC-AEAD-PARAMS",
+      "class": "oversized AEAD IV / malformed tag length (CVE-2025-15467 mechanism) made inexpressible",
+      "before": {
+        "shape": "loose coupling of a [u8; EVP_MAX_IV_LENGTH] local, a *mut u8 piv, an ivlen c_int, an EvpCipherAeadAsn1Params staging struct, and ec->taglen; the bounds were four separate checks spread across both directions and one raw copy (from_raw_parts(piv, ivlen) -> slice copy).",
+        "checks": [
+          "enc: ivlen < 0 and iv_length_fits_authority_buffer(ivlen) before RAND_bytes_ex",
+          "dec: aparams.iv_len <= aparams.iv.len() and iv_length_fits_authority_buffer(cipher_ivlen)",
+          "dec: (4..=16).contains(taglen) before EVP_CTRL_AEAD_SET_TAG",
+          "enc: aparams.tag_len == 0 after the provider reports it"
+        ]
+      },
+      "after": {
+        "type": "AeadParams { iv: [c_uchar; EVP_MAX_IV_LENGTH], iv_len: c_int, tag_len: c_int } — private fields; construction is the only entry point.",
+        "constructors": [
+          "new_for_encryption(libctx, iv_len): rejects negative/>16 IV lengths BEFORE RAND_bytes_ex writes, then fills exactly iv_len bytes; Err(Random) preserves the authority's no-raise RAND failure.",
+          "decode(raw, cipher_iv_len, tag_len): establishes raw.iv_len <= 16, the provider-advertised cipher_iv_len in 0..=16, and tag_len in 4..=16 before any copy or provider call; checks in the authority's order (parsed IV, provider IV, tag).",
+          "set_tag_len(tag_len): establishes the encode-side tag bound (> 0) before the ASN.1 encoder reads it."
+        ],
+        "exits": [
+          "piv(): the only IV pointer handed to EVP_CipherInit_ex; NULL when iv_len == 0, matching the authority's piv.",
+          "bridge(): the only EvpCipherAeadAsn1Params the encoder sees; iv/iv_len/tag_len are already validated and the IV bytes are the ones this call generated."
+        ],
+        "copy_eliminated": "The encode-side memcpy(piv -> aparams.iv) is replaced by the type holding the generated IV itself; the observable IV bytes and the encoded iv_len/tag_len are unchanged.",
+        "error_ordering": "dec IV failures keep cms_enc.c:103's CMS_R_CIPHER_PARAMETER_INITIALISATION_ERROR; tag failures keep :115's CMS_R_CIPHER_AEAD_SET_TAG_ERROR; enc IV failures keep :92's ERR_R_EVP_LIB; the encode tag_len == 0 failure remains an unraised goto-err equivalent. AeadRefusal::TagLength is the only variant that selects :115, so the decode order (IV first, tag second) is preserved."
+      },
+      "eliminated": [
+        "A raw slice constructed from piv with a caller-chosen length at the encode copy site.",
+        "The possibility of handing EVP_CipherInit_ex a provider-advertised IV extent outside the fixed buffer.",
+        "The possibility of handing EVP_CTRL_AEAD_SET_TAG a tag length outside 4..=16 (and of calling it at all for an out-of-range length)."
+      ],
+      "relocated": [
+        "The fixed 16-byte IV extent and both AEAD lengths now live in AeadParams; the raw staging struct is only the cipher_ctx parser's output buffer."
+      ],
+      "hidden": 0
+    },
+    {
+      "id": "C2-CMS-ENC-OWNERSHIP",
+      "class": "manual multi-path cleanup of the fetched cipher and the cipher BIO",
+      "before": {
+        "shape": "fetched_ciph: *mut EvpCipher and b: *mut Bio with 13 repeated EVP_CIPHER_free/BIO_free pairs across the early-exit paths and the final err label.",
+        "sites": "26 free calls in the function body (git show HEAD:src/cms/cms_enc.rs lines 75-518)."
+      },
+      "after": {
+        "types": [
+          "FetchedCipher(*mut EvpCipher) — Drop releases exactly once; initialized to NONE and set once from EVP_CIPHER_fetch.",
+          "CipherBio(*mut Bio) — Drop releases exactly once; into_raw() is the single ownership transfer for the success return."
+        ],
+        "sites": "0 free calls in the function body; exactly one EVP_CIPHER_free in FetchedCipher::drop and one BIO_free in CipherBio::drop.",
+        "contracts": [
+          "FetchedCipher: the field is NULL or the cipher this call fetched and has not released; Drop is the authority's cms_enc.c:199.",
+          "CipherBio: the field is NULL or the BIO this call created, neither transferred nor released; Drop is cms_enc.c:207 and into_raw is the return-b transfers ownership."
+        ]
+      },
+      "eliminated": [
+        "Every hand-written early-exit cleanup pair; a newly added early return can no longer forget a release or repeat one."
+      ],
+      "relocated": [
+        "The two release mechanisms are confined to two narrow Drop impls with stated provenance."
+      ],
+      "hidden": 0
+    }
+  ],
+  "unsafe_before_after": {
+    "function_body_occurrences": {
+      "before": 74,
+      "after": 63,
+      "note": "'unsafe' token count in the function range; the reduction does not include the 7 new #[cfg(test)] tests."
+    },
+    "explicit_release_sites": {
+      "before": 26,
+      "after": 0,
+      "guards": 2
+    },
+    "eliminated": [
+      "raw from_raw_parts IV copy at the encode site",
+      "13 duplicated release pairs"
+    ],
+    "relocated": [
+      "the parser's bounded write into EvpCipherAeadAsn1Params (cipher_ctx.rs unchanged, already bounds by 16)",
+      "EVP_CTRL_AEAD_SET_TAG's tag read (still trusts ec->tag readable for the validated ≤16 bytes)",
+      "EVP_CipherInit_ex's IV read through piv (validated extent)"
+    ],
+    "introduced": [
+      "AeadParams::new_for_encryption unsafe call (libctx live; bound established before RAND)",
+      "two Drop impls (provenance contract stated above)",
+      "test-only fake-provider callbacks and raw field writes in #[cfg(test)]"
+    ],
+    "hidden": 0
+  },
+  "preserved": {
+    "exported_symbols": "no #[no_mangle] added, removed or re-signed; git diff contains no no_mangle line.",
+    "repr_c_layouts": "no #[repr(C)] change; the added AeadParams and the two guards are private non-repr(C) types.",
+    "allocator_seam": "cms_enc.c:130 (OwnedBuf::new_cleansed_released, session key) and cms_enc.c:218 (OwnedBuf::new, caller key) unchanged in size/file/line; no new CRYPTO_* event.",
+    "error_reason_codes": "ERR_R_BIO_LIB, CMS_R_UNKNOWN_CIPHER, CMS_R_CIPHER_INITIALISATION_ERROR, CMS_R_UNSUPPORTED_CONTENT_ENCRYPTION_ALGORITHM, ERR_R_EVP_LIB, CMS_R_CIPHER_PARAMETER_INITIALISATION_ERROR, CMS_R_CIPHER_AEAD_IN_ENVELOPED_DATA, CMS_R_CIPHER_AEAD_SET_TAG_ERROR, CMS_R_INVALID_KEY_LENGTH, ERR_R_ASN1_LIB all retained at their original raise coordinates.",
+    "aead_mitigation": "the oversized-IV refusal and the 4..=16 tag-length refusal are retained and now reachable only through the validated type."
+  },
+  "tests": {
+    "filtered_cms_enc": "cargo test --lib cms_enc -- --test-threads=4: 7 passed / 0 failed / 0 ignored (2205 filtered).",
+    "new": [
+      "cms_enc_oversized_iv_is_refused_before_any_write ... ok",
+      "cms_enc_pre_fix_iv_boundary_negative_control ... ok",
+      "cms_enc_custom_cipher_with_unusual_iv_length_round_trips ... ok",
+      "cms_enc_malformed_tag_lengths_are_refused ... ok",
+      "cms_enc_custom_provider_unusual_tag_length_round_trips ... ok",
+      "cms_enc_success_releases_each_owner_once ... ok",
+      "cms_enc_failure_releases_each_owner_once ... ok"
+    ],
+    "canary_output": [
+      "cms_enc canary: pre-fix would write 20 IV bytes into 16",
+      "cms_enc canary: fired = true (oversized-IV refusal reached)"
+    ],
+    "negative_control": "cms_enc_pre_fix_iv_boundary_negative_control asserts the canary fires for a 20-byte provider-advertised IV and stays quiet for 13 bytes. cms_enc_oversized_iv_is_refused_before_any_write additionally asserts the failure raises ERR_R_EVP_LIB and releases the BIO once.",
+    "malformed_tags": "cms_enc_malformed_tag_lengths_are_refused drives a decode GCM parameter set with a 13-byte IV and taglen 3 then 17; both answer NULL and keep CMS_R_CIPHER_AEAD_SET_TAG_ERROR (ERR_peek_last_error reason 184).",
+    "unusual_provider": [
+      "cms_enc_custom_cipher_with_unusual_iv_length_round_trips: legacy method advertising ivlen 13 succeeds; ASN1_TYPE_get_octetstring reports 13.",
+      "cms_enc_custom_provider_unusual_tag_length_round_trips: hand-built provider dispatch reports taglen 32; encode succeeds and the dispatch was asked exactly once."
+    ],
+    "ownership_by_address": [
+      "success: returned BIO == recorded BIO_new address; BIO release list empty (transfer); fetched-cipher release list length 1 and not the static EVP_aes_128_cbc address.",
+      "failure (empty ASN1 parameter after the fetch): BIO release list == [BIO_new address]; fetched-cipher release list length 1."
+    ],
+    "filtered_cms": "cargo test --lib cms -- --test-threads=4: 43 passed / 0 failed / 6 ignored (the 6 are the pre-existing process-global allocator probes).",
+    "full_lib_threads4": "2164 passed / 0 failed / 48 ignored, 153.64 s."
+  },
+  "gates_observed": {
+    "fmt": "cargo fmt --all -- --check clean.",
+    "check_lib": "cargo check --lib clean.",
+    "filtered": "cargo test --lib cms_enc (7/7) and cargo test --lib cms (43 passed / 0 failed / 6 ignored).",
+    "clippy_lib": "cargo clippy --lib -- -D warnings clean (one missing SAFETY comment was found and fixed before it passed).",
+    "structural": "git diff contains no #[no_mangle], #[repr(C)], SeamFile::new or exported-signature change; src/evp/cipher_ctx.rs is untouched.",
+    "instruments_not_run": "Miri/ASan/Loom/dudect were not run: no aliasing, concurrency or secret-dependent-control mechanism changed. The ownership guards and the validated type are exercised by the address/canary tests above."
+  },
+  "graduation": "OWNERSHIP_RECONSTRUCTED (scoped). Not SAFETY_DISCHARGED: the tag read at EVP_CTRL_AEAD_SET_TAG still relies on the ABI contract that ec->tag is readable for the validated length, and EVP_CipherInit_ex remains a provider edge whose IV extent is established but whose internal behaviour is the provider's.",
+  "residuals": [
+    "Encode-side set_tag_len accepts any positive provider tag length, preserving the authority's `tag_len <= 0` check; it additionally refuses a negative c_int, which the authority would cast to unsigned int and encode. This deviation is not reachable through the crate's EVP_CIPHER_CTX_get_tag_length (which answers 0 on failure) and is recorded as a §17 safety improvement.",
+    "The decode-side ec->tag pointer is trusted for the validated tag length (4..=16); the parser/ABI contract, not this function, establishes that extent.",
+    "AeadParams::decode keeps the parsed-IV check (raw.iv_len <= 16) even though evp_cipher_get_asn1_aead_params already bounds it; this is deliberate defence in depth against a future change to the bridge.",
+    "The unusual-tag-length test uses a hand-built method with a non-null provider marker and a test-only get_ctx_params; the marker is cleared before EVP_CIPHER_meth_free, so no provider pointer is dereferenced or freed. It is a dispatch-shape test, not a registered provider.",
+    "No differential transcript against the authority was produced at this level; the byte-level ASN.1 output of the AES-128-CBC success path is not compared here."
+  ],
+  "non_claims": [
+    "This does not discharge the whole src/cms unsafe surface or any consumer family's dependency closure.",
+    "The two Drop impls are single-release guarantees for the values this function creates; they do not assert the wider BIO/cipher reference-count protocol of their consumers.",
+    "The canary is a test-only witness of the reachability of the pre-fix extent; it is not a memory-safety proof of the authority."
+  ]
+}
