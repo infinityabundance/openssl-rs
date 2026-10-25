@@ -307,7 +307,7 @@ pub(crate) unsafe fn crypto_realloc(
 /// # Safety
 /// `ptr` is NULL or a live block from the same seam; `file` is NULL or NUL-terminated.
 pub(crate) unsafe fn crypto_free(ptr: *mut c_void, file: *const c_char, line: c_int) {
-    note_free();
+    note_free(ptr);
     #[cfg(test)]
     seam_probe::note_in_borrow();
     let p = CRYPTO_FREE_SYM.resolve(c"CRYPTO_free");
@@ -347,11 +347,30 @@ pub(crate) fn take_in_borrow_probe() -> usize {
 fn note_malloc() {}
 
 #[cfg(test)]
-fn note_free() {
-    seam_probe::free();
+fn note_free(ptr: *mut c_void) {
+    seam_probe::free(ptr);
 }
 #[cfg(not(test))]
-fn note_free() {}
+fn note_free(_ptr: *mut c_void) {}
+
+/// Test-only: record the release of one specific block, by address identity.
+///
+/// Used by the thread-exit regression test for the error ring: the buffer's address is
+/// read from the live `ERR_STATE` inside the thread, and the test then asserts that this
+/// exact block was handed to `CRYPTO_free`. Recording one address (rather than counting
+/// releases) keeps the observation immune to unrelated allocations, including those made
+/// concurrently by other tests.
+#[cfg(test)]
+pub(crate) fn arm_free_observation(addr: usize) {
+    seam_probe::arm_free_observation(addr);
+}
+
+/// Test-only: report whether the armed address has been released since it was armed, and
+/// disarm. A missing observation is a failure, never an inferred pass.
+#[cfg(test)]
+pub(crate) fn take_free_observation() -> bool {
+    seam_probe::take_free_observation()
+}
 
 /// Test-only: consume and return `(mallocs, frees)` observed on the process-global seam by
 /// this thread since the previous call.
@@ -364,6 +383,8 @@ pub(crate) fn take_seam_probe() -> (usize, usize) {
 #[cfg(test)]
 mod seam_probe {
     use core::cell::Cell;
+    use core::ffi::c_void;
+    use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
     thread_local! {
         static MALLOCS: Cell<usize> = const { Cell::new(0) };
@@ -371,6 +392,11 @@ mod seam_probe {
         static FAIL_MALLOCS: Cell<usize> = const { Cell::new(0) };
         static IN_BORROW: Cell<usize> = const { Cell::new(0) };
     }
+
+    /// The one block whose release a probe is observing, or 0 when disarmed.
+    static OBSERVED_ADDR: AtomicUsize = AtomicUsize::new(0);
+    /// Whether `OBSERVED_ADDR` has been seen in a release since it was armed.
+    static OBSERVED_SEEN: AtomicBool = AtomicBool::new(false);
 
     pub(super) fn arm_failure(n: usize) {
         let _ = FAIL_MALLOCS.try_with(|c| c.set(n));
@@ -406,8 +432,27 @@ mod seam_probe {
         let _ = MALLOCS.try_with(|n| n.set(n.get() + 1));
     }
 
-    pub(super) fn free() {
+    pub(super) fn free(ptr: *mut c_void) {
+        let addr = ptr as usize;
+        // Identity, not a count: a concurrent test's unrelated release cannot satisfy this.
+        if addr != 0
+            && OBSERVED_ADDR.load(Ordering::SeqCst) == addr
+            && !OBSERVED_SEEN.swap(true, Ordering::SeqCst)
+        {
+            OBSERVED_ADDR.store(0, Ordering::SeqCst);
+        }
         let _ = FREES.try_with(|n| n.set(n.get() + 1));
+    }
+
+    pub(super) fn arm_free_observation(addr: usize) {
+        OBSERVED_SEEN.store(false, Ordering::SeqCst);
+        OBSERVED_ADDR.store(addr, Ordering::SeqCst);
+    }
+
+    pub(super) fn take_free_observation() -> bool {
+        let seen = OBSERVED_SEEN.swap(false, Ordering::SeqCst);
+        OBSERVED_ADDR.store(0, Ordering::SeqCst);
+        seen
     }
 
     pub(super) fn take() -> (usize, usize) {

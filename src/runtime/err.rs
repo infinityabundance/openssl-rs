@@ -483,8 +483,8 @@ impl ErrState {
 // The state is only ever reached through the thread-local `STATE` (or the authority's
 // per-thread `ERR_get_state`), so no `Sync` marker is claimed for it: the struct contains raw
 // pointers and is deliberately not shareable. `thread_local!` needs only `'static`, and
-// `UnsafeCell<ErrState>` is `!Sync` regardless, which is the correct shape for per-thread
-// mutable state.
+// `StateCell` is `!Sync` (it holds an `UnsafeCell`), which is the correct shape for
+// per-thread mutable state.
 
 /// The empty C string stored in place of NULL so the read side can hand back a
 /// non-NULL `""` without allocating, exactly as the authority does.
@@ -818,9 +818,11 @@ unsafe fn dup_c(s: *const c_char) -> Option<SlotStr> {
 /// of both the allocation and the release are unchanged, so a caller's
 /// `CRYPTO_set_mem_functions` hook observes the same size, file and sequence.
 ///
-/// The **thread-local** state is deliberately not governed by this type: it is a
-/// `thread_local!` value with no `Drop`, exactly as it had none before, so nothing new is
-/// released at thread exit (see [`STATE`]).
+/// The **thread-local** state is not governed by this type: it is a [`StateCell`] whose
+/// `Drop` releases the per-slot buffers the ring still owns at thread exit, without
+/// releasing the enclosing block (which lives in thread-local storage). Keeping the two
+/// releases separate is what preserves the authority's `OSSL_ERR_STATE_free` sequence —
+/// buffers first, then the block — while the block itself is never heap-allocated here.
 pub(crate) struct OwnedErrState {
     ptr: ptr::NonNull<ErrState>,
 }
@@ -885,10 +887,43 @@ unsafe fn c_strlen(s: *const c_char) -> usize {
     n
 }
 
+/// The per-thread error state storage.
+///
+/// `UnsafeCell` rather than `RefCell` because these operations legitimately re-enter the
+/// state (see the module note). The wrapper exists for its `Drop`: the authority's
+/// per-thread state is released when the thread ends, and an unwrapped `UnsafeCell<ErrState>`
+/// needs no drop, so `thread_local!` registered **no** destructor and the buffers the ring
+/// still owned at exit were never released (V3's ASan leak of the last queued entry from
+/// `raise_site_dynamic_data`).
+///
+/// The destructor runs the authority's own `OSSL_ERR_STATE_free` opening move,
+/// [`ErrState::clear_all`]`(true)`, which releases every owned `err_data`/`err_file`/`err_func`
+/// buffer and NULLs the slot. It deliberately does **not** release the enclosing block: that
+/// block *is* this thread-local and is reclaimed by the TLS machinery. Because every release
+/// NULLs its slot, a later thread-exit clear after an explicit `ERR_clear_error` (which keeps
+/// a malloced data buffer by truncating it in place) frees each block exactly once.
+struct StateCell(UnsafeCell<ErrState>);
+
+impl StateCell {
+    const fn new() -> StateCell {
+        StateCell(UnsafeCell::new(ErrState::new()))
+    }
+}
+
+impl Drop for StateCell {
+    fn drop(&mut self) {
+        // SAFETY: thread exit gives this thread exclusive access to its own state, and this
+        // is its single teardown. `clear_all(true)` releases each owned buffer exactly once
+        // and leaves the slot NULL; `crypto_free` cannot re-enter this state because the TLS
+        // key is already `Destroyed`, so `ERR_get_state` answers NULL and `with_state`
+        // refuses. The enclosing block is thread-local storage and is not released here.
+        unsafe { (*self.0.get()).clear_all(true) };
+    }
+}
+
 thread_local! {
-    /// The per-thread error state. `UnsafeCell` rather than `RefCell` because
-    /// these operations legitimately re-enter the state (see the module note).
-    static STATE: UnsafeCell<ErrState> = const { UnsafeCell::new(ErrState::new()) };
+    /// The per-thread error state. See [`StateCell`] for the teardown obligation.
+    static STATE: StateCell = const { StateCell::new() };
     /// Whether this thread has already performed the authority's per-thread
     /// state creation, which is what loads the crypto error strings.
     static STATE_READY: Cell<bool> = const { Cell::new(false) };
@@ -1247,7 +1282,9 @@ pub(crate) unsafe fn raise_site_dynamic_data(
 #[no_mangle]
 pub extern "C" fn ERR_get_state() -> *mut ErrState {
     guard_ffi(core::ptr::null_mut(), || {
-        STATE.try_with(|s| s.get()).unwrap_or(core::ptr::null_mut())
+        STATE
+            .try_with(|s| s.0.get())
+            .unwrap_or(core::ptr::null_mut())
     })
 }
 
@@ -3217,5 +3254,83 @@ mod tests {
         assert_eq!(cstr(data).as_deref(), Some(""));
         assert_eq!(flags, 0, "a zero-extent owned slot must not be stored");
         drain();
+    }
+
+    /// Reports the end of a thread's own thread-local teardown.
+    ///
+    /// Initialized **before** the thread's first `ERR` call, so its destructor is registered
+    /// before the state's and therefore runs after it (thread-local destructors run LIFO).
+    /// Sending from the destructor is how the test learns that the state destructor has
+    /// already run, rather than racing `thread::join` against TLS teardown.
+    struct ExitReporter(RefCell<Option<std::sync::mpsc::Sender<()>>>);
+
+    impl Drop for ExitReporter {
+        fn drop(&mut self) {
+            if let Some(tx) = self.0.get_mut().take() {
+                let _ = tx.send(());
+            }
+        }
+    }
+
+    thread_local! {
+        static EXIT_REPORTER: ExitReporter = const { ExitReporter(RefCell::new(None)) };
+    }
+
+    /// V3b: thread exit releases the buffers the per-thread error ring still owns.
+    ///
+    /// The ring is public `#[repr(C)]` layout, so the test reads the **address** of the data
+    /// buffer its raise attached from the live state inside the thread. It then observes a
+    /// `CRYPTO_free` of that exact address after the state's destructor has run. Before the
+    /// state had a destructor nothing released the buffer at exit; that is the leak V3's ASan
+    /// run reported as 84 bytes from `raise_site_dynamic_data`.
+    #[test]
+    fn err_thread_exit_releases_the_queued_data_buffer() {
+        let _g = lock();
+        drain();
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        let handle = std::thread::spawn(move || {
+            // Registered before the first ERR call, so it is destroyed after the state.
+            EXIT_REPORTER.with(|r| *r.0.borrow_mut() = Some(tx));
+            // SAFETY: the site's pointers are static and `msg` is NUL-terminated.
+            unsafe {
+                raise_site_dynamic_data(
+                    &err_sites::EVP_FETCH_376,
+                    1,
+                    c"provider=default, Algorithm (SHA256 : 5)".as_ptr(),
+                )
+            };
+            // The same accessor `with_state` uses, so the address is read from the state the
+            // raise actually wrote to.
+            let state = dso_shared::err_state_ptr();
+            assert!(!state.is_null(), "the thread must have a live error state");
+            // SAFETY: `state` is this thread's live state; the read happens before the thread
+            // returns, and no other handle can release the buffer.
+            let addr = unsafe {
+                let top = (*state).top as usize;
+                assert_ne!(
+                    (*state).err_data_flags[top] & ERR_TXT_MALLOCED,
+                    0,
+                    "the raise must attach an owned data buffer"
+                );
+                (*state).err_data[top] as usize
+            };
+            assert_ne!(addr, 0, "the raise must attach a non-NULL data buffer");
+            dso_shared::arm_free_observation(addr);
+            addr
+        });
+
+        let addr = handle
+            .join()
+            .expect("the error-raising thread must not panic");
+        // The state's destructor is registered after the reporter's, so its teardown has
+        // completed by the time this message arrives.
+        rx.recv_timeout(std::time::Duration::from_secs(10))
+            .expect("the thread-local teardown did not complete");
+        assert!(
+            dso_shared::take_free_observation(),
+            "the per-thread error state must release the buffer at {addr:#x} it still owned at \
+             thread exit"
+        );
     }
 }
