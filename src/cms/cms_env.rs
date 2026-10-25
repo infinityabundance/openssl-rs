@@ -15,11 +15,11 @@ use crate::asn1::string::{
 };
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_set0};
 use crate::evp::asymcipher::{
-    evp_pkey_decrypt_alloc, EVP_PKEY_decrypt_init, EVP_PKEY_encrypt, EVP_PKEY_encrypt_init,
+    EVP_PKEY_decrypt, EVP_PKEY_decrypt_init, EVP_PKEY_encrypt, EVP_PKEY_encrypt_init,
 };
 use crate::evp::cipher::{
-    EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_get0_name, EVP_CIPHER_get_flags,
-    EVP_CIPHER_get_mode, EvpCipher,
+    EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_get0_name, EVP_CIPHER_get_block_size,
+    EVP_CIPHER_get_flags, EVP_CIPHER_get_mode, EvpCipher,
 };
 use crate::evp::cipher_ctx::{
     EVP_CIPHER_CTX_ctrl, EVP_CIPHER_CTX_get0_cipher, EVP_CIPHER_CTX_get_tag_length,
@@ -65,6 +65,8 @@ use super::cms_sd::{
     ossl_cms_SignerIdentifier_cert_cmp, ossl_cms_SignerIdentifier_get0_signer_id,
     ossl_cms_set1_SignerIdentifier,
 };
+use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem::OPENSSL_cleanse;
 use crate::runtime::mem_coords::SeamFile;
 
 /// `CMS_ENVELOPED_STANDARD` — `cms_env.c:33`.
@@ -1507,17 +1509,20 @@ unsafe fn cms_RecipientInfo_ktri_encrypt(
     ret
 }
 
-/// Adopt the content key [`evp_pkey_decrypt_alloc`] produced.
+/// Adopt the content key a previous [`evp_pkey_decrypt_alloc`](crate::evp::asymcipher::evp_pkey_decrypt_alloc)
+/// produced.
 ///
-/// The helper allocates one `CRYPTO_malloc` block of the length the provider first reported and
-/// writes the produced length into `num`, which is therefore at most the allocated extent. The
-/// block is secret key material handed to `ec.key`; the authority releases that field with
-/// `OPENSSL_clear_free(ec->key, ec->keylen)` (`cms_asn1.c:88`), so this adopts with the cleansing
-/// release over exactly the produced length.
+/// The production key-transport path no longer adopts a helper-owned block: it establishes the
+/// provider's output extent itself and allocates the key through [`OwnedBuf`] (see
+/// [`cms_RecipientInfo_ktri_decrypt`]). This direct form is retained as the **release-model**
+/// witness: it pins that a decrypted key installed in `ec.key` is released by the authority's
+/// `OPENSSL_clear_free(ec->key, ec->keylen)` (`cms_asn1.c:88`), i.e. cleansed over exactly the
+/// produced length.
 ///
 /// # Safety
 /// `ptr` is NULL or the whole, exclusively owned block `evp_pkey_decrypt_alloc` returned;
 /// `num` is the produced length it wrote, not larger than the allocation.
+#[cfg(test)]
 unsafe fn adopt_decrypted_key(ptr: *mut c_uchar, num: usize) -> OwnedBuf {
     // SAFETY: the caller establishes provenance, whole-block identity, exclusivity and the
     // extent relation `num <= allocated length`.
@@ -1537,8 +1542,6 @@ unsafe fn cms_RecipientInfo_ktri_decrypt(
     let ktri = unsafe { (*ri).d.cast::<CmsKeyTransRecipientInfo>() };
     // SAFETY: `ktri` is live.
     let pkey = unsafe { (*ktri).pkey };
-    let mut ek: *mut c_uchar = ptr::null_mut();
-    let mut eklen: usize = 0;
     let mut ret = 0;
     let mut fixlen: usize = 0;
     let mut cipher: *const EvpCipher = ptr::null();
@@ -1650,30 +1653,77 @@ unsafe fn cms_RecipientInfo_ktri_decrypt(
             (*(*ktri).encrypted_key).length as usize,
         )
     };
-    // SAFETY: `ktri` is live; `ek` is this frame's slot.
+
+    // The provider's decrypt is a two-pass operation: the first call reports the output extent,
+    // the second fills it. Establish that extent **before** anything is allocated or written, so
+    // the block handed to the provider is exactly the extent the provider declared and a second
+    // call can never legitimately write more than it holds. A report larger than the block is
+    // refused below rather than trusted (CVE-2026-63072's write edge; AGENTS.md §3, §17).
+    let mut capacity: usize = 0;
+    // SAFETY: `slot` is live; the out-slot is this frame's and the input is readable for
+    // `eklen_in`.
     if unsafe {
-        evp_pkey_decrypt_alloc(slot.as_ptr(), &mut ek, &mut eklen, fixlen, ekdata, eklen_in)
+        EVP_PKEY_decrypt(
+            slot.as_ptr(),
+            ptr::null_mut(),
+            &mut capacity,
+            ekdata,
+            eklen_in,
+        )
     } <= 0
     {
         return ret;
     }
 
-    // The decrypted key is the helper's own `CRYPTO_malloc` block: `evp_pkey_decrypt_alloc`
-    // allocated exactly the length the first provider call reported and returns the produced
-    // length in `eklen` (never more than that extent). The block becomes secret key material as
-    // `ec.key`, which the authority releases with `OPENSSL_clear_free` at `cms_asn1.c:88`; adopt it
-    // through the cleansing arm so any earlier exit also cleanses the produced bytes.
-    // SAFETY: `ek` is a live block `evp_pkey_decrypt_alloc` allocated and no one else owns;
-    // `eklen` is the produced length, at most the allocated extent.
-    let ek_owned = unsafe { adopt_decrypted_key(ek, eklen) };
+    // The authority allocates here (`evp_pkey_decrypt_alloc`, `asymcipher.c:337`) and cleanses at
+    // `:343` on failure; the block becomes secret key material as `ec.key`, which the authority
+    // releases with `OPENSSL_clear_free` at `cms_asn1.c:88`. One owner for the whole frame: every
+    // failure below drops it (cleansing the allocation extent) and success transfers it exactly
+    // once.
+    let Some(ek_owned) = OwnedBuf::new_cleansed_released(
+        capacity,
+        SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c"),
+        337,
+        SeamFile::new(c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c"),
+        343,
+    ) else {
+        // The authority's allocation-failure arm answers `-1` with no block to release.
+        return ret;
+    };
+
+    // `capacity` is both the block's extent and the provider's declared output capacity. The
+    // produced length is validated against it before it becomes `ec.keylen` (the extent the
+    // authority later cleanses), and against the key-transport expectation the authority checks.
+    let mut produced = capacity;
+    // SAFETY: `slot` is live, `ek_owned` is `capacity` writable bytes, `produced` is that capacity
+    // as the provider's declared output extent, and the input is readable for `eklen_in`.
+    let ok = unsafe {
+        EVP_PKEY_decrypt(
+            slot.as_ptr(),
+            ek_owned.as_ptr(),
+            &mut produced,
+            ekdata,
+            eklen_in,
+        )
+    } > 0
+        && produced != 0
+        && (fixlen == 0 || produced == fixlen)
+        && produced <= capacity;
+    if !ok {
+        // SAFETY: the site is a compile-time constant.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_342) };
+        // `ek_owned` cleanses the allocation extent at `asymcipher.c:343` on the way out; the
+        // reported length was never used as a cleanse extent.
+        return ret;
+    }
 
     ret = 1;
 
-    // SAFETY: `ec` is live; ownership of the block transfers to `ec.key`.
+    // SAFETY: `ec` is live; ownership of the block transfers to `ec.key` exactly once.
     unsafe {
         super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
         (*ec).key = ek_owned.into_raw();
-        (*ec).keylen = eklen;
+        (*ec).keylen = produced;
     }
 
     // `slot` releases the context and clears `ktri->pctx` on the way out.
@@ -2221,6 +2271,117 @@ fn unwrap_length_fits(reported: c_int, capacity: usize) -> bool {
     reported >= 0 && reported as usize <= capacity
 }
 
+/// The extent `EVP_DecryptUpdate` declares writable to the provider for `in_len` input bytes.
+///
+/// Its provider arm passes `in_len` for a one-byte block and `in_len + block_size` otherwise
+/// (`evp/enc_dec.c`'s `outsize`). Establishing this **before** dispatch is what lets the caller
+/// allocate a block the provider cannot legitimately overrun: the declared capacity and the
+/// allocation are the same number.
+#[inline]
+fn declared_update_extent(in_len: usize, block_size: c_int) -> Option<usize> {
+    match block_size {
+        b if b < 1 => None,
+        1 => Some(in_len),
+        b => in_len.checked_add(b as usize),
+    }
+}
+
+/// The content-key extent CMS allocates from the wrapped-key length: `in_len - 8`.
+#[inline]
+fn content_key_extent(in_len: usize) -> Option<usize> {
+    in_len.checked_sub(8)
+}
+
+/// Convert a provider-reported length into an accepted offset, or `None` when it exceeds the
+/// block that was actually allocated. A report is never trusted before this check.
+#[inline]
+fn reported_extent(reported: c_int, capacity: usize) -> Option<usize> {
+    unwrap_length_fits(reported, capacity).then_some(reported as usize)
+}
+
+/// A frame-private staging block for one key unwrap.
+///
+/// `EVP_DecryptUpdate` is given a buffer extent larger than the content key CMS allocates
+/// (`in_len + block_size` versus `in_len - 8`), so the provider is staged here and the validated
+/// prefix is copied into the authority's exact content-key block at `cms_env.c:995`. A Rust
+/// allocation keeps the authority's `CRYPTO_*` seam event stream unchanged (there is still one
+/// seam allocation for the key, at the same size/`file`/`line`); `Drop` cleanses the whole extent
+/// because it held the unwrapped key (AGENTS.md §5).
+struct SecretScratch {
+    bytes: Vec<u8>,
+}
+
+impl SecretScratch {
+    /// A zero-initialised block of `len` bytes, or `None` when the allocation is refused.
+    fn new(len: usize) -> Option<Self> {
+        let mut bytes = Vec::new();
+        bytes.try_reserve_exact(len).ok()?;
+        bytes.resize(len, 0);
+        Some(Self { bytes })
+    }
+
+    fn capacity(&self) -> usize {
+        self.bytes.len()
+    }
+
+    fn as_mut_ptr(&mut self) -> *mut c_uchar {
+        self.bytes.as_mut_ptr()
+    }
+
+    fn as_ptr(&self) -> *const c_uchar {
+        self.bytes.as_ptr()
+    }
+}
+
+impl Drop for SecretScratch {
+    fn drop(&mut self) {
+        // SAFETY: `bytes` is this owner's live, exclusively owned allocation of `len` writable
+        // bytes.
+        unsafe { OPENSSL_cleanse(self.bytes.as_mut_ptr().cast(), self.bytes.len()) };
+    }
+}
+
+/// Run one staged key unwrap and return the produced content-key length.
+///
+/// The update's declared output extent is `stage`'s extent, and the final call receives the
+/// remaining range only after the update's report has been accepted. A report larger than the
+/// block it describes, or a produced key larger than the content-key block, is refused here; it
+/// is never used to form a write pointer or an `ec->keylen`.
+///
+/// # Safety
+/// `ctx` is initialised for decryption with the key-wrap cipher; `stage` is a block whose extent
+/// is exactly the update extent `EVP_DecryptUpdate` declares; `key_capacity` is the content-key
+/// block's extent; `data` is readable for `in_len`.
+unsafe fn unwrap_staged(
+    ctx: *mut EvpCipherCtx,
+    stage: &mut SecretScratch,
+    key_capacity: usize,
+    data: *const c_uchar,
+    in_len: c_int,
+) -> Option<usize> {
+    let mut update_len: c_int = 0;
+    // SAFETY: per this function's contract.
+    if unsafe { EVP_DecryptUpdate(ctx, stage.as_mut_ptr(), &mut update_len, data, in_len) } == 0 {
+        return None;
+    }
+    let written = reported_extent(update_len, stage.capacity())?;
+    // The unwrapped key can never be longer than the block CMS gives `ec.key`, whose extent its
+    // destructor cleanses. Refuse before constructing the final write pointer.
+    if written > key_capacity {
+        return None;
+    }
+    let final_capacity = stage.capacity().checked_sub(written)?;
+    let mut final_len: c_int = 0;
+    // SAFETY: `written` is within `stage`, so `stage + written` begins `final_capacity` writable
+    // bytes.
+    if unsafe { EVP_DecryptFinal_ex(ctx, stage.as_mut_ptr().add(written), &mut final_len) } == 0 {
+        return None;
+    }
+    let tail = reported_extent(final_len, final_capacity)?;
+    let produced = written.checked_add(tail)?;
+    (produced <= key_capacity).then_some(produced)
+}
+
 /// `static int cms_RecipientInfo_kekri_decrypt(CMS_ContentInfo *cms,``
 /// `CMS_RecipientInfo *ri)` — `cms_env.c:950-1028`.
 ///
@@ -2230,11 +2391,8 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
     cms: *mut CmsContentInfo,
     ri: *mut CmsRecipientInfo,
 ) -> c_int {
-    let mut ukey_alloc_len: usize = 0;
-    let mut ukeylen: c_int = 0;
     let mut r = 0;
     let mut wrap_nid = 0;
-    let mut outlen: c_int = 0;
     // SAFETY: `cms` is live.
     let cms_ctx = unsafe { ossl_cms_get0_cmsctx(cms) };
 
@@ -2304,12 +2462,39 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
         return r;
     };
 
-    // SAFETY: `kekri` is live.
-    ukey_alloc_len = unsafe { (*(*kekri).encrypted_key).length } as usize - 8;
-    // The unwrapped key is this frame's scratch, allocated through the crate's allocator seam at
-    // `ukey_alloc_len` bytes and owned by `ukey`; its release is the authority's cleansing
-    // `OPENSSL_clear_free`, run by `Drop`.
-    // SAFETY: `ukey_alloc_len >= 8`.
+    // The wrapped-key length is the provider's input. `EVP_DecryptUpdate` declares
+    // `in_len + block_size` writable to the provider (exactly `in_len` for a one-byte block),
+    // while CMS gives the unwrapped content key only `in_len - 8`. Establish both extents
+    // **before** dispatch: stage into a block of the declared extent so the provider cannot write
+    // past what it was told, and validate every reported length before it becomes an offset or
+    // `ec->keylen` (CVE-2026-63072's write edge; §3, §17).
+    // SAFETY: `kekri` is live; the length test above established `encrypted_key.length >= 16`.
+    let wrapped_len = unsafe { (*(*kekri).encrypted_key).length } as usize;
+    let Some(ukey_alloc_len) = content_key_extent(wrapped_len) else {
+        return r;
+    };
+    // SAFETY: `cipher` is live.
+    let block_size = unsafe { EVP_CIPHER_get_block_size(cipher.as_ptr()) };
+    let Some(stage_capacity) = declared_update_extent(wrapped_len, block_size) else {
+        // SAFETY: the site is a compile-time constant.
+        unsafe {
+            raise_cms(
+                1010,
+                c"cms_RecipientInfo_kekri_decrypt",
+                crate::runtime::err::err_reasons::CMS_R_UNWRAP_ERROR,
+            )
+        };
+        return r;
+    };
+    // A refused staging allocation is reported like a failed unwrap, before any provider write.
+    let Some(mut stage) = SecretScratch::new(stage_capacity) else {
+        return r;
+    };
+
+    // The content key keeps the authority's exact allocation (`cms_env.c:995`, `in_len - 8`). It
+    // is this frame's single owner until it is transferred into `ec.key` exactly once; every
+    // failure below leaves the slot untouched and drops this owner through the authority's
+    // cleansing release.
     let Some(ukey) = OwnedBuf::new_cleansed_released(
         ukey_alloc_len,
         SeamFile::new(c"cms_env.c"),
@@ -2327,8 +2512,8 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
         return r;
     };
 
-    // SAFETY: `ctx`/`cipher`/`kekri` are live.
-    let ok = unsafe {
+    // SAFETY: `ctx`/`cipher`/`kekri` are live; `stage` holds `stage_capacity` writable bytes.
+    if unsafe {
         EVP_DecryptInit_ex(
             ctx.as_ptr(),
             cipher.as_ptr(),
@@ -2336,44 +2521,8 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
             (*kekri).key.cast(),
             ptr::null(),
         )
-    } != 0
-        // SAFETY: as above.
-        && unsafe {
-            EVP_DecryptUpdate(
-                ctx.as_ptr(),
-                ukey.as_ptr(),
-                &mut ukeylen,
-                (*(*kekri).encrypted_key).data,
-                (*(*kekri).encrypted_key).length,
-            )
-        } != 0
-        // SAFETY: as above.
-        && unsafe {
-            EVP_DecryptFinal_ex(
-                ctx.as_ptr(),
-                ukey.as_ptr().add(ukeylen as usize),
-                &mut outlen,
-            )
-        } != 0;
-    if !ok {
-        // SAFETY: the site is a compile-time constant.
-        unsafe {
-            raise_cms(
-                1010,
-                c"cms_RecipientInfo_kekri_decrypt",
-                crate::runtime::err::err_reasons::CMS_R_UNWRAP_ERROR,
-            )
-        };
-        return r;
-    }
-    ukeylen += outlen;
-
-    // The unwrap primitive reports what it wrote; the block was sized from the queried
-    // unwrapped-key length. A report larger than the block would make the later
-    // `OPENSSL_clear_free((*ec).key, (*ec).keylen)` cleanse past the allocation, so the reported
-    // length is checked against the capacity here instead of being trusted (CVE-2026-63072's
-    // second edge; §17).
-    if !unwrap_length_fits(ukeylen, ukey_alloc_len) {
+    } == 0
+    {
         // SAFETY: the site is a compile-time constant.
         unsafe {
             raise_cms(
@@ -2385,16 +2534,48 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
         return r;
     }
 
-    // SAFETY: `ec` is live; ownership of the block transfers to `ec.key`.
+    // Run the staged unwrap. Every reported length is validated inside before it becomes an
+    // offset or `ec->keylen`; a provider that reports or writes beyond the declared extent is
+    // refused rather than trusted.
+    // SAFETY: `ctx` is initialised for decryption; `stage` covers the declared update extent; the
+    // encrypted key is readable for `wrapped_len`.
+    let Some(produced) = (unsafe {
+        unwrap_staged(
+            ctx.as_ptr(),
+            &mut stage,
+            ukey_alloc_len,
+            (*(*kekri).encrypted_key).data,
+            (*(*kekri).encrypted_key).length,
+        )
+    }) else {
+        // SAFETY: the site is a compile-time constant.
+        unsafe {
+            raise_cms(
+                1010,
+                c"cms_RecipientInfo_kekri_decrypt",
+                crate::runtime::err::err_reasons::CMS_R_UNWRAP_ERROR,
+            )
+        };
+        return r;
+    };
+
+    // Only the validated prefix is the key; the remainder of the authority's block is never read
+    // past `ec.keylen`. `stage` cleanses the whole staging extent on the way out.
+    // SAFETY: `ukey` is `ukey_alloc_len` writable bytes, `stage` is readable for `produced`, and
+    // the two blocks do not overlap.
+    unsafe { ptr::copy_nonoverlapping(stage.as_ptr(), ukey.as_ptr(), produced) };
+
+    // SAFETY: `ec` is live; ownership of `ukey` transfers to `ec.key` exactly once.
     unsafe {
         super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
         (*ec).key = ukey.into_raw();
-        (*ec).keylen = ukeylen as usize;
+        (*ec).keylen = produced;
     }
 
     r = 1;
 
-    // `cipher` and `ctx` release themselves on the way out.
+    // `stage`, `ukey`, `cipher` and `ctx` release themselves on every exit; `ukey` was transferred
+    // above, so only its new owner releases it.
     r
 }
 
@@ -3262,6 +3443,7 @@ const ERR_CMS_R_NOT_KEK: c_int = crate::runtime::err::err_reasons::CMS_R_NOT_KEK
 #[allow(clippy::panic, clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::evp::cipher::{EVP_CIPHER_meth_free, EVP_CIPHER_meth_new};
     use crate::evp::pkey::EVP_PKEY_new;
     use crate::evp::pkey_ctx::EVP_PKEY_CTX_new_from_name;
     use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
@@ -4260,6 +4442,421 @@ mod tests {
                 der.len() as core::ffi::c_long,
             );
             assert!(cms.is_null(), "a truncated recipient set must be refused");
+        }
+    }
+
+    // -------------------------------------------------------------------------------------
+    // Key unwrapping: capacity established before dispatch, one content-key owner
+    // -------------------------------------------------------------------------------------
+
+    /// A KEK recipient holding a real AES-128-WRAP wrapped content key.
+    ///
+    /// # Safety
+    /// The caller owns the container and must release it with `CMS_ContentInfo_free`.
+    unsafe fn kekri_encrypted_pair(
+        seed: u8,
+    ) -> (
+        *mut CmsContentInfo,
+        *mut CmsEncryptedContentInfo,
+        *mut CmsRecipientInfo,
+        *mut CmsKekRecipientInfo,
+    ) {
+        // SAFETY: every block below is owned here and transfers to the recipient on success.
+        unsafe {
+            let cms = enveloped_cms();
+            let ec = ossl_cms_get0_env_enc_content(cms);
+            assert!(!ec.is_null());
+            let ri = CMS_add0_recipient_key(
+                cms,
+                NID_id_aes128_wrap,
+                filled_block(16, seed),
+                16,
+                filled_block(KEY_ID_LEN, seed ^ 0x5A),
+                KEY_ID_LEN,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            assert!(!ri.is_null());
+            (*ec).key = filled_block(16, seed ^ 0x3C);
+            (*ec).keylen = 16;
+            assert_eq!(
+                CMS_RecipientInfo_encrypt(cms, ri),
+                1,
+                "the fixture must wrap"
+            );
+            let kekri = (*ri).d.cast::<CmsKekRecipientInfo>();
+            (cms, ec, ri, kekri)
+        }
+    }
+
+    /// A crafted OID substitution: a valid `id-aes128-wrap` recipient is re-labelled with the
+    /// padded-wrap OID, which shares the 16-byte key length but is not an accepted CMS KEK
+    /// algorithm. The unwrap must be refused before any provider dispatch, leaving the
+    /// content-key slot untouched.
+    #[test]
+    fn cms_env_padded_wrap_oid_substitution_is_refused() {
+        // SAFETY: the fixture is live and the OID object is the static table entry the
+        // authority's own setter takes.
+        unsafe {
+            let (cms, ec, ri, kekri) = kekri_encrypted_pair(0x91);
+            let before = (*ec).key;
+            let before_len = (*ec).keylen;
+            let _ = crate::asn1::x_algor::X509_ALGOR_set0(
+                (*kekri).key_encryption_algorithm,
+                OBJ_nid2obj(crate::runtime::obj::NID_id_aes128_wrap_pad),
+                V_ASN1_UNDEF,
+                ptr::null_mut(),
+            );
+            assert_eq!(
+                CMS_RecipientInfo_decrypt(cms, ri),
+                0,
+                "the padded-wrap OID substitution is refused"
+            );
+            assert_eq!((*ec).key, before, "the content-key slot is untouched");
+            assert_eq!((*ec).keylen, before_len);
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// Malformed and oversized wrapped-key lengths are refused: below the wrap minimum, not a
+    /// whole number of eight-byte blocks, and a large well-formed length whose integrity check
+    /// fails. The slot is never replaced and no write escapes the staging block.
+    #[test]
+    fn cms_env_malformed_wrapped_key_lengths_are_refused() {
+        // SAFETY: the ASN.1 string adopts each fresh block; the container owns the recipient.
+        unsafe {
+            let (cms, ec, ri, kekri) = kekri_encrypted_pair(0xA1);
+            let before = (*ec).key;
+            for len in [0usize, 8, 15] {
+                ASN1_STRING_set0(
+                    (*kekri).encrypted_key,
+                    filled_block(16, 0xCC).cast(),
+                    len as c_int,
+                );
+                assert_eq!(
+                    CMS_RecipientInfo_decrypt(cms, ri),
+                    0,
+                    "a wrapped-key length of {len} is below the wrap minimum"
+                );
+                assert_eq!((*ec).key, before);
+            }
+            ASN1_STRING_set0((*kekri).encrypted_key, filled_block(17, 0xCC).cast(), 17);
+            assert_eq!(
+                CMS_RecipientInfo_decrypt(cms, ri),
+                0,
+                "a length that is not a whole number of wrap blocks is refused"
+            );
+            assert_eq!((*ec).key, before);
+            ASN1_STRING_set0(
+                (*kekri).encrypted_key,
+                filled_block(4096, 0xCC).cast(),
+                4096,
+            );
+            assert_eq!(
+                CMS_RecipientInfo_decrypt(cms, ri),
+                0,
+                "an oversized wrapped key is refused by the primitive's integrity check"
+            );
+            assert_eq!((*ec).key, before);
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// A provider whose update writes/reports more than the block can hold. The first case is the
+    /// pre-fix defect's exact shape: a report that fits the *staging* extent but not the
+    /// content-key extent. The second reports past the extent the provider was told it could
+    /// fill. Both are refused before the report becomes an offset or a key length.
+    #[test]
+    fn cms_env_provider_reported_length_beyond_capacity_is_refused() {
+        #[derive(Clone, Copy)]
+        struct LyingUpdate {
+            write: usize,
+            report: usize,
+        }
+
+        // SAFETY: `out` is writable for `outsize` bytes per the dispatch contract.
+        unsafe extern "C" fn lying_update(
+            state: *mut c_void,
+            out: *mut u8,
+            outl: *mut usize,
+            outsize: usize,
+            _input: *const u8,
+            _inl: usize,
+        ) -> c_int {
+            // SAFETY: the dispatch contract gives `out` `outsize` writable bytes; `state` is the
+            // test's own plain-old-data record.
+            unsafe {
+                let s = *state.cast::<LyingUpdate>();
+                let write = s.write.min(outsize);
+                if write > 0 && !out.is_null() {
+                    ptr::write_bytes(out, 0x5A, write);
+                }
+                *outl = s.report;
+            }
+            1
+        }
+
+        // SAFETY: as `lying_update`.
+        unsafe extern "C" fn lying_final(
+            state: *mut c_void,
+            out: *mut u8,
+            outl: *mut usize,
+            outsize: usize,
+        ) -> c_int {
+            // SAFETY: as `lying_update`.
+            unsafe {
+                let s = *state.cast::<LyingUpdate>();
+                let write = s.write.min(outsize);
+                if write > 0 && !out.is_null() {
+                    ptr::write_bytes(out, 0xA5, write);
+                }
+                *outl = s.report;
+            }
+            1
+        }
+
+        // SAFETY: a hand-built method with a non-NULL provider marker and test callbacks; the
+        // marker is cleared before the method is released.
+        unsafe fn provider_ctx(state: *mut LyingUpdate) -> (*mut EvpCipher, EvpCipherCtx) {
+            // SAFETY: the constructor answers a fresh `EVP_ORIG_METH` method or NULL.
+            let cipher = unsafe { EVP_CIPHER_meth_new(0, 8, 16) };
+            assert!(!cipher.is_null());
+            // SAFETY: `cipher` is this test's live method; every field write is to it.
+            unsafe {
+                // A non-NULL marker is all `EVP_DecryptUpdate` tests; the method is released
+                // with this field cleared below.
+                (*cipher).prov = state.cast();
+                (*cipher).cupdate = Some(lying_update);
+                (*cipher).cfinal = Some(lying_final);
+            }
+            // SAFETY: an all-zero `EvpCipherCtx` is its constructed empty state (raw pointers
+            // NULL, every scalar zero).
+            let mut ctx: EvpCipherCtx = unsafe { core::mem::zeroed() };
+            ctx.cipher = cipher;
+            ctx.encrypt = 0;
+            ctx.algctx = state.cast();
+            (cipher, ctx)
+        }
+
+        let in_len = 24usize;
+        let stage_capacity = declared_update_extent(in_len, 8).unwrap();
+        let key_capacity = content_key_extent(in_len).unwrap();
+        assert_eq!(stage_capacity, 32);
+        assert_eq!(key_capacity, 16);
+        let data = [0x33u8; 24];
+
+        // Case 1: the report fits the staging extent but not the content-key block -- the pre-fix
+        // direct-write shape. It is refused before `EVP_DecryptFinal_ex` is called.
+        // SAFETY: every pointer is this frame's; `unwrap_staged`'s contract is met by the
+        // declared stage extent and the fixture's own state.
+        unsafe {
+            let mut state = LyingUpdate {
+                write: key_capacity + 8,
+                report: key_capacity + 8,
+            };
+            let (cipher, mut ctx) = provider_ctx(&mut state);
+            let mut stage = SecretScratch::new(stage_capacity).unwrap();
+            assert!(
+                unwrap_staged(
+                    &mut ctx,
+                    &mut stage,
+                    key_capacity,
+                    data.as_ptr(),
+                    in_len as c_int,
+                )
+                .is_none(),
+                "a produced key larger than the content-key block is refused"
+            );
+            (*cipher).prov = ptr::null_mut();
+            EVP_CIPHER_meth_free(cipher);
+        }
+
+        // Case 2: the report is one byte past the extent the provider was told it could fill.
+        // SAFETY: as above.
+        unsafe {
+            let mut state = LyingUpdate {
+                write: stage_capacity,
+                report: stage_capacity + 1,
+            };
+            let (cipher, mut ctx) = provider_ctx(&mut state);
+            let mut stage = SecretScratch::new(stage_capacity).unwrap();
+            assert!(
+                unwrap_staged(
+                    &mut ctx,
+                    &mut stage,
+                    key_capacity,
+                    data.as_ptr(),
+                    in_len as c_int,
+                )
+                .is_none(),
+                "a report past the declared output extent is refused"
+            );
+            assert_eq!(
+                stage.capacity(),
+                stage_capacity,
+                "the staging block was not enlarged to accommodate the lie"
+            );
+            (*cipher).prov = ptr::null_mut();
+            EVP_CIPHER_meth_free(cipher);
+        }
+
+        // A staging allocation that cannot be represented is refused rather than wrapped.
+        assert!(SecretScratch::new(usize::MAX).is_none());
+    }
+
+    /// §16 negative control (test-only): the pre-fix buffer pairing -- a provider told it may
+    /// write `in_len + block_size` bytes into a block of `in_len - 8` -- is exactly what the new
+    /// detectors refuse. The canary fires on the old shape, not on the new one.
+    #[test]
+    fn cms_env_negative_control_pre_fix_undersized_output_is_detected() {
+        let in_len = 24usize;
+        let block = 8;
+        let key_capacity = content_key_extent(in_len).unwrap();
+        let declared = declared_update_extent(in_len, block).unwrap();
+        assert!(
+            declared > key_capacity,
+            "the pre-fix buffer is smaller than the extent the provider is told it may fill"
+        );
+        assert!(
+            reported_extent(declared as c_int, key_capacity).is_none(),
+            "the capacity detector must fire on the pre-fix report/buffer pairing"
+        );
+        assert!(
+            declared_update_extent(usize::MAX, block).is_none(),
+            "overflowing capacity arithmetic is refused"
+        );
+    }
+
+    /// A refused content-key allocation fails the unwrap, leaves the incumbent untouched, and a
+    /// retry succeeds: the single owner releases nothing it did not acquire.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn cms_env_content_key_allocation_refusal_leaves_the_slot_untouched() {
+        let _g = crate::test_support::lock_global_state();
+        assert!(crate::ssl::adv_alloc::install());
+        crate::ssl::adv_alloc::assert_instrument_live();
+        // SAFETY: the fixture is live; the armed refusal is this test's own.
+        unsafe {
+            let (cms, ec, ri, _kekri) = kekri_encrypted_pair(0xB1);
+            let before = (*ec).key;
+            // The content-key block is `encrypted_key.length - 8` = 16 bytes.
+            crate::ssl::adv_alloc::arm_any(16);
+            assert_eq!(
+                CMS_RecipientInfo_decrypt(cms, ri),
+                0,
+                "the refused content-key allocation fails the unwrap"
+            );
+            crate::ssl::adv_alloc::disarm_any();
+            assert_eq!((*ec).key, before, "no key was installed");
+            crate::ssl::adv_alloc::assert_no_double_free();
+            // Nothing was left half-built: the retry unwraps normally.
+            assert_eq!(CMS_RecipientInfo_decrypt(cms, ri), 1);
+            assert_eq!((*ec).keylen, 16);
+            crate::ssl::adv_alloc::assert_no_double_free();
+            crate::ssl::adv_alloc::reset();
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// Cleanup exactly once on failure, asserted by address identity: a failed unwrap does not
+    /// release the incumbent content key, and the container's later free releases it exactly once.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn cms_env_failed_unwrap_releases_the_incumbent_once_by_address() {
+        let _g = crate::test_support::lock_global_state();
+        assert!(crate::ssl::adv_alloc::install());
+        crate::ssl::adv_alloc::assert_instrument_live();
+        // SAFETY: the fixture is live and the probe observes the installed seam only.
+        unsafe {
+            let (cms, ec, ri, kekri) = kekri_encrypted_pair(0xC1);
+            let incumbent = (*ec).key;
+            let blob = (*(*kekri).encrypted_key).data;
+            let blob_len = (*(*kekri).encrypted_key).length as usize;
+            // Make the provider's integrity check fail after it has written the staged key.
+            *blob.add(blob_len - 1) ^= 0x01;
+            crate::ssl::adv_alloc::reset();
+            assert_eq!(CMS_RecipientInfo_decrypt(cms, ri), 0);
+            let frees = |p: *mut c_uchar| {
+                crate::ssl::adv_alloc::events()
+                    .into_iter()
+                    .filter(|e| {
+                        matches!(e, crate::ssl::adv_alloc::Ev::Free { p: q } if *q == p as usize)
+                    })
+                    .count()
+            };
+            assert_eq!(frees(incumbent), 0, "the failed unwrap keeps the incumbent");
+            assert_eq!((*ec).key, incumbent);
+            crate::ssl::adv_alloc::assert_no_double_free();
+            crate::ssl::adv_alloc::reset();
+            CMS_ContentInfo_free(cms);
+            assert_eq!(
+                frees(incumbent),
+                1,
+                "the container releases the incumbent exactly once"
+            );
+            crate::ssl::adv_alloc::assert_no_double_free();
+        }
+    }
+
+    /// Cleanup exactly once on replacement, asserted by address identity: each successful unwrap
+    /// transfers one block into `ec.key` and releases the previous one once, and the container's
+    /// final free releases the last block once.
+    #[test]
+    #[ignore = "process-global allocator probe; run via scripts/adv-probe.sh"]
+    fn cms_env_replacing_the_content_key_releases_each_incumbent_once_by_address() {
+        let _g = crate::test_support::lock_global_state();
+        assert!(crate::ssl::adv_alloc::install());
+        crate::ssl::adv_alloc::assert_instrument_live();
+        // SAFETY: the fixture is live and the probe observes the installed seam only.
+        unsafe {
+            let (cms, ec, ri, _kekri) = kekri_encrypted_pair(0xD1);
+            let initial = (*ec).key;
+            let frees = |p: *mut c_uchar| {
+                crate::ssl::adv_alloc::events()
+                    .into_iter()
+                    .filter(|e| {
+                        matches!(e, crate::ssl::adv_alloc::Ev::Free { p: q } if *q == p as usize)
+                    })
+                    .count()
+            };
+            crate::ssl::adv_alloc::reset();
+            assert_eq!(CMS_RecipientInfo_decrypt(cms, ri), 1);
+            let first = (*ec).key;
+            assert_ne!(first, initial, "the unwrap installed its own block");
+            assert_eq!(frees(initial), 1, "the replaced incumbent is released once");
+            assert_eq!(frees(first), 0, "the installed block is not released yet");
+            // A fresh window: the new block is allocated before the incumbent is released, so the
+            // two addresses are distinct even when the allocator reuses freed storage across
+            // windows.
+            crate::ssl::adv_alloc::reset();
+            assert_eq!(CMS_RecipientInfo_decrypt(cms, ri), 1);
+            let second = (*ec).key;
+            assert_ne!(
+                second, first,
+                "the second unwrap installed a distinct block"
+            );
+            assert_eq!(
+                frees(first),
+                1,
+                "the second unwrap releases the first block once"
+            );
+            assert_eq!(frees(second), 0);
+            crate::ssl::adv_alloc::assert_no_double_free();
+            crate::ssl::adv_alloc::reset();
+            CMS_ContentInfo_free(cms);
+            assert_eq!(
+                frees(second),
+                1,
+                "the container releases the last block once"
+            );
+            crate::ssl::adv_alloc::assert_no_double_free();
+            assert_eq!(
+                frees(second),
+                1,
+                "the container releases the last block once"
+            );
+            crate::ssl::adv_alloc::assert_no_double_free();
         }
     }
 }
