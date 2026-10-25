@@ -1,0 +1,227 @@
+{
+  "schema": "safe-c33/atlas-refresh/s70/v1",
+  "receipt": "s70-concurrency",
+  "subphase": "S70",
+  "date": "2026-10-25",
+  "branch": "integrate/safe-c33",
+  "base_head": "d10005e08",
+  "crate_version": "0.0.39",
+  "worktree": "dirty: 8 src files plus this receipt; no commit, no push (subagent)",
+  "scope": "Close S56's and S57's outstanding concurrency obligations on the real production paths: targeted multi-thread tests of the X.509 extension-cache publication/read boundary and of the internal SSL session cache, TSan on both, an honest per-obligation verdict, the minimal fixes, and the XstandardTable Sync decision.",
+  "environment": {
+    "venue": "docker/openssl-rs-court.sh exec (court container openssl-rs-court:1; docker/ not edited)",
+    "host_data_limit_override": "OPENSSL_RS_COURT_DATA=unlimited (documented TSan/ASan venue override; only RLIMIT_DATA removed; cgroup memory/PIDs/CPU unchanged)",
+    "tsan_toolchain": "nightly-2026-10-01",
+    "tsan_rustc": "rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+    "tsan_target_dir": "/work/court/target-tsan",
+    "rustflags": "-Zsanitizer=thread -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16",
+    "tsan_options": "halt_on_error=1:exit_code=66",
+    "cc_wrapper": "/work/court/p25/tsan/bin/tsan-cc (clang -fsanitize=thread for build.rs C adapters)",
+    "build_std": true,
+    "schedule": "cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu <filter> -- --test-threads=1 --nocapture",
+    "notes": "The crate and std are rebuilt under TSan; TSan observes only the executed interleavings, so a clean run is evidence of absence for those interleavings, not a global proof."
+  },
+  "tests": [
+    {
+      "name": "x509::x509_vfy::tests::s70_s56_concurrent_first_cache_build_with_x509_vfy_readers",
+      "file": "src/x509/x509_vfy.rs:6459",
+      "configuration": "8 threads x 12 pre-built X509_STORE_CTX values (96 real X509_verify_cert runs) over one shared leaf/intermediate/root chain, barrier start",
+      "asserts": "the real verify path completes on every context; TSan is the instrument for unordered cache accesses"
+    },
+    {
+      "name": "x509::x509_vfy::tests::s70_s56_get_issuer_reads_ex_flags_before_the_first_build",
+      "file": "src/x509/x509_vfy.rs:6502",
+      "configuration": "4 reader threads x 20,000 X509_STORE_CTX_get1_issuer calls, 1 writer building through X509_check_purpose, barrier start",
+      "asserts": "control: the no_dup == 0 path short-circuits the ex_flags read, so this public path is ordered; clean before and after the fix"
+    },
+    {
+      "name": "x509::x509_vfy::tests::s70_s56_trusted_stack_reads_ex_flags_before_the_first_build",
+      "file": "src/x509/x509_vfy.rs:6585",
+      "configuration": "4 reader threads x 20,000 real X509_verify_cert calls, 1 writer x 20,000 X509_check_purpose calls, no untrusted chain, application trusted stack installed with X509_STORE_CTX_set0_trusted_stack (get1_best_issuer_other_sk -> get0_best_issuer_sk with no_dup != 0)",
+      "asserts": "the reachable pre-build read of x->ex_flags; this test found the S56 race"
+    },
+    {
+      "name": "ssl::ssl_sess::cache_lifecycle_tests::s70_s57_lookup_reader_reads_not_resumable_during_eviction",
+      "file": "src/ssl/ssl_sess.rs:4425",
+      "configuration": "1 mutator x 30,000 add/remove/flush iterations + 4 lookup readers x 30,000 real lookup_sess_in_cache calls; readers call SSL_SESSION_is_resumable on the returned reference or the frame's own reference",
+      "asserts": "eviction/removal/flush write not_resumable under the cache write lock while reference holders read it unlocked"
+    },
+    {
+      "name": "ssl::ssl_sess::cache_lifecycle_tests::s70_s57_owner_back_pointer_read_during_eviction",
+      "file": "src/ssl/ssl_sess.rs:4481",
+      "configuration": "1 mutator x 30,000 iterations + 1 reader x 30,000 real lookup_sess_in_cache + SSL_SESSION_set_timeout calls on a real SSL_CTX cache",
+      "asserts": "eviction/removal/flush clear owner under the write lock while SSL_SESSION_set_timeout loads it unlocked"
+    }
+  ],
+  "tsan": {
+    "pre_fix": {
+      "s56_normal_verify_path": {
+        "result": "clean (exit 0, 2 passed)",
+        "log_sha256": "11dd6959f2c51f00087384aba13ec7eccb36843c660dfd12910ae375feb8956b",
+        "note": "This run predates the trusted-stack test and the fix; it shows the ordinary verify path was already ordered."
+      },
+      "s56_trusted_stack": {
+        "result": "data race",
+        "log": "/work/court/tmp/s70-s56-trusted-prefix.log",
+        "log_sha256": "ed71ed5b4f835aab393078ed559dff9a7627fd2476a0bac47e8ba3af79b2ef9d",
+        "summary_verbatim": "SUMMARY: ThreadSanitizer: data race /work/src/x509/v3_purp.rs:1939 in openssl_rs::x509::x509v3_cache_extensions",
+        "write_stack_verbatim": [
+          "Write of size 4 at 0x724800010d68 by thread T2:",
+          "  #0 ossl_x509v3_cache_extensions /work/src/x509/v3_purp.rs:1939",
+          "  #1 X509_check_purpose /work/src/x509/v3_purp.rs:708",
+          "  #2 openssl_rs::x509::x509_vfy::tests::s70_s56_trusted_stack_reads_ex_flags_before_the_first_build::{closure#0}::{closure#0} /work/src/x509/x509_vfy.rs:6611"
+        ],
+        "read_stack_verbatim": [
+          "Previous read of size 4 at 0x724800010d68 by thread T4:",
+          "  #0 openssl_rs::x509::x509_vfy::get0_best_issuer_sk /work/src/x509/x509_vfy.rs:951",
+          "  #1 openssl_rs::x509::x509_vfy::get1_best_issuer_other_sk /work/src/x509/x509_vfy.rs:1085",
+          "  #2 openssl_rs::x509::dane::get1_trusted_issuer /work/src/x509/dane.rs:910",
+          "  #3 openssl_rs::x509::x509_vfy::build_chain /work/src/x509/x509_vfy.rs:4950",
+          "  #4 openssl_rs::x509::x509_vfy::verify_chain /work/src/x509/x509_vfy.rs:2888",
+          "  #5 openssl_rs::x509::x509_vfy::x509_verify_x509 /work/src/x509/x509_vfy.rs:3022",
+          "  #6 X509_verify_cert /work/src/x509/x509_vfy.rs:5507"
+        ],
+        "note": "Line numbers are pre-fix coordinates. The write is the EXFLAG_SET publication store; after the final doc edit the same statement is at v3_purp.rs:1940."
+      },
+      "s57_not_resumable": {
+        "result": "data race",
+        "log": "/work/court/tmp/s70-s57-notres-prefix.log",
+        "log_sha256": "f96d89e4d29b44cd5f29448503746f7fb41fe30535eef23154d78ddd12abcc91",
+        "summary_verbatim": "SUMMARY: ThreadSanitizer: data race /work/src/ssl/ssl_sess.rs:976 in openssl_rs::ssl::ssl_sess::SSL_CTX_flush_sessions_ex::{closure#0}",
+        "write_stack_verbatim": [
+          "Write of size 4 at 0x726000010eb0 by thread T2:",
+          "  #0 openssl_rs::ssl::ssl_sess::SSL_CTX_flush_sessions_ex::{closure#0} /work/src/ssl/ssl_sess.rs:976",
+          "  #7 SSL_CTX_flush_sessions_ex /work/src/ssl/ssl_sess.rs:956",
+          "  #8 ...s70_s57_lookup_reader_reads_not_resumable_during_eviction::{closure#1}::{closure#0} /work/src/ssl/ssl_sess.rs:4402"
+        ],
+        "read_stack_verbatim": [
+          "Previous read of size 4 at 0x726000010eb0 by thread T4:",
+          "  #0 openssl_rs::ssl::ssl_sess::SSL_SESSION_is_resumable::{closure#0} /work/src/ssl/ssl_sess.rs:2150",
+          "  #7 SSL_SESSION_is_resumable /work/src/ssl/ssl_sess.rs:2144",
+          "  #8 ...s70_s57_lookup_reader_reads_not_resumable_during_eviction::{closure#1}::{closure#1} /work/src/ssl/ssl_sess.rs:4415"
+        ]
+      },
+      "s57_owner": {
+        "result": "data race; the same test also crashed a non-TSan run with a null dereference",
+        "log": "/work/court/tmp/s70-s57-owner-prefix.log",
+        "log_sha256": "b82f431a5364fc072905b6e0d39840169ffc40ff8fff33f9fa3d4f59271c21a9",
+        "summary_verbatim": "SUMMARY: ThreadSanitizer: data race /work/src/ssl/ssl_sess.rs:867 in openssl_rs::ssl::ssl_sess::SSL_CTX_add_session::{closure#0}",
+        "write_stack_verbatim": [
+          "Write of size 8 at 0x726000011380 by thread T2:",
+          "  #0 openssl_rs::ssl::ssl_sess::SSL_CTX_add_session::{closure#0} /work/src/ssl/ssl_sess.rs:867",
+          "  #7 SSL_CTX_add_session /work/src/ssl/ssl_sess.rs:804"
+        ],
+        "read_stack_verbatim": [
+          "Previous read of size 8 at 0x726000011380 by thread T3:",
+          "  #0 openssl_rs::ssl::ssl_sess::SSL_SESSION_set_timeout::{closure#0} /work/src/ssl/ssl_sess.rs:1670",
+          "  #7 SSL_SESSION_set_timeout /work/src/ssl/ssl_sess.rs:1664"
+        ],
+        "non_tsan_crash_verbatim": "thread '<unnamed>' (212743) panicked at src/ssl/ssl_sess.rs:1676:38: null pointer dereference occurred",
+        "non_tsan_crash_meaning": "SSL_SESSION_set_timeout checked owner, locked it, then re-read owner for the unlock. A concurrent eviction cleared it, so the unlock dereferenced NULL. Fixed by loading owner exactly once."
+      }
+    },
+    "post_fix": {
+      "command": "cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu s70 -- --test-threads=1 --nocapture",
+      "result_line": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2220 filtered out; finished in 5.74s",
+      "exit_code": 0,
+      "tsan_reports": 0,
+      "log_sha256": "4b4aa8112f77a084b7eb9618ddb312aa7c513acdd90d607cd72cc67f71a7a3a9",
+      "bound": "clean only for these five tests and the interleavings they executed"
+    }
+  },
+  "verdicts": {
+    "S56": {
+      "state": "(b) it was unsafe and is fixed; after the fix the remaining reads have a concrete ordering argument (a) for the audited paths",
+      "defect": "get0_best_issuer_sk evaluated x->ex_flags when no_dup != 0 before any cache build. The ordinary untrusted path builds x first via X509_self_signed, and X509_STORE_CTX_get1_issuer (no_dup == 0) short-circuits the read, but X509_STORE_CTX_set0_trusted_stack installs get1_best_issuer_other_sk -> get0_best_issuer_sk(no_dup = 1) with no earlier build, so a real X509_verify_cert read raced a concurrent first build.",
+      "fix": "src/x509/x509_vfy.rs:953: get0_best_issuer_sk calls ossl_x509v3_cache_extensions(x) once before the candidate loop when the stack is non-empty. This is the same X509 write lock the builder takes, not a second lock. It is a no-op when EXFLAG_SET is already published; if this thread is first it performs the build before the read.",
+      "publication_argument_after_fix": [
+        "Every extension-cache member and scalar is written only inside ossl_x509v3_cache_extensions while x->lock is held in write mode; EXFLAG_SET is stored last in the same critical section (src/x509/v3_purp.rs:1940).",
+        "A second builder observes EXFLAG_SET and performs no writes; the fields are therefore write-once after publication.",
+        "Every x509_vfy path that reads ex_flags/altname/akid/skid/nc/crldp unlocked first acquires and releases the same x->lock in the same thread (X509_self_signed, X509_check_ca, X509_check_purpose, check_issued/ossl_x509_likely_issued, or the new get0_best_issuer_sk call). If the reader built first, the writes are its own; otherwise its acquire is the happens-before edge after the builder's release.",
+        "build_chain supplies that edge for every chain member before check_extensions, check_name_constraints, internal_verify, the revocation stage and the policy stage run; the trusted-stack path was the one exception and is now covered by the get0_best_issuer_sk call."
+      ],
+      "scope_limits": [
+        "X509_set_proxy_pathlen writes ex_pcpathlen without the lock (the authority does too); S56-R3 remains.",
+        "The lazily built policy_cache can set EXFLAG_INVALID_POLICY under x->lock after a reader has already released the lock and is reading ex_flags unlocked; it needs X509_V_FLAG_POLICY_CHECK and a concurrent first policy build. Not covered by the argument above.",
+        "X509::policy_cache teardown remains outside the seven extension-cache owners (S56-R4).",
+        "Cache teardown (X509_free / D2I_PRE) concurrent with readers is a caller lifetime obligation, as in the authority."
+      ]
+    },
+    "S57": {
+      "state": "(b) it was unsafe and is fixed by a layout-identical design change; data-race freedom for the cache bookkeeping is now established within the stated scope",
+      "defect": "Eviction/removal/flush wrote not_resumable and owner, and insert-UPDATE_TIME/public time setters wrote time/timeout/calc_timeout, all as plain fields under the context write lock, while a thread that already owned a session reference read them through SSL_SESSION_is_resumable, SSL_SESSION_get_time*/set_time*, and ssl_update_cache with no lock. TSan confirmed both races; the owner path also crashed with a NULL dereference because the accessor re-read owner between lock and unlock.",
+      "fix": [
+        "src/ssl/ssl_lib.rs:2666,2738: not_resumable is AtomicI32 and owner is AtomicPtr<SslCtx>.",
+        "src/ssl/ssl_lib.rs:2678,2680,2682: time, timeout and calc_timeout are AtomicU64.",
+        "The types are layout-identical to the authority's int/OSSL_TIME/pointer fields; no #[repr(C)] layout, size, offset or exported signature changed, and the struct is opaque to C consumers.",
+        "All accesses use Ordering::Relaxed: the values are advisory, and the context lock (where an accessor takes it) orders the protected state. No lock was added that the authority does not take.",
+        "src/ssl/ssl_sess.rs:1703,1782: SSL_SESSION_set_timeout/_set_time_ex load owner exactly once and use that pointer for both the lock and unlock, removing the NULL-dereference window."
+      ],
+      "scope_limits": [
+        "owner names a context that can be retired: SSL_CTX_free must not race a session accessor that dereferences owner (the authority's own object-lifetime contract).",
+        "The session payload (id, keys, ticket) is immutable only once the session is published into the cache; a caller that concurrently mutates a shared uncached session through a public setter is outside the contract, as in the authority.",
+        "Relaxed atomics make the accesses data-race-free but provide no ordering or freshness guarantee beyond the authority's own best-effort bookkeeping.",
+        "S30's recorded divergences (callbacks outside the lock, capacity N vs N-1, insertion-order eviction/flush, no internal-lookup bypass, stateful TLS1.2 tickets) remain."
+      ]
+    }
+  },
+  "xstandard_table_sync": {
+    "decision": "removed the unsafe impl Sync rather than leaving a caller obligation dressed as a type invariant",
+    "change": "src/x509/v3_purp.rs:546: XstandardTable(UnsafeCell<[X509Purpose; 10]>) and unsafe impl Sync are gone; the standard table is static mut XSTANDARD: [X509Purpose; 10] and X509_PURPOSE_get0 reads it through &raw mut.",
+    "why": "X509_PURPOSE_add can rewrite a reserved row in place and the accessors hand out *mut rows. Single-threaded use is the authority's own xstandard[] contract and cannot be enforced at the C ABI without changing table semantics. static mut makes the compiler require an unsafe operation for every access and makes no Sync claim at all; the obligation is stated on the accessors, not asserted as an invariant.",
+    "enforcement": "compiler-enforced: all access is through unsafe raw-pointer operations; no safe API exposes the table. The single-threaded discipline itself remains a caller obligation and is documented on X509_PURPOSE_add and the module."
+  },
+  "loom": {
+    "written": false,
+    "reason": "The C rwlock cannot be modelled faithfully. CRYPTO_RWLOCK is a hand-rolled std::sync::Mutex + Condvar with handle-based unlock (CRYPTO_THREAD_unlock takes only an opaque pointer) and raw-pointer identity, and the production transition logic is raw C-ABI pointer code. A Loom model would have to reimplement the publication/eviction/key-comparison transitions instead of using the same code, which the task condition forbids. No toy model was written, and no Loom result is claimed."
+  },
+  "defects_found_in_test_fixtures": [
+    {
+      "where": "src/x509/x509_vfy.rs Chain::drop",
+      "defect": "OPENSSL_sk_pop_free(untrusted, x509_free_void) releases the intermediate's only reference, then X509_free(self.inter) freed the same object again. TSan reported a heap-use-after-free on the freed refcount.",
+      "fix": "removed the second X509_free; the untrusted stack is documented as the sole owner (OPENSSL_sk_push does not up-ref).",
+      "class": "test-only fixture defect, not production"
+    },
+    {
+      "where": "s70_s56_trusted_stack_reads_ex_flags_before_the_first_build cleanup",
+      "defect": "the trusted stack owns the decoy's only reference, but the test also called X509_free(decoy) after OPENSSL_sk_pop_free; TSan reported a heap-use-after-free.",
+      "fix": "the stack's pop_free is the single release; the extra free was removed.",
+      "class": "test-only fixture defect, not production"
+    }
+  ],
+  "gates": {
+    "cargo_fmt": "cargo fmt --all -- --check -> clean",
+    "cargo_check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.07s",
+    "focused_tests": "cargo test --lib s70 -- --test-threads=4 -> 5 passed; 0 failed; 0 ignored; 2220 filtered out; finished in 0.30s",
+    "full_library_suite": "cargo test --lib -- --test-threads=4 -> 2173 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 124.64s",
+    "clippy": "cargo clippy --all-targets -- -D warnings -> Finished `dev` profile, no warnings",
+    "tsan": "5/5 s70 tests pass under TSan; exit 0; 0 reports (see tsan.post_fix)"
+  },
+  "structural_guards": {
+    "no_mangle_diff_lines": 0,
+    "repr_c_diff_lines": 0,
+    "export_name_diff_lines": 0,
+    "allocator_seam_diff_lines": 0,
+    "unsafe_lint_attribute_diff_lines": 0,
+    "crate_version": "0.0.39 (unchanged)",
+    "docker_edited": false
+  },
+  "compatibility_delta": {
+    "S56": "get0_best_issuer_sk now publishes x's extension cache before the no_dup test. The value it then reads is exactly what the check_issued call in the same loop would have published immediately afterwards; no public return value changes for a consistent cache. In the unsynchronized first-build case the authority's own ex_flags value is indeterminate, so this makes the decision deterministic rather than reproducing a torn read.",
+    "S57": "none observable: the fields keep the authority's size, alignment, offset and values; Relaxed atomic accesses compile to the same aligned loads/stores on x86_64. No lock was added that the authority does not take.",
+    "ABI": "unchanged: 0 #[no_mangle], #[repr(C)] or exported-signature diff lines; the allocator seam coordinates and counts are untouched"
+  },
+  "remaining_unestablished": [
+    "S56: X509_set_proxy_pathlen's unlocked ex_pcpathlen write (authority behaviour); the lazy policy_cache's EXFLAG_INVALID_POLICY write vs an already-unlocked reader; X509::policy_cache teardown; cache teardown vs concurrent readers is a caller lifetime obligation.",
+    "S57: the SSL_CTX lifetime behind owner (free racing an accessor), and concurrent mutation of a shared uncached session's payload; both are caller contracts in the authority as well.",
+    "TSan is evidence only for the interleavings these five tests executed. No Miri, ASan, mutation control, Loom model or authority differential was run for S70.",
+    "No independent reviewer adjudicated these claims (AGENTS section 15); the author of the fix is the author of the evidence.",
+    "No claim is made beyond the extension-cache publication and the session bookkeeping: this is not a SAFE_COMPATIBLE promotion and no consumer family is graduated."
+  ],
+  "non_claims": [
+    "A clean TSan run is not a proof of global race-freedom.",
+    "The S56 argument is source-path based and covers the extension-cache fields on the audited x509_vfy paths; the stated exceptions remain.",
+    "The S57 atomics change the memory model of the access, not the authority's value semantics; it is a recorded safety improvement with no ABI/layout change.",
+    "Removing the XstandardTable Sync assertion does not make concurrent purpose-table use safe; it stops the type system from implying that it is."
+  ]
+}

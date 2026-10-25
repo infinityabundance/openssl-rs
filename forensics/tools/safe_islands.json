@@ -1,0 +1,170 @@
+{
+  "schema": "openssl-rs/safe-islands/v1",
+  "kind": "compiler-enforced-safe-islands-registry",
+  "campaign": "safe-c33",
+  "subphase": "S2",
+  "crate": "openssl-rs",
+  "crate_version_at_registration": "0.0.39",
+  "crate_root": "src/lib.rs",
+  "features": [],
+  "toolchain": {
+    "channel": "1.98.1",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "edition": "2021",
+    "pin": "rust-toolchain.toml"
+  },
+  "profiles": {
+    "dev-lib": {
+      "command": "cargo check --lib",
+      "cfg": "library build, non-test cfg",
+      "why": "the production compilation of the crate; every island is unconditional, so this profile observes the same declaration set a consumer build sees"
+    },
+    "test-lib": {
+      "command": "cargo test --lib --no-run",
+      "cfg": "library build with cfg(test) enabled",
+      "why": "an island may contain `#[cfg(test)]` items; the outer `forbid` must cover those too, and only this profile compiles them"
+    }
+  },
+  "checked_profiles": [
+    "dev-lib",
+    "test-lib"
+  ],
+  "not_checked_profiles": [
+    "release/SEAL rebuild: NOT_RUN. The lint result is profile-independent, but the court records this as NOT_RUN rather than inferring it.",
+    "feature profiles: the crate declares no features (registry `features` is empty). A non-empty [features] table is a fail-closed condition because the recorded profile set would no longer cover the cfg surface.",
+    "downstream consumer configurations: NOT_RUN. A consumer's features/patches are a separate compile; this court covers this crate's own two builds."
+  ],
+  "evidence": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json",
+  "evidence_recorder": "forensics/tools/safe_islands_court_record.py",
+  "claim_scope": {
+    "means": "the five named module trees cannot contain unsafe syntax under the recorded toolchain and profiles; the compiler rejected a deliberate unsafe canary in each tree at the registered attribute coordinate",
+    "does_not_mean": [
+      "transitive obligations are discharged",
+      "the algorithms are correct",
+      "constant-time behaviour is established",
+      "SAFETY_DISCHARGED (a separate state, never set by this court)"
+    ]
+  },
+  "targets": [
+    {
+      "module": "crate::status",
+      "declaration_file": "src/lib.rs",
+      "declaration_line": 228,
+      "declaration_form": "pub mod status;",
+      "attribute_file": "src/lib.rs",
+      "attribute_line": 227,
+      "attribute_form": "outer",
+      "attribute": "#[forbid(unsafe_code)]",
+      "source_path": "src/status.rs",
+      "source_lines_at_registration": 168,
+      "nested_modules": "none",
+      "generated": false,
+      "generator": null,
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "checked_profiles": [
+        "dev-lib",
+        "test-lib"
+      ]
+    },
+    {
+      "module": "crate::cipher_tables",
+      "declaration_file": "src/lib.rs",
+      "declaration_line": 81,
+      "declaration_form": "pub(crate) mod cipher_tables;",
+      "attribute_file": "src/lib.rs",
+      "attribute_line": 80,
+      "attribute_form": "outer",
+      "attribute": "#[forbid(unsafe_code)]",
+      "source_path": "src/cipher_tables.rs",
+      "source_lines_at_registration": 1095,
+      "nested_modules": "mod tests (cfg(test))",
+      "generated": true,
+      "generator": {
+        "path": "forensics/tools/gen_phase8_cipher_tables.py",
+        "check_args": [
+          "--check"
+        ],
+        "note": "only the island body is generated; the attribute sits on the hand-written parent declaration, so regeneration cannot rewrite it"
+      },
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "checked_profiles": [
+        "dev-lib",
+        "test-lib"
+      ]
+    },
+    {
+      "module": "crate::digest::tables",
+      "declaration_file": "src/digest/mod.rs",
+      "declaration_line": 59,
+      "declaration_form": "pub mod tables;",
+      "attribute_file": "src/digest/mod.rs",
+      "attribute_line": 58,
+      "attribute_form": "outer",
+      "attribute": "#[forbid(unsafe_code)]",
+      "source_path": "src/digest/tables.rs",
+      "source_lines_at_registration": 562,
+      "nested_modules": "mod tests (cfg(test))",
+      "generated": true,
+      "generator": {
+        "path": "forensics/tools/gen_phase8_tables.py",
+        "check_args": [
+          "--check"
+        ],
+        "note": "only the island body is generated; the attribute sits on the hand-written parent declaration"
+      },
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "checked_profiles": [
+        "dev-lib",
+        "test-lib"
+      ]
+    },
+    {
+      "module": "crate::runtime::constant_time",
+      "declaration_file": "src/runtime/mod.rs",
+      "declaration_line": 32,
+      "declaration_form": "pub mod constant_time;",
+      "attribute_file": "src/runtime/mod.rs",
+      "attribute_line": 31,
+      "attribute_form": "outer",
+      "attribute": "#[forbid(unsafe_code)]",
+      "source_path": "src/runtime/constant_time.rs",
+      "source_lines_at_registration": 496,
+      "nested_modules": "mod tests (cfg(test))",
+      "generated": false,
+      "generator": null,
+      "note": "`include_str!` in a cfg(test) item is a data fixture, not a source alias; bare `include!` is a fail-closed condition",
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "checked_profiles": [
+        "dev-lib",
+        "test-lib"
+      ]
+    },
+    {
+      "module": "crate::runtime::ctype_table",
+      "declaration_file": "src/runtime/mod.rs",
+      "declaration_line": 35,
+      "declaration_form": "pub mod ctype_table;",
+      "attribute_file": "src/runtime/mod.rs",
+      "attribute_line": 34,
+      "attribute_form": "outer",
+      "attribute": "#[forbid(unsafe_code)]",
+      "source_path": "src/runtime/ctype_table.rs",
+      "source_lines_at_registration": 49,
+      "nested_modules": "pub(crate) mod mask (constants only)",
+      "generated": true,
+      "generator": {
+        "path": "forensics/tools/gen_ctype_table.py",
+        "check_args": [
+          "--check"
+        ],
+        "note": "only the island body is generated; the attribute sits on the hand-written parent declaration"
+      },
+      "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); edition 2021",
+      "checked_profiles": [
+        "dev-lib",
+        "test-lib"
+      ]
+    }
+  ]
+}

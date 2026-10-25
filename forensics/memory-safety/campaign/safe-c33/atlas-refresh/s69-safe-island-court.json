@@ -1,0 +1,220 @@
+{
+  "schema": "safe-c33/atlas-refresh/s69-safe-island-court/v1",
+  "kind": "compiler-enforced-safe-islands-enforcement-court",
+  "subphase": "S2",
+  "branch": "integrate/safe-c33",
+  "source_head": "8a8943aa4cc412364b76c1b8b27b62414f196e7e",
+  "source_head_short": "8a8943aa4",
+  "date": "2026-10-25",
+  "status": "RECORDED_AND_VERIFIED_NOT_COMMITTED",
+  "purpose": "Replace the review-checklist reading of the five safe islands with an enforcement court: stdlib integrity guards that fail closed on any attempt to move or weaken the scope, plus an authoritative compiler transcript in which each island rejects a deliberate unsafe canary at the registered attribute. The gate never runs cargo; a separate court-only recorder produces the transcript.",
+  "execution": {
+    "role": "subagent S2",
+    "committed": false,
+    "pushed": false,
+    "docker_changed": false,
+    "host_execution": "The gate (stdio Python only, never cargo) was run on the host; every cargo invocation ran in the court via docker/openssl-rs-court.sh exec.",
+    "venue": "openssl-rs-court (docker/openssl-rs-court.sh exec); build copy /work/court/s69/repo (disposable, removed after use); controls in /tmp/s69-negctl (disposable, container overlay, removed after use)",
+    "oom_guard": "One heavy command at a time; CARGO_BUILD_JOBS=4; CARGO_TARGET_DIR=/work/court/target/s69; sequential builds only.",
+    "host_memory_before_builds": "57 GB available (no build spike)"
+  },
+  "deliverables": [
+    {
+      "path": "forensics/tools/check_safe_islands.py",
+      "sha256": "5375c073bcece212e7cfae6bef42a97530aeea999c5c26a25563ecbb6e0d052f",
+      "role": "the gate: integrity guards + validation of the compiler transcript; stdlib only; never invokes cargo"
+    },
+    {
+      "path": "forensics/tools/safe_islands.json",
+      "sha256": "98a628548e9044924add1e3c1e9b7369c9963c4c4bd7822e00be50dc140e5870",
+      "role": "registry, schema openssl-rs/safe-islands/v1"
+    },
+    {
+      "path": "forensics/tools/safe_islands_court_record.py",
+      "sha256": "d6a8a0bfcbb9a7be90cf8650b3f1607bfb0f20daa9bd729a7664d75079a1e762",
+      "role": "court-only recorder: builds a disposable copy, records uncapped cargo check/test transcripts and per-island canaries; refuses to run without OPENSSL_RS_COURT_RECORD=1"
+    },
+    {
+      "path": "forensics/tools/safe_islands_negative_controls.py",
+      "sha256": "92eccb1891e23252ec3a1858267168dfa72fa87ec7ec757dcf5fc97bb7c7a33b",
+      "role": "self-test: 11 scope/cap mutations plus pristine baseline and reinstated run, on a disposable copy outside the tracked tree"
+    },
+    {
+      "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json",
+      "sha256": "659e98041389ffa64bf25e785601c6bd96ee68553b9a083f1c9995059d480cf9",
+      "role": "the authoritative compiler transcript (schema openssl-rs/safe-islands-compiler-evidence/v1)"
+    }
+  ],
+  "design": {
+    "separation_principle": "The gate prints two separately labelled axes. The integrity guards are tamper detection on scope; the authoritative check is the compiler transcript. Only the latter can set COMPILER_FORBID_CONFIRMED, and neither can set SAFETY_DISCHARGED.",
+    "integrity_guards": [
+      "crate identity: Cargo.toml [package].name, [lib].path and rust-toolchain.toml channel must match the registry; a non-empty [features] table is fail-closed because the recorded profile set would no longer cover the cfg surface",
+      "declaration chain resolution by Rust's own file-module rules from the crate root (crate::digest::tables resolves lib.rs -> digest/mod.rs -> tables), requiring the registered parent and the exact registered source_path",
+      "the attribute immediately preceding the declaration must be exactly `#[forbid(unsafe_code)]` with no other attribute in its stack, no `cfg`/`cfg_attr`, and no inner form unless registered as inner",
+      "no `#[path]` or `cfg` on any declaration in the chain, including ancestors; no inline-module form; no duplicate declaration; no ambiguous `x.rs` + `x/mod.rs`",
+      "island source must be a regular file inside src/, not a symlink; no bare `include!`; no `#[path]`; no inner `#![cfg…]`; no `allow(unsafe_code)`; nested `#[cfg(test)]` items are explicitly allowed because the outer forbid still covers them",
+      "generated islands: run the committed generator's --check; a byte mismatch is accepted only when a recorded render is token-identical (whitespace/comments/rustfmt trailing commas normalized) and that record is bound to the same generator source and to the current file's canonical token digest",
+      "crate root must not carry a cfg/cfg_attr inner attribute"
+    ],
+    "authoritative_check": {
+      "source": "s69-safe-island-compiler-evidence.json, recorded by the court-only recorder",
+      "binding": "sha256 of 12 files (crate root, Cargo.toml, Cargo.lock, build.rs, rust-toolchain.toml, the three parent declarations, the five island sources); exact rustc/cargo version strings; edition; crate name/version/lib path",
+      "required_observations": [
+        "baseline dev-lib: `cargo check --lib` exit 0, 0 errors",
+        "baseline test-lib: `cargo test --lib --no-run` exit 0, 0 errors",
+        "canary dev-lib: an appended `unsafe {}` is rejected in all five islands with code unsafe_code, and the lint note names the registered attribute file, line and `#[forbid(unsafe_code)]` text",
+        "canary test-lib: a `#[cfg(test)]` module containing `unsafe {}` is rejected in all five islands, proving the forbid reaches test-cfg code",
+        "override: `#[allow(unsafe_code)]` in crate::status is rejected as E0453 with the forbid named",
+        "scope proof: an `unsafe {}` appended to src/runtime/mod.rs (outside every island) compiles with 0 errors, so the lint is not crate-wide"
+      ],
+      "capped_build_refusal": "Any recorded build whose argv contains --cap-lints/--force-warn, whose env carries RUSTFLAGS/CARGO_ENCODED_RUSTFLAGS/CARGO_BUILD_RUSTFLAGS with a lint cap or the unsafe_code lint, or which sets RUSTC_WRAPPER/RUSTC_WORKSPACE_WRAPPER, or whose argv is not `cargo check|test --lib`, makes certification impossible (exit 2). The gate itself never runs cargo.",
+      "exit_codes": {
+        "0": "integrity guards and the authoritative check both pass",
+        "1": "an integrity guard failed",
+        "2": "the authoritative check could not be established (missing/stale/capped evidence)",
+        "3": "the registry is unusable"
+      }
+    },
+    "fail_closed": [
+      "declaration moved or deleted",
+      "declaration resolving to a different file or ambiguous file pair",
+      "missing attribute, non-adjacent attribute, any additional attribute, any cfg/cfg_attr",
+      "`#[path]` or `include!` introduced",
+      "a cfg that could remove the guarantee (declaration chain, crate root, island inner attributes)",
+      "a generated file whose token stream no longer matches a fresh render",
+      "missing or stale compiler evidence, or evidence for another toolchain/crate"
+    ]
+  },
+  "registry_summary": [
+    {
+      "module": "crate::status",
+      "declaration": "src/lib.rs:228",
+      "attribute": "src/lib.rs:227 #[forbid(unsafe_code)]",
+      "source": "src/status.rs",
+      "generated": false,
+      "checked_profiles": ["dev-lib", "test-lib"]
+    },
+    {
+      "module": "crate::cipher_tables",
+      "declaration": "src/lib.rs:81",
+      "attribute": "src/lib.rs:80 #[forbid(unsafe_code)]",
+      "source": "src/cipher_tables.rs",
+      "generated": true,
+      "checked_profiles": ["dev-lib", "test-lib"]
+    },
+    {
+      "module": "crate::digest::tables",
+      "declaration": "src/digest/mod.rs:59",
+      "attribute": "src/digest/mod.rs:58 #[forbid(unsafe_code)]",
+      "source": "src/digest/tables.rs",
+      "generated": true,
+      "checked_profiles": ["dev-lib", "test-lib"]
+    },
+    {
+      "module": "crate::runtime::constant_time",
+      "declaration": "src/runtime/mod.rs:32",
+      "attribute": "src/runtime/mod.rs:31 #[forbid(unsafe_code)]",
+      "source": "src/runtime/constant_time.rs",
+      "generated": false,
+      "checked_profiles": ["dev-lib", "test-lib"]
+    },
+    {
+      "module": "crate::runtime::ctype_table",
+      "declaration": "src/runtime/mod.rs:35",
+      "attribute": "src/runtime/mod.rs:34 #[forbid(unsafe_code)]",
+      "source": "src/runtime/ctype_table.rs",
+      "generated": true,
+      "checked_profiles": ["dev-lib", "test-lib"]
+    }
+  ],
+  "compiler_evidence_summary": {
+    "toolchain": {
+      "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+      "edition": "2021",
+      "channel": "1.98.1"
+    },
+    "builds": [
+      {"id": "baseline-lib", "profile": "dev-lib", "result": "PASS", "errors": 0, "warnings": 0},
+      {"id": "baseline-test", "profile": "test-lib", "result": "PASS", "errors": 0, "warnings": 0},
+      {"id": "canary-lib", "profile": "dev-lib", "result": "REJECTED_AS_EXPECTED", "errors": 5, "probes": 5},
+      {"id": "canary-test", "profile": "test-lib", "result": "REJECTED_AS_EXPECTED", "errors": 5, "probes": 5},
+      {"id": "override-lib", "profile": "dev-lib", "result": "REJECTED_AS_EXPECTED", "errors": 1, "probes": 1, "code": "E0453"},
+      {"id": "scope-proof", "profile": "dev-lib", "result": "PASS", "errors": 0, "warnings": 1}
+    ],
+    "probe_coordinates": {
+      "crate::status": "src/lib.rs:227:10",
+      "crate::cipher_tables": "src/lib.rs:80:10",
+      "crate::digest::tables": "src/digest/mod.rs:58:10",
+      "crate::runtime::constant_time": "src/runtime/mod.rs:31:10",
+      "crate::runtime::ctype_table": "src/runtime/mod.rs:34:10"
+    },
+    "uncapped": "every recorded build has empty RUSTFLAGS/CARGO_ENCODED_RUSTFLAGS/CARGO_BUILD_RUSTFLAGS/RUSTC_WRAPPER/RUSTC_WORKSPACE_WRAPPER and an exact cargo check|test --lib argv"
+  },
+  "negative_controls": {
+    "venue": "/tmp/s69-negctl (disposable copy outside the tracked tree; created from an allow-list; src files restored byte-for-byte between cases)",
+    "observations": 13,
+    "as_expected": 13,
+    "cases": [
+      {"id": "baseline", "mutation": "none", "expected": "exit 0", "observed": "exit 0, COMPILER_FORBID_CONFIRMED true", "verdict": "PASS"},
+      {"id": "a-attribute-removed", "mutation": "delete `#[forbid(unsafe_code)]` before `pub mod status;`", "expected": "fail naming crate::status", "observed": "exit 1: `crate::status` has no attribute immediately before its declaration", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "b-declaration-moved", "mutation": "move `mod status;` from src/lib.rs to src/digest/mod.rs", "expected": "fail closed", "observed": "exit 1: crate::status: module `status` is not declared at the top level of lib.rs; the declaration moved or was deleted", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "c-cfg-guard", "mutation": "prepend `#[cfg(test)]` to the status attribute", "expected": "fail closed", "observed": "exit 1: `#[cfg]` on `crate::status` in lib.rs", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "d-path-attribute", "mutation": "insert `#[path = \"status.rs\"]` on the status declaration", "expected": "fail closed", "observed": "exit 1: `#[path]` on `crate::status` in lib.rs", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "e-reinstated", "mutation": "restore every file", "expected": "pass", "observed": "exit 0, COMPILER_FORBID_CONFIRMED true", "verdict": "PASS"},
+      {"id": "f-cap-rustflags", "mutation": "recorded build carries RUSTFLAGS=--cap-lints=warn", "expected": "refuse to certify", "observed": "exit 2: RUSTFLAGS carries a lint cap", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "g-cap-encoded", "mutation": "recorded build carries CARGO_ENCODED_RUSTFLAGS with --cap-lints", "expected": "refuse to certify", "observed": "exit 2: CARGO_ENCODED_RUSTFLAGS carries a lint cap", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "h-cap-argv", "mutation": "recorded cargo argv contains --cap-lints=warn", "expected": "refuse to certify", "observed": "exit 2: argv contains --cap-lints", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "i-wrapper-env", "mutation": "recorded build sets RUSTC_WRAPPER", "expected": "refuse to certify", "observed": "exit 2: RUSTC_WRAPPER is set: wrapper bypasses normal product compilation", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "j-wrapper-argv", "mutation": "recorded command is `sccache cargo check --lib`", "expected": "refuse to certify", "observed": "exit 2: argv does not start with cargo; not a product compilation", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "k-generated-hand-edit", "mutation": "append a const to src/cipher_tables.rs (a generated island)", "expected": "fail closed", "observed": "exit 1: crate::cipher_tables: the committed file's token stream no longer matches a fresh generator render", "verdict": "FAIL-CLOSED AS REQUIRED"},
+      {"id": "l-include-bang", "mutation": "append `include!(\"s69_extra.rs\");` to src/status.rs", "expected": "fail closed", "observed": "exit 1: crate::status: bare `include!` in src/status.rs at line 170", "verdict": "FAIL-CLOSED AS REQUIRED"}
+    ]
+  },
+  "pre_existing_findings": [
+    {
+      "id": "generator-byte-drift",
+      "where": "gen_phase8_cipher_tables.py --check and gen_phase8_tables.py --check fail on the pristine tree at 8a8943aa4",
+      "detail": "The committed src/cipher_tables.rs and src/digest/tables.rs are rustfmt-formatted relative to the generators' raw render (line wrapping and trailing commas added by rustfmt). After dropping comments, whitespace and trailing commas, the token streams are identical: no value, item or identifier differs. src/runtime/ctype_table.rs is byte-identical.",
+      "disposition": "Not fixed in S2: rewriting two large generated files is outside this subphase and would itself need its own evidence. The court therefore reports BYTE_DRIFT_FORMATTING_ONLY explicitly (it is not hidden), enforces token identity as the minimum, and fails on any token change (control k). Any future S-phase that regenerates the files will close the byte drift; the court will then take the byte-identical path.",
+      "risk": "A hand edit that changes only whitespace/comments/trailing commas in a generated island would not be detected. Such an edit cannot change the program, and the compiler transcript still binds the exact file hashes."
+    }
+  ],
+  "gates": {
+    "py_compile": "PASS (all three Python tools)",
+    "json_parse": "PASS (registry and compiler evidence)",
+    "real_tree_run": "PASS, exit 0: 50 checks (31 integrity observations, 19 authoritative observations), COMPILER_FORBID_CONFIRMED true",
+    "authoritative_compilation": "PASS: baseline dev-lib and test-lib compiled uncapped with 0 errors",
+    "negative_controls": "13 of 13 observations as expected",
+    "cargo_fmt": "NOT_RUN (no .rs file changed by S2)",
+    "cargo_clippy": "NOT_RUN (no .rs file changed by S2)",
+    "library_tests": "NOT_RUN (no .rs file changed by S2). The authoritative builds compiled --lib and --lib with cfg(test); no test was executed."
+  },
+  "COMPILER_FORBID_CONFIRMED": true,
+  "SAFETY_DISCHARGED": false,
+  "claim": {
+    "means": "Under rustc 1.98.1 / cargo 1.98.1, edition 2021, the five named module trees (crate::status, crate::cipher_tables, crate::digest::tables, crate::runtime::constant_time, crate::runtime::ctype_table) cannot contain unsafe syntax. The compiler accepted the pristine subtrees and rejected a deliberate unsafe canary in each one, in both the dev-lib and test-lib profiles, with the lint defined at the registered #[forbid(unsafe_code)] coordinate; an inserted #[allow(unsafe_code)] was rejected as E0453; and an unsafe construct outside the islands compiled, so the guarantee is scoped to the five declarations.",
+    "does_not_mean": [
+      "transitive obligations are discharged",
+      "the algorithms are correct",
+      "constant-time behaviour is established",
+      "memory safety of the islands' safe code is proven (safe Rust can still be logically wrong or panic)",
+      "any module outside these five is covered"
+    ]
+  },
+  "could_not_enforce": [
+    "Transcript authenticity is by source hashes, not a signature: a rewritten evidence file whose hashes are recomputed would pass. Mitigation is that the transcript is Git-tracked and reviewed; it is not cryptographic attestation.",
+    "The compiler binary identity is the recorded version string plus the court venue; rustc/cargo binary hashes are not checked.",
+    "Only dev-lib and test-lib are observed. Release/SEAL builds and downstream consumer configurations are NOT_RUN. The lint result is expected to be profile-independent because the declaration is unconditional, but that is an inference, not evidence.",
+    "`forbid(unsafe_code)` is a syntax-level guard. It does not prove the absence of memory unsafety reachable through safe code, does not cover FFI unsafety in other modules, and does not discharge the islands' behavioural contracts.",
+    "Macro expansions are linted by rustc after expansion, so unsafe emitted by a macro inside an island is rejected by the compiler; the gate itself cannot enumerate expansions. The canary proves the lint reaches the island's ordinary code.",
+    "Generated-file enforcement is token identity (formatting normalized), not byte identity, because of the documented pre-existing byte drift; a whitespace-only hand edit is undetected but semantically inert.",
+    "A `build.rs`/`--cfg` combination cannot remove an unconditional module declaration, but any `cfg` attribute on the declaration chain is rejected rather than reasoned about; a future cfg-guarded island requires a registry change and a new transcript.",
+    "The controls f–j mutate a recorded transcript to exercise the refusal logic; they do not prove that a real capped build was ever refused, only that capped transcripts cannot certify."
+  ],
+  "follow_ups": [
+    "Close the two generator byte drifts by regenerating src/cipher_tables.rs and src/digest/tables.rs (a separate, evidence-bearing subphase).",
+    "Add a release/SEAL transcript when the next seal runs, so the unobserved profile is recorded rather than inferred.",
+    "Add the release-build evidence and consumer-build closure at SAFE_COMPATIBLE graduation; this court alone cannot promote a consumer family."
+  ]
+}

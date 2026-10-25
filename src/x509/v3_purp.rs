@@ -64,7 +64,6 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
-use core::cell::UnsafeCell;
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void, CStr};
 use core::mem::size_of;
 use core::ptr;
@@ -531,27 +530,20 @@ const _: () = {
     assert!(core::mem::offset_of!(X509Purpose, usr_data) == 40);
 };
 
-// SAFETY: a purpose row is a plain data record reached only through the module's own
-// single-threaded table discipline. The standard table is wrapped in an `UnsafeCell` (see
-// [`XstandardTable`]) because `X509_PURPOSE_add` may modify a standard row in place, and this
-// wrapper is what carries the `Sync` claim for that writable storage.
-#[repr(transparent)]
-struct XstandardTable(UnsafeCell<[X509Purpose; 10]>);
-
-// SAFETY: `Sync` here is a claim about **access discipline**, not about the bytes being immutable:
-// `X509_PURPOSE_add` can rewrite a reserved row in place (a short-name match selects a standard
-// row and replaces its names, trust, checker and opaque argument), and the accessors hand out
-// `*mut` rows. The type system enforces neither single-threaded use nor the absence of a live
-// borrow taken through `X509_PURPOSE_get0`. The obligation is therefore explicit and belongs to
-// every caller of this module's unsafe table API: no thread may add, modify, clean up or read the
-// purpose tables while another thread does. That is exactly the authority's own
-// `xstandard[]`/`xptable` contract; this `unsafe impl` does not strengthen it.
-unsafe impl Sync for XstandardTable {}
+// The standard table. **This is a mutable C global, not a `Sync` value.** It is declared
+// `static mut` and every access is a raw-pointer access inside an `unsafe` function, so the type
+// system makes no thread-safety claim at all. `X509_PURPOSE_add` can rewrite a reserved row in
+// place (a short-name match selects a standard row and replaces its names, trust, checker and
+// opaque argument) and the accessors hand out `*mut` rows, so single-threaded use is an explicit
+// caller obligation carried by each accessor's `# Safety` contract -- exactly the authority's own
+// `xstandard[]`/`xptable` contract. Earlier revisions wrapped this in `UnsafeCell` and asserted
+// `unsafe impl Sync`; that assertion was only a documented caller obligation dressed as a
+// type-system invariant, and it has been removed rather than relabelled.
 
 /// `static X509_PURPOSE xstandard[]` — `v3_purp.c:46-70`.
 ///
 /// The ten reserved purposes, in `purpose` order so index `id - 1` is the row for reserved id `id`.
-static XSTANDARD: XstandardTable = XstandardTable(UnsafeCell::new([
+static mut XSTANDARD: [X509Purpose; 10] = [
     X509Purpose {
         purpose: X509_PURPOSE_SSL_CLIENT,
         trust: X509_TRUST_SSL_CLIENT,
@@ -642,7 +634,7 @@ static XSTANDARD: XstandardTable = XstandardTable(UnsafeCell::new([
         sname: c"codesign".as_ptr().cast_mut(),
         usr_data: ptr::null_mut(),
     },
-]));
+];
 
 /// `static STACK_OF(X509_PURPOSE) *xptable` — `v3_purp.c:75`.
 ///
@@ -652,7 +644,7 @@ static XSTANDARD: XstandardTable = XstandardTable(UnsafeCell::new([
 ///
 /// `AtomicPtr` orders the publication of the *stack pointer* only. It makes neither the stack's
 /// elements nor a standard row reached through the table safe to mutate concurrently; the
-/// single-threaded contract stated on [`XstandardTable`] covers those.
+/// single-threaded contract stated on [`XSTANDARD`] covers those.
 static XPTABLE: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
 
 /// `static int xp_cmp(const X509_PURPOSE *const *a, const X509_PURPOSE *const *b)` —
@@ -805,8 +797,9 @@ pub unsafe extern "C" fn X509_PURPOSE_get0(idx: c_int) -> *mut X509Purpose {
         return ptr::null_mut();
     }
     if idx < X509_PURPOSE_COUNT {
-        // SAFETY: `idx` is within the standard table, whose storage is this module's own.
-        return unsafe { XSTANDARD.0.get().cast::<X509Purpose>().add(idx as usize) };
+        // SAFETY: `idx` is within the standard table, whose storage is this module's own and is
+        // reached only through raw pointers under the table's single-threaded contract.
+        return unsafe { (&raw mut XSTANDARD).cast::<X509Purpose>().add(idx as usize) };
     }
     let table = XPTABLE.load(Ordering::Acquire);
     // SAFETY: `table` is the module's own list; `OPENSSL_sk_value` accepts NULL and any index.
@@ -1882,6 +1875,28 @@ unsafe fn check_sig_alg_match(issuer_key: *const EvpPkey, subject: *const X509) 
 /// end, so a reader that observes the completed cache never observes a half-built one. The cache
 /// is immutable after publication; the deliberate exception to that rule is the lazy CRLDP name
 /// (see [`crldp_full_name`]), which is never written into the cached distribution point.
+///
+/// ## Concurrency: why the unlocked readers are ordered
+///
+/// `EXFLAG_SET` is stored **last**, while the `X509` write lock is held, and every cache member is
+/// written only before it in that same critical section. A second builder observes `EXFLAG_SET` and
+/// writes nothing. `x509_vfy` reads `ex_flags`, `altname`, `akid`, `skid`, `nc` and `crldp` without
+/// the lock, but every such read is dominated, in the same thread, by a cache-building call on that
+/// certificate: `X509_self_signed`, `X509_check_ca`, `X509_check_purpose` and
+/// `ossl_x509_likely_issued`/`check_issued` all acquire and release this lock. If the reader built
+/// the cache first, the writes are its own; if another thread built it first, the reader's lock
+/// acquire is the happens-before edge after that thread's release. `build_chain` supplies that edge
+/// for every chain member before `check_extensions` and the later revocation/policy stages read
+/// anything, and `get0_best_issuer_sk`'s pre-`check_extensions` read is ordered by its own
+/// `ossl_x509v3_cache_extensions(x)` call (S70), which is also what covers the
+/// `X509_STORE_CTX_set0_trusted_stack` path where no earlier `check_issued` builds `x`. S70
+/// exercises the real verify path and the trusted-stack path under TSan; see
+/// `atlas-refresh/s70-concurrency.json`.
+///
+/// Scope of that argument: it covers the extension-cache fields above. `X509_set_proxy_pathlen`
+/// still writes `ex_pcpathlen` without the lock (the authority does too), and the lazily built
+/// `policy_cache` can set `EXFLAG_INVALID_POLICY` under this lock after a reader has already
+/// released it; neither is covered here.
 ///
 /// # Safety
 ///
