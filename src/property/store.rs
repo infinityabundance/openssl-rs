@@ -1602,6 +1602,15 @@ unsafe extern "C" fn unused_up_ref(_method: *mut c_void) -> c_int {
 }
 
 /// See [`unused_up_ref`].
+///
+/// # Safety
+/// This is a sentinel destructor, never a real one: it may only be installed in the
+/// stack-built `QUERY` key described on [`unused_up_ref`], where the store's hash and
+/// comparator never read or call `method.free`. It never dereferences `_method`, which
+/// may be any value (NULL, dangling or unaligned), and never returns — a reached call
+/// panics and the runtime aborts at the `extern "C"` boundary rather than unwinding, so
+/// even a violated call is not UB. Pointer provenance, alignment and ownership are
+/// therefore not part of the contract; only the ABI is: `void (*)(void *)`.
 unsafe extern "C" fn unused_free(_method: *mut c_void) {
     unreachable!("a stack-built QUERY key's `method.free` was called")
 }

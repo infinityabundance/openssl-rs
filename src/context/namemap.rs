@@ -1063,6 +1063,15 @@ unsafe fn add_names_locked(
 /// table's insertion result; this module's table cannot fail an insertion, so the
 /// site exists and is unreferenced — which is recorded as a residual rather than
 /// papered over with a raise that could not happen.
+/// The unreachable half of `crypto/core_namemap.c:288`'s dynamic raise.
+///
+/// # Safety
+/// This function has no caller-independent precondition. It takes no arguments and
+/// dereferences no caller-supplied pointer: its only unsafe operation is the call to
+/// [`raise_site_dynamic`], whose contract (a table entry whose `file`/`func` are static
+/// NUL-terminated strings and whose `dynamic_reason` is set) is discharged internally by
+/// the compile-time-constant `err_sites::CORE_NAMEMAP_288` coordinate and the constant
+/// reason. It is `unsafe` to match its siblings, not because a caller can violate it.
 #[allow(dead_code)] // unreachable: the candidate's map cannot fail an insertion
 unsafe fn raise_too_many_names() {
     // SAFETY: a compile-time-constant site with a run-time reason; the reason is
