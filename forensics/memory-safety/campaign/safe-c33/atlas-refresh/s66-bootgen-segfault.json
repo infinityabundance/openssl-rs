@@ -1,0 +1,219 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "S66-BOOTGEN-SEGFAULT",
+  "date": "2026-10-25",
+  "subphase": "S66: diagnose the candidate-only xilinx-bootgen signing segfault (STOP-class candidate)",
+  "branch": "integrate/safe-c33",
+  "source_head": "3ea2887fcfce64f4c3c4ccff04ae2b75314c0938",
+  "source_head_short": "3ea2887fc",
+  "source_head_subject": "Merge stage/p25/workload-templates",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+    "src_changed_this_subphase": false,
+    "docker_changed_this_subphase": false,
+    "note": "all builds, probes and workload runs executed inside the expansion court container; the host ran no project command. The host working tree was clean before the receipt and is clean except for this receipt after it."
+  },
+
+  "verdict": {
+    "classification": "CONSUMER_UB_TOLERATED_BY_AUTHORITY_PRIVATE_LAYOUT",
+    "confirmed_memory_safety_defect_in_src": false,
+    "use_after_free": false,
+    "out_of_bounds_write": false,
+    "invalid_read": {
+      "present": true,
+      "where": "the consumer (xilinx-bootgen), not src/",
+      "address": "0x41",
+      "operation": "memcpy(D, RSA_get0_d(rsa)->d, keySize) reads from 0x41"
+    },
+    "candidate_accessor_is_correct": true,
+    "summary": "RSA_get0_d returns a valid, live BIGNUM whose value is identical to the authority's (BN_num_bits(d)=4093, BN_bn2hex identical). bootgen then reads the private BIGNUM field ->d from its own copy of OpenSSL 1.0's struct bignum_st. BIGNUM is opaque in both the authority's and the candidate's public headers (types.h:96), so that read is undefined behaviour. It happens to work against the authority because OpenSSL's private bignum_st starts with BN_ULONG *d; under the candidate the first word of our opaque representation is the Vec capacity (65 = 0x41), so the consumer copies from address 0x41 and faults. No src/ fix is appropriate (AGENTS.md section 17: do not reproduce UB; never imitate a flawed implementation and call it correctness).",
+    "ledger_effect": "No change to the campaign's memory-safety defect ledger: this is not a candidate memory-safety defect. xilinx-bootgen does not graduate; its measured grade stays L5-loaded and its cause is now adjudicated."
+  },
+
+  "reproduction": {
+    "consumer": {
+      "family": "xilinx-bootgen",
+      "version": "2022.2",
+      "source_url": "https://deb.debian.org/debian/pool/main/x/xilinx-bootgen/xilinx-bootgen_2022.2.orig.tar.gz",
+      "binary": "/work/court/tmp/s65-bootgen/xilinx-bootgen-2022.2/bootgen",
+      "binary_sha256": "3ba623a444b79a2a7617b92ed6a79fdf853189b8805545f210224a170d2f78e1",
+      "build_id": "5250b183876c12f15719560b8e53c973500cc40c",
+      "authkeys_cpp_sha256": "9c16ef771ca44d1effbf0421ce33caa697e4239dc4bbfb9d3987258844badebe",
+      "xil_bignum_h_sha256": "4300e22a190c03e5ecae43639cab6e871d2a6da4b312c779e66b7396ea3b0b64"
+    },
+    "candidate": {
+      "install_prefix": "artifacts/phase2/install",
+      "libcrypto_so_3_sha256": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+      "libssl_so_3_sha256": "e0c9ba33cb5d417cee0f93ac72f941bb3048c7f3a4e910ce2b940a6c4f07676d",
+      "matches_committed_atlas_identity": true,
+      "built_from": "a4e511865 (src/ is byte-identical from that commit to HEAD 3ea2887fc; git diff a4e511865..HEAD -- src/ is empty)",
+      "rustc": "1.98.1 (48a229cea 2026-09-01)"
+    },
+    "authority": {
+      "prefix": "/work/forensics/authorities/prefix/openssl-3.6.4-production",
+      "libcrypto_so_3": "libcrypto.so.3 (OpenSSL 3.6.4)"
+    },
+    "fixture": {
+      "dir": "/work/court/tmp/s65-bootgen-fixture",
+      "bif": "image.bif",
+      "keys": "psk.pem (4096-bit RSA), ssk.pem (4096-bit RSA)",
+      "payload": "p.elf"
+    },
+    "commands": {
+      "candidate_sign": "cd /work/court/tmp/s65-bootgen-fixture && LD_LIBRARY_PATH=/work/artifacts/phase2/install/lib <bootgen> -arch zynqmp -image image.bif -o x.bin -w",
+      "candidate_verify_authority_signed": "LD_LIBRARY_PATH=/work/artifacts/phase2/install/lib <bootgen> -arch zynqmp -verify signed.bin",
+      "authority_sign": "<bootgen> -arch zynqmp -image image.bif -o auth-signed.bin -w",
+      "authority_verify": "<bootgen> -arch zynqmp -verify signed.bin",
+      "backtrace_method": "no gdb in the court image; a SIGSEGV/SIGBUS/SIGABRT handler in a preloaded .so (LD_PRELOAD) prints si_addr, RIP and backtrace(); the faulting PC is resolved with addr2line against the unstripped consumer and disassembled against libc",
+      "reproducer_sha256": {
+        "bt2.c": "a049042010540b0efb55a0ecd68e8bfc4bea986510ee0b7d7e5aa63c735be173",
+        "run.log": "44679e036992cff3b891cee0b6de8f759223b3fae7de12c03c8ff9acb9b2cd5c",
+        "rprobe.c": "3f4c8bb0804ea06a68d34072c9f39418396e9ae34608858298037ca0ef579040",
+        "dump.c": "051365eccb96660816769c703403f4c586b961e8fe362d3a3a1cb88d4ac01806",
+        "freeprobe.c": "(mimic of the consumer's private-layout write followed by BN_free; see negative_control)"
+      }
+    },
+    "results": {
+      "authority_sign": {"exit": 0, "observed": "Bootimage generated successfully"},
+      "authority_verify": {"exit": 0, "observed": "Authentication is verified on bootimage signed.bin"},
+      "candidate_sign": {"exit": 139, "signal": "SIGSEGV", "observed": "no image produced"},
+      "candidate_verify_of_authority_signed": {"exit": 1, "observed": "[ERROR] : RSA_public_encrypt error; no verification claim"}
+    },
+    "fault": {
+      "signal": "SIGSEGV",
+      "si_addr": "0x41",
+      "rip": "libc.so.6+0x16d809",
+      "faulting_instruction": "62 e1 fe 48 6f 06  vmovdqu64 (%rsi),%zmm16",
+      "resolved_callee": "memcpy (IFUNC-resolved AVX-512 variant; memcpy@@GLIBC_2.14), source %rsi = 0x41",
+      "faulting_frame_symbol": "Key::ParseOpenSSLKey(_IO_FILE*)",
+      "faulting_frame_bootgen_offset": "bootgen+0x1d414",
+      "fault_is_in": "consumer (xilinx-bootgen); the faulting memcpy is bootgen's, reading a consumer-computed pointer. No frame is inside libcrypto.",
+      "backtrace": [
+        "bt2.so(+0x119c)                         <-- signal handler",
+        "libc.so.6(+0x3c050)                     <-- signal trampoline",
+        "libc.so.6(+0x16d809)                    <-- memcpy (vmovdqu64 (%rsi),%zmm16; %rsi=0x41)",
+        "bootgen(+0x1d414)  Key::ParseOpenSSLKey(_IO_FILE*)   <-- return address of the memcpy call",
+        "bootgen(+0x1ead6)  Key::Parse(std::string const&, bool)",
+        "bootgen(+0x1d35d)  Key::ParseSecret(std::string const&)",
+        "bootgen(+0x19240)  AuthenticationContext::ParsePSKeyFile(std::string const&)",
+        "bootgen(+0x4c097)  ZynqMpBootImage::Add(BifOptions*)",
+        "bootgen(+0x521c6)  BIF_File::Process(Options&)",
+        "bootgen(+0x9409b)  BootGenApp::Run(int, char const**)",
+        "bootgen(+0x934f9)  main",
+        "libc.so.6(+0x2724a)",
+        "libc.so.6(__libc_start_main+0x85)",
+        "bootgen(+0xfd81)  _start"
+      ]
+    }
+  },
+
+  "trigger": {
+    "consumer_source_line": "authkeys.cpp:207  memcpy(D, RSA_get0_d(rsaInst.rsa)->d, keySize);",
+    "same_pattern_elsewhere": [
+      "authkeys.cpp:231-232  memcpy(N, RSA_get0_n(rsa)->d, keySize); memcpy(E, RSA_get0_e(rsa)->d, sizeof(uint32_t));",
+      "authkeys.cpp:404,415,424",
+      "verifyimage-zynqmp.cpp:113-114,131-132",
+      "verifyimage-versal.cpp (same class)"
+    ],
+    "consumer_private_definition": {
+      "file": "xil-bignum.h",
+      "struct": "struct bignum_st { BN_ULONG *d; int top; int dmax; int neg; int flags; };",
+      "note": "copied from OpenSSL 1.0; xil-bignum.h is included beside the real (opaque) openssl/bn.h so the private field access compiles"
+    },
+    "public_contract": {
+      "candidate_header": "/work/artifacts/phase2/install/include/openssl/types.h:96  typedef struct bignum_st BIGNUM;",
+      "authority_header": "/work/forensics/authorities/prefix/openssl-3.6.4-production/include/openssl/types.h:96  typedef struct bignum_st BIGNUM;",
+      "conclusion": "BIGNUM is opaque in both; neither library promises a layout. The consumer's complete definition makes its access an incompatible-type access across translation units (undefined behaviour), tolerated by the authority only because its private struct begins with BN_ULONG *d."
+    },
+    "why_the_value_is_zero_and_the_accessor_is_valid": {
+      "measured_candidate_bignum_d_words": "cap=0x41, ptr=0x55..8e40, len=0x40, neg=0, flags=5",
+      "measured_authority_bignum_d_words": "d(limb ptr)=0x55..df60, top=0x40, dmax=0x40, neg=0, flags=5",
+      "vec_layout_in_this_build": "the candidate's BigNum has #[repr(C)] { d: Vec<Limb>, neg: c_int, flags: c_int }; rustc 1.98.1 lays Vec out as (cap, ptr, len), so the first word is the capacity. A probe (Vec::with_capacity(10) + 3 pushes) measured words = [0xa, <ptr>, 0x3].",
+      "capacity_origin": "src/bn/bignum.rs:1016  Vec::with_capacity(ordered.len() / 8 + 1) -> 512/8 + 1 = 65 = 0x41 for a 4096-bit magnitude",
+      "accessor_validity_proof": "BN_num_bits(RSA_get0_d(rsa)) = 4093, BN_num_bits(RSA_get0_n(rsa)) = 4096, and BN_bn2hex of both is byte-identical to the authority's; the BIGNUM pointer itself is non-null and live. The accessor returns the right object; only the consumer's interpretation of its opaque contents is wrong.",
+      "disassembly_of_the_decisive_site": [
+        "bootgen+0x1d3fd  mov %rbp,%rdi",
+        "bootgen+0x1d400  call RSA_get0_d@plt",
+        "bootgen+0x1d405  mov 0x28(%rbx),%rdi      ; D buffer",
+        "bootgen+0x1d409  mov (%rax),%rsi           ; consumer reads private field ->d",
+        "bootgen+0x1d40c  mov %r12,%rdx             ; keySize = 512",
+        "bootgen+0x1d40f  call memcpy@plt",
+        "bootgen+0x1d414  <return address seen on the faulting stack>"
+      ]
+    },
+    "verify_path_manifestation": "The verification path (verifyimage-zynqmp.cpp:95-110) instead *writes* the 1.0 layout into a live BN_new() object (batches d/top/dmax/neg/flags). The candidate's Vec ends up with len=0 (the consumer's flags/neg land on our len word), so RSA_public_encrypt sees a zero modulus and returns an error; exit 1, no crash. The authority's BIGNUM happens to accept those writes, so verification proceeds. Same consumer UB, different symptom."
+  },
+
+  "negative_control": {
+    "purpose": "Show the consumer pattern is unsafe under the authority too, so the divergence is not a candidate-only memory-safety defect.",
+    "probe": "BN_new(); write struct xil_bignum_st fields (d=buf, top=64, dmax=64, neg=0, flags=0); BN_free(b).",
+    "candidate": "SIGSEGV (exit 139): the corrupted Vec is deallocated from consumer-supplied cap/ptr.",
+    "authority": "SIGABRT (exit 134): glibc 'munmap_chunk(): invalid pointer' while freeing the consumer-supplied d.",
+    "interpretation": "bootgen survives only because it does not free the private-layout RSA/BIGNUM it constructed in the verify path (leak) and because the authority's private layout happens to line up in the sign path. The authority's tolerance is accidental, not a contract."
+  },
+
+  "divergence": {
+    "agents_md_section": "17 (divergence classification; UB in the C authority / consumer not reproduced)",
+    "class": "consumer undefined behaviour (private BIGNUM layout) tolerated by the authority's incidental representation",
+    "consequence": "xilinx-bootgen cannot sign (SIGSEGV) or verify (error exit 1) against the candidate; it remains at L5-loaded. The same consumer source is unsafe against OpenSSL 1.1+ as a matter of contract and would misbehave under any opaque BIGNUM whose first word is not the limb pointer.",
+    "treatment": "Do not reproduce the private layout. The correct repair is consumer-side: use BN_bn2binpad(RSA_get0_d(...), D, keySize) / BN_bn2binpad(RSA_get0_n(...), N, keySize) and the public exponent accessors, rather than ->d. The court keeps the pristine upstream source; no consumer patch was applied and no pass was manufactured.",
+    "compatibility_scope": "a functional workload over a pristine consumer that relies on undefined behaviour; the authority completed it only by layout accident",
+    "not_an_src_contract_breach": "RSA_get0_d/RSA_get0_n/RSA_get0_e return the correct BIGNUM pointers; no ownership state, out-parameter write, or success code is wrong."
+  },
+
+  "src_change": {
+    "changed": false,
+    "files": [],
+    "unsafe_before": 0,
+    "unsafe_after": 0,
+    "unsafe_ops_removed": 0,
+    "unsafe_ops_relocated": 0,
+    "unsafe_ops_introduced": 0,
+    "new_hidden_obligations": 0,
+    "regression_test_added": false,
+    "regression_test_rationale": "No src/ defect was found, so no src/ regression test is owed. The standing evidence is the probe above, which fails against both subjects, and the re-measurement below.",
+    "preserved": {
+      "exported_symbols": true,
+      "repr_c_layouts": true,
+      "allocator_seam": true,
+      "error_codes": true
+    }
+  },
+
+  "remeasurement": {
+    "command": "cd /work && python3 forensics/tools/downstream_runtime.py --measure --only xilinx-bootgen,gftp-text,poco --reuse-committed",
+    "elapsed_seconds": 102,
+    "output": [
+      "[p1000  361] poco       authority L7-functional",
+      "[p1000  361] poco       candidate L7-functional",
+      "[p1000  435] xilinx-bootgen authority L7-functional",
+      "[p1000  435] xilinx-bootgen candidate L5-loaded        the consumer did not sign the fixture",
+      "[p1000  751] gftp-text  authority L7-functional",
+      "[p1000  751] gftp-text  candidate L7-functional"
+    ],
+    "grades": {
+      "xilinx-bootgen": {"before": "L5-loaded", "after": "L5-loaded", "authority": "L7-functional", "changed": false},
+      "gftp-text": {"before": "L7-functional", "after": "L7-functional", "authority": "L7-functional", "changed": false},
+      "poco": {"before": "L7-functional", "after": "L7-functional", "authority": "L7-functional", "changed": false}
+    },
+    "atlas_disposition": "the measurement wrote forensics/downstream/runtime-functional-atlas.json; the committed bytes were restored (sha256 7e8554dfc8c43ac2c265ea7bd17baa463bb94fc7b183cde6b50aaa83c5142ab4) so this subphase's diff is limited to this receipt. The re-measurement confirms the S65 grades exactly.",
+    "log_sha256": "cb78ffca428a4146ae5072b23f65759508db59d44cbe83d51f8a438c68012b39"
+  },
+
+  "non_claims": [
+    "This is not a candidate memory-safety defect and does not confirm a use-after-free or an out-of-bounds write in src/.",
+    "The invalid read is inside the consumer; no libcrypto frame appears in the faulting chain.",
+    "A functional pass for xilinx-bootgen is not claimed, and the grade is not raised; the authority's pass is recorded as accidental-layout tolerance, not as a standard the candidate must reproduce by imitating UB.",
+    "No claim is made about other consumers that may poke BIGNUM internals; each would need its own measurement.",
+    "The negative control demonstrates the authority also aborts if the same private-layout object is freed; it does not certify anything about the authority's general robustness."
+  ],
+
+  "followups": [
+    "Keep xilinx-bootgen at L5-loaded with this adjudicated cause; do not add a consumer patch to manufacture L7.",
+    "If an opaque-BIGNUM-layout canary is wanted for future courts, use the negative-control probe above as a test-only detector of consumers that read private BIGNUM fields; keep it out of release artefacts."
+  ]
+}
