@@ -554,6 +554,17 @@ pub struct OsslStoreCtx {
 ///
 /// `OPENSSL_sk_pop_free` takes `void (*)(void *)` and `OSSL_STORE_INFO_free` takes
 /// `OSSL_STORE_INFO *`; this is the typed bridge the stack frees through.
+///
+/// # Safety
+/// `p` must be NULL, or the base pointer of an allocation produced by this crate's
+/// `OSSL_STORE_INFO_new*` constructors: it must come from the `CRYPTO_*` allocator seam
+/// at the authority's size/`file`/`line`, be suitably aligned for `OsslStoreInfo`, be
+/// fully initialised as an `OSSL_STORE_INFO`, and be exclusively owned by the stack that
+/// is freeing it (no other owner, not already released). Ownership transfers to
+/// `OSSL_STORE_INFO_free`, which releases the block; `p` must not be used afterwards.
+/// A pointer that is not such an allocation, or one still owned elsewhere, is undefined
+/// behaviour. ABI: this is the `OPENSSL_sk_freefunc` (`void (*)(void *)`) form, invoked
+/// exactly once per stack element.
 unsafe extern "C" fn store_info_free_thunk(p: *mut c_void) {
     // SAFETY: the stack holds `OSSL_STORE_INFO *` values, per its declaration.
     unsafe { OSSL_STORE_INFO_free(p.cast::<OsslStoreInfo>()) };

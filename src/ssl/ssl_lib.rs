@@ -328,6 +328,17 @@ const fn dtls_ver_ordinal(v: c_int) -> c_int {
 /// checks are a separate boundary: modelling them changes cipher and signature-algorithm
 /// availability (`ssl_cipher_disabled`, `tls12_sigalg_allowed`), so this subphase does not
 /// silently widen or narrow those lists.
+///
+/// # Safety
+/// ABI: the `SSL_CTX_set_security_callback`/`SSL_set_security_callback` callback type
+/// `int (*)(const SSL *s, const SSL_CTX *ctx, int op, int bits, int nid, void *other,
+/// void *ex)`. `s` may be NULL; when non-NULL it must be a live, fully initialised
+/// connection (it is dereferenced by `SSL_is_dtls` in the `SSL_SECOP_VERSION` arm).
+/// `ctx` may be NULL; when non-NULL it must be a live, initialised context **whose
+/// `cert` container is non-NULL and live**, because `SSL_CTX_get_security_level`
+/// dereferences `(*ctx).cert` without a check. Both must stay valid for the call and
+/// must not be concurrently mutated. `_other`/`_ex` are never dereferenced and may be
+/// any value, including NULL; `op`, `bits` and `nid` are passed by value.
 unsafe extern "C" fn ssl_security_default_callback(
     s: *const Ssl,
     ctx: *const SslCtx,
@@ -8842,6 +8853,14 @@ unsafe extern "C" fn ct_permissive(
 /// `ct_strict` — `ssl/ssl_lib.c:6535-6550`: 1 only when an SCT validates. Parsed SCT stacks are
 /// 14.9's, so no SCT list ever reaches this slice and the authority's `SSL_R_NO_VALID_SCTS` refusal
 /// is the answer.
+///
+/// # Safety
+/// No caller-independent precondition on the argument values: `_ctx`, `scts` and `_arg`
+/// are never read (the parsed SCT stack is modelled as empty, so only the
+/// `SSL_R_NO_VALID_SCTS` raise and a `0` result remain), so NULL, dangling or unaligned
+/// pointers are harmless. The obligation is the ABI: this may only be installed as an
+/// `SSL_CTX_set_ct_validation_callback`/`SSL_set_ct_validation_callback` callback, whose
+/// `int (*)(void *ctx, void *scts, void *arg)` signature this function has.
 unsafe extern "C" fn ct_strict(
     _ctx: *const c_void,
     scts: *const c_void,
