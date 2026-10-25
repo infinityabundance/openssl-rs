@@ -1,0 +1,161 @@
+{
+  "schema": "safe-c33/atlas-refresh/s57/v1",
+  "receipt": "s57-ssl-sess",
+  "subphase": "S57",
+  "branch": "integrate/safe-c33",
+  "source_head": "514f0d9ae33088acbe6a95f1e0447247650bf617",
+  "worktree": "dirty: src/ssl/ssl_sess.rs (S57 guard, key type, tests, canary) plus this receipt; no commit, no push (subagent)",
+  "date": "2026-10-24",
+  "verification_level": "FAST",
+  "scope": "Structural reference ownership for the internal session cache in src/ssl/ssl_sess.rs (SSL_CTX_add_session, SSL_CTX_remove_session, SSL_CTX_flush_sessions_ex, ssl_ctx_session_cache_free, lookup_sess_in_cache, ssl_update_cache), replacement of the zero-initialised scratch key in lookup_sess_in_cache, an explicit concurrency verdict, and four adversarial callback/ownership tests plus a negative control.",
+  "prior_work_preserved": {
+    "receipt": "s30-ssl-sess.json",
+    "preserved": [
+      "Removal callbacks run outside the non-recursive cache lock (S30-D1).",
+      "Push-before-eviction failure atomicity (S30-D2).",
+      "Every detached cache reference is released after unlock (S30-D3).",
+      "SSL_SESS_CACHE_UPDATE_TIME is applied to re-added entries (S30-D4).",
+      "A negative flush cutoff expires nothing (S30-D5).",
+      "Automatic flushing on the 0xff good-connection counter (S30-D6).",
+      "Capacity N (authority keeps N-1), insertion-order eviction, and the other recorded S30 divergences."
+    ],
+    "no_s30_behaviour_undone": true
+  },
+  "ownership_guard": {
+    "type": "SessionRef",
+    "location": "src/ssl/ssl_sess.rs:647-709",
+    "design": "A non-Copy, non-Clone guard holding exactly one SSL_SESSION reference. Constructors: SessionRef::acquire (one SSL_SESSION_up_ref; None when the object refuses a retired/destroying count) and SessionRef::adopt_cache_entry (unsafe; takes the single reference a cache entry held after that entry left the stack or its container is being released). The only ways to stop owning a reference are Drop (exactly one SSL_SESSION_free) or SessionRef::into_raw (explicit transfer to the stack that accepted a push or to a callback that accepted the reference).",
+    "sites_using_the_guard": [
+      "SSL_CTX_add_session (src/ssl/ssl_sess.rs:804): the prospective cache reference is acquired before the write lock, transferred to the stack only after a successful push, and dropped after unlock for the already-cached arm and for every refusal (including a refused write lock). replaced/evicted entries are SessionRef values released after unlock.",
+      "remove_session_locked (src/ssl/ssl_sess.rs:771) now returns Option<SessionRef>. SSL_CTX_remove_session (src/ssl/ssl_sess.rs:921) releases it after the callback and outside the lock; SSL_CTX_add_session's eviction loop pushes the guards into a Vec.",
+      "SSL_CTX_flush_sessions_ex (src/ssl/ssl_sess.rs:955): Vec<SessionRef>; callback receives the borrowed pointer, the guard releases the cache reference after the callback and outside the lock.",
+      "ssl_ctx_session_cache_free (src/ssl/ssl_sess.rs:1029): remaining entries become guards whose Drop runs after the container release; no callback.",
+      "lookup_sess_in_cache (src/ssl/ssl_sess.rs:1217) now returns Option<SessionRef>; the reference is acquired under the context read lock. ssl_get_prev_session consumes it through Option and transfers the accepted reference to s->session with into_raw.",
+      "ssl_update_cache (src/ssl/ssl_sess.rs:1364): the extra reference offered to new_session_cb is a guard; a refusing callback (return 0) drops it exactly once, an accepting callback receives it through into_raw."
+    ],
+    "property": "A cache-held or lookup-acquired reference cannot be dropped twice (Drop runs once per guard) and cannot be retained after removal (the detached entry is moved into a guard). A refused insert after partially acquiring references unwinds exactly once. The public SSL_SESSION_up_ref / SSL_SESSION_free ABI is unchanged."
+  },
+  "scratch_key_decision": {
+    "decision": "replaced the technique",
+    "old": "lookup_sess_in_cache fabricated a whole SslSession with core::mem::zeroed() and wrote the three compared fields; its validity was documented, not structural.",
+    "new": "SessionKey (src/ssl/ssl_sess.rs:578-645) holds exactly ssl_version, session_id_length and session_id, is written field-by-field by from_id, and is compared by matches(). cache_find now takes &SessionKey; of_session builds a key from a live session.",
+    "why": "AGENTS §2: zeroed storage is not automatically a valid T. The old probe's validity depended on every present and future field of SSL_SESSION being zero-valid, which is a property of the whole type, not of the compared fields. A key-only type eliminates the obligation instead of documenting it: no storage is reinterpreted as a session, and a future field addition cannot silently invalidate the probe.",
+    "safety_improvement": "matches() refuses a stored session_id_length wider than SSL_MAX_SSL_SESSION_ID_LENGTH instead of reading past the array (the authority's memcmp would read out of bounds; AGENTS §17). The comparator's length-0 equality is preserved."
+  },
+  "concurrency_verdict": {
+    "reference_lifetime": "ESTABLISHED",
+    "what_establishes_it": "lookup_sess_in_cache holds ctx->lock in read mode across cache_find and SSL_SESSION_up_ref; SSL_CTX_add_session, SSL_CTX_remove_session and SSL_CTX_flush_sessions_ex all take the same lock in write mode. The crate's CRYPTO_RWLOCK is reader/writer: readers share, writers exclude both (src/runtime/thread.rs:31-68). The cache's reference therefore cannot be released between the find and the acquire. After unlock the returned SessionRef is the caller's own reference and survives any later eviction, removal or flush.",
+    "data_race_freedom": "NOT ESTABLISHED",
+    "residual": "Eviction, removal and flushing write the non-atomic session bookkeeping fields not_resumable and owner under the write lock, while a thread that already owns a reference reads them (and the session payload) without any lock. Those accesses are a data race in the Rust memory model and formally in C; the authority has the same structure. Proving this needs a design change (atomic bookkeeping or protecting every reader), which S57 does not make. No lock was added that the authority does not take. Recorded in the module header under 'Concurrency: what is established and what is not'.",
+    "authority_divergence_added": false
+  },
+  "tests": [
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_reentrant_new_session_cb_mutates_an_unlocked_cache",
+      "location": "src/ssl/ssl_sess.rs:3811",
+      "asserts": "new_session_cb runs outside the cache lock (lock probe free), its re-entrant SSL_CTX_add_session returns 1 and inserts the other session, the callback accepts and releases its own extra reference, and the cache ends with exactly {current, other} at the expected reference counts",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_refusing_new_session_cb_leaves_the_cache_unchanged",
+      "location": "src/ssl/ssl_sess.rs:3853",
+      "asserts": "a callback returning 0 takes no reference and changes nothing; the cache still holds exactly the current session; refs are connection + cache (2), proving the offered reference was released exactly once",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_lookup_reference_survives_cache_replacement",
+      "location": "src/ssl/ssl_sess.rs:3895",
+      "asserts": "a lookup guard held while a different object replaces the same key keeps the incumbent alive (3 refs -> 2 after replacement), the cache points at the replacement by address, the incumbent's owner is cleared, and the in-flight session is still readable at its own address",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_refused_add_releases_the_partially_acquired_reference_once",
+      "location": "src/ssl/ssl_sess.rs:3936",
+      "asserts": "with the write lock already held by this thread, SSL_CTX_add_session returns 0 after having called SSL_SESSION_up_ref; refs return to 1, the cache is empty, owner is NULL, and the address-identity ex-data destructor probe fires exactly once when the last reference is released",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_lookup_uses_a_key_value_not_a_zeroed_session",
+      "location": "src/ssl/ssl_sess.rs:3988",
+      "asserts": "SessionKey matches on ssl_version + id, rejects a different id/version, truncates an over-long id at the array width, preserves length-0 keys, and refuses an over-wide stored session_id_length without reading out of bounds",
+      "result": "ok"
+    },
+    {
+      "name": "cache_lifecycle_tests::ssl_sess_canary_detects_an_unreleased_partial_acquisition",
+      "location": "src/ssl/ssl_sess.rs:4034",
+      "asserts": "negative control: an unguarded partial acquisition (manual up_ref with no matching release) keeps the block live, so the address-identity destructor probe reports no release; releasing the simulated extra reference makes it fire once",
+      "result": "ok"
+    },
+    {
+      "name": "pre-existing ssl_sess / cache_lifecycle_tests / alias_ownership_tests / refcount_reentrancy_tests",
+      "asserts": "S30's 16 filtered tests plus the other ssl_sess modules continue to pass after the guard and key changes; two existing tests were adapted to the Option<SessionRef> lookup signature",
+      "result": "ok"
+    }
+  ],
+  "canary": {
+    "kind": "#[cfg(test)]-only negative control (AGENTS §16)",
+    "test": "cache_lifecycle_tests::ssl_sess_canary_detects_an_unreleased_partial_acquisition",
+    "pre_fix_state": "a partial acquisition returned without a guard-owned release (the pre-guard sequencing shape)",
+    "detector": "the address-identity ex-data free probe used by ssl_sess_refused_add_releases_the_partially_acquired_reference_once, scoped to the probe's own ex-data index because CRYPTO_free_ex_data calls every registered free function",
+    "observed_output": "ssl_sess canary: unreleased-partial-acquisition probe = true (must be true); refs after releasing one of two = 1 (must be 1)",
+    "pre_fix_consequence": "The simulated skipped release leaves two references; freeing only the caller's reference cannot reach the destructor, so the probe reports detection (true). The guarded path in the refused-add test releases the same reference and the probe fires exactly once.",
+    "note": "This canary constructs the defect class the guard makes inexpressible; it does not claim the pre-S57 code actually leaked (S30's lock-refusal arm was correct by hand sequencing)."
+  },
+  "test_run": {
+    "filtered_command": "cargo test --lib ssl_sess -- --test-threads=4 --nocapture",
+    "filtered_result_line": "test result: ok. 22 passed; 0 failed; 1 ignored; 0 measured; 2154 filtered out; finished in 1.09s",
+    "ignored": "adv_probe::self_aliasing_session_setters_copy_before_clearing (pre-existing, requires OPENSSL_RS_ADV_PROBE=1)",
+    "full_command": "cargo test --lib -- --test-threads=4",
+    "full_result_line": "test result: ok. 2133 passed; 0 failed; 44 ignored; 0 measured; 0 filtered out; finished in 176.52s",
+    "full_serial": "NOT_RUN (BATCH checkpoint gate; the FAST gate requires the filtered set, which passed)",
+    "baseline_floor": "1962 passed / 0 failed / 42 ignored at a8676158f; current run has no removals and adds tests"
+  },
+  "unsafe": {
+    "production_before": { "unsafe_blocks": 131, "unsafe_fns": 18, "no_mangle_exports": 65 },
+    "production_after": { "unsafe_blocks": 134, "unsafe_fns": 21, "no_mangle_exports": 65 },
+    "total_file_before": { "unsafe_blocks": 207, "lines": 3809 },
+    "total_file_after": { "unsafe_blocks": 219, "lines": 4322 },
+    "eliminated": [
+      "core::mem::zeroed::<SslSession>() scratch object in lookup_sess_in_cache: the zeroed-storage-as-valid-T obligation is gone.",
+      "session_cmp's two-pointer raw byte loop: replaced by SessionKey::matches, which bounds-checks the stored length."
+    ],
+    "relocated": [
+      "Reference release sequencing: every cache/lookup/callback reference release is now SessionRef::drop (one place); acquisition is SessionRef::acquire or adopt_cache_entry (two documented constructors).",
+      "The same SSL_SESSION_up_ref / SSL_SESSION_free operations remain, now reached only through those narrow unsafe constructors/destructor."
+    ],
+    "new_unsafe_operations": [],
+    "new_hidden_obligations": [],
+    "contracts": "Every new unsafe fn/block has a SAFETY contract: SessionKey::of_session (live session), SessionKey::matches (live session, in-bounds prefix), SessionRef::acquire (live session, published positive count), SessionRef::adopt_cache_entry (non-NULL live entry reference just detached, sole releaser), SessionRef::drop (guard owns exactly one reference)."
+  },
+  "gate": {
+    "fmt": "cargo fmt --all -- --check -> FMT_OK",
+    "check": "cargo check --lib -> Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.83s",
+    "filtered_tests": "22 passed; 0 failed; 1 ignored",
+    "clippy": "cargo clippy --lib -- -D warnings -> Finished `dev` profile, no warnings",
+    "no_mangle_repr_c_diff_lines": 0,
+    "allocator_seam_diff_lines": 0,
+    "abi": "65 #[no_mangle] exports unchanged; no #[repr(C)] line added or removed in this file; SslSession/SslCtx layouts untouched",
+    "cleansing": "CtxDestroy for SslSession still zeroes master_key and session_id and releases every member buffer exactly once; no release arm changed"
+  },
+  "grading": {
+    "mechanism": "internal session-cache reference lifecycle and lookup key",
+    "state": "OWNERSHIP_RECONSTRUCTED",
+    "not_SAFETY_DISCHARGED_because": [
+      "The concurrency data race on not_resumable/owner (and unlocked payload reads) is recorded, not discharged.",
+      "The guard contracts are established by their callers in this file, but no independent reviewer, Miri/Loom run or negative-control package has been produced for the mechanism as a whole (AGENTS §7 condition 3, §21 lifecycle).",
+      "The C-ABI callers' lifetime obligations (context outliving lookups, callback contracts) remain external."
+    ],
+    "residuals": [
+      "Concurrency: reference lifetime established; data-race freedom of cache bookkeeping NOT established (see concurrency_verdict).",
+      "S30's recorded divergences remain: callbacks outside the lock, capacity N versus the authority's N-1, insertion-order eviction/flush, no internal-lookup bypass, stateful TLS1.2 tickets.",
+      "No authority differential, sanitizer, Miri or Loom court was run at FAST level."
+    ]
+  },
+  "not_established": [
+    "No authority executable differential was run; compatibility claims remain source-level against openssl-3.0.13.",
+    "No allocator-failure injection forced an sk_push refusal; the lock-refusal arm is the reachable partial-acquisition refusal and is covered by address identity.",
+    "No Miri, Loom, ASan or mutation run at FAST level.",
+    "The full serial library suite was not run at this level (BATCH gate).",
+    "All work ran in docker/openssl-rs-court.sh with CARGO_BUILD_JOBS=4 and --test-threads=4; docker/ was not edited; /proc/meminfo showed MemAvailable ~60 GiB before the build."
+  ]
+}

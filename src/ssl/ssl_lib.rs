@@ -111,7 +111,7 @@ use crate::ssl::statem::statem::{
     ossl_statem_get_in_handshake, ossl_statem_in_error, ossl_statem_set_in_handshake,
     ossl_statem_set_in_init, SSL_in_before, SSL_in_init, SSL_is_init_finished,
 };
-use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled};
+use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled, SigalgsSlot};
 use crate::x509::by_dir::X509_LOOKUP_hash_dir;
 use crate::x509::by_file::X509_LOOKUP_file;
 use crate::x509::by_store::X509_LOOKUP_store;
@@ -211,6 +211,10 @@ const SSL_KEY_UPDATE_REQUESTED: c_int = 1;
 const SSL_OP_NO_RENEGOTIATION: u64 = 1 << 30;
 /// `TLS1_VERSION` — `tls1.h:199`.
 const TLS1_VERSION: c_int = 0x0301;
+/// `TLS1_1_VERSION` — `tls1.h:200`.
+const TLS1_1_VERSION: c_int = 0x0302;
+/// `SSL_SECOP_VERSION` — `ssl.h:2730` (`9 | SSL_SECOP_OTHER_NONE`).
+const SSL_SECOP_VERSION: c_int = 9;
 /// `DTLS1_BAD_VER` — `ssl3.h:231`.
 const DTLS1_BAD_VER: c_int = 0x0100;
 /// `SSL_SENT_SHUTDOWN` — `ssl.h:216`.
@@ -272,21 +276,95 @@ const ERR_R_CRYPTO_LIB: c_int = 15 | (2 << 18);
 /// `ERR_R_PASSED_INVALID_ARGUMENT` — `err.h.in:360` (`262 | ERR_RFLAG_COMMON`).
 const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 262 | (2 << 18);
 
-/// `ssl_security_default_callback` — the level check the certificate's `sec_cb` is initialised
-/// to (`ssl_cert.c:83`).
+/// `ssl_get_security_level_bits` — `ssl/ssl_cert.c:1219-1245`.
 ///
-/// Slice 1 stores the pointer so `SSL_CTX_get_security_callback`'s default matches the
-/// authority's non-NULL answer; the callback's body is the certificate path's (14.7) and it is
-/// never invoked here.
+/// # Safety
+/// Exactly one of `s`/`ctx` must be live (the authority's callback is handed a connection or a
+/// context, never both); `levelp` may be NULL.
+unsafe fn ssl_get_security_level_bits(
+    s: *const Ssl,
+    ctx: *const SslCtx,
+    levelp: *mut c_int,
+) -> c_int {
+    /// `minbits_table[5 + 1]` — `ssl/ssl_cert.c:1226`.
+    const MINBITS: [c_int; 6] = [0, 80, 112, 128, 192, 256];
+    // SAFETY: exactly one of the two is live per the contract; both getters read
+    // `cert->sec_level`, which `cert_new` initialises.
+    let mut level = if !ctx.is_null() {
+        // SAFETY: `ctx` is the live context per the branch condition and the contract.
+        unsafe { SSL_CTX_get_security_level(ctx) }
+    } else {
+        // SAFETY: `s` is the live connection per the contract.
+        unsafe { SSL_get_security_level(s) }
+    };
+    level = level.clamp(0, 5);
+    // SAFETY: `levelp` is writable or NULL per the contract.
+    if !levelp.is_null() {
+        // SAFETY: the branch established `levelp` is writable.
+        unsafe { *levelp = level };
+    }
+    MINBITS[level as usize]
+}
+
+/// `dtls_ver_ordinal(v)` — `ssl_local.h:57`.
+const fn dtls_ver_ordinal(v: c_int) -> c_int {
+    if v == DTLS1_BAD_VER {
+        0xff00
+    } else {
+        v
+    }
+}
+
+/// `ssl_security_default_callback` — `ssl/ssl_cert.c:1247-1312`.
+///
+/// The `SSL_SECOP_VERSION` arm is modelled in full. It is the version floor
+/// `ssl_method_error` consults (`statem_lib.c:1937`), and the security level is what keeps
+/// SSLv3/TLS1.0/TLS1.1 disabled *after* `SSL_OP_NO_TLSv1` opens a hole in the version table.
+/// Without it `ssl_get_min_max_version` sees those versions as enabled, selects SSLv3 as the
+/// maximum, and every ClientHello is rejected with `SSL_R_UNSUPPORTED_PROTOCOL` (the charybdis
+/// `SSLV3_ALERT_HANDSHAKE_FAILURE`).
+///
+/// The remaining operations keep the permissive answer S58 recorded as a residual. Their level
+/// checks are a separate boundary: modelling them changes cipher and signature-algorithm
+/// availability (`ssl_cipher_disabled`, `tls12_sigalg_allowed`), so this subphase does not
+/// silently widen or narrow those lists.
 unsafe extern "C" fn ssl_security_default_callback(
-    _s: *const Ssl,
-    _ctx: *const SslCtx,
-    _op: c_int,
-    _bits: c_int,
-    _nid: c_int,
+    s: *const Ssl,
+    ctx: *const SslCtx,
+    op: c_int,
+    bits: c_int,
+    nid: c_int,
     _other: *mut c_void,
     _ex: *mut c_void,
 ) -> c_int {
+    let mut level = 0;
+    // SAFETY: exactly one of `s`/`ctx` is live (see `ssl_security`/`ssl_ctx_security`).
+    let _minbits = unsafe { ssl_get_security_level_bits(s, ctx, &mut level) };
+    if level == 0 {
+        // The authority's level-0 arm refuses temporary DH keys below 80 bits; every other
+        // operation keeps the permissive answer recorded above.
+        if op == SSL_SECOP_TMP_DH && bits < 80 {
+            return 0;
+        }
+        return 1;
+    }
+    if op == SSL_SECOP_VERSION {
+        // `SSL_CONNECTION_FROM_CONST_SSL(s) == NULL` answers 0: a context-only query has no
+        // connection version to judge.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is the live connection per the branch above.
+        if unsafe { SSL_is_dtls(s) } == 0 {
+            // SSLv3, TLSv1.0 and TLSv1.1 are only allowed at level 0.
+            if nid <= TLS1_1_VERSION {
+                return 0;
+            }
+        } else if dtls_ver_ordinal(nid) > dtls_ver_ordinal(DTLS1_2_VERSION) {
+            // DTLS1.0 and DTLS1.BAD_VER are only allowed at level 0.
+            return 0;
+        }
+    }
     1
 }
 
@@ -1832,15 +1910,22 @@ pub struct Ssl {
     /// (`tls13_save_handshake_digest_for_pha`, `statem_lib.c:2846-2867`). Owned; freed by `SSL_free`.
     pub pha_dgst: *mut c_void,
     /// `uint16_t *s3.tmp.peer_sigalgs` — the peer's signature-algorithm list, as native-endian
-    /// schemes. NULL until a ClientHello's `signature_algorithms` is parsed; the connection owns
-    /// the `CRYPTO_malloc` block and `SSL_free` releases it.
-    pub peer_sigalgs: *mut u16,
-    /// `size_t s3.tmp.peer_sigalgslen` — the element count of `peer_sigalgs`.
-    pub peer_sigalgslen: usize,
-    /// `SIGALG_LOOKUP **shared_sigalgs` — the negotiated list (always NULL here).
-    pub shared_sigalgs: *mut c_void,
-    /// `size_t shared_sigalgslen`.
-    pub shared_sigalgslen: usize,
+    /// schemes. An object-owned element-counted member pair ([`SigalgsSlot`]) whose length
+    /// companion is [`Self::peer_sigalgslen`]; mediated by [`Ssl::peer_sigalgs`]/
+    /// [`Ssl::peer_sigalgs_slot`]; **private**. NULL/0 until a `signature_algorithms` vector is
+    /// saved, and the connection owns the `CRYPTO_malloc` block until `SSL_free` or the next save.
+    peer_sigalgs: *mut u16,
+    /// `size_t s3.tmp.peer_sigalgslen` — the element count of `peer_sigalgs`, published only by
+    /// the slot and always the allocation's own count.
+    peer_sigalgslen: usize,
+    /// `SIGALG_LOOKUP **shared_sigalgs` — the negotiated list. This reduced build stores the
+    /// shared schemes as native-endian `u16` codes rather than `SIGALG_LOOKUP *`: no ABI reads the
+    /// representation, and `SSL_get_shared_sigalgs` resolves each code through the same static
+    /// table. An object-owned element-counted member pair ([`SigalgsSlot`]) mediated by
+    /// [`Ssl::shared_sigalgs`]/[`Ssl::shared_sigalgs_slot`]; **private**.
+    shared_sigalgs: *mut u16,
+    /// `size_t shared_sigalgslen` — the element count of `shared_sigalgs`.
+    shared_sigalgslen: usize,
     /// `const SIGALG_LOOKUP *s3.tmp.sigalg` — this side's chosen sigalg (always NULL here).
     pub sigalg: *const c_void,
     /// `const SIGALG_LOOKUP *s3.tmp.peer_sigalg` — the peer's chosen sigalg (always NULL here).
@@ -2281,6 +2366,57 @@ impl Ssl {
     pub(crate) unsafe fn server_cert_type_slot(&mut self) -> MemberBufSlot<'_> {
         // SAFETY: `self` is live and its `server_cert_type` pair obeys the invariant.
         unsafe { MemberBufSlot::of(&mut self.server_cert_type, &mut self.server_cert_type_len) }
+    }
+
+    /// The object-owned peer signature-algorithm list — the authoritative read of the
+    /// `peer_sigalgs`/`peer_sigalgslen` member pair. Empty until a list is saved.
+    ///
+    /// This is a safe slice because the fields are private and every publication goes through
+    /// [`SigalgsSlot`], which stores an owning list value's own pointer and element count
+    /// together. A NULL pointer therefore means "no list" regardless of the companion word (the
+    /// slot sets the pointer before the length and clears it before the length), so the transient
+    /// window inside a slot operation still reads as empty.
+    pub(crate) fn peer_sigalgs(&self) -> &[u16] {
+        if self.peer_sigalgs.is_null() {
+            return &[];
+        }
+        // SAFETY: by the private-field invariant the pointer is the base of a live `CRYPTO_malloc`
+        // block of exactly `peer_sigalgslen` initialised `u16`s owned by this connection, and the
+        // returned borrow cannot outlive `&self`.
+        unsafe { core::slice::from_raw_parts(self.peer_sigalgs, self.peer_sigalgslen) }
+    }
+
+    /// Derive the [`SigalgsSlot`] handle over this connection's peer list pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `peer_sigalgs` pair obeys the element-counted pair invariant
+    /// (`(NULL, 0)`, or one owned block of exactly `len` schemes).
+    pub(crate) unsafe fn peer_sigalgs_slot(&mut self) -> SigalgsSlot<'_> {
+        // SAFETY: `self` is live and its peer pair obeys the invariant.
+        unsafe { SigalgsSlot::of(&mut self.peer_sigalgs, &mut self.peer_sigalgslen) }
+    }
+
+    /// The object-owned negotiated signature-algorithm list (scheme codes) — the authoritative read
+    /// of the `shared_sigalgs`/`shared_sigalgslen` member pair. Empty until
+    /// `tls1_process_sigalgs` has run on a peer list.
+    pub(crate) fn shared_sigalgs(&self) -> &[u16] {
+        if self.shared_sigalgs.is_null() {
+            return &[];
+        }
+        // SAFETY: as `peer_sigalgs`: the pair is private and published only by `SigalgsSlot`, so
+        // the pointer names exactly `shared_sigalgslen` initialised `u16`s owned by `self`.
+        unsafe { core::slice::from_raw_parts(self.shared_sigalgs, self.shared_sigalgslen) }
+    }
+
+    /// Derive the [`SigalgsSlot`] handle over this connection's shared list pair.
+    ///
+    /// # Safety
+    ///
+    /// `self` is a live `Ssl` whose `shared_sigalgs` pair obeys the element-counted pair invariant.
+    pub(crate) unsafe fn shared_sigalgs_slot(&mut self) -> SigalgsSlot<'_> {
+        // SAFETY: `self` is live and its shared pair obeys the invariant.
+        unsafe { SigalgsSlot::of(&mut self.shared_sigalgs, &mut self.shared_sigalgslen) }
     }
 
     /// The object-owned SNI name (NULL when unset) — the authoritative read of the `ext_hostname`
@@ -3593,7 +3729,10 @@ unsafe impl CtxDestroy for Ssl {
             SSL_SESSION_free((*s).session);
             crate::ssl::tls_srp::ssl_srp_ctx_free_intern(s);
             CRYPTO_free((*s).session_ticket.cast(), FILE, 0);
-            CRYPTO_free((*s).peer_sigalgs.cast(), FILE, 0);
+            // The two element-counted sigalg lists are released through their pair handles, whose
+            // private-field invariant makes each release the block's single one.
+            (*s).peer_sigalgs_slot().clear(FILE, 0);
+            (*s).shared_sigalgs_slot().clear(FILE, 0);
             dtls1_free(s);
             BIO_free_all((*s).wbio);
             BIO_free_all((*s).rbio);
@@ -14407,12 +14546,13 @@ mod contract_tests {
             // Model a mid-handshake connection: state that a swap must not disturb.
             (*s).hand_state = 7;
             (*s).statem_state = 3;
-            let sigs = crate::runtime::mem::CRYPTO_malloc(4, ptr::null(), 0).cast::<u16>();
-            assert!(!sigs.is_null());
-            sigs.write(0x0403);
-            sigs.add(1).write(0x0503);
-            (*s).peer_sigalgs = sigs;
-            (*s).peer_sigalgslen = 2;
+            // Publish the peer list through the sanctioned writer so the connection's pair is
+            // constructed by `OwnedSigalgs`/`SigalgsSlot` rather than by a second, raw writer: the
+            // element-counted invariant the safe accessor relies on then has one producer.
+            assert_eq!(
+                crate::ssl::t1_lib::tls1_save_peer_sigalgs_raw(s, &[0x04, 0x03, 0x05, 0x03]),
+                1
+            );
 
             let ret = SSL_set_SSL_CTX(s, ctx2);
             assert_eq!(ret, ctx2);
@@ -14431,9 +14571,11 @@ mod contract_tests {
             );
             assert_eq!((*s).hand_state, 7, "handshake state survives the swap");
             assert_eq!((*s).statem_state, 3);
-            assert_eq!((*s).peer_sigalgslen, 2, "peer sigalgs are connection state");
-            assert_eq!((*s).peer_sigalgs.read(), 0x0403);
-            assert_eq!((*s).peer_sigalgs.add(1).read(), 0x0503);
+            assert_eq!(
+                (*s).peer_sigalgs(),
+                &[0x0403, 0x0503],
+                "peer sigalgs are connection state"
+            );
             assert_eq!(
                 (*ctx1).references.load(Ordering::Relaxed),
                 2,

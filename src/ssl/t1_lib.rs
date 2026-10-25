@@ -10,10 +10,20 @@
 //!   `SSL_set_tlsext_max_fragment_length` write the context/connection `ext.max_fragment_len_mode`
 //!   after the authority's validity check; `SSL_SESSION_get_max_fragment_length` maps the session's
 //!   `UNSPECIFIED` to `DISABLED`.
-//! * **The sigalg readers.** `SSL_get_sigalgs`, `SSL_get_shared_sigalgs`,
-//!   `SSL_get_signature_type_nid` and `SSL_get_peer_signature_type_nid` read the connection's
-//!   `s3.tmp.peer_sigalgs`/`shared_sigalgs`/`sigalg`/`peer_sigalg`, all NULL before a handshake, and
-//!   so answer the authority's own `0`.
+//! * **The sigalg readers.** `SSL_get_sigalgs` resolves each stored peer scheme through the
+//!   transcribed `sigalg_lookup_tbl` plus the three provider (ML-DSA) rows, so the three NID
+//!   out-parameters are the authority's `lu->sig`/`hash`/`sigandhash` (and `NID_undef` for an
+//!   unknown or unavailable code point). `SSL_get_shared_sigalgs` reads the negotiated list that
+//!   `tls1_set_shared_sigalgs` computes from the peer's saved order and the configured default
+//!   (swapped under `SSL_OP_SERVER_PREFERENCE`), reproducing the authority's ordering, duplicate
+//!   preservation and unknown-entry skipping. Both lists are object-owned element-counted member
+//!   pairs (`SigalgsSlot`): the stored extent is the allocation's own count, a refused replacement
+//!   leaves the incumbent installed, and a repeated save releases the previous block exactly once.
+//! * **The peer vector acceptance rule.** `tls1_peer_sigalgs` is the single definition of
+//!   `PACKET_as_length_prefixed_2` + `tls1_save_u16`: the length-prefixed vector must exhaust the
+//!   extension body and be non-empty and even. Empty, odd, over-long and trailing-byte vectors are
+//!   refused with the authority's alert and reason on both the server ClientHello and the client
+//!   CertificateRequest paths.
 //! * **`SSL_get1_builtin_sigalgs`.** The authority's provider probe: for each row of the static
 //!   `sigalg_lookup_tbl` it fetches the hash and sets the key type, appending the row's name when
 //!   both succeed. The table is transcribed below with the twenty-six rows the admitted authority's
@@ -23,14 +33,23 @@
 //!
 //! ## Measured divergences, recorded rather than hidden
 //!
-//! * **The sigalg lookup cache is not loaded, so the sigalg readers only reach their empty state.**
-//!   The authority's `SSL_CTX_new_ex` runs `ssl_load_sigalgs` (`t1_lib.c:2200-2289`), which fills
-//!   `ctx->sigalg_lookup_cache`; this slice does not, exactly as 14.1's recorded divergence for
-//!   `SSL_CTX_new_ex` says. The cache is consulted by `SSL_get_sigalgs`'s per-index
-//!   `tls1_lookup_sigalg` (`t1_lib.c:3625`), but every field it would read is NULL until a handshake
-//!   populates them, and no handshake runs, so the court observes the empty answer on both sides.
-//!   The lookup's name/phash/psignhash arm is therefore stated as `NID_undef` (what an empty cache
-//!   answers) and is unreachable.
+//! * **The sigalg lookup cache is not built at context creation.** The authority's `SSL_CTX_new_ex`
+//!   runs `ssl_setup_sigalgs` (`t1_lib.c:2167-2289`), which fills `ctx->sigalg_lookup_cache` and
+//!   `ctx->tls12_sigalgs`; this slice does not, exactly as 14.1's recorded divergence for
+//!   `SSL_CTX_new_ex` says. The readers therefore resolve through the module's transcribed static
+//!   table instead of a per-context cache. Consequence: row *availability* is the admitted build's
+//!   default provider (every static row and the three provider rows resolve), not a re-probe of a
+//!   caller-supplied `libctx`, and a context whose providers differ would mark fewer rows available.
+//! * **The configured/preference lists are the default.** `client_sigalgs`/`conf_sigalgs` (the
+//!   `SSL_CTX_set1_sigalgs` commands) and Suite B are not wired, so `tls1_set_shared_sigalgs` uses
+//!   `CLIENT_SIGALGS` — the authority's `ctx->tls12_sigalgs` order for the admitted build — as both
+//!   the preference and the allowed list. `valid_flags` is not modelled because the reduced
+//!   certificate path does not consume it; only the shared list, which the accessor observes, is
+//!   derived.
+//! * **The default security callback remains the permissive stub.** `ssl_security` is invoked by
+//!   the shared-list walk exactly as the authority invokes it, but this crate's default callback
+//!   answers 1 for every operation, so the authority's level-1 rejection of SHA-1 rows (64 security
+//!   bits < 80) is not reproduced. A configured callback sees the walk and its answer is honoured.
 //! * **`SSL_check_chain` only lands its refusal arms.** A non-NULL `x`/`pk` pair reaches
 //!   `tls1_check_chain` (`t1_lib.c:3984-4243`), whose signature-algorithm, certificate-parameter,
 //!   suite-B and issuer-name checks are the certificate path's and are not landed in this subphase.
@@ -59,9 +78,15 @@ use crate::evp::pkey_ctx::{
 use crate::runtime::err::err_reasons::SSL_R_SSL3_EXT_INVALID_MAX_FRAGMENT_LENGTH;
 use crate::runtime::err::raise_with;
 
+use crate::asn1::owned::OwnedBlock;
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::obj::{
-    NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha512, NID_undef, OBJ_nid2ln,
+    NID_dsaWithSHA1, NID_dsa_with_SHA256, NID_ecdsa_with_SHA1, NID_ecdsa_with_SHA224,
+    NID_ecdsa_with_SHA256, NID_ecdsa_with_SHA384, NID_ecdsa_with_SHA512, NID_sha1,
+    NID_sha1WithRSAEncryption, NID_sha224, NID_sha224WithRSAEncryption, NID_sha256,
+    NID_sha256WithRSAEncryption, NID_sha384, NID_sha384WithRSAEncryption, NID_sha512,
+    NID_sha512WithRSAEncryption, NID_undef, OBJ_nid2ln, NID_ML_DSA_44, NID_ML_DSA_65,
+    NID_ML_DSA_87,
 };
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::ssl::ssl_cert::ssl_security;
@@ -98,15 +123,24 @@ fn is_max_fragment_length_ext_valid(value: u8) -> bool {
 // Ownership of a scratch buffer
 // ---------------------------------------------------------------------------------------------
 
-/// `SIGALG_LOOKUP` — `ssl_local.h:1186-1212`, reduced to the three fields `SSL_get1_builtin_sigalgs`
-/// reads: the TLS name, the hash NID and the `EVP_PKEY` type.
+/// `SIGALG_LOOKUP` — `ssl_local.h:1186-1212`, reduced to the columns the two public readers and
+/// the shared-list computation actually observe.
 struct SigAlgLookup {
     /// `const char *name`.
     name: &'static str,
+    /// `uint16_t sigalg` — the TLS code point.
+    sigalg: u16,
     /// `int hash` — `NID_undef` means "no associated digest".
     hash: c_int,
     /// `int sig` — the `EVP_PKEY_*` type.
     sig: c_int,
+    /// `int sigandhash` — the combined signature-with-digest NID (`NID_undef` when none).
+    sigandhash: c_int,
+    /// `int sig_idx` — the certificate slot index (`ssl_cert_info` order).
+    sig_idx: usize,
+    /// `secbits`, as `sigalg_security_bits` computes it (`SSL_get1_builtin_sigalgs` does not read
+    /// it; the security callback of the shared-list walk does).
+    sec_bits: c_int,
 }
 
 /// `sigalg_lookup_tbl[]` — `ssl/t1_lib.c:1964-2142`, the twenty-six non-GOST rows, in table order.
@@ -117,135 +151,290 @@ struct SigAlgLookup {
 static SIGALG_LOOKUP_TBL: [SigAlgLookup; 26] = [
     SigAlgLookup {
         name: "ecdsa_secp256r1_sha256",
+        sigalg: 0x0403,
         hash: NID_sha256,
         sig: EVP_PKEY_EC,
+        sigandhash: NID_ecdsa_with_SHA256,
+        sig_idx: 3,
+        sec_bits: 128,
     },
     SigAlgLookup {
         name: "ecdsa_secp384r1_sha384",
+        sigalg: 0x0503,
         hash: NID_sha384,
         sig: EVP_PKEY_EC,
+        sigandhash: NID_ecdsa_with_SHA384,
+        sig_idx: 3,
+        sec_bits: 192,
     },
     SigAlgLookup {
         name: "ecdsa_secp521r1_sha512",
+        sigalg: 0x0603,
         hash: NID_sha512,
         sig: EVP_PKEY_EC,
+        sigandhash: NID_ecdsa_with_SHA512,
+        sig_idx: 3,
+        sec_bits: 256,
     },
     SigAlgLookup {
         name: "ed25519",
+        sigalg: 0x0807,
         hash: NID_undef,
         sig: EVP_PKEY_ED25519,
+        sigandhash: NID_undef,
+        sig_idx: 7,
+        sec_bits: 128,
     },
     SigAlgLookup {
         name: "ed448",
+        sigalg: 0x0808,
         hash: NID_undef,
         sig: EVP_PKEY_ED448,
+        sigandhash: NID_undef,
+        sig_idx: 8,
+        sec_bits: 224,
     },
     SigAlgLookup {
         name: "ecdsa_sha224",
+        sigalg: 0x0303,
         hash: NID_sha224,
         sig: EVP_PKEY_EC,
+        sigandhash: NID_ecdsa_with_SHA224,
+        sig_idx: 3,
+        sec_bits: 112,
     },
     SigAlgLookup {
         name: "ecdsa_sha1",
+        sigalg: 0x0203,
         hash: NID_sha1,
         sig: EVP_PKEY_EC,
+        sigandhash: NID_ecdsa_with_SHA1,
+        sig_idx: 3,
+        sec_bits: 64,
     },
     SigAlgLookup {
         name: "ecdsa_brainpoolP256r1tls13_sha256",
+        sigalg: 0x081a,
         hash: NID_sha256,
         sig: EVP_PKEY_EC,
+        sigandhash: NID_ecdsa_with_SHA256,
+        sig_idx: 3,
+        sec_bits: 128,
     },
     SigAlgLookup {
         name: "ecdsa_brainpoolP384r1tls13_sha384",
+        sigalg: 0x081b,
         hash: NID_sha384,
         sig: EVP_PKEY_EC,
+        sigandhash: NID_ecdsa_with_SHA384,
+        sig_idx: 3,
+        sec_bits: 192,
     },
     SigAlgLookup {
         name: "ecdsa_brainpoolP512r1tls13_sha512",
+        sigalg: 0x081c,
         hash: NID_sha512,
         sig: EVP_PKEY_EC,
+        sigandhash: NID_ecdsa_with_SHA512,
+        sig_idx: 3,
+        sec_bits: 256,
     },
     SigAlgLookup {
         name: "rsa_pss_rsae_sha256",
+        sigalg: 0x0804,
         hash: NID_sha256,
         sig: EVP_PKEY_RSA_PSS,
+        sigandhash: NID_undef,
+        sig_idx: 0,
+        sec_bits: 128,
     },
     SigAlgLookup {
         name: "rsa_pss_rsae_sha384",
+        sigalg: 0x0805,
         hash: NID_sha384,
         sig: EVP_PKEY_RSA_PSS,
+        sigandhash: NID_undef,
+        sig_idx: 0,
+        sec_bits: 192,
     },
     SigAlgLookup {
         name: "rsa_pss_rsae_sha512",
+        sigalg: 0x0806,
         hash: NID_sha512,
         sig: EVP_PKEY_RSA_PSS,
+        sigandhash: NID_undef,
+        sig_idx: 0,
+        sec_bits: 256,
     },
     SigAlgLookup {
         name: "rsa_pss_pss_sha256",
+        sigalg: 0x0809,
         hash: NID_sha256,
         sig: EVP_PKEY_RSA_PSS,
+        sigandhash: NID_undef,
+        sig_idx: 1,
+        sec_bits: 128,
     },
     SigAlgLookup {
         name: "rsa_pss_pss_sha384",
+        sigalg: 0x080a,
         hash: NID_sha384,
         sig: EVP_PKEY_RSA_PSS,
+        sigandhash: NID_undef,
+        sig_idx: 1,
+        sec_bits: 192,
     },
     SigAlgLookup {
         name: "rsa_pss_pss_sha512",
+        sigalg: 0x080b,
         hash: NID_sha512,
         sig: EVP_PKEY_RSA_PSS,
+        sigandhash: NID_undef,
+        sig_idx: 1,
+        sec_bits: 256,
     },
     SigAlgLookup {
         name: "rsa_pkcs1_sha256",
+        sigalg: 0x0401,
         hash: NID_sha256,
         sig: EVP_PKEY_RSA,
+        sigandhash: NID_sha256WithRSAEncryption,
+        sig_idx: 0,
+        sec_bits: 128,
     },
     SigAlgLookup {
         name: "rsa_pkcs1_sha384",
+        sigalg: 0x0501,
         hash: NID_sha384,
         sig: EVP_PKEY_RSA,
+        sigandhash: NID_sha384WithRSAEncryption,
+        sig_idx: 0,
+        sec_bits: 192,
     },
     SigAlgLookup {
         name: "rsa_pkcs1_sha512",
+        sigalg: 0x0601,
         hash: NID_sha512,
         sig: EVP_PKEY_RSA,
+        sigandhash: NID_sha512WithRSAEncryption,
+        sig_idx: 0,
+        sec_bits: 256,
     },
     SigAlgLookup {
         name: "rsa_pkcs1_sha224",
+        sigalg: 0x0301,
         hash: NID_sha224,
         sig: EVP_PKEY_RSA,
+        sigandhash: NID_sha224WithRSAEncryption,
+        sig_idx: 0,
+        sec_bits: 112,
     },
     SigAlgLookup {
         name: "rsa_pkcs1_sha1",
+        sigalg: 0x0201,
         hash: NID_sha1,
         sig: EVP_PKEY_RSA,
+        sigandhash: NID_sha1WithRSAEncryption,
+        sig_idx: 0,
+        sec_bits: 64,
     },
     SigAlgLookup {
         name: "dsa_sha256",
+        sigalg: 0x0402,
         hash: NID_sha256,
         sig: EVP_PKEY_DSA,
+        sigandhash: NID_dsa_with_SHA256,
+        sig_idx: 2,
+        sec_bits: 128,
     },
     SigAlgLookup {
         name: "dsa_sha384",
+        sigalg: 0x0502,
         hash: NID_sha384,
         sig: EVP_PKEY_DSA,
+        sigandhash: NID_undef,
+        sig_idx: 2,
+        sec_bits: 192,
     },
     SigAlgLookup {
         name: "dsa_sha512",
+        sigalg: 0x0602,
         hash: NID_sha512,
         sig: EVP_PKEY_DSA,
+        sigandhash: NID_undef,
+        sig_idx: 2,
+        sec_bits: 256,
     },
     SigAlgLookup {
         name: "dsa_sha224",
+        sigalg: 0x0302,
         hash: NID_sha224,
         sig: EVP_PKEY_DSA,
+        sigandhash: NID_undef,
+        sig_idx: 2,
+        sec_bits: 112,
     },
     SigAlgLookup {
         name: "dsa_sha1",
+        sigalg: 0x0202,
         hash: NID_sha1,
         sig: EVP_PKEY_DSA,
+        sigandhash: NID_dsaWithSHA1,
+        sig_idx: 2,
+        sec_bits: 64,
     },
 ];
+
+/// The three provider (`TLS-SIGALG` capability) rows the admitted build's default provider
+/// publishes (`providers/common/capabilities.c:315-320`; the ML-DSA entries have no hash, and
+/// `ssl_setup_sigalgs` gives them `sig_idx = SSL_PKEY_NUM + i` and a `sigandhash` equal to their
+/// own algorithm NID). The authority keeps them in `ctx->sigalg_lookup_cache` after the static
+/// rows, so `tls1_lookup_sigalg` resolves them for `SSL_get_sigalgs`.
+static PROVIDER_SIGALGS: [SigAlgLookup; 3] = [
+    SigAlgLookup {
+        name: "mldsa44",
+        sigalg: 0x0904,
+        hash: NID_undef,
+        sig: NID_ML_DSA_44,
+        sigandhash: NID_ML_DSA_44,
+        sig_idx: 9,
+        sec_bits: 128,
+    },
+    SigAlgLookup {
+        name: "mldsa65",
+        sigalg: 0x0905,
+        hash: NID_undef,
+        sig: NID_ML_DSA_65,
+        sigandhash: NID_ML_DSA_65,
+        sig_idx: 10,
+        sec_bits: 192,
+    },
+    SigAlgLookup {
+        name: "mldsa87",
+        sigalg: 0x0906,
+        hash: NID_undef,
+        sig: NID_ML_DSA_87,
+        sigandhash: NID_ML_DSA_87,
+        sig_idx: 11,
+        sec_bits: 256,
+    },
+];
+
+/// `tls1_lookup_sigalg(ctx, sigalg)` — `ssl/t1_lib.c:2367-2379`, over the static table followed by
+/// the provider rows, in the cache order `ssl_setup_sigalgs` builds.
+///
+/// **Availability is the admitted build's.** `ssl_setup_sigalgs` marks a static row unavailable
+/// when its digest or key type is missing and a provider row available for every TLS context; this
+/// build's default provider publishes every digest and key type in the static table (the same
+/// property `SSL_get1_builtin_sigalgs` observes), so every row resolves. A context created over a
+/// different library context whose providers differ would mark fewer rows available; that is a
+/// recorded residual of the reduced context cache, not a silent assumption.
+fn tls1_lookup_sigalg(sigalg: u16) -> Option<&'static SigAlgLookup> {
+    SIGALG_LOOKUP_TBL
+        .iter()
+        .chain(PROVIDER_SIGALGS.iter())
+        .find(|row| row.sigalg == sigalg)
+}
 
 /// `int SSL_CTX_set_tlsext_max_fragment_length(SSL_CTX *ctx, uint8_t mode)` —
 /// `ssl/t1_lib.c:4750-4760`.
@@ -367,6 +556,13 @@ pub unsafe extern "C" fn SSL_get_peer_signature_type_nid(s: *const Ssl, pnid: *m
 /// `int SSL_get_sigalgs(SSL *s, int idx, int *psign, int *phash, int *psignhash,
 /// unsigned char *rsig, unsigned char *rhash)` — `ssl/t1_lib.c:3599-3634`.
 ///
+/// The stored list is the connection's owned peer list; its length is the allocation's own
+/// element count (see [`SigalgsSlot`]), so an index is checked against the block that will be
+/// read, never against a separately tracked count. Each scheme is resolved through
+/// [`tls1_lookup_sigalg`], which is the authority's cache lookup for the admitted build; an
+/// unknown or unavailable code point answers `NID_undef` in all three NID out-parameters, exactly
+/// as the authority's `lu == NULL` arm does.
+///
 /// # Safety
 /// `s` must be NULL or live; the out-parameters NULL or writable.
 #[no_mangle]
@@ -382,17 +578,16 @@ pub unsafe extern "C" fn SSL_get_sigalgs(
     if s.is_null() {
         return 0;
     }
-    // SAFETY: `s` is non-NULL and live per the caller's contract.
-    let (psig, numsigalgs) = unsafe { ((*s).peer_sigalgs, (*s).peer_sigalgslen) };
-    if psig.is_null() || numsigalgs > c_int::MAX as usize {
+    // SAFETY: `s` is non-NULL and live per the caller's contract, so its peer pair obeys the pair
+    // invariant and the borrow lives only for this block.
+    let list = unsafe { (*s).peer_sigalgs() };
+    if list.len() > c_int::MAX as usize {
         return 0;
     }
     if idx >= 0 {
-        if idx as usize >= numsigalgs {
+        let Some(&val) = list.get(idx as usize) else {
             return 0;
-        }
-        // SAFETY: `idx` is in range of the `numsigalgs`-long array `psig`.
-        let val = unsafe { *psig.add(idx as usize) };
+        };
         if !rhash.is_null() {
             // SAFETY: `rhash` is writable per the contract.
             unsafe { *rhash = ((val >> 8) & 0xff) as u8 };
@@ -401,27 +596,30 @@ pub unsafe extern "C" fn SSL_get_sigalgs(
             // SAFETY: `rsig` is writable per the contract.
             unsafe { *rsig = (val & 0xff) as u8 };
         }
-        // `tls1_lookup_sigalg`'s cache is not loaded (see the module divergence note), so an
-        // empty cache is what this arm would answer; it is unreachable because `peer_sigalgs` is
-        // NULL in every state this slice can reach.
+        let lu = tls1_lookup_sigalg(val);
         if !psign.is_null() {
             // SAFETY: `psign` is writable per the contract.
-            unsafe { *psign = NID_undef };
+            unsafe { *psign = lu.map_or(NID_undef, |row| row.sig) };
         }
         if !phash.is_null() {
             // SAFETY: `phash` is writable per the contract.
-            unsafe { *phash = NID_undef };
+            unsafe { *phash = lu.map_or(NID_undef, |row| row.hash) };
         }
         if !psignhash.is_null() {
             // SAFETY: `psignhash` is writable per the contract.
-            unsafe { *psignhash = NID_undef };
+            unsafe { *psignhash = lu.map_or(NID_undef, |row| row.sigandhash) };
         }
     }
-    numsigalgs as c_int
+    list.len() as c_int
 }
 
 /// `int SSL_get_shared_sigalgs(SSL *s, int idx, int *psign, int *phash, int *psignhash,
 /// unsigned char *rsig, unsigned char *rhash)` — `ssl/t1_lib.c:3636-3663`.
+///
+/// [`tls1_set_shared_sigalgs`] publishes the negotiated list as scheme codes (the authority stores
+/// `SIGALG_LOOKUP *`; the representation is private to the connection, and the accessor resolves
+/// each code through the same static table). The list is empty until the peer's list has been
+/// processed, which is the authority's NULL answer.
 ///
 /// # Safety
 /// `s` must be NULL or live; the out-parameters NULL or writable.
@@ -438,33 +636,38 @@ pub unsafe extern "C" fn SSL_get_shared_sigalgs(
     if s.is_null() {
         return 0;
     }
-    // SAFETY: `s` is non-NULL and live per the caller's contract.
-    let (shsigalgs, len) = unsafe { ((*s).shared_sigalgs, (*s).shared_sigalgslen) };
-    if shsigalgs.is_null() || idx < 0 || idx as usize >= len || len > c_int::MAX as usize {
+    // SAFETY: `s` is non-NULL and live per the caller's contract, so its shared pair obeys the
+    // pair invariant and the borrow lives only for this block.
+    let list = unsafe { (*s).shared_sigalgs() };
+    if idx < 0 || idx as usize >= list.len() || list.len() > c_int::MAX as usize {
         return 0;
     }
-    // Unreachable: no unit in this slice sets `shared_sigalgs`.
+    let code = list[idx as usize];
+    let Some(lu) = tls1_lookup_sigalg(code) else {
+        // The shared list only contains resolved rows; a corrupt list is refused rather than read.
+        return 0;
+    };
     if !phash.is_null() {
         // SAFETY: `phash` is writable per the contract.
-        unsafe { *phash = NID_undef };
+        unsafe { *phash = lu.hash };
     }
     if !psign.is_null() {
         // SAFETY: `psign` is writable per the contract.
-        unsafe { *psign = NID_undef };
+        unsafe { *psign = lu.sig };
     }
     if !psignhash.is_null() {
         // SAFETY: `psignhash` is writable per the contract.
-        unsafe { *psignhash = NID_undef };
+        unsafe { *psignhash = lu.sigandhash };
     }
     if !rsig.is_null() {
         // SAFETY: `rsig` is writable per the contract.
-        unsafe { *rsig = 0 };
+        unsafe { *rsig = (lu.sigalg & 0xff) as u8 };
     }
     if !rhash.is_null() {
         // SAFETY: `rhash` is writable per the contract.
-        unsafe { *rhash = 0 };
+        unsafe { *rhash = ((lu.sigalg >> 8) & 0xff) as u8 };
     }
-    len as c_int
+    list.len() as c_int
 }
 
 /// `int SSL_check_chain(SSL *s, X509 *x, EVP_PKEY *pk, STACK_OF(X509) *chain)` —
@@ -796,12 +999,130 @@ pub(crate) fn tls1_nid2group_id(nid: c_int) -> u16 {
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// The peer and shared signature-algorithm list owners
+// ---------------------------------------------------------------------------------------------
+
+/// A connection-owned signature-algorithm list: exactly `count` native-endian `u16` schemes in one
+/// `CRYPTO_malloc` block.
+///
+/// The block and its element count are created together, so they cannot disagree: the only ways to
+/// obtain a value are [`from_codes`](OwnedSigalgs::from_codes) and
+/// [`from_scheme_bytes`](OwnedSigalgs::from_scheme_bytes), each of which allocates for exactly
+/// `count` schemes and initialises every slot before the value exists. Until
+/// [`SigalgsSlot::replace`] transfers it to a connection, this value is the block's only owner and
+/// its `Drop` is the block's single release.
+struct OwnedSigalgs {
+    block: OwnedBlock<u16>,
+    count: usize,
+}
+
+impl OwnedSigalgs {
+    /// Copy `codes` into a fresh block. `None` (nothing allocated, nothing published) when `codes`
+    /// is empty or the block cannot be allocated; the extent is `checked_mul`-guarded inside
+    /// [`OwnedBlock::malloc`].
+    fn from_codes(codes: &[u16]) -> Option<OwnedSigalgs> {
+        if codes.is_empty() {
+            return None;
+        }
+        let block = OwnedBlock::<u16>::malloc(codes.len(), FILE_SEAM, 0)?;
+        // SAFETY: `block` is a fresh allocation of exactly `codes.len()` writable `u16`s, and the
+        // source is a live slice of the same length that cannot alias the fresh block. Every slot
+        // is initialised exactly once through the raw pointer; no typed reference is formed over
+        // uninitialised storage.
+        unsafe { ptr::copy_nonoverlapping(codes.as_ptr(), block.as_ptr(), codes.len()) };
+        Some(OwnedSigalgs {
+            block,
+            count: codes.len(),
+        })
+    }
+
+    /// Copy big-endian wire pairs into a fresh block. The caller has established a non-empty, even
+    /// length; `None` when the block cannot be allocated.
+    fn from_scheme_bytes(schemes: &[u8]) -> Option<OwnedSigalgs> {
+        if schemes.is_empty() || !schemes.len().is_multiple_of(2) {
+            return None;
+        }
+        let count = schemes.len() / 2;
+        let block = OwnedBlock::<u16>::malloc(count, FILE_SEAM, 0)?;
+        for (i, pair) in schemes.as_chunks::<2>().0.iter().enumerate() {
+            // SAFETY: `block` names exactly `count` writable `u16`s and `i < count`; the slot was
+            // uninitialised until this write, which goes through the raw pointer so no typed
+            // reference is formed over uninitialised storage.
+            unsafe { block.as_ptr().add(i).write(u16::from_be_bytes(*pair)) };
+        }
+        Some(OwnedSigalgs { block, count })
+    }
+
+    /// The stored schemes. Every slot was initialised by the constructor and `count` is the
+    /// allocation's own element count, so the slice never reaches outside the block.
+    #[cfg(test)]
+    fn as_slice(&self) -> &[u16] {
+        // SAFETY: `block` is a live allocation of exactly `count` initialised `u16`s owned by
+        // `self`; the returned borrow cannot outlive `self`.
+        unsafe { core::slice::from_raw_parts(self.block.as_ptr(), self.count) }
+    }
+}
+
+/// The transfer boundary between an [`OwnedSigalgs`] and a connection's stored `(ptr, len)` member
+/// pair. The pair stays `*mut u16`/`usize` at its authority offset; this handle is the only
+/// sanctioned way to move a list in or out, and `Ssl`'s fields are private, so no other code can
+/// make the stored extent disagree with the allocation.
+pub(crate) struct SigalgsSlot<'a> {
+    ptr: &'a mut *mut u16,
+    len: &'a mut usize,
+}
+
+impl<'a> SigalgsSlot<'a> {
+    /// Derive the handle from a connection's member pair.
+    ///
+    /// # Safety
+    ///
+    /// `ptr`/`len` are the two member fields of a live connection and currently obey the pair
+    /// invariant: `(NULL, 0)`, or a single `CRYPTO_*` block this connection owns exclusively whose
+    /// length is exactly `len` elements. The borrow is exclusive for `'a`, so nothing else
+    /// publishes to the pair for that time.
+    pub(crate) unsafe fn of(ptr: &'a mut *mut u16, len: &'a mut usize) -> SigalgsSlot<'a> {
+        SigalgsSlot { ptr, len }
+    }
+
+    /// Release the incumbent (if any) and publish `list`.
+    ///
+    /// `list` was allocated before this call, so a refused allocation leaves the incumbent in
+    /// place — exactly `tls1_save_u16`'s ordering (it parses and allocates first, then frees the
+    /// old pointer). Reads derive emptiness from `*ptr`, so even the transient `(NULL, old_len)`
+    /// produced by [`clear`](SigalgsSlot::clear) reads as empty rather than as a slice.
+    ///
+    /// Private to this module: the only list values that exist are built here, so the slot's
+    /// public surface (`of`/`clear`) cannot install a block whose extent is not its own count.
+    fn replace(&mut self, list: OwnedSigalgs) {
+        self.clear(FILE, 0);
+        let count = list.count;
+        // `into_raw` gives up the owner's single release; no allocator call or callback lies
+        // between the two publications, so the pair is never observable in a half-updated state.
+        *self.ptr = list.block.into_raw();
+        *self.len = count;
+    }
+
+    /// Release the incumbent through `CRYPTO_free` at `file`/`line` and publish `(NULL, 0)`.
+    pub(crate) fn clear(&mut self, file: *const c_char, line: c_int) {
+        let old = core::mem::replace(self.ptr, ptr::null_mut());
+        *self.len = 0;
+        // SAFETY: by the pair invariant the incumbent is NULL or this connection's own single
+        // block, whose base pointer is what `CRYPTO_free` releases; NULL is its no-op.
+        unsafe { crate::runtime::mem::CRYPTO_free(old.cast(), file, line) };
+    }
+}
+
 /// The scheme bytes of a `signature_algorithms` extension body (`list_len(2) || scheme(2)...`) as
-/// `tls_parse_ctos_sig_algs` accepts them, or `None` when the authority refuses the vector: a body
-/// shorter than the length word, a zero-length vector, a declared vector that runs past the body,
-/// or an empty/odd-length vector. This is the safe, single definition of the acceptance condition
-/// shared by the writer ([`tls1_save_peer_sigalgs`]) and the ClientHello parser, so the parse can
-/// validate without touching the connection.
+/// `tls_parse_ctos_sig_algs` accepts them, or `None` when the authority refuses the vector.
+///
+/// `PACKET_as_length_prefixed_2` (`extensions_srvr.c:308`) requires the length-prefixed vector to
+/// consume the **whole** extension body, then `PACKET_remaining != 0` and `tls1_save_u16` require a
+/// non-empty, even-length vector. This function is that single acceptance condition: a body
+/// shorter than the length word, a zero-length vector, an odd-length vector, a declared vector that
+/// runs past the body, or trailing bytes after it all answer `None`. It is shared by the writer
+/// ([`tls1_save_peer_sigalgs`]) and the ClientHello parser, so both refuse the same inputs.
 pub(crate) fn tls1_peer_sigalgs(body: &[u8]) -> Option<&[u8]> {
     if body.len() < 2 {
         return None;
@@ -810,23 +1131,26 @@ pub(crate) fn tls1_peer_sigalgs(body: &[u8]) -> Option<&[u8]> {
     if list_len == 0 {
         return None;
     }
-    let schemes = body.get(2..2usize.checked_add(list_len)?)?;
+    // The authority's `PACKET_as_length_prefixed_2` requires the sub-packet to exhaust the body.
+    if list_len.checked_add(2)? != body.len() {
+        return None;
+    }
+    let schemes = &body[2..];
     if !schemes.len().is_multiple_of(2) {
         return None;
     }
     Some(schemes)
 }
 
-/// `int tls1_save_u16(PACKET *pkt, uint16_t **p, size_t *len)` — `t1_lib.c:3490-3517`, for the
+/// `int tls1_save_u16(PACKET *pkt, uint16_t **p, size_t *len)` — `t1_lib.c:3523-3559`, for the
 /// `signature_algorithms` vector `tls_parse_ctos_sig_algs` saves (`extensions_srvr.c:303-320`)
 /// and the client's `CertificateRequest` reader (`statem_clnt.c:2650-2690`, `:2686`).
 ///
-/// The extension body is `list_len(2) || scheme(2)...`; a zero-length or odd list, or one whose
-/// declared length runs past the body, is refused *before* the incumbent list is released, so a
-/// malformed request leaves the previous list intact (the authority parses into the packet before
-/// it stores). On success the schemes are stored as native-endian `u16`s — that is the
-/// representation `SSL_get_sigalgs` reads — in a `CRYPTO_malloc` block this connection owns and
-/// `SSL_free` releases.
+/// The extension body is `list_len(2) || scheme(2)...`; a zero-length, odd-length, over-long or
+/// trailing-byte-bearing vector is refused *before* the incumbent list is released, so a malformed
+/// request leaves the previous list intact (the authority parses into the packet before it
+/// stores). On success the schemes are stored as native-endian `u16`s — that is the representation
+/// `SSL_get_sigalgs` reads — in a `CRYPTO_malloc` block the connection owns and `SSL_free` releases.
 ///
 /// # Safety
 /// `s` must be a live connection.
@@ -840,8 +1164,11 @@ pub(crate) unsafe fn tls1_save_peer_sigalgs(s: *mut Ssl, body: &[u8]) -> c_int {
 }
 
 /// The scheme bytes of a `signature_algorithms` vector (`list_len(2)` already stripped), saved
-/// exactly as [`tls1_save_peer_sigalgs`] saves them. The TLS1.2 `CertificateRequest` reader has
-/// the vector in this shape after `PACKET_get_length_prefixed_2`.
+/// exactly as [`tls1_save_peer_sigalgs`] saves them. The TLS1.2 `CertificateRequest` reader has the
+/// vector in this shape after `PACKET_get_length_prefixed_2`.
+///
+/// A refused allocation leaves the incumbent in place (`tls1_save_u16` frees only after the new
+/// block exists); a repeated save replaces it, so the previous list is released exactly once.
 ///
 /// # Safety
 /// `s` must be a live connection.
@@ -849,20 +1176,12 @@ pub(crate) unsafe fn tls1_save_peer_sigalgs_raw(s: *mut Ssl, schemes: &[u8]) -> 
     if schemes.is_empty() || !schemes.len().is_multiple_of(2) {
         return 0;
     }
-    let count = schemes.len() / 2;
-    // SAFETY: `s` is live; the block is the connection's own.
-    let p = unsafe { alloc_peer_sigalgs(s, count) };
-    if p.is_null() {
+    let Some(list) = OwnedSigalgs::from_scheme_bytes(schemes) else {
         return 0;
-    }
-    // `p` is `count * size_of::<u16>()` writable bytes from `CRYPTO_malloc` (maximally aligned).
-    // Each slot is written through the raw pointer before any typed view exists, so no reference is
-    // ever formed over uninitialised storage; `schemes` has exactly `count` pairs.
-    for (i, pair) in schemes.as_chunks::<2>().0.iter().enumerate() {
-        // SAFETY: `p` names `count` writable `u16`s and `i < count`, so `p.add(i)` is in bounds;
-        // the write initialises the slot through a raw pointer (no typed view is formed).
-        unsafe { p.add(i).write(u16::from_be_bytes(*pair)) };
-    }
+    };
+    // SAFETY: `s` is live; its peer pair currently obeys the pair invariant (it is `(NULL, 0)` or
+    // the connection's own single block, written only through this handle).
+    unsafe { (*s).peer_sigalgs_slot().replace(list) };
     1
 }
 
@@ -871,55 +1190,169 @@ pub(crate) unsafe fn tls1_save_peer_sigalgs_raw(s: *mut Ssl, schemes: &[u8]) -> 
 /// The authority's default list is what it uses when the peer sent no `signature_algorithms` at
 /// all: the client falls back to the list it advertised (`tls1_get_legacy_sigalg` + the
 /// `tls12_get_psigalgs(s, 1, ...)` membership test in `tls_choose_sigalg`, `t1_lib.c:4685-4713`;
-/// `tls1_set_shared_sigalgs`'s NULL-`peer_sigalgs` arm, `t1_lib.c:3490-3509`). This stores that
+/// `tls1_set_shared_sigalgs`'s NULL-`peer_sigalgs` arm, `t1_lib.c:3500-3508`). This stores that
 /// list so the certificate constructors' scheme check can consult it.
 ///
 /// # Safety
 /// `s` must be a live connection.
 pub(crate) unsafe fn tls1_save_peer_sigalgs_default(s: *mut Ssl, schemes: &[u16]) -> c_int {
-    if schemes.is_empty() {
+    let Some(list) = OwnedSigalgs::from_codes(schemes) else {
         return 0;
-    }
-    // SAFETY: `s` is live; the block is the connection's own.
-    let p = unsafe { alloc_peer_sigalgs(s, schemes.len()) };
-    if p.is_null() {
-        return 0;
-    }
-    // SAFETY: `p` is `schemes.len()` writable `u16`s; this frame is its only writer and `schemes`
-    // cannot alias the fresh block. Copying through raw pointers avoids forming a `&mut [u16]`
-    // over storage that is not yet initialised.
-    unsafe { core::ptr::copy_nonoverlapping(schemes.as_ptr(), p, schemes.len()) };
+    };
+    // SAFETY: `s` is live; its peer pair currently obeys the pair invariant.
+    unsafe { (*s).peer_sigalgs_slot().replace(list) };
     1
 }
 
-/// Releases the incumbent peer list and answers a writable block for `count` schemes, publishing
-/// it as the connection's own. NULL on a refused allocation; the checked multiply is what refuses
-/// an impossible extent before anything is released.
+/// `SSL_SECOP_SIGALG_SHARED` — `ssl.h:2736` (`12 | SSL_SECOP_OTHER_SIGALG`).
+const SSL_SECOP_SIGALG_SHARED: c_int = 12 | (5 << 16);
+
+/// `SSL_OP_SERVER_PREFERENCE` — `ssl.h:390` (`SSL_OP_BIT(22)`).
+const SSL_OP_SERVER_PREFERENCE: u64 = 1 << 22;
+
+/// `ssl_cert_is_disabled(ctx, idx)` — `ssl_local.h`. The reduced certificate never installs a
+/// disabled-slot mask (no `SSL_set1_sigalgs`-style setter is wired), so its answer is always 0;
+/// the `sig_idx` column is consulted here so the table stays the authority's shape.
+fn ssl_cert_is_disabled(_s: *const Ssl, _idx: usize) -> bool {
+    false
+}
+
+/// `tls12_sigalg_allowed(s, op, lu)` — `t1_lib.c:3317-3393`, over the columns this reduced table
+/// models.
+///
+/// The GOST arm is vacuous (no GOST row is transcribed), `ssl_cert_is_disabled` is all-zero in
+/// this build (nothing calls the certificate-disabling setters), and `tls1_suiteb` is always 0
+/// (Suite B is not modelled). The security callback is invoked exactly as the authority invokes
+/// it, so an application callback sees the shared-list walk.
 ///
 /// # Safety
 /// `s` must be a live connection.
-unsafe fn alloc_peer_sigalgs(s: *mut Ssl, count: usize) -> *mut u16 {
-    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
-    let Some(bytes) = count.checked_mul(core::mem::size_of::<u16>()) else {
-        return ptr::null_mut();
+unsafe fn tls12_sigalg_allowed(s: *const Ssl, op: c_int, lu: &SigAlgLookup) -> bool {
+    // SAFETY: `s` is live per the contract.
+    let tls13 = unsafe { (*s).version == crate::ssl::ssl_lib::TLS1_3_VERSION };
+    // DSA is not allowed in TLS 1.3.
+    if tls13 && lu.sig == EVP_PKEY_DSA {
+        return false;
+    }
+    // A client that could negotiate TLS 1.3 drops DSA and the SHA-1/SHA-224 schemes from the
+    // shared walk (`t1_lib.c:3331-3337`).
+    // SAFETY: `s` is live.
+    // SAFETY: `s` is live.
+    if unsafe { (*s).server == 0 }
+        // SAFETY: `s` is live.
+        && unsafe { SSL_is_dtls(s) == 0 }
+        // SAFETY: `s` is live.
+        && unsafe { (*s).min_ver } >= crate::ssl::ssl_lib::TLS1_3_VERSION
+        && (lu.sig == EVP_PKEY_DSA || lu.hash == NID_sha1 || lu.hash == NID_sha224)
+    {
+        return false;
+    }
+    if ssl_cert_is_disabled(s, lu.sig_idx) {
+        return false;
+    }
+    // `SSL_new` always installs the certificate, so the authority never reaches `ssl_security`
+    // with a NULL `cert`; a partially constructed test object can. Answer "not allowed" rather
+    // than dereferencing NULL: this cannot widen the walk.
+    // SAFETY: `s` is live per the contract.
+    if unsafe { (*s).cert.is_null() } {
+        return false;
+    }
+    let sigalgstr = [(lu.sigalg >> 8) as u8, lu.sigalg as u8];
+    // SAFETY: `s` is live; `sigalgstr` is a live two-byte array passed as the authority's
+    // `void *other` for the duration of the callback.
+    unsafe {
+        crate::ssl::ssl_cert::ssl_security(
+            s,
+            op,
+            lu.sec_bits,
+            lu.hash,
+            sigalgstr.as_ptr().cast_mut().cast(),
+        ) != 0
+    }
+}
+
+/// `size_t tls12_shared_sigalgs(s, shsig, pref, preflen, allow, allowlen)` — `t1_lib.c:3451-3476`,
+/// as scheme codes.
+///
+/// A preference entry is kept when it resolves to an available row, `tls12_sigalg_allowed`
+/// accepts it, and it appears in `allow`; the inner scan `break`s on the first match, so duplicate
+/// preference entries produce duplicate shared entries exactly as the authority's counting and
+/// filling passes do.
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn tls12_shared_sigalgs(s: *const Ssl, pref: &[u16], allow: &[u16]) -> Vec<u16> {
+    let mut out = Vec::new();
+    for &code in pref {
+        let Some(lu) = tls1_lookup_sigalg(code) else {
+            continue;
+        };
+        // SAFETY: `s` is live per the contract.
+        if !unsafe { tls12_sigalg_allowed(s, SSL_SECOP_SIGALG_SHARED, lu) } {
+            continue;
+        }
+        if allow.contains(&code) {
+            out.push(code);
+        }
+    }
+    out
+}
+
+/// `int tls1_set_shared_sigalgs(SSL_CONNECTION *s)` — `t1_lib.c:3478-3521`.
+///
+/// The preference and allowed lists are the connection's configured default
+/// ([`CLIENT_SIGALGS`], the authority's `ctx->tls12_sigalgs` order) and the peer's saved list,
+/// swapped when `SSL_OP_SERVER_PREFERENCE` is set. `client_sigalgs`/`conf_sigalgs` and Suite B are
+/// not modelled, so the configured list is always the default — a recorded reduction of the same
+/// kind `ssl_conf.rs` records for the `sigalgs` commands.
+///
+/// The peer list is copied before the walk, because the walk invokes the application's security
+/// callback: the callback must not be handed a borrow of storage it could re-enter and replace.
+/// The incumbent shared list is released only after the new one exists, and the allocation
+/// failure answer is the authority's `0`.
+///
+/// # Safety
+/// `s` must be a live connection.
+pub(crate) unsafe fn tls1_set_shared_sigalgs(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live per the contract; the returned slice borrows the connection only for
+    // this statement.
+    let peer: Vec<u16> = unsafe { (*s).peer_sigalgs() }.to_vec();
+    let conf: &[u16] = &crate::ssl::statem::extensions_clnt::CLIENT_SIGALGS;
+    // SAFETY: `s` is live.
+    let server_pref = unsafe { (*s).options } & SSL_OP_SERVER_PREFERENCE != 0;
+    let (pref, allow) = if server_pref {
+        (conf, peer.as_slice())
+    } else {
+        (peer.as_slice(), conf)
     };
-    // SAFETY: `s` is live; the incumbent (if any) is this connection's own block.
-    unsafe {
-        CRYPTO_free((*s).peer_sigalgs.cast(), FILE, 0);
-        (*s).peer_sigalgs = ptr::null_mut();
-        (*s).peer_sigalgslen = 0;
+    // SAFETY: `s` is live.
+    let codes = unsafe { tls12_shared_sigalgs(s, pref, allow) };
+    if codes.is_empty() {
+        // No match (or no peer list): the authority publishes `(NULL, 0)` and answers success.
+        // SAFETY: `s` is live; its shared pair currently obeys the pair invariant.
+        unsafe { (*s).shared_sigalgs_slot().clear(FILE, 0) };
+        return 1;
     }
-    // SAFETY: no preconditions; the refusal arm leaves the connection's list empty.
-    let p = unsafe { CRYPTO_malloc(bytes, FILE, 0) }.cast::<u16>();
-    if p.is_null() {
-        return ptr::null_mut();
-    }
-    // SAFETY: `s` is live; `p` is the block just allocated for `count` schemes.
-    unsafe {
-        (*s).peer_sigalgs = p;
-        (*s).peer_sigalgslen = count;
-    }
-    p
+    let Some(list) = OwnedSigalgs::from_codes(&codes) else {
+        // An allocation refusal: the authority answers 0 with the shared list empty. This
+        // implementation leaves the incumbent in place (a valid state that the caller's failure
+        // path poisons); nothing is published and nothing leaks.
+        return 0;
+    };
+    // SAFETY: `s` is live; its shared pair currently obeys the pair invariant.
+    unsafe { (*s).shared_sigalgs_slot().replace(list) };
+    1
+}
+
+/// `int tls1_process_sigalgs(SSL_CONNECTION *s)` — `t1_lib.c:3573-3598`, reduced to the shared-list
+/// computation this module's accessor observes; the authority also derives `valid_flags`, which
+/// this reduced certificate path does not model.
+///
+/// # Safety
+/// `s` must be a live connection.
+pub(crate) unsafe fn tls1_process_sigalgs(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live per the contract.
+    unsafe { tls1_set_shared_sigalgs(s) }
 }
 
 /// `uint16_t tls1_group_name2id(SSL_CTX *ctx, const char *name)` — `t1_lib.c:709-719`, reduced to
@@ -1189,4 +1622,413 @@ pub(crate) unsafe fn tls1_set_groups(
         *grpextlen = ngroups;
     }
     1
+}
+
+// ---------------------------------------------------------------------------------------------
+// S58 — the peer/shared signature-algorithm boundary
+// ---------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod t1_lib_sigalgs_tests {
+    #![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+
+    use crate::runtime::err::ERR_clear_error;
+    use crate::ssl::methods::TLS_method;
+    use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new};
+
+    const TLS1_2_VERSION: c_int = 0x0303;
+
+    /// A fresh context and connection; the caller releases both.
+    fn connection() -> (*mut SslCtx, *mut Ssl) {
+        // SAFETY: the constructors take no caller obligations and answer fresh objects owned by
+        // this frame; the caller releases them with `SSL_free`/`SSL_CTX_free`.
+        unsafe {
+            let ctx = SSL_CTX_new(TLS_method());
+            assert!(!ctx.is_null());
+            let s = SSL_new(ctx);
+            assert!(!s.is_null());
+            (ctx, s)
+        }
+    }
+
+    /// A `signature_algorithms` extension body from wire scheme bytes.
+    fn body(schemes: &[u8]) -> Vec<u8> {
+        let mut out = (schemes.len() as u16).to_be_bytes().to_vec();
+        out.extend_from_slice(schemes);
+        out
+    }
+
+    /// The safe acceptance rule refuses every malformed shape the authority refuses.
+    #[test]
+    fn t1_lib_sigalgs_malformed_vectors_are_refused_without_touching_the_incumbent() {
+        let _g = crate::test_support::lock_global_state();
+        let (ctx, s) = connection();
+        // SAFETY: every object is this frame's.
+        unsafe {
+            assert_eq!(tls1_save_peer_sigalgs(s, &body(&[0x04, 0x03])), 1);
+            assert_eq!((*s).peer_sigalgs(), &[0x0403]);
+
+            // Empty body, bare length word, zero length, odd length, over-long declaration,
+            // and a declared length that disagrees with the containing extension.
+            for malformed in [
+                &[][..],
+                &[0x00][..],
+                &[0x00, 0x00][..],
+                &[0x00, 0x03, 0x04, 0x03, 0x00][..],
+                &[0xff, 0xfe, 0x04, 0x03][..],
+                &[0x00, 0x02, 0x04, 0x03, 0xff][..],
+            ] {
+                assert!(
+                    tls1_peer_sigalgs(malformed).is_none(),
+                    "malformed vector accepted: {malformed:02x?}"
+                );
+                ERR_clear_error();
+                assert_eq!(
+                    tls1_save_peer_sigalgs(s, malformed),
+                    0,
+                    "malformed vector saved: {malformed:02x?}"
+                );
+                assert_eq!(
+                    (*s).peer_sigalgs(),
+                    &[0x0403],
+                    "a refused vector must leave the incumbent list in place"
+                );
+            }
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// An unknown code point is a valid vector entry: it is stored, counted, and resolves to the
+    /// authority's `NID_undef` in all three NID out-parameters.
+    #[test]
+    fn t1_lib_sigalgs_unknown_code_points_are_stored_and_resolve_to_nid_undef() {
+        let _g = crate::test_support::lock_global_state();
+        let (ctx, s) = connection();
+        // SAFETY: every object is this frame's.
+        unsafe {
+            assert_eq!(
+                tls1_save_peer_sigalgs(s, &body(&[0x04, 0x03, 0xff, 0xff])),
+                1
+            );
+            assert_eq!((*s).peer_sigalgs(), &[0x0403, 0xffff]);
+
+            let (mut sign, mut hash, mut signhash) = (-1, -1, -1);
+            let (mut rsig, mut rhash) = (0u8, 0u8);
+            assert_eq!(
+                SSL_get_sigalgs(
+                    s,
+                    1,
+                    &mut sign,
+                    &mut hash,
+                    &mut signhash,
+                    &mut rsig,
+                    &mut rhash
+                ),
+                2
+            );
+            assert_eq!((sign, hash, signhash), (NID_undef, NID_undef, NID_undef));
+            assert_eq!((rsig, rhash), (0xff, 0xff));
+            // An out-of-range index answers 0, as the authority's `idx >= numsigalgs` arm does.
+            assert_eq!(
+                SSL_get_sigalgs(
+                    s,
+                    2,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut()
+                ),
+                0
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// Duplicates are preserved: the stored list is the wire list, not a set.
+    #[test]
+    fn t1_lib_sigalgs_duplicates_are_preserved() {
+        let _g = crate::test_support::lock_global_state();
+        let (ctx, s) = connection();
+        // SAFETY: every object is this frame's.
+        unsafe {
+            assert_eq!(
+                tls1_save_peer_sigalgs(s, &body(&[0x04, 0x03, 0x04, 0x03])),
+                1
+            );
+            assert_eq!((*s).peer_sigalgs(), &[0x0403, 0x0403]);
+            assert_eq!(
+                SSL_get_sigalgs(
+                    s,
+                    -1,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut()
+                ),
+                2
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// `SSL_get_sigalgs` resolves the authority's table columns for a known peer list (the case
+    /// that previously answered `NID_undef` for every row) and for a provider row.
+    #[test]
+    fn t1_lib_sigalgs_get_sigalgs_matches_the_authority_table() {
+        let _g = crate::test_support::lock_global_state();
+        let (ctx, s) = connection();
+        // SAFETY: every object is this frame's.
+        unsafe {
+            // 0x0403 ECDSA P-256/SHA-256, 0x0804 RSA-PSS/SHA-256, 0x0201 RSA PKCS#1/SHA-1,
+            // 0x0905 ML-DSA-65 (a provider row), and an unknown code point.
+            assert_eq!(
+                tls1_save_peer_sigalgs(
+                    s,
+                    &body(&[0x04, 0x03, 0x08, 0x04, 0x02, 0x01, 0x09, 0x05, 0xff, 0xff])
+                ),
+                1
+            );
+
+            let row = |idx: c_int| {
+                let (mut sign, mut hash, mut signhash) = (-1, -1, -1);
+                let (mut rsig, mut rhash) = (0u8, 0u8);
+                assert_eq!(
+                    SSL_get_sigalgs(
+                        s,
+                        idx,
+                        &mut sign,
+                        &mut hash,
+                        &mut signhash,
+                        &mut rsig,
+                        &mut rhash
+                    ),
+                    5
+                );
+                ((sign, hash, signhash), u16::from_be_bytes([rhash, rsig]))
+            };
+
+            assert_eq!(
+                row(0),
+                ((EVP_PKEY_EC, NID_sha256, NID_ecdsa_with_SHA256), 0x0403)
+            );
+            assert_eq!(row(1), ((EVP_PKEY_RSA_PSS, NID_sha256, NID_undef), 0x0804));
+            assert_eq!(
+                row(2),
+                ((EVP_PKEY_RSA, NID_sha1, NID_sha1WithRSAEncryption), 0x0201)
+            );
+            assert_eq!(row(3), ((NID_ML_DSA_65, NID_undef, NID_ML_DSA_65), 0x0905));
+            assert_eq!(row(4), ((NID_undef, NID_undef, NID_undef), 0xffff));
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// The shared list is the authority's intersection: peer order by default, configured order
+    /// under `SSL_OP_SERVER_PREFERENCE`, with unknown and un-offered entries skipped and duplicate
+    /// preference entries preserved. Before this change the accessor answered 0 unconditionally.
+    #[test]
+    fn t1_lib_sigalgs_shared_list_matches_the_authority() {
+        let _g = crate::test_support::lock_global_state();
+        let (ctx, s) = connection();
+        // SAFETY: every object is this frame's.
+        unsafe {
+            (*s).server = 1;
+            (*s).version = TLS1_2_VERSION;
+            (*s).min_ver = TLS1_2_VERSION;
+
+            // Peer order wins by default: 0x0503 precedes 0x0403 on the wire.
+            assert_eq!(
+                tls1_save_peer_sigalgs(s, &body(&[0x05, 0x03, 0x04, 0x03])),
+                1
+            );
+            assert_eq!(tls1_process_sigalgs(s), 1);
+            assert_eq!((*s).shared_sigalgs(), &[0x0503, 0x0403]);
+            let (mut sign, mut hash, mut signhash) = (-1, -1, -1);
+            let (mut rsig, mut rhash) = (0u8, 0u8);
+            assert_eq!(
+                SSL_get_shared_sigalgs(
+                    s,
+                    0,
+                    &mut sign,
+                    &mut hash,
+                    &mut signhash,
+                    &mut rsig,
+                    &mut rhash
+                ),
+                2
+            );
+            assert_eq!(
+                (sign, hash, signhash),
+                (EVP_PKEY_EC, NID_sha384, NID_ecdsa_with_SHA384)
+            );
+            assert_eq!(u16::from_be_bytes([rhash, rsig]), 0x0503);
+
+            // Unknown and not-configured entries are skipped; duplicates are preserved.
+            assert_eq!(
+                tls1_save_peer_sigalgs(s, &body(&[0x99, 0x99, 0x04, 0x03, 0x04, 0x03, 0x02, 0x03])),
+                1
+            );
+            assert_eq!(tls1_process_sigalgs(s), 1);
+            assert_eq!((*s).shared_sigalgs(), &[0x0403, 0x0403]);
+
+            // Server preference reverses the order to the configured list's.
+            (*s).options |= SSL_OP_SERVER_PREFERENCE;
+            assert_eq!(
+                tls1_save_peer_sigalgs(s, &body(&[0x05, 0x03, 0x04, 0x03])),
+                1
+            );
+            assert_eq!(tls1_process_sigalgs(s), 1);
+            assert_eq!((*s).shared_sigalgs(), &[0x0403, 0x0503]);
+
+            // A provider row is part of the configured list and resolves in the accessor.
+            (*s).options &= !SSL_OP_SERVER_PREFERENCE;
+            assert_eq!(tls1_save_peer_sigalgs(s, &body(&[0x09, 0x05])), 1);
+            assert_eq!(tls1_process_sigalgs(s), 1);
+            assert_eq!((*s).shared_sigalgs(), &[0x0905]);
+            let (mut sign, mut hash, mut signhash) = (-1, -1, -1);
+            assert_eq!(
+                SSL_get_shared_sigalgs(
+                    s,
+                    0,
+                    &mut sign,
+                    &mut hash,
+                    &mut signhash,
+                    ptr::null_mut(),
+                    ptr::null_mut()
+                ),
+                1
+            );
+            assert_eq!(
+                (sign, hash, signhash),
+                (NID_ML_DSA_65, NID_undef, NID_ML_DSA_65)
+            );
+
+            // Before any peer list is processed the accessor is in the authority's empty state.
+            assert_eq!(
+                SSL_get_shared_sigalgs(
+                    s,
+                    -1,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut()
+                ),
+                0
+            );
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    /// The owning value's constructors initialise every slot for exactly the stated count.
+    #[test]
+    fn t1_lib_sigalgs_owned_list_extent_matches_its_allocation() {
+        let from_bytes = OwnedSigalgs::from_scheme_bytes(&[0x04, 0x03, 0x05, 0x03]).unwrap();
+        assert_eq!(from_bytes.as_slice(), &[0x0403, 0x0503]);
+        let from_codes = OwnedSigalgs::from_codes(&[0x0804]).unwrap();
+        assert_eq!(from_codes.as_slice(), &[0x0804]);
+        assert!(OwnedSigalgs::from_codes(&[]).is_none());
+        assert!(OwnedSigalgs::from_scheme_bytes(&[0x04]).is_none());
+    }
+
+    /// §16 negative control: the pre-fix rule `body.get(2..2 + list_len)` accepted trailing bytes,
+    /// and the instrument must distinguish it from the fixed rule. The printed line is the
+    /// recorded output.
+    #[test]
+    fn t1_lib_sigalgs_negative_control_trailing_bytes() {
+        let body = [0x00u8, 0x02, 0x04, 0x03, 0xff];
+        let list_len = u16::from_be_bytes([body[0], body[1]]) as usize;
+        // The exact predicate the pre-fix `tls1_peer_sigalgs` used.
+        let pre_fix_accepts = body.get(2..2 + list_len).is_some();
+        let post_fix_accepts = tls1_peer_sigalgs(&body).is_some();
+        println!(
+            "negative control: pre-fix accepts trailing-byte vector = {pre_fix_accepts}; \
+             post-fix = {post_fix_accepts}"
+        );
+        assert!(pre_fix_accepts, "the pre-fix rule must exhibit the defect");
+        assert!(!post_fix_accepts, "the fixed rule must refuse it");
+    }
+
+    /// Allocator-injection probe (`scripts/adv-probe.sh`): a refused replacement keeps the
+    /// incumbent, and a successful replacement releases the previous block *by address* exactly
+    /// once. `#[ignore]`d because it installs the process-global `CRYPTO_set_mem_functions` hook;
+    /// it must run alone (`--exact --test-threads=1` with `OPENSSL_RS_ADV_PROBE=1`).
+    #[test]
+    #[ignore = "installs the process-global allocator hook; run one probe per process"]
+    fn t1_lib_sigalgs_repeated_save_releases_the_incumbent_by_address() {
+        let _g = crate::test_support::lock_global_state();
+        use crate::ssl::adv_alloc::{self, Ev};
+
+        adv_alloc::require_installed();
+        adv_alloc::assert_instrument_live();
+        let (ctx, s) = connection();
+        // SAFETY: every object is this frame's; the hook observes the crate's allocator seam.
+        unsafe {
+            assert_eq!(tls1_save_peer_sigalgs(s, &body(&[0x04, 0x03])), 1);
+            let first = (*s).peer_sigalgs().as_ptr() as usize;
+            assert_eq!((*s).peer_sigalgs(), &[0x0403]);
+
+            // A refused two-scheme (4-byte) replacement leaves the incumbent installed and does
+            // not release it.
+            adv_alloc::reset();
+            adv_alloc::arm_any(4);
+            assert_eq!(
+                tls1_save_peer_sigalgs(s, &body(&[0x04, 0x03, 0x05, 0x03])),
+                0
+            );
+            adv_alloc::disarm_any();
+            assert_eq!(
+                (*s).peer_sigalgs(),
+                &[0x0403],
+                "a refused allocation must leave the incumbent in place"
+            );
+            let events = adv_alloc::events();
+            assert!(
+                events.iter().any(|e| matches!(
+                    e,
+                    Ev::Malloc {
+                        n: 4,
+                        refused: true,
+                        ..
+                    }
+                )),
+                "the probe must have observed its intended refusal: {events:?}"
+            );
+            assert!(
+                !events
+                    .iter()
+                    .any(|e| matches!(e, Ev::Free { p } if *p == first)),
+                "the incumbent must not be released on a refused allocation: {events:?}"
+            );
+
+            // A successful replacement releases the previous block by address and installs the
+            // new one.
+            adv_alloc::reset();
+            assert_eq!(
+                tls1_save_peer_sigalgs(s, &body(&[0x05, 0x03, 0x06, 0x03])),
+                1
+            );
+            let second = (*s).peer_sigalgs().as_ptr() as usize;
+            assert_ne!(second, first);
+            assert_eq!((*s).peer_sigalgs(), &[0x0503, 0x0603]);
+            let events = adv_alloc::events();
+            assert!(
+                events
+                    .iter()
+                    .any(|e| matches!(e, Ev::Free { p } if *p == first)),
+                "the previous block must be released by its address: {events:?}"
+            );
+
+            SSL_free(s);
+            SSL_CTX_free(ctx);
+            adv_alloc::assert_no_double_free();
+        }
+    }
 }

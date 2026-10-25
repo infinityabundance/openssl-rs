@@ -1944,6 +1944,13 @@ unsafe fn commit_client_hello(
         if unsafe { crate::ssl::t1_lib::tls1_save_peer_sigalgs_raw(s, schemes) } == 0 {
             return Err(HelloReject::INTERNAL);
         }
+        // `tls1_choose_sigalgs_server` calls `tls1_process_sigalgs` once a peer list is present
+        // (`t1_lib.c:2970-2978`): the negotiated list is computed from the peer's order (or the
+        // server's, under `SSL_OP_SERVER_PREFERENCE`) and the configured default.
+        // SAFETY: `s` is live.
+        if unsafe { crate::ssl::t1_lib::tls1_process_sigalgs(s) } == 0 {
+            return Err(HelloReject::INTERNAL);
+        }
     }
 
     // SAFETY: `s` is live; `random` is exactly the 32-byte member's extent and `session_id` was
@@ -3234,15 +3241,9 @@ pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -
     let base_id = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) };
     // SAFETY: `pkey` is the live key; a non-EC key answers `NID_undef`.
     let curve_nid = unsafe { ssl_get_ec_curve_nid(pkey) };
-    // SAFETY: `s` is live; `peer_sigalgs` is the connection's own list of `peer_sigalgslen`
-    // native-endian schemes, alive until `SSL_free`.
-    let (sp, sn) = unsafe { ((*s).peer_sigalgs, (*s).peer_sigalgslen) };
-    let offered: &[u16] = if sp.is_null() || sn == 0 {
-        &[]
-    } else {
-        // SAFETY: the invariant above: a saved list is `sn` live `u16`s owned by `s`.
-        unsafe { core::slice::from_raw_parts(sp, sn) }
-    };
+    // SAFETY: `s` is live; its private peer list pair obeys the element-counted invariant, and the
+    // borrow lives until `choose_sigalg` returns.
+    let offered: &[u16] = unsafe { (*s).peer_sigalgs() };
     let Some((scheme, md)) = choose_sigalg(base_id, curve_nid, offered) else {
         // SAFETY: `s` is live.
         unsafe {
@@ -3730,13 +3731,11 @@ pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Opt
     };
     // The authority's TLS1.2 arm selects from `shared_sigalgs`; the peer's list is saved for every
     // version, and a TLS1.2 peer that sent none keeps the historical default.
-    // SAFETY: `s` is live; `peer_sigalgs` is the connection's own list of `peer_sigalgslen`
-    // native-endian schemes, alive until `SSL_free`.
-    let (sp, sn) = unsafe { ((*s).peer_sigalgs, (*s).peer_sigalgslen) };
-    if !sp.is_null() && sn != 0 {
-        // SAFETY: the invariant above: a saved list is `sn` live `u16`s owned by `s`.
-        let offered = unsafe { core::slice::from_raw_parts(sp, sn) };
-        if !offered.contains(&scheme) {
+    // SAFETY: `s` is live; the borrow ends before this frame touches any other member.
+    {
+        // SAFETY: `s` is live; the private peer pair obeys the element-counted invariant.
+        let offered = unsafe { (*s).peer_sigalgs() };
+        if !offered.is_empty() && !offered.contains(&scheme) {
             return None;
         }
     }
@@ -7661,6 +7660,40 @@ mod tls12_group_tests {
         assert_group_handshake(o::NID_X25519);
     }
 
+    /// charybdis sets `SSL_OP_NO_TLSv1` on a version-flexible `TLS_method()` context and leaves
+    /// the min/max protocol bounds unset. With the security level's version floor missing, the
+    /// server's walk treated SSLv3 as the maximum and answered the ClientHello with
+    /// `SSL_R_UNSUPPORTED_PROTOCOL` (`SSLV3_ALERT_HANDSHAKE_FAILURE`); with it, TLS1.2 is both
+    /// bounds and the handshake completes.
+    #[test]
+    fn charybdis_tls12_handshake_with_no_tlsv1() {
+        let _g = crate::test_support::lock_global_state();
+        // SAFETY: the pair is created and released in this frame.
+        unsafe {
+            ERR_clear_error();
+            let p = make_pair(c"AES128-GCM-SHA256", TLS1_2_VERSION, None, None);
+            // The authority configuration: no explicit bounds, `SSL_OP_NO_TLSv1` only.
+            (*p.s).min_proto_version = 0;
+            (*p.s).max_proto_version = 0;
+            (*p.s).options |= crate::ssl::ssl_ciph_table::SSL_OP_NO_TLSv1;
+            let (client_ok, server_ok) = drive(&p);
+            let server_version = (*p.s).version;
+            let reasons = if server_ok {
+                Vec::new()
+            } else {
+                error_reasons()
+            };
+            free_pair(p);
+            assert!(
+                client_ok && server_ok,
+                "TLS1.2 handshake with SSL_OP_NO_TLSv1 failed \
+                 (client={client_ok} server={server_ok}, server version={server_version:#06x}, \
+                 reasons={reasons:?})"
+            );
+            assert_eq!(server_version, TLS1_2_VERSION);
+        }
+    }
+
     // --- ECDSA scheme selection -------------------------------------------------------------
 
     /// `find_sig_alg` (`t1_lib.c:4551-4592`): the scheme follows the signing key's curve and
@@ -8102,7 +8135,7 @@ mod tls12_group_tests {
                 crate::ssl::t1_lib::tls1_save_peer_sigalgs(s, &[0x00, 0x02, 0x04, 0x03]),
                 1
             );
-            assert_eq!((*s).peer_sigalgslen, 1);
+            assert_eq!((*s).peer_sigalgs().len(), 1);
             assert_eq!(tls13_construct_cert_verify(s, true), 0);
             let reasons = error_reasons();
             assert!(
@@ -9395,6 +9428,76 @@ mod client_hello_parse_tests {
             unsafe { ossl_statem_in_error(s) },
             0,
             "a fatal rejection must poison the state machine"
+        );
+    }
+
+    /// A reduced-server ClientHello whose otherwise-valid extension block ends with a
+    /// `signature_algorithms` extension carrying exactly `body`.
+    fn hello_with_sigalgs_body(body: &[u8]) -> Vec<u8> {
+        let mut exts = vec![0x00, 43, 0x00, 0x03, 0x02, 0x03, 0x04]; // supported_versions
+        let mut groups = X25519_GROUP.to_be_bytes().to_vec();
+        let mut group_ext = (groups.len() as u16).to_be_bytes().to_vec();
+        group_ext.append(&mut groups);
+        exts.extend_from_slice(&[0x00, 10]);
+        exts.extend_from_slice(&(group_ext.len() as u16).to_be_bytes());
+        exts.extend_from_slice(&group_ext);
+        exts.extend_from_slice(&ext(TLSEXT_TYPE_SIG_ALGS, body));
+        client_hello_with_exts(&[], &TLS_AES_128_GCM_SHA256.to_be_bytes(), &exts)
+    }
+
+    /// S58: a zero-length `signature_algorithms` vector is the authority's
+    /// `SSL_AD_DECODE_ERROR` / `SSL_R_BAD_EXTENSION` on the server path
+    /// (`tls_parse_ctos_sig_algs`, `extensions_srvr.c:308-312`).
+    #[test]
+    fn t1_lib_sigalgs_server_empty_vector_is_decode_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        assert_rejected(
+            srv.s,
+            &hello_with_sigalgs_body(&[0x00, 0x00]),
+            SSL_R_BAD_EXTENSION,
+            SSL_AD_DECODE_ERROR,
+        );
+    }
+
+    /// S58: an odd-length vector is refused with the same alert and reason.
+    #[test]
+    fn t1_lib_sigalgs_server_odd_vector_is_decode_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        assert_rejected(
+            srv.s,
+            &hello_with_sigalgs_body(&[0x00, 0x03, 0x04, 0x03, 0x00]),
+            SSL_R_BAD_EXTENSION,
+            SSL_AD_DECODE_ERROR,
+        );
+    }
+
+    /// S58: a declared vector that does not exhaust the extension body is refused. The pre-fix
+    /// `tls1_peer_sigalgs` accepted the trailing byte (the negative control in `t1_lib` records
+    /// that predicate); `PACKET_as_length_prefixed_2` does not.
+    #[test]
+    fn t1_lib_sigalgs_server_trailing_bytes_is_decode_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        assert_rejected(
+            srv.s,
+            &hello_with_sigalgs_body(&[0x00, 0x02, 0x04, 0x03, 0xff]),
+            SSL_R_BAD_EXTENSION,
+            SSL_AD_DECODE_ERROR,
+        );
+    }
+
+    /// S58: an over-long declared vector is refused with the same alert and reason.
+    #[test]
+    fn t1_lib_sigalgs_server_over_long_vector_is_decode_bad_extension() {
+        let _g = crate::test_support::lock_global_state();
+        let srv = tls13_server();
+        assert_rejected(
+            srv.s,
+            &hello_with_sigalgs_body(&[0xff, 0xfe, 0x04, 0x03]),
+            SSL_R_BAD_EXTENSION,
+            SSL_AD_DECODE_ERROR,
         );
     }
 

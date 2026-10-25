@@ -129,7 +129,14 @@ def load_sweeps(refresh: Path) -> list[tuple[int, str, dict]]:
     return sorted(out)
 
 
-def family_names(atlas: dict) -> list[str]:
+def family_names(atlas: dict) -> tuple[list[str], list[str], list[str]]:
+    """Return ``(union of L7 families, candidate-only, authority-only)``.
+
+    A candidate/authority level difference is a measured result (the atlas can
+    record an authority-only HARNESS drop or a candidate-only lift), not a
+    malformed atlas.  It is disclosed in the rendered text, never reconciled by
+    changing a row.
+    """
     runs = atlas["body"]["runs"]
     levels: dict[tuple[str, str], set[str]] = {"candidate": set(), "authority": set()}
     for run in runs:
@@ -138,12 +145,7 @@ def family_names(atlas: dict) -> list[str]:
         if run.get("level") == "L7-functional":
             levels[run["subject"]].add(run["family_id"].split(":", 1)[-1])
     cand, auth = levels["candidate"], levels["authority"]
-    if cand != auth:
-        raise RenderError(
-            "candidate/authority L7 family sets differ: "
-            f"candidate-only={sorted(cand - auth)} authority-only={sorted(auth - cand)}"
-        )
-    return sorted(cand)
+    return sorted(cand | auth), sorted(cand - auth), sorted(auth - cand)
 
 
 def census_partition(census: dict, delta: dict) -> dict[str, int]:
@@ -445,7 +447,7 @@ class Evidence:
         self.sweeps = load_sweeps(refresh)
         self.candidate = candidate_identity(self.atlas)
         self.version = cargo_version(root)
-        self.families = family_names(self.atlas)
+        self.families, self.cand_only, self.auth_only = family_names(self.atlas)
         self.partition = census_partition(self.census, self.delta)
         self.tests = test_baseline(root, self.candidate)
         self.publish = publish_identity(refresh, root, self.version, self.candidate)
@@ -537,6 +539,28 @@ class Evidence:
 
     def open_stop(self) -> list[dict]:
         return [d for d in self.stop_defects if not d["closed_by"]]
+
+    def l7_agreement(self) -> str:
+        """The candidate/authority L7 comparison, including a measured asymmetry."""
+        corpus = self.corpus()
+        if not self.cand_only and not self.auth_only:
+            return (
+                "candidate and authority rows agree "
+                f"({corpus['candidate']} = {corpus['authority']})"
+            )
+        parts = []
+        if self.cand_only:
+            parts.append(
+                "candidate-only " + ", ".join(f"`{n}`" for n in self.cand_only)
+            )
+        if self.auth_only:
+            parts.append(
+                "authority-only " + ", ".join(f"`{n}`" for n in self.auth_only)
+            )
+        return (
+            f"candidate {corpus['candidate']} / authority {corpus['authority']} "
+            f"`L7-functional`; measured asymmetry: {'; '.join(parts)}"
+        )
 
     def identity_text(self) -> str:
         bits = []
@@ -652,7 +676,7 @@ class Evidence:
                 f"`{ATLAS_S}` (`body.runs`); `{STATUS_S}` (`consumers`) |",
                 "| **Downstream drop-in, 1000-family corpus** | "
                 f"**{corpus['candidate']} / {corpus['total']} at `L7-functional`**; "
-                f"candidate {corpus['candidate']} = authority {corpus['authority']}; "
+                f"{self.l7_agreement()}; "
                 f"**{corpus['recipes']} recipes, {corpus['built']} built, {corpus['linked']} linked**; "
                 f"{corpus['loaded']} loaded, {corpus['l4']} `L4-linked`, "
                 f"{corpus['failed']} failed, {corpus['not_attempted']} not attempted "
@@ -686,7 +710,7 @@ class Evidence:
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
                 "— no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation "
                 "control, authority differential, full forensic regeneration or held-out "
-                "compatibility for the S16–S53 cluster | "
+                "compatibility for the S16–S61 cluster | "
                 f"`{STATUS_S}` (`gates.boundary_gate`, `gates.seal_gate`) |",
                 "| **Allocator / ABI invariants** | "
                 f"**preserved** — recorded invariant planes: {invariants or 'none recorded'} | "
@@ -786,8 +810,8 @@ class Evidence:
         return "\n".join(
             [
                 f"**{len(self.families)} of {corpus['total']} counted corpus families are "
-                "`L7-functional`** — candidate and authority rows agree "
-                f"({corpus['candidate']} = {corpus['authority']}); {corpus['failed']} failed, "
+                "`L7-functional`** — " + self.l7_agreement() + "; "
+                f"{corpus['failed']} failed, "
                 f"{corpus['loaded']} loaded, {corpus['recipes']} recipes, "
                 f"{corpus['not_attempted']} not attempted.",
                 "",
@@ -899,7 +923,7 @@ class Evidence:
                 "| **Not discharged** | " + not_discharged + " |",
                 "| **BOUNDARY / SEAL gates** | "
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
-                "— the S16–S53 cluster has no independent caller/dependency-closure audit, "
+                "— the S16–S61 cluster has no independent caller/dependency-closure audit, "
                 "Miri/ASan/Loom/mutation control, authority differential, full forensic "
                 "regeneration or held-out compatibility. |",
                 "| **Known gaps** | " + (gap_bits or "none recorded") + " |",

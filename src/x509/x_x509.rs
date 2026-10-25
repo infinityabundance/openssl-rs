@@ -74,6 +74,7 @@ use crate::runtime::obj::{Asn1Object, OBJ_obj2nid};
 use crate::runtime::owned_buf::OwnedBuf;
 use crate::runtime::owned_str::OwnedCStr;
 use crate::runtime::thread::CryptoRwlock;
+use crate::x509::v3_purp::ossl_x509v3_cache_free;
 use crate::x509::x509_set::X509SigInfo;
 use crate::x509::x_exten::X509_EXTENSION_it;
 use crate::x509::x_name::{X509Name, X509_NAME_it};
@@ -506,12 +507,9 @@ unsafe extern "C" fn x509_cb(
 
     match operation {
         ASN1_OP_D2I_PRE => {
-            // SAFETY: `ret` is live. The cache releases the authority performs here for
-            // `akid`/`crldp`/`policy_cache`/`altname`/`nc`/`rfc3779_addr`/`rfc3779_asid` are
-            // withheld: each names a `v3_*`/`pcy_*` free whose unit is not landed, and every one is
-            // only ever written by `ossl_x509v3_cache_extensions` (`x509_v3.c`, also not landed),
-            // so on every object this crate can build the pointers are NULL. The `aux` free and the
-            // two string frees are landed.
+            // SAFETY: `ret` is live. The cache values installed by
+            // `ossl_x509v3_cache_extensions` are released through the cache's one owner before the
+            // object is re-zeroed below; the string member and the `aux` block are released here.
             unsafe {
                 CRYPTO_free_ex_data(
                     CRYPTO_EX_INDEX_X509,
@@ -519,8 +517,8 @@ unsafe extern "C" fn x509_cb(
                     &raw mut (*ret).ex_data,
                 );
                 X509_CERT_AUX_free((*ret).aux.cast());
-                ASN1_OCTET_STRING_free((*ret).skid);
                 ASN1_OCTET_STRING_free((*ret).distinguishing_id);
+                ossl_x509v3_cache_free(ret);
             }
             // The authority's `/* fall through */`.
             // SAFETY: `ret` is live.
@@ -531,8 +529,9 @@ unsafe extern "C" fn x509_cb(
             return unsafe { x509_new_post(ret) };
         }
         ASN1_OP_FREE_POST => {
-            // SAFETY: `ret` is live. The six withheld cache frees are the same ones the
-            // `ASN1_OP_D2I_PRE` arm withholds, for the same reason; `aux` and the two strings land.
+            // SAFETY: `ret` is live. The extension-cache values are released through the cache's
+            // one owner (exactly once per installed slot); `aux`, `distinguishing_id` and `propq`
+            // have their own releases here.
             unsafe {
                 CRYPTO_free_ex_data(
                     CRYPTO_EX_INDEX_X509,
@@ -540,8 +539,8 @@ unsafe extern "C" fn x509_cb(
                     &raw mut (*ret).ex_data,
                 );
                 X509_CERT_AUX_free((*ret).aux.cast());
-                ASN1_OCTET_STRING_free((*ret).skid);
                 ASN1_OCTET_STRING_free((*ret).distinguishing_id);
+                ossl_x509v3_cache_free(ret);
                 // `ret` is live and its `propq` obeys the member-buffer invariant, so `clear` is
                 // that block's one release at the authority's own site (`:98`); a NULL incumbent
                 // makes it a no-op.
