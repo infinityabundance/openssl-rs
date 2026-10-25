@@ -1,0 +1,428 @@
+{
+  "schema": "safe-c33/atlas-refresh/v5/v1",
+  "kind": "v5-seal-measurement",
+  "subphase": "V5",
+  "date_utc": "2026-10-25",
+  "branch": "integrate/safe-c33",
+  "source_identity": {
+    "repository_head": "47cb7dfd63c5d5e4e2639cc4c6639b616d001254",
+    "source_head_short": "47cb7dfd6",
+    "source_head_subject": "Merge stage/p25/v4-closure",
+    "tracked_tree_clean_at_start": true,
+    "src_changed_this_subphase": false,
+    "docker_changed_this_subphase": false,
+    "authority": "openssl-3.6.4-production"
+  },
+  "execution": {
+    "role": "subagent",
+    "host_execution": false,
+    "committed": false,
+    "pushed": false,
+    "venue_image": "openssl-rs-court-expand:1",
+    "container_name": "openssl-rs-court-expand",
+    "cargo_build_jobs": 4,
+    "cargo_target_dir": "/work/target",
+    "tmpdir": "/work/court/tmp",
+    "memory_before_heavy_commands": "host MemAvailable 53020148 kB; one heavy command at a time",
+    "note": "The Phase-2 build rewrote the tracked install/artefacts and the two downstream atlases, as a measurement run is expected to. This receipt is the only new tracked evidence."
+  },
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "6cc932b25b6c8f66a69dafadbc043cf3cbac213d88e687038ff39f0f88335ff2",
+    "libssl_so_3_sha256": "f5431a18e5d41b39d725ad8764275bbb4daf8f5919e0c9683d72a8e488d52418",
+    "legacy_so_sha256": "6afdba5e810328d2940c609768bec957ef26395e3dfdd35f87f2cb478e2ae870",
+    "openssl_exe_sha256": "a19d6ffa210263c56825f9b224d7c4b7963f46d267812fcb6cefc7d165a03c1e"
+  },
+  "task_a_rebuild_and_abi": {
+    "command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh",
+    "exit_code": 0,
+    "log": "court/tmp/v5-build.log",
+    "log_sha256": "83553f8cc2792c7d99969948e052f21a9452b55f71cfa732a0cff996f37be494",
+    "abi_courts": {
+      "count": 11,
+      "all_pass": true,
+      "names": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "artifact": "artifacts/phase2/COURTS.json",
+      "artifact_file_sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e",
+      "artifact_body_hash": "d4b9e82420753db75260424af6865214a4bcd6384d701d13a757d83fa29b1d53",
+      "scaffold_warning": "PASSING THESE COURTS IS NOT PARITY; these courts establish the structural distribution shell only."
+    },
+    "legacy_provider": {
+      "readelf_d": [
+        "NEEDED libcrypto.so.3",
+        "NEEDED libm.so.6",
+        "NEEDED libgcc_s.so.1",
+        "NEEDED libc.so.6",
+        "NEEDED ld-linux-x86-64.so.2",
+        "RUNPATH $ORIGIN/.."
+      ],
+      "ldd_without_env": "libcrypto.so.3 => /work/artifacts/phase2/install/lib/ossl-modules/../libcrypto.so.3",
+      "without_OPENSSL_MODULES": {
+        "log": "court/tmp/v5-provider-without.log",
+        "log_sha256": "2f02ac73814f9d68f21a98627b4ffcc69ef24087c8fd3ebd2885a3953a8dbf80",
+        "observed": ["modulesdir=(null)", "default=loaded", "legacy=NULL", "fetch_md4=NULL", "exit=1"]
+      },
+      "with_OPENSSL_MODULES": {
+        "log": "court/tmp/v5-provider-with.log",
+        "log_sha256": "0d0b8860805ab0a379f15d320e44c6efd025dc0207280536c0592cd0aea83fc2",
+        "observed": ["modulesdir=(null)", "default=loaded", "legacy=loaded", "fetch_md4=ok", "md4_abc=a448017aaf21d8525fc10ae87aa6729d", "exit=0"]
+      },
+      "verdict": "legacy.so loads and MD4(abc) matches the known vector with OPENSSL_MODULES; the compiled-in MODULESDIR remains the empty sentinel (recorded Phase-16 divergence), so a true no-environment drop-in is still not achieved."
+    }
+  },
+  "task_b_no_reuse_measurement": {
+    "evidence_reuse": null,
+    "reuse_flags": "none: both tools were run with --measure only; no --only, no --reuse-committed, no --reuse-previous-candidate",
+    "commands": [
+      "python3 forensics/tools/downstream_build_link.py --measure",
+      "python3 forensics/tools/downstream_runtime.py --measure"
+    ],
+    "build_link_log": {
+      "path": "court/tmp/v5-build-link.log",
+      "sha256": "c917df0da84adc380622ac79aa7fb74ce348b7a121e988f5e4f7c973060e6cbf"
+    },
+    "runtime_log": {
+      "path": "court/tmp/v5-runtime.log",
+      "sha256": "3a61191e522384f169e4d87a09f7d6f75d2176d24e4815642994d0332f37b80b"
+    },
+    "build_link_summary_lines": [
+      "[downstream-build-link] elapsed=5097s with_recipe=307 no_recipe=693",
+      "  authority configured=274 built=253 linked=245 failed=62",
+      "  candidate configured=274 built=252 linked=245 failed=62",
+      "  candidate_linkage_proven=245 candidate_specific_patch_count=0",
+      "  -> forensics/downstream/build-link-atlas.json"
+    ],
+    "runtime_summary_lines": [
+      "[downstream-runtime] elapsed=5910s with_recipe=307 no_recipe=693",
+      "  authority loaded=221 runtime=208 functional=206 failed=8 not_attempted=755",
+      "  candidate loaded=221 runtime=207 functional=205 failed=9 not_attempted=755",
+      "  candidate_reaches_baseline=305 reaches_linked_baseline=244 below_baseline=1 baseline_not_linked=62 candidate_failures={'acquire-failure': 693, 'link-failure': 62, 'load-failure': 5, 'functional-failure': 2, 'runtime-failure': 2}",
+      "  -> forensics/downstream/runtime-functional-atlas.json"
+    ],
+    "atlases": {
+      "build_link": {
+        "path": "forensics/downstream/build-link-atlas.json",
+        "evidence_reuse": null,
+        "candidate_identity_matches_rebuild": true
+      },
+      "runtime_functional": {
+        "path": "forensics/downstream/runtime-functional-atlas.json",
+        "evidence_reuse": null,
+        "candidate_identity_matches_rebuild": true
+      }
+    },
+    "before_after": {
+      "before": {
+        "atlas_state": "carried forward, candidate_identity_match=true but all 307 rows bound to the S59/S60/S61 supersession (not the current candidate)",
+        "authority": {"loaded": 221, "runtime": 207, "functional": 205, "failed": 6},
+        "candidate": {"loaded": 221, "runtime": 208, "functional": 206, "failed": 5},
+        "candidate_reaches_baseline": 306,
+        "candidate_below_baseline": 0
+      },
+      "after": {
+        "atlas_state": "fresh at 6cc932b2/f5431a18 with evidence_reuse=null",
+        "authority": {"loaded": 221, "runtime": 208, "functional": 206, "failed": 8},
+        "candidate": {"loaded": 221, "runtime": 207, "functional": 205, "failed": 9},
+        "candidate_reaches_baseline": 305,
+        "candidate_below_baseline": 1
+      }
+    }
+  },
+  "regressions": {
+    "candidate_only_drops_vs_prior": [],
+    "candidate_level_drops_vs_prior_all_authority_symmetric": [
+      {
+        "family": "charybdis",
+        "prior_candidate": "L7-functional",
+        "new_candidate": "L4-linked",
+        "authority_also_dropped": true,
+        "prior_authority": "L7-functional",
+        "new_authority": "L4-linked",
+        "classification": "ENVIRONMENT",
+        "evidence": "both subjects launch exit=127: 'libltdl.so.7: cannot open shared object file: No such file or directory'"
+      },
+      {
+        "family": "memcached",
+        "prior_candidate": "L7-functional",
+        "new_candidate": "L4-linked",
+        "authority_also_dropped": true,
+        "prior_authority": "L7-functional",
+        "new_authority": "L4-linked",
+        "classification": "ENVIRONMENT",
+        "evidence": "both subjects launch exit=127: 'libevent-2.1.so.7: cannot open shared object file: No such file or directory'"
+      },
+      {
+        "family": "nsd",
+        "prior_candidate": "L7-functional",
+        "new_candidate": "L4-linked",
+        "authority_also_dropped": true,
+        "prior_authority": "L7-functional",
+        "new_authority": "L4-linked",
+        "classification": "ENVIRONMENT",
+        "evidence": "both subjects launch exit=127: 'libevent-2.1.so.7: cannot open shared object file: No such file or directory'"
+      }
+    ],
+    "candidate_level_rises": [
+      {"family": "gftp-text", "prior": "L4-linked", "new": "L7-functional", "both_subjects": true},
+      {"family": "poco", "prior": "L4-linked", "new": "L7-functional", "both_subjects": true},
+      {"family": "tinc", "prior_authority": "L5-loaded", "new_authority": "L7-functional", "prior_candidate": "L7-functional", "new_candidate": "L7-functional"},
+      {"family": "xilinx-bootgen", "prior_authority": "L4-linked", "new_authority": "L7-functional", "prior_candidate": "L4-linked", "new_candidate": "L5-loaded"}
+    ],
+    "candidate_below_authority_baseline_new": [
+      {
+        "family": "xilinx-bootgen",
+        "prior_authority": "L4-linked",
+        "prior_candidate": "L4-linked",
+        "new_authority": "L7-functional",
+        "new_candidate": "L5-loaded",
+        "authority_dropped": false,
+        "note": "Not a drop from the prior candidate grade (L4 -> L5); it is a newly exposed candidate-only baseline gap because the authority now reaches L7.",
+        "classification": "IMPLEMENTATION"
+      }
+    ],
+    "unchanged_candidate_only_build_divergence": [
+      {
+        "family": "bind9",
+        "prior_authority": "L3-built",
+        "prior_candidate": "L2-configured",
+        "new_authority": "L3-built",
+        "new_candidate": "L2-configured",
+        "classification": "IMPLEMENTATION",
+        "note": "Pre-existing S60 divergence; no grade change in V5."
+      }
+    ]
+  },
+  "candidate_only_findings": [
+    {
+      "id": "V5-I1",
+      "family": "xilinx-bootgen",
+      "grade": {"authority": "L7-functional", "candidate": "L5-loaded"},
+      "classification": "IMPLEMENTATION",
+      "consumer": "Xilinx Bootgen 2022.2",
+      "workload": "sign -> verify -> tampered signature reject + keyed-KDF known output + wrong-key differs",
+      "failing_phase": "the KDF vector path passes under both subjects; the signing path fails only under the candidate",
+      "failing_call": {
+        "source": "bind9-independent consumer source, authkeys.cpp",
+        "first_fault": "memcpy(D, RSA_get0_d(rsaInst.rsa)->d, keySize) at authkeys.cpp:207",
+        "same_layout_assumption": [
+          "memcpy(N, RSA_get0_n(rsaInst.rsa)->d, keySize) at authkeys.cpp:231",
+          "memcpy(E, RSA_get0_e(rsaInst.rsa)->d, sizeof(uint32_t)) at authkeys.cpp:232"
+        ],
+        "crash": "candidate segfaults (exit=-11) in the memcpy from the BIGNUM's first word"
+      },
+      "subjects": {
+        "authority": {
+          "RSA_get0_n": {"first_word": "valid heap pointer", "top": 64, "dmax": 64, "neg": 0, "flags": 1},
+          "RSA_get0_d": {"first_word": "valid heap pointer", "top": 64, "dmax": 64, "neg": 0, "flags": 5},
+          "RSA_get0_e": {"first_word": "valid heap pointer", "top": 1, "dmax": 1, "neg": 0, "flags": 1},
+          "copy_512_bytes_n": "ok",
+          "copy_512_bytes_d": "ok",
+          "copy_4_bytes_e": "ok"
+        },
+        "candidate": {
+          "RSA_get0_n": {"first_word": "0x41 (Vec bookkeeping, not a pointer)", "interpreted_as_c_struct": {"d": "0x41", "top": -1967539104, "dmax": 22008, "neg": 64, "flags": 0}},
+          "RSA_get0_d": {"first_word": "0x41 (Vec bookkeeping, not a pointer)"},
+          "RSA_get0_e": {"first_word": "0x1 (Vec bookkeeping, not a pointer)"},
+          "copy_512_bytes_n": "SIGSEGV before any bytes are copied"
+        }
+      },
+      "smallest_causal_region": {
+        "path": "src/bn/bignum.rs",
+        "lines": "90-99",
+        "construct": "#[repr(C)] pub struct BigNum { d: Vec<Limb>, neg: c_int, flags: c_int }",
+        "explanation": "The candidate BIGNUM begins with a Rust Vec (its first word is capacity/pointer bookkeeping), not the authority's 'BN_ULONG *d; int top; int dmax; int neg; int flags'. Any C consumer that reads the legacy bignum_st seen through RSA_get0_n/d/e therefore reads a non-pointer as d."
+      },
+      "returning_boundary": {
+        "path": "src/rsa/object.rs",
+        "lines": "1429-1450",
+        "functions": ["RSA_get0_n", "RSA_get0_e", "RSA_get0_d"]
+      },
+      "classification_rationale": "Reachable, candidate-only, and a hard crash; the authority presents the legacy struct layout and signs successfully. This is an implementation ABI/representation divergence, not a harness or fixture artefact.",
+      "not_a_memory_safety_conclusion": "This is a compatibility failure observed in a consumer; it is not a SAFETY_DISCHARGED result and no closure is admitted."
+    },
+    {
+      "id": "V5-I2",
+      "family": "bind9",
+      "grade": {"authority": "L3-built", "candidate": "L2-configured"},
+      "classification": "IMPLEMENTATION",
+      "consumer": "BIND 9.18.49 build-time helper cfg_test",
+      "failing_call": {
+        "source": "lib/isc/tls.c:88",
+        "call": "RUNTIME_CHECK(OPENSSL_init_ssl(OPENSSL_INIT_ENGINE_ALL_BUILTIN | OPENSSL_INIT_LOAD_CONFIG, NULL) == 1)",
+        "observed_candidate": "OPENSSL_init_ssl returns 0; cfg_test aborts (SIGABRT/exit 134) with 'tls.c:88:tls_initialize(): fatal error: RUNTIME_CHECK(...) failed'",
+        "observed_authority": "OPENSSL_init_ssl returns 1; cfg_test exits 0 and writes the zone grammar"
+      },
+      "isolated_values": {
+        "authority": {"flags_0": 1, "LOAD_CONFIG": 1, "ENGINE_ALL_BUILTIN": 1, "ENGINE_ALL_BUILTIN|LOAD_CONFIG": 1},
+        "candidate": {"flags_0": 1, "LOAD_CONFIG": 1, "ENGINE_ALL_BUILTIN": 0, "ENGINE_ALL_BUILTIN|LOAD_CONFIG": 0},
+        "candidate_error": "078C0105:common libcrypto routines:OPENSSL_init_crypto:init fail:../../src/openssl-3.6.4/crypto/init.c:504"
+      },
+      "smallest_causal_region": {
+        "path": "src/runtime/init.rs",
+        "lines": "276-281 and 807-810",
+        "construct": "INIT_UNSUPPORTED = OPENSSL_INIT_ENGINE_RDRAND | OPENSSL_INIT_ENGINE_OPENSSL | OPENSSL_INIT_ENGINE_CRYPTODEV | OPENSSL_INIT_ENGINE_CAPI | OPENSSL_INIT_ENGINE_PADLOCK | OPENSSL_INIT_ENGINE_AFALG; the refusal raises ERR_R_INIT_FAIL and returns 0",
+        "explanation": "OPENSSL_INIT_ENGINE_ALL_BUILTIN includes the six unsupported engine bits, so the composite flag is refused. The refusal is deliberate and documented, but it is consumer-visible as a failed init."
+      },
+      "classification_rationale": "Not a harness artefact: the same build/harness succeeds under the authority, and the candidate returns 0 from a documented public init API. It is a retained compatibility divergence (ENGINE bits not implemented), not a memory-safety finding.",
+      "prior_status": "This is the pre-existing S60 candidate build asymmetry; V5 reproduces it and pins the exact call and refusal site, but does not fix it."
+    }
+  ],
+  "safe_33_cohort_recheck": {
+    "cohort_source": "forensics/memory-safety/campaign/safe-c33/state.json#cohort",
+    "count": 33,
+    "both_subjects_l7_functional": 33,
+    "safe_compatible": 0,
+    "grades": [
+      {"family": "curl", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "cyrus-sasl", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "dovecot", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "fetchmail", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "fossil", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "haproxy", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "hiredis-ssl", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "iperf3", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "isync", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "keepalived", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "kmod", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "ldns", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "libarchive", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "libevent", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "librdkafka", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "libretls", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "links", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "monit", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "mosquitto", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "nginx", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "openssh", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "openvpn", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "proxytunnel", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "pure-ftpd", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "redis", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "rsync", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "socat", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "squid", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "sslscan", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "ssmtp", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "stunnel", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "tinc", "authority": "L7-functional", "candidate": "L7-functional"},
+      {"family": "tnftp", "authority": "L7-functional", "candidate": "L7-functional"}
+    ],
+    "closure_status": {
+      "state": "REFUSED",
+      "source": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v4-consumer-closure.json#verdict",
+      "safe_compatible": false,
+      "reason": "closure refused: MISSING_BOUNDARY_RECEIPT (70 reachable file(s) carry production obligations but no boundary-sweep receipt owns them); UNKNOWN_OBLIGATION (163 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED); UNKNOWN_MECHANISM (8 reachable file(s) with production obligations map to no registered mechanism)",
+      "note": "No family may be described as SAFE_COMPATIBLE regardless of its L7 grade. L7-functional is compatibility evidence only."
+    }
+  },
+  "non_l7_classification": {
+    "rows_total": 1589,
+    "rows_total_basis": "2000 rows (1000 frozen families x 2 subjects) minus 411 L7 rows (authority 206 + candidate 205)",
+    "counts": {
+      "SOURCE-UNREACHABLE": 1386,
+      "ENVIRONMENT": 120,
+      "FIXTURE": 75,
+      "HARNESS": 6,
+      "IMPLEMENTATION": 2
+    },
+    "rules": [
+      {
+        "category": "SOURCE-UNREACHABLE",
+        "rows": 1386,
+        "basis": "693 families with no admitted pristine-source recipe, one authority and one candidate row each",
+        "evidence": "reason: 'no admitted pristine-source build recipe is recorded for this family; the atlas does not manufacture a source URL'; build-link with_recipe=307, no_recipe=693"
+      },
+      {
+        "category": "ENVIRONMENT",
+        "rows": 120,
+        "composition": [
+          {"rows": 44, "items": "22 configure-failure families x 2 subjects", "families": ["dnsdist", "dnsperf", "dsniff", "galera-3", "galera-4", "globus-gsi-cert-utils", "gridsite-clients", "i2pd", "ipmitool", "jabberd2", "megatools", "ophcrack", "partimage", "pdns", "pdns-recursor", "python3-m2crypto", "rspamd", "stubby", "tcpflow", "tpm2-tools", "xar", "xrdp"], "evidence": "missing dev dependency or configure incompatibility, e.g. 'Package libedit ... not found', 'Berkeley DB with 1.85 compatibility not found', 'Cannot find ssl libraries', missing libffi/python2.7, autoreconf failure; identical on both subjects"},
+          {"rows": 70, "items": "35 build-failure families x 2 subjects (all build failures except bind9's candidate-only arm and the link-failure rows)", "evidence": "both subjects fail under the same recipe and image, e.g. 'make: No targets specified', 'Cannot regenerate version.cmake from git', 'the build produced no artifact matching ...'; symmetric, so not candidate-attributable"},
+          {"rows": 6, "items": "charybdis, memcached, nsd x 2 subjects", "evidence": "launch exit=127, missing transitive shared libraries libltdl.so.7 / libevent-2.1.so.7; authority and candidate identical"}
+        ]
+      },
+      {
+        "category": "FIXTURE",
+        "rows": 75,
+        "composition": [
+          {"rows": 7, "items": "artifact declares no libssl/libcrypto dependency, so the subject was not consumed", "families": ["bind9 (authority)", "libewf (both)", "libfsapfs-utils (both)", "unbound-anchor (both)"], "evidence": "build/link residual: 'the built artifact declares no libssl/libcrypto dependency'"},
+          {"rows": 62, "items": "31 families x 2 subjects with no admitted deterministic local workload (19 L4-linked, 11 L5-loaded, 1 L6-runtime per subject)", "evidence": "reason: 'no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured' (residual out-of-scope)"},
+          {"rows": 2, "items": "libshout x 2 subjects", "evidence": "fixture peer timed out: 'TimeoutError(timed out) conns=2' in the SOURCE-over-TLS peer transcript; identical on both subjects"},
+          {"rows": 2, "items": "fdm x 2 subjects", "evidence": "negative fixture fetched 'Connection refused' and aborted, so the 'unrelated CA must abort the IMAPS fetch' expectation was never exercised; identical on both subjects"},
+          {"rows": 2, "items": "perl-net-dns-sec x 2 subjects", "evidence": "the harness-generated key is not a BIND private key: '/tmp/s46-netdnssec.key does not appear to be a BIND private key' at l7_perl_net_dns_sec.pl:40; identical on both subjects"}
+        ]
+      },
+      {
+        "category": "HARNESS",
+        "rows": 6,
+        "composition": [
+          {"rows": 2, "items": "ckermit x 2 subjects", "evidence": "extraction of the fetched pristine source failed with no diagnostic output"},
+          {"rows": 2, "items": "medusa x 2 subjects", "evidence": "launch exit=0 but no version text, so the version probe did not admit a load proof"},
+          {"rows": 2, "items": "python3-scrypt x 2 subjects", "evidence": "L7 workload harness did not compile: collect2/ld returned 1"}
+        ]
+      },
+      {
+        "category": "IMPLEMENTATION",
+        "rows": 2,
+        "composition": [
+          {"rows": 1, "items": "xilinx-bootgen candidate", "evidence": "V5-I1: SIGSEGV in bootgen's memcpy from RSA_get0_d/n/e()->d; BIGNUM layout divergence"},
+          {"rows": 1, "items": "bind9 candidate", "evidence": "V5-I2: OPENSSL_init_ssl(ENGINE_ALL_BUILTIN|LOAD_CONFIG) returns 0 and cfg_test aborts"}
+        ]
+      }
+    ],
+    "no_unclassified_rows": true
+  },
+  "seal_elements_not_run": [
+    {
+      "element": "full Phase-25 forensic regeneration",
+      "status": "NOT_RUN",
+      "gate": "SEAL",
+      "why": "V5 measured compatibility and re-probed the cohort; it did not regenerate the pinned census/attribution (c09eef8b, 868 files) or the dependency-closure receipts. AGENTS.md section 6 defers full forensic regeneration to seal points; no regeneration was performed here."
+    },
+    {
+      "element": "held-out cryptographic assurance",
+      "status": "NOT_RUN",
+      "gate": "SEAL",
+      "why": "No Wycheproof/ACVP/CAVP vectors, no dudect/ctgrind timing campaign, and no held-out cryptographic corpus were run. L7-functional is compatibility evidence, not a cryptographic result."
+    },
+    {
+      "element": "release build",
+      "status": "NOT_RUN",
+      "gate": "SEAL",
+      "why": "The Phase-2 install is a release-profile build of the library, not the release candidate/reproducibility artefact. No release build, packaging, or reproducibility check was performed in V5."
+    },
+    {
+      "element": "independent review",
+      "status": "NOT_RUN",
+      "gate": "SEAL",
+      "why": "The agent that produced this measurement also wrote the receipt. No independent reviewer adjudicated the evidence (AGENTS.md sections 7 and 15)."
+    },
+    {
+      "element": "BOUNDARY gate for the consumer cohort",
+      "status": "NOT_RUN",
+      "gate": "BOUNDARY/SEAL",
+      "why": "V4 already refused closure (MISSING_BOUNDARY_RECEIPT / UNKNOWN_OBLIGATION / UNKNOWN_MECHANISM), so no consumer closure can be admitted at this HEAD."
+    }
+  ],
+  "non_claims": [
+    "No consumer family is SAFE_COMPATIBLE; consumers remain 0/33. L7-functional is compatibility evidence only.",
+    "The two IMPLEMENTATION findings (xilinx-bootgen BIGNUM layout, bind9 ENGINE_ALL_BUILTIN refusal) are compatibility defects, not memory-safety conclusions; neither is SAFETY_DISCHARGED.",
+    "The three L7->L4 drops (charybdis, memcached, nsd) are symmetric authority drops caused by missing transitive shared libraries in the launch environment; they are not candidate regressions.",
+    "The xilinx-bootgen candidate grade rose L4 -> L5; its below-baseline status is newly exposed by the authority reaching L7, not a drop from its prior grade.",
+    "The build-link asymmetry (authority built 253, candidate built 252) is the single pre-existing bind9 divergence; linked counts are equal (245) and candidate_specific_patch_count is 0.",
+    "The legacy provider still requires OPENSSL_MODULES because the compiled-in MODULESDIR is the empty sentinel; the no-environment drop-in goal is not met.",
+    "This receipt records observed output from one court run at one source identity; it does not establish reproducibility on another host or toolchain."
+  ]
+}
