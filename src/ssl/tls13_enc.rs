@@ -2549,15 +2549,15 @@ mod tests {
         let transcript = [0u8; 4];
         let mut calc = [0u8; 32];
         // Sign a well-formed binder, then verify it: the exact-length path still works.
-        // SAFETY: `md` is the live SHA-256 method table; every buffer is a live slice.
         assert_eq!(
+            // SAFETY: `md` is the live SHA-256 method table; every buffer is a live slice.
             unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut calc, true, &[]) },
             1
         );
         assert_ne!(calc, [0u8; 32], "the binder derivation produced a value");
         let mut check = [0u8; 32];
-        // SAFETY: as above.
         assert_eq!(
+            // SAFETY: as above.
             unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut check, false, &calc) },
             1
         );
@@ -2566,8 +2566,8 @@ mod tests {
         // 31-byte input is the defect this controls).
         let mut untouched = [0u8; 32];
         let short = [0u8; 31];
-        // SAFETY: `md` is live; `short` is a 31-byte slice the callee must not read past.
         assert_eq!(
+            // SAFETY: `md` is live; `short` is a 31-byte slice the callee must not read past.
             unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut untouched, false, &short) },
             0
         );
@@ -2577,14 +2577,14 @@ mod tests {
         );
         // A long binder is refused too.
         let long = [0u8; 33];
-        // SAFETY: as above.
         assert_eq!(
+            // SAFETY: as above.
             unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut check, false, &long) },
             0
         );
         // An empty binder is the shortest invalid case.
-        // SAFETY: as above.
         assert_eq!(
+            // SAFETY: as above.
             unsafe { tls13_psk_do_binder(md, &transcript, &psk, &mut check, false, &[]) },
             0
         );

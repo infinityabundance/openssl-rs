@@ -2948,6 +2948,9 @@ mod tests {
     #[test]
     fn obj_name_do_all_reports_entries() {
         let _g = lock();
+        /// # Safety
+        /// `arg` is the live `&mut usize` passed to `OBJ_NAME_do_all`; `_name` is an entry the
+        /// walk supplies for the call and is not dereferenced here.
         unsafe extern "C" fn count_cb(_name: *const ObjName, arg: *mut c_void) {
             // SAFETY: `arg` is the `&mut usize` passed below.
             let counter = unsafe { &mut *(arg as *mut usize) };
@@ -2988,6 +2991,9 @@ mod tests {
             removed: usize,
         }
 
+        /// # Safety
+        /// The registry calls this destructor with the name, type and data it recorded; all
+        /// three are borrowed for the call only and must not be released here.
         unsafe extern "C" fn counting_free(
             _name: *const c_char,
             _type_: c_int,
@@ -2996,13 +3002,24 @@ mod tests {
             FREED.fetch_add(1, Ordering::SeqCst);
         }
 
+        /// # Safety
+        /// `on` is a live registry entry supplied by the walk and valid for the call; `arg` is
+        /// the live `&mut Ctx` passed below. Re-entering the registry is permitted: the walk
+        /// holds a snapshot, so `on` stays valid across the nested lookup.
         unsafe extern "C" fn walk_cb(on: *const ObjName, arg: *mut c_void) {
+            // SAFETY: `arg` is the `&mut Ctx` passed to the walk, exclusively borrowed for the
+            // walk's duration.
             let ctx = unsafe { &mut *(arg as *mut Ctx) };
             ctx.seen += 1;
             // The production callback does exactly this nested read.
+            // SAFETY: `on` is a live snapshot entry; `name` is NUL-terminated and `type_` is
+            // its recorded name index.
             let got = unsafe { OBJ_NAME_get((*on).name, (*on).type_) };
             assert!(!got.is_null(), "a nested lookup must still resolve");
+            // SAFETY: as above; `ctx.b_name` is the test's own NUL-terminated name.
             if unsafe { (*on).name } == ctx.b_name {
+                // SAFETY: `ctx.b_name` is the test's own NUL-terminated name and `on` is a
+                // live snapshot entry.
                 ctx.removed += unsafe { OBJ_NAME_remove(ctx.b_name, (*on).type_) } as usize;
                 assert_eq!(
                     FREED.load(Ordering::SeqCst),
@@ -3051,6 +3068,10 @@ mod tests {
         static UNLOCKED: AtomicBool = AtomicBool::new(false);
         static QUERIES: AtomicI32 = AtomicI32::new(0);
 
+        /// # Safety
+        /// The registry calls this destructor with the captured name and type; both are
+        /// borrowed for the call and must not be released. `name` may be NULL after removal
+        /// and is checked before use.
         unsafe extern "C" fn observing_free(
             name: *const c_char,
             type_: c_int,
@@ -3073,6 +3094,8 @@ mod tests {
             // re-entry is exercised only when the control proves the lock is
             // released, so a regression fails the assertion instead of hanging.
             if unlocked && !name.is_null() {
+                // SAFETY: `name` is the destructor's captured NUL-terminated name and was just
+                // checked non-null; `type_` is the recorded name index.
                 let _ = unsafe { OBJ_NAME_get(name, type_) };
                 QUERIES.fetch_add(1, Ordering::SeqCst);
             }
