@@ -13548,7 +13548,9 @@ def _build_harness(prog: dict, root: Path, prefix: Path, out: Path,
     spec = prog["harness"]
     source = REPO_ROOT / str(spec["source"])
     aux = aux or (root.parents[1] / "aux" / "root")
-    argv = ["cc", str(source), "-o", str(out), "-O2", "-Wall", "-Wextra"]
+    # A C++ consumer library (Poco) needs a C++ driver; every existing harness is C.
+    compiler = str(spec.get("compiler") or "cc")
+    argv = [compiler, str(source), "-o", str(out), "-O2", "-Wall", "-Wextra"]
     body = {"root": root, "prefix": prefix, "aux": aux, "repo": REPO_ROOT}
     argv += [str(a).format(**body) for a in spec.get("cflags") or []]
     argv += [str(a).format(**body) for a in spec.get("ldflags") or []]
@@ -13811,6 +13813,10 @@ def _measure_subject_runtime(fam: dict, recipe: dict, subject: str, prefix: Path
                                  "local_only": result.get("local_only", True)}}
     if result.get("note"):
         extra["note"] = result["note"]
+    # Persist the consumer-boundary proof beside the level it gated: an L7 row
+    # without this evidence (for a mechanism template) would be a false L7.
+    if result.get("consumer_evidence") is not None:
+        extra["consumer_evidence"] = result["consumer_evidence"]
 
     if result["functional_ok"]:
         level, outcome, residual, failure_class, reason = L7, "reached", "none", None, None
