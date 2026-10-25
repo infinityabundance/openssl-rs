@@ -1,0 +1,429 @@
+{
+ "schema": "safe-c33/atlas-refresh/v1b-reconcile/v1",
+ "kind": "v1b-reconcile",
+ "subphase": "V1b",
+ "generated_utc": "2026-10-25T17:33:44Z",
+ "campaign": "V1 safety inventory regenerated at the current identity; no discharge attempted",
+ "source_identity": {
+  "branch": "integrate/safe-c33",
+  "source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
+  "source_head_subject": "Merge stage/p25/v4b-precision",
+  "tracked_working_tree_clean": false,
+  "dirty_reason": "the phase-2 install and forensics/atlas/implemented-surface.json were rebuilt from HEAD for this receipt; src/ is unchanged",
+  "src_rs_files": 877,
+  "src_content_sha256": "3216ce6c1d84e890ed73df0926097aed9aec6230f1e693526d03c9d60af85828",
+  "v1_src_content_sha256": "6b59aa0697647baedb77c287c99ae56775550a9969c73ab9419e7cb1539a5b30"
+ },
+ "task1_install": {
+  "method": "rebuild from this exact source (twice, to test determinism), then run the phase-2 ABI courts",
+  "command": "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && ... && unset CARGO_TARGET_DIR && bash forensics/tools/build_phase2.sh'",
+  "exit_code": 0,
+  "log": "court/tmp/v1b-build.log",
+  "log_sha256": "a3f651a286d9dd1e3f5e713a34d1dbaceef8442e0760d497e9afe3deb899533e",
+  "deterministic": true,
+  "determinism_evidence": "two independent build_phase2.sh runs from HEAD produced the same four hashes",
+  "artefacts": {
+   "libcrypto.so.3": "e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463",
+   "libssl.so.3": "d6ef867855c45e2df7b0f397fe9582e9e911aacb126c1a7d360ddfb990eb7651",
+   "legacy.so": "8b25cf15179e5a4e5a002757f3847c91b0d99ee03b317ec61babf646011e088f",
+   "openssl": "33dd3916be40d8aaecba253883c37d3fddc40856df019c3cc7c1b111ba2f24d9"
+  },
+  "committed_install_0_0_39": {
+   "libcrypto.so.3": "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48",
+   "libssl.so.3": "069c2cb1496ef9cda3aed0da478d67c2822e5de8da123a5f29d365438ebd6851",
+   "legacy.so": "57dc86fd4493aab8c78ad412306ba3fad0b87652007472617d5843572f9ad925",
+   "openssl": "412324e6806defc9a40e36f1534ef711b06644aa595eda24eb9189cabd584f66"
+  },
+  "rebuild_matches_committed": {
+   "libcrypto.so.3": false,
+   "libssl.so.3": false,
+   "legacy.so": false,
+   "openssl": false
+  },
+  "abi_courts": "11/11 pass",
+  "abi_courts_evidence": {
+   "path": "artifacts/phase2/COURTS.json",
+   "all_pass": true,
+   "courts": [
+    "ABI-SYMBOL",
+    "ABI-VERSION",
+    "ABI-DYNAMIC",
+    "ABI-LAYOUT",
+    "ABI-LINK",
+    "ABI-LOAD",
+    "ABI-CONSTANTS",
+    "ABI-MATRIX",
+    "ABI-SUBSTITUTION",
+    "ABI-INSTALL-LAYOUT",
+    "libcrypto-contamination"
+   ]
+  },
+  "finding": "the committed install at HEAD is the 0.0.39 release identity (libcrypto eb0d7c03..., source dbe8163f). HEAD src differs from that release in 11 compiled files (S70 concurrency fix, CMS batch, lint fixes), so a rebuild from HEAD cannot reproduce eb0d7c03. The current identity is the deterministic rebuild e10b0254...."
+ },
+ "task2_census": {
+  "tool": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1_census.py (unmodified)",
+  "reusable": "census, partition, contracts, delta and commands are reusable. identity.binary is NOT reusable: the script hardcodes the V1 facts (crate_version 0.0.38, committed_install_matches_this_source=true, the a4e511865/0.0.38 evidence prose, source_delta_since_published_install, previous_published_identity, matches_published_0_0_38). Those fields were replaced with observed values after generation; no measurement field was touched.",
+  "command": "cargo clippy --lib --tests --message-format=json -- --cap-lints warn -W clippy::undocumented_unsafe_blocks -W clippy::missing_safety_doc (RUSTFLAGS=-W unsafe-code)",
+  "raw_diagnostics": 140876,
+  "unique_compiler_sites": 61275,
+  "macro_expansion_spans": 307,
+  "v1_raw_diagnostics": 140801,
+  "v1_unique_compiler_sites": 61201,
+  "by_kind": {
+   "UNSAFE_BLOCK": 47095,
+   "UNSAFE_EXTERN_BLOCK": 10,
+   "UNSAFE_FN_DEF": 13827,
+   "UNSAFE_IMPL": 334,
+   "UNSAFE_TRAIT": 9
+  },
+  "v1_by_kind": {
+   "UNSAFE_BLOCK": 47043,
+   "UNSAFE_EXTERN_BLOCK": 10,
+   "UNSAFE_FN_DEF": 13804,
+   "UNSAFE_IMPL": 335,
+   "UNSAFE_TRAIT": 9
+  },
+  "reconciliation_compiler_vs_lexical": {
+   "UNSAFE_TRAIT": {
+    "compiler_unique": 9,
+    "lexical_all_partitions": 9
+   },
+   "UNSAFE_EXTERN_BLOCK": {
+    "compiler_unique": 10,
+    "lexical_all_partitions": 10
+   },
+   "UNSAFE_BLOCK": {
+    "compiler_unique": 47095,
+    "lexical_all_partitions": 47164
+   },
+   "UNSAFE_IMPL": {
+    "compiler_unique": 334,
+    "lexical_all_partitions": 334
+   },
+   "UNSAFE_FN_DEF": {
+    "compiler_unique": 13827,
+    "lexical_all_partitions": 13746
+   }
+  },
+  "v1_reconciliation_compiler_vs_lexical": {
+   "UNSAFE_TRAIT": {
+    "compiler_unique": 9,
+    "lexical_all_partitions": 9
+   },
+   "UNSAFE_BLOCK": {
+    "compiler_unique": 47043,
+    "lexical_all_partitions": 47112
+   },
+   "UNSAFE_EXTERN_BLOCK": {
+    "compiler_unique": 10,
+    "lexical_all_partitions": 10
+   },
+   "UNSAFE_FN_DEF": {
+    "compiler_unique": 13804,
+    "lexical_all_partitions": 13723
+   },
+   "UNSAFE_IMPL": {
+    "compiler_unique": 335,
+    "lexical_all_partitions": 335
+   }
+  },
+  "files_with_kind_mismatch": 33,
+  "compiler_vs_lexical_file_counts": {
+   "compiler_files_with_unsafe_block": 784,
+   "lexical_files_with_unsafe_block": 785,
+   "lexical_only_block_files": [
+    "src/runtime/miri_tcb.rs"
+   ]
+  },
+  "blind_spots": "identical to V1 (8 entries, byte-for-byte equal)",
+  "contract_lints": {
+   "undocumented_unsafe_blocks": [],
+   "missing_safety_doc": 0,
+   "why_zero_is_real": "clippy-driver ran the lint (Cargo.toml sets undocumented_unsafe_blocks = \"deny\"). The census run capped lints to warn, but the separate all-targets gate (cargo clippy --all-targets -- -D warnings) exited 0 with zero errors, so zero undocumented sites is an enforced result, not a missing driver. V1's five files were cleared by commit ef22c0db9 (\"fix(lint): clear the clippy gate by fixing it, not by allowing it\")."
+  },
+  "delta_vs_v1": "compiler sites +74 (61275 vs 61201), raw diagnostics +75, macro spans 0 change, by-kind block +52, fn +23, impl -1; the compiler-vs-lexical reconciliation retains the same shape (lexical blocks +69, lexical fns -81)."
+ },
+ "task3_partition": {
+  "total_files": 877,
+  "bases": [
+   {
+    "basis": "older recorded (attribution.json@c09eef8b + post-census-delta.json)",
+    "ZERO_UNSAFE": 92,
+    "BOUNDARY_COVERED": 18,
+    "PARTIAL": 761,
+    "TEST_ONLY": 6
+   },
+   {
+    "basis": "older recorded, normalized zero-first",
+    "ZERO_UNSAFE": 98,
+    "BOUNDARY_COVERED": 18,
+    "PARTIAL": 761,
+    "TEST_ONLY": 0
+   },
+   {
+    "basis": "V1 recomputed @22ecf665",
+    "ZERO_UNSAFE": 97,
+    "BOUNDARY_COVERED": 17,
+    "PARTIAL": 763,
+    "TEST_ONLY": 0,
+    "test_first": {
+     "ZERO_UNSAFE": 84,
+     "BOUNDARY_COVERED": 17,
+     "PARTIAL": 763,
+     "TEST_ONLY": 13
+    }
+   },
+   {
+    "basis": "V1b recomputed @4a95b73a8",
+    "ZERO_UNSAFE": 97,
+    "BOUNDARY_COVERED": 17,
+    "PARTIAL": 763,
+    "TEST_ONLY": 0,
+    "test_first": {
+     "ZERO_UNSAFE": 84,
+     "BOUNDARY_COVERED": 17,
+     "PARTIAL": 763,
+     "TEST_ONLY": 13
+    }
+   }
+  ],
+  "delta_v1b_vs_v1": "none (97/17/763; test-first 84/17/763/13 in both)",
+  "delta_vs_older_normalized": {
+   "ZERO_UNSAFE": -1,
+   "BOUNDARY_COVERED": -1,
+   "PARTIAL": 2
+  },
+  "note": "the 9 changed-category files and 301 changed-block rows stay inside PARTIAL, so source change did not cross a category boundary"
+ },
+ "task4_contracts": {
+  "files_with_unsafe_operations": 790,
+  "files_all_operations_contracted": 640,
+  "files_with_uncontracted_operations": 150,
+  "files_with_production_blockers": 91,
+  "operation_counts": {
+   "production_blockers": 198,
+   "test_only_blockers": 156,
+   "allocator_seam_blockers": 0,
+   "total_blockers": 354
+  },
+  "v1_operation_counts": {
+   "production_blockers": 198,
+   "test_only_blockers": 176,
+   "allocator_seam_blockers": 7,
+   "total_blockers": 381
+  },
+  "v1_files": {
+   "files_with_unsafe_operations": 790,
+   "files_all_operations_contracted": 638,
+   "files_with_uncontracted_operations": 152,
+   "files_with_production_blockers": 91
+  },
+  "delta": {
+   "production": 0,
+   "test_only": -20,
+   "allocator_seam": -7,
+   "total": -27,
+   "files_all_contracted": 2,
+   "files_with_uncontracted": -2
+  },
+  "moved_files": [
+   {
+    "file": "src/provider/cipher_gcm.rs",
+    "v1": 12,
+    "v1b": 0,
+    "partition": "test_only",
+    "reason": "commit ef22c0db9 added SAFETY comments to 12 test-only blocks; the file's clippy allow means clippy is silent and the lexical fallback previously left them uncontracted"
+   },
+   {
+    "file": "src/runtime/obj.rs",
+    "v1": 9,
+    "v1b": 0,
+    "partition": "test_only",
+    "reason": "commit ef22c0db9 added SAFETY comments to 9 test-only blocks under the file's clippy allow"
+   },
+   {
+    "file": "src/runtime/secure.rs",
+    "v1": 7,
+    "v1b": 0,
+    "partition": "allocator_seam",
+    "reason": "commit ef22c0db9 added SAFETY contracts to the secure-heap allocation/free seam; this is the entire allocator-seam delta (7 to 0)"
+   },
+   {
+    "file": "src/runtime/thread.rs",
+    "v1": 2,
+    "v1b": 1,
+    "partition": "test_only->0 (one production remains)",
+    "reason": "commit ef22c0db9 gave the test-only unsafe fn a contract; the production unsafe extern block (line 2104) still has no SAFETY and remains the one production blocker",
+    "v1_split": {
+     "test_only": 1,
+     "production": 1
+    },
+    "v1b_split": {
+     "production": 1
+    }
+   },
+   {
+    "file": "src/ssl/statem/statem_clnt.rs",
+    "v1": 2,
+    "v1b": 1,
+    "partition": "test_only->0 (one production remains)",
+    "reason": "S70 (7b15cefeb) and ef22c0db9 cleared the undocumented test block; the production unsafe fn at line 3597 still has only block-level SAFETY, not a # Safety fn contract",
+    "v1_split": {
+     "test_only": 1,
+     "production": 1
+    },
+    "v1b_split": {
+     "production": 1
+    }
+   },
+   {
+    "file": "src/cms/cms_enc.rs",
+    "v1": 0,
+    "v1b": 3,
+    "partition": "test_only",
+    "reason": "the CMS batch (e468cae58, 45256eaf7) added three test-only unsafe extern 'C' helpers (noop_init, noop_ctrl, report_tag_len) at lines 909/919/930; two have no # Safety fn contract and one has only block-level SAFETY"
+   }
+  ],
+  "production_note": "production blockers are 198 in both inventories and no file's production count moved; the S70 and CMS changes added contracted production operations and shifted line numbers."
+ },
+ "task5_binding": {
+  "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
+  "inventory_sha256": "8348fc20d5f1b586a170dd11023f9282e13e8ff575a032610589b5070305b365",
+  "v1_inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1-candidate-freeze.json",
+  "libcrypto_sha256_map": {
+   "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae": "e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463",
+   "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48": "e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463"
+  },
+  "v1_source_head": "22ecf665d6ee719825ace69c7cfe08ee7474f364",
+  "current_source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
+  "committed_0_0_39_source_head": "dbe8163fca52aed3e50b33f9ea94f4455dcb2759",
+  "closure_engine_invocation": "python3 forensics/tools/consumer_closure.py ... --inventory <v1b-candidate-freeze.json>",
+  "correction": "identity.binary was post-corrected only; census/partition/contracts/delta were generated by the unmodified V1 tool"
+ },
+ "task6_closure": {
+  "family": "cyrus-sasl",
+  "command": "OPENSSL_RS_COURT_IMAGE=openssl-rs-court-expand:1 OPENSSL_RS_COURT_NAME=openssl-rs-court-expand bash docker/openssl-rs-court.sh exec bash -lc '... python3 forensics/tools/consumer_closure.py --family cyrus-sasl --artifact court/tmp/v4-sasl2/.../libdigestmd5.so.3.0.0 --build-record court/tmp/v4-sasl2/build-record.json --inventory .../v1b-candidate-freeze.json --output .../consumer-closure-V1b.json --summary'",
+  "exit_code": 1,
+  "exit_meaning": "REFUSED (the tool exits non-zero on refusal)",
+  "output": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/consumer-closure-V1b.json",
+  "output_sha256": "1c5afa1b4b03bbd7a6fb550aba493b97642dcc6a7b72281552e3cc178e536e4b",
+  "candidate": {
+   "install_prefix": "artifacts/phase2/install",
+   "libcrypto_so_3_sha256": "e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463",
+   "inventory_libcrypto_sha256": "e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463",
+   "matches_inventory": true
+  },
+  "stale_hash_cleared": true,
+  "refusals": [
+   {
+    "code": "MISSING_BOUNDARY_RECEIPT",
+    "detail": "38 reachable file(s) carry production obligations but no boundary-sweep receipt owns them"
+   },
+   {
+    "code": "UNKNOWN_OBLIGATION",
+    "detail": "104 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED"
+   },
+   {
+    "code": "UNKNOWN_MECHANISM",
+    "detail": "9 reachable file(s) with production obligations map to no registered mechanism"
+   }
+  ],
+  "counts": {
+   "reachable_files": 312,
+   "reachable_production_obligations": 119,
+   "DISCHARGED": 0,
+   "BLOCKED": 15,
+   "UNKNOWN": 104,
+   "by_mechanism": {
+    "<unmapped>": 11,
+    "ASN1_OCSP": 7,
+    "EVP_PKEY_PROVIDER": 64,
+    "RAND_CMS_STORE_KEYFMT": 9,
+    "RUNTIME_ALLOC_OWNERSHIP": 3,
+    "RUNTIME_CONCURRENCY": 2,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 9
+   },
+   "v1_production_operations_total": 198,
+   "v1_uncontracted_operations_total": 354
+  },
+  "verdict": {
+   "state": "REFUSED",
+   "safe_compatible": false,
+   "reason": "closure refused: MISSING_BOUNDARY_RECEIPT (38 reachable file(s) carry production obligations but no boundary-sweep receipt owns them); UNKNOWN_OBLIGATION (104 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED); UNKNOWN_MECHANISM (9 reachable file(s) with production obligations map to no registered mechanism)"
+  },
+  "delta_vs_v4b": {
+   "v4b_refusals": [
+    "STALE_HASH",
+    "MISSING_BOUNDARY_RECEIPT",
+    "UNKNOWN_OBLIGATION",
+    "UNKNOWN_MECHANISM"
+   ],
+   "counts_v4b": {
+    "reachable_files": 305,
+    "reachable_production_obligations": 98,
+    "DISCHARGED": 0,
+    "BLOCKED": 15,
+    "UNKNOWN": 83,
+    "by_mechanism": {
+     "<unmapped>": 11,
+     "ASN1_OCSP": 2,
+     "EVP_PKEY_PROVIDER": 54,
+     "RAND_CMS_STORE_KEYFMT": 7,
+     "RUNTIME_ALLOC_OWNERSHIP": 3,
+     "RUNTIME_CONCURRENCY": 2,
+     "SSL_SESSION": 14,
+     "X509_VERIFY_POLICY": 5
+    },
+    "v1_production_operations_total": 198,
+    "v1_uncontracted_operations_total": 381
+   },
+   "reachable_files": 7,
+   "reachable_production_obligations": 21,
+   "UNKNOWN": 21,
+   "BLOCKED": 0,
+   "by_mechanism_delta": "ASN1_OCSP +5, EVP_PKEY_PROVIDER +10, RAND_CMS_STORE_KEYFMT +2, X509_VERIFY_POLICY +4; all others unchanged",
+   "newly_reachable_without_receipt": [
+    "src/ocsp/v3_ocsp.rs",
+    "src/pkcs7/pk7_asn1.rs",
+    "src/provider/base.rs",
+    "src/provider/core_dispatch.rs",
+    "src/provider/dsa_sig.rs",
+    "src/provider/ecx_kmgmt.rs",
+    "src/x509/v3_timespec.rs"
+   ],
+   "refusals_v4b": [
+    "STALE_HASH",
+    "MISSING_BOUNDARY_RECEIPT",
+    "UNKNOWN_OBLIGATION",
+    "UNKNOWN_MECHANISM"
+   ],
+   "refusals_v1b": [
+    "MISSING_BOUNDARY_RECEIPT",
+    "UNKNOWN_OBLIGATION",
+    "UNKNOWN_MECHANISM"
+   ]
+  },
+  "interpretation": "STALE_HASH is cleared because the inventory and the installed libcrypto now name the same rebuild (e10b0254...). The verdict remains REFUSED for substantive reasons: 38 reachable files lack a boundary receipt, 104 reachable obligations are UNKNOWN, and 9 files map to no registered mechanism. The increase in reachable obligations follows the rebuilt binary and the updated inventory, not a discharge."
+ },
+ "gates": {
+  "clippy_all_targets": {
+   "command": "cargo clippy --all-targets --message-format=short -- -D warnings",
+   "exit_code": 0,
+   "errors": 0,
+   "log": "court/tmp/v1b-gate-clippy.log",
+   "log_sha256": "2d297d916f01da3cbb1b79ee08e5b501b57dbd6ac5594d75efdfa9dbed18c868"
+  }
+ },
+ "not_recomputed": [
+  "The committed 0.0.39 install (eb0d7c03) is not reproducible from HEAD; it corresponds to dbe8163f. This is a source delta, not a toolchain difference (rust-toolchain.toml pins 1.98.1).",
+  "No downstream (cyrus-sasl) rebuild was attempted; the existing artefact was built against the 0.0.39 install and is only re-resolved against the rebuilt install.",
+  "No discharge, Miri, ASan, Wycheproof or timing work was performed; those gates remain NOT_RUN for this subphase.",
+  "The closure tool's source_identity.note and its 'V1:' obligation-id prefix are tool text; its counts now come from the V1b inventory (354 uncontracted)."
+ ],
+ "non_claims": [
+  "Regenerating an inventory is not a safety or compatibility result.",
+  "The libcrypto hash map is a reportable mapping, not an equivalence claim between V1 and V1b sources.",
+  "11/11 ABI courts establish the structural shell only (docs/CUSTODIAN_CONTRACT.md section 5)."
+ ]
+}
