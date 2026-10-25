@@ -1449,7 +1449,6 @@ mod tests {
             // SAFETY: the constructor answers a fresh method or NULL; every write is to it.
             let cipher = EVP_CIPHER_meth_new(0, 8, 16);
             assert!(!cipher.is_null());
-            (*cipher).prov = data.as_ptr().cast_mut().cast();
             (*cipher).init = Some(refusing_init);
             let ctx = (*kari).ctx.cast::<EvpCipherCtx>();
             (*ctx).cipher = cipher;
