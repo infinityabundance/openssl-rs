@@ -24,10 +24,30 @@ The tools import this module rather than growing another bespoke branch:
 * ``downstream_runtime`` merges :func:`programs` / :func:`runners` and calls
   :func:`admit_binary` *before* a template family may claim L7.
 
+An entry may set ``"recipe": "admitted"``.  That means the family already has
+an admitted pristine recipe in the shared build/link catalogue (with its own
+auxiliary packages); :func:`recipe_specs` then emits no recipe, so the template
+row adds only the runtime intent and workload and never shadows the admitted
+build.  This is how a mechanism template is proved on an existing admitted
+family rather than by admitting a second copy of it.
+
+A ``workload`` may be a single recipe object or a tuple of them.  The latter is
+for one family whose consumer exposes more than one mechanism (Bootgen signs
+*and* runs a counter-mode KDF), and each item still carries its own positive
+behaviour and negative control.
+
 The template layer is deliberately honest about what it does **not** do: a
 bucket template is a local, deterministic exercise of the program's OpenSSL
 path, not a security proof, and a family that never loads the subject
 libssl/libcrypto is refused by :func:`admit_binary` rather than promoted.
+
+However, a template is also not allowed to manufacture an L7 by calling OpenSSL
+from the harness while merely linking the consumer.  Every mechanism template
+is gated by :func:`verify_consumer_boundary`: the *consumer* artifact must
+import at least one OpenSSL symbol (and, when a consumer shared library is
+named, the workload must reference a symbol that library actually exports),
+while a compiled typed harness must import **no** OpenSSL symbol of its own.
+A workload that fails that gate is recorded as ``false-l7`` and cannot pass.
 
 SPDX-License-Identifier: Apache-2.0
 """
@@ -69,6 +89,12 @@ HARNESS_TEMPLATES: tuple[str, ...] = (
     "tls_server",
     "signature",
     "ssh_client",
+    # Mechanism-oriented templates.  Each has a positive behaviour and an
+    # essential negative control; see the handlers below.
+    "x509_verification",
+    "evp_signing",
+    "aead_roundtrip",
+    "hmac_kdf",
 )
 
 _TEMPLATE_SCHEMA = "openssl-rs/downstream-template-families/1"
@@ -103,6 +129,12 @@ def recipe_specs() -> tuple[dict, ...]:
     """
     out: list[dict] = []
     for entry in families():
+        if str(entry.get("recipe") or "") == "admitted":
+            # The family's pristine build recipe already lives in the shared
+            # catalogue (usually with auxiliary pins).  Emitting a second,
+            # reduced recipe here would shadow it; the template row contributes
+            # only the runtime intent and workload.
+            continue
         rec = {
             "family": entry["family"],
             "version": entry["version"],
@@ -141,6 +173,10 @@ def programs() -> dict[str, dict]:
             prog["lib_paths"] = list(entry["lib_paths"])
         if entry.get("env"):
             prog["env"] = dict(entry["env"])
+        if entry.get("harness"):
+            prog["harness"] = dict(entry["harness"])
+        if entry.get("make_steps"):
+            prog["make_steps"] = [list(step) for step in entry["make_steps"]]
         out[str(entry["family"])] = prog
     return out
 
@@ -333,6 +369,193 @@ def _under(path: str, prefix: Path) -> bool:
 
 
 # --------------------------------------------------------------------------------------------
+# the consumer-API invariant (enforced, never merely documented)
+# --------------------------------------------------------------------------------------------
+#
+# A workload is admitted only when the artifact that proves L7 is the consumer
+# itself.  The generic rule has two verifiable limbs:
+#
+#   1. the consumer artifact (the family's program, or the named consumer shared
+#      library) must have at least one *undefined* OpenSSL symbol in its own
+#      dynamic symbol table -- i.e. its code calls into the subject OpenSSL; and
+#   2. when the workload is a compiled typed harness that links a consumer
+#      library, the harness must reference at least one symbol the consumer
+#      library exports, and the harness must import **zero** OpenSSL symbols.
+#
+# Limb 2 is what rejects the false L7 in the brief: a harness that links the
+# consumer library but only calls OpenSSL itself is refused with
+# `failure_class=false-l7` and cannot be recorded as functional.  The local
+# fixture peer (an HTTPS/FTPS listener in this module) may use Python's `ssl`;
+# it is a peer, not the workload, and is recorded separately as
+# `fixture_openssl=true` -- it is never counted as the consumer's call.
+
+_OPENSSL_SYMBOL_PREFIXES: tuple[str, ...] = (
+    "EVP_", "SHA", "HMAC", "X509", "SSL_", "OPENSSL_", "CRYPTO_", "BN_", "RSA_",
+    "EC_", "ECDSA_", "PEM_", "PKCS", "BIO_", "ERR_", "RAND_", "OBJ_", "ASN1_",
+    "BUF_", "OSSL_", "ENGINE_", "CMS_", "OCSP", "CONF_", "TS_", "POLY1305",
+    "CHACHA20", "AES_", "DES_", "MD5", "MD4", "RIPEMD", "WHIRLPOOL", "BLAKE2",
+)
+
+
+def _is_openssl_symbol(symbol: str) -> bool:
+    return any(symbol.startswith(prefix) for prefix in _OPENSSL_SYMBOL_PREFIXES)
+
+
+def _symbol_name(line: str) -> str:
+    """The bare symbol from one ``nm`` line (version suffixes removed)."""
+    parts = line.split()
+    if not parts:
+        return ""
+    return parts[-1].split("@", 1)[0]
+
+
+def _nm_symbols(path: Path, *args: str) -> list[str]:
+    res = _run(["nm", *args, str(path)], timeout=60)
+    if not res["ok"] and "-D" in args:
+        # A relocatable object (the typed harness before linking) has no dynamic
+        # table; fall back to the ordinary symbol table for that one case.
+        args = tuple(a for a in args if a != "-D")
+        res = _run(["nm", *args, str(path)], timeout=60)
+    return [_symbol_name(line) for line in (res.get("stdout") or "").splitlines()
+            if _symbol_name(line)]
+
+
+def _undefined_symbols(path: Path) -> list[str]:
+    return _nm_symbols(path, "-D", "-u") or _nm_symbols(path, "-u")
+
+
+def _defined_symbols(path: Path) -> list[str]:
+    return _nm_symbols(path, "-D", "--defined-only") or \
+        _nm_symbols(path, "--defined-only")
+
+
+def _real_binary(path: Path) -> Path:
+    """Resolve a libtool wrapper to the ELF it launches."""
+    try:
+        if path.is_file() and path.read_bytes()[:4] == b"\x7fELF":
+            return path
+    except OSError:
+        return path
+    sibling = path.parent / ".libs" / path.name
+    try:
+        if sibling.is_file() and sibling.read_bytes()[:4] == b"\x7fELF":
+            return sibling
+    except OSError:
+        pass
+    return path
+
+
+def verify_consumer_boundary(entry: dict, ctx: dict, *, program: Path | None = None,
+                             harness_obj: Path | None = None) -> dict:
+    """Prove the workload exercises the consumer's own OpenSSL-consuming code.
+
+    ``entry["consumer"]`` is required for the mechanism templates:
+
+    * ``{"self": true}`` -- the family's executable is the consumer; it must
+      import at least one OpenSSL symbol.
+    * ``{"library_globs": [...], "required_symbols": [...]}`` -- the workload
+      must link one of the named consumer libraries, that library must import
+      OpenSSL, and (for a typed harness) the harness must reference a symbol
+      the library exports while importing no OpenSSL symbol itself.
+
+    Returns ``{"ok": bool, "reason": str|None, "evidence": {...}}``.  A caller
+    must not record a functional workload when ``ok`` is false.
+    """
+    spec = entry.get("consumer") or {}
+    root = Path(ctx["root"])
+    target = _real_binary(Path(program or ctx["program"]))
+    libraries: list[Path] = []
+    for pattern in spec.get("library_globs") or ():
+        libraries.extend(sorted(root.glob(str(pattern))))
+    libraries = [p for p in libraries if p.is_file()]
+    self_mode = bool(spec.get("self")) or (not libraries and not spec.get("library_globs"))
+    evidence: dict = {
+        "rule": "consumer-boundary/1",
+        "consumer_mode": "self" if self_mode else "library",
+        "workload": str(target),
+        "fixture_openssl": bool(spec.get("fixture_openssl", False)),
+    }
+    if not target.is_file():
+        return {"ok": False, "reason": f"the workload artifact {target} does not exist",
+                "evidence": evidence}
+    if not self_mode and not libraries:
+        return {"ok": False, "reason": "the configured consumer library was not built",
+                "evidence": evidence}
+
+    consumer_artifacts = [target] if self_mode else libraries
+    for artifact in consumer_artifacts:
+        undefined = _undefined_symbols(artifact)
+        openssl = [s for s in undefined if _is_openssl_symbol(s)]
+        evidence.setdefault("consumers", []).append({
+            "artifact": str(artifact),
+            "undefined_symbols": len(undefined),
+            "openssl_imports": len(openssl),
+            "openssl_sample": openssl[:8],
+        })
+        if not openssl:
+            return {
+                "ok": False,
+                "reason": (f"{artifact} imports no OpenSSL symbol: a workload that does not "
+                           "call the consumer's OpenSSL path is a false L7"),
+                "evidence": evidence,
+            }
+
+    if harness_obj is not None:
+        harness = _real_binary(Path(harness_obj))
+        h_undefined = _undefined_symbols(harness)
+        h_openssl = [s for s in h_undefined if _is_openssl_symbol(s)]
+        evidence["harness"] = {"artifact": str(harness),
+                               "undefined_symbols": len(h_undefined),
+                               "openssl_imports": h_openssl[:8]}
+        if h_openssl:
+            return {
+                "ok": False,
+                "reason": ("the typed harness itself imports OpenSSL ("
+                           + ", ".join(h_openssl[:4])
+                           + "); the workload must exercise the consumer's OpenSSL path, not "
+                             "reimplement it in the harness"),
+                "evidence": evidence,
+            }
+        if not self_mode:
+            defined: set[str] = set()
+            for library in libraries:
+                defined.update(_defined_symbols(library))
+            referenced = [s for s in h_undefined if s in defined]
+            evidence["harness"]["consumer_symbols_referenced"] = len(referenced)
+            evidence["harness"]["consumer_symbols_sample"] = referenced[:8]
+            if not referenced:
+                return {
+                    "ok": False,
+                    "reason": ("the typed harness references no symbol exported by the consumer "
+                               "library, so the consumer's code is not actually exercised"),
+                    "evidence": evidence,
+                }
+            required = [str(s) for s in spec.get("required_symbols") or ()]
+            missing = [needle for needle in required
+                       if not any(needle in symbol for symbol in referenced)]
+            if missing:
+                return {
+                    "ok": False,
+                    "reason": ("the typed harness does not reference the declared consumer "
+                               f"symbol(s) {missing}"),
+                    "evidence": evidence,
+                }
+
+    if not self_mode:
+        ldd = _run(["ldd", str(target)], timeout=60)
+        evidence["workload_ldd_names_consumer"] = any(
+            library.name in (ldd.get("stdout") or "") for library in libraries)
+        if not evidence["workload_ldd_names_consumer"]:
+            return {
+                "ok": False,
+                "reason": (f"the workload's loader closure does not name {libraries[0].name}; "
+                           "linking is not exercising the consumer"),
+                "evidence": evidence,
+            }
+    return {"ok": True, "reason": None, "evidence": evidence}
+
+
+# --------------------------------------------------------------------------------------------
 # fixtures: PKI, HTTPS, plaintext negative peer, Gemini/TLS peer
 # --------------------------------------------------------------------------------------------
 
@@ -426,6 +649,178 @@ class _HTTPFixture:
         return False
 
 
+class _FTPSFixture:
+    """A deterministic loopback FTPS peer (explicit ``AUTH TLS``) for the x509 template.
+
+    The peer only presents a certificate chain.  The *consumer* is the family's
+    program: it performs the chain verification and is the workload's OpenSSL
+    caller.  ``SSL_CERT_FILE`` selects the trust anchor for each run, so the
+    positive and negative controls differ only in the CA (and never in the
+    server, payload or URL).
+    """
+
+    def __init__(self, port: int, body: bytes, *, cert: Path, key: Path):
+        self.body = body
+        self.sslctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        self.sslctx.load_cert_chain(str(cert), str(key))
+        try:
+            self.sock = socket.create_server(("::", port), family=socket.AF_INET6,
+                                            dualstack_ipv6=True, backlog=16)
+        except (OSError, AttributeError):
+            self.sock = socket.create_server(("127.0.0.1", port), backlog=16)
+        self.thread = threading.Thread(target=self._serve, daemon=True)
+        self._closed = False
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._closed = True
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+        return False
+
+    def _serve(self):
+        while not self._closed:
+            try:
+                conn, _ = self.sock.accept()
+            except OSError:
+                return
+            threading.Thread(target=self._session, args=(conn,), daemon=True).start()
+
+    def _session(self, conn):
+        buffer = b""
+        wrapped = False
+        data_listener = None
+
+        def readline():
+            nonlocal buffer
+            while b"\n" not in buffer:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    return None
+                buffer += chunk
+            line, _, buffer = buffer.partition(b"\n")
+            return line.decode("latin-1").strip()
+
+        def send(text):
+            conn.sendall((text + "\r\n").encode("latin-1"))
+
+        def open_data_listener():
+            try:
+                listener = socket.create_server(("::", 0), family=socket.AF_INET6,
+                                                dualstack_ipv6=True, backlog=4)
+            except (OSError, AttributeError):
+                listener = socket.create_server(("127.0.0.1", 0), backlog=4)
+            return listener
+
+        try:
+            send("220 s65 FTP fixture")
+            while True:
+                line = readline()
+                if line is None:
+                    return
+                command, _, argument = line.partition(" ")
+                command = command.upper()
+                argument = argument.strip()
+                if command == "AUTH" and argument.upper() == "TLS":
+                    send("234 AUTH TLS accepted")
+                    conn = self.sslctx.wrap_socket(conn, server_side=True)
+                    wrapped = True
+                elif command == "PBSZ":
+                    send("200 PBSZ 0")
+                elif command == "PROT":
+                    send("200 PROT P")
+                elif command == "USER":
+                    send("331 password required")
+                elif command == "PASS":
+                    send("230 logged in")
+                elif command == "SYST":
+                    send("215 UNIX Type: L8")
+                elif command == "FEAT":
+                    send("211-Features:"); send(" AUTH TLS"); send(" PBSZ")
+                    send(" PROT"); send("211 End")
+                elif command in ("TYPE", "OPTS", "MODE", "STRU", "NOOP"):
+                    send("200 ok")
+                elif command == "PWD":
+                    send('257 "/"')
+                elif command in ("CWD", "CDUP"):
+                    send("250 ok")
+                elif command == "SIZE":
+                    send(f"213 {len(self.body)}")
+                elif command == "MDTM":
+                    send("213 20260101000000")
+                elif command == "PASV":
+                    if data_listener is not None:
+                        data_listener.close()
+                    data_listener = open_data_listener()
+                    port = data_listener.getsockname()[1]
+                    send(f"227 Entering Passive Mode (127,0,0,1,{port // 256},{port % 256})")
+                elif command == "EPSV":
+                    if data_listener is not None:
+                        data_listener.close()
+                    data_listener = open_data_listener()
+                    port = data_listener.getsockname()[1]
+                    send(f"229 Entering Extended Passive Mode (|||{port}|)")
+                elif command in ("LIST", "NLST"):
+                    if data_listener is None:
+                        send("425 use PASV first")
+                        continue
+                    send("150 opening data connection")
+                    data_conn, _ = data_listener.accept()
+                    try:
+                        if wrapped:
+                            data_conn = self.sslctx.wrap_socket(data_conn, server_side=True)
+                        if command == "NLST":
+                            listing = b"payload.bin\r\n"
+                        else:
+                            listing = (f"-rw-r--r-- 1 ftp ftp {len(self.body)} Jan 01 00:00 "
+                                       "payload.bin\r\n").encode("latin-1")
+                        data_conn.sendall(listing)
+                        data_conn.close()
+                    except OSError:
+                        pass
+                    data_listener.close()
+                    data_listener = None
+                    send("226 transfer complete")
+                elif command == "RETR":
+                    if data_listener is None:
+                        send("425 use PASV first")
+                        continue
+                    send("150 opening data connection")
+                    data_conn, _ = data_listener.accept()
+                    try:
+                        if wrapped:
+                            data_conn = self.sslctx.wrap_socket(data_conn, server_side=True)
+                        data_conn.sendall(self.body)
+                        data_conn.close()
+                    except OSError:
+                        pass
+                    data_listener.close()
+                    data_listener = None
+                    send("226 transfer complete")
+                elif command == "QUIT":
+                    send("221 bye")
+                    return
+                else:
+                    send("502 command not implemented")
+        except (OSError, ssl.SSLError):
+            return
+        finally:
+            if data_listener is not None:
+                try:
+                    data_listener.close()
+                except OSError:
+                    pass
+            try:
+                conn.close()
+            except OSError:
+                pass
+
+
 def _wait_tcp(port: int, timeout: float = 20.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -459,8 +854,9 @@ def run_template(name: str, ctx: dict) -> dict:
     entry = _BY_FAMILY.get(name)
     if entry is None:
         return _fail("no template entry for this family", "harness-failure")
-    wl = entry.get("workload") or {}
-    kind = wl.get("template")
+    workloads = entry.get("workload") or {}
+    if isinstance(workloads, dict):
+        workloads = [workloads]
     tmpdir = isolated_tmpdir(ctx["workdir"])
     env = _env_for(ctx, tmpdir=tmpdir)
     env.setdefault("HOME", str(ctx["workdir"]))
@@ -474,14 +870,41 @@ def run_template(name: str, ctx: dict) -> dict:
         "tls_server": _tpl_tls_server,
         "signature": _tpl_signature,
         "ssh_client": _tpl_ssh_client,
+        "x509_verification": _tpl_x509_verification,
+        "evp_signing": _tpl_evp_signing,
+        "aead_roundtrip": _tpl_aead_roundtrip,
+        "hmac_kdf": _tpl_hmac_kdf,
     }
-    handler = handlers.get(str(kind))
-    if handler is None:
-        return _fail(f"template {kind!r} is not implemented in this venue", "harness-failure")
-    try:
-        return handler(entry, ctx)
-    except Exception as exc:  # noqa: BLE001 - a fixture failure is recorded, never raised
-        return _fail(f"the {kind} template failed: {exc}", "harness-failure")
+    results: list[dict] = []
+    for wl in workloads:
+        kind = (wl or {}).get("template")
+        handler = handlers.get(str(kind))
+        if handler is None:
+            return _fail(f"template {kind!r} is not implemented in this venue",
+                         "harness-failure")
+        try:
+            results.append(handler(dict(entry, workload=wl), ctx))
+        except Exception as exc:  # noqa: BLE001 - a fixture failure is recorded, never raised
+            return _fail(f"the {kind} template failed: {exc}", "harness-failure")
+    if len(results) == 1:
+        return results[0]
+    functional = all(r.get("functional_ok") for r in results)
+    runtime_ok = all(r.get("runtime_ok") for r in results)
+    first_bad = next((r for r in results if not r.get("functional_ok")), None)
+    return {
+        "runtime_ok": runtime_ok,
+        "functional_ok": functional,
+        "failure_class": None if functional else (first_bad or {}).get("failure_class"),
+        "residual": "none" if functional else (first_bad or {}).get("residual"),
+        "reason": None if functional else "; ".join(
+            str(r.get("reason")) for r in results if r.get("reason")),
+        "transcript": "\n\n".join(str(r.get("transcript") or "") for r in results),
+        "workload": f"{name}: " + " + ".join(
+            str((r.get("workload") or "").split(": ", 1)[-1]) for r in results),
+        "consumer_evidence": [r.get("consumer_evidence") for r in results
+                              if r.get("consumer_evidence") is not None],
+        "local_only": True,
+    }
 
 
 def _fail(reason: str, failure_class: str) -> dict:
@@ -790,6 +1213,351 @@ def _zip_has_entry(path: Path, name: str) -> bool:
             return any(info.filename == name and info.file_size > 0 for info in zf.infolist())
     except (OSError, zipfile.BadZipFile):
         return False
+
+
+# --------------------------------------------------------------------------------------------
+# mechanism templates
+# --------------------------------------------------------------------------------------------
+
+def _gate_reject(gate: dict, transcript: str) -> dict:
+    """The one outcome a workload that fails the consumer gate can have."""
+    return {
+        "runtime_ok": False,
+        "functional_ok": False,
+        # The closed failure taxonomy has no `false-l7`; a workload rejected by
+        # the consumer gate is a harness failure whose reason names the
+        # invariant.  It can never be promoted to L7.
+        "failure_class": "harness-failure",
+        "residual": "out-of-scope",
+        "reason": f"false-L7 rejected by the consumer-API invariant: {gate.get('reason')}",
+        "transcript": transcript,
+        "workload": "template (false-L7 rejected)",
+        "consumer_evidence": gate.get("evidence"),
+        "local_only": True,
+    }
+
+
+def _tpl_x509_verification(entry: dict, ctx: dict) -> dict:
+    """Accept a chain signed by the trusted CA; reject one signed by an unrelated CA.
+
+    ``mode: "peer"`` (the proof family) drives the consumer against a local FTPS
+    peer whose certificate is signed by the fixture CA.  ``SSL_CERT_FILE`` is
+    the only difference between the positive and negative runs.  ``mode:
+    "chain"`` is for an offline chain verifier: ``argv`` names ``{ca}`` and
+    ``negative_argv`` names ``{wrong_ca}``.
+    """
+    wl = entry["workload"]
+    b = _base(entry, ctx, wl)
+    pki = _generate_pki(ctx)
+    b["ca"], b["wrong_ca"] = pki["ca"], pki["wrong_ca"]
+    b["cert"], b["key"] = pki["cert"], pki["key"]
+    program = Path(str(wl.get("program") or ctx["program"]))
+    mode = str(wl.get("mode", "peer"))
+    if mode == "chain":
+        pos = _run([str(program), *_expand_wl(wl["argv"], b)], cwd=ctx["workdir"],
+                   env=ctx["env"], timeout=120)
+        neg = _run([str(program), *_expand_wl(wl.get("negative_argv") or wl["argv"], b)],
+                   cwd=ctx["workdir"], env=ctx["env"], timeout=120)
+        pos_match = re.search(str(wl["expect"]), pos["stdout"] + pos["stderr"], re.MULTILINE)
+        neg_match = re.search(str(wl["expect"]), neg["stdout"] + neg["stderr"], re.MULTILINE)
+        functional = bool(pos["ok"] and pos_match and (neg["exit_code"] != 0 or not neg_match))
+        pos_ok = bool(pos["ok"] and pos_match)
+        transcript = _transcript([("valid chain", pos), ("unrelated CA (must fail)", neg)])
+        reason = ("the valid chain was not accepted" if not pos_ok else
+                  "a chain signed by an unrelated CA was not rejected")
+    else:
+        payload = b"template-payload\n"
+        download = str(wl.get("download", "payload.bin"))
+        pos_dir = ctx["workdir"] / "x509-positive"
+        neg_dir = ctx["workdir"] / "x509-negative"
+        for directory in (pos_dir, neg_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+        # The released master ``gftprc`` ships ``verify_ssl_peer=0``, which
+        # would make the negative control meaningless.  gftp expands ``~`` with
+        # getpwuid() (not $HOME) and copies the master config to that user file
+        # when it is absent, so re-enable verification in the installed master
+        # and drop any user copy left by an earlier process.  This is a fixture
+        # precondition in the family scratch, not a source patch.
+        master = Path(ctx["root"]) / ".l7-install" / "share" / "gftp" / "gftprc"
+        if master.is_file():
+            master.write_text(
+                master.read_text(encoding="utf-8", errors="ignore").replace(
+                    "verify_ssl_peer=0", "verify_ssl_peer=1"), encoding="utf-8")
+        try:
+            Path("~/.gftp/gftprc").expanduser().unlink()
+        except (OSError, RuntimeError):
+            pass
+        pos_env = dict(ctx["env"], SSL_CERT_FILE=str(pki["ca"]), HOME=str(pos_dir))
+        neg_env = dict(ctx["env"], SSL_CERT_FILE=str(pki["wrong_ca"]), HOME=str(neg_dir))
+        with _FTPSFixture(b["port"], payload, cert=pki["cert"], key=pki["key"]):
+            pos = _run([str(program), *_expand_wl(wl["argv"], b)], cwd=pos_dir,
+                       env=pos_env, timeout=120)
+            neg = _run([str(program), *_expand_wl(wl.get("negative_argv") or wl["argv"], b)],
+                       cwd=neg_dir, env=neg_env, timeout=120)
+        pos_file = pos_dir / download
+        neg_file = neg_dir / download
+        pos_ok = bool(pos["ok"] and pos_file.is_file() and pos_file.read_bytes() == payload)
+        neg_rejected = not (neg_file.is_file() and neg_file.read_bytes() == payload)
+        functional = bool(pos_ok and neg_rejected)
+        transcript = _transcript([
+            ("trusted CA", pos),
+            ("downloaded under trusted CA", {"exit_code": 0 if pos_file.is_file() else 1,
+                                              "stdout": (pos_file.read_bytes()[:200].decode(
+                                                  "utf-8", "replace")
+                                                  if pos_file.is_file() else ""),
+                                              "stderr": ""}),
+            ("unrelated CA (must fail)", neg),
+            ("downloaded under unrelated CA", {"exit_code": 0 if neg_file.is_file() else 1,
+                                                "stdout": (neg_file.read_bytes()[:200].decode(
+                                                    "utf-8", "replace")
+                                                    if neg_file.is_file() else ""),
+                                                "stderr": ""}),
+        ])
+        reason = ("the verified FTPS transfer did not deliver the fixture payload"
+                  if not pos_ok else
+                  "a peer presenting a chain from an unrelated CA was not rejected")
+    gate = verify_consumer_boundary(entry, ctx, program=program)
+    if not gate["ok"]:
+        return _gate_reject(gate, transcript)
+    return {
+        "runtime_ok": pos_ok,
+        "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if pos_ok else
+                                                  "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if pos_ok else
+                                               "runtime-failure"),
+        "reason": None if functional else reason,
+        "transcript": transcript,
+        "workload": f"{entry['family']}: x509 chain verification (trusted CA accept; unrelated "
+                    "CA reject)",
+        "consumer_evidence": gate["evidence"],
+        "local_only": True,
+    }
+
+
+def _signing_fixture(ctx: dict, wl: dict) -> dict:
+    """A local signing key pair and ELF input, independent of the consumer."""
+    d = ctx["workdir"] / "signing"
+    d.mkdir(parents=True, exist_ok=True)
+    paths: dict[str, Path] = {}
+    for name, bits in (wl.get("keys") or {"psk": 4096, "ssk": 4096}).items():
+        path = d / f"{name}.pem"
+        res = _openssl(ctx, ["genpkey", "-algorithm", "RSA", "-pkeyopt",
+                             f"rsa_keygen_bits:{int(bits)}", "-out", str(path)], d)
+        if not res["ok"] or not path.is_file():
+            raise RuntimeError(f"could not generate the {name} signing key: "
+                               f"{census._error_line(res)}")
+        paths[str(name)] = path
+    source_text = str(wl.get("payload_source", "int main(void){return 0;}\n"))
+    source = d / "payload.c"
+    source.write_text(source_text, encoding="utf-8")
+    payload = d / "payload.elf"
+    build = _run(["cc", "-o", str(payload), str(source)], cwd=d, env=ctx["env"], timeout=60)
+    if not build["ok"] or not payload.is_file():
+        raise RuntimeError(f"could not build the signing fixture ELF: {census._error_line(build)}")
+    paths["payload"] = payload
+    bif_text = str(wl.get("bif") or "the_ROM_image:\n{\n [pskfile] {psk}\n [sskfile] {ssk}\n"
+                                        " [bootloader, authentication=rsa] {payload}\n}\n")
+    for key, path in paths.items():
+        bif_text = bif_text.replace("{" + key + "}", str(path))
+    bif = d / "image.bif"
+    bif.write_text(bif_text, encoding="utf-8")
+    paths["bif"] = bif
+    return {k: str(v) for k, v in paths.items()}
+
+
+def _tpl_evp_signing(entry: dict, ctx: dict) -> dict:
+    """Sign a fixture with the consumer, verify it, then reject a tampered signature."""
+    wl = entry["workload"]
+    b = _base(entry, ctx, wl)
+    fixture = _signing_fixture(ctx, wl)
+    signed = ctx["workdir"] / "signed.bin"
+    tampered = ctx["workdir"] / "tampered.bin"
+    extra = {**fixture, "signed": str(signed), "tampered": str(tampered)}
+    program = Path(str(wl.get("program") or ctx["program"]))
+    sign = _run([str(program), *_expand_wl(wl["sign_argv"], b, extra=extra)], cwd=ctx["workdir"],
+                env=ctx["env"], timeout=120)
+    sign_expect = str(wl.get("sign_expect", ""))
+    sign_ok = bool(sign["ok"] and signed.is_file() and
+                   (not sign_expect or re.search(sign_expect, sign["stdout"] + sign["stderr"],
+                                                 re.MULTILINE)))
+    verify = _run([str(program), *_expand_wl(wl["verify_argv"], b, extra=extra)],
+                  cwd=ctx["workdir"], env=ctx["env"], timeout=120) if sign_ok else {
+                      "exit_code": -1, "stdout": "", "stderr": "sign failed"}
+    verify_expect = str(wl.get("verify_expect", ""))
+    verified = bool(sign_ok and verify_expect and
+                    re.search(verify_expect, verify["stdout"] + verify["stderr"], re.MULTILINE))
+    if sign_ok:
+        tampered.write_bytes(signed.read_bytes())
+        blob = bytearray(tampered.read_bytes())
+        offset = int(wl.get("tamper_offset", -100))
+        index = offset if offset >= 0 else len(blob) + offset
+        index = max(0, min(index, len(blob) - 1))
+        blob[index] ^= 0x01
+        tampered.write_bytes(bytes(blob))
+    negative = _run([str(program), *_expand_wl(wl["verify_argv"], b,
+                                              extra=dict(extra, signed=str(tampered)))],
+                    cwd=ctx["workdir"], env=ctx["env"], timeout=120) if sign_ok else {
+                        "exit_code": -1, "stdout": "", "stderr": "sign failed"}
+    negative_expect = str(wl.get("negative_expect", ""))
+    negative_output = negative["stdout"] + negative["stderr"]
+    tamper_rejected = bool(
+        (negative_expect and re.search(negative_expect, negative_output, re.MULTILINE)) or
+        (not negative_expect and negative["exit_code"] != 0 and
+         not (verify_expect and re.search(verify_expect, negative_output, re.MULTILINE))))
+    if verify_expect and re.search(verify_expect, negative_output, re.MULTILINE):
+        tamper_rejected = False
+    functional = bool(sign_ok and verified and tamper_rejected)
+    transcript = _transcript([("sign", sign), ("verify signed artifact", verify),
+                              ("verify tampered signature (must fail)", negative),
+                              ("fixture", {"exit_code": 0, "stdout": str(fixture["bif"]),
+                                            "stderr": ""})])
+    reason = ("the consumer did not sign the fixture" if not sign_ok else
+              "the consumer did not verify its own valid signature" if not verified else
+              "a tampered signature was not rejected")
+    gate = verify_consumer_boundary(entry, ctx, program=program)
+    if not gate["ok"]:
+        return _gate_reject(gate, transcript)
+    return {
+        "runtime_ok": sign_ok,
+        "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if sign_ok else
+                                                  "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if sign_ok else
+                                               "runtime-failure"),
+        "reason": None if functional else reason,
+        "transcript": transcript,
+        "workload": f"{entry['family']}: sign -> verify -> tampered signature reject",
+        "consumer_evidence": gate["evidence"],
+        "local_only": True,
+    }
+
+
+def _tpl_aead_roundtrip(entry: dict, ctx: dict) -> dict:
+    """Encrypt/decrypt round trip through the consumer, then reject a modified tag.
+
+    A typed library harness (``workload.harness``) is used for a library-only
+    family: the harness object is compiled by the runtime and this handler runs
+    its positive and ``--tamper`` modes.  The consumer gate then proves that the
+    harness imports no OpenSSL symbol and that it references the named consumer
+    library.  A CLI family may instead name ``encrypt_argv``/``decrypt_argv``.
+    """
+    wl = entry["workload"]
+    b = _base(entry, ctx, wl)
+    program = Path(str(wl.get("program") or ctx["program"]))
+    h = wl.get("harness")
+    if h:
+        pos = _run([str(program), *_expand_wl(h.get("argv") or [], b)], cwd=ctx["workdir"],
+                   env=ctx["env"], timeout=120)
+        neg = _run([str(program), *_expand_wl(h.get("negative_argv") or [], b)],
+                   cwd=ctx["workdir"], env=ctx["env"], timeout=120)
+        pos_expect = str(h.get("expect", "aead_roundtrip=ok"))
+        neg_expect = str(h.get("negative_expect", "aead_tamper=rejected"))
+        pos_ok = bool(pos["ok"] and re.search(pos_expect, pos["stdout"] + pos["stderr"],
+                                              re.MULTILINE))
+        neg_ok = bool(re.search(neg_expect, neg["stdout"] + neg["stderr"], re.MULTILINE))
+        gate = verify_consumer_boundary(entry, ctx, program=program, harness_obj=program)
+        transcript = _transcript([("round trip", pos), ("modified tag (must fail)", neg)])
+    else:
+        payload = b["files"]["payload"]
+        artifact = ctx["workdir"] / str(wl.get("artifact", "ciphertext.bin"))
+        plain = ctx["workdir"] / str(wl.get("plaintext", "plaintext.out"))
+        extra = {"artifact": str(artifact), "plaintext": str(plain)}
+        enc = _run([str(program), *_expand_wl(wl["encrypt_argv"], b, extra=extra)],
+                   cwd=ctx["workdir"], env=ctx["env"], timeout=120)
+        dec = _run([str(program), *_expand_wl(wl["decrypt_argv"], b, extra=extra)],
+                   cwd=ctx["workdir"], env=ctx["env"], timeout=120) if enc["ok"] else {
+                       "exit_code": -1, "stdout": "", "stderr": "encrypt failed"}
+        pos_ok = bool(enc["ok"] and artifact.is_file() and dec["ok"] and plain.is_file() and
+                      plain.read_bytes() == payload.read_bytes())
+        if artifact.is_file():
+            blob = bytearray(artifact.read_bytes())
+            offset = int(wl.get("tamper_offset", -1))
+            index = offset if offset >= 0 else len(blob) + offset
+            index = max(0, min(index, len(blob) - 1))
+            blob[index] ^= 0x01
+            artifact.write_bytes(bytes(blob))
+        if plain.is_file():
+            plain.unlink()
+        neg = _run([str(program), *_expand_wl(wl["decrypt_argv"], b, extra=extra)],
+                   cwd=ctx["workdir"], env=ctx["env"], timeout=120)
+        neg_ok = bool(neg["exit_code"] != 0 or not plain.is_file() or
+                      plain.read_bytes() != payload.read_bytes())
+        gate = verify_consumer_boundary(entry, ctx, program=program)
+        transcript = _transcript([("encrypt", enc), ("decrypt round trip", dec),
+                                  ("modified tag (must fail)", neg)])
+    if not gate["ok"]:
+        return _gate_reject(gate, transcript)
+    functional = bool(pos_ok and neg_ok)
+    return {
+        "runtime_ok": pos_ok,
+        "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if pos_ok else
+                                                  "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if pos_ok else
+                                               "runtime-failure"),
+        "reason": None if functional else (
+            "the encrypt/decrypt round trip did not reproduce the payload" if not pos_ok else
+            "a modified authentication tag was not rejected"),
+        "transcript": transcript,
+        "workload": f"{entry['family']}: AEAD round trip + modified-tag reject",
+        "consumer_evidence": gate["evidence"],
+        "local_only": True,
+    }
+
+
+def _tpl_hmac_kdf(entry: dict, ctx: dict) -> dict:
+    """Reproduce a published keyed-KDF output; a wrong key must produce a different one."""
+    wl = entry["workload"]
+    b = _base(entry, ctx, wl)
+    kdf = wl["kdf"]
+    fid = str(kdf["fid"])
+    expected = str(kdf["expected"])
+    vector = ctx["workdir"] / "kdf-positive.txt"
+    wrong = ctx["workdir"] / "kdf-wrong-key.txt"
+    vector.write_text(
+        f"L = {int(kdf.get('bits', 256))}\nKI = {kdf['key']}\n"
+        f"FixedInputDataByteLen = {len(fid) // 2}\nFixedInputData = {fid}\nKO = {expected}\n",
+        encoding="utf-8")
+    wrong.write_text(
+        f"L = {int(kdf.get('bits', 256))}\nKI = {kdf['wrong_key']}\n"
+        f"FixedInputDataByteLen = {len(fid) // 2}\nFixedInputData = {fid}\n",
+        encoding="utf-8")
+    program = Path(str(wl.get("program") or ctx["program"]))
+    extra = {"vector": str(vector), "wrong_vector": str(wrong)}
+    pos = _run([str(program), *_expand_wl(wl["argv"], b, extra=extra)], cwd=ctx["workdir"],
+               env=ctx["env"], timeout=120)
+    neg = _run([str(program), *_expand_wl(wl.get("negative_argv") or wl["argv"], b, extra=extra)],
+               cwd=ctx["workdir"], env=ctx["env"], timeout=120)
+    pos_out = pos["stdout"] + pos["stderr"]
+    neg_out = neg["stdout"] + neg["stderr"]
+    pos_ok = bool(pos["ok"] and re.search(str(wl["expect"]), pos_out, re.MULTILINE) and
+                  re.search(re.escape(expected), pos_out, re.IGNORECASE))
+    output_re = str(wl.get("output_re", r"KO = ([0-9A-Fa-f]+)"))
+    match = re.search(output_re, neg_out, re.MULTILINE)
+    wrong_differs = bool(match and match.group(1).lower() != expected.lower())
+    neg_ok = bool(wrong_differs or (neg["exit_code"] != 0 and
+                                    not re.search(str(wl["expect"]), neg_out, re.MULTILINE)))
+    functional = bool(pos_ok and neg_ok)
+    transcript = _transcript([("published vector", pos), ("wrong key (must differ)", neg)])
+    reason = ("the consumer did not reproduce the published KDF output" if not pos_ok else
+              "a wrong key produced the same KDF output")
+    gate = verify_consumer_boundary(entry, ctx, program=program)
+    if not gate["ok"]:
+        return _gate_reject(gate, transcript)
+    return {
+        "runtime_ok": pos_ok,
+        "functional_ok": functional,
+        "failure_class": None if functional else ("functional-failure" if pos_ok else
+                                                  "runtime-failure"),
+        "residual": "none" if functional else ("functional-divergence" if pos_ok else
+                                               "runtime-failure"),
+        "reason": None if functional else reason,
+        "transcript": transcript,
+        "workload": f"{entry['family']}: keyed-KDF known output + wrong-key differs",
+        "consumer_evidence": gate["evidence"],
+        "local_only": True,
+    }
 
 
 def _tpl_ssh_client(entry: dict, ctx: dict) -> dict:

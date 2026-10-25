@@ -376,6 +376,110 @@
         "expect": "HTTP OK",
         "negative": "plaintext"
       }
+    },
+    {
+      "family": "gftp-text",
+      "bucket": "TLS generic client",
+      "version": "2.9.1~beta",
+      "url": "https://deb.debian.org/debian/pool/main/g/gftp/gftp_2.9.1~beta.orig.tar.xz",
+      "sha256": "79c727a0c7720e0e49dac4fc760a686d10ff78a496e1e3e644b45d3e76e1eecd",
+      "archive": "tar.xz",
+      "build_system": "autotools",
+      "recipe": "admitted",
+      "artifact": "src/text/gftp-text",
+      "program": "src/text/gftp-text",
+      "launch": ["--version"],
+      "version_re": "gFTP|gftp",
+      "lib_paths": [],
+      "make_steps": [["install"]],
+      "consumer": {"self": true, "fixture_openssl": true},
+      "workload": {
+        "template": "x509_verification",
+        "mode": "peer",
+        "argv": ["-d", "ftps://template:template@localhost:{port}/payload.bin"],
+        "negative_argv": ["-d", "ftps://template:template@localhost:{port}/payload.bin"],
+        "download": "payload.bin",
+        "expect": "template-payload",
+        "negative": "wrong_ca"
+      }
+    },
+    {
+      "family": "xilinx-bootgen",
+      "bucket": "signature/cert tool",
+      "version": "2022.2",
+      "url": "https://deb.debian.org/debian/pool/main/x/xilinx-bootgen/xilinx-bootgen_2022.2.orig.tar.gz",
+      "sha256": "af1d494e30f357b46868ad4580f78bef7c660b5a32a10308c3bc8ae452a9eaba",
+      "archive": "tar.gz",
+      "build_system": "make",
+      "recipe": "admitted",
+      "artifact": "bootgen",
+      "program": "bootgen",
+      "launch": ["-help"],
+      "version_re": "Xilinx Bootgen|Bootgen",
+      "lib_paths": [],
+      "consumer": {"self": true},
+      "workload": [
+        {
+          "template": "evp_signing",
+          "keys": {"psk": 4096, "ssk": 4096},
+          "sign_argv": ["-arch", "zynqmp", "-image", "{bif}", "-o", "{signed}", "-w"],
+          "verify_argv": ["-arch", "zynqmp", "-verify", "{signed}"],
+          "sign_expect": "Bootimage generated successfully",
+          "verify_expect": "Authentication is verified",
+          "negative_expect": "Authentication verification failed",
+          "tamper_offset": -100
+        },
+        {
+          "template": "hmac_kdf",
+          "kdf": {
+            "bits": 256,
+            "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "wrong_key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e10",
+            "fid": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+            "expected": "F67D17DDF07D3579CCED1CE404E9854C12C25F8CFB2B6EE74508F13C7797F8E1"
+          },
+          "argv": ["-arch", "zynqmp", "-verify_kdf", "{vector}"],
+          "negative_argv": ["-arch", "zynqmp", "-verify_kdf", "{wrong_vector}"],
+          "expect": "Verified with given Ko",
+          "output_re": "KO = ([0-9A-Fa-f]+)"
+        }
+      ]
+    },
+    {
+      "family": "poco",
+      "bucket": "crypto library (typed harness)",
+      "version": "1.11.0",
+      "url": "https://deb.debian.org/debian/pool/main/p/poco/poco_1.11.0.orig.tar.bz2",
+      "sha256": "b08cf73926fa92a6c8f3c712e8fb217d5d0c2fa5248ec0281f251fe1e925d2f1",
+      "archive": "tar.bz2",
+      "build_system": "cmake",
+      "recipe": "admitted",
+      "artifact": "b/lib/libPocoNetSSL.so*",
+      "program": ".l7-poco-harness",
+      "launch": ["--version"],
+      "version_re": "poco-aead-harness",
+      "lib_paths": [],
+      "harness": {
+        "source": "forensics/tools/l7_poco_aead.cpp",
+        "compiler": "c++",
+        "cflags": ["-std=c++17", "-I{root}/Foundation/include", "-I{root}/Crypto/include",
+                  "-I{prefix}/include"],
+        "ldflags": ["-L{root}/b/lib", "-Wl,-rpath,{root}/b/lib", "-Wl,-rpath,{prefix}/lib",
+                    "-lPocoCrypto", "-lPocoFoundation", "-lpthread"]
+      },
+      "consumer": {
+        "library_globs": ["b/lib/libPocoCrypto.so*"],
+        "required_symbols": ["_ZN4Poco6Crypto"]
+      },
+      "workload": {
+        "template": "aead_roundtrip",
+        "harness": {
+          "argv": [],
+          "negative_argv": ["--tamper"],
+          "expect": "aead_roundtrip=ok",
+          "negative_expect": "aead_tamper=rejected"
+        }
+      }
     }
   ]
 }
