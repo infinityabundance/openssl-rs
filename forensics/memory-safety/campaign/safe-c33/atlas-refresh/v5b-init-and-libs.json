@@ -1,0 +1,191 @@
+{
+  "schema": "safe-c33/subphase-receipt/v1",
+  "receipt": "V5B-INIT-AND-LIBS",
+  "date": "2026-10-25",
+  "subphase": "V5b: restore bind9's OPENSSL_init_ssl contract and the runtime libraries of three capability-migrated families",
+  "branch": "integrate/safe-c33",
+  "source_head": "df7268650e87a0a08f1368a984b96cfdd4a9a481",
+  "source_head_short": "df7268650",
+  "source_head_subject": "Merge stage/p25/v5-seal",
+  "execution": {
+    "role": "subagent",
+    "committed": false,
+    "pushed": false,
+    "host_execution": false,
+    "venue": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+    "src_changed_this_subphase": true,
+    "docker_changed_this_subphase": false,
+    "note": "all cargo, Python, fetch, build and launch work ran inside the court container; no project build ran on the host"
+  },
+  "defect_a_bind9_initialisation": {
+    "witness": "bind9 lib/isc/tls.c:88 calls OPENSSL_init_ssl(OPENSSL_INIT_ENGINE_ALL_BUILTIN | OPENSSL_INIT_LOAD_CONFIG, NULL); authority returned 1, candidate returned 0 with 078C0105 (ERR_LIB_CRYPTO/ERR_R_INIT_FAIL), aborting bind9's configure test",
+    "minimal_reproduction": "runtime::init::tests::init_engine_all_builtin_with_load_config_succeeds_like_the_authority, before the source fix: left: 0, right: 1",
+    "root_cause": "src/runtime/init.rs kept OPENSSL_INIT_ENGINE_RDRAND/_OPENSSL/_CRYPTODEV/_CAPI/_PADLOCK/_AFALG on INIT_UNSUPPORTED. OPENSSL_INIT_ENGINE_ALL_BUILTIN is the union of those seven bits, so bind9's option word tripped the refusal before the config step. The authority's ossl_init_engine_* bodies (crypto/init.c:312-380) each return 1 unconditionally; refusing the bit was a return-value divergence, not a faithful refusal.",
+    "fix": [
+      "removed INIT_UNSUPPORTED and both refusal blocks from OPENSSL_init_crypto",
+      "runs the engine steps at the authority's coordinates (crypto/init.c:652-682): engine_dynamic keeps its landed loader; the absent loaders (openssl, rdrand, devcrypto, padlock, capi, afalg) are successful no-ops",
+      "added the authority's ENGINE_register_all_complete() for OPENSSL_INIT_ENGINE_ALL_BUILTIN (crypto/init.c:685-688)",
+      "recorded the retained contents divergence: no built-in engine is registered for the absent loaders (docs/DECISIONS.md D565; src/engine/eng_all.rs)",
+      "LOAD_CONFIG unchanged: DEFAULT_CONF_MFLAGS carries CONF_MFLAGS_IGNORE_MISSING_FILE, and def_load maps the BIO missing-file reason to CONF_R_NO_SUCH_FILE; a new init_* test fixes this"
+    ],
+    "focused_tests": {
+      "init_engine_all_builtin_with_load_config_succeeds_like_the_authority": "PASS (fails before the fix)",
+      "init_load_config_succeeds_when_the_file_is_missing": "PASS (already correct; now guarded)"
+    },
+    "preserved": [
+      "exported symbols and #[repr(C)] layouts unchanged",
+      "CRYPTO_* allocator seam unchanged",
+      "error codes unchanged; ERR_R_INIT_FAIL still raised for the terminal after-cleanup case"
+    ]
+  },
+  "defect_b_runtime_libraries": {
+    "witness": "charybdis, memcached and nsd dropped from L7 to L4 under both subjects with libltdl.so.7 and libevent-2.1.so.7 unresolved at launch",
+    "root_cause": "forensics/tools/downstream_runtime.py built the launch root only from recipe['aux_sources']. The S64 registry expresses these dependencies as recipe['capabilities'], which bl._prepare_aux extracts into the same <family work>/aux/root, but _aux_runtime_lib_dirs/_aux_runtime_bin_dirs and the harness build environment never read the capability specs. The libraries were therefore present in the build root and absent from LD_LIBRARY_PATH at launch.",
+    "fix": [
+      "new _aux_runtime_specs(recipe) merges capability bundles (bl.deps.resolve_recipe + merge_specs) with legacy aux_sources in the same order _prepare_aux uses",
+      "_aux_runtime_lib_dirs and _aux_runtime_bin_dirs now consume the merged specs, so <aux>/root/usr/lib/x86_64-linux-gnu precedes the subject prefix in LD_LIBRARY_PATH",
+      "the workload build environment (CPPFLAGS/LDFLAGS/PKG_CONFIG_PATH/LD_LIBRARY_PATH) also consumes the merged specs",
+      "_runtime_row records the resolved {capability, bundle_id, sha256} aux_bundles, the same evidence shape the build/link row uses"
+    ],
+    "registry_expression": {
+      "charybdis": {"capability": "autotools-ltdl", "bundle_id": "cap:autotools-ltdl@bookworm-libtool-2.4.7", "provides": "libltdl.so.7 under usr/lib/x86_64-linux-gnu", "sha256": "sha256:d02380f4cda7cb0a670c74278ba809c22448f308e1e7a9687ebe4633166d638a"},
+      "memcached": {"capability": "libevent", "bundle_id": "cap:libevent@2.1.12-stable-8", "provides": "libevent-2.1.so.7 under usr/lib/x86_64-linux-gnu", "sha256": "sha256:2154b8fd78e8284a6a111803d7d47b6293d490e5c600b3937eb18c0a3fd7b123"},
+      "nsd": {"capability": "libevent", "bundle_id": "cap:libevent@2.1.12-stable-8", "provides": "libevent-2.1.so.7 under usr/lib/x86_64-linux-gnu", "sha256": "sha256:2154b8fd78e8284a6a111803d7d47b6293d490e5c600b3937eb18c0a3fd7b123"},
+      "mechanism": "the registry component 'runtime' records the SONAME and path; each package's library_dirs names the extracted directory the launch root must carry. No bundle required re-authoring and no atlas row was restored.",
+      "dlopen_limit": "the registry can only supply files it pins in a bundle's package set. A consumer that dlopens a SONAME absent from its declared capability still cannot be served by this mechanism; that gap would have to be expressed as a new component, not inferred at launch. No such gap occurred for these three families."
+    },
+    "grades_before": {
+      "charybdis": {"authority": "L4-linked", "candidate": "L4-linked", "failure": "runtime-failure: the program did not start and report its version"},
+      "memcached": {"authority": "L4-linked", "candidate": "L4-linked", "failure": "runtime-failure: the program did not start and report its version"},
+      "nsd": {"authority": "L4-linked", "candidate": "L4-linked", "failure": "runtime-failure: the program did not start and report its version"}
+    },
+    "grades_after": {
+      "charybdis": {"authority": "L7-functional", "candidate": "L7-functional"},
+      "memcached": {"authority": "L7-functional", "candidate": "L7-functional"},
+      "nsd": {"authority": "L7-functional", "candidate": "L7-functional"}
+    }
+  },
+  "bind9_grade": {
+    "before": {"authority": "L3-built (unlinked)", "candidate": "L2-configured (unbuildable: configure test failed)"},
+    "after": {"authority": "L3-built (unlinked)", "candidate": "L3-built (unlinked)"},
+    "runtime_row": "none: the built artifact declares no libssl/libcrypto DT_NEEDED, so neither subject is a linkage consumer and the runtime atlas records L3-built as the applicable baseline"
+  },
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libssl_so_3_sha256": "abb3163f2a8863dde822ec7524d903eef8f34f81f96dd1a1e357a13c3f809fb5",
+    "libcrypto_so_3_sha256": "c6a15e470ea866ecc76f7dd469df6b538a98a50317ccdc646e9bd21156c7a4e8",
+    "rebuild": "bash forensics/tools/build_phase2.sh; phase2 courts all_pass=True"
+  },
+  "files": {
+    "source": [
+      "src/runtime/init.rs",
+      "src/engine/eng_all.rs",
+      "src/apps/engine.rs",
+      "src/async/mod.rs"
+    ],
+    "documentation": ["docs/DECISIONS.md"],
+    "tools": [
+      "forensics/tools/downstream_runtime.py",
+      "forensics/tools/phase17_courts.py"
+    ],
+    "atlas": [
+      "forensics/downstream/runtime-functional-atlas.json",
+      "forensics/downstream/build-link-atlas.json",
+      "forensics/atlas/implemented-surface.json"
+    ],
+    "rebuilt_install": [
+      "artifacts/phase2/install/bin/openssl",
+      "artifacts/phase2/install/lib/libcrypto.a",
+      "artifacts/phase2/install/lib/libcrypto.so",
+      "artifacts/phase2/install/lib/libcrypto.so.3",
+      "artifacts/phase2/install/lib/libssl.a",
+      "artifacts/phase2/install/lib/libssl.so",
+      "artifacts/phase2/install/lib/libssl.so.3",
+      "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "artifacts/phase2/openssl"
+    ],
+    "hashes": {
+      "src/runtime/init.rs": "492e4aa8dc1f9f9c320e4ccceef69a4b0601f42e319e7fd79988c8a1252424c0",
+      "src/engine/eng_all.rs": "9ae03fd0b676ae00349e9eb5265033967b00293d9e7fee14e6d21e2632ef4bc0",
+      "src/apps/engine.rs": "d933dc5b406616d3e75f9180bf6b1af6ff9670409c14bb31bc3e095fa18373c1",
+      "src/async/mod.rs": "1d6a444a01085d743e4b140a956314bc66cd75858289c329d5f60817a492a479",
+      "docs/DECISIONS.md": "fcc349e8f92445d024a45986275ee3d4e2b360897de8aaf51d94de17a43c651a",
+      "forensics/tools/downstream_runtime.py": "ed74e85f5aed79f46b033efc3a59abf08a4b9a7dd68cc4144603871c704a8975",
+      "forensics/tools/phase17_courts.py": "26849dc05403732ea2e2de45aaedba31efaf7baf46bce817f8c920ea22ef037e",
+      "forensics/downstream/runtime-functional-atlas.json": "4624afdb7a2cd61ac59e256bd2f35dce535e6bec13843367d791f88334ddf9b2",
+      "forensics/downstream/build-link-atlas.json": "66ca682d617ec5e46ee84eee4e1476af5489adcfd17c89e032ba65e9cfc9f73b"
+    }
+  },
+  "gates": {
+    "fmt": {"command": "cargo fmt --all -- --check", "result": "PASS", "output": "exit 0, no output"},
+    "check_lib": {"command": "cargo check --lib", "result": "PASS", "output": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.09s"},
+    "focused_pre_fix": {"command": "cargo test --lib init_engine_all_builtin_with_load_config_succeeds_like_the_authority", "result": "FAILED as expected", "output": "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2198 filtered out; finished in 0.00s (left: 0, right: 1)"},
+    "focused_post_fix": {"command": "cargo test --lib -- --test-threads=4 runtime::init::tests::", "result": "PASS", "output": "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 2184 filtered out; finished in 0.00s"},
+    "full_lib": {"command": "cargo test --lib -- --test-threads=4", "result": "PASS", "output": "test result: ok. 2154 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 155.73s"},
+    "clippy": {"command": "cargo clippy --all-targets -- -D warnings", "result": "PASS", "output": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.84s; no warnings"},
+    "phase2_courts": {"command": "bash forensics/tools/build_phase2.sh", "result": "PASS", "output": "artifacts/phase2/COURTS.json all_pass=True"},
+    "runtime_check": {"command": "python3 forensics/tools/downstream_runtime.py --check", "result": "PASS", "output": "[downstream-runtime] with_recipe=307 cand_loaded=224 cand_functional=208 reaches_baseline=305 findings=0 control honest=True"},
+    "build_link_check": {"command": "python3 forensics/tools/downstream_build_link.py --check", "result": "PASS", "output": "[downstream-build-link] with_recipe=307 candidate_linked=245 linkage_proven=245 findings=0 control honest=True"},
+    "registry_self_test": {"command": "python3 forensics/tools/downstream_deps.py --self-test", "result": "PASS", "output": "[downstream-deps] self-test ok: 8 capabilities, 8 bundles, 30 package definitions (25 unique URLs), subject isolation, version coherence, source immutability and content addressing enforced"}
+  },
+  "remeasure": {
+    "runtime": {
+      "command": "python3 forensics/tools/downstream_runtime.py --measure --only charybdis,memcached,nsd --reuse-committed --reuse-previous-candidate",
+      "output": [
+        "[p1000 33] nsd authority L7-functional",
+        "[p1000 33] nsd candidate L7-functional",
+        "[p1000 149] memcached authority L7-functional",
+        "[p1000 149] memcached candidate L7-functional",
+        "[p1000 604] charybdis authority L7-functional",
+        "[p1000 604] charybdis candidate L7-functional",
+        "elapsed=84s with_recipe=307 no_recipe=693",
+        "authority loaded=224 runtime=211 functional=209 failed=5 not_attempted=755",
+        "candidate loaded=224 runtime=210 functional=208 failed=6 not_attempted=755",
+        "candidate_reaches_baseline=305 reaches_linked_baseline=244 below_baseline=1 baseline_not_linked=62"
+      ],
+      "identity": "both atlases carry the candidate identity above; the three re-measured rows record aux_bundles",
+      "aggregate_delta": {
+        "authority": "loaded 221->224, functional 206->209, failed 8->5",
+        "candidate": "loaded 221->224, functional 205->208, failed 9->6",
+        "attribution": "the three families are the entire delta; no other reused row changed"
+      }
+    },
+    "build_link": {
+      "command": "python3 forensics/tools/downstream_build_link.py --measure --only bind9 --reuse-committed --reuse-previous-candidate",
+      "output": [
+        "[p1000 185] bind9 auth=L3-built cand=L3-built the built artifact declares no libssl/libcrypto dependency, so the subject was not consumed",
+        "elapsed=43s with_recipe=307 no_recipe=693",
+        "authority configured=274 built=253 linked=245 failed=62",
+        "candidate configured=274 built=253 linked=245 failed=62",
+        "candidate_linkage_proven=245 candidate_specific_patch_count=0"
+      ],
+      "aggregate_delta": {
+        "candidate_built": "252->253 (bind9)",
+        "candidate_build_failures": "36->35",
+        "link_failures": "3->4 (bind9 moved from build failure to the unlinked class)",
+        "linkage_proven": "245->245"
+      }
+    }
+  },
+  "safety_accounting": {
+    "unsafe_ops": "none added; the only new unsafe block is the call to the existing safe C entry point ENGINE_register_all_complete with its registry-iteration contract documented",
+    "obligations_discharged": [
+      "the engine init steps' return value is now the authority's (1), with all absent-loader no-ops named",
+      "OPENSSL_INIT_LOAD_CONFIG's missing-file behaviour is pinned by a test"
+    ],
+    "obligations_retained": [
+      "the built-in engine loaders (openssl, rdrand, devcrypto, padlock, afalg) are not implemented; the registry contents still differ from the authority and D565 records it"
+    ],
+    "hidden": 0
+  },
+  "unresolved": [
+    "python3 forensics/tools/downstream_runtime.py --self-test fails on the pre-existing 'launch': [] entries for vsftpd and postfix (verified present at HEAD; not caused by this change and not repaired here)",
+    "the rebuilt artifacts under artifacts/phase2 are binary changes the orchestrator must commit together with the source, otherwise the atlases are bound to an install that is not in Git",
+    "the three families' runtime evidence is L7-functional under both subjects but only for the admitted local workloads; this is not a cryptographic-assurance claim"
+  ],
+  "non_claims": [
+    "no registry bundle can supply a runtime library it does not pin; this repair supplies only the libraries the recipes already declared",
+    "bind9 reaches L3-built, not a runtime row; its OpenSSL use is not linked and its TLS behaviour is not exercised by this measurement",
+    "the runtime self-test failure for vsftpd/postfix remains open independently of V5b"
+  ]
+}
