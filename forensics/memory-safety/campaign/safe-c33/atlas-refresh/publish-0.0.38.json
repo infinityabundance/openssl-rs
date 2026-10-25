@@ -1,0 +1,60 @@
+{
+  "receipt": "publish-0.0.38",
+  "date": "2026-10-25",
+  "crate": "openssl-rs",
+  "version": "0.0.38",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "commit": "a4e511865",
+    "commit_subject": "Merge pull request #65 from infinityabundance/integrate/safe-c33",
+    "note": "Published from a clean working tree on main at this merge commit. Contains S56-S61: the X.509 extension cache rebuild, structural session-cache reference ownership, the single-owner peer sigalg list, the no-reuse downstream re-measurement, the corpus batch, and the charybdis security-level protocol-floor fix.",
+    "working_tree": "clean at publish time"
+  },
+  "artefacts": {
+    "libcrypto.so.3": "b56ac6bfc09741a36c7f5b9c0dc7ba5131648083cb0b77d46d3ede61312585ae",
+    "libssl.so.3": "e0c9ba33cb5d417cee0f93ac72f941bb3048c7f3a4e910ce2b940a6c4f07676d",
+    "legacy.so": "fa0c29f00e93077fbedf974fa8f8ed1fb02bc273b0d1622841a7779e2460a9d7",
+    "openssl": "216d448a77992f974078bb1c9c95b491ec2330f34a8550305fce77b153d3d104"
+  },
+  "packaging": {
+    "files": 1010,
+    "compressed_bytes": 8876806,
+    "limit_bytes": 10000000,
+    "note": "Published with --no-verify. The tree was compiled by the phase-2 rebuild and exercised by the S58 full suite at the same source minus S59-S61; no full suite was run for this exact tree."
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.38",
+    "checksum": "fc5cbc4e57dde48d5df3f634a7be374c1adbdc085a9525fadb91de8e70b3fb71",
+    "checksum_prefix": "fc5cbc4e",
+    "crate_size": 8876806,
+    "published_at": "2026-10-25T02:02:36Z"
+  },
+  "provider_verification": {
+    "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",
+    "ldd": "resolves the install's own libcrypto",
+    "load": "OSSL_PROVIDER_load(NULL,\"legacy\") non-NULL with OPENSSL_MODULES set",
+    "legacy_algorithm": "MD4(abc) = a448017aaf21d8525fc10ae87aa6729d",
+    "retained": "compiled-in MODULESDIR is still the empty sentinel"
+  },
+  "evidence_shipped": {
+    "abi_courts": "11/11",
+    "downstream": "206 candidate L7 of 221 loaded with 307 recipes, measured at the previous identity; 307 of 307 recipe-backed families carried forward with candidate_identity_match=false",
+    "library_tests": "2148 passed, 0 failed, 45 ignored (S58 full run) - a floor for this tree",
+    "adversarial_probes": "42 probes registered, all passing in isolation at S58"
+  },
+  "memory_safety_deltas": {
+    "v3_purp": "extension cache built in local state then published once; unsafe blocks 276 -> 207",
+    "ssl_sess": "SessionRef owner for every cache reference; fabricated zeroed SslSession replaced by SessionKey",
+    "t1_lib": "OwnedSigalgs makes the peer sigalg list single-owner across four files",
+    "ssl_lib": "security-level protocol floor enforced; charybdis L5 -> L7"
+  },
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "No full library suite was run for this exact tree.",
+    "BOUNDARY and SEAL gates remain NOT_RUN for the S27-S61 cluster: no Miri, ASan, Loom, dudect, authority differential or independent caller audit.",
+    "SAFE_COMPATIBLE remains 0/33; no consumer family has graduated.",
+    "Concurrency data-race freedom in the session cache is NOT established.",
+    "The XstandardTable Sync claim remains a documented caller obligation, not an enforced invariant."
+  ]
+}
