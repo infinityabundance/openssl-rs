@@ -906,6 +906,11 @@ mod tests {
 
     /// `init` callback for the hand-built methods below: the key is accepted, nothing is
     /// decrypted or encrypted by these tests.
+    ///
+    /// # Safety
+    /// None on the arguments: the callback ignores `ctx`, `key` and `iv` without dereferencing
+    /// or retaining them, so the dispatch may pass any values. It is installed only through
+    /// [`EVP_CIPHER_meth_set_init`], whose parameter type fixes this ABI signature.
     unsafe extern "C" fn noop_init(
         _ctx: *mut c_void,
         _key: *const c_uchar,
@@ -916,6 +921,11 @@ mod tests {
     }
 
     /// `ctrl` callback for the hand-built methods below: accepts every command.
+    ///
+    /// # Safety
+    /// None on the arguments: the callback ignores `ctx`, `type`, `arg` and `ptr` without
+    /// dereferencing or retaining them, so the dispatch may pass any values. It is installed
+    /// only through [`EVP_CIPHER_meth_set_ctrl`], whose parameter type fixes this ABI signature.
     unsafe extern "C" fn noop_ctrl(
         _ctx: *mut c_void,
         _type: c_int,
@@ -927,6 +937,11 @@ mod tests {
 
     /// A provider-style `get_ctx_params` that reports [`REPORTED_TAG_LEN`] for `taglen` and
     /// leaves every other parameter unmodified.
+    ///
+    /// # Safety
+    /// `params` must be NULL or a `key`-terminated array of live [`OsslParam`], as the provider
+    /// dispatch (`evp_do_ciph_ctx_getparams`) establishes, and any located entry must be
+    /// writable per [`OSSL_PARAM_set_size_t`]. `algctx` is ignored and never dereferenced.
     unsafe extern "C" fn report_tag_len(_algctx: *mut c_void, params: *mut OsslParam) -> c_int {
         // SAFETY: the dispatch contract gives a key-terminated parameter array.
         unsafe {
