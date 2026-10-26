@@ -8,7 +8,7 @@
   "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
   "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md"
  ],
- "superseded_note": "Historical closure inventory bound to head_sha 67ae7f8e and crate 0.0.27. Census, cohort and worklist figures other than the two corrected worklist states below are as-of that HEAD and are retained unchanged; do not read them as the current state. Current mechanism states: ERR-1 SAFETY_DISCHARGED (mechanism-discharge-ERR.json); BIO CONTRACTED (B39/B40 boundaries independently checked, mechanism not discharged); RUNTIME_ALLOC_OWNERSHIP UNSAFE_OPEN.",
+ "superseded_note": "Historical closure inventory bound to head_sha 67ae7f8e and crate 0.0.27. Census, cohort and worklist figures other than the two corrected worklist states below are as-of that HEAD and are retained unchanged; do not read them as the current state. Current mechanism states: ERR-1 SAFETY_DISCHARGED (mechanism-discharge-ERR.json); BIO CONTRACTED (B39/B40 boundaries independently checked, mechanism not discharged); RUNTIME_ALLOC_OWNERSHIP and ASN1_OCSP OWNERSHIP_RECONSTRUCTED for the openssh-reachable sites (openssh-mechanisms-reconstructed.json), not SAFETY_DISCHARGED.",
  "base_sha": "b5bbb457ec6a3fd57ab5f9890d1bae3bbe7fe491",
  "base_ref": "origin/main",
  "head_sha": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
@@ -852,7 +852,7 @@
   {
    "id": "RUNTIME_ALLOC_OWNERSHIP",
    "category": "runtime allocator/ownership",
-   "state": "UNSAFE_OPEN",
+   "state": "OWNERSHIP_RECONSTRUCTED",
    "families_total": 31,
    "families_measured": 4,
    "families_inferred": 27,
@@ -867,12 +867,84 @@
     "crypto/buffer",
     "crypto/context",
     "crypto/lhash"
-   ]
+   ],
+   "reconstruction": {
+    "receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-mechanisms-reconstructed.json",
+    "site_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-runtime-alloc-sites.json",
+    "scope": "the four RUNTIME_ALLOC_OWNERSHIP sites reachable from the openssh closure (the prompt named 3; the frozen inventory records 4: eng_table.rs:148, runtime/ex_data.rs:239, runtime/ex_data.rs:251, runtime/init.rs:1240)",
+    "contract": "An owner allocated through the crate's `CRYPTO_*` seam is either a raw-storage handle (`RawCtx`) or a validated handle (`OwnedCtx`); `Drop` is the block's single release, `RawCtx` never runs the destructor body, and `assume_init` is the one validated transition. Callbacks this mechanism installs (lhash hash/compare, ex_data new/free/dup) receive only values the installing module itself placed (lhash) or no argument at all (ex_data no-ops). The allocator seam, the exported symbols and `#[repr(C)]` layouts are unchanged.",
+    "allocation_seam": "crate::runtime::mem CRYPTO_malloc/CRYPTO_zalloc/CRYPTO_free (src/runtime/mem.rs byte-identical to the pre-subphase tree)",
+    "sites": [
+     {
+      "closure_coordinate": "V1:src/engine/eng_table.rs:148:UNSAFE_FN_DEF",
+      "file": "src/engine/eng_table.rs",
+      "line": 148,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "engine_pile_hash",
+      "current_definition_line": 159,
+      "obligation_outcome": "CONTRACTED",
+      "contract": "`c` is a live `EnginePile` stored in an ENGINE table's lhash: the only installers are `int_table_check` (creates the table with this hash) and `engine_table_register` (inserts only `RawCtx::<EnginePile>` allocations), and the lhash never passes NULL for a stored element.",
+      "established_by": [
+       "caller: OPENSSL_LH_new/HashFunc invocation; the element set is established by this module's own insert sites (one production site, engine_table_register)"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/runtime/ex_data.rs:239:UNSAFE_FN_DEF",
+      "file": "src/runtime/ex_data.rs",
+      "line": 239,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "dummy_free",
+      "current_definition_line": 245,
+      "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+      "contract": "No caller contract: no argument is read. The no-op is now a safe `extern \"C\" fn`, which coerces to the `unsafe extern \"C\" fn` slot `Callback::free_func` stores.",
+      "established_by": [
+       "vacuous: the body reads no argument"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/runtime/ex_data.rs:251:UNSAFE_FN_DEF",
+      "file": "src/runtime/ex_data.rs",
+      "line": 251,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "dummy_dup",
+      "current_definition_line": 260,
+      "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+      "contract": "No caller contract: no argument is read, including the `from_d` slot it answers success for. The no-op is now a safe `extern \"C\" fn`.",
+      "established_by": [
+       "vacuous: the body reads no argument"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/runtime/init.rs:1240:UNSAFE_EXTERN_BLOCK",
+      "file": "src/runtime/init.rs",
+      "line": 1240,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "symbol": "abort",
+      "current_definition_line": 1246,
+      "obligation_outcome": "ALREADY_CONTRACTED",
+      "contract": "`abort` is libc's `void abort(void)`: no argument, no memory access, never returns; the `<stdlib.h>` signature is the ABI contract and the symbol must not be interposed with a different one.",
+      "established_by": [
+       "external ABI contract: libc `<stdlib.h>`; the item carries a contiguous `// SAFETY:` prelude in the working tree (the inventory coordinate 1240 predates that prelude)"
+      ]
+     }
+    ],
+    "eliminated": [
+     "src/runtime/ex_data.rs: the unsafe markers on dummy_new/dummy_free/dummy_dup (3 definitions) \u2014 they read no argument"
+    ],
+    "relocated": [
+     "engine_pile_hash/engine_pile_cmp now carry the lhash callback contract and name the module's single production insert site"
+    ],
+    "hidden": 0,
+    "pending_discharge": [
+     "no independent BOUNDARY review exists, so the mechanism is not SAFETY_DISCHARGED",
+     "the lhash stores `*mut c_void`; the element-type invariant is maintained by module encapsulation, not by the type system \u2014 a retained (not hidden) obligation of this mechanism"
+    ]
+   }
   },
   {
    "id": "ASN1_OCSP",
    "category": "ASN.1",
-   "state": "UNSAFE_OPEN",
+   "state": "OWNERSHIP_RECONSTRUCTED",
    "families_total": 31,
    "families_measured": 4,
    "families_inferred": 27,
@@ -884,7 +956,120 @@
     "crypto/ocsp",
     "crypto/ts",
     "crypto/objects"
-   ]
+   ],
+   "reconstruction": {
+    "receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-mechanisms-reconstructed.json",
+    "site_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-asn1-ocsp-sites.json",
+    "scope": "the seven ASN1_OCSP sites reachable from the openssh closure (ssh and sshd carry the same obligation set)",
+    "contract": "Every callback this mechanism installs is invoked by a named in-crate caller that supplies a live object of the row's declared item type, borrowed for the call and never adopted, plus a live BIO or a correctly sized output cursor. No site takes ownership across the ABI edge except the documented decoder result (d2i_ocsp_nonce) and the encoder output (i2d_ocsp_nonce), whose ownership transitions are stated on the fn. The allocation seam for the one site that allocates transient storage is the crate's `CRYPTO_*` seam, unchanged.",
+    "allocation_seam": "crate::runtime::mem CRYPTO_malloc/CRYPTO_free (src/runtime/mem.rs byte-identical to the pre-subphase tree)",
+    "sites": [
+     {
+      "closure_coordinate": "V1:src/asn1/a_mbstr.rs:243:UNSAFE_FN_DEF",
+      "file": "src/asn1/a_mbstr.rs",
+      "line": 243,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "cpy_asc",
+      "current_definition_line": 246,
+      "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+      "contract": "No caller contract: the C callback `int (*)(unsigned long, void *)` and its `*mut *mut c_uchar` argument are gone. `traverse_string` now takes an `FnMut`, and `cpy_asc`/`cpy_bmp`/`cpy_univ`/`cpy_utf8` are safe fns over `&mut [u8]` + position, so every write is bounds-checked against the block `ASN1_mbstring_ncopy` allocated.",
+      "established_by": [
+       "type invariant: the output slice is the `outlen`-byte view of the `count = outlen + 1` block the same frame allocated; Rust's slice bounds enforce it"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/ocsp/ocsp_ext.rs:685:UNSAFE_FN_DEF",
+      "file": "src/ocsp/ocsp_ext.rs",
+      "line": 685,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "ocsp_add1_nonce",
+      "current_definition_line": 698,
+      "obligation_outcome": "CONTRACTED",
+      "contract": "`exts` is a writable `STACK_OF(X509_EXTENSION) *` slot and `val` is NULL or readable for a positive `len`; the `Asn1String` the call builds is a borrowed view over a local buffer that `X509V3_add1_i2d` encodes without adopting.",
+      "established_by": [
+       "caller: OCSP_request_add1_nonce / OCSP_basic_add1_nonce pass the address of their own live extension field (`# Safety` on both exported fns)"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:113:UNSAFE_FN_DEF",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "line": 113,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "i2r_ocsp_crlid",
+      "current_definition_line": 122,
+      "obligation_outcome": "CONTRACTED",
+      "contract": "`_method` is this row (unread), `in` is the live `OCSP_CRLID` the row's `it` decoder produced (borrowed, not retained), `bp` is a live BIO, and each of `crlUrl`/`crlNum`/`crlTime` is NULL or the decoder's live value.",
+      "established_by": [
+       "caller: X509V3_EXT_print (src/x509/v3_prn.rs), which decodes through `method->it` and passes the live BIO"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:200:UNSAFE_FN_DEF",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "line": 200,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "i2d_ocsp_nonce",
+      "current_definition_line": 217,
+      "obligation_outcome": "CONTRACTED",
+      "contract": "`a` is a live `ASN1_OCTET_STRING` borrowed for the call; `pp` is NULL (size query) or `*pp` is a writable cursor with room for the returned length.",
+      "established_by": [
+       "caller: do_ext_i2d (src/x509/v3_conf.rs) sizes with a NULL destination, allocates `len`, then passes `&mut p` into that block (`# Safety` names the twice-pass encoder contract)"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:221:UNSAFE_FN_DEF",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "line": 221,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "d2i_ocsp_nonce",
+      "current_definition_line": 248,
+      "obligation_outcome": "CONTRACTED",
+      "contract": "`a` is NULL or a live `ASN1_OCTET_STRING *` slot; `*pp` is readable for `length` bytes with `0 <= length <= c_int::MAX`; on success the caller owns the decoded value, on failure a caller-supplied value is untouched and nothing allocated is leaked.",
+      "established_by": [
+       "caller: X509V3_EXT_d2i / X509V3_EXT_print pass a NULL slot and the extension's own value bytes"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:312:UNSAFE_FN_DEF",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "line": 312,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "s2i_ocsp_nocheck",
+      "current_definition_line": 349,
+      "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+      "contract": "No caller contract: every argument is unread. The item is now a safe `extern \"C\" fn`, which coerces to the row's `unsafe extern \"C\" fn` slot; the returned `ASN1_NULL` is the caller's.",
+      "established_by": [
+       "vacuous: the body reads no argument"
+      ]
+     },
+     {
+      "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:326:UNSAFE_FN_DEF",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "line": 326,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "i2r_ocsp_serviceloc",
+      "current_definition_line": 371,
+      "obligation_outcome": "CONTRACTED",
+      "contract": "`_method` is this row (unread), `in` is the live `OCSP_SERVICELOC` the row's `it` decoder produced (borrowed, not retained), `bp` is a live BIO, and `issuer`/`locator` are the decoder's own borrowed members.",
+      "established_by": [
+       "caller: X509V3_EXT_print (src/x509/v3_prn.rs)"
+      ]
+     }
+    ],
+    "eliminated": [
+     "src/asn1/a_mbstr.rs: the `unsafe extern \"C\" fn` callback family and its `*mut *mut c_uchar` cursor (4 definitions) \u2014 replaced by an `FnMut` traversal and safe slice-bounded writers",
+     "src/ocsp/v3_ocsp.rs:312: s2i_ocsp_nocheck's unsafe marker (no argument is read)"
+    ],
+    "relocated": [
+     "the remaining i2r/d2i/i2d callback contracts now live in per-fn `# Safety` sections naming the invoking crate function",
+     "the output-buffer extent obligation for a_mbstr's conversion now lives in Rust's slice bounds instead of a comment"
+    ],
+    "hidden": 0,
+    "pending_discharge": [
+     "no independent BOUNDARY review of these contracts exists, so the mechanism is not SAFETY_DISCHARGED (AGENTS.md \u00a77, \u00a721)",
+     "external C callers of the exported X509V3_EXT_* entry points could in principle pass a mismatched object; that is the OpenSSL ABI contract, not an in-crate caller obligation"
+    ]
+   }
   },
   {
    "id": "X509_VERIFY_POLICY",

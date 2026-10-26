@@ -203,9 +203,20 @@ impl<T: CtxDestroy> Drop for OwnedCtx<T> {
         drop_probe::LAST.with(|last| last.set(Some(drop_probe::Call::Owned)));
         // SAFETY: `self.ptr` is the block this handle allocated (or `from_raw` reclaimed) and this
         // is its single release; `Drop` runs once, and `destroy_body` is the authority's own
-        // `*_free` body.
+        // `*_free` body, which releases the owned members and never the enclosing block.
+        unsafe { T::destroy_body(self.ptr.as_ptr()) };
+        // Recorded after the member releases and before the block's own release, so the probe
+        // observes the block release in the order the authority performs the two steps.
+        #[cfg(test)]
+        crate::runtime::release_probe::record(
+            crate::runtime::release_probe::Arm::Plain,
+            self.ptr.as_ptr().cast::<c_void>(),
+            self.file.as_ptr(),
+            self.line,
+        );
+        // SAFETY: `self.ptr` is the block this handle owns and `destroy_body` has not released; the
+        // stored coordinates are the authority's release site for it.
         unsafe {
-            T::destroy_body(self.ptr.as_ptr());
             CRYPTO_free(
                 self.ptr.as_ptr().cast::<c_void>(),
                 self.file.as_ptr(),
@@ -338,6 +349,13 @@ impl<T: CtxDestroy> Drop for RawCtx<T> {
     fn drop(&mut self) {
         #[cfg(test)]
         drop_probe::LAST.with(|last| last.set(Some(drop_probe::Call::Raw)));
+        #[cfg(test)]
+        crate::runtime::release_probe::record(
+            crate::runtime::release_probe::Arm::Plain,
+            self.ptr.as_ptr().cast::<c_void>(),
+            self.file.as_ptr(),
+            self.line,
+        );
         // SAFETY: `self.ptr` is the block this handle allocated and has not handed out; this is its
         // single release, and the authority's own bare `CRYPTO_free` is the whole release.
         unsafe {
@@ -381,6 +399,7 @@ impl Drop for OwnedBlock {
         #[cfg(test)]
         crate::runtime::release_probe::record(
             crate::runtime::release_probe::Arm::Plain,
+            self.ptr,
             ptr::null(),
             0,
         );
@@ -408,6 +427,7 @@ mod release_family_tests {
         };
         assert!(!raw.is_null());
         // SAFETY: `raw` is the fresh seam block this test owns.
+        // SAFETY: `raw` is the fresh block this test owns and has not released.
         let block = unsafe { OwnedBlock::take(raw) }.expect("a non-NULL block is owned");
         drop(block);
         let call = release_probe::take().expect("the release was recorded");
@@ -537,3 +557,166 @@ mod adv_partial_init_tests {
 #[cfg(test)]
 #[path = "owned_ctx_model.rs"]
 mod release_model_tests;
+
+// -------------------------------------------------------------------------------------------
+// RUNTIME_ALLOC_OWNERSHIP site tests: allocation refusal, partial initialisation and
+// exactly-once release, asserted by address.
+// -------------------------------------------------------------------------------------------
+#[cfg(test)]
+mod alloc_own_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::runtime::release_probe::{self, Arm};
+    use core::cell::RefCell;
+
+    thread_local! {
+        /// The member addresses `MemberCtx::destroy_body` released on this thread.
+        static MEMBER_RELEASES: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+    }
+
+    fn member_releases() -> Vec<usize> {
+        MEMBER_RELEASES.with(|r| r.borrow().clone())
+    }
+
+    /// A context with one owned member block: the shape `destroy_body` must release exactly once,
+    /// and the only shape a partially initialised owner must *not* release.
+    ///
+    /// It deliberately has no C layout: it is a test-only type that never crosses the C ABI, so
+    /// the owner's layout is Rust's.
+    struct MemberCtx {
+        member: *mut c_void,
+    }
+
+    // SAFETY: (a) `destroy_body` releases exactly the one member this value owns (NULL-tolerant)
+    // and never the enclosing block, which `OwnedCtx`'s `Drop` releases alone; it is reached once
+    // per owner. (b) an all-zero `MemberCtx` (member NULL) is a valid value for which the body is
+    // sound. (c) `FILE` is the default NULL coordinate, which has no lifetime obligation.
+    unsafe impl CtxDestroy for MemberCtx {
+        unsafe fn destroy_body(ptr: *mut MemberCtx) {
+            // SAFETY: `ptr` is a live context per the trait contract.
+            let member = unsafe { (*ptr).member };
+            if member.is_null() {
+                return;
+            }
+            MEMBER_RELEASES.with(|r| r.borrow_mut().push(member as usize));
+            // The block is still owned by `OwnedCtx` at this point: its `Drop` calls this body
+            // first and releases the block afterwards. Observing no release yet proves the order.
+            assert!(
+                release_probe::take().is_none(),
+                "a member must be released before the enclosing block"
+            );
+            // SAFETY: `member` is the block this context owns and has not released.
+            unsafe { CRYPTO_free(member, ptr::null(), 0) };
+        }
+    }
+
+    /// A validated owner releases its member and its block exactly once each, by address, and the
+    /// member goes first.
+    #[test]
+    fn alloc_own_ctx_releases_member_and_block_once_each_by_address() {
+        release_probe::clear();
+        MEMBER_RELEASES.with(|r| r.borrow_mut().clear());
+        let member = unsafe {
+            // SAFETY: `file` is NULL, which `CRYPTO_malloc` accepts.
+            CRYPTO_malloc(16, ptr::null(), 0)
+        };
+        assert!(!member.is_null(), "the member block allocates");
+        let block_addr;
+        {
+            let owned = OwnedCtx::<MemberCtx>::zalloc().expect("a zeroed context allocates");
+            block_addr = owned.as_ptr() as usize;
+            // SAFETY: `owned` is live and uniquely owned; the member is a fresh block this test
+            // transfers to it.
+            unsafe { (*owned.as_ptr()).member = member };
+        }
+        assert_eq!(
+            member_releases(),
+            vec![member as usize],
+            "the member released once"
+        );
+        let call = release_probe::take().expect("the block release was recorded");
+        assert_eq!(call.arm, Arm::Plain);
+        assert_eq!(
+            call.ptr as usize, block_addr,
+            "the block release names its address"
+        );
+        assert!(
+            release_probe::take().is_none(),
+            "the block release happens once"
+        );
+    }
+
+    /// Storage that was never validated (`RawCtx`) releases the block alone: the member it still
+    /// points at is not a resource the owner acquired, so nothing else is released.
+    #[test]
+    fn alloc_own_rawctx_partial_init_releases_the_block_alone() {
+        release_probe::clear();
+        MEMBER_RELEASES.with(|r| r.borrow_mut().clear());
+        let member = unsafe {
+            // SAFETY: `file` is NULL, which `CRYPTO_malloc` accepts.
+            CRYPTO_malloc(16, ptr::null(), 0)
+        };
+        assert!(!member.is_null());
+        let raw = RawCtx::<MemberCtx>::zalloc().expect("a zeroed block allocates");
+        let block_addr = raw.as_ptr() as usize;
+        // SAFETY: `raw` is live storage for a `MemberCtx` whose fields the caller initialises;
+        // `member` is a fresh block.
+        unsafe { (*raw.as_ptr()).member = member };
+        drop(raw);
+        assert!(
+            member_releases().is_empty(),
+            "unvalidated storage must not run the destructor body"
+        );
+        let call = release_probe::take().expect("the block release was recorded");
+        assert_eq!(
+            call.ptr as usize, block_addr,
+            "the only release is the block"
+        );
+        assert!(release_probe::take().is_none());
+        // SAFETY: the test still owns the member block it allocated above.
+        unsafe { CRYPTO_free(member, ptr::null(), 0) };
+    }
+
+    /// A refused allocation answers `None` and creates nothing to release; the seam's NULL is not
+    /// adopted as a block.
+    #[test]
+    fn alloc_own_refused_allocation_answers_none_and_releases_nothing() {
+        release_probe::clear();
+        let refused = unsafe {
+            // SAFETY: `file` is NULL, which `CRYPTO_malloc` accepts. The libc allocator refuses a
+            // request larger than `PTRDIFF_MAX`, which is the seam's own allocation-refusal arm.
+            CRYPTO_malloc(usize::MAX, ptr::null(), 0)
+        };
+        assert!(refused.is_null(), "the seam refuses an impossible request");
+        // SAFETY: NULL is the documented "nothing to adopt" input.
+        assert!(unsafe { OwnedBlock::take(refused) }.is_none());
+        assert!(
+            release_probe::take().is_none(),
+            "a refused allocation creates no block to release"
+        );
+    }
+
+    /// The same two facts for the byte-block owner, whose release is the seam's `(NULL, 0)`
+    /// coordinate: one release, naming the address the owner was handed.
+    #[test]
+    fn alloc_own_block_release_is_exactly_once_at_the_allocated_address() {
+        release_probe::clear();
+        let raw = unsafe {
+            // SAFETY: `file` is NULL, which `CRYPTO_malloc` accepts.
+            CRYPTO_malloc(8, ptr::null(), 0)
+        };
+        assert!(!raw.is_null());
+        // SAFETY: `raw` is the fresh block this test owns and has not released.
+        let block = unsafe { OwnedBlock::take(raw) }.expect("a non-NULL block is owned");
+        drop(block);
+        let call = release_probe::take().expect("the release was recorded");
+        assert_eq!(call.arm, Arm::Plain);
+        assert_eq!(
+            call.ptr as usize, raw as usize,
+            "released at its own address"
+        );
+        assert!(call.file.is_null() && call.line == 0);
+        assert!(release_probe::take().is_none(), "released exactly once");
+    }
+}
