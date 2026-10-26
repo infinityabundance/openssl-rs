@@ -11074,12 +11074,12 @@ fn ia32cap_avx2() -> bool {
 }
 
 /// `int ossl_cipher_capable_aes_cbc_hmac_sha1(void)` — `cipher_aes_cbc_hmac_sha1_hw.c:40-43`.
-unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha1() -> c_int {
+extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha1() -> c_int {
     ia32cap_aesni() as c_int
 }
 
 /// `int ossl_cipher_capable_aes_cbc_hmac_sha256(void)` — the same predicate in its own unit.
-unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha256() -> c_int {
+extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha256() -> c_int {
     ia32cap_aesni() as c_int
 }
 
@@ -11089,17 +11089,17 @@ unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha256() -> c_int {
 /// The three ETM predicates are **not** the AES-NI bit. `HWAES_CBC_HMAC_SHA*_ETM_CAPABLE` is
 /// aarch64-only (`aes_platform.h:116-118`), so on x86-64 the hw files' `#else` arm does not exist
 /// and each predicate is the constant 0. Its observable is the fetch, and all nine rows are dropped.
-unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha1_etm() -> c_int {
+extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha1_etm() -> c_int {
     0
 }
 
 /// `int ossl_cipher_capable_aes_cbc_hmac_sha256_etm(void)` — the same stub.
-unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha256_etm() -> c_int {
+extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha256_etm() -> c_int {
     0
 }
 
 /// `int ossl_cipher_capable_aes_cbc_hmac_sha512_etm(void)` — the same stub.
-unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha512_etm() -> c_int {
+extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha512_etm() -> c_int {
     0
 }
 
