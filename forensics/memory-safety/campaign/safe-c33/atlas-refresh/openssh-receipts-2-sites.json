@@ -1,0 +1,140 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-receipts-2",
+  "subphase": "P25 openssh closure: second cluster (verify, PEM info, async, X509 ext, SHA-2, base provider)",
+  "date": "2026-10-26",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "source_head": "9fa946ccc1eb9516090b8096e0aae38e41150602",
+    "inventory": "v1b-candidate-freeze.json (source head 4a95b73a8)",
+    "closure_runs": [
+      "court/tmp/openssh-closure/current-ssh.json",
+      "court/tmp/openssh-closure/current-sshd.json"
+    ]
+  },
+  "summary": {
+    "sites_enumerated": 8,
+    "by_source_state": {
+      "ELIMINATED": 2,
+      "CONTRACTED": 6
+    },
+    "additional_unsafe_items_by_file": {
+      "src/apps/verify.rs": 0,
+      "src/async/arch/async_posix.rs": 13,
+      "src/digest/sha2.rs": 23,
+      "src/pem/pem_info.rs": 11,
+      "src/provider/base.rs": 4,
+      "src/x509/v3_lib.rs": 11,
+      "src/x509/v3_tlsf.rs": 4
+    },
+    "discharged": 0,
+    "blocked": 8,
+    "unknown": 0
+  },
+  "evidence_receipt": "openssh-receipts-2.json",
+  "correction": {
+    "id": "OSSH-R2-CORR-1",
+    "what": "The first draft said src/async/arch/async_posix.rs had no mechanism mapping. state.json#/obligation_mechanisms maps that exact site to C_ABI_CONTRACT via an obligation-override, so the adjudicator moves it UNKNOWN -> BLOCKED.",
+    "source": "state.json#/obligation_mechanisms + mechanism_for()"
+  },
+  "note": "Projection of openssh-receipts-2.json for consumer_closure.load_boundaries, which admits only *-sites.json.",
+  "boundaries": [
+    {
+      "id": "OSSH-R2-001",
+      "file": "src/x509/v3_tlsf.rs",
+      "line": 146,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "tls_feature_it",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
+    },
+    {
+      "id": "OSSH-R2-002",
+      "file": "src/provider/base.rs",
+      "line": 149,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "base_gettable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
+    },
+    {
+      "id": "OSSH-R2-003",
+      "file": "src/apps/verify.rs",
+      "line": 104,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
+    },
+    {
+      "id": "OSSH-R2-004",
+      "file": "src/pem/pem_info.rs",
+      "line": 73,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "BLOCKED",
+      "operation": "(strstr)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
+    },
+    {
+      "id": "OSSH-R2-005",
+      "file": "src/async/arch/async_posix.rs",
+      "line": 52,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "BLOCKED",
+      "operation": "(ucontext shims)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: mechanism state is UNSAFE_OPEN (no ownership reconstruction and no SAFETY_DISCHARGED receipt); the file is mapped by an obligation-override in state.json"
+    },
+    {
+      "id": "OSSH-R2-006",
+      "file": "src/x509/v3_lib.rs",
+      "line": 359,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "ext_cmp",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
+    },
+    {
+      "id": "OSSH-R2-007",
+      "file": "src/digest/sha2.rs",
+      "line": 417,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "sha512_256_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
+    },
+    {
+      "id": "OSSH-R2-008",
+      "file": "src/digest/sha2.rs",
+      "line": 441,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "ossl_sha256_192_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
+    }
+  ]
+}

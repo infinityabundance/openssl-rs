@@ -143,7 +143,7 @@ static TLS_FEATURE_ITEM: Asn1Item = Asn1Item {
 
 /// The authority's `static ... TLS_FEATURE_it` — **not** an exported symbol, so this module answers
 /// it privately for the row and does not mark it `#[no_mangle]`.
-unsafe extern "C" fn tls_feature_it() -> *const Asn1Item {
+extern "C" fn tls_feature_it() -> *const Asn1Item {
     &TLS_FEATURE_ITEM
 }
 

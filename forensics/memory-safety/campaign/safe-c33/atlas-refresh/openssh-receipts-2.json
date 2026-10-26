@@ -1,0 +1,759 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-receipts-2",
+  "subphase": "P25 openssh closure: second cluster (verify, PEM info, async, X509 ext, SHA-2, base provider)",
+  "date": "2026-10-26",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "source_head": "9fa946ccc1eb9516090b8096e0aae38e41150602",
+    "inventory": "v1b-candidate-freeze.json (source head 4a95b73a8)",
+    "closure_runs": [
+      "court/tmp/openssh-closure/current-ssh.json",
+      "court/tmp/openssh-closure/current-sshd.json"
+    ]
+  },
+  "scope": {
+    "reachable_operation_set": "the openssh closure's V1 production obligations for these files, plus every other unsafe item listed under additional_operations",
+    "additional_operations_policy": "enumerated by a brace-matched scan; audited=false means enumerated, not adjudicated",
+    "discharge_claim": "none. A site receipt moves UNKNOWN to BLOCKED only when a mechanism maps the file. X509_VERIFY_POLICY, RAND_CMS_STORE_KEYFMT and EVP_PKEY_PROVIDER are OWNERSHIP_RECONSTRUCTED; src/async/arch/async_posix.rs is C_ABI_CONTRACT, which is UNSAFE_OPEN, so its obligation becomes BLOCKED and still cannot be discharged."
+  },
+  "summary": {
+    "sites_enumerated": 8,
+    "by_source_state": {
+      "ELIMINATED": 2,
+      "CONTRACTED": 6
+    },
+    "additional_unsafe_items_by_file": {
+      "src/apps/verify.rs": 0,
+      "src/async/arch/async_posix.rs": 13,
+      "src/digest/sha2.rs": 23,
+      "src/pem/pem_info.rs": 11,
+      "src/provider/base.rs": 4,
+      "src/x509/v3_lib.rs": 11,
+      "src/x509/v3_tlsf.rs": 4
+    },
+    "discharged": 0,
+    "blocked": 8,
+    "unknown": 0
+  },
+  "boundaries": [
+    {
+      "id": "OSSH-R2-001",
+      "file": "src/x509/v3_tlsf.rs",
+      "line": 146,
+      "inventory_line": 146,
+      "current_line": 146,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "tls_feature_it",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: the fn takes no arguments and returns a pointer to a 'static Asn1Item; the body contains no unsafe operation. The marker was removed.",
+      "established_by": [
+        "body inspection: &TLS_FEATURE_ITEM, a 'static"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R2-002",
+      "file": "src/provider/base.rs",
+      "line": 149,
+      "inventory_line": 149,
+      "current_line": 149,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "base_gettable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table; the body contains no unsafe operation. The marker was removed.",
+      "established_by": [
+        "type invariant: BASE_PARAM_TYPES is a 'static array"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R2-003",
+      "file": "src/apps/verify.rs",
+      "line": 104,
+      "inventory_line": 104,
+      "current_line": 108,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`ctx` is the live `X509_STORE_CTX` the core passes to a verification callback for the duration of the call; it is not released or concurrently mutated while the callback runs. `ok` is a value.",
+      "established_by": [
+        "C ABI: X509_STORE_CTX verification-callback contract",
+        "source: # Safety added to the fn in this subphase"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R2-004",
+      "file": "src/pem/pem_info.rs",
+      "line": 73,
+      "inventory_line": 73,
+      "current_line": 77,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "(strstr)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`strstr` is libc's `char *strstr(const char *, const char *)`. Both arguments are non-NULL pointers to NUL-terminated byte strings readable for the call; the result aliases the haystack and is never freed or written through this declaration.",
+      "established_by": [
+        "C ABI: <string.h> signature",
+        "source: SAFETY comment added to the extern block"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R2-005",
+      "file": "src/async/arch/async_posix.rs",
+      "line": 52,
+      "inventory_line": 52,
+      "current_line": 60,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "(ucontext shims)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: mechanism state is UNSAFE_OPEN (no ownership reconstruction and no SAFETY_DISCHARGED receipt); the file is mapped by an obligation-override in state.json",
+      "contract": "The seven `openssl_rs_ucontext_*` symbols are defined by `src/async/arch/async_ucontext.c`, the platform half linked into this crate. `ctx` is a live, aligned block of at least `openssl_rs_ucontext_size()` bytes with one owner; `stack` is readable/writable for `size` bytes for the life of the context; `start` is a valid `extern \"C\"` function. The size/align/capable probes touch no caller memory.",
+      "established_by": [
+        "link-time contract: src/async/arch/async_ucontext.c",
+        "source: SAFETY comment added to the extern block"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R2-006",
+      "file": "src/x509/v3_lib.rs",
+      "line": 359,
+      "inventory_line": 359,
+      "current_line": 365,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "ext_cmp",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`a` and `b` are pointers to element slots of this list, each live and readable for one pointer-sized value, each holding a non-NULL `*const X509V3ExtMethod` that outlives the call. The stack layer installs and calls the comparator.",
+      "established_by": [
+        "stack contract: the comparator is installed on EXT_LIST",
+        "source: # Safety added to the fn in this subphase"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R2-007",
+      "file": "src/digest/sha2.rs",
+      "line": 417,
+      "inventory_line": 417,
+      "current_line": 421,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha512_256_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`c` is a live, aligned, writable `Sha512Ctx` this module allocated; it is not aliased by another exclusive reference for the call.",
+      "established_by": [
+        "source: # Safety added to the fn in this subphase"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R2-008",
+      "file": "src/digest/sha2.rs",
+      "line": 441,
+      "inventory_line": 441,
+      "current_line": 449,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_sha256_192_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`c` is a live, aligned, writable `Sha256Ctx` this module allocated; it is not aliased by another exclusive reference for the call.",
+      "established_by": [
+        "source: # Safety added to the fn in this subphase"
+      ],
+      "residual": null
+    }
+  ],
+  "additional_operations": {
+    "src/apps/verify.rs": [],
+    "src/async/arch/async_posix.rs": [
+      {
+        "line": 60,
+        "name": "(extern block)",
+        "kind": "UNSAFE_EXTERN_BLOCK",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 116,
+        "name": "async_stack_alloc",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 128,
+        "name": "async_stack_free",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 212,
+        "name": "ASYNC_set_mem_functions",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 251,
+        "name": "ASYNC_get_mem_functions",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 310,
+        "name": "from_raw",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 332,
+        "name": "async_fibre_alloc",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 344,
+        "name": "async_fibre_makecontext",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 384,
+        "name": "async_fibre_stack",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 397,
+        "name": "async_fibre_free",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 408,
+        "name": "async_fibre_release",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 427,
+        "name": "async_fibre_storage_free",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 439,
+        "name": "async_fibre_swapcontext",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      }
+    ],
+    "src/digest/sha2.rs": [
+      {
+        "line": 315,
+        "name": "load_word64",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 360,
+        "name": "block",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 364,
+        "name": "make_string",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 393,
+        "name": "sha512_224_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 464,
+        "name": "SHA224_Init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 488,
+        "name": "SHA256_Init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 503,
+        "name": "SHA224_Update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 517,
+        "name": "SHA256_Update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 531,
+        "name": "SHA224_Final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 541,
+        "name": "SHA256_Final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 551,
+        "name": "SHA256_Transform",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 561,
+        "name": "SHA384_Init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 585,
+        "name": "SHA512_Init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 610,
+        "name": "SHA512_Update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 690,
+        "name": "SHA384_Update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 704,
+        "name": "SHA512_Final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 768,
+        "name": "SHA384_Final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 778,
+        "name": "SHA512_Transform",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 790,
+        "name": "sha2_one_shot",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 826,
+        "name": "SHA224",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 846,
+        "name": "SHA256",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 866,
+        "name": "SHA384",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 886,
+        "name": "SHA512",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      }
+    ],
+    "src/pem/pem_info.rs": [
+      {
+        "line": 77,
+        "name": "(extern block)",
+        "kind": "UNSAFE_EXTERN_BLOCK",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 125,
+        "name": "adopt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 162,
+        "name": "d2i_void_x509_aux",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 175,
+        "name": "d2i_void_x509",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 188,
+        "name": "d2i_void_x509_crl",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 201,
+        "name": "d2i_void_auto",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 220,
+        "name": "PEM_X509_INFO_read_ex",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 251,
+        "name": "PEM_X509_INFO_read",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 276,
+        "name": "PEM_X509_INFO_read_bio_ex",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 602,
+        "name": "PEM_X509_INFO_read_bio",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 623,
+        "name": "PEM_X509_INFO_write_bio",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      }
+    ],
+    "src/provider/base.rs": [
+      {
+        "line": 165,
+        "name": "base_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 228,
+        "name": "base_query",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 266,
+        "name": "base_teardown",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 316,
+        "name": "ossl_base_provider_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      }
+    ],
+    "src/x509/v3_lib.rs": [
+      {
+        "line": 224,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 381,
+        "name": "ext_list_free",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 414,
+        "name": "X509V3_EXT_add",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 443,
+        "name": "X509V3_EXT_add_list",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 467,
+        "name": "X509V3_EXT_cleanup",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 516,
+        "name": "X509V3_EXT_get_nid",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 547,
+        "name": "X509V3_EXT_get",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 568,
+        "name": "X509V3_EXT_add_alias",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 615,
+        "name": "X509V3_EXT_d2i",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 653,
+        "name": "X509V3_get_d2i",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 738,
+        "name": "X509V3_add1_i2d",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      }
+    ],
+    "src/x509/v3_tlsf.rs": [
+      {
+        "line": 117,
+        "name": "asn1_integer_free_thunk",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 164,
+        "name": "TLS_FEATURE_free",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 173,
+        "name": "i2v_TLS_FEATURE",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 208,
+        "name": "v2i_TLS_FEATURE",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      }
+    ]
+  },
+  "residuals": [],
+  "gates": {
+    "cargo_fmt_check": "PASS (cargo fmt --all -- --check, court, exit 0)",
+    "cargo_clippy": "PASS (cargo clippy --all-targets -- -D warnings, court, exit 0)",
+    "cargo_test_lib": "PASS (cargo test --lib -- --test-threads=4, court)",
+    "host_build": "none: every gate ran in docker/openssl-rs-court.sh"
+  },
+  "non_claims": [
+    "No site is SAFETY_DISCHARGED; the mechanisms need independent BOUNDARY review.",
+    "additional_operations are enumerated, not adjudicated.",
+    "No Miri, ASan or cryptographic court was run for this subphase.",
+    "src/async/arch/async_posix.rs is C_ABI_CONTRACT (UNSAFE_OPEN): its obligation is now BLOCKED, not discharged, and the mechanism still has no ownership reconstruction."
+  ],
+  "correction": {
+    "id": "OSSH-R2-CORR-1",
+    "what": "The first draft said src/async/arch/async_posix.rs had no mechanism mapping. state.json#/obligation_mechanisms maps that exact site to C_ABI_CONTRACT via an obligation-override, so the adjudicator moves it UNKNOWN -> BLOCKED.",
+    "source": "state.json#/obligation_mechanisms + mechanism_for()"
+  }
+}
