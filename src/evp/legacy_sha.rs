@@ -33,7 +33,10 @@
 //! after expansion is invisible to them; these callbacks are internal, but they are still spelled
 //! out, because a reader comparing this file with `legacy_meth.h` should be able to do it line by
 //! line. The shared shape (`EVP_MD_CTX_get0_md_data(ctx)` and nothing else) is factored into
-//! [`md_data`] so the fifteen functions read as the three-line macros they replace.
+//! [`md_data`] for the update, final and control callbacks. The initialisers go through
+//! [`init_md_data`] instead, because a C caller can reach them through the exported
+//! `EVP_MD_meth_get_init` with a context that has no writable block; that helper validates the
+//! context and refuses the shape the authority writes through.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -82,14 +85,65 @@ const EVP_MD_FLAG_DIGALGID_ABSENT: c_ulong = 0x0008;
 const EVP_ORIG_GLOBAL: c_int = 1;
 
 /// `EVP_MD_CTX_get0_md_data(ctx)` — `crypto/evp/evp_lib.c:1087`, which the authority's legacy macros
-/// call. It is a bare `return ctx->md_data;`, and it is factored out here because all fifteen
-/// callbacks below open with it.
+/// call. It is a bare `return ctx->md_data;`, and it is factored out here because the update, final
+/// and control callbacks below open with it. The initialisers use [`init_md_data`] instead, because
+/// their exported function pointer can be called with a context that has no block.
 ///
 /// # Safety
 /// `ctx` must be a live `EVP_MD_CTX`.
 unsafe fn md_data(ctx: *mut EvpMdCtx) -> *mut c_void {
     // SAFETY: the caller's contract.
     unsafe { (*ctx).md_data }
+}
+
+/// The writable digest block an initialiser may write, or `None` when the context does not
+/// establish one.
+///
+/// The authority's `IMPLEMENT_LEGACY_EVP_MD_METH` writes through
+/// `EVP_MD_CTX_get0_md_data(ctx)` without testing it. That is sound only when the EVP layer
+/// supplied the block; the exported `EVP_MD_meth_get_init` also hands this callback to any C
+/// caller, and `EVP_MD_CTX_new()` zero-fills the block, so `md_data` is NULL. The crate refuses
+/// that shape with the C initialise failure value `0` instead of reproducing the authority's
+/// NULL write (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-INIT-MD-DATA-1`).
+///
+/// A context establishes a writable block in exactly two ways:
+///
+/// * `digest` is this very table object (`owner`) — the transcribed legacy-table shape; or
+/// * `digest` is another live method whose `ctx_size` is at least `size` — the block
+///   `evp_md_init_legacy` allocated for that method, which is the shape a caller produces when
+///   it installs this exported callback on its own method with a sufficient `app_datasize`.
+///
+/// A NULL context, a NULL `md_data`, a NULL method and a too-small `app_datasize` all refuse.
+///
+/// # Safety
+/// `ctx` must be NULL or point to a live `EvpMdCtx`; `owner` must be a live `EvpMd`, the table
+/// object that installs this callback.
+unsafe fn init_md_data(
+    ctx: *mut EvpMdCtx,
+    owner: *const EvpMd,
+    size: usize,
+) -> Option<*mut c_void> {
+    if ctx.is_null() {
+        return None;
+    }
+    // SAFETY: `ctx` is NULL or live per the contract.
+    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: as above.
+    let digest = unsafe { (*ctx).digest };
+    if md_data.is_null() || digest.is_null() {
+        return None;
+    }
+    if core::ptr::eq(digest, owner) {
+        return Some(md_data);
+    }
+    // SAFETY: `digest` is a live method: a context's method is only ever installed from a method
+    // the library owns, and a NULL or dangling method is not a C-valid context state.
+    let ctx_size = unsafe { (*digest).ctx_size };
+    if ctx_size >= 0 && ctx_size as usize >= size {
+        Some(md_data)
+    } else {
+        None
+    }
 }
 
 /// A `static` `EVP_MD`. The wrapper exists for the same reason `src/evp/digest.rs`'s own
@@ -178,9 +232,30 @@ const fn legacy_md(
 // ---------------------------------------------------------------------------------------------
 
 /// `sha1_init` — `legacy_meth.h:11-14`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback checks the context's method
+/// and block before writing: a fresh `EVP_MD_CTX_new()` (`md_data == NULL`), a NULL context, a
+/// context with no method and a method whose `app_datasize` is too small all answer `0`, the C
+/// initialise failure value, instead of performing the authority's NULL write. The normal table
+/// shape — a writable `SHA_CTX` behind a context bound to this method — still initialises and
+/// returns `1`. The refusal is recorded as `docs/SECURITY_DIVERGENCE_POLICY.md`
+/// `D-LEGACY-MD-INIT-MD-DATA-1`; no path the crate's own initialiser takes reaches it.
 unsafe extern "C" fn sha1_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract; `md_data` reads a field of a live context.
-    unsafe { SHA1_Init(md_data(ctx).cast::<ShaCtx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA1_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SHA1_MD.0),
+            core::mem::size_of::<ShaCtx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SHA_CTX`.
+    unsafe { SHA1_Init(block.cast::<ShaCtx>()) }
 }
 
 /// `sha1_update` — `legacy_meth.h:15-18`.
@@ -221,9 +296,27 @@ unsafe extern "C" fn sha1_int_ctrl(
 }
 
 /// `sha224_init` — `IMPLEMENT_LEGACY_EVP_MD_METH(sha224, SHA224)`.
+///
+/// # Safety
+///
+/// As [`sha1_init`]: `ctx` must be NULL or point to a live `EVP_MD_CTX`; the callback establishes
+/// its own writable `SHA256_CTX` from the context's method and block, and answers `0` when the
+/// caller supplied a shape that does not contain one. The table's own path (a context bound to
+/// `sha224_md` with a writable block) is unchanged and returns `1`.
 unsafe extern "C" fn sha224_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe { SHA224_Init(md_data(ctx).cast::<Sha256Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA224_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SHA224_MD.0),
+            core::mem::size_of::<Sha256Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SHA256_CTX`.
+    unsafe { SHA224_Init(block.cast::<Sha256Ctx>()) }
 }
 
 /// `sha224_update` — `IMPLEMENT_LEGACY_EVP_MD_METH(sha224, SHA224)`, where `SHA224_Update` is
@@ -460,6 +553,8 @@ pub extern "C" fn EVP_sha512_256() -> *const EvpMd {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
     use super::*;
 
     /// The seven objects against the authority's own fields, measured by
@@ -571,5 +666,125 @@ mod tests {
         }
         assert_eq!(EVP_sha1(), core::ptr::addr_of!(SHA1_MD.0));
         assert_eq!(EVP_sha256(), core::ptr::addr_of!(SHA256_MD.0));
+    }
+
+    /// An `EVP_MD_CTX` bound to `md` and a writable digest block, with no provider state. The
+    /// legacy callbacks read only `digest` and `md_data`; every other field is the zero
+    /// `EVP_MD_CTX_new` leaves behind.
+    fn bound_context(md: *const EvpMd, block: *mut c_void) -> EvpMdCtx {
+        EvpMdCtx {
+            reqdigest: md,
+            digest: md,
+            engine: core::ptr::null_mut(),
+            flags: 0,
+            md_data: block,
+            pctx: core::ptr::null_mut(),
+            update: None,
+            algctx: core::ptr::null_mut(),
+            fetched_digest: core::ptr::null_mut(),
+        }
+    }
+
+    /// `EVP_MD_meth_get_init(EVP_sha1())` handed to a C caller, then called with the two context
+    /// shapes the getter's documented contract does not exclude: a fresh `EVP_MD_CTX_new()`
+    /// (`md_data == NULL`) and a NULL context. The authority's `sha1_init` writes through
+    /// `EVP_MD_CTX_get0_md_data(ctx)`, so both are a NULL write; the crate refuses both with `0`.
+    /// The same test drives the table's own path — a context bound to `sha1_md` with a writable
+    /// `SHA_CTX` — and checks that the result is still the standard SHA1("abc") digest.
+    #[test]
+    fn legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_get_final, EVP_MD_meth_get_init,
+            EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: `EVP_sha1()` answers a live static method.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_sha1()) }.expect("sha1_md has an init");
+        // SAFETY: as above.
+        let update = unsafe { EVP_MD_meth_get_update(EVP_sha1()) }.expect("sha1_md has an update");
+        // SAFETY: as above.
+        let final_ = unsafe { EVP_MD_meth_get_final(EVP_sha1()) }.expect("sha1_md has a final");
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is a live context and the callback accepts any live context.
+        assert_eq!(unsafe { init(fresh) }, 0, "init accepted a NULL md_data");
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
+
+        // SAFETY: a NULL context is the input under test; the callback's contract permits it.
+        assert_eq!(unsafe { init(core::ptr::null_mut()) }, 0);
+
+        let mut store = core::mem::MaybeUninit::<ShaCtx>::uninit();
+        let mut ctx = bound_context(EVP_sha1(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sha1_md`, and `store` is a writable `SHA_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 20];
+        // SAFETY: `output` is writable for the SHA-1 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0xa9, 0x99, 0x3e, 0x36, 0x47, 0x06, 0x81, 0x6a, 0xba, 0x3e, 0x25, 0x71, 0x78, 0x50,
+                0xc2, 0x6c, 0x9c, 0xd0, 0xd8, 0x9d,
+            ],
+            "SHA1(\"abc\") changed"
+        );
+    }
+
+    /// As [`legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context`], over the
+    /// `sha224_md` table entry and `SHA224_Init`'s `SHA256_CTX` block.
+    #[test]
+    fn legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_get_final, EVP_MD_meth_get_init,
+            EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: `EVP_sha224()` answers a live static method.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_sha224()) }.expect("sha224_md has an init");
+        // SAFETY: as above.
+        let update =
+            unsafe { EVP_MD_meth_get_update(EVP_sha224()) }.expect("sha224_md has an update");
+        // SAFETY: as above.
+        let final_ = unsafe { EVP_MD_meth_get_final(EVP_sha224()) }.expect("sha224_md has a final");
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is a live context and the callback accepts any live context.
+        assert_eq!(unsafe { init(fresh) }, 0, "init accepted a NULL md_data");
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
+
+        // SAFETY: a NULL context is the input under test; the callback's contract permits it.
+        assert_eq!(unsafe { init(core::ptr::null_mut()) }, 0);
+
+        let mut store = core::mem::MaybeUninit::<Sha256Ctx>::uninit();
+        let mut ctx = bound_context(EVP_sha224(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sha224_md`, and `store` is a writable `SHA256_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 28];
+        // SAFETY: `output` is writable for the SHA-224 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0x23, 0x09, 0x7d, 0x22, 0x34, 0x05, 0xd8, 0x22, 0x86, 0x42, 0xa4, 0x77, 0xbd, 0xa2,
+                0x55, 0xb3, 0x2a, 0xad, 0xbc, 0xe4, 0xbd, 0xa0, 0xb3, 0xf7, 0xe3, 0x6c, 0x9d, 0xa7,
+            ],
+            "SHA224(\"abc\") changed"
+        );
     }
 }

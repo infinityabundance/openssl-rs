@@ -2670,6 +2670,148 @@ mod tests {
             crate::runtime::err::ERR_clear_error();
         }
     }
+
+    /// `OSSL_STORE_attach` refuses a params array the provider rejects instead of
+    /// publishing a store whose `loader` is NULL (B27-X2), and still publishes a store
+    /// for the accepted no-params and single-parameter forms.
+    ///
+    /// The refusal is C-valid: `file_set_ctx_params_decoder` rejects a repeated `expect`
+    /// key, so `loader_set_params` answers 0. Pre-fix, that refusal left the local
+    /// `loader_ctx` non-NULL while `fetched_loader` and `loader` were NULL, so the
+    /// context was published and `OSSL_STORE_close`/`OSSL_STORE_load` dereferenced the
+    /// NULL loader. The accepting arms below prove the refusal is not over-broad.
+    #[test]
+    fn store_attach_refused_params_returns_null_and_accepted_params_publish_a_store() {
+        use crate::runtime::bio::bss_mem::BIO_new_mem_buf;
+        use crate::runtime::bio::BIO_free;
+
+        let _guard = lock_global_state();
+        crate::runtime::err::ERR_clear_error();
+        // SAFETY: the names are static NUL-terminated literals and the global state lock
+        // serialises the provider store.
+        let (default_provider, base_provider) = unsafe {
+            let default_provider =
+                crate::provider::OSSL_PROVIDER_load(ptr::null_mut(), c"default".as_ptr());
+            assert!(!default_provider.is_null(), "the default provider loads");
+            let base_provider =
+                crate::provider::OSSL_PROVIDER_load(ptr::null_mut(), c"base".as_ptr());
+            assert!(!base_provider.is_null(), "the base provider loads");
+            (default_provider, base_provider)
+        };
+
+        // A repeated `expect` key: the file provider refuses it, so the attach must refuse
+        // the operation rather than publish `loader = NULL` with a closed context.
+        let mut expect: c_int = 0;
+        // SAFETY: the key is a static literal and `expect` is writable for an `int`.
+        let duplicate =
+            unsafe { OSSL_PARAM_construct_int(OSSL_STORE_PARAM_EXPECT.as_ptr(), &mut expect) };
+        let refused_params = [duplicate, duplicate, OSSL_PARAM_construct_end()];
+        // SAFETY: the literal is live for the call; the BIO is the probe's reference.
+        let refused_bio = unsafe { BIO_new_mem_buf(c"b27x2-refused".as_ptr().cast(), 13) };
+        assert!(
+            !refused_bio.is_null(),
+            "the refusal probe's memory BIO is created"
+        );
+        // SAFETY: every pointer is NULL or live per `OSSL_STORE_attach`'s contract; the
+        // params array is terminated and its repeated key is a defined provider refusal.
+        let refused_ctx = unsafe {
+            OSSL_STORE_attach(
+                refused_bio,
+                c"file".as_ptr(),
+                ptr::null_mut(),
+                c"provider=default".as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                refused_params.as_ptr(),
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert!(
+            refused_ctx.is_null(),
+            "a refused params set must refuse the attach, not publish a store with loader = NULL"
+        );
+        // SAFETY: the attach released its own references, leaving the probe's one.
+        assert_eq!(unsafe { BIO_free(refused_bio) }, 1);
+
+        // Accepted form 1: no params, with a NULL scheme (the authority's `file` default).
+        // SAFETY: as above; the literal is live for the call.
+        let plain_bio = unsafe { BIO_new_mem_buf(c"b27x2-valid".as_ptr().cast(), 11) };
+        assert!(
+            !plain_bio.is_null(),
+            "the valid probe's memory BIO is created"
+        );
+        // SAFETY: every pointer is NULL or live per `OSSL_STORE_attach`'s contract.
+        let ctx = unsafe {
+            OSSL_STORE_attach(
+                plain_bio,
+                ptr::null(),
+                ptr::null_mut(),
+                c"provider=default".as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                ptr::null(),
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert!(!ctx.is_null(), "an attach with no params is accepted");
+        // SAFETY: `ctx` is the live store the attach just published; both members must be
+        // non-NULL for the close/load entries below to be reachable without a NULL loader.
+        unsafe {
+            assert!(!(*ctx).loader.is_null());
+            assert_eq!((*ctx).fetched_loader.cast_const(), (*ctx).loader);
+            assert_eq!(OSSL_STORE_close(ctx), 1);
+        }
+        // SAFETY: the store's close released its reference; this is the probe's single release.
+        assert_eq!(unsafe { BIO_free(plain_bio) }, 1);
+
+        // Accepted form 2: a single well-formed `expect` parameter must not be refused.
+        let mut accepted_expect: c_int = 0;
+        // SAFETY: the key is a static literal and the value is writable for an `int`.
+        let accepted = unsafe {
+            OSSL_PARAM_construct_int(OSSL_STORE_PARAM_EXPECT.as_ptr(), &mut accepted_expect)
+        };
+        let accepted_params = [accepted, OSSL_PARAM_construct_end()];
+        // SAFETY: as above; the literal is live for the call.
+        let accepted_bio = unsafe { BIO_new_mem_buf(c"b27x2-accepted".as_ptr().cast(), 14) };
+        assert!(
+            !accepted_bio.is_null(),
+            "the accepting probe's memory BIO is created"
+        );
+        // SAFETY: every pointer is NULL or live per `OSSL_STORE_attach`'s contract.
+        let ctx = unsafe {
+            OSSL_STORE_attach(
+                accepted_bio,
+                c"file".as_ptr(),
+                ptr::null_mut(),
+                c"provider=default".as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                accepted_params.as_ptr(),
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert!(
+            !ctx.is_null(),
+            "a single accepted params array must still publish a store"
+        );
+        // SAFETY: `ctx` is the live store the attach just published.
+        unsafe {
+            assert_eq!(OSSL_STORE_close(ctx), 1);
+        }
+        // SAFETY: the store's close released its reference; this is the probe's single release.
+        assert_eq!(unsafe { BIO_free(accepted_bio) }, 1);
+
+        // SAFETY: both providers are the references this test loaded; unloading them restores
+        // the process-global provider state the lock protects.
+        unsafe {
+            assert_eq!(crate::provider::OSSL_PROVIDER_unload(default_provider), 1);
+            assert_eq!(crate::provider::OSSL_PROVIDER_unload(base_provider), 1);
+        }
+        crate::runtime::err::ERR_clear_error();
+    }
 }
 
 // ---------------------------------------------------------------------------

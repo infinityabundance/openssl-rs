@@ -265,8 +265,11 @@ pub struct OsslEncoderCtx {
 /// `OSSL_ENCODER_free`, which is why the `refcnt` field must be readable as 0 on that path (the
 /// `zalloc` guarantee) and why the constructor does not simply build the struct in Rust: the
 /// failure arm's release goes through the public destructor.
+///
+/// Safe: it takes no argument, so there is no caller precondition, and the one raw dereference
+/// is of the fresh block this frame allocated (whose all-zero value is a valid `OsslEncoder`).
 #[allow(dead_code)] // read by the withheld fetch block, next pass
-pub(crate) unsafe fn ossl_encoder_new() -> *mut OsslEncoder {
+pub(crate) fn ossl_encoder_new() -> *mut OsslEncoder {
     // The block, allocated through the crate's allocator seam at the authority's own (NULL, 0) site
     // (`OPENSSL_zalloc(sizeof(*encoder))`). It is a validated `OsslEncoder` immediately: `OsslEncoder`'s
     // zero-validity obligation (b) holds (see the `CtxDestroy` impl below), so the zeroed block is a
@@ -378,8 +381,9 @@ pub(crate) unsafe fn encoder_from_algorithm(
     // SAFETY: `prov` is NULL or live per the contract.
     let libctx = unsafe { ossl_provider_libctx(prov) };
 
-    // SAFETY: `ossl_encoder_new` takes no arguments and answers NULL or a live object.
-    let encoder = unsafe { ossl_encoder_new() };
+    // `ossl_encoder_new` takes no arguments and answers NULL or a fresh, uniquely owned object;
+    // it is a safe function.
+    let encoder = ossl_encoder_new();
     if encoder.is_null() {
         return ptr::null_mut();
     }

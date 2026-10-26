@@ -14,7 +14,7 @@
   "source_identity": {
     "repo": "/mnt/1tb_kingston/openssl-rs",
     "branch": "integrate/safe-c33",
-    "head": "30541bae71656f883c71e030f9e4127f4ed83113 (B36 merge; committed) — independently re-adjudicated",
+    "head": "30541bae71656f883c71e030f9e4127f4ed83113 (B36 merge; committed) \u2014 independently re-adjudicated",
     "files": [
       "src/asn1/owned.rs",
       "src/asn1/text.rs",
@@ -456,6 +456,24 @@
       },
       "caller_obligation": "Retained: panic safety is failure-atomic for ERR's own slots; this does not generalize to other stateful contexts.",
       "state": "ESTABLISHED"
+    },
+    {
+      "id": "ERR-23",
+      "operation": "DSO dlfcn_pathbyaddr error-data append",
+      "sites": [
+        "src/dso/mod.rs:885"
+      ],
+      "contract": {
+        "provenance": "The V1 unsafe operation was `add_error_data_pathbyaddr`, which had no argument. The current source has no caller obligation: both appended values are produced inside the body (the literal and either libc-owned `dlerror()` or the `\"<NULL>\"` substitution).",
+        "alignment": "the appended byte vector is a Rust `Vec<u8>`; the queue copies it before returning.",
+        "extent": "the vector is NUL-terminated before `openssl_rs_err_add_data`; the libc string is read for the call only.",
+        "init": "the literal and the substitution are fully initialized; `dlerror()` answers NULL or a NUL-terminated string.",
+        "lifetime_alias": "`dlerror()` is read during the call and never retained; the vector is frame-local.",
+        "release": "the vector is released by Rust; the ERR queue copies the bytes."
+      },
+      "caller_obligation": "None. The former `unsafe fn` marker is gone; the caller in `src/dso/dlfcn.rs` was updated. The remaining unsafe operations at this coordinate are the `dlerror()` string read and the queue append, each with its own block SAFETY comment.",
+      "state": "ESTABLISHED",
+      "extension_note": "Surface extension for the P25 openssh discharge (2026-10-26); it names the frozen V1 coordinate src/dso/mod.rs:885 and records that the current operation is eliminated."
     }
   ],
   "caller_closure": {
@@ -1199,18 +1217,66 @@
       "all_establish_null_or_nul_terminated": true
     },
     "controls": [
-      {"id": "FOCUSED-ERR", "observed": "19 passed; 0 failed; 1719 filtered out", "result": "PASS"},
-      {"id": "MIRI-SB", "observed": "19 passed; 0 failed; 1728 filtered out", "result": "PASS"},
-      {"id": "MIRI-TB", "observed": "19 passed; 0 failed; 1728 filtered out", "result": "PASS"},
-      {"id": "ASAN-RUST", "observed": "19 passed; 0 failed; 1719 filtered out; no AddressSanitizer report", "result": "PASS"},
-      {"id": "TSAN-RUST", "observed": "19 passed; 0 failed; 1719 filtered out; no ThreadSanitizer report", "result": "PASS"},
-      {"id": "C-BORROWED-PROBE", "observed": "e=07800001; data=[raised: ok]; flags=3; borrowed=[borrowed diagnostic text]", "result": "PASS"},
-      {"id": "C-BORROWED-NEGATIVE", "observed": "realloc(): invalid pointer; Aborted (core dumped)", "result": "DETECTOR_FIRED"},
-      {"id": "ASAN-C-PROBE", "observed": "positive probe clean; negative: attempting free on address which was not malloc()-ed; SUMMARY: bad-free in __interceptor_realloc", "result": "DETECTOR_FIRED"},
-      {"id": "COMPILE-LOCK-REGRESSION", "observed": "temporary *const c_char regression fails at src/asn1/owned.rs:148; file restored clean", "result": "PASS"},
-      {"id": "BATCH-TESTS", "observed": "1707 passed; 0 failed; 31 ignored (--test-threads=4)", "result": "PASS"},
-      {"id": "CLIPPY", "observed": "Finished dev profile; RC=0", "result": "PASS"},
-      {"id": "FMT", "observed": "cargo fmt --all -- --check: no diff", "result": "PASS"}
+      {
+        "id": "FOCUSED-ERR",
+        "observed": "19 passed; 0 failed; 1719 filtered out",
+        "result": "PASS"
+      },
+      {
+        "id": "MIRI-SB",
+        "observed": "19 passed; 0 failed; 1728 filtered out",
+        "result": "PASS"
+      },
+      {
+        "id": "MIRI-TB",
+        "observed": "19 passed; 0 failed; 1728 filtered out",
+        "result": "PASS"
+      },
+      {
+        "id": "ASAN-RUST",
+        "observed": "19 passed; 0 failed; 1719 filtered out; no AddressSanitizer report",
+        "result": "PASS"
+      },
+      {
+        "id": "TSAN-RUST",
+        "observed": "19 passed; 0 failed; 1719 filtered out; no ThreadSanitizer report",
+        "result": "PASS"
+      },
+      {
+        "id": "C-BORROWED-PROBE",
+        "observed": "e=07800001; data=[raised: ok]; flags=3; borrowed=[borrowed diagnostic text]",
+        "result": "PASS"
+      },
+      {
+        "id": "C-BORROWED-NEGATIVE",
+        "observed": "realloc(): invalid pointer; Aborted (core dumped)",
+        "result": "DETECTOR_FIRED"
+      },
+      {
+        "id": "ASAN-C-PROBE",
+        "observed": "positive probe clean; negative: attempting free on address which was not malloc()-ed; SUMMARY: bad-free in __interceptor_realloc",
+        "result": "DETECTOR_FIRED"
+      },
+      {
+        "id": "COMPILE-LOCK-REGRESSION",
+        "observed": "temporary *const c_char regression fails at src/asn1/owned.rs:148; file restored clean",
+        "result": "PASS"
+      },
+      {
+        "id": "BATCH-TESTS",
+        "observed": "1707 passed; 0 failed; 31 ignored (--test-threads=4)",
+        "result": "PASS"
+      },
+      {
+        "id": "CLIPPY",
+        "observed": "Finished dev profile; RC=0",
+        "result": "PASS"
+      },
+      {
+        "id": "FMT",
+        "observed": "cargo fmt --all -- --check: no diff",
+        "result": "PASS"
+      }
     ],
     "take_data_invariant": "Re-derived from src/runtime/err.rs and err_variadic.c: a slot is NULL, borrowed without ERR_TXT_MALLOCED, or a seam block with ERR_TXT_MALLOCED. take_data detaches first; it returns NULL for an empty/zero-extent borrowed slot, transfers a MALLOCED block, and copies a positive-extent borrowed slot into a fresh slot_buf_alloc block. The C adapter passes only NULL or a fresh seam block to CRYPTO_realloc. No borrowed pointer reaches CRYPTO_realloc for C-valid objects.",
     "retained_obligations": [
@@ -1507,5 +1573,15 @@
     "inline_bound": "src/evp/cipher_ctx.rs OwnedBlock::malloc call site at the evp_lib coordinate (missed by the first enumeration; compile caught it)",
     "residuals": "NEO-ERR-6 safe-interface gap closed by typing; NEO-ERR-3/4 remain contract-only; NEO-ERR-7 guard unchanged. No new hidden obligation.",
     "graduation": "RE_ADJUDICATION_PENDING; not INDEPENDENTLY_CHECKED, not SAFETY_DISCHARGED; consumer SAFE_COMPATIBLE 0/33."
-  }
+  },
+  "surface_extensions": [
+    {
+      "id": "ERR-23",
+      "added": "2026-10-26",
+      "source_head": "b40e1f096",
+      "reason": "the last UNKNOWN in the openssh closure was src/dso/mod.rs:885, whose V1 unsafe marker has been eliminated",
+      "evidence": "openssh-discharge.json; openssh-receipts-3.json OSSH-R3-026",
+      "independent_review": "NOT_RUN for the extension; the ERR mechanism discharge itself remains the independently reviewed ERR-1"
+    }
+  ]
 }
