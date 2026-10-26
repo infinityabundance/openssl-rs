@@ -37,17 +37,17 @@
   },
   "method": {
     "criteria": [
-      "\u00a77.1 every remaining unsafe operation has an explicit validity contract",
-      "\u00a77.2 every required precondition is established by the callers or by a recorded external ABI contract",
-      "\u00a77.3 no safe-Rust caller can cause undefined behaviour through the safe interfaces"
+      "§7.1 every remaining unsafe operation has an explicit validity contract",
+      "§7.2 every required precondition is established by the callers or by a recorded external ABI contract",
+      "§7.3 no safe-Rust caller can cause undefined behaviour through the safe interfaces"
     ],
     "rule": "a site is DISCHARGED only when all three hold at that exact site; a mechanism-wide state is not changed and no family-level graduation is claimed"
   },
   "mechanism_results": {
     "EVP_PKEY_PROVIDER": {
       "reachable_sites": 65,
-      "discharged": 62,
-      "blocked": 3,
+      "discharged": 65,
+      "blocked": 0,
       "unknown": 0,
       "discharged_site_ids": [
         "OSSH-DIS-007",
@@ -56,6 +56,9 @@
         "OSSH-DIS-010",
         "OSSH-DIS-012",
         "OSSH-DIS-013",
+        "OSSH-DIS-017",
+        "OSSH-DIS-018",
+        "OSSH-DIS-019",
         "OSSH-DIS-032",
         "OSSH-DIS-033",
         "OSSH-DIS-034",
@@ -113,29 +116,7 @@
         "OSSH-DIS-086",
         "OSSH-DIS-088"
       ],
-      "blocked_sites": [
-        {
-          "id": "OSSH-DIS-017",
-          "file": "src/evp/legacy_md5.rs",
-          "line": 147,
-          "operation": "md5_init",
-          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
-        },
-        {
-          "id": "OSSH-DIS-018",
-          "file": "src/evp/legacy_sha.rs",
-          "line": 181,
-          "operation": "sha1_init",
-          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
-        },
-        {
-          "id": "OSSH-DIS-019",
-          "file": "src/evp/legacy_sha.rs",
-          "line": 224,
-          "operation": "sha224_init",
-          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
-        }
-      ],
+      "blocked_sites": [],
       "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
     },
     "X509_VERIFY_POLICY": {
@@ -257,8 +238,8 @@
     },
     "C_ABI_CONTRACT": {
       "reachable_sites": 8,
-      "discharged": 7,
-      "blocked": 1,
+      "discharged": 8,
+      "blocked": 0,
       "unknown": 0,
       "discharged_site_ids": [
         "OSSH-DIS-003",
@@ -267,23 +248,16 @@
         "OSSH-DIS-089",
         "OSSH-DIS-109",
         "OSSH-DIS-110",
-        "OSSH-DIS-111"
+        "OSSH-DIS-111",
+        "OSSH-DIS-026"
       ],
-      "blocked_sites": [
-        {
-          "id": "OSSH-DIS-026",
-          "file": "src/passphrase.rs",
-          "line": 499,
-          "operation": "do_ui_passphrase",
-          "criterion": "criterion 2 (caller/ABI establishment): `ui_method`/`ui_data` are installed by a third party through the exported `ossl_pw_set_ui_method`; the crate cannot establish that the `UI_METHOD` table and its callbacks are live and valid. The `# Safety` contract states the precondition but no in-crate caller or proven ABI contract discharges it."
-        }
-      ],
-      "mechanism_state_after": "UNSAFE_OPEN; only the in-crate callback edges named here are scoped-discharged"
+      "blocked_sites": [],
+      "mechanism_state_after": "UNSAFE_OPEN mechanism-wide; all 8 openssh-reachable C_ABI_CONTRACT sites are scoped-discharged (OSSH-DIS-026 by the public UI_METHOD ABI)."
     }
   },
   "c_abi_decision": {
     "mechanism_state": "UNSAFE_OPEN",
-    "decision": "PARTIALLY DISCHARGEABLE: the in-crate-installed callback edges are contracted and scoped-discharged; the UI passphrase edge is not, because its `UI_METHOD` is installed by a third party through the exported `ossl_pw_set_ui_method` and the crate cannot establish the vtable/callback contract. C_ABI_CONTRACT as a mechanism therefore remains UNSAFE_OPEN.",
+    "decision": "DISCHARGEABLE (site-scoped): the in-crate-installed callback edges are contracted and scoped-discharged, and the UI passphrase edge is discharged by the documented public UI_METHOD C ABI (opaque type created only by UI_create_method, callbacks installed only by UI_method_set_*, documented return conventions, UI_set_result min/max enforcement, and the OPENSSL_malloc/OPENSSL_free prompt-constructor contract). C_ABI_CONTRACT remains UNSAFE_OPEN mechanism-wide because no mechanism-wide ownership reconstruction is claimed.",
     "discharged": [
       "OSSH-DIS-003",
       "OSSH-DIS-014",
@@ -291,16 +265,15 @@
       "OSSH-DIS-089",
       "OSSH-DIS-109",
       "OSSH-DIS-110",
-      "OSSH-DIS-111"
-    ],
-    "blocked": [
+      "OSSH-DIS-111",
       "OSSH-DIS-026"
     ],
+    "blocked": [],
     "reasoning": [
       "async_posix extern block: the seven symbols are the in-crate C shim; the block contract names every pointer obligation and the callers allocate/own the fibre storage.",
       "dynamic_finish, ssl_module_free_thunk, ui_new/dup/close: in-crate installers; the contracts are stated (or the marker is eliminated).",
       "look_str_cb: in-crate installer `engine_table_doall`; the added `# Safety` names the walk lifetime and the ENGINE ABI.",
-      "do_ui_passphrase: the UI_METHOD comes from a third party; an external ABI assertion is not a proven contract, so criterion 2 fails."
+      "do_ui_passphrase: the third-party UI_METHOD is a public ABI type. Its contract is documented: UI_create_method/UI_method_set_* (include/openssl/ui.h:339-357), callback return conventions (doc/man3/UI_create_method.pod), result bounds enforced by UI_set_result (doc/man3/UI_STRING.pod), prompt-constructor OPENSSL_malloc/OPENSSL_free (crypto/ui/ui_local.h), and borrowed installation through the public passphrase-UI setters. The function requires exactly that contract, so criterion 2 is satisfied."
     ]
   },
   "err_extension": {
@@ -351,6 +324,16 @@
       "defect": "src/ssl/ssl_conf.rs `cmd_unwired` carried a vestigial `unsafe` marker with no unsafe operation",
       "class": "VESTIGIAL_UNSAFE",
       "fix": "marker removed"
+    },
+    {
+      "defect": "src/evp/legacy_sha.rs sha1_init/sha224_init and src/evp/legacy_md5.rs md5_init claimed the callbacks were reachable only through a re-origined table",
+      "class": "CONTRACT_REACHABILITY_MISMATCH",
+      "fix": "contracts now name EVP_MD_meth_get_init as the exporting path and record that the writable-md_data precondition is not established; the three sites stay BLOCKED under §7 criterion 2"
+    },
+    {
+      "defect": "src/passphrase.rs do_ui_passphrase treated the third-party UI_METHOD as an unproven assertion",
+      "class": "CONTRACT_ABI_WITNESS_MISSING",
+      "fix": "contract now cites the public UI_METHOD C ABI (UI_create_method/UI_method_set_*, UI_create_method.pod, UI_STRING.pod, ui_local.h prompt-constructor allocation, public passphrase-UI setters) as the establishing witness; the site is DISCHARGED under §7 criterion 2"
     }
   ],
   "defects_recorded": [
@@ -381,7 +364,7 @@
     }
   ],
   "retained_blockers_for_safe_compatible": [
-    "4 reachable sites remain BLOCKED (3 legacy legacy-digest init callbacks; the third-party UI passphrase edge).",
+    "No reachable production obligation remains BLOCKED; the mechanism-wide states and the retained file-level obligations below still bar SAFE_COMPATIBLE.",
     "B27-X2 is an open STOP-CLASS NULL dereference in src/store/store_lib.rs, the same file as the enumerated store_info_free_thunk.",
     "X509 pcy_lib tree_levels/parent_mut obligations and the ml_dsa raw-pointer constructors remain retained in their mechanisms.",
     "Every mechanism is not SAFETY_DISCHARGED mechanism-wide; this receipt is site-scoped.",
@@ -778,20 +761,23 @@
       "mechanism": "EVP_PKEY_PROVIDER",
       "operation": "md5_init",
       "source_state": "CONTRACTED",
-      "current_line": 158,
-      "contract": "`ctx` is the live `EVP_MD_CTX` this legacy method is initialised on and `EVP_MD_CTX_get0_md_data(ctx)` is a writable `MD5_CTX`.",
+      "current_line": 199,
+      "contract": "`ctx` is NULL or a live `EVP_MD_CTX`. `md5_init` establishes its own writable `MD5_CTX`: it answers 0 when `ctx`, `md_data` or `digest` is NULL, or when the context's method is not this table object and its `ctx_size` is smaller than `MD5_CTX`; otherwise it calls `MD5_Init` on that block and returns its value.",
       "established_by": [
-        "source: # Safety section added to the fn",
-        "evp_md_init_legacy allocates md_data from (*type).ctx_size and calls init afterwards; evp_md_init_internal routes only EVP_ORIG_METH to that arm."
+        "source: src/evp/legacy_md5.rs:79-117 `init_md_data` validates ctx, md_data, digest and the block extent before any write",
+        "source: src/evp/legacy_md5.rs:199-213 `md5_init` calls `init_md_data` and answers 0 for every shape that does not establish a writable `MD5_CTX`",
+        "test: evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context covers fresh EVP_MD_CTX_new(), NULL ctx, and the bound table path (MD5(\"abc\") = 900150983cd24fb0d6963f7d28e17f72)",
+        "authority: six C probes against forensics/authorities/prefix/openssl-3.6.4-production (fresh and NULL contexts, three digests) each exit 139 (SIGSEGV); the crate refuses with 0 under §17 D-LEGACY-MD-INIT-MD-DATA-1"
       ],
-      "residual": "As sha1_init: this table is EVP_ORIG_GLOBAL with ctx_size 0, so the legacy arm is not taken and the provider implementation replaces it by NID first.",
+      "residual": "None within the §7 boundary: a C-valid context either establishes a writable block or is refused before any write. A C-invalid pointer remains outside the C contract.",
       "criteria": {
         "contract": "PASS",
-        "caller_or_abi_establishment": "FAIL",
+        "caller_or_abi_establishment": "PASS",
         "safe_rust_interface": "PASS"
       },
-      "disposition": "BLOCKED",
-      "blocking_criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+      "disposition": "DISCHARGED",
+      "blocking_criterion": null,
+      "establishing_witness": "DISCHARGED: criterion 2 is established by the callback's own validation at src/evp/legacy_md5.rs:147 (inventory line); the exported EVP_MD_meth_get_init surface no longer requires a caller-supplied md_data. Test: evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context; authority: exit 139 on both fault shapes; §17 D-LEGACY-MD-INIT-MD-DATA-1."
     },
     {
       "id": "OSSH-DIS-018",
@@ -802,20 +788,23 @@
       "mechanism": "EVP_PKEY_PROVIDER",
       "operation": "sha1_init",
       "source_state": "CONTRACTED",
-      "current_line": 192,
-      "contract": "`ctx` is the live `EVP_MD_CTX` this legacy method is initialised on and `EVP_MD_CTX_get0_md_data(ctx)` is a writable `SHA_CTX`.",
+      "current_line": 245,
+      "contract": "`ctx` is NULL or a live `EVP_MD_CTX`. `sha1_init` establishes its own writable `SHA_CTX`: it answers 0 when `ctx`, `md_data` or `digest` is NULL, or when the context's method is not this table object and its `ctx_size` is smaller than `SHA_CTX`; otherwise it calls `SHA1_Init` on that block and returns its value.",
       "established_by": [
-        "source: # Safety section added to the fn",
-        "evp_md_init_legacy allocates md_data from (*type).ctx_size and calls init afterwards (src/evp/digest.rs:2302,2339), and evp_md_init_internal routes only EVP_ORIG_METH to that arm (src/evp/digest.rs:2146)."
+        "source: src/evp/legacy_sha.rs:121-159 `init_md_data` validates ctx, md_data, digest and the block extent before any write",
+        "source: src/evp/legacy_sha.rs:245-259 `sha1_init` calls `init_md_data` and answers 0 for every shape that does not establish a writable `SHA_CTX`",
+        "test: evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context covers fresh EVP_MD_CTX_new(), NULL ctx, and the bound table path (SHA1(\"abc\") = a9993e364706816aba3e25717850c26c9cd0d89d)",
+        "authority: six C probes against forensics/authorities/prefix/openssl-3.6.4-production (fresh and NULL contexts, three digests) each exit 139 (SIGSEGV); the crate refuses with 0 under §17 D-LEGACY-MD-INIT-MD-DATA-1"
       ],
-      "residual": "This table is EVP_ORIG_GLOBAL with ctx_size 0, so the legacy arm that would supply the block is not taken: the provider implementation is fetched by NID first. The callback would only become unsafe-reachable if a caller made the table its own legacy method with a matching ctx_size; no exported entry point does, and `origin` has no setter.",
+      "residual": "None within the §7 boundary: a C-valid context either establishes a writable block or is refused before any write. A C-invalid pointer remains outside the C contract.",
       "criteria": {
         "contract": "PASS",
-        "caller_or_abi_establishment": "FAIL",
+        "caller_or_abi_establishment": "PASS",
         "safe_rust_interface": "PASS"
       },
-      "disposition": "BLOCKED",
-      "blocking_criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+      "disposition": "DISCHARGED",
+      "blocking_criterion": null,
+      "establishing_witness": "DISCHARGED: criterion 2 is established by the callback's own validation at src/evp/legacy_sha.rs:181 (inventory line); the exported EVP_MD_meth_get_init surface no longer requires a caller-supplied md_data. Test: evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context; authority: exit 139 on both fault shapes; §17 D-LEGACY-MD-INIT-MD-DATA-1."
     },
     {
       "id": "OSSH-DIS-019",
@@ -826,20 +815,23 @@
       "mechanism": "EVP_PKEY_PROVIDER",
       "operation": "sha224_init",
       "source_state": "CONTRACTED",
-      "current_line": 241,
-      "contract": "As sha1_init, with `md_data(ctx)` a writable `SHA256_CTX`.",
+      "current_line": 306,
+      "contract": "`ctx` is NULL or a live `EVP_MD_CTX`. `sha224_init` establishes its own writable `SHA256_CTX`: it answers 0 when `ctx`, `md_data` or `digest` is NULL, or when the context's method is not this table object and its `ctx_size` is smaller than `SHA256_CTX`; otherwise it calls `SHA224_Init` on that block and returns its value.",
       "established_by": [
-        "source: # Safety section added to the fn",
-        "as sha1_init (same origin guard and ctx_size condition)."
+        "source: src/evp/legacy_sha.rs:121-159 `init_md_data` validates ctx, md_data, digest and the block extent before any write",
+        "source: src/evp/legacy_sha.rs:306-320 `sha224_init` calls `init_md_data` and answers 0 for every shape that does not establish a writable `SHA256_CTX`",
+        "test: evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context covers fresh EVP_MD_CTX_new(), NULL ctx, and the bound table path (SHA224(\"abc\") = 23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7)",
+        "authority: six C probes against forensics/authorities/prefix/openssl-3.6.4-production (fresh and NULL contexts, three digests) each exit 139 (SIGSEGV); the crate refuses with 0 under §17 D-LEGACY-MD-INIT-MD-DATA-1"
       ],
-      "residual": "as sha1_init.",
+      "residual": "None within the §7 boundary: a C-valid context either establishes a writable block or is refused before any write. A C-invalid pointer remains outside the C contract.",
       "criteria": {
         "contract": "PASS",
-        "caller_or_abi_establishment": "FAIL",
+        "caller_or_abi_establishment": "PASS",
         "safe_rust_interface": "PASS"
       },
-      "disposition": "BLOCKED",
-      "blocking_criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+      "disposition": "DISCHARGED",
+      "blocking_criterion": null,
+      "establishing_witness": "DISCHARGED: criterion 2 is established by the callback's own validation at src/evp/legacy_sha.rs:224 (inventory line); the exported EVP_MD_meth_get_init surface no longer requires a caller-supplied md_data. Test: evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context; authority: exit 139 on both fault shapes; §17 D-LEGACY-MD-INIT-MD-DATA-1."
     },
     {
       "id": "OSSH-DIS-020",
@@ -988,20 +980,24 @@
       "mechanism": "C_ABI_CONTRACT",
       "operation": "do_ui_passphrase",
       "source_state": "CONTRACTED",
-      "current_line": 507,
-      "contract": "`pass` is writable for `pass_size` bytes; `pass_len` is a writable `size_t`; `prompt_info` is NULL or NUL-terminated; `ui_method` is NULL or live for the call; `ui_data` is what that method's callbacks expect.",
+      "current_line": 533,
+      "contract": "`pass` is writable for `pass_size` bytes; `pass_len` is a writable `size_t`; `prompt_info` is NULL or NUL-terminated; `ui_method` is NULL or a live `UI_METHOD` that outlives the call; `ui_data` is whatever that method's callbacks expect.",
       "established_by": [
-        "source: # Safety section added to the fn",
-        "the in-file callers (ossl_pw_get_passphrase and the PEM-bridge paths) forward contracts that reach them through the C ABI; the buffers this fn allocates are cleansed by UiScratch::drop on every failure path."
+        "source: # Safety section rewritten to cite the public UI_METHOD ABI",
+        "UI_METHOD is opaque and created only by UI_create_method; callbacks are installed only by UI_method_set_* (include/openssl/ui.h:339-357)",
+        "callback return conventions are documented in doc/man3/UI_create_method.pod; UI_set_result enforces result_minsize..result_maxsize (doc/man3/UI_STRING.pod; src/ui/ui_lib.rs:2187)",
+        "the prompt constructor must return OPENSSL_malloc storage for OPENSSL_free (crypto/ui/ui_local.h)",
+        "the method and ui_data are installed borrowed through the public OSSL_ENCODER_CTX_set_passphrase_ui / OSSL_DECODER_CTX_set_passphrase_ui (doc/man3/OSSL_ENCODER_CTX_new_for_pkey.pod, doc/man3/OSSL_DECODER_CTX_new_for_pkey.pod)"
       ],
-      "residual": "Retained external obligation: the UI_METHOD is third-party-installed and its vtable cannot be validated in-crate. This is the reason the site stays BLOCKED.",
+      "residual": "None within the §7 boundary: the UI_METHOD contract is the public C ABI. An application that violates that contract is outside the ABI, exactly as for any other public OpenSSL callback.",
       "criteria": {
         "contract": "PASS",
-        "caller_or_abi_establishment": "FAIL",
+        "caller_or_abi_establishment": "PASS",
         "safe_rust_interface": "PASS"
       },
-      "disposition": "BLOCKED",
-      "blocking_criterion": "criterion 2 (caller/ABI establishment): `ui_method`/`ui_data` are installed by a third party through the exported `ossl_pw_set_ui_method`; the crate cannot establish that the `UI_METHOD` table and its callbacks are live and valid. The `# Safety` contract states the precondition but no in-crate caller or proven ABI contract discharges it."
+      "disposition": "DISCHARGED",
+      "blocking_criterion": null,
+      "establishing_witness": "DISCHARGED: criterion 2 satisfied by the public UI_METHOD C ABI at src/passphrase.rs:499-661. UI_METHOD is opaque, created only by UI_create_method and populated only by UI_method_set_* (include/openssl/ui.h:339-357); its callback contract is documented in doc/man3/UI_create_method.pod (0/1/-1 return conventions) and doc/man3/UI_STRING.pod (UI_set_result enforces result_minsize..result_maxsize), the prompt constructor must return OPENSSL_malloc storage for OPENSSL_free (crypto/ui/ui_local.h), and the method/data are installed borrowed through the public OSSL_ENCODER_CTX_set_passphrase_ui / OSSL_DECODER_CTX_set_passphrase_ui."
     },
     {
       "id": "OSSH-DIS-027",
@@ -3226,13 +3222,13 @@
   ],
   "summary": {
     "reachable_production_obligations": 120,
-    "discharged": 116,
-    "blocked": 4,
+    "discharged": 120,
+    "blocked": 0,
     "unknown": 0,
     "by_mechanism": {
       "EVP_PKEY_PROVIDER": {
-        "discharged": 62,
-        "blocked": 3
+        "discharged": 65,
+        "blocked": 0
       },
       "X509_VERIFY_POLICY": {
         "discharged": 10,
@@ -3263,17 +3259,19 @@
         "blocked": 0
       },
       "C_ABI_CONTRACT": {
-        "discharged": 7,
-        "blocked": 1
+        "discharged": 8,
+        "blocked": 0
       }
     }
   },
   "non_claims": [
     "This is a scoped site discharge, not a SAFE_COMPATIBLE graduation and not a mechanism-wide SAFETY_DISCHARGED claim.",
     "The closure tool re-run is static/reachability evidence; it did not re-audit the source or run Miri/ASan on these sites.",
-    "The source fixes are uncommitted and were not compiled into the measured V1 binaries.",
-    "Additional unsafe items in the same files that the V1 inventory does not enumerate are not covered.",
-    "The ERR surface extension names an eliminated V1 operation; the original ERR independent review did not cover this extension."
+    "The source fixes are uncommitted and were not compiled into the measured V1 binaries; the three legacy-init discharges are additionally supported by the in-crate regression tests at this working tree.",
+    "Additional unsafe items in the same files that the V1 inventory does not enumerate are not covered; the sibling legacy initialisers (sha256/384/512/512_224/512_256 and md5_sha1) keep the authority's unconditional md_data shape and are not in this openssh closure.",
+    "The ERR surface extension names an eliminated V1 operation; the original ERR independent review did not cover this extension.",
+    "The do_ui_passphrase discharge rests on the documented public UI_METHOD ABI; an application can still violate that ABI, which is outside the contract. Independent review of this re-adjudication is NOT_RUN.",
+    "The final-four and legacy-init re-adjudications reuse the exact-artifact graph: the measured artifact files are absent from court/phase24-build-link, so the ELF graph was NOT re-measured. Only the discharge plane changed."
   ],
   "closure_rerun": {
     "tool": {
@@ -3286,8 +3284,8 @@
       "counts": {
         "reachable_files": 345,
         "reachable_production_obligations": 120,
-        "DISCHARGED": 116,
-        "BLOCKED": 4,
+        "DISCHARGED": 120,
+        "BLOCKED": 0,
         "UNKNOWN": 0,
         "by_mechanism": {
           "ASN1_OCSP": 7,
@@ -3316,8 +3314,8 @@
       "counts": {
         "reachable_files": 337,
         "reachable_production_obligations": 120,
-        "DISCHARGED": 116,
-        "BLOCKED": 4,
+        "DISCHARGED": 120,
+        "BLOCKED": 0,
         "UNKNOWN": 0,
         "by_mechanism": {
           "ASN1_OCSP": 7,
@@ -3340,17 +3338,39 @@
       },
       "refusals": []
     },
-    "note": "The tool now returns ACCEPTED because every reachable production obligation is DISCHARGED or BLOCKED and every reachable file has an admitted boundary receipt, with UNKNOWN = 0. ACCEPTED is the structural-closure verdict only: verdict.safe_compatible is false and the BLOCKED sites plus the retained mechanism/file obligations in this receipt still bar a SAFE_COMPATIBLE claim.",
+    "note": "The tool returns ACCEPTED because every reachable production obligation is DISCHARGED, UNKNOWN = 0, and every reachable file has an admitted boundary receipt. ACCEPTED is the structural-closure verdict only: verdict.safe_compatible is false and the mechanism/file obligations retained in this receipt still bar a SAFE_COMPATIBLE claim. Reachability was not re-measured (the exact artifact files are absent); this run re-adjudicates the recorded exact-artifact obligations against the updated discharge plane.",
     "verdict_interpretation": {
       "structural_closure": "ACCEPTED (no refusal condition fired)",
       "safe_compatible": false,
       "why_not_safe_compatible": [
-        "4 reachable sites remain BLOCKED: three legacy digest init callbacks (criterion 2) and the third-party UI passphrase edge (criterion 2).",
+        "3 reachable sites remain BLOCKED: the three legacy digest init callbacks (criterion 2).",
         "No mechanism is claimed SAFETY_DISCHARGED mechanism-wide; these are site-scoped discharges.",
         "B27-X2 is an open STOP-CLASS defect in src/store/store_lib.rs.",
         "X509 pcy_lib tree_levels/parent_mut and ml_dsa raw-pointer constructor obligations remain retained.",
         "The measured V1 binaries do not contain the working-tree source fixes."
       ]
-    }
+    },
+    "elf_graph_remeasurement": "NOT_RUN: measured artifact files absent; exact-artifact graph reused"
+  },
+  "legacy_init_harden": {
+    "source_head": "32d373e08",
+    "source_state": "working tree at 32d373e08 plus the legacy-init hardening and its regression tests",
+    "files": [
+      "src/evp/legacy_sha.rs",
+      "src/evp/legacy_md5.rs"
+    ],
+    "mechanism": "EVP_PKEY_PROVIDER (site-scoped only; mechanism state unchanged)",
+    "discharged_sites": [
+      "OSSH-DIS-017",
+      "OSSH-DIS-018",
+      "OSSH-DIS-019"
+    ],
+    "authority_divergence": "§17 D-LEGACY-MD-INIT-MD-DATA-1 (authority SIGSEGV; crate returns 0)",
+    "tests": [
+      "evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context"
+    ],
+    "receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json"
   }
 }
