@@ -598,8 +598,9 @@ fn atoi_prefix(text: &str) -> c_int {
 /// `ctx`/`ssl` fields are each NULL or a live context/connection of this crate; the call
 /// only reads `cctx`, but it hands those handles to the `SSL_CTX_set_num_tickets` /
 /// `SSL_set_num_tickets` setters, so neither object may be concurrently written.
-/// `value` must be NULL or point to a NUL-terminated byte string readable for the whole
-/// call. ABI: the `ConfCmdFn` (`int (*)(SSL_CONF_CTX *, const char *)`) signature the
+/// `value` must be non-NULL and point to a NUL-terminated byte string readable for the
+/// whole call (`SSL_CONF_cmd` refuses a NULL value for a typed command before invoking the
+/// handler). ABI: the `ConfCmdFn` (`int (*)(SSL_CONF_CTX *, const char *)`) signature the
 /// command table stores.
 unsafe extern "C" fn cmd_NumTickets(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     // SAFETY: `value` is NUL-terminated.
@@ -621,6 +622,15 @@ unsafe extern "C" fn cmd_NumTickets(cctx: *mut SslConfCtx, value: *const c_char)
 }
 
 /// `cmd_RecordPadding` — `ssl_conf.c:667-721`.
+///
+/// # Safety
+///
+/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` whose
+/// `ctx`/`ssl` fields are each NULL or a live context/connection of this crate; the call
+/// hands those handles to `SSL_CTX_set_block_padding_ex`/`SSL_set_block_padding_ex`, so
+/// neither object may be concurrently written. `value` must be non-NULL and point to a
+/// NUL-terminated byte string readable for the whole call (`SSL_CONF_cmd` refuses a NULL
+/// value for a typed command). ABI: the `ConfCmdFn` signature the command table stores.
 unsafe extern "C" fn cmd_RecordPadding(cctx: *mut SslConfCtx, value: *const c_char) -> c_int {
     // SAFETY: `value` is NUL-terminated.
     let bytes = unsafe { core::ffi::CStr::from_ptr(value) }.to_bytes();
@@ -655,8 +665,9 @@ unsafe extern "C" fn cmd_RecordPadding(cctx: *mut SslConfCtx, value: *const c_ch
 }
 
 /// A command whose named unit is a later subphase: recognised by the table, refused by the
-/// handler (recorded in the module header).
-unsafe extern "C" fn cmd_unwired(_cctx: *mut SslConfCtx, _value: *const c_char) -> c_int {
+/// handler (recorded in the module header). It reads no argument and contains no unsafe
+/// operation, so it is a safe `extern "C" fn`.
+extern "C" fn cmd_unwired(_cctx: *mut SslConfCtx, _value: *const c_char) -> c_int {
     0
 }
 
@@ -1003,11 +1014,12 @@ fn switches() -> [SslSwitchTbl; 31] {
 /// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx`
 /// (read-only for this call). `cctx.prefix` must be NULL or point to `cctx.prefixlen`
 /// readable, initialised bytes, with `prefixlen <= isize::MAX`. `pcmd` must be NULL or
+/// `pcmd` must be NULL or
 /// point to a writable, aligned `*const c_char` slot whose current value is NULL or a
-/// NUL-terminated string that stays valid for the call; when the prefix is stripped the
-/// slot is advanced by `prefixlen` (or by one for `-`) bytes *within that same string*,
-/// so the original pointer must name the start of a NUL-terminated allocation, not a
-/// sub-slice of one.
+/// pointer into a NUL-terminated allocation that stays valid for the call; when the prefix
+/// is stripped the slot is advanced by `prefixlen` (or by one for `-`) bytes *within that
+/// same allocation*, and the body checks that the remaining string is longer than the
+/// prefix before advancing.
 unsafe fn skip_prefix(cctx: *mut SslConfCtx, pcmd: *mut *const c_char) -> bool {
     // SAFETY: `cctx` is live.
     let c = unsafe { &*cctx };

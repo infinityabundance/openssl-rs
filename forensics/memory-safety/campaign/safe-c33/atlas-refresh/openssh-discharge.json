@@ -1,0 +1,3356 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/scoped-site-discharge/v1",
+  "kind": "site-enumerating-discharge-receipt",
+  "receipt": "openssh-discharge",
+  "subphase": "P25 openssh closure: mechanism-level site-enumerating discharge",
+  "date": "2026-10-26",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "head": "b40e1f096",
+    "working_tree_dirty": true,
+    "working_tree_note": "the contract/elimination fixes in this subphase are uncommitted; the closure was re-run at this working tree",
+    "source_fix_file_sha256": {
+      "src/context/namemap.rs": "f05d3d4840563ce5c736406e9f6d7d5050262c08f387fa5f8c53c20f52c74cf7",
+      "src/engine/eng_dyn.rs": "0044c618f70a001c6a54d92d925bfcd5c2a2f4c1bdd55ba1ca899f8e3eb2eae6",
+      "src/engine/tb_asnmth.rs": "ef104135ff9751981051ff8fbbf710b4aa299be7dd0b5a0ed702ea3a2d45a7bb",
+      "src/rand/rand_lib.rs": "ee19112d10a5a9c96d39db3b6d466044acb4185479149810a0585ad520a7c5e5",
+      "src/ssl/ssl_conf.rs": "0ca90877cba6adbaf9ff58734c7e21e3ee7d2b3fc074ec13d372eec8b401b15f"
+    },
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
+    "inventory_source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
+    "artifacts": {
+      "ssh": {
+        "path": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+        "sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57"
+      },
+      "sshd": {
+        "path": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+        "sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+      }
+    },
+    "artifact_note": "the frozen V1 binaries do not contain this subphase source fixes; the closure measures the classification effect of the site receipts, not the compiled effect of the fixes"
+  },
+  "scope": {
+    "reachable_operation_set": "the 120 V1 production obligation coordinates the openssh/sshd closure reports reachable (ssh union sshd)",
+    "coordinate_basis": "frozen inventory lines; the disposition names the file and inventory line the closure adjudicates",
+    "not_in_scope": "additional unsafe items in the same files that the V1 inventory does not list; they are enumerated where known under defects_recorded and are not claimed discharged"
+  },
+  "method": {
+    "criteria": [
+      "\u00a77.1 every remaining unsafe operation has an explicit validity contract",
+      "\u00a77.2 every required precondition is established by the callers or by a recorded external ABI contract",
+      "\u00a77.3 no safe-Rust caller can cause undefined behaviour through the safe interfaces"
+    ],
+    "rule": "a site is DISCHARGED only when all three hold at that exact site; a mechanism-wide state is not changed and no family-level graduation is claimed"
+  },
+  "mechanism_results": {
+    "EVP_PKEY_PROVIDER": {
+      "reachable_sites": 65,
+      "discharged": 62,
+      "blocked": 3,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-007",
+        "OSSH-DIS-008",
+        "OSSH-DIS-009",
+        "OSSH-DIS-010",
+        "OSSH-DIS-012",
+        "OSSH-DIS-013",
+        "OSSH-DIS-032",
+        "OSSH-DIS-033",
+        "OSSH-DIS-034",
+        "OSSH-DIS-035",
+        "OSSH-DIS-036",
+        "OSSH-DIS-037",
+        "OSSH-DIS-038",
+        "OSSH-DIS-039",
+        "OSSH-DIS-040",
+        "OSSH-DIS-041",
+        "OSSH-DIS-042",
+        "OSSH-DIS-043",
+        "OSSH-DIS-044",
+        "OSSH-DIS-045",
+        "OSSH-DIS-046",
+        "OSSH-DIS-047",
+        "OSSH-DIS-048",
+        "OSSH-DIS-049",
+        "OSSH-DIS-050",
+        "OSSH-DIS-051",
+        "OSSH-DIS-052",
+        "OSSH-DIS-053",
+        "OSSH-DIS-054",
+        "OSSH-DIS-055",
+        "OSSH-DIS-056",
+        "OSSH-DIS-057",
+        "OSSH-DIS-058",
+        "OSSH-DIS-059",
+        "OSSH-DIS-060",
+        "OSSH-DIS-061",
+        "OSSH-DIS-062",
+        "OSSH-DIS-063",
+        "OSSH-DIS-064",
+        "OSSH-DIS-065",
+        "OSSH-DIS-066",
+        "OSSH-DIS-067",
+        "OSSH-DIS-068",
+        "OSSH-DIS-069",
+        "OSSH-DIS-070",
+        "OSSH-DIS-071",
+        "OSSH-DIS-072",
+        "OSSH-DIS-073",
+        "OSSH-DIS-074",
+        "OSSH-DIS-075",
+        "OSSH-DIS-076",
+        "OSSH-DIS-077",
+        "OSSH-DIS-078",
+        "OSSH-DIS-079",
+        "OSSH-DIS-080",
+        "OSSH-DIS-081",
+        "OSSH-DIS-082",
+        "OSSH-DIS-083",
+        "OSSH-DIS-084",
+        "OSSH-DIS-085",
+        "OSSH-DIS-086",
+        "OSSH-DIS-088"
+      ],
+      "blocked_sites": [
+        {
+          "id": "OSSH-DIS-017",
+          "file": "src/evp/legacy_md5.rs",
+          "line": 147,
+          "operation": "md5_init",
+          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+        },
+        {
+          "id": "OSSH-DIS-018",
+          "file": "src/evp/legacy_sha.rs",
+          "line": 181,
+          "operation": "sha1_init",
+          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+        },
+        {
+          "id": "OSSH-DIS-019",
+          "file": "src/evp/legacy_sha.rs",
+          "line": 224,
+          "operation": "sha224_init",
+          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+        }
+      ],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "X509_VERIFY_POLICY": {
+      "reachable_sites": 10,
+      "discharged": 10,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-001",
+        "OSSH-DIS-112",
+        "OSSH-DIS-113",
+        "OSSH-DIS-114",
+        "OSSH-DIS-115",
+        "OSSH-DIS-116",
+        "OSSH-DIS-117",
+        "OSSH-DIS-118",
+        "OSSH-DIS-119",
+        "OSSH-DIS-120"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "RAND_CMS_STORE_KEYFMT": {
+      "reachable_sites": 9,
+      "discharged": 9,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-004",
+        "OSSH-DIS-005",
+        "OSSH-DIS-027",
+        "OSSH-DIS-028",
+        "OSSH-DIS-029",
+        "OSSH-DIS-030",
+        "OSSH-DIS-031",
+        "OSSH-DIS-087",
+        "OSSH-DIS-108"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "ASN1_OCSP": {
+      "reachable_sites": 7,
+      "discharged": 7,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-002",
+        "OSSH-DIS-020",
+        "OSSH-DIS-021",
+        "OSSH-DIS-022",
+        "OSSH-DIS-023",
+        "OSSH-DIS-024",
+        "OSSH-DIS-025"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "SSL_SESSION": {
+      "reachable_sites": 14,
+      "discharged": 14,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-094",
+        "OSSH-DIS-095",
+        "OSSH-DIS-096",
+        "OSSH-DIS-097",
+        "OSSH-DIS-098",
+        "OSSH-DIS-099",
+        "OSSH-DIS-100",
+        "OSSH-DIS-101",
+        "OSSH-DIS-102",
+        "OSSH-DIS-103",
+        "OSSH-DIS-104",
+        "OSSH-DIS-105",
+        "OSSH-DIS-106",
+        "OSSH-DIS-107"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "RUNTIME_CONCURRENCY": {
+      "reachable_sites": 2,
+      "discharged": 2,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-006",
+        "OSSH-DIS-093"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "RUNTIME_ALLOC_OWNERSHIP": {
+      "reachable_sites": 4,
+      "discharged": 4,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-015",
+        "OSSH-DIS-090",
+        "OSSH-DIS-091",
+        "OSSH-DIS-092"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "ERR": {
+      "reachable_sites": 1,
+      "discharged": 1,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-011"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "SAFETY_DISCHARGED (ERR mechanism scope)"
+    },
+    "C_ABI_CONTRACT": {
+      "reachable_sites": 8,
+      "discharged": 7,
+      "blocked": 1,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-003",
+        "OSSH-DIS-014",
+        "OSSH-DIS-016",
+        "OSSH-DIS-089",
+        "OSSH-DIS-109",
+        "OSSH-DIS-110",
+        "OSSH-DIS-111"
+      ],
+      "blocked_sites": [
+        {
+          "id": "OSSH-DIS-026",
+          "file": "src/passphrase.rs",
+          "line": 499,
+          "operation": "do_ui_passphrase",
+          "criterion": "criterion 2 (caller/ABI establishment): `ui_method`/`ui_data` are installed by a third party through the exported `ossl_pw_set_ui_method`; the crate cannot establish that the `UI_METHOD` table and its callbacks are live and valid. The `# Safety` contract states the precondition but no in-crate caller or proven ABI contract discharges it."
+        }
+      ],
+      "mechanism_state_after": "UNSAFE_OPEN; only the in-crate callback edges named here are scoped-discharged"
+    }
+  },
+  "c_abi_decision": {
+    "mechanism_state": "UNSAFE_OPEN",
+    "decision": "PARTIALLY DISCHARGEABLE: the in-crate-installed callback edges are contracted and scoped-discharged; the UI passphrase edge is not, because its `UI_METHOD` is installed by a third party through the exported `ossl_pw_set_ui_method` and the crate cannot establish the vtable/callback contract. C_ABI_CONTRACT as a mechanism therefore remains UNSAFE_OPEN.",
+    "discharged": [
+      "OSSH-DIS-003",
+      "OSSH-DIS-014",
+      "OSSH-DIS-016",
+      "OSSH-DIS-089",
+      "OSSH-DIS-109",
+      "OSSH-DIS-110",
+      "OSSH-DIS-111"
+    ],
+    "blocked": [
+      "OSSH-DIS-026"
+    ],
+    "reasoning": [
+      "async_posix extern block: the seven symbols are the in-crate C shim; the block contract names every pointer obligation and the callers allocate/own the fibre storage.",
+      "dynamic_finish, ssl_module_free_thunk, ui_new/dup/close: in-crate installers; the contracts are stated (or the marker is eliminated).",
+      "look_str_cb: in-crate installer `engine_table_doall`; the added `# Safety` names the walk lifetime and the ENGINE ABI.",
+      "do_ui_passphrase: the UI_METHOD comes from a third party; an external ABI assertion is not a proven contract, so criterion 2 fails."
+    ]
+  },
+  "err_extension": {
+    "mechanism": "ERR",
+    "receipt": "mechanism-discharge-ERR.json",
+    "surface_entry": "ERR-23",
+    "site": "src/dso/mod.rs:885",
+    "outcome": "the V1 operation `add_error_data_pathbyaddr` was made safe; the remaining block-level unsafe operations have contracts; the surface now names the coordinate",
+    "independent_review": "NOT_RUN for the extension; the ERR mechanism discharge remains ERR-1"
+  },
+  "source_fixes": [
+    {
+      "defect": "src/engine/tb_asnmth.rs:330 `look_str_cb` had no `# Safety` fn contract",
+      "class": "MISSING_CONTRACT",
+      "fix": "added the callback contract naming `sk`, `arg`, the engine-lock lifetime and the ENGINE ABI for `pkey_asn1_meths`"
+    },
+    {
+      "defect": "src/ssl/ssl_conf.rs `cmd_NumTickets` contract admitted a NULL `value` but the body calls `CStr::from_ptr(value)`",
+      "class": "CONTRACT_BODY_MISMATCH",
+      "fix": "contract now requires non-NULL `value`; `SSL_CONF_cmd` already refuses NULL before a typed handler"
+    },
+    {
+      "defect": "src/ssl/ssl_conf.rs:624 `cmd_RecordPadding` was an unsafe callback with no `# Safety` contract",
+      "class": "MISSING_CONTRACT",
+      "fix": "added the `ConfCmdFn` contract (live `cctx`, NULL-or-live `ctx`/`ssl`, non-NULL NUL-terminated `value`)"
+    },
+    {
+      "defect": "src/ssl/ssl_conf.rs `skip_prefix` required the command pointer to be the start of an allocation, which `SSL_CONF_cmd` does not establish and the body does not need",
+      "class": "OVER_STRICT_CONTRACT",
+      "fix": "contract now requires a pointer into a NUL-terminated allocation; the body already checks the remaining length before advancing"
+    },
+    {
+      "defect": "src/rand/rand_lib.rs `rand_set_rand_method_internal` contract claimed `e` is always NULL, while `RAND_set_rand_engine` passes its engine argument",
+      "class": "CONTRACT_CALLER_MISMATCH",
+      "fix": "contract now says NULL or a live engine, stored but neither dereferenced nor consumed (D312)"
+    },
+    {
+      "defect": "src/context/namemap.rs:1067 `raise_too_many_names` carried a vestigial `unsafe` marker although it has no caller precondition",
+      "class": "VESTIGIAL_UNSAFE",
+      "fix": "marker removed; the internal `raise_site_dynamic` call keeps its block SAFETY comment"
+    },
+    {
+      "defect": "src/engine/eng_dyn.rs `dynamic_init`/`dynamic_finish` carried vestigial `unsafe` markers with no unsafe operation",
+      "class": "VESTIGIAL_UNSAFE",
+      "fix": "markers removed; both remain `extern \"C\" fn` and coerce to the engine callback slot"
+    },
+    {
+      "defect": "src/ssl/ssl_conf.rs `cmd_unwired` carried a vestigial `unsafe` marker with no unsafe operation",
+      "class": "VESTIGIAL_UNSAFE",
+      "fix": "marker removed"
+    }
+  ],
+  "defects_recorded": [
+    {
+      "defect": "src/ssl/ssl_conf.rs `ssl_match_option`, `ssl_set_option_list`, `min_max_proto`, `cmd_Options`, `cmd_VerifyMode`, `cmd_CipherString`, `cmd_Ciphersuites`, `cmd_MinProtocol`, `cmd_MaxProtocol` remain unsafe fns without a `# Safety` section",
+      "disposition": "RECORDED_NOT_FIXED",
+      "why": "they are additional unsafe items in the file, not among the 120 reachable production obligations this receipt enumerates; a file-wide contract pass is a separate batch"
+    },
+    {
+      "defect": "src/provider/ecx_kmgmt.rs `x25519_gettable_params`, `x448_gettable_params`, `x25519_settable_params` remain `unsafe extern \"C\" fn` with no unsafe operation and no contract",
+      "disposition": "RECORDED_NOT_FIXED",
+      "why": "additional unsafe items in the file, not the listed V1 coordinates; they are not claimed as discharged"
+    },
+    {
+      "defect": "OSSH-R1-RES-1: the SSLv3 master-secret temporaries in `src/digest/sha1.rs` / `src/digest/md5_sha1.rs` are not cleansed on early-failure returns",
+      "disposition": "RECORDED_NOT_FIXED",
+      "why": "different files from the enumerated sites; main carries the fix at 1b346669d (`fix(digest): cleanse the master-secret temporaries on every path`) but this branch does not. It is not reclassified as safe."
+    },
+    {
+      "defect": "B27-X2: `OSSL_STORE_attach` can return a context with `loader = NULL` and a closed `loader_ctx`, after which `OSSL_STORE_close`/`OSSL_STORE_load` dereference NULL",
+      "disposition": "OPEN_STOP_CLASS",
+      "why": "recorded in boundary-sweep-B27; it blocks promotion of `src/store/store_lib.rs` and any mechanism-wide RAND_CMS_STORE_KEYFMT discharge, although the enumerated `store_info_free_thunk` site itself is sound"
+    },
+    {
+      "defect": "X509 pcy_lib `tree_levels` caller-chosen lifetime and `Node::parent_mut` uniqueness obligations remain retained",
+      "disposition": "RETAINED",
+      "why": "in the X509_VERIFY_POLICY mechanism but not at the ten enumerated openssh sites; no mechanism-wide X509 SAFETY_DISCHARGED claim is made"
+    }
+  ],
+  "retained_blockers_for_safe_compatible": [
+    "4 reachable sites remain BLOCKED (3 legacy legacy-digest init callbacks; the third-party UI passphrase edge).",
+    "B27-X2 is an open STOP-CLASS NULL dereference in src/store/store_lib.rs, the same file as the enumerated store_info_free_thunk.",
+    "X509 pcy_lib tree_levels/parent_mut obligations and the ml_dsa raw-pointer constructors remain retained in their mechanisms.",
+    "Every mechanism is not SAFETY_DISCHARGED mechanism-wide; this receipt is site-scoped.",
+    "The frozen V1 binaries do not contain the source fixes; no recompiled L4/L7 evidence is offered here."
+  ],
+  "boundaries": [
+    {
+      "id": "OSSH-DIS-001",
+      "source_boundary": "OSSH-R2-003",
+      "file": "src/apps/verify.rs",
+      "inventory_line": 104,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "cb",
+      "source_state": "CONTRACTED",
+      "current_line": 108,
+      "contract": "`ctx` is the live `X509_STORE_CTX` the core passes to a verification callback for the duration of the call; it is not released or concurrently mutated while the callback runs. `ok` is a value.",
+      "established_by": [
+        "C ABI: X509_STORE_CTX verification-callback contract",
+        "source: # Safety added to the fn in this subphase"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-002",
+      "source_boundary": "P25-OSSH-OCSP-1",
+      "file": "src/asn1/a_mbstr.rs",
+      "inventory_line": 243,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ASN1_OCSP",
+      "operation": "cpy_asc",
+      "source_state": null,
+      "current_line": null,
+      "contract": "No caller contract. The C callback type `int (*)(unsigned long, void *)` and its `*mut *mut c_uchar` cursor argument are removed: `traverse_string` takes an `FnMut`, and the four writers take `&mut [u8]` + position, so each write is bounds-checked against the block `ASN1_mbstring_ncopy` allocated.",
+      "established_by": [
+        "type invariant: `out` is the `outlen`-byte view of the same frame's `count = outlen + 1` block"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-003",
+      "source_boundary": "OSSH-R2-005",
+      "file": "src/async/arch/async_posix.rs",
+      "inventory_line": 52,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "(ucontext shims)",
+      "source_state": "CONTRACTED",
+      "current_line": 60,
+      "contract": "The seven `openssl_rs_ucontext_*` symbols are defined by `src/async/arch/async_ucontext.c`, the platform half linked into this crate. `ctx` is a live, aligned block of at least `openssl_rs_ucontext_size()` bytes with one owner; `stack` is readable/writable for `size` bytes for the life of the context; `start` is a valid `extern \"C\"` function. The size/align/capable probes touch no caller memory.",
+      "established_by": [
+        "link-time contract: src/async/arch/async_ucontext.c",
+        "source: SAFETY comment added to the extern block"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-004",
+      "source_boundary": "OSSH-R3-022",
+      "file": "src/cms/cms_asn1.rs",
+      "inventory_line": 495,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "cms_si_cb",
+      "source_state": "CONTRACTED",
+      "current_line": 502,
+      "contract": "`pval` is the live value slot of the CMS_SIGNER_INFO being freed; on ASN1_OP_FREE_POST `*pval` is the live object and its pkey/signer/mctx/pctx members are NULL or owned by it.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "src/asn1/fre.rs:312-347 calls ASN1_OP_FREE_POST with the caller's slot after the template walk and before the block release."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-005",
+      "source_boundary": "OSSH-R3-023",
+      "file": "src/cms/cms_sd.rs",
+      "inventory_line": 2211,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "x509_algor_free_void",
+      "source_state": "CONTRACTED",
+      "current_line": 2217,
+      "contract": "`p` is NULL or the `X509_ALGOR` whose reference the calling stack owns and is releasing.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the single call site (CMS_add1_signer at cms_sd.rs:826) owns the STACK_OF(X509_ALGOR) that CMS_add_standard_smimecap built."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-006",
+      "source_boundary": null,
+      "file": "src/context/namemap.rs",
+      "inventory_line": 1067,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "operation": "raise_too_many_names",
+      "source_state": "ELIMINATED",
+      "current_line": null,
+      "contract": "No caller precondition: no arguments and no caller-supplied pointer. The only unsafe operation is the internal `raise_site_dynamic` call whose `ErrSite` is the compile-time constant `err_sites::CORE_NAMEMAP_288` and whose reason is a constant.",
+      "established_by": [
+        "source: the vestigial `unsafe` marker was removed in this subphase; the body keeps a block `SAFETY:` comment for `raise_site_dynamic`",
+        "the function is private and `#[allow(dead_code)]`: the map cannot fail an insertion"
+      ],
+      "residual": "Unreachable by construction; recorded, not claimed as coverage.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-007",
+      "source_boundary": "OSSH-R3-024",
+      "file": "src/decoder_meth.rs",
+      "inventory_line": 767,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "decoder_instance_free_thunk",
+      "source_state": "CONTRACTED",
+      "current_line": 774,
+      "contract": "`p` is NULL or the `OsslDecoderInstance` whose single stack reference is being released.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the OsslDecoderCtx CtxDestroy impl calls OPENSSL_sk_pop_free over decoder_insts; each element is allocated by ossl_decoder_instance_new/_dup and holds one reference."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-008",
+      "source_boundary": "OSSH-R3-025",
+      "file": "src/decoder_pkey.rs",
+      "inventory_line": 548,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "keymgmt_free_thunk",
+      "source_state": "CONTRACTED",
+      "current_line": 554,
+      "contract": "`p` is NULL or the `EvpKeyMgmt` whose stack reference is being released.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "installed over the keymgmts stack, whose elements are EVP_KEYMGMT_up_ref'd insertions owned by that stack."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-009",
+      "source_boundary": "OSSH-R2-007",
+      "file": "src/digest/sha2.rs",
+      "inventory_line": 417,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha512_256_init",
+      "source_state": "CONTRACTED",
+      "current_line": 421,
+      "contract": "`c` is a live, aligned, writable `Sha512Ctx` this module allocated; it is not aliased by another exclusive reference for the call.",
+      "established_by": [
+        "source: # Safety added to the fn in this subphase"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-010",
+      "source_boundary": "OSSH-R2-008",
+      "file": "src/digest/sha2.rs",
+      "inventory_line": 441,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_sha256_192_init",
+      "source_state": "CONTRACTED",
+      "current_line": 449,
+      "contract": "`c` is a live, aligned, writable `Sha256Ctx` this module allocated; it is not aliased by another exclusive reference for the call.",
+      "established_by": [
+        "source: # Safety added to the fn in this subphase"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-011",
+      "source_boundary": "OSSH-R3-026",
+      "file": "src/dso/mod.rs",
+      "inventory_line": 885,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ERR",
+      "operation": "add_error_data_pathbyaddr",
+      "source_state": "ELIMINATED",
+      "current_line": 893,
+      "contract": "None required: no argument, and both appended values are produced inside the body (the literal and either libc's dlerror() result or the \"<NULL>\" substitution).",
+      "established_by": [
+        "source: `unsafe` removed from the fn; the caller in src/dso/dlfcn.rs was updated",
+        "the libc call and the error-queue append carry their own block SAFETY comments; there was no caller obligation for the marker to encode."
+      ],
+      "residual": "The obligation does NOT become BLOCKED: ERR is SAFETY_DISCHARGED at mechanism scope and mechanism-discharge-ERR.json's surface does not name src/dso/mod.rs:885, so the adjudicator must return UNKNOWN (consumer-scope re-adjudication required). Extending a discharged surface is not something this receipt may do.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-012",
+      "source_boundary": "OSSH-R3-027",
+      "file": "src/ec/asn1.rs",
+      "inventory_line": 280,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "decode_der_length",
+      "source_state": "CONTRACTED",
+      "current_line": 287,
+      "contract": "`pkt` is a view of a readable buffer at least `pkt.remaining()` bytes long.",
+      "established_by": [
+        "source: # Safety section added to the fn (the fn's block SAFETY comments already referred to a section that did not exist)",
+        "the callers construct the packet from a caller-supplied byte range, and get_sub only returns a range inside its parent."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-013",
+      "source_boundary": "OSSH-R3-028",
+      "file": "src/encoder_meth.rs",
+      "inventory_line": 269,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_encoder_new",
+      "source_state": "ELIMINATED",
+      "current_line": 272,
+      "contract": "None required: no argument, and the only raw dereference is of the fresh block this frame allocated.",
+      "established_by": [
+        "source: `unsafe` removed from the fn; its caller in this file was updated",
+        "OwnedCtx::zalloc establishes the allocation and the documented zero-validity invariant; the refcnt store is of this frame's own block."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-014",
+      "source_boundary": null,
+      "file": "src/engine/eng_dyn.rs",
+      "inventory_line": 576,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "dynamic_finish",
+      "source_state": "ELIMINATED",
+      "current_line": null,
+      "contract": "No caller precondition: `_e` is unread and the body is the constant 0. It is now a safe `extern \"C\" fn`, which coerces to the `ENGINE_GEN_INT_FUNC_PTR` slot.",
+      "established_by": [
+        "source: the vestigial `unsafe` marker was removed in this subphase",
+        "installed in-crate by `engine_dynamic` through `ENGINE_set_finish_function`"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-015",
+      "source_boundary": "P25-OSSH-ALLOC-1",
+      "file": "src/engine/eng_table.rs",
+      "inventory_line": 148,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "operation": "engine_pile_hash",
+      "source_state": null,
+      "current_line": null,
+      "contract": "`c` is a live `EnginePile` stored in an ENGINE table's lhash: `int_table_check` creates the table with this hash and `engine_table_register` is the only production inserter, so every hashed element is one of this module's own `EnginePile` allocations; the lhash never passes NULL for a stored element.",
+      "established_by": [
+        "caller: OPENSSL_LH_new's HashFunc invocation; element set established by this module's own insert sites"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-016",
+      "source_boundary": null,
+      "file": "src/engine/tb_asnmth.rs",
+      "inventory_line": 330,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "look_str_cb",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`nid` is a value; `sk` is the live engine stack of the pile `engine_table_doall` is walking under the engine lock; `_def` is unread; `arg` is the live `*mut EngineFindStr` passed to `engine_table_doall`, exclusively borrowed for the walk. Each engine's `pkey_asn1_meths` slot is NULL or an ENGINE-ABI callback.",
+      "established_by": [
+        "`ENGINE_pkey_asn1_find_str` (in-crate) stacks a live `EngineFindStr` and calls `engine_table_doall`",
+        "`engine_table_doall`/`int_dall` hand the pile's own `sk` and the caller's `arg` under the read lock",
+        "source: `# Safety` section added in this subphase"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-017",
+      "source_boundary": "OSSH-R3-029",
+      "file": "src/evp/legacy_md5.rs",
+      "inventory_line": 147,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_init",
+      "source_state": "CONTRACTED",
+      "current_line": 158,
+      "contract": "`ctx` is the live `EVP_MD_CTX` this legacy method is initialised on and `EVP_MD_CTX_get0_md_data(ctx)` is a writable `MD5_CTX`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "evp_md_init_legacy allocates md_data from (*type).ctx_size and calls init afterwards; evp_md_init_internal routes only EVP_ORIG_METH to that arm."
+      ],
+      "residual": "As sha1_init: this table is EVP_ORIG_GLOBAL with ctx_size 0, so the legacy arm is not taken and the provider implementation replaces it by NID first.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "BLOCKED",
+      "blocking_criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+    },
+    {
+      "id": "OSSH-DIS-018",
+      "source_boundary": "OSSH-R3-014",
+      "file": "src/evp/legacy_sha.rs",
+      "inventory_line": 181,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1_init",
+      "source_state": "CONTRACTED",
+      "current_line": 192,
+      "contract": "`ctx` is the live `EVP_MD_CTX` this legacy method is initialised on and `EVP_MD_CTX_get0_md_data(ctx)` is a writable `SHA_CTX`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "evp_md_init_legacy allocates md_data from (*type).ctx_size and calls init afterwards (src/evp/digest.rs:2302,2339), and evp_md_init_internal routes only EVP_ORIG_METH to that arm (src/evp/digest.rs:2146)."
+      ],
+      "residual": "This table is EVP_ORIG_GLOBAL with ctx_size 0, so the legacy arm that would supply the block is not taken: the provider implementation is fetched by NID first. The callback would only become unsafe-reachable if a caller made the table its own legacy method with a matching ctx_size; no exported entry point does, and `origin` has no setter.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "BLOCKED",
+      "blocking_criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+    },
+    {
+      "id": "OSSH-DIS-019",
+      "source_boundary": "OSSH-R3-015",
+      "file": "src/evp/legacy_sha.rs",
+      "inventory_line": 224,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha224_init",
+      "source_state": "CONTRACTED",
+      "current_line": 241,
+      "contract": "As sha1_init, with `md_data(ctx)` a writable `SHA256_CTX`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "as sha1_init (same origin guard and ctx_size condition)."
+      ],
+      "residual": "as sha1_init.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "BLOCKED",
+      "blocking_criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+    },
+    {
+      "id": "OSSH-DIS-020",
+      "source_boundary": "P25-OSSH-OCSP-2",
+      "file": "src/ocsp/ocsp_ext.rs",
+      "inventory_line": 685,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ASN1_OCSP",
+      "operation": "ocsp_add1_nonce",
+      "source_state": null,
+      "current_line": null,
+      "contract": "`exts` is a writable `STACK_OF(X509_EXTENSION) *` slot; `val` is NULL or readable for a positive `len`; the `Asn1String` this call builds is a borrowed view over a frame-local buffer that `X509V3_add1_i2d` encodes without adopting.",
+      "established_by": [
+        "caller: OCSP_request_add1_nonce / OCSP_basic_add1_nonce pass the address of their own live extension field; both exported fns carry `# Safety`"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-021",
+      "source_boundary": "P25-OSSH-OCSP-3",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "inventory_line": 113,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ASN1_OCSP",
+      "operation": "i2r_ocsp_crlid",
+      "source_state": null,
+      "current_line": null,
+      "contract": "`_method` is this row (unread); `in` is the live `OCSP_CRLID` the row's `it` decoder produced, borrowed and never retained; `bp` is a live BIO; each field pointer is NULL or the decoder's live value.",
+      "established_by": [
+        "caller: X509V3_EXT_print (src/x509/v3_prn.rs) decodes through `method->it` and passes the live BIO"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-022",
+      "source_boundary": "P25-OSSH-OCSP-4",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "inventory_line": 200,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ASN1_OCSP",
+      "operation": "i2d_ocsp_nonce",
+      "source_state": null,
+      "current_line": null,
+      "contract": "`a` is a live `ASN1_OCTET_STRING` borrowed for the call; `pp` is NULL (size query) or `*pp` is a writable cursor with room for the returned length.",
+      "established_by": [
+        "caller: do_ext_i2d (src/x509/v3_conf.rs) sizes with a NULL destination, allocates `len`, and passes `&mut p` into that block"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-023",
+      "source_boundary": "P25-OSSH-OCSP-5",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "inventory_line": 221,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ASN1_OCSP",
+      "operation": "d2i_ocsp_nonce",
+      "source_state": null,
+      "current_line": null,
+      "contract": "`a` is NULL or a live `ASN1_OCTET_STRING *` slot; `*pp` is readable for `length` bytes with `0 <= length <= c_int::MAX`; on success the caller owns the decoded value, on failure a caller-supplied value is untouched and nothing allocated leaks.",
+      "established_by": [
+        "caller: X509V3_EXT_d2i / X509V3_EXT_print pass a NULL slot and the extension's own value bytes"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-024",
+      "source_boundary": "P25-OSSH-OCSP-6",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "inventory_line": 312,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ASN1_OCSP",
+      "operation": "s2i_ocsp_nocheck",
+      "source_state": null,
+      "current_line": null,
+      "contract": "No caller contract: every argument is unread. The item is a safe `extern \"C\" fn` that coerces to the row's slot.",
+      "established_by": [
+        "vacuous: the body reads no argument"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-025",
+      "source_boundary": "P25-OSSH-OCSP-7",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "inventory_line": 326,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ASN1_OCSP",
+      "operation": "i2r_ocsp_serviceloc",
+      "source_state": null,
+      "current_line": null,
+      "contract": "`_method` is this row (unread); `in` is the live `OCSP_SERVICELOC` the row's `it` decoder produced, borrowed and never retained; `bp` is a live BIO; `issuer`/`locator` are the decoder's own borrowed members.",
+      "established_by": [
+        "caller: X509V3_EXT_print (src/x509/v3_prn.rs)"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-026",
+      "source_boundary": "OSSH-R3-030",
+      "file": "src/passphrase.rs",
+      "inventory_line": 499,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "do_ui_passphrase",
+      "source_state": "CONTRACTED",
+      "current_line": 507,
+      "contract": "`pass` is writable for `pass_size` bytes; `pass_len` is a writable `size_t`; `prompt_info` is NULL or NUL-terminated; `ui_method` is NULL or live for the call; `ui_data` is what that method's callbacks expect.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the in-file callers (ossl_pw_get_passphrase and the PEM-bridge paths) forward contracts that reach them through the C ABI; the buffers this fn allocates are cleansed by UiScratch::drop on every failure path."
+      ],
+      "residual": "Retained external obligation: the UI_METHOD is third-party-installed and its vtable cannot be validated in-crate. This is the reason the site stays BLOCKED.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "BLOCKED",
+      "blocking_criterion": "criterion 2 (caller/ABI establishment): `ui_method`/`ui_data` are installed by a third party through the exported `ossl_pw_set_ui_method`; the crate cannot establish that the `UI_METHOD` table and its callbacks are live and valid. The `# Safety` contract states the precondition but no in-crate caller or proven ABI contract discharges it."
+    },
+    {
+      "id": "OSSH-DIS-027",
+      "source_boundary": "OSSH-R2-004",
+      "file": "src/pem/pem_info.rs",
+      "inventory_line": 73,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "(strstr)",
+      "source_state": "CONTRACTED",
+      "current_line": 77,
+      "contract": "`strstr` is libc's `char *strstr(const char *, const char *)`. Both arguments are non-NULL pointers to NUL-terminated byte strings readable for the call; the result aliases the haystack and is never freed or written through this declaration.",
+      "established_by": [
+        "C ABI: <string.h> signature",
+        "source: SAFETY comment added to the extern block"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-028",
+      "source_boundary": "OSSH-R3-031",
+      "file": "src/pem/pem_pk8.rs",
+      "inventory_line": 67,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "(strlen)",
+      "source_state": "CONTRACTED",
+      "current_line": 71,
+      "contract": "libc `strlen`: its argument is a non-NULL, NUL-terminated pointer readable for the call; the result is a value.",
+      "established_by": [
+        "source: SAFETY comment added to the extern block",
+        "the single call site uses it only on the caller-supplied `u` password string, which do_pk8pkey's contract requires to be NUL-terminated."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-029",
+      "source_boundary": "OSSH-R3-032",
+      "file": "src/pem/pem_pkey.rs",
+      "inventory_line": 110,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "(strcmp, strlen)",
+      "source_state": "CONTRACTED",
+      "current_line": 114,
+      "contract": "libc `strcmp`/`strlen`: arguments are non-NULL, NUL-terminated pointers readable for the call; results are values.",
+      "established_by": [
+        "source: SAFETY comment added to the extern block",
+        "call sites pass 'static literals or caller-supplied strings that the entry points' contracts require to be NUL-terminated."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-030",
+      "source_boundary": "OSSH-R3-016",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "inventory_line": 489,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "pk7_cb",
+      "source_state": "CONTRACTED",
+      "current_line": 499,
+      "contract": "`pval` is the live value slot of the PKCS7 item being encoded; `exarg` is NULL on every operation except the four streaming ones, where it is a live `ASN1_STREAM_ARG` in asn1t.h's order (out, ndef_bio, boundary); `_it` is unread.",
+      "established_by": [
+        "source: # Safety section added to the fn; local Asn1StreamArg replaced by the canonical asn1::bio_asn1 type",
+        "src/asn1/bio_asn1.rs:903-931 (BIO_new_NDEF) passes &mut ASN1_STREAM_ARG for ASN1_OP_STREAM_PRE; src/asn1/asn_mime.rs:993-1028 does the same for the detached arms; the non-streaming operations pass NULL and take the `_ => {}` arm."
+      ],
+      "residual": "See OSSH-R3-D1: the site also carried a layout defect, now fixed and pinned by asn1_stream_arg_keeps_the_authority_field_order.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-031",
+      "source_boundary": "OSSH-R3-017",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "inventory_line": 578,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "si_cb",
+      "source_state": "CONTRACTED",
+      "current_line": 590,
+      "contract": "`pval` is the live value slot of the PKCS7_SIGNER_INFO being freed; on ASN1_OP_FREE_POST `*pval` is still the live object.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "src/asn1/fre.rs:271-274 calls ASN1_OP_FREE_POST with the caller's slot after releasing the template's fields and before the enclosing block."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-032",
+      "source_boundary": null,
+      "file": "src/property/store.rs",
+      "inventory_line": 1605,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "unused_free",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "Sentinel `free` for the stack-built `QUERY` key: it may only be installed in that key, it never dereferences `_method` (which may be NULL, dangling or unaligned), and a reached call panics and aborts at the `extern \"C\"` boundary rather than unwinding. The ABI is `void (*)(void *)`.",
+      "established_by": [
+        "`ossl_method_store_cache_get`/`_cache_set` build the stack key; the store's hash and comparator never read or call `method.free`",
+        "source: `# Safety` section on the item"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-033",
+      "source_boundary": "OSSH-R2-002",
+      "file": "src/provider/base.rs",
+      "inventory_line": 149,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "base_gettable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 149,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table; the body contains no unsafe operation. The marker was removed.",
+      "established_by": [
+        "type invariant: BASE_PARAM_TYPES is a 'static array"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-034",
+      "source_boundary": "OSSH-R1-028",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 967,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "block_fn",
+      "source_state": "CONTRACTED",
+      "current_line": 971,
+      "contract": "`ctx` is a live `ProvCipherCtx` produced by this provider's `newctx`/`dupctx`; it is not released or concurrently mutated for the call. The returned block function is the one the matching `initkey` stored.",
+      "established_by": [
+        "type invariant: every caller holds the context created by newctx/dupctx",
+        "body: only (*ctx).block is read"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-035",
+      "source_boundary": "OSSH-R1-029",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 11077,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1",
+      "source_state": "ELIMINATED",
+      "current_line": 11077,
+      "contract": "No caller precondition: no pointer argument; returns the AES-NI capability bit. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-036",
+      "source_boundary": "OSSH-R1-030",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 11082,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256",
+      "source_state": "ELIMINATED",
+      "current_line": 11082,
+      "contract": "No caller precondition: no pointer argument; returns the AES-NI capability bit. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-037",
+      "source_boundary": "OSSH-R1-031",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 11092,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1_etm",
+      "source_state": "ELIMINATED",
+      "current_line": 11092,
+      "contract": "No caller precondition: no pointer argument; the x86-64 stub returns 0. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-038",
+      "source_boundary": "OSSH-R1-032",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 11097,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256_etm",
+      "source_state": "ELIMINATED",
+      "current_line": 11097,
+      "contract": "No caller precondition: no pointer argument; the x86-64 stub returns 0. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-039",
+      "source_boundary": "OSSH-R1-033",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 11102,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha512_etm",
+      "source_state": "ELIMINATED",
+      "current_line": 11102,
+      "contract": "No caller precondition: no pointer argument; the x86-64 stub returns 0. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-040",
+      "source_boundary": "OSSH-R1-034",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 21686,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "tdes_desx_cbc_newctx",
+      "source_state": "CONTRACTED",
+      "current_line": 21694,
+      "contract": "No caller precondition on `provctx` (stored, not dereferenced). On success the returned `ProvTdesCtx` block is owned by the caller and returned exactly once to `tdes_freectx`; on failure it answers NULL.",
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of size_of::<ProvTdesCtx>()",
+        "body: ossl_cipher_generic_initkey initialises the block before hand-out"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-041",
+      "source_boundary": "OSSH-R1-035",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 21712,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "tdes_desx_cbc_get_params",
+      "source_state": "CONTRACTED",
+      "current_line": 21724,
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array whose located `data` slots are writable for their `data_size` (the dispatch GET_PARAMS contract).",
+      "established_by": [
+        "C ABI: OSSL_FUNC_CIPHER_GET_PARAMS / OSSL_PARAM termination/extent"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-042",
+      "source_boundary": "OSSH-R1-036",
+      "file": "src/provider/cipher.rs",
+      "inventory_line": 22168,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "rc4_hmac_md5_get_params",
+      "source_state": "CONTRACTED",
+      "current_line": 22184,
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array whose located `data` slots are writable for their `data_size` (the dispatch GET_PARAMS contract).",
+      "established_by": [
+        "C ABI: OSSL_FUNC_CIPHER_GET_PARAMS / OSSL_PARAM termination/extent"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-043",
+      "source_boundary": "OSSH-R1-001",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 300,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_digest_default_gettable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 300,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. The unsafe marker was removed; a safe `extern \"C\" fn` coerces to the dispatch slot.",
+      "established_by": [
+        "type invariant: DIGEST_DEFAULT_GETTABLE_PARAMS is a 'static array"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-044",
+      "source_boundary": "OSSH-R1-002",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 407,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "digest_impl::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "current_line": 407,
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new` is safe and `into_raw` is safe. The body contains no unsafe operation, so the marker was removed.",
+      "established_by": [
+        "body inspection: no unsafe operation; safe fn coerces to the dispatch slot"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-045",
+      "source_boundary": "OSSH-R1-003",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 418,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "digest_impl::freectx",
+      "source_state": "CONTRACTED",
+      "current_line": 423,
+      "contract": "`vctx` is NULL or a live `$ctx` this row's `newctx`/`dupctx` handed to the core and the core has not released; the core calls `freectx` exactly once per such pointer, through the dispatch row that installed this function.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop = one CRYPTO_clear_free at size_of::<$ctx>()"
+      ],
+      "residual": "secret-clearing: Drop calls CRYPTO_clear_free at the exact block size",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-046",
+      "source_boundary": "OSSH-R1-004",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 559,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1::settable_ctx_params",
+      "source_state": "ELIMINATED",
+      "current_line": 559,
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table. The unsafe marker was removed.",
+      "established_by": [
+        "type invariant: SETTABLE is a 'static array"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-047",
+      "source_boundary": "OSSH-R1-005",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 567,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1::set_ctx_params",
+      "source_state": "CONTRACTED",
+      "current_line": 596,
+      "contract": "`vctx` is NULL or a live `ShaCtx` this row produced; `params` is NULL or a key-terminated `OSSL_PARAM` array and a located OCTET_STRING entry's `data` is readable for its `data_size`. `ossl_sha1_ctrl` consumes the value only when `data_size == 48`.",
+      "established_by": [
+        "C ABI: OSSL_PARAM termination/extent (include/openssl/params.h)",
+        "caller: internal_init and the dispatch pass the array unchanged",
+        "type invariant: data_type is checked before data/data_size are read"
+      ],
+      "residual": "DEFECT (recorded): the SSL3 master-secret digest temporaries in digest/sha1.rs are not cleansed on the early-failure returns; see residuals",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-048",
+      "source_boundary": "OSSH-R1-006",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 599,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "current_line": 628,
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new`/`into_raw` are safe. Marker removed.",
+      "established_by": [
+        "body inspection: no unsafe operation"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-049",
+      "source_boundary": "OSSH-R1-007",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 610,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1::freectx",
+      "source_state": "CONTRACTED",
+      "current_line": 642,
+      "contract": "`vctx` is NULL or a live `ShaCtx` from this row's `newctx`/`dupctx`, not yet released; the core calls this once per such pointer.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-050",
+      "source_boundary": "OSSH-R1-008",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 895,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::ctx_init",
+      "source_state": "ELIMINATED",
+      "current_line": 895,
+      "contract": "No caller precondition: `_ctx` is unread and the fn returns a constant. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-051",
+      "source_boundary": "OSSH-R1-009",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 900,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::ctx_update",
+      "source_state": "ELIMINATED",
+      "current_line": 900,
+      "contract": "No caller precondition: all three arguments are unread and the fn returns a constant. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-052",
+      "source_boundary": "OSSH-R1-010",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 908,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::ctx_final",
+      "source_state": "ELIMINATED",
+      "current_line": 904,
+      "contract": "No caller precondition: both arguments are unread and the fn returns a constant. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-053",
+      "source_boundary": "OSSH-R1-011",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 912,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "current_line": 940,
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new`/`into_raw` are safe. Marker removed.",
+      "established_by": [
+        "body inspection: no unsafe operation"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-054",
+      "source_boundary": "OSSH-R1-012",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 923,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::freectx",
+      "source_state": "CONTRACTED",
+      "current_line": 954,
+      "contract": "`vctx` is NULL or a live `NullMdCtx` from this row's `newctx`/`dupctx`, not yet released.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-055",
+      "source_boundary": "OSSH-R1-013",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1054,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_sha1::settable_ctx_params",
+      "source_state": "ELIMINATED",
+      "current_line": 1049,
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table.",
+      "established_by": [
+        "type invariant: SETTABLE is a 'static array"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-056",
+      "source_boundary": "OSSH-R1-014",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1063,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_sha1::set_ctx_params",
+      "source_state": "CONTRACTED",
+      "current_line": 1098,
+      "contract": "`vctx` is NULL or a live `Md5Sha1Ctx` this row produced; `params` is NULL or a key-terminated `OSSL_PARAM` array and a located OCTET_STRING entry's `data` is readable for its `data_size`; `ossl_md5_sha1_ctrl` consumes it only when `data_size == 48`.",
+      "established_by": [
+        "C ABI: OSSL_PARAM termination/extent",
+        "caller: internal_init and the dispatch pass the array unchanged",
+        "type invariant: data_type is checked before data/data_size are read"
+      ],
+      "residual": "DEFECT (recorded): md5_sha1_ctrl's secret-derived temporaries are not cleansed on early failure returns; see residuals",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-057",
+      "source_boundary": "OSSH-R1-015",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1095,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_sha1::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "current_line": 1130,
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new`/`into_raw` are safe. Marker removed.",
+      "established_by": [
+        "body inspection: no unsafe operation"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-058",
+      "source_boundary": "OSSH-R1-016",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1106,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_sha1::freectx",
+      "source_state": "CONTRACTED",
+      "current_line": 1144,
+      "contract": "`vctx` is NULL or a live `Md5Sha1Ctx` from this row's `newctx`/`dupctx`, not yet released.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-059",
+      "source_boundary": "OSSH-R1-017",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1255,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::new_keccak",
+      "source_state": "CONTRACTED",
+      "current_line": 1298,
+      "contract": "No caller precondition on the arguments (`pad`, `bitlen`, `mdlen` are row constants). On success the returned block is owned by the caller and returned exactly once to `freectx`; on failure it answers NULL and transfers nothing.",
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of size_of::<KeccakCtx>()",
+        "body: the state is initialised through ossl_sha3_init/ossl_keccak_init before hand-out"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-060",
+      "source_boundary": "OSSH-R1-018",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1281,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::freectx",
+      "source_state": "CONTRACTED",
+      "current_line": 1327,
+      "contract": "`vctx` is NULL or a live `KeccakCtx` from this row's `newctx`/`dupctx`, not yet released.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-061",
+      "source_boundary": "OSSH-R1-019",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1377,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::refuse_squeeze",
+      "source_state": "ELIMINATED",
+      "current_line": 1372,
+      "contract": "No caller precondition: every argument is unread and the fn refuses the operation. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-062",
+      "source_boundary": "OSSH-R1-020",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1391,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::shake_set_ctx_params",
+      "source_state": "CONTRACTED",
+      "current_line": 1441,
+      "contract": "`vctx` is NULL or a live `KeccakCtx` this row produced; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located size_t entries are readable.",
+      "established_by": [
+        "C ABI: OSSL_PARAM termination/extent",
+        "type invariant: the located entries are checked for null before use"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-063",
+      "source_boundary": "OSSH-R1-021",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1463,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::settable_ctx_params",
+      "source_state": "ELIMINATED",
+      "current_line": 1458,
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table.",
+      "established_by": [
+        "type invariant: CTX_PARAMS is a 'static array"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-064",
+      "source_boundary": "OSSH-R1-022",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1471,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::keccak_init_params",
+      "source_state": "CONTRACTED",
+      "current_line": 1525,
+      "contract": "`vctx` is NULL or a live `KeccakCtx` this row produced; `params` is NULL or a key-terminated `OSSL_PARAM` array (forwarded to shake_set_ctx_params).",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_INIT + OSSL_PARAM termination/extent"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-065",
+      "source_boundary": "OSSH-R1-023",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1548,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3_xof_row::newctx",
+      "source_state": "CONTRACTED",
+      "current_line": 1543,
+      "contract": "No caller precondition on `_provctx` (unread). The block returned by `new_keccak` is owned by the caller and released exactly once by the matching `freectx`.",
+      "established_by": [
+        "type invariant: new_keccak's ownership transfer",
+        "body: the only unsafe operation is the call to new_keccak"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-066",
+      "source_boundary": "OSSH-R1-024",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1781,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "blake2::settable_ctx_params",
+      "source_state": "ELIMINATED",
+      "current_line": 1776,
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table.",
+      "established_by": [
+        "type invariant: CTX_PARAMS is a 'static array"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-067",
+      "source_boundary": "OSSH-R1-025",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1793,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "blake2::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "current_line": 1859,
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new`/`into_raw` are safe. Marker removed.",
+      "established_by": [
+        "body inspection: no unsafe operation"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-068",
+      "source_boundary": "OSSH-R1-026",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 1804,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "blake2::freectx",
+      "source_state": "CONTRACTED",
+      "current_line": 1874,
+      "contract": "`vctx` is NULL or a live `$flavour::MdData` from this row's `newctx`/`dupctx`, not yet released.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-069",
+      "source_boundary": "OSSH-R1-027",
+      "file": "src/provider/digest.rs",
+      "inventory_line": 2356,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "deflt_gettable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 2351,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table.",
+      "established_by": [
+        "type invariant: the returned table is 'static"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-070",
+      "source_boundary": "OSSH-R3-033",
+      "file": "src/provider/dsa_sig.rs",
+      "inventory_line": 1510,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dsa_sigalg_query_key_types",
+      "source_state": "ELIMINATED",
+      "current_line": 1514,
+      "contract": "None required: no argument, and the answer is the address of a 'static array.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; the inner `unsafe impl Sync` remains with its own SAFETY comment, and a safe fn coerces to the signature dispatch slot."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-071",
+      "source_boundary": "OSSH-R1-037",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "inventory_line": 591,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ecx_imexport_types",
+      "source_state": "ELIMINATED",
+      "current_line": 591,
+      "contract": "No caller precondition: `selection` is a value and the fn returns a 'static table or NULL. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-072",
+      "source_boundary": "OSSH-R1-038",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "inventory_line": 911,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ed25519_gettable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 911,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-073",
+      "source_boundary": "OSSH-R1-039",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "inventory_line": 916,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ed448_gettable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 916,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-074",
+      "source_boundary": "OSSH-R1-040",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "inventory_line": 1094,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "x448_settable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 1094,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-075",
+      "source_boundary": "OSSH-R1-041",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "inventory_line": 1099,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ed25519_settable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 1099,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-076",
+      "source_boundary": "OSSH-R1-042",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "inventory_line": 1104,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ed448_settable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 1104,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-077",
+      "source_boundary": "OSSH-R1-043",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "inventory_line": 1356,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ecx_gen_settable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 1356,
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-078",
+      "source_boundary": "OSSH-R3-018",
+      "file": "src/provider/encode_key2any.rs",
+      "inventory_line": 170,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "(strcmp)",
+      "source_state": "CONTRACTED",
+      "current_line": 175,
+      "contract": "libc `strcmp`: both arguments are non-NULL, NUL-terminated pointers readable for the call; the result is a value and nothing is written or freed through the declaration.",
+      "established_by": [
+        "source: SAFETY comment added to the extern block",
+        "the single call site (generate_decoder's parameter walk) passes a key string it already tested for NULL and a `c\"...\"` literal."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-079",
+      "source_boundary": "OSSH-R3-019",
+      "file": "src/provider/encode_key2any.rs",
+      "inventory_line": 2230,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "key2any_unused_k2d",
+      "source_state": "ELIMINATED",
+      "current_line": 2237,
+      "contract": "None required: every argument is unread and the body is the constant 0.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; a safe fn coerces to the KeyToDerFn slot the make_encoder! table passes it through."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it. The table comment records that the arm is unreachable under its row's selection mask.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-080",
+      "source_boundary": "OSSH-R1-044",
+      "file": "src/provider/keymgmt.rs",
+      "inventory_line": 843,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dh_import_types",
+      "source_state": "VESTIGIAL_REMOVED",
+      "current_line": 843,
+      "contract": "No caller precondition: `selection` is a value, `dh_imexport_types` only indexes a four-entry 'static table with a mask-derived in-range index, and the function reads no pointer. The marker was removed from this fn and from `dh_imexport_types`/`dh_export_types`.",
+      "established_by": [
+        "body inspection: no unsafe operation in any of the three functions",
+        "type invariant: selection masks produce index 0..3 of a [4] table"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-081",
+      "source_boundary": "OSSH-R1-045",
+      "file": "src/provider/keymgmt.rs",
+      "inventory_line": 920,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dh_gettable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 919,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-082",
+      "source_boundary": "OSSH-R1-046",
+      "file": "src/provider/keymgmt.rs",
+      "inventory_line": 929,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dh_settable_params",
+      "source_state": "ELIMINATED",
+      "current_line": 928,
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-083",
+      "source_boundary": "OSSH-R1-047",
+      "file": "src/provider/keymgmt.rs",
+      "inventory_line": 1764,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dhx_query_operation_name",
+      "source_state": "ELIMINATED",
+      "current_line": 1763,
+      "contract": "No caller precondition: `_operation_id` is unread and the fn returns a 'static C string. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-084",
+      "source_boundary": "OSSH-R3-034",
+      "file": "src/provider/mlx_kmgmt.rs",
+      "inventory_line": 116,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "mlx_kem_have_pubkey",
+      "source_state": "CONTRACTED",
+      "current_line": 121,
+      "contract": "`key` is a non-NULL, live `MlxKey`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the key-management callers in this file hold the key object the provider dispatch handed them."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-085",
+      "source_boundary": "OSSH-R3-020",
+      "file": "src/provider/rsa_sig.rs",
+      "inventory_line": 462,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "rsa_pss_restricted",
+      "source_state": "CONTRACTED",
+      "current_line": 467,
+      "contract": "`ctx` is a live `PROV_RSA_CTX`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "every caller in this file holds the context the provider dispatch handed it."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-086",
+      "source_boundary": "OSSH-R3-021",
+      "file": "src/provider/rsa_sig.rs",
+      "inventory_line": 3183,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "rsa_sigalg_query_key_types",
+      "source_state": "ELIMINATED",
+      "current_line": 3192,
+      "contract": "None required: no argument, and the answer is the address of a 'static array.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; the inner `unsafe impl Sync` remains with its own SAFETY comment, and a safe fn coerces to the signature dispatch slot."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-087",
+      "source_boundary": "OSSH-R3-035",
+      "file": "src/rand/rand_lib.rs",
+      "inventory_line": 660,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "rand_set_rand_method_internal",
+      "source_state": "CONTRACTED",
+      "current_line": 667,
+      "contract": "`meth` is NULL or a table that stays live for at least as long as it is installed; `e` is NULL (the only value any current caller passes).",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "RAND_set_rand_method's C-ABI contract; both values are published to process-wide storage and are not read back as objects here."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-088",
+      "source_boundary": "OSSH-R3-036",
+      "file": "src/rsa/ossl.rs",
+      "inventory_line": 298,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "is_mont_bn_mod_exp",
+      "source_state": "CONTRACTED",
+      "current_line": 303,
+      "contract": "`meth` is a non-NULL, live `RSA_METHOD`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "rsa_ossl_mod_exp and the other in-file callers read it from the live RSA they were handed."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-089",
+      "source_boundary": null,
+      "file": "src/runtime/conf/conf_ssl.rs",
+      "inventory_line": 546,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "ssl_module_free_thunk",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "No precondition on `_md` (unread). The obligation is the `CONF_module_add` finish-callback ABI; the callback runs after the registry has decided the module is finished, the state `ossl_config_ssl_module_free` requires.",
+      "established_by": [
+        "installed in-crate by `ossl_config_add_ssl_module` via `CONF_module_add`",
+        "source: `# Safety` section added in this subphase"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-090",
+      "source_boundary": "P25-OSSH-ALLOC-2",
+      "file": "src/runtime/ex_data.rs",
+      "inventory_line": 239,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "operation": "dummy_free",
+      "source_state": null,
+      "current_line": null,
+      "contract": "No caller contract: every argument is unread. The no-op is a safe `extern \"C\" fn` coercing to the stored slot.",
+      "established_by": [
+        "vacuous: the body reads no argument"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-091",
+      "source_boundary": "P25-OSSH-ALLOC-3",
+      "file": "src/runtime/ex_data.rs",
+      "inventory_line": 251,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "operation": "dummy_dup",
+      "source_state": null,
+      "current_line": null,
+      "contract": "No caller contract: every argument is unread, including the `from_d` slot it answers success for. The no-op is a safe `extern \"C\" fn`.",
+      "established_by": [
+        "vacuous: the body reads no argument"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-092",
+      "source_boundary": "P25-OSSH-ALLOC-4",
+      "file": "src/runtime/init.rs",
+      "inventory_line": 1240,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "operation": "abort",
+      "source_state": null,
+      "current_line": null,
+      "contract": "`abort` takes no argument, dereferences no memory and never returns; the `<stdlib.h>` signature is the ABI contract.",
+      "established_by": [
+        "external ABI contract: libc `<stdlib.h>`"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-093",
+      "source_boundary": null,
+      "file": "src/runtime/thread.rs",
+      "inventory_line": 2104,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "operation": "(nanosleep extern block)",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "libc `nanosleep`: `req` is a non-NULL, live, aligned, initialised `Timespec`; `rem` is NULL or a live writable `Timespec`; the return is an errno value.",
+      "established_by": [
+        "`sleep_millis` passes a live stack `Timespec` and NULL `rem`",
+        "source: `SAFETY:` comment on the extern block; `<time.h>` is the ABI contract"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-094",
+      "source_boundary": "OSSH-R3-005",
+      "file": "src/ssl/ssl_ciph.rs",
+      "inventory_line": 709,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "ssl_cipher_ptr_id_cmp",
+      "source_state": "CONTRACTED",
+      "current_line": 716,
+      "contract": "`a`/`b` are element-slot addresses, each readable for one `*const SslCipher`, and each element is NULL or a live `SSL_CIPHER`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "OPENSSL_sk_sort invokes the comparator installed by OPENSSL_sk_set_cmp_func in update_cipher_list_by_id over a stack this module populated from the static cipher table; no other element kind is ever pushed."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-095",
+      "source_boundary": "OSSH-R3-006",
+      "file": "src/ssl/ssl_ciph.rs",
+      "inventory_line": 759,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "update_cipher_list",
+      "source_state": "CONTRACTED",
+      "current_line": 773,
+      "contract": "`ctx` is live with readable `disabled_enc_mask`/`disabled_mac_mask`; `cipher_list` and `cipher_list_by_id` are writable slots holding NULL or a stack the context owns; `tls13_ciphersuites` is NULL or a live stack.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "ssl_create_cipher_list (same file), the only caller, from the caller-owned SSL_CTX it was given."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-096",
+      "source_boundary": "OSSH-R3-007",
+      "file": "src/ssl/ssl_ciph.rs",
+      "inventory_line": 810,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "ciphersuite_cb",
+      "source_state": "CONTRACTED",
+      "current_line": 831,
+      "contract": "CONF_parse_list element callback: `elem` is readable for `len` bytes and `arg` is the live `*mut OpenSSLStack` the caller passed.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "set_ciphersuites (same file) is the only installer and passes a freshly allocated, exclusively owned stack; CONF_parse_list bounds `len` by the element separator."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-097",
+      "source_boundary": null,
+      "file": "src/ssl/ssl_conf.rs",
+      "inventory_line": 167,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "ssl_set_option",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`cctx` is non-NULL, aligned, live and exclusive for the call. Each selected flag pointer is NULL or points to a live field of the matching type (`*mut u64` options, `*mut c_int` verify flags, `*mut c_long` cert flags) in an SSL/SSL_CTX that outlives the call.",
+      "established_by": [
+        "in-file command handlers and `ctrl_switch_option` call it with the `cctx` supplied by `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx`; those setters derive each pointer from the live object",
+        "the command and switch tables are in-crate constants"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-098",
+      "source_boundary": null,
+      "file": "src/ssl/ssl_conf.rs",
+      "inventory_line": 584,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "cmd_NumTickets",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`cctx` live with `ctx`/`ssl` NULL or live; `value` non-NULL and NUL-terminated (`SSL_CONF_cmd` refuses a NULL value for a typed command). The ABI is `ConfCmdFn`.",
+      "established_by": [
+        "command-table row `cmdstr(cmd_NumTickets, ...)` is in-crate",
+        "`SSL_CONF_cmd` checks `value.is_null()` before invoking a typed handler"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-099",
+      "source_boundary": null,
+      "file": "src/ssl/ssl_conf.rs",
+      "inventory_line": 981,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "skip_prefix",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`cctx` live; `pcmd` NULL or a writable slot holding NULL or a pointer into a NUL-terminated allocation valid for the call. The body checks that the remaining string is longer than the prefix before advancing.",
+      "established_by": [
+        "`SSL_CONF_cmd` passes its own NUL-terminated `cmd` and a frame-local cursor slot",
+        "the prefix is a copy of the caller's `pre` (or NULL) held by the context"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-100",
+      "source_boundary": null,
+      "file": "src/ssl/ssl_conf.rs",
+      "inventory_line": 1061,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "ctrl_switch_option",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`cctx` satisfies `ssl_set_option`'s whole contract; `idx` is bounds-checked against the private switch table and an out-of-range value returns 0 without touching `cctx`.",
+      "established_by": [
+        "`SSL_CONF_cmd`'s `SSL_CONF_TYPE_NONE` arm passes an index from `cmd_lookup` over the in-crate switch table",
+        "the selected row's `name_flags`/`option_value` come from that table"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-101",
+      "source_boundary": null,
+      "file": "src/ssl/ssl_conf.rs",
+      "inventory_line": 1438,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "free_cert_filename",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`c` is a live, initialised `SslConfCtx` borrowed exclusively (the `&mut` states it). `cert_filename` is NULL or the base of a `CRYPTO_zalloc`/`CRYPTO_malloc` array of `num_cert_filename` slots, each NULL or a `CRYPTO_*` string this context exclusively owns and has not released.",
+      "established_by": [
+        "`SSL_CONF_CTX_free`/`_set_ssl`/`_set_ssl_ctx` pass `&mut *cctx` from a live context",
+        "the array and its strings are allocated by the same file's `set_ssl`/`set_ssl_ctx` and the filename command paths"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-102",
+      "source_boundary": null,
+      "file": "src/ssl/ssl_lib.rs",
+      "inventory_line": 331,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "ssl_security_default_callback",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "ABI `int (*)(const SSL *, const SSL_CTX *, int, int, int, void *, void *)`: `s` NULL or a live connection; `ctx` NULL or a live context whose `cert` container is non-NULL and live; both stable and not concurrently mutated. `_other`/`_ex` are never dereferenced.",
+      "established_by": [
+        "installed in-crate as the default security callback at `ssl_lib.rs:1006` and `:14734`",
+        "the library invokes it from the security-check paths with the live connection/context"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-103",
+      "source_boundary": null,
+      "file": "src/ssl/ssl_lib.rs",
+      "inventory_line": 8845,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "ct_strict",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "No caller-independent precondition on the argument values: `_ctx`, `scts` and `_arg` are never read, so NULL, dangling or unaligned values are harmless. The obligation is the `SSL_CTX_set_ct_validation_callback`/`SSL_set_ct_validation_callback` ABI `int (*)(void *, void *, void *)`.",
+      "established_by": [
+        "installed in-crate by `SSL_CTX_enable_ct`/`SSL_enable_ct`",
+        "source: `# Safety` section on the fn"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-104",
+      "source_boundary": null,
+      "file": "src/ssl/ssl_rsa.rs",
+      "inventory_line": 1061,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "serverinfo_srv_add_cb",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "No caller-independent precondition on the pointer values: the body forwards to `serverinfoex_srv_add_cb`, which ignores `_s`, `_out`, `_outlen`, `_al` and `_arg` and returns 0. The obligation is the custom-extension add-callback ABI.",
+      "established_by": [
+        "installed in-crate by `SSL_CTX_add_server_custom_ext` at `ssl_rsa.rs:1126`",
+        "source: `# Safety` section on the fn"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-105",
+      "source_boundary": null,
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "inventory_line": 3597,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "tls12_client_drive",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`s` is non-NULL, aligned, live and fully initialised, with exclusive access for the call; the connection invariants hold on entry; no Rust reference into `s` is held across the call (the certificate hook may mutate it).",
+      "established_by": [
+        "the in-crate TLS1.2 client state machine is the only caller",
+        "source: `# Safety` section on the fn"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-106",
+      "source_boundary": null,
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "inventory_line": 2933,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "tls12_construct_cert_status",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`s` is non-NULL, aligned, live and fully initialised, with exclusive access for the call; when `ext_ocsp_resp` is non-NULL it is the allocation `SSL_set_tlsext_status_ocsp_resp` installed.",
+      "established_by": [
+        "the in-crate TLS1.2 server state machine is the only caller",
+        "source: `# Safety` section on the fn"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-107",
+      "source_boundary": "OSSH-R3-037",
+      "file": "src/ssl/t1_trce.rs",
+      "inventory_line": 1052,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "is_dtls",
+      "source_state": "CONTRACTED",
+      "current_line": 1058,
+      "contract": "`sc` is a live SSL_CONNECTION (Ssl), and `(*sc).method` when non-NULL is a live method table.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the trace printers that call it hold the connection the trace callback was handed."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-108",
+      "source_boundary": null,
+      "file": "src/store/store_lib.rs",
+      "inventory_line": 557,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "store_info_free_thunk",
+      "source_state": "CONTRACTED",
+      "current_line": null,
+      "contract": "`p` is NULL or the base of an `OSSL_STORE_INFO` allocated by this crate's `OSSL_STORE_INFO_new*` constructors through the `CRYPTO_*` seam, fully initialised, exclusively owned by the stack that is freeing it; ownership transfers to `OSSL_STORE_INFO_free` and `p` is not used afterwards. ABI `OPENSSL_sk_freefunc` (`void (*)(void *)`).",
+      "established_by": [
+        "`OPENSSL_sk_pop_free` over stacks this module fills only with `OSSL_STORE_INFO_new*` blocks",
+        "source: `# Safety` section on the thunk"
+      ],
+      "residual": "This site is sound, but `store_lib.rs` has an open STOP-CLASS defect at `OSSL_STORE_attach` (B27-X2), so the RAND_CMS_STORE_KEYFMT mechanism and the file are not SAFETY_DISCHARGED.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-109",
+      "source_boundary": "OSSH-R3-008",
+      "file": "src/ui/ui_util.rs",
+      "inventory_line": 145,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "ui_new_method_data",
+      "source_state": "ELIMINATED",
+      "current_line": 148,
+      "contract": "None required: every argument is unread and the body is empty.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; a safe fn coerces to the CRYPTO_EX_new slot, as src/runtime/ex_data.rs's dummy_new already does."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-110",
+      "source_boundary": "OSSH-R3-009",
+      "file": "src/ui/ui_util.rs",
+      "inventory_line": 161,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "ui_dup_method_data",
+      "source_state": "CONTRACTED",
+      "current_line": 172,
+      "contract": "`pptr` is a readable and writable ex-data slot whose value is NULL or a live `PemPasswordCbData` block allocated through this crate's allocator seam, and no other owner releases it during the call.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "CRYPTO_dup_ex_data passes the destination method's own slot and treats a 0 answer as a failed duplication."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-111",
+      "source_boundary": "OSSH-R3-010",
+      "file": "src/ui/ui_util.rs",
+      "inventory_line": 310,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "ui_close",
+      "source_state": "ELIMINATED",
+      "current_line": 330,
+      "contract": "None required: `_ui` is unread and the body is the constant 1.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; ui_open and ui_write in the same file were the same shape and were converted with it."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-112",
+      "source_boundary": "OSSH-R3-011",
+      "file": "src/x509/v3_asid.rs",
+      "inventory_line": 797,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "i2r_ASIdentifiers",
+      "source_state": "CONTRACTED",
+      "current_line": 804,
+      "contract": "`ext` is a non-NULL, live `ASIdentifiers` of the method's own item type and `out` is a live `BIO`; `_method` is unread.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "src/x509/v3_prn.rs:247,288 checks the decoded object for NULL before calling i2r and passes the caller's live output BIO."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-113",
+      "source_boundary": "OSSH-R3-012",
+      "file": "src/x509/v3_asid.rs",
+      "inventory_line": 841,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "asid_or_range_cmp",
+      "source_state": "CONTRACTED",
+      "current_line": 855,
+      "contract": "`a_`/`b_` are element-slot addresses each holding a non-NULL, live `ASIdOrRange` whose selected union arm is the one `type_` names.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "OPENSSL_sk_sort passes slot addresses for a stack this module filled from its own constructors (X509v3_asid_add_id_or_range), which never push NULL."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-114",
+      "source_boundary": "OSSH-R3-013",
+      "file": "src/x509/v3_asid.rs",
+      "inventory_line": 1083,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "as_identifier_choice_is_canonical",
+      "source_state": "CONTRACTED",
+      "current_line": 1104,
+      "contract": "`choice` is NULL or a live `ASIdentifierChoice`; when the `asIdsOrRanges` arm is selected it is a live stack of NULL-or-live `ASIdOrRange` (extract_min_max is called with each element and refuses NULL).",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "X509v3_asid_is_canonical/X509v3_asid_subset pass a member of a decoded ASIdentifiers or NULL."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-115",
+      "source_boundary": "OSSH-R2-006",
+      "file": "src/x509/v3_lib.rs",
+      "inventory_line": 359,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "ext_cmp",
+      "source_state": "CONTRACTED",
+      "current_line": 365,
+      "contract": "`a` and `b` are pointers to element slots of this list, each live and readable for one pointer-sized value, each holding a non-NULL `*const X509V3ExtMethod` that outlives the call. The stack layer installs and calls the comparator.",
+      "established_by": [
+        "stack contract: the comparator is installed on EXT_LIST",
+        "source: # Safety added to the fn in this subphase"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-116",
+      "source_boundary": "OSSH-R3-001",
+      "file": "src/x509/v3_timespec.rs",
+      "inventory_line": 1326,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "i2r_OSSL_TIME_SPEC_ABSOLUTE",
+      "source_state": "CONTRACTED",
+      "current_line": 1334,
+      "contract": "`time` is a non-NULL, live `OSSL_TIME_SPEC_ABSOLUTE` and `out` a live `BIO` for the call; `_method` and `_indent` are unread.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "src/x509/v3_prn.rs:247,288 -- the only i2r caller path -- passes the non-NULL object its own d2i produced and the caller's live BIO; the in-file callers pass a live OSSL_TIME_SPEC member."
+      ],
+      "residual": "A C caller that invokes the callback with an object of another item type is bound by the X509V3_EXT_METHOD ABI contract, which this receipt does not prove.",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-117",
+      "source_boundary": "OSSH-R3-002",
+      "file": "src/x509/v3_timespec.rs",
+      "inventory_line": 1468,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "print_bit_month",
+      "source_state": "CONTRACTED",
+      "current_line": 1482,
+      "contract": "`out` is a live `BIO`; `bs` is a non-NULL, live `ASN1_BIT_STRING` that is a member of the object being printed.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "i2r_OSSL_PERIOD (same file) passes an ASN1_BIT_STRING field of the decoded OSSL_TIME_PERIOD and the live output BIO."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-118",
+      "source_boundary": "OSSH-R3-003",
+      "file": "src/x509/v3_timespec.rs",
+      "inventory_line": 1554,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "print_int_named_day",
+      "source_state": "CONTRACTED",
+      "current_line": 1573,
+      "contract": "`out` is a live `BIO`; `nd` is a value.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "i2r_OSSL_PERIOD (same file) passes the live output BIO."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-119",
+      "source_boundary": "OSSH-R3-004",
+      "file": "src/x509/v3_timespec.rs",
+      "inventory_line": 1572,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "print_bit_named_day",
+      "source_state": "CONTRACTED",
+      "current_line": 1596,
+      "contract": "`out` is a live `BIO`; `bs` is a non-NULL, live `ASN1_BIT_STRING` member of the object being printed.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "forwards print_day_of_week's contract unchanged; the caller is i2r_OSSL_PERIOD."
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    },
+    {
+      "id": "OSSH-DIS-120",
+      "source_boundary": "OSSH-R2-001",
+      "file": "src/x509/v3_tlsf.rs",
+      "inventory_line": 146,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "tls_feature_it",
+      "source_state": "ELIMINATED",
+      "current_line": 146,
+      "contract": "No caller precondition: the fn takes no arguments and returns a pointer to a 'static Asn1Item; the body contains no unsafe operation. The marker was removed.",
+      "established_by": [
+        "body inspection: &TLS_FEATURE_ITEM, a 'static"
+      ],
+      "residual": null,
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "disposition": "DISCHARGED",
+      "discharge_basis": "no remaining unsafe operation with an unstated validity contract at this site; every required precondition is established by the enumerated caller or by the stated in-crate/link-time ABI contract; no safe-Rust caller can reach the unsafe operations through a safe interface without the preconditions above."
+    }
+  ],
+  "summary": {
+    "reachable_production_obligations": 120,
+    "discharged": 116,
+    "blocked": 4,
+    "unknown": 0,
+    "by_mechanism": {
+      "EVP_PKEY_PROVIDER": {
+        "discharged": 62,
+        "blocked": 3
+      },
+      "X509_VERIFY_POLICY": {
+        "discharged": 10,
+        "blocked": 0
+      },
+      "RAND_CMS_STORE_KEYFMT": {
+        "discharged": 9,
+        "blocked": 0
+      },
+      "ASN1_OCSP": {
+        "discharged": 7,
+        "blocked": 0
+      },
+      "SSL_SESSION": {
+        "discharged": 14,
+        "blocked": 0
+      },
+      "RUNTIME_CONCURRENCY": {
+        "discharged": 2,
+        "blocked": 0
+      },
+      "RUNTIME_ALLOC_OWNERSHIP": {
+        "discharged": 4,
+        "blocked": 0
+      },
+      "ERR": {
+        "discharged": 1,
+        "blocked": 0
+      },
+      "C_ABI_CONTRACT": {
+        "discharged": 7,
+        "blocked": 1
+      }
+    }
+  },
+  "non_claims": [
+    "This is a scoped site discharge, not a SAFE_COMPATIBLE graduation and not a mechanism-wide SAFETY_DISCHARGED claim.",
+    "The closure tool re-run is static/reachability evidence; it did not re-audit the source or run Miri/ASan on these sites.",
+    "The source fixes are uncommitted and were not compiled into the measured V1 binaries.",
+    "Additional unsafe items in the same files that the V1 inventory does not enumerate are not covered.",
+    "The ERR surface extension names an eliminated V1 operation; the original ERR independent review did not cover this extension."
+  ],
+  "closure_rerun": {
+    "tool": {
+      "path": "forensics/tools/consumer_closure.py",
+      "version": 3
+    },
+    "ssh": {
+      "artifact": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+      "artifact_sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+      "counts": {
+        "reachable_files": 345,
+        "reachable_production_obligations": 120,
+        "DISCHARGED": 116,
+        "BLOCKED": 4,
+        "UNKNOWN": 0,
+        "by_mechanism": {
+          "ASN1_OCSP": 7,
+          "C_ABI_CONTRACT": 8,
+          "ERR": 1,
+          "EVP_PKEY_PROVIDER": 65,
+          "RAND_CMS_STORE_KEYFMT": 9,
+          "RUNTIME_ALLOC_OWNERSHIP": 4,
+          "RUNTIME_CONCURRENCY": 2,
+          "SSL_SESSION": 14,
+          "X509_VERIFY_POLICY": 10
+        },
+        "v1_production_operations_total": 198,
+        "v1_uncontracted_operations_total": 354
+      },
+      "verdict": {
+        "state": "ACCEPTED",
+        "safe_compatible": false,
+        "reason": "no refusal condition fired"
+      },
+      "refusals": []
+    },
+    "sshd": {
+      "artifact": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+      "artifact_sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002",
+      "counts": {
+        "reachable_files": 337,
+        "reachable_production_obligations": 120,
+        "DISCHARGED": 116,
+        "BLOCKED": 4,
+        "UNKNOWN": 0,
+        "by_mechanism": {
+          "ASN1_OCSP": 7,
+          "C_ABI_CONTRACT": 8,
+          "ERR": 1,
+          "EVP_PKEY_PROVIDER": 65,
+          "RAND_CMS_STORE_KEYFMT": 9,
+          "RUNTIME_ALLOC_OWNERSHIP": 4,
+          "RUNTIME_CONCURRENCY": 2,
+          "SSL_SESSION": 14,
+          "X509_VERIFY_POLICY": 10
+        },
+        "v1_production_operations_total": 198,
+        "v1_uncontracted_operations_total": 354
+      },
+      "verdict": {
+        "state": "ACCEPTED",
+        "safe_compatible": false,
+        "reason": "no refusal condition fired"
+      },
+      "refusals": []
+    },
+    "note": "The tool now returns ACCEPTED because every reachable production obligation is DISCHARGED or BLOCKED and every reachable file has an admitted boundary receipt, with UNKNOWN = 0. ACCEPTED is the structural-closure verdict only: verdict.safe_compatible is false and the BLOCKED sites plus the retained mechanism/file obligations in this receipt still bar a SAFE_COMPATIBLE claim.",
+    "verdict_interpretation": {
+      "structural_closure": "ACCEPTED (no refusal condition fired)",
+      "safe_compatible": false,
+      "why_not_safe_compatible": [
+        "4 reachable sites remain BLOCKED: three legacy digest init callbacks (criterion 2) and the third-party UI passphrase edge (criterion 2).",
+        "No mechanism is claimed SAFETY_DISCHARGED mechanism-wide; these are site-scoped discharges.",
+        "B27-X2 is an open STOP-CLASS defect in src/store/store_lib.rs.",
+        "X509 pcy_lib tree_levels/parent_mut and ml_dsa raw-pointer constructor obligations remain retained.",
+        "The measured V1 binaries do not contain the working-tree source fixes."
+      ]
+    }
+  }
+}
