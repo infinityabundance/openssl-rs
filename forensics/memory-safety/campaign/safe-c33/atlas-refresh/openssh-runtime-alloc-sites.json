@@ -1,0 +1,131 @@
+{
+  "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-runtime-alloc-sites",
+  "subphase": "safe-c33 openssh block 4: RUNTIME_ALLOC_OWNERSHIP mechanism reconstruction",
+  "date": "2026-10-26",
+  "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "head": "247925538",
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
+    "line_number_basis": "closure coordinates are the frozen inventory's; current_definition_line is the item's line in the working tree"
+  },
+  "mechanism_receipt": "openssh-mechanisms-reconstructed.json",
+  "summary": {
+    "enumerated": 4,
+    "eliminated_structurally": 2,
+    "contracted": 2,
+    "blocked": 0,
+    "discharged": 0,
+    "statement": "All four sites are enumerated. Two unsafe markers are gone (ex_data no-ops) and two carry caller-enumerated contracts (engine_pile_hash/engine_pile_cmp via the lhash installers; init.rs abort via libc). DISCHARGED stays 0: no independent BOUNDARY review exists, so the mechanism is OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED."
+  },
+  "boundaries": [
+    {
+      "id": "P25-OSSH-ALLOC-1",
+      "file": "src/engine/eng_table.rs",
+      "line": 148,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_pile_hash",
+      "authority": "crypto/engine/eng_table.c engine_pile_hash",
+      "body_class": "unsafe-fn-definition",
+      "contract_in_source": "block-level SAFETY comment only; no # Safety fn contract",
+      "required_contract": "`c` is a live `EnginePile` stored in an ENGINE table's lhash: `int_table_check` creates the table with this hash and `engine_table_register` is the only production inserter, so every hashed element is one of this module's own `EnginePile` allocations; the lhash never passes NULL for a stored element.",
+      "preconditions": [
+        "c: live EnginePile from this table"
+      ],
+      "established_by": [
+        "caller: OPENSSL_LH_new's HashFunc invocation; element set established by this module's own insert sites"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter",
+        "input_output_aliasing": "none: the pile is read, never aliased mutably",
+        "partial_init_on_failure": "only fully initialised piles are inserted (nid is written before the insert)",
+        "callback_reentrancy": "none: the hash runs under the engine lock but calls no application callback",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "CONTRACTED",
+      "obligation_outcome": "CONTRACTED",
+      "blocker": "No independent BOUNDARY review. Retained (not hidden): the lhash stores `*mut c_void`, so the element-type invariant is held by module encapsulation rather than the type system.",
+      "source_change_to_discharge": "Applied: `# Safety` on engine_pile_hash and engine_pile_cmp naming the installer, the inserter and the non-NULL element contract."
+    },
+    {
+      "id": "P25-OSSH-ALLOC-2",
+      "file": "src/runtime/ex_data.rs",
+      "line": 239,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "dummy_free",
+      "authority": "crypto/ex_data.c CRYPTO_free_ex_index's no-op free",
+      "body_class": "unsafe-fn-definition",
+      "contract_in_source": "no SAFETY contract and no unsafe operation: every argument is unread",
+      "required_contract": "No caller contract: every argument is unread. The no-op is a safe `extern \"C\" fn` coercing to the stored slot.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body reads no argument"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a",
+        "input_output_aliasing": "n/a",
+        "partial_init_on_failure": "n/a",
+        "callback_reentrancy": "the ex-data machinery may invoke it for any live slot; nothing is touched",
+        "secret_cleansing": "n/a"
+      },
+      "disposition": "CONTRACTED",
+      "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+      "blocker": "No independent BOUNDARY review; nothing remains to review at this site.",
+      "source_change_to_discharge": "Applied: `unsafe` removed from the declaration."
+    },
+    {
+      "id": "P25-OSSH-ALLOC-3",
+      "file": "src/runtime/ex_data.rs",
+      "line": 251,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "dummy_dup",
+      "authority": "crypto/ex_data.c CRYPTO_free_ex_index's no-op dup",
+      "body_class": "unsafe-fn-definition",
+      "contract_in_source": "no SAFETY contract and no unsafe operation: every argument is unread",
+      "required_contract": "No caller contract: every argument is unread, including the `from_d` slot it answers success for. The no-op is a safe `extern \"C\" fn`.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body reads no argument"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the out slot is not written (the success answer is the whole effect)",
+        "input_output_aliasing": "n/a",
+        "partial_init_on_failure": "n/a",
+        "callback_reentrancy": "the ex-data machinery may invoke it for any slot",
+        "secret_cleansing": "n/a"
+      },
+      "disposition": "CONTRACTED",
+      "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+      "blocker": "No independent BOUNDARY review; nothing remains to review at this site.",
+      "source_change_to_discharge": "Applied: `unsafe` removed from the declaration."
+    },
+    {
+      "id": "P25-OSSH-ALLOC-4",
+      "file": "src/runtime/init.rs",
+      "line": 1240,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "operation": "abort",
+      "authority": "libc <stdlib.h> void abort(void)",
+      "body_class": "unsafe-extern-block",
+      "contract_in_source": "contiguous // SAFETY: prelude in the working tree; the frozen inventory coordinate predates it",
+      "required_contract": "`abort` takes no argument, dereferences no memory and never returns; the `<stdlib.h>` signature is the ABI contract.",
+      "preconditions": [],
+      "established_by": [
+        "external ABI contract: libc `<stdlib.h>`"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a",
+        "input_output_aliasing": "n/a",
+        "partial_init_on_failure": "n/a",
+        "callback_reentrancy": "n/a",
+        "secret_cleansing": "n/a"
+      },
+      "disposition": "CONTRACTED",
+      "obligation_outcome": "ALREADY_CONTRACTED",
+      "blocker": "No independent BOUNDARY review; the contract already exists in the tree and the inventory coordinate is stale.",
+      "source_change_to_discharge": "None needed: the working tree already carries the SAFETY prelude at src/runtime/init.rs:1240-1245."
+    }
+  ]
+}

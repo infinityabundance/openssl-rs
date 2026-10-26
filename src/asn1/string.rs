@@ -122,6 +122,7 @@ impl Drop for OwnedBlock {
         #[cfg(test)]
         crate::runtime::release_probe::record(
             crate::runtime::release_probe::Arm::Plain,
+            self.ptr.cast::<c_void>(),
             FILE.as_ptr(),
             LINE,
         );

@@ -145,6 +145,17 @@ pub extern "C" fn ENGINE_set_table_flags(flags: c_uint) {
 }
 
 /// `static unsigned long engine_pile_hash(const ENGINE_PILE *c)` — `:55-58`.
+///
+/// # Safety
+///
+/// `c` must be a live `EnginePile` stored in an ENGINE table's lhash, which is the only way this
+/// callback is installed: [`int_table_check`] creates the table with
+/// `OPENSSL_LH_new(Some(engine_pile_hash), …)` and the module inserts nothing but the
+/// `RawCtx::<EnginePile>` allocations at [`engine_table_register`], so every element the lhash
+/// hashes was allocated and fully initialised here. The lhash never passes NULL for an element it
+/// stored (and a NULL element is never inserted). The callback keeps the `unsafe extern "C"`
+/// shape because the authority's `OPENSSL_LH_HASHFUNC` is a C function pointer over untyped
+/// storage; the lhash itself remains the narrow untyped boundary this obligation lives in.
 unsafe extern "C" fn engine_pile_hash(c: *const c_void) -> core::ffi::c_ulong {
     let pile = c.cast::<EnginePile>();
     // SAFETY: the lhash calls the hash with a stored pile pointer.
@@ -152,6 +163,12 @@ unsafe extern "C" fn engine_pile_hash(c: *const c_void) -> core::ffi::c_ulong {
 }
 
 /// `static int engine_pile_cmp(const ENGINE_PILE *a, const ENGINE_PILE *b)` — `:60-63`.
+///
+/// # Safety
+///
+/// `a` and `b` must both be live `EnginePile`s from the same ENGINE table's lhash; the same
+/// establishment as [`engine_pile_hash`] applies — [`int_table_check`] installs this comparison
+/// and the module inserts only `EnginePile` allocations.
 unsafe extern "C" fn engine_pile_cmp(a: *const c_void, b: *const c_void) -> c_int {
     let a = a.cast::<EnginePile>();
     let b = b.cast::<EnginePile>();
