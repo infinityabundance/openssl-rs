@@ -1,0 +1,171 @@
+{
+  "schema": "openssl-rs/safe-c33/vestigial-unsafe-removal/v1",
+  "kind": "vestigial-marker-removal-receipt",
+  "receipt": "openssh-vestigial",
+  "subphase": "safe-c33 openssh closure block 3: remove the vestigial unsafe marker from 25 EVP_PKEY_PROVIDER provider sites",
+  "date": "2026-10-26",
+  "candidate": {
+    "base_head": "be148ea0658ccb2ed703b5f30956f7a1ba4aa498",
+    "branch": "integrate/safe-c33",
+    "working_tree": "dirty: the four source edits below are uncommitted by instruction (the subagent does not commit or push)",
+    "files": {
+      "src/provider/digest.rs": {
+        "before": {
+          "git_blob": "7b8680b690ef1addff9d9aaf1755f279bbb72d24",
+          "sha256": "e9f57695e5aed2baae475bbcc8506aaab1dd660ece609f7289c1f73e38fa0ed1"
+        },
+        "after": {
+          "git_blob": "100eebc00e8077b013f966f4c45efc504e7bf4d6",
+          "sha256": "173e20bdb143da067bec5eed3d55c8da2250a6ed0ba584edae173ff70f105b91"
+        }
+      },
+      "src/provider/cipher.rs": {
+        "before": {
+          "git_blob": "e5a3b6be99536a0ac8c3283037b9d97cc0013f02",
+          "sha256": "b842b7b5c25b7faab981099712185f9c726c50c6b42bc7096ae09d7ebf3e6e96"
+        },
+        "after": {
+          "git_blob": "e177eadbfc37c6844ac42e01f67607c927b957ac",
+          "sha256": "e3df14dc8d38167c28d80dac7cb8fc0edd872c97f2d3347a03db736b5b87e7a0"
+        }
+      },
+      "src/provider/ecx_kmgmt.rs": {
+        "before": {
+          "git_blob": "d6efebc4c56bb0b9d9cb5c949cdf47470dfe4459",
+          "sha256": "001736cf1643dbfb6441e1978979bda264f39287ebf50a9d12088b1fbc161269"
+        },
+        "after": {
+          "git_blob": "80d16dd861f58791185fd0d525fa20620105dab5",
+          "sha256": "51e3c0a636e8da58b18a887e9cfeae1935b2fc623adc5a0ed262569a6d79c919"
+        }
+      },
+      "src/provider/keymgmt.rs": {
+        "before": {
+          "git_blob": "ffb0567c6ec7ee58385e0f9e5a3a8427f4055fc8",
+          "sha256": "59d81afee0b00dfc2b339b5e1dc1ddff2a3f9e5216bb8265647700dafd1b495a"
+        },
+        "after": {
+          "git_blob": "ffe0c52f7eed657a540b2b6cd1766ed3866bedad",
+          "sha256": "5bb2b61c640a33dc0430caef8c0e915b69065c6ede78f838bc67ca03ec461f4f"
+        }
+      }
+    }
+  },
+  "hypothesis_source": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-provider-sites.json",
+    "claim": "25 provider sites carry an unsafe marker that protects nothing: the body performs no unsafe operation and reads none of its raw-pointer arguments",
+    "status": "independently re-read at each of the 25 sites; the code is the truth and agreed with the receipt"
+  },
+  "verification_method": "Each declaration was read in full before editing. Every parameter is prefixed `_` or is otherwise unread; every body is a constant, a `.as_ptr()` of a `static` table, `ia32cap_aesni() as c_int`, `ossl_prov_is_running()`, or a `c\"...\".as_ptr()` literal. None dereferences, indexes, copies, adopts, casts-and-uses, or calls an unsafe fn. Dispatch registration types were inspected separately (see table_types).",
+  "sites_removed": [
+    {"file": "src/provider/digest.rs", "old_line": 300, "new_line": 300, "operation": "ossl_digest_default_gettable_params", "registration": "OsslDispatch.function: *mut c_void"},
+    {"file": "src/provider/digest.rs", "old_line": 559, "new_line": 559, "operation": "sha1::settable_ctx_params", "registration": "OsslDispatch.function: *mut c_void"},
+    {"file": "src/provider/digest.rs", "old_line": 895, "new_line": 895, "operation": "nullmd::ctx_init", "registration": "called by nullmd::internal_init; also not a dispatch slot itself"},
+    {"file": "src/provider/digest.rs", "old_line": 900, "new_line": 900, "operation": "nullmd::ctx_update", "registration": "called by nullmd::update"},
+    {"file": "src/provider/digest.rs", "old_line": 908, "new_line": 904, "operation": "nullmd::ctx_final", "registration": "called by nullmd::internal_final"},
+    {"file": "src/provider/digest.rs", "old_line": 1054, "new_line": 1049, "operation": "md5_sha1::settable_ctx_params", "registration": "OsslDispatch.function: *mut c_void"},
+    {"file": "src/provider/digest.rs", "old_line": 1377, "new_line": 1372, "operation": "sha3::refuse_squeeze", "registration": "sha3_xof_row! table, function: *mut c_void"},
+    {"file": "src/provider/digest.rs", "old_line": 1463, "new_line": 1458, "operation": "sha3::settable_ctx_params", "registration": "OsslDispatch.function: *mut c_void"},
+    {"file": "src/provider/digest.rs", "old_line": 1781, "new_line": 1776, "operation": "blake2::settable_ctx_params", "registration": "OsslDispatch.function: *mut c_void"},
+    {"file": "src/provider/digest.rs", "old_line": 2356, "new_line": 2351, "operation": "deflt_gettable_params", "registration": "OsslDispatch.function: *mut c_void"},
+    {"file": "src/provider/cipher.rs", "old_line": 11077, "new_line": 11077, "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1", "registration": "capable_row: Option<AlgorithmCapability>"},
+    {"file": "src/provider/cipher.rs", "old_line": 11082, "new_line": 11082, "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256", "registration": "capable_row: Option<AlgorithmCapability>"},
+    {"file": "src/provider/cipher.rs", "old_line": 11092, "new_line": 11092, "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1_etm", "registration": "capable_row: Option<AlgorithmCapability>"},
+    {"file": "src/provider/cipher.rs", "old_line": 11097, "new_line": 11097, "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256_etm", "registration": "capable_row: Option<AlgorithmCapability>"},
+    {"file": "src/provider/cipher.rs", "old_line": 11102, "new_line": 11102, "operation": "ossl_cipher_capable_aes_cbc_hmac_sha512_etm", "registration": "capable_row: Option<AlgorithmCapability>"},
+    {"file": "src/provider/ecx_kmgmt.rs", "old_line": 591, "new_line": 591, "operation": "ecx_imexport_types", "registration": "OsslDispatch.function: *mut c_void (IMPORT_TYPES and EXPORT_TYPES)"},
+    {"file": "src/provider/ecx_kmgmt.rs", "old_line": 911, "new_line": 911, "operation": "ed25519_gettable_params", "registration": "ecx_keymgmt_functions! table, function: *mut c_void"},
+    {"file": "src/provider/ecx_kmgmt.rs", "old_line": 916, "new_line": 916, "operation": "ed448_gettable_params", "registration": "ecx_keymgmt_functions! table, function: *mut c_void"},
+    {"file": "src/provider/ecx_kmgmt.rs", "old_line": 1094, "new_line": 1094, "operation": "x448_settable_params", "registration": "ecx_keymgmt_functions! table, function: *mut c_void"},
+    {"file": "src/provider/ecx_kmgmt.rs", "old_line": 1099, "new_line": 1099, "operation": "ed25519_settable_params", "registration": "ecx_keymgmt_functions! table, function: *mut c_void"},
+    {"file": "src/provider/ecx_kmgmt.rs", "old_line": 1104, "new_line": 1104, "operation": "ed448_settable_params", "registration": "ecx_keymgmt_functions! table, function: *mut c_void"},
+    {"file": "src/provider/ecx_kmgmt.rs", "old_line": 1356, "new_line": 1356, "operation": "ecx_gen_settable_params", "registration": "ecx_keymgmt_functions! table, function: *mut c_void"},
+    {"file": "src/provider/keymgmt.rs", "old_line": 920, "new_line": 920, "operation": "dh_gettable_params", "registration": "OsslDispatch.function: *mut c_void (DH and DHX)"},
+    {"file": "src/provider/keymgmt.rs", "old_line": 929, "new_line": 929, "operation": "dh_settable_params", "registration": "OsslDispatch.function: *mut c_void (DH and DHX)"},
+    {"file": "src/provider/keymgmt.rs", "old_line": 1764, "new_line": 1764, "operation": "dhx_query_operation_name", "registration": "OsslDispatch.function: *mut c_void"}
+  ],
+  "sites_kept": [],
+  "kept_summary": "0 of the 25 were kept. No site turned out to read a raw pointer, write an out-parameter, or perform an unsafe operation. All 25 declarations were changed from `unsafe extern \"C\" fn` (or `pub(crate) unsafe extern \"C\" fn`) to `extern \"C\" fn`; the ABI signature is unchanged.",
+  "table_types": {
+    "OsslDispatch.function": "*mut c_void. Function items are registered with `name as *mut c_void`, so the dispatch table imposes no unsafe-fn type and no table change was required.",
+    "AlgorithmCapability": "pub(crate) type AlgorithmCapability = unsafe extern \"C\" fn() -> c_int (src/provider/activate.rs). A safe `extern \"C\" fn() -> c_int` coerces to this unsafe fn-pointer type when passed to `capable_row(...)`, so the alias did not have to change. The alias itself remains an unsafe fn pointer; that is a separate, deliberate type-level marker and was not altered.",
+    "tables_changed": 0,
+    "implication": "No dispatch-table type, exported symbol, #[repr(C)] layout, or ABI signature changed. The removed `unsafe` is a Rust-level declaration qualifier only; the C calling convention and code address are identical."
+  },
+  "call_site_changes": [
+    {
+      "file": "src/provider/digest.rs",
+      "site": "nullmd::internal_init",
+      "change": "removed `unsafe { ctx_init(ctx.cast::<NullMdCtx>()) }` and its now-moot SAFETY comment; calling the safe helper needs no block"
+    },
+    {
+      "file": "src/provider/digest.rs",
+      "site": "nullmd::internal_final",
+      "change": "removed `unsafe { ctx_final(out, ctx.cast::<NullMdCtx>()) }`; the `unsafe { *outl = 0 }` store and its SAFETY comment are retained because that store is genuinely unsafe"
+    },
+    {
+      "file": "src/provider/digest.rs",
+      "site": "nullmd::update",
+      "change": "removed `unsafe { ctx_update(...) }` and its now-moot SAFETY comment"
+    }
+  ],
+  "gates": {
+    "fmt": {"command": "cargo fmt --all -- --check", "exit": 0},
+    "check": {"command": "cargo check --lib", "exit": 0, "summary": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.21s"},
+    "clippy": {"command": "cargo clippy --all-targets -- -D warnings", "exit": 0, "summary": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.28s"},
+    "tests": {
+      "command": "cargo test --lib -- --test-threads=4",
+      "exit": 0,
+      "summary": "test result: ok. 2173 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 143.48s"
+    },
+    "venue": "docker/openssl-rs-court.sh, CARGO_BUILD_JOBS=4, CARGO_TARGET_DIR=/work/court/target; no cargo was run on the host",
+    "miri_asan": "NOT_RUN: this batch changes only declaration qualifiers and removes calls to now-safe helpers; no new unsafe operation or boundary was introduced. BOUNDARY instruments are not scheduled for a marker-only edit."
+  },
+  "unsafe_counts": {
+    "method": "v1_census.py (the campaign's own census, same command identity as v1b-candidate-freeze: RUSTFLAGS=-W unsafe-code, clippy --lib --tests --message-format=json), run at the current working tree; compiler and lexical sites reconciled",
+    "scope": "the four closure files",
+    "operations_total_before": 1414,
+    "operations_total_after": 1386,
+    "operations_delta": -28,
+    "delta_explanation": "-25 removed UNSAFE_FN_DEF declarations and -3 removed unsafe call blocks (the nullmd helpers); no unsafe operation was added",
+    "per_file": {
+      "src/provider/digest.rs": {"before": {"UNSAFE_BLOCK": 146, "UNSAFE_FN_DEF": 84, "total": 230}, "after": {"UNSAFE_BLOCK": 143, "UNSAFE_FN_DEF": 74, "total": 217}},
+      "src/provider/cipher.rs": {"before": {"UNSAFE_BLOCK": 480, "UNSAFE_FN_DEF": 452, "UNSAFE_IMPL": 28, "UNSAFE_TRAIT": 1, "total": 961}, "after": {"UNSAFE_BLOCK": 480, "UNSAFE_FN_DEF": 447, "UNSAFE_IMPL": 28, "UNSAFE_TRAIT": 1, "total": 956}},
+      "src/provider/ecx_kmgmt.rs": {"before": {"UNSAFE_BLOCK": 64, "UNSAFE_FN_DEF": 62, "UNSAFE_IMPL": 1, "total": 127}, "after": {"UNSAFE_BLOCK": 64, "UNSAFE_FN_DEF": 55, "UNSAFE_IMPL": 1, "total": 120}, "new_contract_status": "all_operations_contracted is now true for this file"},
+      "src/provider/keymgmt.rs": {"before": {"UNSAFE_BLOCK": 49, "UNSAFE_FN_DEF": 44, "UNSAFE_IMPL": 3, "total": 96}, "after": {"UNSAFE_BLOCK": 49, "UNSAFE_FN_DEF": 41, "UNSAFE_IMPL": 3, "total": 93}}
+    },
+    "uncontracted_production_operations_in_the_four_files": {
+      "before": {"digest": 27, "cipher": 9, "ecx_kmgmt": 7, "keymgmt": 4, "total": 47},
+      "after": {"digest": 18, "cipher": 4, "ecx_kmgmt": 0, "keymgmt": 1, "total": 23},
+      "note": "the 47 before-count is the closure's own per-file obligation count and equals the provider-sites enumeration. After is -25 target removals plus +1 measurement correction: nullmd::internal_final is now correctly reported as uncontracted (it was previously lexically masked by a SAFETY comment inside the neighbouring internal_init body). This is not a new unsafe assumption."
+    }
+  },
+  "closure": {
+    "receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-closure.json",
+    "before": {"total_obligations": 120, "BLOCKED": 66, "UNKNOWN": 54, "DISCHARGED": 0},
+    "target_status_before": {"BLOCKED": 25, "UNKNOWN": 0, "DISCHARGED": 0},
+    "projection_after_pure_removal": {"total_obligations": 95, "BLOCKED": 41, "UNKNOWN": 54, "DISCHARGED": 0},
+    "projection_after_with_census_correction": {"total_obligations": 96, "BLOCKED": 42, "UNKNOWN": 54, "DISCHARGED": 0},
+    "discharged_moves_off_zero": false,
+    "reclassification_answer": "Yes: all 25 functions can now be classified as having no unsafe operation at all. Their declarations are safe `extern \"C\" fn` and their bodies contain no unsafe operation. That removes 25 obligations from the census surface; it does not discharge any obligation.",
+    "full_closure_rerun": "NOT_RUN. The artifact-bound consumer_closure.py joins obligations to a committed inventory identity and refuses a stale/dirty inventory; the working tree is intentionally uncommitted here and no libcrypto/OpenSSH rebuild was performed. The counts above are the campaign census at the current tree plus the closure's own obligation coordinates, not a re-adjudicated artifact closure. Re-adjudication must be repeated after the orchestrator commits and rebuilds at the new identity.",
+    "why_discharged_stays_zero": "AGENTS.md section 7: DISCHARGED requires a SAFETY_DISCHARGED scope naming the exact site, established preconditions, and independent review. A site with no unsafe operation is a reduction in unsafe surface, not a mechanism discharge; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED."
+  },
+  "out_of_scope_observations": [
+    "src/provider/digest.rs:984 nullmd::gettable_params is also a vestigial `unsafe extern \"C\" fn` (body is `DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()`, argument unread) but is outside the enumerated 25 and was left untouched. This is likely the 26th site named in openssh-provider-sites.json's residual; it should be handled in a follow-up batch.",
+    "src/provider/digest.rs:974 nullmd::update is now an `unsafe extern \"C\" fn` whose body performs no unsafe operation after the ctx_update change. It was already declared unsafe before this batch and is outside the 25; it is retained to keep the batch scoped. The same is true of nullmd::internal_init after its call-site change."
+  ],
+  "residuals": [
+    "nullmd::internal_final (src/provider/digest.rs) is newly visible to the census as uncontracted because the SAFETY comment in internal_init was removed. It performs a genuine unsafe store to the caller's `outl`; it needs a fn-level contract, not marker removal.",
+    "The AlgorithmCapability alias remains `unsafe extern \"C\" fn() -> c_int`; safe fns coerce to it, so no type change was needed and none was made.",
+    "The 25 removed sites still require ordinary provider-ABI compatibility evidence; removing a Rust declaration qualifier does not change ABI but does move the source identity.",
+    "The full openssh closure and its DISCHARGED count remain at their pre-batch values until the change is committed, the install is rebuilt, and the closure is re-adjudicated."
+  ],
+  "non_claims": [
+    "This receipt does not claim that any of the 25 sites, or EVP_PKEY_PROVIDER, is SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+    "Removing the markers is not a memory-safety proof; it records that these bodies had no unsafe precondition to protect.",
+    "No ABI, symbol, #[repr(C)], allocator-seam, constant-time, or cryptographic property was changed or measured.",
+    "No Miri or sanitizer run was scheduled for this marker-only edit.",
+    "The closure figures are census-derived projections at an uncommitted working tree, not a fresh artifact-bound closure receipt."
+  ]
+}
