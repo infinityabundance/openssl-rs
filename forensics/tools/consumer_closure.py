@@ -1652,6 +1652,8 @@ def index_export_sites(repo: Path, inventory_files: list[str]) -> dict:
 # obligations, boundaries, mechanism state
 # --------------------------------------------------------------------------- #
 
+SITE_RECEIPT_KIND = "site-enumerating-boundary-receipt"
+
 MECHANISM_RULES = [
     (re.compile(r"^src/runtime/err\.rs$|^src/runtime/dso_shared\.rs$"), "ERR"),
     (re.compile(r"^src/runtime/bio/"), "BIO"),
@@ -1707,10 +1709,27 @@ def mechanism_for(file: str, mechanisms: dict,
 
 
 def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
-    """Return (by_file, by_id) across every boundary-sweep receipt."""
+    """Return (by_file, by_id) across every boundary receipt.
+
+    Two receipt families are admitted: the ``boundary-sweep-B*.json`` sweep
+    receipts, and site-enumerating receipts named ``*-sites.json`` that declare
+    ``kind`` as :data:`SITE_RECEIPT_KIND`.  A site receipt is evidence that a
+    file's reachable operations were enumerated and given a disposition.  It is
+    *not* evidence that any site is discharged: the adjudicator still requires
+    a SAFETY_DISCHARGED scope whose disposition names the exact site, so a site
+    receipt alone can only move an obligation from UNKNOWN to BLOCKED.
+    """
     by_file = collections.defaultdict(list)
     by_id = {}
     paths = sorted(boundary_dir.glob("boundary-sweep-B*.json"))
+    for p in sorted(boundary_dir.glob("*-sites.json")):
+        try:
+            doc = json.loads(p.read_text())
+        except Exception:
+            continue
+        if doc.get("kind") != SITE_RECEIPT_KIND:
+            continue
+        paths.append(p)
     for p in paths:
         try:
             doc = json.loads(p.read_text())
@@ -2720,6 +2739,26 @@ def self_test() -> int:
     check("scoped range parser", scoped_ranges(
         "SAFETY_DISCHARGED (scope: src/ui/ui_openssl.rs:111-124, 269-290)"),
         {"src/ui/ui_openssl.rs": [(111, 124), (269, 290)]})
+
+    # site receipts: only the declared kind is admitted, and it never discharges
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        (d / "good-sites.json").write_text(json.dumps({
+            "kind": SITE_RECEIPT_KIND, "receipt": "good-sites",
+            "boundaries": [{"id": "X-1", "file": "src/x.rs",
+                            "mechanism": "EVP_PKEY_PROVIDER",
+                            "disposition": "BLOCKED"}]}))
+        (d / "other-sites.json").write_text(json.dumps({
+            "kind": "something-else",
+            "boundaries": [{"id": "Y-1", "file": "src/y.rs",
+                            "mechanism": "EVP_PKEY_PROVIDER",
+                            "disposition": "BLOCKED"}]}))
+        bf, _ = load_boundaries(d)
+        check("site receipt admitted", sorted(bf), ["src/x.rs"])
+        check("site receipt alone is BLOCKED",
+              adjudicate(ob("src/x.rs", 1, "EVP_PKEY_PROVIDER"), mechs,
+                         bf["src/x.rs"], plane)["status"], "BLOCKED")
 
     # ---- negative control: an unclassified indirect site is broad ---------- #
     class _FakeG:
