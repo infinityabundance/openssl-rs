@@ -944,6 +944,108 @@
    "authority_prefixes": [
     "ssl/"
    ]
+  },
+  {
+   "id": "C_ABI_CONTRACT",
+   "category": "C ABI/callback contract (cross-cutting)",
+   "state": "UNSAFE_OPEN",
+   "families_total": null,
+   "families_measured": null,
+   "families_inferred": null,
+   "crate_unsafe_operations": null,
+   "crate_files": null,
+   "converted_files_on_branch": [],
+   "authority_prefixes": [
+    "apps/",
+    "crypto/async",
+    "crypto/conf",
+    "crypto/engine",
+    "crypto/passphrase",
+    "crypto/ui"
+   ],
+   "scope": "Definitions of `unsafe extern \"C\" fn` callbacks, `unsafe extern \"C\" {}` shim blocks, and internal `unsafe fn` adapters whose caller contract is a raw C/ABI contract rather than an ownership interior. Cross-cutting ABI-edge mechanism: it is not an ownership reconstruction and it does not own the data those callbacks operate on.",
+   "discharge_requirement": "For each site, a `# Safety` contract naming the caller, the pointer/alias/initialisation preconditions that caller must establish, and the caller-closure evidence that establishes them, reviewed at BOUNDARY. No ownership receipt in another mechanism discharges an ABI-edge function contract.",
+   "note": "Introduced 2026-10-25 to classify the 11 reachable function-level contract gaps in the openssh closure that no ownership mechanism owns. State is UNSAFE_OPEN: no reconstruction exists yet."
+  }
+ ],
+ "obligation_mechanisms": [
+  {
+   "file": "src/apps/verify.rs",
+   "line": 104,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "X509_VERIFY_POLICY",
+   "basis": "`cb` is the X509_STORE_set_verify_cb callback. The caller that establishes `ctx` liveness and type is the crypto/x509 store-context verifier, which X509_VERIFY_POLICY owns. Existing mechanism, OWNERSHIP_RECONSTRUCTED; its receipt does not enumerate this consumer-side app callback, so no discharge is implied."
+  },
+  {
+   "file": "src/async/arch/async_posix.rs",
+   "line": 52,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "mechanism": "C_ABI_CONTRACT",
+   "basis": "Declarations of the C-side ucontext_t shim in src/async/arch/async_ucontext.c. Layout, size and alignment stay on the C side of the ABI; no existing ownership mechanism covers a platform shim and the same-file allocator/lock sites belong to other mechanisms. Classified at the ABI edge, not as async-stack ownership."
+  },
+  {
+   "file": "src/dso/mod.rs",
+   "line": 885,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "ERR",
+   "basis": "`add_error_data_pathbyaddr` is the ERR_add_error_data adapter: its unsafe obligations are the libc `dlerror()` string and `openssl_rs_err_add_data` append, both ERR-owned. ERR-1 is SAFETY_DISCHARGED at mechanism scope but its declared surface does not name this site, so the adjudicator must return UNKNOWN rather than DISCHARGED."
+  },
+  {
+   "file": "src/engine/eng_dyn.rs",
+   "line": 576,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "basis": "`dynamic_finish` is an ENGINE method callback installed through the ENGINE finish-function slot. No ENGINE ownership mechanism exists in the registry, and an ENGINE ownership reconstruction would not by itself state this callback's caller contract."
+  },
+  {
+   "file": "src/engine/eng_table.rs",
+   "line": 148,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+   "basis": "`engine_pile_hash` is the OPENSSL_LH_new hash callback over a stored ENGINE_PILE. The lhash representation and callback-invocation contract are in crypto/lhash, which RUNTIME_ALLOC_OWNERSHIP declares. Mechanism state is UNSAFE_OPEN: reconstruction is required before any discharge.",
+   "reconstruction_required": true
+  },
+  {
+   "file": "src/engine/tb_asnmth.rs",
+   "line": 330,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "basis": "`look_str_cb` is an ENGINE_TABLE_DOALL_CB callback invoked by engine_table_doall under the engine lock. No ENGINE ownership mechanism exists; the obligation is the callback's ABI contract."
+  },
+  {
+   "file": "src/passphrase.rs",
+   "line": 499,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "basis": "`do_ui_passphrase` is an internal `unsafe fn` whose raw-pointer caller contract (pass/pass_len writability, prompt_info NUL-termination, ui_method validity) is documented only at block level. It is a UI/passphrase ABI-edge helper, not an ownership interior; its secret buffers are separately owned by the allocator seam."
+  },
+  {
+   "file": "src/runtime/conf/conf_ssl.rs",
+   "line": 546,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "basis": "`ssl_module_free_thunk` is the CONF_module_add finish callback. The CONF module-registry callback contract is an ABI edge; no CONF ownership mechanism exists. The existing B7-CONF-2 receipt covers the diagnostic builders, not this thunk."
+  },
+  {
+   "file": "src/ui/ui_util.rs",
+   "line": 145,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "basis": "`ui_new_method_data` is a CRYPTO_EX_new callback; the ex-data machinery calls it through a function pointer. No UI ownership mechanism exists; classified at the ABI edge."
+  },
+  {
+   "file": "src/ui/ui_util.rs",
+   "line": 161,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "basis": "`ui_dup_method_data` is a CRYPTO_EX_dup callback that receives and replaces the ex-data slot pointer. Its pointer-to-pointer contract is the ex-data ABI edge, not an ownership interior owned by an existing mechanism."
+  },
+  {
+   "file": "src/ui/ui_util.rs",
+   "line": 310,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "basis": "`ui_close` is a UI_METHOD close callback installed on the wrapper method. No UI ownership mechanism exists; the obligation is the method-table callback contract."
   }
  ],
  "worklist": [

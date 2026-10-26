@@ -1672,7 +1672,31 @@ MECHANISM_RULES = [
 ]
 
 
-def mechanism_for(file: str, mechanisms: dict) -> tuple[str | None, str]:
+def load_obligation_mechanisms(state_doc: dict) -> dict:
+    """Exact (file, line, kind) -> mechanism record from state.json.
+
+    Per-site classifications for obligations a file-level rule would
+    misattribute (a heterogeneous file, or an operation whose owner is not the
+    file's dominant subsystem).  They only classify: the mechanism's own state
+    and receipts still decide whether anything is discharged.
+    """
+    out = {}
+    for rec in state_doc.get("obligation_mechanisms") or []:
+        key = (rec.get("file"), rec.get("line"), rec.get("kind"))
+        if rec.get("mechanism"):
+            out[key] = rec
+    return out
+
+
+def mechanism_for(file: str, mechanisms: dict,
+                  obligation: dict | None = None,
+                  obligation_mechanisms: dict | None = None) -> tuple[str | None, str]:
+    if obligation is not None and obligation_mechanisms:
+        rec = obligation_mechanisms.get(
+            (file, obligation.get("line"), obligation.get("kind")))
+        if rec is not None:
+            return rec["mechanism"], (
+                "obligation-override:state.json#/obligation_mechanisms")
     for mid, rec in mechanisms.items():
         if file in (rec.get("converted_files_on_branch") or []):
             return mid, "converted_files_on_branch"
@@ -1954,6 +1978,7 @@ def build_receipt(args) -> dict:
                                    state_scope=rec.get("scope"))
     boundaries_by_file, _boundaries_by_id = load_boundaries(boundary_dir)
     plane = discharge_plane(status_doc, boundary_dir)
+    obligation_mechanisms = load_obligation_mechanisms(state_doc)
 
     refusals = []
     notes = []
@@ -2201,7 +2226,7 @@ def build_receipt(args) -> dict:
         f = b.get("file")
         if f not in files_upper:
             continue
-        mech, basis = mechanism_for(f, mechanisms)
+        mech, basis = mechanism_for(f, mechanisms, b, obligation_mechanisms)
         obligations.append({
             "id": f"V1:{f}:{b.get('line')}:{b.get('kind')}",
             "file": f,
@@ -2752,6 +2777,16 @@ def self_test() -> int:
     check("mechanism ssl", mechanism_for("src/ssl/ssl_lib.rs", {})[0], "SSL_SESSION")
     check("mechanism x509", mechanism_for("src/x509/v3_utl.rs", {})[0], "X509_VERIFY_POLICY")
     check("mechanism none", mechanism_for("src/apps/verify.rs", {})[0], None)
+    overrides = {("src/apps/verify.rs", 104, "UNSAFE_FN_DEF"):
+                 {"mechanism": "X509_VERIFY_POLICY"}}
+    check("mechanism obligation override",
+          mechanism_for("src/apps/verify.rs", {},
+                        {"line": 104, "kind": "UNSAFE_FN_DEF"},
+                        overrides)[0], "X509_VERIFY_POLICY")
+    check("mechanism override absent",
+          mechanism_for("src/apps/verify.rs", {},
+                        {"line": 999, "kind": "UNSAFE_FN_DEF"},
+                        overrides)[0], None)
 
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
