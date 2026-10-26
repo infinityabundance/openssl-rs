@@ -458,6 +458,21 @@
       "legacy_init_harden_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json"
     },
     {
+      "receipt": "openssh-rebind",
+      "scope": "blake2 legacy init md_data precondition (OSSH-RB-001)",
+      "base_head": "376ae9608",
+      "source_state": "working tree at 376ae9608 plus the eight-file rebind edits and the BLAKE2 legacy-init hardening",
+      "state": "SAFETY_DISCHARGED (scoped to OSSH-RB-001)",
+      "discharged_boundaries": [
+        "OSSH-RB-001"
+      ],
+      "retained_boundaries": [],
+      "hidden_obligations": 0,
+      "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-rebind-sites.json",
+      "note": "Site-scoped only; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED. OSSH-RB-001 now validates ctx/md_data/digest through init_md_data and refuses a context without a writable BLAKE2B_CTX with 0; the bound path still initialises and returns 1. Authority: four 3.6.4 probes exit 139; \u00a717 D-LEGACY-BLAKE2-INIT-MD-DATA-1.",
+      "blake2_harden_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-blockers.json"
+    },
+    {
       "receipt": "openssh-discharge",
       "scope": "openssh reachable production obligations for X509_VERIFY_POLICY, site-enumerated at exact inventory coordinates",
       "base_head": "b40e1f096",

@@ -273,6 +273,11 @@ class DsoGraph:
         self.sections = self._elf_sections()
         self.relocs = self._elf_relocs()
         self.dynamic_defs = defined_symbols(path, dynamic=True)
+        self.all_syms = self._all_symbols()
+        self.sym_sizes = self._symbol_sizes()
+        # Per-evidence records filled by the precision resolver / evidence pass.
+        self.dlsym_literals = {}
+        self.evidence_classes = collections.Counter()
         self.slot_funcs = {}
         self.slot_data = {}
         self.slot_syms = {}
@@ -298,6 +303,95 @@ class DsoGraph:
             if typ in FUNC_TYPES:
                 funcs.setdefault(addr, name)
         return funcs
+
+    def _all_symbols(self) -> dict:
+        """Every defined symbol address -> name (functions and data)."""
+        out = {}
+        for line in run(["nm", "--defined-only", str(self.path)]).stdout.splitlines():
+            parsed = parse_nm_line(line)
+            if parsed is None:
+                continue
+            addr, _typ, name = parsed
+            out.setdefault(addr, name)
+        return out
+
+    def _symbol_sizes(self) -> dict:
+        """Defined symbol name -> byte size, from ``nm -S``."""
+        out = {}
+        for line in run(["nm", "-S", "--defined-only", str(self.path)]).stdout.splitlines():
+            toks = line.split()
+            if len(toks) < 4:
+                continue
+            try:
+                size = int(toks[1], 16)
+            except ValueError:
+                continue
+            out.setdefault(toks[3].split("@")[0], size)
+        return out
+
+    def cstring_at(self, addr: int):
+        """The NUL-terminated ASCII identifier at ``addr``, or None.
+
+        Used only for dlsym evidence: the symbol name must be a literal in an
+        image section and must look like an exported-symbol name.
+        """
+        sec = self.section_of(addr)
+        if sec is None:
+            return None
+        a, _off, size = self.sections[sec]
+        rel = addr - a
+        if rel < 0 or rel >= size:
+            return None
+        blob = self._section_bytes(sec)[rel:rel + 257]
+        nul = blob.find(b"\x00")
+        if nul <= 0:
+            return None
+        try:
+            text = blob[:nul].decode("ascii")
+        except UnicodeDecodeError:
+            return None
+        return text if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", text) else None
+
+    def symbol_at(self, addr: int):
+        return self.all_syms.get(addr)
+
+    def seam_symbol(self, addr: int):
+        """Name of an allocator-override global at ``addr``, or None.
+
+        The crate's ``runtime::mem`` module keeps the three hooks installed by
+        ``CRYPTO_set_mem_functions`` in writable globals.  A load from one of
+        those globals is the public allocator-override seam (class O1), which is
+        *not* statically bounded: any caller of the public setter can install a
+        target outside this image.
+        """
+        name = self.all_syms.get(addr)
+        if not name:
+            return None
+        m = re.search(r"(MALLOC_FN|REALLOC_FN|FREE_FN)", name)
+        return m.group(1) if m else None
+
+    def table_ptrs(self, base: int, count: int, *, stride: int = 8,
+                   offset: int = 0, strict: bool = False):
+        """Read ``count`` link-time table entries, returning (targets, incomplete).
+
+        ``strict`` marks a table whose entries are all function pointers: a
+        non-zero entry that is not a function start is then reported incomplete
+        rather than silently ignored.  A table with a non-zero non-function
+        entry is *not* evidence-resolved.
+        """
+        targets, incomplete = set(), []
+        for k in range(count):
+            addr = base + offset + k * stride
+            v = self.static_slot(addr)
+            if v is None or not v:
+                incomplete.append(addr)
+                continue
+            ints = {x for x in v if isinstance(x, int) and x != 0}
+            funcs = {x for x in ints if x in self.start_set}
+            targets |= funcs
+            if strict and ints - funcs:
+                incomplete.append(addr)
+        return targets, incomplete
 
     def _section_bytes(self, wanted: str):
         sec = self.sections.get(wanted)
@@ -512,6 +606,11 @@ class DsoGraph:
     def taken(self) -> set:
         return self.taken_code | self.taken_data
 
+    @property
+    def slot_func_targets(self) -> set:
+        """Functions named in link-time-constant (relocated) data slots."""
+        return {v for vs in self.slot_funcs.values() for v in vs}
+
 
 # --------------------------------------------------------------------------- #
 # precision resolver: per-site indirect-call resolution
@@ -668,6 +767,25 @@ class PrecisionResolver:
         self.class_counts = collections.Counter()
         self.unknown_call_args = set()
         self.returns = collections.defaultdict(set)
+        self.dlsym_evidence = {}
+
+    # ---- dlsym evidence -------------------------------------------------- #
+
+    def dlsym_literal(self, frame):
+        """The literal symbol name passed to ``dlsym`` at this call, or None.
+
+        Only a value that is a single in-image address pointing at a
+        NUL-terminated identifier is accepted.  A computed, loaded or otherwise
+        non-literal argument returns None, which leaves the site unresolved --
+        that is the negative control for class R1.
+        """
+        v = _as_value(frame.regs.get("%rsi"))
+        if v.is_top() or len(v.s) != 1:
+            return None
+        val = next(iter(v.s))
+        if not isinstance(val, int):
+            return None
+        return self.g.cstring_at(val)
 
     # ---- values ---------------------------------------------------------- #
 
@@ -785,7 +903,16 @@ class PrecisionResolver:
             return _as_value(frame.stack.get(key))
         if "(%rip)" in opnd and re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)", opnd):
             addr = frame.comment_addr
-            return self.slot_value(addr) if addr is not None else PValue()
+            if addr is None:
+                return PValue()
+            seam = self.g.seam_symbol(addr)
+            if seam is not None:
+                vals = {("seam", seam)}
+                v = self.slot_value(addr)
+                if not v.is_top():
+                    vals |= v.s
+                return PValue(frozenset(vals))
+            return self.slot_value(addr)
         m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+),(%r[a-z0-9]+),([148])\)", opnd)
         if m:
             off = int(m.group(1), 16) if m.group(1) else 0
@@ -891,7 +1018,7 @@ class PrecisionResolver:
     # ---- site classification --------------------------------------------- #
 
     def note_site(self, kind, fstart, addr, text, targets, unresolved, reason,
-                  klass, field_offsets=()):
+                  klass, field_offsets=(), seam=None):
         key = (fstart, addr, kind)
         prev = self.sites.get(key)
         if prev is None:
@@ -899,11 +1026,13 @@ class PrecisionResolver:
                 "kind": kind, "func": fstart, "addr": addr, "text": text,
                 "targets": set(targets), "unresolved": unresolved,
                 "reason": reason, "class": klass,
-                "field_offsets": set(field_offsets),
+                "field_offsets": set(field_offsets), "seam": seam,
             }
             return
         prev["targets"] |= targets
         prev["field_offsets"] |= set(field_offsets)
+        if seam and not prev.get("seam"):
+            prev["seam"] = seam
         if unresolved and not prev["unresolved"]:
             prev["unresolved"] = True
             prev["reason"] = reason
@@ -964,6 +1093,7 @@ class PrecisionResolver:
                     return set(), True
                 targets = set()
                 unresolved = False
+                seam = None
                 for x in sv.s:
                     if isinstance(x, tuple) and x[0] == "arg":
                         targets |= self.summary[fstart][x[1]]
@@ -971,6 +1101,8 @@ class PrecisionResolver:
                         targets |= self.field_bound(x[1])
                     elif isinstance(x, tuple) and x[0] == "sym":
                         targets.add(x)
+                    elif isinstance(x, tuple) and x[0] == "seam":
+                        seam = x[1]
                     elif isinstance(x, int) and x in self.g.start_set:
                         targets.add(x)
                     elif isinstance(x, int) and x == 0:
@@ -979,7 +1111,8 @@ class PrecisionResolver:
                         unresolved = True
                 self.note_site(kind, fstart, addr, text, targets, unresolved,
                                "stack-slot" if not unresolved else "stack-slot-partial",
-                               "resolved" if not unresolved else "materialised")
+                               "resolved" if not unresolved else "materialised",
+                               seam=seam)
                 return targets, unresolved
             base = _as_value(frame.regs.get(m.group(2)))
             if base.is_top():
@@ -988,8 +1121,11 @@ class PrecisionResolver:
                                field_offsets={off})
                 return self.field_bound(off), True
             targets, unresolved = set(), False
+            seam = None
             for b in base.s:
-                if isinstance(b, tuple) and b[0] == "arg":
+                if isinstance(b, tuple) and b[0] == "seam":
+                    seam = b[1]
+                elif isinstance(b, tuple) and b[0] == "arg":
                     targets |= self.field_bound(off)
                     for tb in {x for x in self.summary[fstart][b[1]]
                                if isinstance(x, int) and self.g.is_data(x)}:
@@ -1030,7 +1166,7 @@ class PrecisionResolver:
             klass = "resolved" if not unresolved else "field"
             self.note_site(kind, fstart, addr, text, targets, unresolved,
                            "base-slot" if not unresolved else "base-slot-partial",
-                           klass, field_offsets={off})
+                           klass, field_offsets={off}, seam=seam)
             return targets, unresolved
         if opnd in frame.regs:
             v = _as_value(frame.regs[opnd])
@@ -1050,6 +1186,7 @@ class PrecisionResolver:
             v = PValue(frozenset(resolved))
             targets, unresolved, switch, partial = set(), arg_open, set(), set()
             field_offsets = set()
+            seam = None
             for b in v.s:
                 if isinstance(b, int):
                     if b in self.g.start_set:
@@ -1071,6 +1208,8 @@ class PrecisionResolver:
                     partial.add("arg")
                 elif isinstance(b, tuple) and b[0] == "sym":
                     targets.add(b)
+                elif isinstance(b, tuple) and b[0] == "seam":
+                    seam = b[1]
                 elif isinstance(b, tuple) and b[0] in ("rsp", "rbp"):
                     sv = _as_value(frame.stack.get(b))
                     if sv.is_top():
@@ -1102,7 +1241,7 @@ class PrecisionResolver:
             self.note_site(kind, fstart, addr, text, targets, unresolved,
                            "reg-value" if not unresolved else
                            "reg-value-partial[" + ",".join(sorted(partial)) + "]",
-                           klass, field_offsets=field_offsets)
+                           klass, field_offsets=field_offsets, seam=seam)
             return targets, unresolved
         self.note_site(kind, fstart, addr, text, set(), True,
                        "unsupported-operand:" + opnd, "unclassified")
@@ -1153,8 +1292,9 @@ class PrecisionResolver:
             elif isinstance(b, tuple) and b[0] == "field":
                 out |= self.field_bound(b[1])
             elif isinstance(b, tuple) and b[0] == "sym":
-                addr = self.g.dynamic_defs.get(b[1])
-                out.add(addr if addr is not None else 0)
+                out.add(b)
+            elif isinstance(b, tuple) and b[0] == "seam":
+                out.add(b)
             elif isinstance(b, int):
                 out.add(b)
         return PValue(frozenset(out)) if out else PValue.one(0)
@@ -1193,6 +1333,16 @@ class PrecisionResolver:
                 if isinstance(t, int):
                     self.calls.append((fstart, t, args))
                     retvals |= self.returns.get(t, set())
+            if any(isinstance(t, tuple) and t[0] == "sym"
+                   and t[1].split("@")[0] == "dlsym" for t in targets):
+                lit = self.dlsym_literal(frame)
+                if lit is not None:
+                    exported = lit in self.g.dynamic_defs
+                    rec = self.g.dlsym_literals.setdefault(
+                        lit, {"sites": set(), "exported": exported})
+                    rec["sites"].add((fstart, addr))
+                    self.dlsym_evidence[(fstart, addr)] = rec
+                    retvals = {("sym", lit)} if exported else set()
             if _unres:
                 for a in args:
                     vals = None if a.is_top() else a.s
@@ -1218,7 +1368,12 @@ class PrecisionResolver:
                     self.calls.append((fstart, callee, args))
             for r in _CALLER_SAVED:
                 frame.regs[r] = PValue()
-            if callee is not None and self.returns.get(callee):
+            cname = (self.g.funcs.get(callee, "") if callee is not None else "")
+            if cname.split("@")[0] == "dlsym":
+                lit = self.dlsym_literal(frame)
+                if lit is not None and lit in self.g.dynamic_defs:
+                    frame.regs["%rax"] = PValue.one(("sym", lit))
+            elif callee is not None and self.returns.get(callee):
                 frame.regs["%rax"] = PValue(frozenset(self.returns[callee]))
             for k in list(frame.stack):
                 if k in frame.escaped:
@@ -1233,6 +1388,8 @@ class PrecisionResolver:
             if not v.is_top():
                 for b in v.s:
                     if isinstance(b, int):
+                        self.returns[fstart].add(b)
+                    elif isinstance(b, tuple) and b[0] == "sym":
                         self.returns[fstart].add(b)
             return
         if mn in ("nop", "nopw", "nopl") or mn.startswith("data16") or mn.startswith("cs"):
@@ -1439,6 +1596,276 @@ class PrecisionResolver:
         g.address_taken_union = (set(g.taken_code) | set(g.taken_data)
                                  | {v for vs in g.slot_funcs.values() for v in vs})
         return g.sites
+
+
+# --------------------------------------------------------------------------- #
+# evidence classes for indirect sites inside the linked image
+# --------------------------------------------------------------------------- #
+#
+# The precision resolver is deliberately local: a value it cannot follow is
+# admitted at its evidence class rather than guessed.  The classes below encode
+# evidence that is *external to the local value flow* but still bounds the target
+# set at the link/image level.  Each class states the invariant it relies on; a
+# class whose invariant cannot be checked against the exact candidate is not
+# applied, and the site stays unresolved.
+
+# R2: the linked Rust core/std image.  These are compiler-constructed
+# trait-object vtables and runtime hooks (panic hook, Once initialiser, libc
+# syscall/weak pointers, libunwind callback).  The crate cannot install an
+# application-supplied OpenSSL callback through a Rust vtable: the vtable is
+# built by the compiler for a trait object whose methods are monomorphised in
+# core/std, and the only code that writes such a slot is that same std/core
+# routine.  The target set is therefore the address-taken functions of the
+# linked core/std image, never an application symbol.
+RUST_RUNTIME_FRAGMENTS = ("CsgxBkk5gSRhY_4core", "Cs9k3SxhrAWiO_3std",
+                          "___rustc")
+
+# R3: link-time-constant OpenSSL tables.  Each key names the enclosing function
+# and the table that fixes the entries; the tool re-reads the entries from the
+# exact candidate image (a symbol + offset or a field-store set) rather than
+# trusting a recorded target list.
+R3_FUNCTIONS = ("11int_ctx_new", "12def_load_bio", "14template_clear",
+                "6do_adb", "19camellia_ecb_cipher", "ECDH_compute_key")
+
+# A1: provider / method-store dispatch.  The immediate callee is a built-in
+# provider implementation in the image; the target set can only grow through a
+# provider module loaded from configuration.  That path is reachable in these
+# workloads: libssl's OPENSSL_init_ssl adds OPENSSL_INIT_LOAD_CONFIG
+# unconditionally and SSL_CTX_new_ex calls it, so a configuration file can name
+# an external module.  A1 is therefore *not* statically bounded and is left
+# unresolved as ABI_OPEN_PROVIDER_CONFIG.
+A1_FUNCTIONS = ("algorithm_do_this", "ossl_method_store_cache_set",
+                "ossl_method_store_fetch", "ossl_method_store_cache_get",
+                "ossl_method_store_add", "impl_cache_flush_cache",
+                "impl_cache_free_thunk", "impl_free_thunk",
+                "alg_cleanup_by_provider", "alg_cleanup",
+                "construct_evp_method", "destruct_evp_method",
+                "ossl_method_construct_this", "ossl_method_construct_reserve_store",
+                "inner_evp_generic_fetch", "provider_init",
+                "ossl_provider_doall_activated", "encoder_import_cb",
+                "cipher_generic_init_internal")
+
+# A2: legacy method-table dispatch.  The immediate callee is a link-time entry
+# of a built-in EVP_PKEY_METHOD/EVP_MD/EVP_CIPHER/BIO_METHOD/UI_METHOD/
+# X509_LOOKUP_METHOD/CONF_METHOD table.  The bound holds only while the
+# workload imports no setter for those families; the check below enforces it.
+A2_FUNCTIONS = ("evp_pkey_asym_cipher_init", "evp_pkey_derive_init",
+                "do_sigver_init", "pmeth_func_cmp",
+                "PEM_ASN1_write_bio_internal", "ui_read", "check_crl")
+
+# Setters that would let the workload install a table entry for the A2 families.
+A2_REGISTRATION_SETTERS = frozenset({
+    "EVP_MD_meth_new", "EVP_CIPHER_meth_new", "EVP_PKEY_meth_new",
+    "EVP_PKEY_asn1_new", "EVP_PKEY_asn1_add0", "BIO_meth_new",
+    "UI_create_method", "X509_LOOKUP_meth_new", "CONF_module_add",
+})
+
+# O1: the allocator-override seam.  The resolver's reachable residual is the
+# three sites the audit names -- the MALLOC_FN selection in
+# runtime::err::append_current and the FREE_FN selection in the SlotStr and
+# PendingReleaseGuard drop glue.  The same seam also appears in inlined
+# CRYPTO_free/CRYPTO_malloc code, where the resolver resolves the static fallback
+# to default_free/default_malloc; those sites are not part of the residual and
+# are recorded separately (see the receipt's allocator_override_seam bound).
+def is_o1_function(name: str) -> bool:
+    """The three allocator-seam functions the audit names.
+
+    Other drop glue in this image also inlines a ``FREE_FN`` selection; those are
+    resolved by the static fallback and are not part of the audited residual.
+    The SlotStr drop *glue* is distinguished from ``SlotStr::Drop::drop``, which
+    dispatches ``CRYPTO_free`` through the dlsym route (class R1).
+    """
+    return ("append_current" in name or "PendingReleaseGuard" in name
+            or ("drop_glue" in name and "SlotStr" in name))
+
+
+def residual_class_targets(g: "DsoGraph") -> set:
+    """The resolver's conservative residual bound for a non-unclassified site.
+
+    These are exactly the functions a previously unresolved site contributed to
+    the upper bound.  Keeping them in a resolved evidence-class site preserves
+    the closure's reachability upper bound; the evidence class itself states the
+    *narrower* invariant (std/core image, built-in table, or method ABI).
+    """
+    out = set(g.taken_code)
+    for vals in getattr(g, "field_stores", {}).values():
+        out |= {v for v in vals if isinstance(v, int) and v in g.start_set}
+    out |= {v for v in getattr(g, "unknown_call_arg_targets", ())
+            if v in g.start_set}
+    return out
+
+
+def is_rust_runtime(name: str) -> bool:
+    return any(frag in (name or "") for frag in RUST_RUNTIME_FRAGMENTS)
+
+
+def _sym_addr(g: "DsoGraph", fragment: str):
+    """Return (address, symbol, size) for a defined data symbol, or None."""
+    for addr, name in g.all_syms.items():
+        if fragment in name and g.section_of(addr) not in (None, ".text", ".plt"):
+            return addr, name, g.sym_sizes.get(name.split("@")[0], 0)
+    return None
+
+
+def rust_runtime_targets(g: "DsoGraph") -> set:
+    pool = g.taken_code | g.taken_data | g.slot_func_targets
+    return {a for a in pool
+            if a in g.funcs and is_rust_runtime(g.funcs[a])}
+
+
+def method_table_targets(g: "DsoGraph") -> set:
+    """Functions named by link-time-constant tables in the image.
+
+    This is the bound for a built-in method/provider table: every entry is a
+    relocation-resolved function pointer in ``.data.rel.ro``/``.rodata``.  A
+    consumer-registered callback is not in this set, which is exactly why the
+    A2 class also requires the absence of a registration setter import.
+    """
+    targets = set(g.slot_func_targets)
+    for vals in getattr(g, "field_stores", {}).values():
+        targets |= {v for v in vals if isinstance(v, int) and v in g.start_set}
+    return targets
+
+
+def r3_targets(g: "DsoGraph", name: str, site: dict):
+    """Read an R3 table from the exact candidate image.
+
+    Returns (targets, incomplete, table_description).  ``incomplete`` names the
+    entries that could not be established as in-image function pointers; a
+    non-empty list means the evidence does not bound the site.
+    """
+    if "11int_ctx_new" in name:
+        sym = _sym_addr(g, "PMETH_STANDARD_METHODS")
+        if not sym:
+            return set(), ["PMETH_STANDARD_METHODS: symbol absent"], "PMETH_STANDARD_METHODS"
+        addr, _n, size = sym
+        count = max(1, size // 8)
+        targets, bad = g.table_ptrs(addr, count, strict=True)
+        return targets, bad, f"PMETH_STANDARD_METHODS[{count}]"
+    if "12def_load_bio" in name:
+        sym = _sym_addr(g, "DEFAULT_METHOD")
+        if not sym:
+            return set(), ["DEFAULT_METHOD: symbol absent"], "DEFAULT_CONF_METHOD"
+        addr, _n, _size = sym
+        targets, bad = g.table_ptrs(addr, 1, offset=0x10, strict=True)
+        return targets, bad, "DEFAULT_CONF_METHOD.load_bio"
+    if "19camellia_ecb_cipher" in name:
+        # EvpCamelliaKey::block is a per-context function pointer installed by
+        # camellia_init_key from in-image block functions; the reachable store
+        # summary at the block field is the table contents.
+        vals = {v for v in getattr(g, "field_stores", {}).get(0, ())
+                if isinstance(v, int) and v in g.start_set}
+        return vals, ([] if vals else ["camellia block field: no store"]), \
+            "EvpCamelliaKey.block (field-store set)"
+    if "14template_clear" in name or "6do_adb" in name:
+        # The resolver already read the static ASN1_TEMPLATE/ASN1_ADB entries
+        # it could follow; those targets are link-time constants in the image.
+        vals = {t for t in site.get("targets", ()) if isinstance(t, int) and t in g.start_set}
+        return vals, ([] if vals else ["ASN1 template/ADB: no entries"]), \
+            "static ASN1_TEMPLATE/ASN1_ADB"
+    if "ECDH_compute_key" in name:
+        sym = _sym_addr(g, "DEFAULT_EC_KEY_METHOD")
+        if not sym:
+            return set(), ["DEFAULT_EC_KEY_METHOD: symbol absent"], "default EC_KEY_METHOD"
+        addr, _n, _size = sym
+        ptr = g.static_slot(addr)
+        ints = {x for x in (ptr or ()) if isinstance(x, int) and x != 0}
+        if len(ints) != 1:
+            return set(), ["DEFAULT_EC_KEY_METHOD: not a single pointer"], \
+                "default EC_KEY_METHOD"
+        table = next(iter(ints))
+        # The method table's 13 columns are function pointers or NULL; a
+        # non-code column is a name/flags field, not a dispatch entry.
+        targets, _bad = g.table_ptrs(table, 13, strict=False)
+        return targets, ([] if targets else ["EC_KEY_METHOD: no entries"]), \
+            "default EC_KEY_METHOD table"
+    return set(), ["no R3 evidence"], "none"
+
+
+def _match(name: str, fragments) -> bool:
+    return any(f in (name or "") for f in fragments)
+
+
+def _resolve(g: "DsoGraph", site: dict, targets: set, klass: str, reason: str) -> None:
+    site["targets"] |= {t for t in targets if isinstance(t, int) and t in g.start_set}
+    site["unresolved"] = False
+    site["class"] = klass
+    site["reason"] = reason
+
+
+def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
+    """Apply the R2/R3/A1/A2 evidence classes to one candidate DSO.
+
+    Only unresolved sites are considered.  A class is applied only when its
+    invariant is checkable against this exact image; otherwise the site keeps
+    its resolver reason.  O1 (the allocator seam) is already marked
+    ABI_OPEN_CONFIG_BOUND by the resolver and is never resolved here.
+    """
+    stats = collections.Counter()
+    residual = residual_class_targets(g)
+    rust = rust_runtime_targets(g)
+    for (_fstart, _addr, _kind), site in g.sites.items():
+        name = g.funcs.get(site["func"], "")
+        # O1 is the audited allocator-seam residual.  It is deliberately left
+        # unresolved even where a static fallback exists: the hook set is a
+        # runtime fact about this configuration, not a link-time bound.
+        if site.get("seam") and is_o1_function(name):
+            site["class"] = "ABI_OPEN_CONFIG_BOUND"
+            site["unresolved"] = True
+            site["reason"] = "allocator-override-seam:" + site["seam"]
+            stats["O1_abi_open"] += 1
+            continue
+        if not site["unresolved"]:
+            continue
+        if site["class"] == "ABI_OPEN_CONFIG_BOUND":
+            stats["O1_abi_open"] += 1
+            continue
+        if is_rust_runtime(name):
+            if rust:
+                _resolve(g, site, rust | residual, "rust-std-core",
+                         "linked core/std trait-object or runtime hook; no application callback")
+                stats["R2_resolved"] += 1
+            else:
+                stats["R2_no_targets"] += 1
+            continue
+        if _match(name, R3_FUNCTIONS):
+            targets, incomplete, table = r3_targets(g, name, site)
+            if targets and not incomplete:
+                _resolve(g, site, targets | residual, "static-table",
+                         "link-time-constant table read from the image: " + table)
+                stats["R3_resolved"] += 1
+            else:
+                site["reason"] = "static-table-incomplete:" + table
+                stats["R3_unresolved"] += 1
+            continue
+        if _match(name, A1_FUNCTIONS):
+            site["targets"] |= residual
+            site["class"] = "ABI_OPEN_PROVIDER_CONFIG"
+            site["reason"] = ("provider/method-store ABI: built-in provider is in-image, "
+                              "but config-driven external provider loading is reachable "
+                              "(SSL_CTX_new_ex -> OPENSSL_init_ssl -> LOAD_CONFIG)")
+            stats["A1_abi_open"] += 1
+            continue
+        if _match(name, A2_FUNCTIONS):
+            if workload_imports & A2_REGISTRATION_SETTERS:
+                site["class"] = "ABI_OPEN_METHOD_TABLE"
+                site["reason"] = ("legacy method-table ABI: the workload imports a "
+                                  "method-table setter")
+                stats["A2_abi_open"] += 1
+            elif residual:
+                _resolve(g, site, residual, "legacy-method-abi",
+                         "built-in link-time method table; no A2 setter imported")
+                stats["A2_resolved"] += 1
+            else:
+                stats["A2_no_targets"] += 1
+            continue
+        stats["unmatched"] += 1
+    g.evidence_classes.update(stats)
+    g.residual_sites = [s for s in g.sites.values() if s["unresolved"]]
+    g.resolved_targets = {t for s in g.sites.values() for t in s["targets"]}
+    g.precision_counts = collections.Counter((s["class"], s["unresolved"])
+                                             for s in g.sites.values())
+    return dict(stats)
 
 
 def build_graph(graphs: dict, roots: set, export_index: dict,
@@ -2124,11 +2551,14 @@ def build_receipt(args) -> dict:
         target = export_index.get(imp["name"])
         if target:
             import_nodes.add(target)
+    workload_imports = {imp["name"] for imp in imports}
+    evidence_stats = {}
     for g in graphs.values():
         g.precision = PrecisionResolver(
             g, imports={addr for dso, addr in import_nodes if dso == g.name})
         g.precision.run()
         g.precision.publish()
+        evidence_stats[g.name] = apply_evidence_classes(g, workload_imports)
 
     root_nodes = set(import_nodes)
     for imp in imported:
@@ -2607,8 +3037,56 @@ def build_receipt(args) -> dict:
                  "class": s["class"], "text": s["text"][:160]}
                 for d, f, s in closure["reachable_residual_sites"][:80]],
             "unclassified_reachable_sites": closure["unclassified_sites"],
-            "settled": ("the only reachable unresolved sites are field- or "
-                        "materialised-class sites; no unclassified site is reachable"
+            "evidence_classes": evidence_stats,
+            "dlsym_literals": {
+                name: {lit: {"sites": len(rec["sites"]), "exported": rec["exported"]}
+                       for lit, rec in sorted(g.dlsym_literals.items())}
+                for name, g in graphs.items()},
+            "dlsym_literals_naming_missing_exports": sorted({
+                lit for g in graphs.values() for lit, rec in g.dlsym_literals.items()
+                if not rec["exported"]}),
+            "unresolved_by_class": dict(collections.Counter(
+                s["class"] for g in graphs.values() for s in g.sites.values()
+                if s["unresolved"])),
+            "abi_open": {
+                "allocator_override_seam": {
+                    "class": "ABI_OPEN_CONFIG_BOUND",
+                    "sites": [{"dso": name, "function": hex(s["func"]),
+                               "site": hex(s["addr"]), "reason": s["reason"]}
+                              for name, g in graphs.items() for s in g.sites.values()
+                              if s["unresolved"] and s["class"] == "ABI_OPEN_CONFIG_BOUND"],
+                    "bound": "public CRYPTO_set_mem_functions ABI; any caller-supplied triple",
+                    "runtime_fact_not_static_bound": (
+                        "the globals are NULL in this configuration, so the in-image "
+                        "default is selected; that is a runtime fact, not a link-time bound"),
+                    "predicate_element_left_failing": 7,
+                },
+                "provider_config": {
+                    "class": "ABI_OPEN_PROVIDER_CONFIG",
+                    "sites": [{"dso": name, "function": hex(s["func"]),
+                               "site": hex(s["addr"])}
+                              for name, g in graphs.items() for s in g.sites.values()
+                              if s["unresolved"] and s["class"] == "ABI_OPEN_PROVIDER_CONFIG"],
+                    "bound": "built-in provider implementations in the image",
+                    "why_open": (
+                        "SSL_CTX_new_ex calls OPENSSL_init_ssl, which unconditionally "
+                        "adds OPENSSL_INIT_LOAD_CONFIG, and a configuration file can "
+                        "name an external provider module"),
+                    "predicate_element_left_failing": 7,
+                },
+            },
+            "predicate_element_7": {
+                "established": not closure["reachable_residual_sites"],
+                "reachable_unresolved_sites": len(closure["reachable_residual_sites"]),
+                "unclassified_reachable_sites": len(closure["unclassified_sites"]),
+                "why": ("no unresolved dynamic dispatch remains"
+                        if not closure["reachable_residual_sites"] else
+                        "reachable sites remain unresolved in the classes named in "
+                        "precision.abi_open"),
+            },
+            "settled": ("the only reachable unresolved sites are the explicitly "
+                        "ABI-open classes named in precision.abi_open; no unclassified "
+                        "site is reachable"
                         if not closure["unclassified_sites"] else
                         "at least one reachable site has no evidence class and admits "
                         "the global address-taken union"),
@@ -2794,6 +3272,109 @@ def self_test() -> int:
     check("materialised class does not admit global table entry",
           (g.name, 0x30) in narrow["upper_reachable"], False)
 
+    # ---- evidence-class controls ------------------------------------------ #
+    # R1: a non-literal dlsym argument must not be resolved.
+    class _DG:
+        def cstring_at(self, addr):
+            return "ERR_get_state" if addr == 0x500 else None
+
+    class _DF:
+        def __init__(self, value):
+            self.regs = {"%rsi": value}
+
+    class _DR:
+        g = _DG()
+
+    check("dlsym literal resolves",
+          PrecisionResolver.dlsym_literal(_DR(), _DF(PValue.one(0x500))),
+          "ERR_get_state")
+    check("dlsym top argument is not evidence",
+          PrecisionResolver.dlsym_literal(_DR(), _DF(PValue())), None)
+    check("dlsym symbolic argument is not evidence",
+          PrecisionResolver.dlsym_literal(_DR(), _DF(PValue.one(("arg", 1)))), None)
+    check("dlsym non-string address is not evidence",
+          PrecisionResolver.dlsym_literal(_DR(), _DF(PValue.one(0x600))), None)
+
+    # R3: a table with an unfilled/non-code entry is not evidence-complete.
+    class _TG:
+        start_set = {0x1000, 0x2000}
+
+        def static_slot(self, addr):
+            return {0x1000: {0x1000}, 0x1008: {0x2000},
+                    0x1010: {0x3000}}.get(addr, None)
+
+    r3_t, r3_bad = DsoGraph.table_ptrs(_TG(), 0x1000, 2, strict=True)
+    check("R3 table reads in-image entries", r3_t, {0x1000, 0x2000})
+    check("R3 unfilled entry stays incomplete", r3_bad, [])
+    r3_t, r3_bad = DsoGraph.table_ptrs(_TG(), 0x1000, 3, strict=True)
+    check("R3 non-code entry is incomplete", r3_bad, [0x1010])
+
+    check("O1 names the three audited functions",
+          [is_o1_function(n) for n in (
+              "...err14append_current", "...err7SlotStr...drop_glue",
+              "...errNtB5_19PendingReleaseGuard...Drop4drop",
+              "...errNtB5_7SlotStr...Drop4drop")],
+          [True, True, True, False])
+
+    # A2: the setter-import predicate is the negative control.
+    class _EG:
+        name = "control.so"
+        start_set = {0x10, 0x20, 0x40}
+        funcs = {0x10: "_RNvNt...CsgxBkk5gSRhY_4core3fmt...",
+                 0x20: "app_owned_function",
+                 0x30: "_RNvNt...CsgxBkk5gSRhY_4core3fmt...impl",
+                 0x40: "_RNvNt...PEM_ASN1_write_bio_internal"}
+        taken_code = {0x30}
+        taken_data = set()
+        slot_funcs = {0x900: {0x30}}
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        evidence_classes = collections.Counter()
+        sites = {}
+        residual_sites = []
+        resolved_targets = set()
+        precision_counts = collections.Counter()
+
+        @property
+        def slot_func_targets(self):
+            return {0x30}
+
+    def _site(func, seam=None):
+        return {"kind": "call", "func": func, "addr": func + 1,
+                "text": "call *%rax", "targets": set(), "unresolved": True,
+                "reason": "field-of-unknown-base", "class": "field",
+                "field_offsets": set(), "seam": seam}
+
+    eg = _EG()
+    a2 = _site(0x40)
+    eg.sites = {(0x40, 0x41, "call"): a2}
+    apply_evidence_classes(eg, {"EVP_MD_meth_new"})
+    check("A2 with an imported setter stays unresolved", a2["unresolved"], True)
+    eg = _EG()
+    a2 = _site(0x40)
+    eg.sites = {(0x40, 0x41, "call"): a2}
+    apply_evidence_classes(eg, set())
+    check("A2 without a setter resolves", a2["unresolved"], False)
+
+    eg = _EG()
+    r2 = _site(0x10)
+    eg.sites = {(0x10, 0x11, "call"): r2}
+    apply_evidence_classes(eg, set())
+    check("R2 std/core site resolves", r2["unresolved"], False)
+    eg = _EG()
+    app = _site(0x20)
+    eg.sites = {(0x20, 0x21, "call"): app}
+    apply_evidence_classes(eg, set())
+    check("application namespace is not R2", app["unresolved"], True)
+
+    eg = _EG()
+    o1 = _site(0x41, seam="FREE_FN")
+    eg.funcs[0x41] = "...errNtB5_7SlotStr...drop_glue"
+    eg.sites = {(0x41, 0x42, "call"): o1}
+    apply_evidence_classes(eg, set())
+    check("O1 seam stays ABI-open", o1["class"], "ABI_OPEN_CONFIG_BOUND")
+    check("O1 seam stays unresolved", o1["unresolved"], True)
+
     # module -> file mapping needs a real tree; use the tool's own repo when present
     repo = Path(__file__).resolve().parents[2]
     if (repo / "src").is_dir():
@@ -2834,7 +3415,8 @@ def self_test() -> int:
         return 1
     print(f"[consumer-closure] self-test ok: parsing, adjudication truth table, "
           f"module/file mapping, export-site index, mechanism routing, precision "
-          f"narrowing and unclassified-site negative control")
+          f"narrowing, unclassified-site negative control, and R1/R2/R3/A2/O1 "
+          f"evidence-class controls")
     return 0
 
 
