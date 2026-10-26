@@ -984,6 +984,40 @@ authority and the candidate for this function, and there was never supposed to b
 - **When it changes:** it does not. The authority's behaviour is a fault in 3.6.3 and 3.6.4
   alike; the boundary is permanent and the claim stays narrowed.
 
+### D-LEGACY-MD-INIT-MD-DATA-1 — the legacy SHA-1/SHA-224/MD5 initialisers write through a
+### NULL `md_data`
+
+- **Obligation:** `sha1_init`, `sha224_init` and `md5_init`, emitted by
+  `IMPLEMENT_LEGACY_EVP_MD_METH` (`crypto/evp/legacy_meth.h:10-22`), are
+  `return fn##_Init(EVP_MD_CTX_get0_md_data(ctx));` with no test on the block. The exported
+  `EVP_MD_meth_get_init` (`crypto/evp/evp_lib.c`; `artifacts/phase2/libcrypto.ld:1886`) hands the
+  callback to any C caller, and its documented contract only says that the getter retrieves the
+  data supplied to `EVP_MD_meth_set_*` (`doc/man3/EVP_MD_meth_new.pod`). A caller can therefore
+  pass a fresh `EVP_MD_CTX_new()` — zero-filled, `md_data == NULL` — or a NULL context.
+- **Authority:** **measured**. Six probes, each run in its own process against
+  `forensics/authorities/prefix/openssl-3.6.4-production` (the three digests × {fresh context,
+  NULL context}). Each prints the method, callback and context (`md_data=(nil)` for the fresh
+  shape) and then dies with **exit 139** (SIGSEGV) at the `*_Init` write. The fault is the
+  measurement, so there is nothing to compare past it.
+- **Crate:** the three callbacks validate the context through `init_md_data` before writing. A
+  NULL context, a NULL `md_data`, a NULL method, or a method whose `ctx_size` is smaller than the
+  digest context all answer `0` — the C initialise failure value — and touch no memory. A context
+  bound to the callback's own table object, or to another method with a sufficient `ctx_size`,
+  still calls the authority's `*_Init` and returns its value (`1`). No error is raised, because
+  the authority raises nothing on this path; it does not return.
+- **Reason:** `D-MD-NULL-CALLBACK-1`'s: a write through a NULL pointer is not a contract to
+  reproduce (AGENTS.md §3). The getter's documented contract says nothing about the context's
+  `md_data`, so the writable-block precondition cannot be discharged by the ABI; the callback must
+  establish it itself.
+- **Claim removed:** calling the exported initialiser pointer with a fresh or NULL context is not
+  claimed compatible — both fault in the authority. On a context that establishes a writable
+  digest block the digest maths and the result are unchanged
+  (`legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context`,
+  `legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context` and
+  `legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context`).
+- **When it changes:** it does not. 3.6.3 and 3.6.4 both fault; the boundary is permanent and the
+  claim stays narrowed.
+
 ### D-MD-DOALL-NULL-1 — `EVP_MD_do_all_provided` calls a NULL visitor
 
 - **Obligation:** `EVP_MD_do_all_provided(libctx, NULL, arg)`.

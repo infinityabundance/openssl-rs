@@ -1,0 +1,169 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/openssh-final-four/v1",
+  "kind": "adjudication-receipt",
+  "receipt": "openssh-final-four",
+  "subphase": "safe-c33 openssh closure: resolve or definitively block the final four",
+  "date": "2026-10-26",
+  "source_identity": {
+    "branch": "integrate/safe-c33",
+    "head": "32d373e08a1faea6eb8f93387ad1a264d1845baf",
+    "head_subject": "Merge stage/p25/b27-verified",
+    "working_tree": "dirty: the four contract rewrites plus the discharge/closure receipts below; no code change",
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
+    "inventory_source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
+    "contract_edits": [
+      "src/evp/legacy_sha.rs: sha1_init and sha224_init # Safety rewritten to name the real reachability witness and keep the site BLOCKED",
+      "src/evp/legacy_md5.rs: md5_init # Safety rewritten likewise",
+      "src/passphrase.rs: do_ui_passphrase # Safety rewritten to cite the public UI_METHOD C ABI as the criterion-2 establishing witness"
+    ]
+  },
+  "authority": {
+    "openssl": "3.6.4 (admitted install artifacts/phase2/install)",
+    "libcrypto_sha256": "e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463",
+    "openssh": "9.9p1",
+    "artifacts": {
+      "ssh": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+      "sshd": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+    }
+  },
+  "criterion": "AGENTS.md §7 criterion 2 as written: every required precondition is established by the callers or by an external ABI contract. A documented external ABI contract counts; an in-crate assertion that the value is 'probably valid' does not.",
+  "site_mapping_note": "The task named src/digest/sha1.rs:181, :224 and src/digest/md5_sha1.rs:147. The closure's actual three legacy initialiser coordinates are src/evp/legacy_sha.rs:181 (sha1_init), src/evp/legacy_sha.rs:224 (sha224_init) and src/evp/legacy_md5.rs:147 (md5_init); the passphrase site is src/passphrase.rs:499 (do_ui_passphrase). These are the four BLOCKED records in openssh-discharge.json.",
+  "decisions": [
+    {
+      "id": "OSSH-DIS-018",
+      "operation": "sha1_init",
+      "file": "src/evp/legacy_sha.rs",
+      "inventory_line": 181,
+      "current_line": 199,
+      "outcome": "BLOCKED",
+      "failing_criterion": "criterion 2 (caller/ABI establishment)",
+      "contract": "ctx must be a live EVP_MD_CTX whose md_data is a writable SHA_CTX, exclusively borrowed for the call.",
+      "what_was_checked": [
+        "The installing table is EVP_ORIG_GLOBAL with ctx_size == 0 (legacy_md), so evp_md_init_internal takes the legacy arm only for EVP_ORIG_METH or EVP_MD_CTX_FLAG_NO_INIT (src/evp/digest.rs:2146); the NO_INIT arm returns at :2334 before init is called. The crate's own initialise path therefore never supplies the block.",
+        "That does NOT establish the precondition. The exported EVP_MD_meth_get_init (src/evp/digest.rs:1565; exported at artifacts/phase2/libcrypto.ld:1886) returns this callback pointer to any C caller. Its documented contract is only that the getter retrieves the data supplied to EVP_MD_meth_set_* (doc/man3/EVP_MD_meth_new.pod:165-169); it says nothing about the caller's md_data.",
+        "A caller can pass EVP_MD_CTX_new(), which zero-fills the block (src/evp/digest.rs:1899-1907), so md_data is NULL. The callback would dereference/write NULL. There is no external ABI contract that makes md_data writable for a context the caller chooses.",
+        "The earlier contract's claim that the callback is 'only reachable if a caller made this table its own legacy method with a matching ctx_size, which no exported entry point does' was inaccurate; the exported getter reaches the callback without re-origining the table. The contract was rewritten to state the real witness."
+      ],
+      "source_witness": [
+        "src/evp/legacy_sha.rs:120-169 (legacy_md: origin EVP_ORIG_GLOBAL, ctx_size 0)",
+        "src/evp/digest.rs:2146, :2302, :2334 (initialise routing)",
+        "src/evp/digest.rs:1565 (EVP_MD_meth_get_init returns (*md).init)",
+        "artifacts/phase2/libcrypto.ld:1886 (exported symbol)",
+        "doc/man3/EVP_MD_meth_new.pod:165-169 (getter contract)",
+        "src/evp/digest.rs:1899-1907 (EVP_MD_CTX_new zero-fills; md_data NULL)"
+      ]
+    },
+    {
+      "id": "OSSH-DIS-019",
+      "operation": "sha224_init",
+      "file": "src/evp/legacy_sha.rs",
+      "inventory_line": 224,
+      "current_line": 250,
+      "outcome": "BLOCKED",
+      "failing_criterion": "criterion 2 (caller/ABI establishment)",
+      "contract": "ctx must be a live EVP_MD_CTX whose md_data is a writable SHA256_CTX, exclusively borrowed for the call.",
+      "reasoning": "Exactly OSSH-DIS-018, over SHA256_CTX: the EVP_ORIG_GLOBAL/ctx_size == 0 table keeps the initialise path away from the callback, but EVP_MD_meth_get_init exports the pointer and does not establish a writable md_data block.",
+      "source_witness": "as OSSH-DIS-018; the table installs sha224_init at src/evp/legacy_sha.rs:357-366"
+    },
+    {
+      "id": "OSSH-DIS-017",
+      "operation": "md5_init",
+      "file": "src/evp/legacy_md5.rs",
+      "inventory_line": 147,
+      "current_line": 165,
+      "outcome": "BLOCKED",
+      "failing_criterion": "criterion 2 (caller/ABI establishment)",
+      "contract": "ctx must be a live EVP_MD_CTX whose md_data is a writable MD5_CTX, exclusively borrowed for the call.",
+      "reasoning": "Exactly OSSH-DIS-018, over MD5_CTX: the EVP_ORIG_GLOBAL/ctx_size == 0 table keeps the initialise path away from the callback, but EVP_MD_meth_get_init exports the pointer and does not establish a writable md_data block.",
+      "source_witness": "as OSSH-DIS-018; the table installs md5_init at src/evp/legacy_md5.rs:91-140"
+    },
+    {
+      "id": "OSSH-DIS-026",
+      "operation": "do_ui_passphrase",
+      "file": "src/passphrase.rs",
+      "inventory_line": 499,
+      "current_line": 533,
+      "outcome": "DISCHARGED",
+      "satisfied_criterion": "criterion 2 via the documented public UI_METHOD C ABI",
+      "contract": "pass writable for pass_size; pass_len writable; prompt_info NULL or NUL-terminated; ui_method NULL or a live UI_METHOD that outlives the call; ui_data whatever that method's callbacks expect.",
+      "precondition_to_abi_mapping": [
+        "live UI_METHOD/outlives the call: UI_METHOD is opaque (include/openssl/ui.h:293-294), created only by the exported UI_create_method, and installed borrowed by the public OSSL_ENCODER_CTX_set_passphrase_ui / OSSL_DECODER_CTX_set_passphrase_ui (doc/man3/OSSL_ENCODER_CTX_new_for_pkey.pod, doc/man3/OSSL_DECODER_CTX_new_for_pkey.pod) through ossl_pw_set_ui_method (src/passphrase.rs:375). The application owns the lifetime, as it does for every borrowed C API object.",
+        "callbacks valid: only the exported UI_method_set_* family installs them (include/openssl/ui.h:339-357), so the vtable layout and member types are the public ABI's.",
+        "callback semantics: opener/writer/flusher/reader/closer return 0 on error, 1 on success, -1 for out-of-band events, and only the flusher/reader may return -1 (doc/man3/UI_create_method.pod). UI_process (src/ui/ui_lib.rs:1411) handles exactly those three answers.",
+        "reader result extent: a reader sets its answer with UI_set_result/UI_set_result_ex, which rejects a length outside result_minsize..result_maxsize (doc/man3/UI_STRING.pod; src/ui/ui_lib.rs:2187). do_ui_passphrase installs pass_size as the maxsize, so UI_get_result_length cannot exceed the pass extent.",
+        "prompt constructor: when present it must return an OPENSSL_malloc-allocated string for OPENSSL_free (crypto/ui/ui_local.h, ui_construct_prompt comment). UiScratch::drop performs exactly that release.",
+        "ui_data: UI_add_user_data stores the application pointer without duplication; the public UI documentation says the caller owns it (doc/man3/UI_new.pod, UI_add_user_data). No stricter property is required."
+      ],
+      "why_no_extra_requirement": "do_ui_passphrase only passes the method to UI_set_method, its data to UI_add_user_data, and the callback-driven UI_construct_prompt/UI_process/UI_get_result_length calls. Each requirement is one of the bullets above; no crate-private validation of the UI_METHOD object is required beyond 'it is a UI_METHOD from the public API, alive for the call'. An application that violates the published callback contract is outside the ABI, exactly as with any public OpenSSL callback.",
+      "source_witness": [
+        "artifacts/phase2/include/openssl/ui.h:293-294, :339-357 (opaque type and setters)",
+        "forensics/authorities/src/openssl-3.6.4/doc/man3/UI_create_method.pod (callback return conventions)",
+        "forensics/authorities/src/openssl-3.6.4/doc/man3/UI_STRING.pod (UI_set_result bounds)",
+        "forensics/authorities/src/openssl-3.6.4/crypto/ui/ui_local.h (prompt constructor OPENSSL_malloc/OPENSSL_free contract)",
+        "forensics/authorities/src/openssl-3.6.4/doc/man3/OSSL_ENCODER_CTX_new_for_pkey.pod and OSSL_DECODER_CTX_new_for_pkey.pod (public installation path)",
+        "src/passphrase.rs:500-536 (rewritten contract)",
+        "src/ui/ui_lib.rs:1182, :1411, :2187 (the invoked public operations)"
+      ]
+    }
+  ],
+  "closure": {
+    "tool": "forensics/tools/consumer_closure.py v3 (its own adjudicate())",
+    "artifact_identity_preserved": {
+      "ssh": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+      "sshd": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+    },
+    "elf_graph_remeasurement": "NOT_RUN: the exact measured artifact files are absent from court/phase24-build-link. The recorded exact-artifact closure obligations were re-adjudicated against the current discharge plane; reachability was not re-measured.",
+    "ssh": {
+      "reachable_production_obligations": 120,
+      "DISCHARGED": 117,
+      "BLOCKED": 3,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED"
+    },
+    "sshd": {
+      "reachable_production_obligations": 120,
+      "DISCHARGED": 117,
+      "BLOCKED": 3,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED"
+    },
+    "final_counts": {
+      "total": 120,
+      "DISCHARGED": 117,
+      "BLOCKED": 3,
+      "UNKNOWN": 0
+    },
+    "verdict": "ACCEPTED (structural closure: every reachable production obligation is DISCHARGED or BLOCKED, 0 UNKNOWN, no refusal); SAFE_COMPATIBLE is false. This is not a consumer graduation.",
+    "blocked": [
+      "V1:src/evp/legacy_md5.rs:147:UNSAFE_FN_DEF",
+      "V1:src/evp/legacy_sha.rs:181:UNSAFE_FN_DEF",
+      "V1:src/evp/legacy_sha.rs:224:UNSAFE_FN_DEF"
+    ],
+    "changed_from_previous_run": [
+      {
+        "id": "V1:src/passphrase.rs:499:UNSAFE_FN_DEF",
+        "from": "BLOCKED",
+        "to": "DISCHARGED"
+      }
+    ]
+  },
+  "gates": {
+    "fmt": "PASS: cargo fmt --all -- --check (no output)",
+    "clippy": "PASS: cargo clippy --all-targets -- -D warnings (Finished dev profile in 8.12s)",
+    "lib_tests": "PASS: cargo test --lib -- --test-threads=4 -> 2199 passed; 0 failed; 52 ignored; finished in 126.49s",
+    "container": "openssl-rs-court:1, CARGO_BUILD_JOBS=4"
+  },
+  "limitations": [
+    "Independent review of these re-adjudications is NOT_RUN (AGENTS.md §15/§21).",
+    "The exact artifacts are absent, so the ELF reachability graph was not re-measured; only the closure's recorded exact-artifact obligations were re-adjudicated.",
+    "No L4/L7 compatibility or cryptographic court was re-run at this working-tree identity.",
+    "C_ABI_CONTRACT remains UNSAFE_OPEN mechanism-wide; only the openssh-reachable sites are scoped-discharged.",
+    "The three digest callbacks remain BLOCKED and unfixed: a C caller of EVP_MD_meth_get_init can still supply a context with NULL/non-writable md_data. This is recorded as the failing criterion, not silently reclassified."
+  ],
+  "non_claims": [
+    "A DISCHARGED outcome here means the §7 criteria hold at that exact site under the cited witness; it is not a mechanism-wide safety certificate.",
+    "The passphrase discharge rests on the documented public UI_METHOD ABI; an application that violates that ABI is outside the contract.",
+    "The 3 BLOCKED sites are not claimed safe; they are recorded as unmet criterion 2.",
+    "No source code was changed by this receipt; only # Safety contracts and campaign receipts were edited."
+  ]
+}

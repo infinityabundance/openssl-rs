@@ -382,7 +382,7 @@
       "receipt": "openssh-discharge",
       "scope": "openssh reachable production obligations for EVP_PKEY_PROVIDER, site-enumerated at exact inventory coordinates",
       "base_head": "b40e1f096",
-      "source_state": "working tree at b40e1f096 plus the contract/elimination fixes in this subphase",
+      "source_state": "working tree at 32d373e08 plus the final-four contract re-adjudication and the legacy-init hardening (the three digest initialisers now validate their context)",
       "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
       "discharged_boundaries": [
         "OSSH-DIS-007",
@@ -391,6 +391,9 @@
         "OSSH-DIS-010",
         "OSSH-DIS-012",
         "OSSH-DIS-013",
+        "OSSH-DIS-017",
+        "OSSH-DIS-018",
+        "OSSH-DIS-019",
         "OSSH-DIS-032",
         "OSSH-DIS-033",
         "OSSH-DIS-034",
@@ -448,15 +451,11 @@
         "OSSH-DIS-086",
         "OSSH-DIS-088"
       ],
-      "retained_boundaries": [
-        "OSSH-DIS-017",
-        "OSSH-DIS-018",
-        "OSSH-DIS-019"
-      ],
-      "retained_state": "BLOCKED",
+      "retained_boundaries": [],
       "hidden_obligations": 0,
       "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-discharge.json",
-      "note": "Site-scoped only; the mechanism state is not changed. "
+      "note": "Site-scoped only; the mechanism state is not changed. All 65 openssh-reachable EVP_PKEY_PROVIDER sites are scoped-discharged, including OSSH-DIS-017/018/019, whose legacy init callbacks now establish and validate their own md_data.",
+      "legacy_init_harden_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json"
     },
     {
       "receipt": "openssh-discharge",
@@ -592,7 +591,7 @@
       "receipt": "openssh-discharge",
       "scope": "openssh reachable production obligations for C_ABI_CONTRACT, site-enumerated at exact inventory coordinates",
       "base_head": "b40e1f096",
-      "source_state": "working tree at b40e1f096 plus the contract/elimination fixes in this subphase",
+      "source_state": "working tree at 32d373e08 plus the final-four contract re-adjudication (public UI_METHOD ABI witness for do_ui_passphrase; legacy digest contracts corrected and retained BLOCKED)",
       "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
       "discharged_boundaries": [
         "OSSH-DIS-003",
@@ -601,15 +600,14 @@
         "OSSH-DIS-089",
         "OSSH-DIS-109",
         "OSSH-DIS-110",
-        "OSSH-DIS-111"
-      ],
-      "retained_boundaries": [
+        "OSSH-DIS-111",
         "OSSH-DIS-026"
       ],
-      "retained_state": "BLOCKED",
+      "retained_boundaries": [],
       "hidden_obligations": 0,
       "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-discharge.json",
-      "note": "Site-scoped only; the mechanism state is not changed.  C_ABI_CONTRACT remains UNSAFE_OPEN because of the third-party UI_METHOD edge."
+      "note": "Site-scoped only; the mechanism state is not changed. C_ABI_CONTRACT remains UNSAFE_OPEN mechanism-wide, but all 8 openssh-reachable sites are now scoped-discharged; OSSH-DIS-026 is discharged by the documented public UI_METHOD C ABI.",
+      "final_four_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-four.json"
     }
   ],
   "defects_closed": [
