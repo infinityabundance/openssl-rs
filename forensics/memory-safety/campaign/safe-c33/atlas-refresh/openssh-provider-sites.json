@@ -1,0 +1,1552 @@
+{
+  "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-provider-sites",
+  "subphase": "safe-c33 openssh closure block 3: EVP_PKEY_PROVIDER provider-site enumeration",
+  "date": "2026-10-26",
+  "candidate": {
+    "base_head": "102d40c027fb43370c4fe65c63c3b9430ac2ddb8",
+    "branch": "integrate/safe-c33",
+    "files": {
+      "src/provider/digest.rs": {
+        "git_blob": "7b8680b690ef1addff9d9aaf1755f279bbb72d24",
+        "sha256": "e9f57695e5aed2baae475bbcc8506aaab1dd660ece609f7289c1f73e38fa0ed1"
+      },
+      "src/provider/cipher.rs": {
+        "git_blob": "e5a3b6be99536a0ac8c3283037b9d97cc0013f02",
+        "sha256": "b842b7b5c25b7faab981099712185f9c726c50c6b42bc7096ae09d7ebf3e6e96"
+      },
+      "src/provider/ecx_kmgmt.rs": {
+        "git_blob": "d6efebc4c56bb0b9d9cb5c949cdf47470dfe4459",
+        "sha256": "001736cf1643dbfb6441e1978979bda264f39287ebf50a9d12088b1fbc161269"
+      },
+      "src/provider/keymgmt.rs": {
+        "git_blob": "ffb0567c6ec7ee58385e0f9e5a3a8427f4055fc8",
+        "sha256": "59d81afee0b00dfc2b339b5e1dc1ddff2a3f9e5216bb8265647700dafd1b495a"
+      }
+    },
+    "line_number_basis": "the four files are byte-identical between the closure inventory's source head 4a95b73a8 and this candidate (git diff --stat empty), so the inventory line numbers are the current line numbers"
+  },
+  "mechanism": "EVP_PKEY_PROVIDER",
+  "scope": {
+    "closure": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-closure.json",
+    "closure_files": [
+      "src/provider/digest.rs",
+      "src/provider/cipher.rs",
+      "src/provider/ecx_kmgmt.rs",
+      "src/provider/keymgmt.rs"
+    ],
+    "operations": 47,
+    "question": "For each reachable unsafe fn in the four EVP_PKEY_PROVIDER files, what is the actual precondition set, where is it established, and can a safe Rust caller cause UB?"
+  },
+  "summary": {
+    "enumerated_operations": 47,
+    "matches_closure_obligations": {
+      "src/provider/digest.rs": {
+        "closure": 27,
+        "enumerated": 27
+      },
+      "src/provider/cipher.rs": {
+        "closure": 9,
+        "enumerated": 9
+      },
+      "src/provider/ecx_kmgmt.rs": {
+        "closure": 7,
+        "enumerated": 7
+      },
+      "src/provider/keymgmt.rs": {
+        "closure": 4,
+        "enumerated": 4
+      }
+    },
+    "DISCHARGED": 0,
+    "BLOCKED": 47,
+    "UNKNOWN": 0,
+    "discharge_statement": "No site is marked DISCHARGED. The mechanisms' state is OWNERSHIP_RECONSTRUCTED; AGENTS.md section 7 requires every retained obligation to be enumerated and an independent check before SAFETY_DISCHARGED, and this subphase has neither. A site receipt can move an obligation from UNKNOWN to BLOCKED, not to DISCHARGED."
+  },
+  "boundaries": [
+    {
+      "id": "P25-PROV-DIGEST-300",
+      "file": "src/provider/digest.rs",
+      "line": 300,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ossl_digest_default_gettable_params",
+      "authority": "providers/common/digestcommon.c ossl_digest_default_gettable_params",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-559",
+      "file": "src/provider/digest.rs",
+      "line": 559,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::settable_ctx_params",
+      "authority": "providers/implementations/digests/sha2_prov.c known_sha1_settable_ctx_params",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-895",
+      "file": "src/provider/digest.rs",
+      "line": 895,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "null_md::ctx_init",
+      "authority": "providers/implementations/digests/null_prov.c:18-21",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-900",
+      "file": "src/provider/digest.rs",
+      "line": 900,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "null_md::ctx_update",
+      "authority": "providers/implementations/digests/null_prov.c:23-26",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-908",
+      "file": "src/provider/digest.rs",
+      "line": 908,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "null_md::ctx_final",
+      "authority": "providers/implementations/digests/null_prov.c:28-31",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1054",
+      "file": "src/provider/digest.rs",
+      "line": 1054,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::settable_ctx_params",
+      "authority": "providers/implementations/digests/md5_sha1_prov.c:28-31",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1377",
+      "file": "src/provider/digest.rs",
+      "line": 1377,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::refuse_squeeze",
+      "authority": "providers/implementations/digests/sha3_prov.c shake/cmac method split",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1463",
+      "file": "src/provider/digest.rs",
+      "line": 1463,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::settable_ctx_params",
+      "authority": "providers/implementations/digests/sha3_prov.c:584-588",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1781",
+      "file": "src/provider/digest.rs",
+      "line": 1781,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2::settable_ctx_params",
+      "authority": "providers/implementations/digests/blake2_prov.c:29-32",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-2356",
+      "file": "src/provider/digest.rs",
+      "line": 2356,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "deflt_gettable_params",
+      "authority": "providers/defltprov.c:46-49",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a constant or a 'static table and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1255",
+      "file": "src/provider/digest.rs",
+      "line": 1255,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::new_keccak",
+      "authority": "providers/implementations/digests/sha3_prov.c SHA3/SHAKE/KMAC_newctx",
+      "body_class": "fresh-context-initialiser",
+      "contract_in_source": "none: no # Safety on the fn",
+      "required_contract": "No caller precondition: every argument is a scalar row constant. The function allocates a fresh zeroed KeccakCtx, initialises it, and transfers ownership to the caller (or answers NULL). The unsafe operations are confined to that fresh block, whose validity comes from OwnedCtx::new.",
+      "preconditions": [],
+      "established_by": [
+        "type invariant: OwnedCtx::new yields a zeroed block of exactly size_of::<KeccakCtx>()",
+        "vacuous: every argument is a compile-time row constant"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the returned block is exactly size_of::<KeccakCtx>()",
+        "input_output_aliasing": "n/a: no input buffer",
+        "partial_init_on_failure": "ossl_sha3_init / ossl_keccak_init return no status and write only the fresh block; an allocation failure returns NULL before any write",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "the block is released by the matching freectx through OwnedCtx::Drop -> CRYPTO_clear_free"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "Every unsafe operation is confined to a freshly allocated local block, so there is no caller obligation to state -- but the fn is declared unsafe with no # Safety contract and no independent review. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Make it a safe fn: the fresh-block invariant is internal, and a safe fn can be called from the row macros without an unsafe block."
+    },
+    {
+      "id": "P25-PROV-DIGEST-407",
+      "file": "src/provider/digest.rs",
+      "line": 407,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "digest_impl::newctx",
+      "authority": "include/prov/digestcommon.h IMPLEMENT_digest_functions",
+      "body_class": "owned-context-constructor",
+      "contract_in_source": "none: no # Safety on the fn (block SAFETY only, where present)",
+      "required_contract": "No caller precondition on `provctx` (unread). On success the fn transfers a fresh CRYPTO_zalloc block of size_of::<Ctx>() owned by the caller, to be returned exactly once to the matching freectx; on failure it answers NULL and transfers nothing.",
+      "preconditions": [],
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of exactly size_of::<Ctx>() through the CRYPTO_* seam (safe fn; NULL -> None)",
+        "vacuous: provctx is not dereferenced"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the returned block is exactly size_of::<Ctx>()",
+        "input_output_aliasing": "n/a: no input buffer",
+        "partial_init_on_failure": "None: the block is zeroed on allocation and no fallible member initialiser runs after ownership is handed out",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "the block is released by the matching freectx through OwnedCtx::Drop -> CRYPTO_clear_free, so a context that later holds secret state is cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The allocation itself is sound and its ownership transfer is type-enforced by OwnedCtx, but the fn-level contract that states the transfer and the exactly-once freectx obligation is absent. . No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` and document the ownership transfer as an ordinary function contract, or add `# Safety: no caller precondition; the returned block is owned by the caller and must be passed exactly once to freectx`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-599",
+      "file": "src/provider/digest.rs",
+      "line": 599,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::newctx",
+      "authority": "providers/implementations/digests/sha2_prov.c IMPLEMENT_digest_functions",
+      "body_class": "owned-context-constructor",
+      "contract_in_source": "none: no # Safety on the fn (block SAFETY only, where present)",
+      "required_contract": "No caller precondition on `provctx` (unread). On success the fn transfers a fresh CRYPTO_zalloc block of size_of::<Ctx>() owned by the caller, to be returned exactly once to the matching freectx; on failure it answers NULL and transfers nothing.",
+      "preconditions": [],
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of exactly size_of::<Ctx>() through the CRYPTO_* seam (safe fn; NULL -> None)",
+        "vacuous: provctx is not dereferenced"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the returned block is exactly size_of::<Ctx>()",
+        "input_output_aliasing": "n/a: no input buffer",
+        "partial_init_on_failure": "None: the block is zeroed on allocation and no fallible member initialiser runs after ownership is handed out",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "the block is released by the matching freectx through OwnedCtx::Drop -> CRYPTO_clear_free, so a context that later holds secret state is cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The allocation itself is sound and its ownership transfer is type-enforced by OwnedCtx, but the fn-level contract that states the transfer and the exactly-once freectx obligation is absent. . No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` and document the ownership transfer as an ordinary function contract, or add `# Safety: no caller precondition; the returned block is owned by the caller and must be passed exactly once to freectx`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-912",
+      "file": "src/provider/digest.rs",
+      "line": 912,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "null_md::newctx",
+      "authority": "providers/implementations/digests/null_prov.c IMPLEMENT_digest_functions",
+      "body_class": "owned-context-constructor",
+      "contract_in_source": "none: no # Safety on the fn (block SAFETY only, where present)",
+      "required_contract": "No caller precondition on `provctx` (unread). On success the fn transfers a fresh CRYPTO_zalloc block of size_of::<Ctx>() owned by the caller, to be returned exactly once to the matching freectx; on failure it answers NULL and transfers nothing.",
+      "preconditions": [],
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of exactly size_of::<Ctx>() through the CRYPTO_* seam (safe fn; NULL -> None)",
+        "vacuous: provctx is not dereferenced"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the returned block is exactly size_of::<Ctx>()",
+        "input_output_aliasing": "n/a: no input buffer",
+        "partial_init_on_failure": "None: the block is zeroed on allocation and no fallible member initialiser runs after ownership is handed out",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "the block is released by the matching freectx through OwnedCtx::Drop -> CRYPTO_clear_free, so a context that later holds secret state is cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The allocation itself is sound and its ownership transfer is type-enforced by OwnedCtx, but the fn-level contract that states the transfer and the exactly-once freectx obligation is absent. . No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` and document the ownership transfer as an ordinary function contract, or add `# Safety: no caller precondition; the returned block is owned by the caller and must be passed exactly once to freectx`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1095",
+      "file": "src/provider/digest.rs",
+      "line": 1095,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::newctx",
+      "authority": "providers/implementations/digests/md5_sha1_prov.c IMPLEMENT_digest_functions",
+      "body_class": "owned-context-constructor",
+      "contract_in_source": "none: no # Safety on the fn (block SAFETY only, where present)",
+      "required_contract": "No caller precondition on `provctx` (unread). On success the fn transfers a fresh CRYPTO_zalloc block of size_of::<Ctx>() owned by the caller, to be returned exactly once to the matching freectx; on failure it answers NULL and transfers nothing.",
+      "preconditions": [],
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of exactly size_of::<Ctx>() through the CRYPTO_* seam (safe fn; NULL -> None)",
+        "vacuous: provctx is not dereferenced"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the returned block is exactly size_of::<Ctx>()",
+        "input_output_aliasing": "n/a: no input buffer",
+        "partial_init_on_failure": "None: the block is zeroed on allocation and no fallible member initialiser runs after ownership is handed out",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "the block is released by the matching freectx through OwnedCtx::Drop -> CRYPTO_clear_free, so a context that later holds secret state is cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The allocation itself is sound and its ownership transfer is type-enforced by OwnedCtx, but the fn-level contract that states the transfer and the exactly-once freectx obligation is absent. . No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` and document the ownership transfer as an ordinary function contract, or add `# Safety: no caller precondition; the returned block is owned by the caller and must be passed exactly once to freectx`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1793",
+      "file": "src/provider/digest.rs",
+      "line": 1793,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2::newctx",
+      "authority": "providers/implementations/digests/blake2_prov.c IMPLEMENT_BLAKE_functions",
+      "body_class": "owned-context-constructor",
+      "contract_in_source": "none: no # Safety on the fn (block SAFETY only, where present)",
+      "required_contract": "No caller precondition on `provctx` (unread). On success the fn transfers a fresh CRYPTO_zalloc block of size_of::<Ctx>() owned by the caller, to be returned exactly once to the matching freectx; on failure it answers NULL and transfers nothing.",
+      "preconditions": [],
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of exactly size_of::<Ctx>() through the CRYPTO_* seam (safe fn; NULL -> None)",
+        "vacuous: provctx is not dereferenced"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the returned block is exactly size_of::<Ctx>()",
+        "input_output_aliasing": "n/a: no input buffer",
+        "partial_init_on_failure": "None: the block is zeroed on allocation and no fallible member initialiser runs after ownership is handed out",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "the block is released by the matching freectx through OwnedCtx::Drop -> CRYPTO_clear_free, so a context that later holds secret state is cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The allocation itself is sound and its ownership transfer is type-enforced by OwnedCtx, but the fn-level contract that states the transfer and the exactly-once freectx obligation is absent. . No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` and document the ownership transfer as an ordinary function contract, or add `# Safety: no caller precondition; the returned block is owned by the caller and must be passed exactly once to freectx`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1548",
+      "file": "src/provider/digest.rs",
+      "line": 1548,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3_xof_row::newctx",
+      "authority": "providers/implementations/digests/sha3_prov.c SHA3/SHAKE row",
+      "body_class": "owned-context-constructor",
+      "contract_in_source": "none: no # Safety on the fn (block SAFETY only, where present)",
+      "required_contract": "No caller precondition on `provctx` (unread). On success the fn transfers a fresh CRYPTO_zalloc block of size_of::<Ctx>() owned by the caller, to be returned exactly once to the matching freectx; on failure it answers NULL and transfers nothing.",
+      "preconditions": [],
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of exactly size_of::<Ctx>() through the CRYPTO_* seam (safe fn; NULL -> None)",
+        "vacuous: provctx is not dereferenced"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the returned block is exactly size_of::<Ctx>()",
+        "input_output_aliasing": "n/a: no input buffer",
+        "partial_init_on_failure": "None: the block is zeroed on allocation and no fallible member initialiser runs after ownership is handed out",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "the block is released by the matching freectx through OwnedCtx::Drop -> CRYPTO_clear_free, so a context that later holds secret state is cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The allocation itself is sound and its ownership transfer is type-enforced by OwnedCtx, but the fn-level contract that states the transfer and the exactly-once freectx obligation is absent. Its only unsafe operation is the call to sha3::new_keccak, which writes the same fresh block. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` and document the ownership transfer as an ordinary function contract, or add `# Safety: no caller precondition; the returned block is owned by the caller and must be passed exactly once to freectx`."
+    },
+    {
+      "id": "P25-PROV-DIGEST-418",
+      "file": "src/provider/digest.rs",
+      "line": 418,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "digest_impl::freectx",
+      "authority": "include/prov/digestcommon.h IMPLEMENT_digest_functions",
+      "body_class": "owned-context-destructor",
+      "contract_in_source": "block-level SAFETY only: '`vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release'",
+      "required_contract": "`vctx` is NULL or a pointer this provider's matching newctx/dupctx handed to the core for a `Ctx` and which the core has not yet released; the core calls freectx exactly once for each such pointer and never with a pointer from another dispatch row.",
+      "preconditions": [
+        "vctx is NULL or a live block previously returned by this row's newctx/dupctx",
+        "the block has not been released and will not be used after this call",
+        "the dispatch row that delivered vctx is the one that installed this freectx (type provenance)"
+      ],
+      "established_by": [
+        "C ABI contract: the OpenSSL provider dispatch lifecycle (OSSL_FUNC_*_FREECTX) owns the context and calls it once",
+        "type invariant: OwnedCtx::<T>::from_raw is unsafe with this exact contract, and Drop is the single CRYPTO_clear_free"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: the whole size_of::<Ctx>() block is released",
+        "input_output_aliasing": "none: from_raw takes the pointer by value and no live reference to the block exists across the call under the dispatch contract",
+        "partial_init_on_failure": "NULL is a no-op; a block from newctx is fully zero-initialised, so the destructor never runs on an uninitialised value",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "Drop calls T::destroy_body then CRYPTO_clear_free at size_of::<Ctx>(), so secret-bearing members are cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "DISPATCH_LIFECYCLE_UNSTATED"
+      ],
+      "blocker": "The runtime precondition is the provider lifecycle ABI rather than a merely documented one, but the fn states no # Safety contract and the row-provenance assumption (the pointer was produced by this row's constructor) is implicit in the dispatch table, not in the fn. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: vctx is NULL or a block this row's newctx/dupctx handed to the core, not yet released, and the core calls this once` and record the dispatch-row provenance in the table's comment."
+    },
+    {
+      "id": "P25-PROV-DIGEST-610",
+      "file": "src/provider/digest.rs",
+      "line": 610,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::freectx",
+      "authority": "providers/implementations/digests/sha2_prov.c IMPLEMENT_digest_functions",
+      "body_class": "owned-context-destructor",
+      "contract_in_source": "block-level SAFETY only: '`vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release'",
+      "required_contract": "`vctx` is NULL or a pointer this provider's matching newctx/dupctx handed to the core for a `ShaCtx` and which the core has not yet released; the core calls freectx exactly once for each such pointer and never with a pointer from another dispatch row.",
+      "preconditions": [
+        "vctx is NULL or a live block previously returned by this row's newctx/dupctx",
+        "the block has not been released and will not be used after this call",
+        "the dispatch row that delivered vctx is the one that installed this freectx (type provenance)"
+      ],
+      "established_by": [
+        "C ABI contract: the OpenSSL provider dispatch lifecycle (OSSL_FUNC_*_FREECTX) owns the context and calls it once",
+        "type invariant: OwnedCtx::<T>::from_raw is unsafe with this exact contract, and Drop is the single CRYPTO_clear_free"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: the whole size_of::<Ctx>() block is released",
+        "input_output_aliasing": "none: from_raw takes the pointer by value and no live reference to the block exists across the call under the dispatch contract",
+        "partial_init_on_failure": "NULL is a no-op; a block from newctx is fully zero-initialised, so the destructor never runs on an uninitialised value",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "Drop calls T::destroy_body then CRYPTO_clear_free at size_of::<Ctx>(), so secret-bearing members are cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "DISPATCH_LIFECYCLE_UNSTATED"
+      ],
+      "blocker": "The runtime precondition is the provider lifecycle ABI rather than a merely documented one, but the fn states no # Safety contract and the row-provenance assumption (the pointer was produced by this row's constructor) is implicit in the dispatch table, not in the fn. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: vctx is NULL or a block this row's newctx/dupctx handed to the core, not yet released, and the core calls this once` and record the dispatch-row provenance in the table's comment."
+    },
+    {
+      "id": "P25-PROV-DIGEST-923",
+      "file": "src/provider/digest.rs",
+      "line": 923,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "null_md::freectx",
+      "authority": "providers/implementations/digests/null_prov.c IMPLEMENT_digest_functions",
+      "body_class": "owned-context-destructor",
+      "contract_in_source": "block-level SAFETY only: '`vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release'",
+      "required_contract": "`vctx` is NULL or a pointer this provider's matching newctx/dupctx handed to the core for a `NullMdCtx` and which the core has not yet released; the core calls freectx exactly once for each such pointer and never with a pointer from another dispatch row.",
+      "preconditions": [
+        "vctx is NULL or a live block previously returned by this row's newctx/dupctx",
+        "the block has not been released and will not be used after this call",
+        "the dispatch row that delivered vctx is the one that installed this freectx (type provenance)"
+      ],
+      "established_by": [
+        "C ABI contract: the OpenSSL provider dispatch lifecycle (OSSL_FUNC_*_FREECTX) owns the context and calls it once",
+        "type invariant: OwnedCtx::<T>::from_raw is unsafe with this exact contract, and Drop is the single CRYPTO_clear_free"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: the whole size_of::<Ctx>() block is released",
+        "input_output_aliasing": "none: from_raw takes the pointer by value and no live reference to the block exists across the call under the dispatch contract",
+        "partial_init_on_failure": "NULL is a no-op; a block from newctx is fully zero-initialised, so the destructor never runs on an uninitialised value",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "Drop calls T::destroy_body then CRYPTO_clear_free at size_of::<Ctx>(), so secret-bearing members are cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "DISPATCH_LIFECYCLE_UNSTATED"
+      ],
+      "blocker": "The runtime precondition is the provider lifecycle ABI rather than a merely documented one, but the fn states no # Safety contract and the row-provenance assumption (the pointer was produced by this row's constructor) is implicit in the dispatch table, not in the fn. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: vctx is NULL or a block this row's newctx/dupctx handed to the core, not yet released, and the core calls this once` and record the dispatch-row provenance in the table's comment."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1106",
+      "file": "src/provider/digest.rs",
+      "line": 1106,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::freectx",
+      "authority": "providers/implementations/digests/md5_sha1_prov.c IMPLEMENT_digest_functions",
+      "body_class": "owned-context-destructor",
+      "contract_in_source": "block-level SAFETY only: '`vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release'",
+      "required_contract": "`vctx` is NULL or a pointer this provider's matching newctx/dupctx handed to the core for a `Md5Sha1Ctx` and which the core has not yet released; the core calls freectx exactly once for each such pointer and never with a pointer from another dispatch row.",
+      "preconditions": [
+        "vctx is NULL or a live block previously returned by this row's newctx/dupctx",
+        "the block has not been released and will not be used after this call",
+        "the dispatch row that delivered vctx is the one that installed this freectx (type provenance)"
+      ],
+      "established_by": [
+        "C ABI contract: the OpenSSL provider dispatch lifecycle (OSSL_FUNC_*_FREECTX) owns the context and calls it once",
+        "type invariant: OwnedCtx::<T>::from_raw is unsafe with this exact contract, and Drop is the single CRYPTO_clear_free"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: the whole size_of::<Ctx>() block is released",
+        "input_output_aliasing": "none: from_raw takes the pointer by value and no live reference to the block exists across the call under the dispatch contract",
+        "partial_init_on_failure": "NULL is a no-op; a block from newctx is fully zero-initialised, so the destructor never runs on an uninitialised value",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "Drop calls T::destroy_body then CRYPTO_clear_free at size_of::<Ctx>(), so secret-bearing members are cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "DISPATCH_LIFECYCLE_UNSTATED"
+      ],
+      "blocker": "The runtime precondition is the provider lifecycle ABI rather than a merely documented one, but the fn states no # Safety contract and the row-provenance assumption (the pointer was produced by this row's constructor) is implicit in the dispatch table, not in the fn. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: vctx is NULL or a block this row's newctx/dupctx handed to the core, not yet released, and the core calls this once` and record the dispatch-row provenance in the table's comment."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1281",
+      "file": "src/provider/digest.rs",
+      "line": 1281,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::freectx",
+      "authority": "providers/implementations/digests/sha3_prov.c",
+      "body_class": "owned-context-destructor",
+      "contract_in_source": "block-level SAFETY only: '`vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release'",
+      "required_contract": "`vctx` is NULL or a pointer this provider's matching newctx/dupctx handed to the core for a `KeccakCtx` and which the core has not yet released; the core calls freectx exactly once for each such pointer and never with a pointer from another dispatch row.",
+      "preconditions": [
+        "vctx is NULL or a live block previously returned by this row's newctx/dupctx",
+        "the block has not been released and will not be used after this call",
+        "the dispatch row that delivered vctx is the one that installed this freectx (type provenance)"
+      ],
+      "established_by": [
+        "C ABI contract: the OpenSSL provider dispatch lifecycle (OSSL_FUNC_*_FREECTX) owns the context and calls it once",
+        "type invariant: OwnedCtx::<T>::from_raw is unsafe with this exact contract, and Drop is the single CRYPTO_clear_free"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: the whole size_of::<Ctx>() block is released",
+        "input_output_aliasing": "none: from_raw takes the pointer by value and no live reference to the block exists across the call under the dispatch contract",
+        "partial_init_on_failure": "NULL is a no-op; a block from newctx is fully zero-initialised, so the destructor never runs on an uninitialised value",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "Drop calls T::destroy_body then CRYPTO_clear_free at size_of::<Ctx>(), so secret-bearing members are cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "DISPATCH_LIFECYCLE_UNSTATED"
+      ],
+      "blocker": "The runtime precondition is the provider lifecycle ABI rather than a merely documented one, but the fn states no # Safety contract and the row-provenance assumption (the pointer was produced by this row's constructor) is implicit in the dispatch table, not in the fn. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: vctx is NULL or a block this row's newctx/dupctx handed to the core, not yet released, and the core calls this once` and record the dispatch-row provenance in the table's comment."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1804",
+      "file": "src/provider/digest.rs",
+      "line": 1804,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2::freectx",
+      "authority": "providers/implementations/digests/blake2_prov.c IMPLEMENT_BLAKE_functions",
+      "body_class": "owned-context-destructor",
+      "contract_in_source": "block-level SAFETY only: '`vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release'",
+      "required_contract": "`vctx` is NULL or a pointer this provider's matching newctx/dupctx handed to the core for a `MdData` and which the core has not yet released; the core calls freectx exactly once for each such pointer and never with a pointer from another dispatch row.",
+      "preconditions": [
+        "vctx is NULL or a live block previously returned by this row's newctx/dupctx",
+        "the block has not been released and will not be used after this call",
+        "the dispatch row that delivered vctx is the one that installed this freectx (type provenance)"
+      ],
+      "established_by": [
+        "C ABI contract: the OpenSSL provider dispatch lifecycle (OSSL_FUNC_*_FREECTX) owns the context and calls it once",
+        "type invariant: OwnedCtx::<T>::from_raw is unsafe with this exact contract, and Drop is the single CRYPTO_clear_free"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: the whole size_of::<Ctx>() block is released",
+        "input_output_aliasing": "none: from_raw takes the pointer by value and no live reference to the block exists across the call under the dispatch contract",
+        "partial_init_on_failure": "NULL is a no-op; a block from newctx is fully zero-initialised, so the destructor never runs on an uninitialised value",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "Drop calls T::destroy_body then CRYPTO_clear_free at size_of::<Ctx>(), so secret-bearing members are cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "DISPATCH_LIFECYCLE_UNSTATED"
+      ],
+      "blocker": "The runtime precondition is the provider lifecycle ABI rather than a merely documented one, but the fn states no # Safety contract and the row-provenance assumption (the pointer was produced by this row's constructor) is implicit in the dispatch table, not in the fn. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: vctx is NULL or a block this row's newctx/dupctx handed to the core, not yet released, and the core calls this once` and record the dispatch-row provenance in the table's comment."
+    },
+    {
+      "id": "P25-PROV-DIGEST-567",
+      "file": "src/provider/digest.rs",
+      "line": 567,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::set_ctx_params",
+      "authority": "providers/implementations/digests/sha2_prov.c sha1_set_ctx_params",
+      "body_class": "params-consumer",
+      "contract_in_source": "none: no # Safety on the fn (per-call block SAFETY only)",
+      "required_contract": "`vctx` is NULL or a live `ShaCtx` from this row's newctx/dupctx; `params` is NULL or a key-terminated array of live OSSL_PARAM entries; every located entry's `data` is readable for its `data_size`; a parameter value is consumed only when its `data_type` matches, and the context remains a valid (possibly reset) value on a refusal.",
+      "preconditions": [
+        "vctx is NULL or the live provider context of this row",
+        "params is NULL or a key-terminated OSSL_PARAM array",
+        "for an OCTET_STRING entry, data is readable for data_size",
+        "the core passes the application's array unchanged; termination and buffers are the caller's ABI obligation",
+        "the SSL3 master secret is consumed only when data_size == 48 (ossl_sha1_ctrl's own guard)"
+      ],
+      "established_by": [
+        "C ABI contract: OSSL_PARAM array termination and per-entry buffer extent (include/openssl/params.h)",
+        "caller: internal_init and the digest dispatch pass the same contract they received",
+        "type invariant: the located entry is checked for data_type before data/data_size are read"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "no out-parameter: the fn only reads the caller's array and writes this context",
+        "input_output_aliasing": "an entry's data cannot alias the provider context (the application never holds that pointer); entries that alias each other are the caller's ABI responsibility",
+        "partial_init_on_failure": "a refusal can leave the context reset or partially updated (keccak_init_params resets before validating params); the context remains a valid live value, matching the authority",
+        "callback_reentrancy": "n/a: no lock is held and no application callback is invoked",
+        "secret_cleansing": "the SSL3 master-secret path (sha1/md5_sha1) cleanses its digest temporaries only on the success path; early failure returns leave them on the stack (recorded residual)"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "PARAM_ARRAY_ABI_UNSTATED"
+      ],
+      "blocker": "The body is sound under the OSSL_PARAM ABI, but that ABI is the application's obligation and the fn neither states it nor validates termination; the secret-bearing temporaries of the SSL3 path are not cleansed on early failure. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add the `# Safety` contract above (naming the key-terminated array and per-entry buffer extent), and cleanse the sha1/md5_sha1 digest temporaries on every failure arm of ossl_sha1_ctrl / ossl_md5_sha1_ctrl (source change described, not made)."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1063",
+      "file": "src/provider/digest.rs",
+      "line": 1063,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::set_ctx_params",
+      "authority": "providers/implementations/digests/md5_sha1_prov.c:40-55",
+      "body_class": "params-consumer",
+      "contract_in_source": "none: no # Safety on the fn (per-call block SAFETY only)",
+      "required_contract": "`vctx` is NULL or a live `Md5Sha1Ctx` from this row's newctx/dupctx; `params` is NULL or a key-terminated array of live OSSL_PARAM entries; every located entry's `data` is readable for its `data_size`; a parameter value is consumed only when its `data_type` matches, and the context remains a valid (possibly reset) value on a refusal.",
+      "preconditions": [
+        "vctx is NULL or the live provider context of this row",
+        "params is NULL or a key-terminated OSSL_PARAM array",
+        "for an OCTET_STRING entry, data is readable for data_size",
+        "the core passes the application's array unchanged; termination and buffers are the caller's ABI obligation",
+        "the SSL3 master secret is consumed only when data_size == 48 (ossl_md5_sha1_ctrl's own guard)"
+      ],
+      "established_by": [
+        "C ABI contract: OSSL_PARAM array termination and per-entry buffer extent (include/openssl/params.h)",
+        "caller: internal_init and the digest dispatch pass the same contract they received",
+        "type invariant: the located entry is checked for data_type before data/data_size are read"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "no out-parameter: the fn only reads the caller's array and writes this context",
+        "input_output_aliasing": "an entry's data cannot alias the provider context (the application never holds that pointer); entries that alias each other are the caller's ABI responsibility",
+        "partial_init_on_failure": "a refusal can leave the context reset or partially updated (keccak_init_params resets before validating params); the context remains a valid live value, matching the authority",
+        "callback_reentrancy": "n/a: no lock is held and no application callback is invoked",
+        "secret_cleansing": "the SSL3 master-secret path (sha1/md5_sha1) cleanses its digest temporaries only on the success path; early failure returns leave them on the stack (recorded residual)"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "PARAM_ARRAY_ABI_UNSTATED"
+      ],
+      "blocker": "The body is sound under the OSSL_PARAM ABI, but that ABI is the application's obligation and the fn neither states it nor validates termination; the secret-bearing temporaries of the SSL3 path are not cleansed on early failure. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add the `# Safety` contract above (naming the key-terminated array and per-entry buffer extent), and cleanse the sha1/md5_sha1 digest temporaries on every failure arm of ossl_sha1_ctrl / ossl_md5_sha1_ctrl (source change described, not made)."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1391",
+      "file": "src/provider/digest.rs",
+      "line": 1391,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::shake_set_ctx_params",
+      "authority": "providers/implementations/digests/sha3_prov.c:726-740",
+      "body_class": "params-consumer",
+      "contract_in_source": "none: no # Safety on the fn (per-call block SAFETY only)",
+      "required_contract": "`vctx` is NULL or a live `KeccakCtx` from this row's newctx/dupctx; `params` is NULL or a key-terminated array of live OSSL_PARAM entries; every located entry's `data` is readable for its `data_size`; a parameter value is consumed only when its `data_type` matches, and the context remains a valid (possibly reset) value on a refusal.",
+      "preconditions": [
+        "vctx is NULL or the live provider context of this row",
+        "params is NULL or a key-terminated OSSL_PARAM array",
+        "for an OCTET_STRING entry, data is readable for data_size",
+        "the core passes the application's array unchanged; termination and buffers are the caller's ABI obligation",
+        "xoflen/size are read through OSSL_PARAM_get_size_t, which requires a live entry and a writable usize"
+      ],
+      "established_by": [
+        "C ABI contract: OSSL_PARAM array termination and per-entry buffer extent (include/openssl/params.h)",
+        "caller: internal_init and the digest dispatch pass the same contract they received",
+        "type invariant: the located entry is checked for data_type before data/data_size are read"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "no out-parameter: the fn only reads the caller's array and writes this context",
+        "input_output_aliasing": "an entry's data cannot alias the provider context (the application never holds that pointer); entries that alias each other are the caller's ABI responsibility",
+        "partial_init_on_failure": "a refusal can leave the context reset or partially updated (keccak_init_params resets before validating params); the context remains a valid live value, matching the authority",
+        "callback_reentrancy": "n/a: no lock is held and no application callback is invoked",
+        "secret_cleansing": "the SSL3 master-secret path (sha1/md5_sha1) cleanses its digest temporaries only on the success path; early failure returns leave them on the stack (recorded residual)"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "PARAM_ARRAY_ABI_UNSTATED"
+      ],
+      "blocker": "The body is sound under the OSSL_PARAM ABI, but that ABI is the application's obligation and the fn neither states it nor validates termination; the secret-bearing temporaries of the SSL3 path are not cleansed on early failure. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add the `# Safety` contract above (naming the key-terminated array and per-entry buffer extent), and cleanse the sha1/md5_sha1 digest temporaries on every failure arm of ossl_sha1_ctrl / ossl_md5_sha1_ctrl (source change described, not made)."
+    },
+    {
+      "id": "P25-PROV-DIGEST-1471",
+      "file": "src/provider/digest.rs",
+      "line": 1471,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::keccak_init_params",
+      "authority": "providers/implementations/digests/sha3_prov.c:72-76",
+      "body_class": "params-consumer",
+      "contract_in_source": "none: no # Safety on the fn (per-call block SAFETY only)",
+      "required_contract": "`vctx` is NULL or a live `KeccakCtx` from this row's newctx/dupctx; `params` is NULL or a key-terminated array of live OSSL_PARAM entries; every located entry's `data` is readable for its `data_size`; a parameter value is consumed only when its `data_type` matches, and the context remains a valid (possibly reset) value on a refusal.",
+      "preconditions": [
+        "vctx is NULL or the live provider context of this row",
+        "params is NULL or a key-terminated OSSL_PARAM array",
+        "for an OCTET_STRING entry, data is readable for data_size",
+        "the core passes the application's array unchanged; termination and buffers are the caller's ABI obligation",
+        "vctx is reset before params are validated; a refusal leaves a valid reset context"
+      ],
+      "established_by": [
+        "C ABI contract: OSSL_PARAM array termination and per-entry buffer extent (include/openssl/params.h)",
+        "caller: internal_init and the digest dispatch pass the same contract they received",
+        "type invariant: the located entry is checked for data_type before data/data_size are read"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "no out-parameter: the fn only reads the caller's array and writes this context",
+        "input_output_aliasing": "an entry's data cannot alias the provider context (the application never holds that pointer); entries that alias each other are the caller's ABI responsibility",
+        "partial_init_on_failure": "a refusal can leave the context reset or partially updated (keccak_init_params resets before validating params); the context remains a valid live value, matching the authority",
+        "callback_reentrancy": "n/a: no lock is held and no application callback is invoked",
+        "secret_cleansing": "the SSL3 master-secret path (sha1/md5_sha1) cleanses its digest temporaries only on the success path; early failure returns leave them on the stack (recorded residual)"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "PARAM_ARRAY_ABI_UNSTATED"
+      ],
+      "blocker": "The body is sound under the OSSL_PARAM ABI, but that ABI is the application's obligation and the fn neither states it nor validates termination; the secret-bearing temporaries of the SSL3 path are not cleansed on early failure. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add the `# Safety` contract above (naming the key-terminated array and per-entry buffer extent), and cleanse the sha1/md5_sha1 digest temporaries on every failure arm of ossl_sha1_ctrl / ossl_md5_sha1_ctrl (source change described, not made)."
+    },
+    {
+      "id": "P25-PROV-CIPHER-11077",
+      "file": "src/provider/cipher.rs",
+      "line": 11077,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1",
+      "authority": "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha1_hw.c:40-43",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body reads a CPU feature bit or returns the compile-time constant 0 and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-CIPHER-11082",
+      "file": "src/provider/cipher.rs",
+      "line": 11082,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256",
+      "authority": "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha256_hw.c",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body reads a CPU feature bit or returns the compile-time constant 0 and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-CIPHER-11092",
+      "file": "src/provider/cipher.rs",
+      "line": 11092,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1_etm",
+      "authority": "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha1_etm_hw.c:13-16",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body reads a CPU feature bit or returns the compile-time constant 0 and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-CIPHER-11097",
+      "file": "src/provider/cipher.rs",
+      "line": 11097,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256_etm",
+      "authority": "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha256_etm_hw.c",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body reads a CPU feature bit or returns the compile-time constant 0 and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-CIPHER-11102",
+      "file": "src/provider/cipher.rs",
+      "line": 11102,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha512_etm",
+      "authority": "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha512_etm_hw.c",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body reads a CPU feature bit or returns the compile-time constant 0 and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-CIPHER-21686",
+      "file": "src/provider/cipher.rs",
+      "line": 21686,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "tdes_desx_cbc_newctx",
+      "authority": "providers/implementations/ciphers/cipher_desx.c IMPLEMENT_tdes_cipher",
+      "body_class": "owned-context-constructor-with-init",
+      "contract_in_source": "none: no # Safety on the fn",
+      "required_contract": "`provctx` is NULL or the live PROV_CTX the provider published to the core at init; on success the fn transfers a fresh owned context whose members were initialised by the row's generic initkey, and on failure it answers NULL and transfers nothing.",
+      "preconditions": [
+        "provctx is NULL or a live provider context published by this provider's init"
+      ],
+      "established_by": [
+        "C ABI contract: the core passes the provider's own provctx to OSSL_FUNC_CIPHER_NEWCTX",
+        "type invariant: OwnedCtx::new yields a zeroed block of exactly size_of::<ProvTdesCtx>()",
+        "callee: prov_libctx_of documents provctx as NULL or the published PROV_CTX"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "the returned block is exactly size_of::<ProvTdesCtx>()",
+        "input_output_aliasing": "n/a: no input buffer",
+        "partial_init_on_failure": "allocation failure returns NULL before any member is touched; ossl_cipher_generic_initkey cannot fail after allocation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "the block is released by tdes_freectx through OwnedCtx::Drop -> CRYPTO_clear_free, so key material is cleansed"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "PROVCTX_PROVENANCE_UNSTATED",
+        "CALLEE_CONTRACT_UNSTATED"
+      ],
+      "blocker": "provctx provenance is established by the provider ABI but not stated by this fn; the called ossl_cipher_generic_initkey has only a 'the caller's contract' comment, so the dereference obligation is circularly delegated. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Give ossl_cipher_generic_initkey a real `# Safety` (vctx is a live zeroed context of the row's type; provctx is NULL or the published PROV_CTX) and add `# Safety: provctx is NULL or the live published provider context` here."
+    },
+    {
+      "id": "P25-PROV-CIPHER-21712",
+      "file": "src/provider/cipher.rs",
+      "line": 21712,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "tdes_desx_cbc_get_params",
+      "authority": "providers/implementations/ciphers/cipher_desx.c:20",
+      "body_class": "params-producer",
+      "contract_in_source": "block SAFETY only: 'the dispatch contract'",
+      "required_contract": "`params` is NULL or a key-terminated array of live OSSL_PARAM entries; for every entry the provider recognises, `data` is NULL or writable for the entry's `data_size`, and the provider writes at most `data_size` bytes and reports the required length in `return_size`. A NULL `data` is a size query and writes nothing.",
+      "preconditions": [
+        "params is NULL or a key-terminated OSSL_PARAM array",
+        "each located entry is live and its data buffer is writable for data_size",
+        "data may be NULL, in which case only return_size is written"
+      ],
+      "established_by": [
+        "C ABI contract: OSSL_PARAM array termination and per-entry buffer extent",
+        "callee contract: ossl_tdes_get_params / ossl_cipher_generic_get_params has a # Safety naming exactly this obligation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "bounded by OSSL_PARAM_set_*: each write is rejected unless data_size matches or the general path fits within data_size; return_size reports the required length",
+        "input_output_aliasing": "n/a for distinct entries; two entries sharing one data buffer are the caller's ABI responsibility",
+        "partial_init_on_failure": "earlier entries can be written before a later key fails; the authority behaves the same and no UB results",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: only public algorithm parameters are written"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "OUT_PARAM_EXTENT_UNSTATED"
+      ],
+      "blocker": "The wrapper's own contract is absent; the extent guarantee lives only in the callee's # Safety and in OSSL_PARAM_set_*, so the wrapper neither states the caller's array obligation nor the per-entry write bound. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: params is NULL or a key-terminated array whose recognised entries have data writable for data_size (NULL data is a size query)`."
+    },
+    {
+      "id": "P25-PROV-CIPHER-22168",
+      "file": "src/provider/cipher.rs",
+      "line": 22168,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "rc4_hmac_md5_get_params",
+      "authority": "providers/implementations/ciphers/cipher_rc4_hmac_md5.c:215-222",
+      "body_class": "params-producer",
+      "contract_in_source": "block SAFETY only: 'the dispatch contract'",
+      "required_contract": "`params` is NULL or a key-terminated array of live OSSL_PARAM entries; for every entry the provider recognises, `data` is NULL or writable for the entry's `data_size`, and the provider writes at most `data_size` bytes and reports the required length in `return_size`. A NULL `data` is a size query and writes nothing.",
+      "preconditions": [
+        "params is NULL or a key-terminated OSSL_PARAM array",
+        "each located entry is live and its data buffer is writable for data_size",
+        "data may be NULL, in which case only return_size is written"
+      ],
+      "established_by": [
+        "C ABI contract: OSSL_PARAM array termination and per-entry buffer extent",
+        "callee contract: ossl_cipher_generic_get_params has a # Safety naming exactly this obligation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "bounded by OSSL_PARAM_set_*: each write is rejected unless data_size matches or the general path fits within data_size; return_size reports the required length",
+        "input_output_aliasing": "n/a for distinct entries; two entries sharing one data buffer are the caller's ABI responsibility",
+        "partial_init_on_failure": "earlier entries can be written before a later key fails; the authority behaves the same and no UB results",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: only public algorithm parameters are written"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "OUT_PARAM_EXTENT_UNSTATED"
+      ],
+      "blocker": "The wrapper's own contract is absent; the extent guarantee lives only in the callee's # Safety and in OSSL_PARAM_set_*, so the wrapper neither states the caller's array obligation nor the per-entry write bound. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: params is NULL or a key-terminated array whose recognised entries have data writable for data_size (NULL data is a size query)`."
+    },
+    {
+      "id": "P25-PROV-CIPHER-967",
+      "file": "src/provider/cipher.rs",
+      "line": 967,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "block_fn",
+      "authority": "providers/implementations/ciphers/ciphercommon_hw.c (internal helper)",
+      "body_class": "context-field-read",
+      "contract_in_source": "block SAFETY only: 'the caller holds a live context'",
+      "required_contract": "`ctx` is non-NULL and points to a live `ProvCipherCtx` whose `block` field is readable; the caller is a PROV_CIPHER_HW_FN invocation on a context created by this provider.",
+      "preconditions": [
+        "ctx is non-NULL and live for the duration of the call",
+        "the context came from this provider's newctx/dupctx for a block cipher row"
+      ],
+      "established_by": [
+        "caller: the three ctx_block! uses are inside fns contracted as 'the PROV_CIPHER_HW_FN contract'",
+        "type invariant: `block` is Option<Block128F>, so an unset field is a refusal rather than a call"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: reads one word",
+        "input_output_aliasing": "none: the returned function pointer is copied out before the call; the context is not aliased mutably across the read",
+        "partial_init_on_failure": "a zeroed context has block == None, which the caller refuses",
+        "callback_reentrancy": "n/a: no lock is held; the returned fn is called after this returns",
+        "secret_cleansing": "n/a: no secret-bearing storage is read or written"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "CALLER_LIVENESS_UNSTATED"
+      ],
+      "blocker": "The liveness precondition is delegated in a block comment and the function is the only place that dereferences the context without a null check; the callers' PROV_CIPHER_HW_FN contract is itself only named, not written. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Add `# Safety: ctx is non-NULL and live, produced by this provider's block-cipher newctx/dupctx` and make the PROV_CIPHER_HW_FN type carry that contract."
+    },
+    {
+      "id": "P25-PROV-ECX_KMGMT-591",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 591,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ecx_imexport_types",
+      "authority": "providers/implementations/keymgmt/ecx_kmgmt.c:350-355",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body selects a 'static table from a scalar selector or reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-ECX_KMGMT-911",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 911,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ed25519_gettable_params",
+      "authority": "providers/implementations/keymgmt/ecx_kmgmt.c:836-839",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body selects a 'static table from a scalar selector or reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-ECX_KMGMT-916",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 916,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ed448_gettable_params",
+      "authority": "providers/implementations/keymgmt/ecx_kmgmt.c:841-844",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body selects a 'static table from a scalar selector or reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-ECX_KMGMT-1094",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 1094,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x448_settable_params",
+      "authority": "providers/implementations/keymgmt/ecx_kmgmt.c:973-976",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body selects a 'static table from a scalar selector or reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-ECX_KMGMT-1099",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 1099,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ed25519_settable_params",
+      "authority": "providers/implementations/keymgmt/ecx_kmgmt.c:978-981",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body selects a 'static table from a scalar selector or reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-ECX_KMGMT-1104",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 1104,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ed448_settable_params",
+      "authority": "providers/implementations/keymgmt/ecx_kmgmt.c:983-986",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body selects a 'static table from a scalar selector or reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-ECX_KMGMT-1356",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 1356,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "ecx_gen_settable_params",
+      "authority": "providers/implementations/keymgmt/ecx_kmgmt.c:1171-1175",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body selects a 'static table from a scalar selector or reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-KEYMGMT-920",
+      "file": "src/provider/keymgmt.rs",
+      "line": 920,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "dh_gettable_params",
+      "authority": "providers/implementations/keymgmt/dh_kmgmt.c:357-360",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a 'static table or a static NUL-terminated string and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-KEYMGMT-929",
+      "file": "src/provider/keymgmt.rs",
+      "line": 929,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "dh_settable_params",
+      "authority": "providers/implementations/keymgmt/dh_kmgmt.c:367-370",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a 'static table or a static NUL-terminated string and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-KEYMGMT-1764",
+      "file": "src/provider/keymgmt.rs",
+      "line": 1764,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "dhx_query_operation_name",
+      "authority": "providers/implementations/keymgmt/dh_kmgmt.c:878-882",
+      "body_class": "no-unsafe-operation",
+      "contract_in_source": "none: the fn is declared unsafe but has no # Safety contract",
+      "required_contract": "No caller precondition: every pointer parameter is unread and the returned pointer is a 'static table. The unsafe marker is vestigial; the correct contract is the absence of one, expressed by making the item a safe extern \"C\" fn.",
+      "preconditions": [],
+      "established_by": [
+        "vacuous: the body performs no unsafe operation"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "VESTIGIAL_UNSAFE"
+      ],
+      "blocker": "The census obligation is the unsafe fn declaration itself: the body returns a 'static table or a static NUL-terminated string and reads no argument. The body contains no unsafe operation, so there is nothing to discharge at runtime -- but the source still marks the item unsafe and records no contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Remove `unsafe` from the declaration (a safe extern \"C\" fn coerces to the unsafe fn pointer stored in the dispatch table), or, if it must remain unsafe, add `# Safety: no caller precondition; the pointer arguments are unread`."
+    },
+    {
+      "id": "P25-PROV-KEYMGMT-843",
+      "file": "src/provider/keymgmt.rs",
+      "line": 843,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "dh_import_types",
+      "authority": "providers/implementations/keymgmt/dh_kmgmt.c:305-308",
+      "body_class": "delegated-no-unsafe-effect",
+      "contract_in_source": "block SAFETY only: 'the shared helper reads only its argument'",
+      "required_contract": "No caller precondition: `selection` is a scalar bitmask; the function indexes a four-entry 'static pointer array with `type_select` in 0..=3 and returns one of the table addresses or NULL.",
+      "preconditions": [],
+      "established_by": [
+        "callee: dh_imexport_types has no unsafe operation and no caller precondition",
+        "type invariant: the two selector bits give type_select in 0..=3, inside the four-entry DH_TYPES array"
+      ],
+      "hazard_analysis": {
+        "out_parameter_extent": "n/a: no out-parameter is written",
+        "input_output_aliasing": "n/a: no pointer argument is read",
+        "partial_init_on_failure": "n/a: no fallible initialisation",
+        "callback_reentrancy": "n/a: no lock is held and no callback is invoked",
+        "secret_cleansing": "n/a: no secret-bearing storage"
+      },
+      "disposition": "BLOCKED",
+      "blocker_codes": [
+        "MISSING_FN_CONTRACT",
+        "CALLEE_CONTRACT_UNSTATED"
+      ],
+      "blocker": "The only unsafe operation is a call to a helper whose body has no unsafe operation; neither fn states a contract. No independent BOUNDARY check exists for this shared mechanism (EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED, no scoped SAFETY_DISCHARGED receipt names this site), so this subphase may not promote it.",
+      "source_change_to_discharge": "Make dh_imexport_types safe and this wrapper safe; a safe extern \"C\" fn coerces to the dispatch pointer type."
+    }
+  ],
+  "class_findings": {
+    "out_parameter_extent": "Only the two *_get_params wrappers write out-parameters. The write bound is enforced by OSSL_PARAM_set_* (data_size checked; NULL data is a size query), so no wrapper writes more than the caller's capacity. It is not stated by the wrapper's own contract.",
+    "input_output_aliasing": "No site takes an input buffer and an output buffer that can alias: the param consumers read the application's array and write the provider context; the param producers write the caller's array only. Two OSSL_PARAM entries sharing one data buffer remain the caller's ABI responsibility in the authority and here.",
+    "partial_init_on_failure": "newctx allocates zeroed blocks and has no fallible member initialiser afterwards. keccak_init_params resets before validating params, and the SSL3 arm can partially update the chain, matching the authority; the context stays a valid live value.",
+    "callback_reentrancy": "None of the 47 operations holds a lock or invokes an application-supplied callback, so there is no reentrancy edge.",
+    "secret_cleansing": "Contexts are released through OwnedCtx::Drop -> CRYPTO_clear_free. The SSL3 master-secret path (sha1::set_ctx_params, md5_sha1::set_ctx_params) uses stack digest temporaries that are cleansed only on the success path; early failure returns leave them resident. This reproduces the authority's mechanism and is recorded as a residual, not reclassified as discharged."
+  },
+  "loader_registration": {
+    "tool": "forensics/tools/consumer_closure.py",
+    "change": "load_boundaries now also admits *-sites.json receipts whose kind is site-enumerating-boundary-receipt. The adjudicator still requires a SAFETY_DISCHARGED scoped boundary whose disposition names the site, so this receipt can only move these 47 obligations to BLOCKED."
+  },
+  "residuals": [
+    "All 47 sites remain BLOCKED: no fn-level # Safety contract in source and no independent BOUNDARY review for the shared EVP_PKEY_PROVIDER mechanism.",
+    "The unsafe markers on the 26 no-unsafe-operation fns and on the 5 newctx constructors are vestigial; the correct source fix is to remove `unsafe`, which is a source change out of this measurement subphase.",
+    "freectx row provenance (the context pointer came from this dispatch row's constructor) is enforced by the dispatch table, not by the fn.",
+    "The OSSL_PARAM array termination and per-entry buffer extent are the application's ABI obligation and are not validated at the wrapper.",
+    "ossl_cipher_generic_initkey has only a 'the caller's contract' comment, so tdes_desx_cbc_newctx's dereference obligation is circularly delegated.",
+    "sha1::set_ctx_params / md5_sha1::set_ctx_params reach digest temporaries that are not cleansed on early failure returns."
+  ],
+  "gates": {
+    "closure_rerun": "see the composed openssh-closure.json produced after this receipt",
+    "fmt_clippy_tests": "NOT_RUN: no src/ file was changed. This subphase produced a forensics receipt and a consumer_closure loader change only, so the local gate was not scheduled (AGENTS.md verification scheduling: FAST is for source edits).",
+    "miri_asan": "NOT_RUN: BOUNDARY instruments are not scheduled by this measurement subphase.",
+    "independent_review": "NOT_RUN: the author of this receipt is not an independent reviewer."
+  },
+  "non_claims": [
+    "BLOCKED here means the site cannot be promoted under AGENTS.md section 7 at this subphase; it does not assert that the operation is unsound.",
+    "The receipt does not claim any of the 47 sites is SAFETY_DISCHARGED.",
+    "The enumeration is the closure's reachable set at the recorded candidate identity, not a whole-program proof.",
+    "No compatibility, cryptographic or timing claim is made."
+  ]
+}
