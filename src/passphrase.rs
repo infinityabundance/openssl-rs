@@ -496,6 +496,14 @@ impl Drop for UiScratch {
 /// The `end:` label frees in the authority's order (verify buffer, then input buffer, then the
 /// prompt, then the `UI`) and neither buffer is NULL-tested for the reasons
 /// `CRYPTO_clear_free`'s contract gives.
+///
+/// # Safety
+///
+/// `pass` is writable for `pass_size` bytes; `pass_len` is a writable `size_t`; `prompt_info` is
+/// NULL or NUL-terminated; `ui_method` is NULL or a live `UI_METHOD` that outlives the call; and
+/// `ui_data` is whatever that method's callbacks expect. Established by the callers in this file
+/// (`ossl_pw_get_passphrase` and the PEM-bridge paths), whose own contracts carry them from the
+/// C ABI.
 unsafe fn do_ui_passphrase(
     pass: *mut c_char,
     pass_size: usize,

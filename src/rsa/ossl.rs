@@ -294,6 +294,11 @@ const fn rsa_pkcs1_ossl_meth() -> *const RsaMethod {
 /// method installed it. The authority makes the same comparison for the same reason, which is that
 /// `smooth` is only allowed when the method's exponentiation *is* the Montgomery one the fast path
 /// is written against.
+///
+/// # Safety
+///
+/// `meth` is a non-NULL, live `RSA_METHOD`. Established by `rsa_ossl_mod_exp` and the other
+/// in-file callers, which read it from the live `RSA` they were handed.
 #[allow(unpredictable_function_pointer_comparisons)]
 unsafe fn is_mont_bn_mod_exp(meth: *const RsaMethod) -> bool {
     // SAFETY: `meth` is a live table per every caller's contract.

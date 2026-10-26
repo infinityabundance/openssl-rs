@@ -706,6 +706,13 @@ unsafe fn check_suiteb_cipher_list(
 // ---------------------------------------------------------------------------------------------
 
 /// `ssl_cipher_ptr_id_cmp` — `ssl_lib.c:3239-3247`, the `cipher_list_by_id` comparator.
+///
+/// # Safety
+///
+/// `a`/`b` are the addresses of stack element slots, each readable for one `*const SslCipher`, and
+/// each element is NULL or a live `SSL_CIPHER` (every entry this module pushes comes from the
+/// static cipher table). Established by `OPENSSL_sk_sort`, which installs this comparator with
+/// `OPENSSL_sk_set_cmp_func` in [`update_cipher_list_by_id`] over a stack this module populated.
 unsafe extern "C" fn ssl_cipher_ptr_id_cmp(a: *const c_void, b: *const c_void) -> c_int {
     // SAFETY: the stack comparator receives pointers to the elements, so each argument is a
     // `*const *const SslCipher`.
@@ -756,6 +763,13 @@ fn mac_table_mask_ok(algorithm2: u32) -> bool {
 }
 
 /// `update_cipher_list` — `ssl_ciph.c:1343-1387`.
+///
+/// # Safety
+///
+/// `ctx` is a live `SSL_CTX`/`SSL` and both its `disabled_enc_mask`/`disabled_mac_mask` fields are
+/// readable; `cipher_list` and `cipher_list_by_id` are writable slots holding NULL or a stack this
+/// context owns; `tls13_ciphersuites` is NULL or a live stack. Established by
+/// [`ssl_create_cipher_list`], the only caller, from the caller-owned `SSL_CTX` it was given.
 unsafe fn update_cipher_list(
     ctx: *mut SslCtx,
     cipher_list: *mut *mut OpenSslStack,
@@ -807,6 +821,13 @@ unsafe fn update_cipher_list(
 }
 
 /// `ciphersuite_cb` — `ssl_ciph.c:1273-1302`.
+///
+/// # Safety
+///
+/// `CONF_parse_list`'s element callback contract: `elem` is readable for `len` bytes, and `arg`
+/// is the `*mut OpenSSLStack` the caller passed. Established by
+/// [`set_ciphersuites`], which is the only installer of this callback and passes a freshly
+/// allocated, exclusively owned stack as `arg`.
 unsafe extern "C" fn ciphersuite_cb(elem: *const c_char, len: c_int, arg: *mut c_void) -> c_int {
     let ciphersuites = arg as *mut OpenSslStack;
     if elem.is_null() || len <= 0 || len > 79 {

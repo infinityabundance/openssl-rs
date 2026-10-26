@@ -277,6 +277,13 @@ unsafe fn encode_der_dsa_sig(out: &mut Vec<u8>, r: *const BigNum, s: *const BigN
 /// The short form is a length below 0x80; `0x81` and `0x82` are the two length-prefixed long
 /// forms the authority accepts. Anything else — an indefinite length, a form wider than two
 /// octets, or an exhausted packet — answers `None`.
+///
+/// # Safety
+///
+/// `pkt` is a view of a readable buffer at least `pkt.remaining()` bytes long, and that
+/// invariant holds for the sub-packets it returns. Established by the callers that construct the
+/// packet from a caller-supplied byte range and by [`Packet::get_sub`], which only hands back a
+/// range inside its parent.
 unsafe fn decode_der_length(pkt: &mut Packet) -> Option<Packet> {
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
     let byte = unsafe { pkt.get_1()? } as usize;

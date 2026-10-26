@@ -141,8 +141,11 @@ static GET_INDEX_ONCE_RET: AtomicI32 = AtomicI32::new(0);
 /// `static void ui_new_method_data(...)` — `crypto/ui/ui_util.c:53-60`.
 ///
 /// A no-op `CRYPTO_EX_new`: the data is allocated externally and attached with
-/// `UI_method_set_ex_data`, so there is nothing for the constructor to do.
-unsafe extern "C" fn ui_new_method_data(
+/// `UI_method_set_ex_data`, so there is nothing for the constructor to do. It is a safe
+/// `extern "C" fn` because the body reads no argument, so there is no caller precondition to
+/// state, and a safe fn coerces to the `CRYPTO_EX_new` slot (the same reason
+/// `src/runtime/ex_data.rs`'s `dummy_new` is safe).
+extern "C" fn ui_new_method_data(
     _parent: *mut c_void,
     _ptr: *mut c_void,
     _ad: *mut CryptoExData,
@@ -158,6 +161,14 @@ unsafe extern "C" fn ui_new_method_data(
 /// `pem_password_cb_data`, so freeing one does not free the other's. Answers 0 when the memdup
 /// fails, which makes the whole duplication fail rather than leaving two methods sharing a
 /// pointer.
+///
+/// # Safety
+///
+/// `pptr` is a readable and writable ex-data slot whose current value is NULL or a live
+/// `PemPasswordCbData` block allocated through this crate's allocator seam, and no other owner
+/// releases it during the call. Established by `CRYPTO_dup_ex_data`, which passes the destination
+/// method's own slot (the source value was copied from the registered index) and treats a 0
+/// answer as a failed duplication.
 unsafe extern "C" fn ui_dup_method_data(
     _to: *mut CryptoExData,
     _from: *const CryptoExData,
@@ -236,7 +247,10 @@ fn run_once_get_index() -> bool {
 }
 
 /// `static int ui_open(UI *ui)` — `crypto/ui/ui_util.c:91-94`.
-unsafe extern "C" fn ui_open(_ui: *mut Ui) -> c_int {
+///
+/// A safe `extern "C" fn`: the body reads no argument and performs no unsafe operation, so there
+/// is no caller precondition, and a safe fn coerces to the `UiOpenSessionFn` slot.
+extern "C" fn ui_open(_ui: *mut Ui) -> c_int {
     1
 }
 
@@ -302,12 +316,18 @@ unsafe extern "C" fn ui_read(ui: *mut Ui, uis: *mut UiString) -> c_int {
 }
 
 /// `static int ui_write(UI *ui, UI_STRING *uis)` — `crypto/ui/ui_util.c:134-137`.
-unsafe extern "C" fn ui_write(_ui: *mut Ui, _uis: *mut UiString) -> c_int {
+///
+/// A safe `extern "C" fn` for the reason [`ui_open`] gives: no argument is read and the body
+/// contains no unsafe operation.
+extern "C" fn ui_write(_ui: *mut Ui, _uis: *mut UiString) -> c_int {
     1
 }
 
 /// `static int ui_close(UI *ui)` — `crypto/ui/ui_util.c:138-141`.
-unsafe extern "C" fn ui_close(_ui: *mut Ui) -> c_int {
+///
+/// A safe `extern "C" fn` for the reason [`ui_open`] gives: `_ui` is unread and the body contains
+/// no unsafe operation, so there is no caller precondition.
+extern "C" fn ui_close(_ui: *mut Ui) -> c_int {
     1
 }
 

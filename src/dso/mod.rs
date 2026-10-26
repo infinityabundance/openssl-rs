@@ -882,7 +882,15 @@ pub(crate) unsafe fn c_str_or_null_literal<'a>(p: *const c_char) -> &'a [u8] {
 /// The substitution is *reachable* here in a way it is not at the load and bind sites:
 /// those two fail immediately after a `dlopen`/`dlsym` that just set `dlerror`'s state,
 /// whereas this one fails because `dladdr` did -- and `dladdr` does not.
-pub(crate) unsafe fn add_error_data_pathbyaddr() {
+///
+/// # Preconditions
+///
+/// None: both values this appends are produced inside the body -- the `dlfcn_pathbyaddr(): `
+/// literal and either the libc-owned `dlerror()` result (read for the duration of the call) or
+/// the `"<NULL>"` substitution. The vector is this frame's and is NUL-terminated before the
+/// append. The libc call and the error-queue append are internally justified, not caller
+/// obligations, so the former `unsafe fn` marker was vestigial.
+pub(crate) fn add_error_data_pathbyaddr() {
     let mut m = b"dlfcn_pathbyaddr(): ".to_vec();
     // SAFETY: `dlerror()` answers NULL or a NUL-terminated string.
     m.extend_from_slice(unsafe { c_str_or_null_literal(dlerror()) });

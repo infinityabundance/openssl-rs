@@ -112,6 +112,11 @@ const MLX_HAVE_PUBKEY: c_uint = 1;
 const MLX_HAVE_PRVKEY: c_uint = 2;
 
 /// `mlx_kem_have_pubkey(key)` — `prov/mlx_kem.h:44`, `(key)->state > 0`.
+///
+/// # Safety
+///
+/// `key` is a non-NULL, live `MlxKey`. Established by the key-management callers in this file,
+/// which hold the key object the provider dispatch handed them.
 #[inline]
 pub(crate) unsafe fn mlx_kem_have_pubkey(key: *const MlxKey) -> bool {
     // SAFETY: `key` is live per the caller's contract.

@@ -1049,6 +1049,12 @@ static SSL_CERT_TYPE_TBL: &[SslTraceTbl] = &[
 // -------------------------------------------------------------------------------------------
 
 /// `SSL_CONNECTION_IS_DTLS(sc)` — `ssl_local.h:257-258`, through the method's `dtls` bit.
+///
+/// # Safety
+///
+/// `sc` is a live `SSL_CONNECTION` (`Ssl`) and its `method`, when non-NULL, is a live method
+/// table. Established by the trace printers below, which receive the connection the trace
+/// callback was handed and hold it for the duration of the print.
 unsafe fn is_dtls(sc: *const Ssl) -> bool {
     // SAFETY: `sc` is live per the caller's contract.
     !unsafe { (*sc).method }.is_null() && unsafe { (*(*sc).method).dtls }

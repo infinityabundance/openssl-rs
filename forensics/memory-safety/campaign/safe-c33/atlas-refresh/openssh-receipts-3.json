@@ -1,0 +1,1015 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-receipts-3",
+  "subphase": "P25 openssh closure: third cluster (X509 ext printers, cipher-list callbacks, UI/ex-data callbacks, ASN.1 free/stream callbacks, legacy digests, encoder/decoder thunks, vendor helpers)",
+  "date": "2026-10-26",
+  "candidate": {
+    "branch": "main (integrate/safe-c33 merged; see source_head_note)",
+    "source_head": "791e01e220168d8fc2bc477a9df0c70529ad8a32",
+    "source_head_note": "measured on the working tree at 791e01e220168d8fc2bc477a9df0c70529ad8a32 plus this subphase's uncommitted source edits; the subagent did not commit or push",
+    "inventory": "v1b-candidate-freeze.json (source head 4a95b73a8)",
+    "closure_runs": [
+      "court/tmp/openssh-closure/closure-ssh-r3-after.json",
+      "court/tmp/openssh-closure/closure-sshd-r3-after.json"
+    ],
+    "closure_runs_note": "the post-receipt runs use the exact artefacts the build records name: court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh (sha256 c8723f34...) and court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd (sha256 dccccf07...). An earlier re-run in this subphase used copied binaries under court/tmp/openssh-closure/{client,server} whose digests do not match the build records; the closure refused it on STALE_HASH and it is NOT offered as identity evidence. Its counts were nevertheless 345 reachable files / 120 obligations / 0 DISCHARGED / 83 BLOCKED / 37 UNKNOWN, i.e. the campaign's recorded pre-state."
+  },
+  "scope": {
+    "reachable_operation_set": "the openssh closure's remaining V1 production obligations (37 across 24 files) plus every other unsafe item counted in additional_operations",
+    "additional_operations_policy": "comment- and string-stripped lexical counts over each owning file; counted, not audited. They are not claimed as reviewed.",
+    "discharge_claim": "none. X509_VERIFY_POLICY, SSL_SESSION, RAND_CMS_STORE_KEYFMT and EVP_PKEY_PROVIDER are OWNERSHIP_RECONSTRUCTED and C_ABI_CONTRACT is UNSAFE_OPEN, so a site receipt can only move UNKNOWN to BLOCKED (or, for the ERR site, to UNKNOWN with a precise reason)."
+  },
+  "summary": {
+    "sites_enumerated": 37,
+    "by_source_state": {
+      "ELIMINATED": 7,
+      "CONTRACTED": 30
+    },
+    "discharged": 0,
+    "site_dispositions": {
+      "ELIMINATED": 7,
+      "CONTRACTED": 27,
+      "BLOCKED": 3
+    },
+    "expected_blocked": 36,
+    "expected_unknown": 1,
+    "additional_unsafe_items_by_file": {
+      "src/cms/cms_asn1.rs": {
+        "unsafe_fn_items": 18,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 35,
+        "unsafe_impls": 3
+      },
+      "src/cms/cms_sd.rs": {
+        "unsafe_fn_items": 40,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 307,
+        "unsafe_impls": 0
+      },
+      "src/decoder_meth.rs": {
+        "unsafe_fn_items": 57,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 96,
+        "unsafe_impls": 1
+      },
+      "src/decoder_pkey.rs": {
+        "unsafe_fn_items": 27,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 182,
+        "unsafe_impls": 0
+      },
+      "src/dso/mod.rs": {
+        "unsafe_fn_items": 37,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 63,
+        "unsafe_impls": 1
+      },
+      "src/ec/asn1.rs": {
+        "unsafe_fn_items": 35,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 49,
+        "unsafe_impls": 1
+      },
+      "src/encoder_meth.rs": {
+        "unsafe_fn_items": 55,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 81,
+        "unsafe_impls": 2
+      },
+      "src/evp/legacy_md5.rs": {
+        "unsafe_fn_items": 8,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 8,
+        "unsafe_impls": 1
+      },
+      "src/evp/legacy_sha.rs": {
+        "unsafe_fn_items": 21,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 21,
+        "unsafe_impls": 1
+      },
+      "src/passphrase.rs": {
+        "unsafe_fn_items": 21,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 95,
+        "unsafe_impls": 0
+      },
+      "src/pem/pem_pk8.rs": {
+        "unsafe_fn_items": 35,
+        "unsafe_extern_blocks": 1,
+        "unsafe_blocks": 74,
+        "unsafe_impls": 0
+      },
+      "src/pem/pem_pkey.rs": {
+        "unsafe_fn_items": 31,
+        "unsafe_extern_blocks": 1,
+        "unsafe_blocks": 131,
+        "unsafe_impls": 0
+      },
+      "src/pkcs7/pk7_asn1.rs": {
+        "unsafe_fn_items": 38,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 63,
+        "unsafe_impls": 4
+      },
+      "src/provider/dsa_sig.rs": {
+        "unsafe_fn_items": 42,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 45,
+        "unsafe_impls": 1
+      },
+      "src/provider/encode_key2any.rs": {
+        "unsafe_fn_items": 74,
+        "unsafe_extern_blocks": 1,
+        "unsafe_blocks": 221,
+        "unsafe_impls": 1
+      },
+      "src/provider/mlx_kmgmt.rs": {
+        "unsafe_fn_items": 34,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 36,
+        "unsafe_impls": 1
+      },
+      "src/provider/rsa_sig.rs": {
+        "unsafe_fn_items": 57,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 58,
+        "unsafe_impls": 2
+      },
+      "src/rand/rand_lib.rs": {
+        "unsafe_fn_items": 52,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 250,
+        "unsafe_impls": 2
+      },
+      "src/rsa/ossl.rs": {
+        "unsafe_fn_items": 22,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 64,
+        "unsafe_impls": 1
+      },
+      "src/ssl/ssl_ciph.rs": {
+        "unsafe_fn_items": 42,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 88,
+        "unsafe_impls": 0
+      },
+      "src/ssl/t1_trce.rs": {
+        "unsafe_fn_items": 25,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 327,
+        "unsafe_impls": 1
+      },
+      "src/ui/ui_util.rs": {
+        "unsafe_fn_items": 9,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 34,
+        "unsafe_impls": 0
+      },
+      "src/x509/v3_asid.rs": {
+        "unsafe_fn_items": 31,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 248,
+        "unsafe_impls": 0
+      },
+      "src/x509/v3_timespec.rs": {
+        "unsafe_fn_items": 46,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 173,
+        "unsafe_impls": 0
+      }
+    }
+  },
+  "closure_rerun": {
+    "tool": "forensics/tools/consumer_closure.py",
+    "tool_self_test": "not re-run in this subphase",
+    "boundary_input": "atlas-refresh/openssh-receipts-3-sites.json (new)",
+    "before": {
+      "source": "the campaign's recorded pre-state for the same 24 files",
+      "ssh": {
+        "reachable_files": 345,
+        "obligations": 120,
+        "DISCHARGED": 0,
+        "BLOCKED": 83,
+        "UNKNOWN": 37,
+        "reachable_files_without_receipt": 24,
+        "refusals": [
+          "MISSING_BOUNDARY_RECEIPT",
+          "UNKNOWN_OBLIGATION"
+        ]
+      }
+    },
+    "after": {
+      "ssh": {
+        "state": "RUN",
+        "reachable_files": 345,
+        "obligations": 120,
+        "DISCHARGED": 0,
+        "BLOCKED": 119,
+        "UNKNOWN": 1,
+        "reachable_files_with_receipt": 53,
+        "reachable_files_without_receipt": 0,
+        "refusals": [
+          "UNKNOWN_OBLIGATION"
+        ],
+        "artifact_sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57"
+      },
+      "sshd": {
+        "state": "RUN",
+        "reachable_files": 337,
+        "obligations": 120,
+        "DISCHARGED": 0,
+        "BLOCKED": 119,
+        "UNKNOWN": 1,
+        "reachable_files_with_receipt": 53,
+        "reachable_files_without_receipt": 0,
+        "refusals": [
+          "UNKNOWN_OBLIGATION"
+        ],
+        "artifact_sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+      }
+    },
+    "delta_explained": "BLOCKED 83 -> 119 and UNKNOWN 37 -> 1: the 36 obligations whose files had no boundary receipt moved from UNKNOWN to BLOCKED (7 of them are ELIMINATED in the current source; the receipt still reports the inventory coordinate, so they are BLOCKED rather than DISCHARGED). MISSING_BOUNDARY_RECEIPT disappears (24 -> 0 files). The one remaining UNKNOWN is intentionally not convertible: src/dso/mod.rs:885 belongs to ERR, whose mechanism-scope discharge does not name it, so the adjudicator must refuse a blanket discharge. DISCHARGED stays 0 by design.",
+    "why_discharged_cannot_rise": "a DISCHARGED obligation requires either a mechanism-scope SAFETY_DISCHARGED receipt naming the exact site or a scoped-boundary discharge. Neither exists for these mechanisms, and AGENTS.md sections 15/21 forbid the author of a safety claim from being its sole adjudicator."
+  },
+  "boundaries": [
+    {
+      "id": "OSSH-R3-001",
+      "file": "src/x509/v3_timespec.rs",
+      "line": 1326,
+      "inventory_line": 1326,
+      "current_line": 1334,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "i2r_OSSL_TIME_SPEC_ABSOLUTE",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`time` is a non-NULL, live `OSSL_TIME_SPEC_ABSOLUTE` and `out` a live `BIO` for the call; `_method` and `_indent` are unread.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "src/x509/v3_prn.rs:247,288 -- the only i2r caller path -- passes the non-NULL object its own d2i produced and the caller's live BIO; the in-file callers pass a live OSSL_TIME_SPEC member."
+      ],
+      "residual": "A C caller that invokes the callback with an object of another item type is bound by the X509V3_EXT_METHOD ABI contract, which this receipt does not prove."
+    },
+    {
+      "id": "OSSH-R3-002",
+      "file": "src/x509/v3_timespec.rs",
+      "line": 1468,
+      "inventory_line": 1468,
+      "current_line": 1482,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "print_bit_month",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`out` is a live `BIO`; `bs` is a non-NULL, live `ASN1_BIT_STRING` that is a member of the object being printed.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "i2r_OSSL_PERIOD (same file) passes an ASN1_BIT_STRING field of the decoded OSSL_TIME_PERIOD and the live output BIO."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-003",
+      "file": "src/x509/v3_timespec.rs",
+      "line": 1554,
+      "inventory_line": 1554,
+      "current_line": 1573,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "print_int_named_day",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`out` is a live `BIO`; `nd` is a value.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "i2r_OSSL_PERIOD (same file) passes the live output BIO."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-004",
+      "file": "src/x509/v3_timespec.rs",
+      "line": 1572,
+      "inventory_line": 1572,
+      "current_line": 1596,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "print_bit_named_day",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`out` is a live `BIO`; `bs` is a non-NULL, live `ASN1_BIT_STRING` member of the object being printed.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "forwards print_day_of_week's contract unchanged; the caller is i2r_OSSL_PERIOD."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-005",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 709,
+      "inventory_line": 709,
+      "current_line": 716,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "ssl_cipher_ptr_id_cmp",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: SSL_SESSION is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`a`/`b` are element-slot addresses, each readable for one `*const SslCipher`, and each element is NULL or a live `SSL_CIPHER`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "OPENSSL_sk_sort invokes the comparator installed by OPENSSL_sk_set_cmp_func in update_cipher_list_by_id over a stack this module populated from the static cipher table; no other element kind is ever pushed."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-006",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 759,
+      "inventory_line": 759,
+      "current_line": 773,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "update_cipher_list",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: SSL_SESSION is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`ctx` is live with readable `disabled_enc_mask`/`disabled_mac_mask`; `cipher_list` and `cipher_list_by_id` are writable slots holding NULL or a stack the context owns; `tls13_ciphersuites` is NULL or a live stack.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "ssl_create_cipher_list (same file), the only caller, from the caller-owned SSL_CTX it was given."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-007",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 810,
+      "inventory_line": 810,
+      "current_line": 831,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "ciphersuite_cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: SSL_SESSION is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "CONF_parse_list element callback: `elem` is readable for `len` bytes and `arg` is the live `*mut OpenSSLStack` the caller passed.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "set_ciphersuites (same file) is the only installer and passes a freshly allocated, exclusively owned stack; CONF_parse_list bounds `len` by the element separator."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-008",
+      "file": "src/ui/ui_util.rs",
+      "line": 145,
+      "inventory_line": 145,
+      "current_line": 148,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "ui_new_method_data",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged.",
+      "contract": "None required: every argument is unread and the body is empty.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; a safe fn coerces to the CRYPTO_EX_new slot, as src/runtime/ex_data.rs's dummy_new already does."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it."
+    },
+    {
+      "id": "OSSH-R3-009",
+      "file": "src/ui/ui_util.rs",
+      "line": 161,
+      "inventory_line": 161,
+      "current_line": 172,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "ui_dup_method_data",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: C_ABI_CONTRACT is UNSAFE_OPEN and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`pptr` is a readable and writable ex-data slot whose value is NULL or a live `PemPasswordCbData` block allocated through this crate's allocator seam, and no other owner releases it during the call.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "CRYPTO_dup_ex_data passes the destination method's own slot and treats a 0 answer as a failed duplication."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-010",
+      "file": "src/ui/ui_util.rs",
+      "line": 310,
+      "inventory_line": 310,
+      "current_line": 330,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "ui_close",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged.",
+      "contract": "None required: `_ui` is unread and the body is the constant 1.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; ui_open and ui_write in the same file were the same shape and were converted with it."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it."
+    },
+    {
+      "id": "OSSH-R3-011",
+      "file": "src/x509/v3_asid.rs",
+      "line": 797,
+      "inventory_line": 797,
+      "current_line": 804,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "i2r_ASIdentifiers",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`ext` is a non-NULL, live `ASIdentifiers` of the method's own item type and `out` is a live `BIO`; `_method` is unread.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "src/x509/v3_prn.rs:247,288 checks the decoded object for NULL before calling i2r and passes the caller's live output BIO."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-012",
+      "file": "src/x509/v3_asid.rs",
+      "line": 841,
+      "inventory_line": 841,
+      "current_line": 855,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "asid_or_range_cmp",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`a_`/`b_` are element-slot addresses each holding a non-NULL, live `ASIdOrRange` whose selected union arm is the one `type_` names.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "OPENSSL_sk_sort passes slot addresses for a stack this module filled from its own constructors (X509v3_asid_add_id_or_range), which never push NULL."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-013",
+      "file": "src/x509/v3_asid.rs",
+      "line": 1083,
+      "inventory_line": 1083,
+      "current_line": 1104,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "operation": "as_identifier_choice_is_canonical",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`choice` is NULL or a live `ASIdentifierChoice`; when the `asIdsOrRanges` arm is selected it is a live stack of NULL-or-live `ASIdOrRange` (extract_min_max is called with each element and refuses NULL).",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "X509v3_asid_is_canonical/X509v3_asid_subset pass a member of a decoded ASIdentifiers or NULL."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-014",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 181,
+      "inventory_line": 181,
+      "current_line": 192,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "BLOCKED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`ctx` is the live `EVP_MD_CTX` this legacy method is initialised on and `EVP_MD_CTX_get0_md_data(ctx)` is a writable `SHA_CTX`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "evp_md_init_legacy allocates md_data from (*type).ctx_size and calls init afterwards (src/evp/digest.rs:2302,2339), and evp_md_init_internal routes only EVP_ORIG_METH to that arm (src/evp/digest.rs:2146)."
+      ],
+      "residual": "This table is EVP_ORIG_GLOBAL with ctx_size 0, so the legacy arm that would supply the block is not taken: the provider implementation is fetched by NID first. The callback would only become unsafe-reachable if a caller made the table its own legacy method with a matching ctx_size; no exported entry point does, and `origin` has no setter.",
+      "blocked_reason": "the contract is written, but no in-crate call establishes it: the legacy arm (evp_md_init_legacy) allocates md_data only when (*type).ctx_size != 0, and this table's ctx_size is 0, so the SHA_CTX pointer the callback would take is never supplied. The site is safe because the origin guard keeps it unreachable, which is not the same as discharging the callback contract."
+    },
+    {
+      "id": "OSSH-R3-015",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 224,
+      "inventory_line": 224,
+      "current_line": 241,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha224_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "BLOCKED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "As sha1_init, with `md_data(ctx)` a writable `SHA256_CTX`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "as sha1_init (same origin guard and ctx_size condition)."
+      ],
+      "residual": "as sha1_init.",
+      "blocked_reason": "the contract is written, but no in-crate call establishes it: the legacy arm (evp_md_init_legacy) allocates md_data only when (*type).ctx_size != 0, and this table's ctx_size is 0, so the SHA256_CTX pointer the callback would take is never supplied. The site is safe because the origin guard keeps it unreachable, which is not the same as discharging the callback contract."
+    },
+    {
+      "id": "OSSH-R3-016",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "line": 489,
+      "inventory_line": 489,
+      "current_line": 499,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "pk7_cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`pval` is the live value slot of the PKCS7 item being encoded; `exarg` is NULL on every operation except the four streaming ones, where it is a live `ASN1_STREAM_ARG` in asn1t.h's order (out, ndef_bio, boundary); `_it` is unread.",
+      "established_by": [
+        "source: # Safety section added to the fn; local Asn1StreamArg replaced by the canonical asn1::bio_asn1 type",
+        "src/asn1/bio_asn1.rs:903-931 (BIO_new_NDEF) passes &mut ASN1_STREAM_ARG for ASN1_OP_STREAM_PRE; src/asn1/asn_mime.rs:993-1028 does the same for the detached arms; the non-streaming operations pass NULL and take the `_ => {}` arm."
+      ],
+      "residual": "See OSSH-R3-D1: the site also carried a layout defect, now fixed and pinned by asn1_stream_arg_keeps_the_authority_field_order."
+    },
+    {
+      "id": "OSSH-R3-017",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "line": 578,
+      "inventory_line": 578,
+      "current_line": 590,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "si_cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`pval` is the live value slot of the PKCS7_SIGNER_INFO being freed; on ASN1_OP_FREE_POST `*pval` is still the live object.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "src/asn1/fre.rs:271-274 calls ASN1_OP_FREE_POST with the caller's slot after releasing the template's fields and before the enclosing block."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-018",
+      "file": "src/provider/encode_key2any.rs",
+      "line": 170,
+      "inventory_line": 170,
+      "current_line": 175,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "(strcmp)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "libc `strcmp`: both arguments are non-NULL, NUL-terminated pointers readable for the call; the result is a value and nothing is written or freed through the declaration.",
+      "established_by": [
+        "source: SAFETY comment added to the extern block",
+        "the single call site (generate_decoder's parameter walk) passes a key string it already tested for NULL and a `c\"...\"` literal."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-019",
+      "file": "src/provider/encode_key2any.rs",
+      "line": 2230,
+      "inventory_line": 2230,
+      "current_line": 2237,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "key2any_unused_k2d",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged.",
+      "contract": "None required: every argument is unread and the body is the constant 0.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; a safe fn coerces to the KeyToDerFn slot the make_encoder! table passes it through."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it. The table comment records that the arm is unreachable under its row's selection mask."
+    },
+    {
+      "id": "OSSH-R3-020",
+      "file": "src/provider/rsa_sig.rs",
+      "line": 462,
+      "inventory_line": 462,
+      "current_line": 467,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "rsa_pss_restricted",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`ctx` is a live `PROV_RSA_CTX`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "every caller in this file holds the context the provider dispatch handed it."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-021",
+      "file": "src/provider/rsa_sig.rs",
+      "line": 3183,
+      "inventory_line": 3183,
+      "current_line": 3192,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "rsa_sigalg_query_key_types",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged.",
+      "contract": "None required: no argument, and the answer is the address of a 'static array.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; the inner `unsafe impl Sync` remains with its own SAFETY comment, and a safe fn coerces to the signature dispatch slot."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it."
+    },
+    {
+      "id": "OSSH-R3-022",
+      "file": "src/cms/cms_asn1.rs",
+      "line": 495,
+      "inventory_line": 495,
+      "current_line": 502,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "cms_si_cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`pval` is the live value slot of the CMS_SIGNER_INFO being freed; on ASN1_OP_FREE_POST `*pval` is the live object and its pkey/signer/mctx/pctx members are NULL or owned by it.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "src/asn1/fre.rs:312-347 calls ASN1_OP_FREE_POST with the caller's slot after the template walk and before the block release."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-023",
+      "file": "src/cms/cms_sd.rs",
+      "line": 2211,
+      "inventory_line": 2211,
+      "current_line": 2217,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "x509_algor_free_void",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`p` is NULL or the `X509_ALGOR` whose reference the calling stack owns and is releasing.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the single call site (CMS_add1_signer at cms_sd.rs:826) owns the STACK_OF(X509_ALGOR) that CMS_add_standard_smimecap built."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-024",
+      "file": "src/decoder_meth.rs",
+      "line": 767,
+      "inventory_line": 767,
+      "current_line": 774,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "decoder_instance_free_thunk",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`p` is NULL or the `OsslDecoderInstance` whose single stack reference is being released.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the OsslDecoderCtx CtxDestroy impl calls OPENSSL_sk_pop_free over decoder_insts; each element is allocated by ossl_decoder_instance_new/_dup and holds one reference."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-025",
+      "file": "src/decoder_pkey.rs",
+      "line": 548,
+      "inventory_line": 548,
+      "current_line": 554,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "keymgmt_free_thunk",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`p` is NULL or the `EvpKeyMgmt` whose stack reference is being released.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "installed over the keymgmts stack, whose elements are EVP_KEYMGMT_up_ref'd insertions owned by that stack."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-026",
+      "file": "src/dso/mod.rs",
+      "line": 885,
+      "inventory_line": 885,
+      "current_line": 893,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ERR",
+      "operation": "add_error_data_pathbyaddr",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "UNKNOWN",
+      "closure": "UNKNOWN: ERR is SAFETY_DISCHARGED at mechanism scope, but mechanism-discharge-ERR.json's declared surface does not name this file/line; consumer-scope re-adjudication is required. The source marker is gone, but the V1 obligation coordinate is unchanged in the frozen inventory.",
+      "contract": "None required: no argument, and both appended values are produced inside the body (the literal and either libc's dlerror() result or the \"<NULL>\" substitution).",
+      "established_by": [
+        "source: `unsafe` removed from the fn; the caller in src/dso/dlfcn.rs was updated",
+        "the libc call and the error-queue append carry their own block SAFETY comments; there was no caller obligation for the marker to encode."
+      ],
+      "residual": "The obligation does NOT become BLOCKED: ERR is SAFETY_DISCHARGED at mechanism scope and mechanism-discharge-ERR.json's surface does not name src/dso/mod.rs:885, so the adjudicator must return UNKNOWN (consumer-scope re-adjudication required). Extending a discharged surface is not something this receipt may do."
+    },
+    {
+      "id": "OSSH-R3-027",
+      "file": "src/ec/asn1.rs",
+      "line": 280,
+      "inventory_line": 280,
+      "current_line": 287,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "decode_der_length",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`pkt` is a view of a readable buffer at least `pkt.remaining()` bytes long.",
+      "established_by": [
+        "source: # Safety section added to the fn (the fn's block SAFETY comments already referred to a section that did not exist)",
+        "the callers construct the packet from a caller-supplied byte range, and get_sub only returns a range inside its parent."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-028",
+      "file": "src/encoder_meth.rs",
+      "line": 269,
+      "inventory_line": 269,
+      "current_line": 272,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_encoder_new",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged.",
+      "contract": "None required: no argument, and the only raw dereference is of the fresh block this frame allocated.",
+      "established_by": [
+        "source: `unsafe` removed from the fn; its caller in this file was updated",
+        "OwnedCtx::zalloc establishes the allocation and the documented zero-validity invariant; the refcnt store is of this frame's own block."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it."
+    },
+    {
+      "id": "OSSH-R3-029",
+      "file": "src/evp/legacy_md5.rs",
+      "line": 147,
+      "inventory_line": 147,
+      "current_line": 158,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "BLOCKED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`ctx` is the live `EVP_MD_CTX` this legacy method is initialised on and `EVP_MD_CTX_get0_md_data(ctx)` is a writable `MD5_CTX`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "evp_md_init_legacy allocates md_data from (*type).ctx_size and calls init afterwards; evp_md_init_internal routes only EVP_ORIG_METH to that arm."
+      ],
+      "residual": "As sha1_init: this table is EVP_ORIG_GLOBAL with ctx_size 0, so the legacy arm is not taken and the provider implementation replaces it by NID first.",
+      "blocked_reason": "the contract is written, but no in-crate call establishes it: the legacy arm (evp_md_init_legacy) allocates md_data only when (*type).ctx_size != 0, and this table's ctx_size is 0, so the MD5_CTX pointer the callback would take is never supplied. The site is safe because the origin guard keeps it unreachable, which is not the same as discharging the callback contract."
+    },
+    {
+      "id": "OSSH-R3-030",
+      "file": "src/passphrase.rs",
+      "line": 499,
+      "inventory_line": 499,
+      "current_line": 507,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "operation": "do_ui_passphrase",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: C_ABI_CONTRACT is UNSAFE_OPEN and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`pass` is writable for `pass_size` bytes; `pass_len` is a writable `size_t`; `prompt_info` is NULL or NUL-terminated; `ui_method` is NULL or live for the call; `ui_data` is what that method's callbacks expect.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the in-file callers (ossl_pw_get_passphrase and the PEM-bridge paths) forward contracts that reach them through the C ABI; the buffers this fn allocates are cleansed by UiScratch::drop on every failure path."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-031",
+      "file": "src/pem/pem_pk8.rs",
+      "line": 67,
+      "inventory_line": 67,
+      "current_line": 71,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "(strlen)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "libc `strlen`: its argument is a non-NULL, NUL-terminated pointer readable for the call; the result is a value.",
+      "established_by": [
+        "source: SAFETY comment added to the extern block",
+        "the single call site uses it only on the caller-supplied `u` password string, which do_pk8pkey's contract requires to be NUL-terminated."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-032",
+      "file": "src/pem/pem_pkey.rs",
+      "line": 110,
+      "inventory_line": 110,
+      "current_line": 114,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "(strcmp, strlen)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "libc `strcmp`/`strlen`: arguments are non-NULL, NUL-terminated pointers readable for the call; results are values.",
+      "established_by": [
+        "source: SAFETY comment added to the extern block",
+        "call sites pass 'static literals or caller-supplied strings that the entry points' contracts require to be NUL-terminated."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-033",
+      "file": "src/provider/dsa_sig.rs",
+      "line": 1510,
+      "inventory_line": 1510,
+      "current_line": 1514,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dsa_sigalg_query_key_types",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged.",
+      "contract": "None required: no argument, and the answer is the address of a 'static array.",
+      "established_by": [
+        "source: `unsafe` removed from the fn in this receipt",
+        "the fn now declares `extern \"C\" fn`; the inner `unsafe impl Sync` remains with its own SAFETY comment, and a safe fn coerces to the signature dispatch slot."
+      ],
+      "residual": "The inventory obligation stands as a V1 coordinate; the current source has no unsafe operation at it."
+    },
+    {
+      "id": "OSSH-R3-034",
+      "file": "src/provider/mlx_kmgmt.rs",
+      "line": 116,
+      "inventory_line": 116,
+      "current_line": 121,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "mlx_kem_have_pubkey",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`key` is a non-NULL, live `MlxKey`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the key-management callers in this file hold the key object the provider dispatch handed them."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-035",
+      "file": "src/rand/rand_lib.rs",
+      "line": 660,
+      "inventory_line": 660,
+      "current_line": 667,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "operation": "rand_set_rand_method_internal",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`meth` is NULL or a table that stays live for at least as long as it is installed; `e` is NULL (the only value any current caller passes).",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "RAND_set_rand_method's C-ABI contract; both values are published to process-wide storage and are not read back as objects here."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-036",
+      "file": "src/rsa/ossl.rs",
+      "line": 298,
+      "inventory_line": 298,
+      "current_line": 303,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "is_mont_bn_mod_exp",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`meth` is a non-NULL, live `RSA_METHOD`.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "rsa_ossl_mod_exp and the other in-file callers read it from the live RSA they were handed."
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R3-037",
+      "file": "src/ssl/t1_trce.rs",
+      "line": 1052,
+      "inventory_line": 1052,
+      "current_line": 1058,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "operation": "is_dtls",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: SSL_SESSION is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site.",
+      "contract": "`sc` is a live SSL_CONNECTION (Ssl), and `(*sc).method` when non-NULL is a live method table.",
+      "established_by": [
+        "source: # Safety section added to the fn",
+        "the trace printers that call it hold the connection the trace callback was handed."
+      ],
+      "residual": null
+    }
+  ],
+  "ui_classification": {
+    "finding": "consumer_closure.py's MECHANISM_RULES contain no rule matching src/ui/. The three ui_util.rs obligations are classified only by state.json#/obligation_mechanisms.",
+    "decision_from_code": "ui_new_method_data and ui_dup_method_data are the CRYPTO_EX_new / CRYPTO_EX_dup callbacks registered by CRYPTO_get_ex_new_index (src/runtime/ex_data.rs); ui_close is a UI_METHOD ui_close_session slot invoked by UI_process. Each is a function-pointer slot whose caller is outside the file, and each obligation is the callee's pointer/slot contract. C_ABI_CONTRACT therefore fits.",
+    "mechanism_state": "C_ABI_CONTRACT stays UNSAFE_OPEN in state.json; the class fits, and it remains UNSAFE_OPEN after this receipt. ui_new_method_data and ui_close are ELIMINATED as unsafe operations in the current source (they are now safe extern \"C\" fns), but the V1 obligation coordinate still adjudicates BLOCKED because no ownership reconstruction or SAFETY_DISCHARGED scope exists for C_ABI_CONTRACT.",
+    "recorded_not_changed": "No src/ui directory rule was added: a classification rule is a mechanism decision that needs its own evidence, and adding one now would change how every future src/ui obligation is adjudicated. A future src/ui obligation without a per-site override would be UNMAPPED and the closure would refuse."
+  },
+  "defects": [
+    {
+      "id": "OSSH-R3-D1",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "site": "pk7_cb (V1 coordinate 489)",
+      "class": "ABI layout mismatch -> out-parameter aliasing / type confusion",
+      "found": "the file declared its own `#[repr(C)] struct Asn1StreamArg { out, boundary, ndef_bio }`, while include/openssl/asn1t.h:709-716 and the crate's canonical src/asn1/bio_asn1.rs:937-944 both declare `{ out, ndef_bio, boundary }`. pk7_cb casts the item layer's exarg to the local type, so at ASN1_OP_STREAM_PRE PKCS7_stream wrote the boundary pointer into the caller's ndef_bio slot and pk7_cb wrote the PKCS7_dataInit BIO into the caller's boundary slot. BIO_new_NDEF then stored the address of an ASN1_OCTET_STRING's `data` field as `ndef_bio` and returned it to its caller as a BIO: the streaming PKCS7 encode path used a non-BIO as a BIO.",
+      "reachability": "the callback's address is in PKCS7_aux (the item's ASN1_AUX), and ASN1_OP_STREAM_PRE is run by BIO_new_NDEF, which BIO_new_PKCS7 and SMIME_write_PKCS7 reach.",
+      "fate": "FIXED",
+      "fix": "removed the local struct and imported crate::asn1::bio_asn1::Asn1StreamArg, so there is one definition and it is the asn1t.h order. Added asn1_stream_arg_keeps_the_authority_field_order, which pins offsets 0/8/16 and the 3-word size.",
+      "not_claimed": "no end-to-end streaming encode test was added: a direct test has to take ownership of the NDEF chain the filter normally owns. That functional coverage is NOT_RUN here and is left to the BATCH gate for the pkcs7 streaming path.",
+      "candidate_binary_note": "the defect is a property of the source, and the frozen V1 candidate (source head 4a95b73a8) carries the same local struct; the closure re-run therefore measures the classification effect, not the compiled effect, of this fix."
+    }
+  ],
+  "tests": {
+    "added": "src/pkcs7/pk7_asn1.rs::tests::asn1_stream_arg_keeps_the_authority_field_order",
+    "gate": "see the closure_rerun block recorded by the orchestrator"
+  },
+  "non_claims": [
+    "No site is SAFETY_DISCHARGED. Four owning mechanisms are OWNERSHIP_RECONSTRUCTED and C_ABI_CONTRACT is UNSAFE_OPEN; independent BOUNDARY review does not exist for any of them.",
+    "A contract written in source is documentation of an ABI obligation; it is not runtime enforcement and does not discharge the obligation by itself.",
+    "additional_operations are counted, not adjudicated.",
+    "This receipt does not claim the whole of any listed file: each has many unsafe operations outside the closure's obligation set.",
+    "The closure was measured against the frozen V1 binaries, which do not contain this subphase's source edits; the BLOCKED/UNKNOWN shift measures classification only.",
+    "openssh remains REFUSED for SAFE_COMPATIBLE.",
+    "No Miri, ASan, compatibility or cryptographic court was re-run for this subphase.",
+    "The legacy digest callback contracts rest on an origin/ctx_size invariant (no exported setter for `origin`); that invariant is stated, not proved by an independent check."
+  ]
+}
