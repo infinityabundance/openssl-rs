@@ -225,7 +225,11 @@ fn valid_class(class_index: c_int) -> bool {
 }
 
 /// The no-op callback installed by `CRYPTO_free_ex_index`.
-unsafe extern "C" fn dummy_new(
+///
+/// It is a safe `extern "C" fn`: the body reads none of its arguments, so there is no caller
+/// precondition to state, and a safe fn coerces to the `unsafe extern "C" fn` slot
+/// [`Callback`] stores. Marking it `unsafe` would assert a contract that does not exist.
+extern "C" fn dummy_new(
     _parent: *mut c_void,
     _ptr: *mut c_void,
     _ad: *mut CryptoExData,
@@ -236,7 +240,9 @@ unsafe extern "C" fn dummy_new(
 }
 
 /// The no-op callback installed by `CRYPTO_free_ex_index`.
-unsafe extern "C" fn dummy_free(
+///
+/// A safe `extern "C" fn` for the same reason as [`dummy_new`]: no argument is read.
+extern "C" fn dummy_free(
     _parent: *mut c_void,
     _ptr: *mut c_void,
     _ad: *mut CryptoExData,
@@ -248,7 +254,10 @@ unsafe extern "C" fn dummy_free(
 
 /// The no-op "dup" installed by `CRYPTO_free_ex_index`; it reports success so
 /// a `dup` over a freed index still copies the slot.
-unsafe extern "C" fn dummy_dup(
+///
+/// A safe `extern "C" fn` for the same reason as [`dummy_new`]: no argument is read, including
+/// the `from_d` slot pointer it answers success for.
+extern "C" fn dummy_dup(
     _to: *mut CryptoExData,
     _from: *const CryptoExData,
     _from_d: *mut *mut c_void,

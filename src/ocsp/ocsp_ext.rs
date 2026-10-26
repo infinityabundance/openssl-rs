@@ -682,6 +682,19 @@ pub unsafe extern "C" fn OCSP_SINGLERESP_add_ext(
 /// `ASN1_OCTET_STRING` value whose `length`/`data` hold a complete DER `OCTET STRING` (header
 /// written by `ASN1_put_object`, content copied from `val` or filled by `RAND_bytes`). It is then
 /// installed with `X509V3_add1_i2d` under `X509V3_ADD_REPLACE`. Answers 1 on success, 0 otherwise.
+///
+/// # Safety
+///
+/// `exts` must be a writable `STACK_OF(X509_EXTENSION) *` slot -- the two callers,
+/// [`OCSP_request_add1_nonce`] and [`OCSP_basic_add1_nonce`], pass the address of the request's or
+/// response's own extension field, which their `# Safety` contracts make live -- and `val` must be
+/// NULL or readable for `len` bytes (a non-positive `len` selects the default length and still
+/// requires `len` bytes only when it is positive).
+///
+/// The `Asn1String` this function builds is a **borrowed view** over `buf`: `X509V3_add1_i2d`
+/// encodes it into a fresh extension and takes no ownership of `os` or its data, so `buf` is the
+/// single owner of the scratch bytes and is dropped once on every path. `os` is never adopted by
+/// anything outside this frame, so no second release of its data can exist.
 unsafe fn ocsp_add1_nonce(exts: *mut *mut OpenSslStack, val: *mut c_uchar, len: c_int) -> c_int {
     // SAFETY: `exts` is a writable slot per the contract; `val` is NULL or readable for `len`
     // bytes. The scratch `os` value is this frame's own.
@@ -1019,5 +1032,26 @@ pub unsafe extern "C" fn OCSP_url_svcloc_new(
         ACCESS_DESCRIPTION_free(ad);
         OCSP_SERVICELOC_free(sloc);
         x
+    }
+}
+
+#[cfg(test)]
+mod nonce_site_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+
+    /// A length the DER header cannot encode is refused before any allocation or extension work:
+    /// the failure is the authority's `ASN1_object_size < 0` arm, and the caller's slot is
+    /// untouched.
+    #[test]
+    fn asn1_ocsp_add1_nonce_refuses_an_unencodable_length_before_allocating() {
+        let mut exts: *mut OpenSslStack = ptr::null_mut();
+        // SAFETY: `&raw mut exts` is a writable extension-stack slot; `val` is NULL and the
+        // refused length means nothing is read from it. The refusal happens before the slot is
+        // used, so it stays NULL.
+        let r = unsafe { ocsp_add1_nonce(&raw mut exts, ptr::null_mut(), c_int::MAX) };
+        assert_eq!(r, 0, "an unencodable length is refused");
+        assert!(exts.is_null(), "the refused call writes no extension stack");
     }
 }

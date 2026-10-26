@@ -1,0 +1,482 @@
+{
+  "schema": "openssl-rs/safe-c33/openssh-mechanisms-reconstructed/v1",
+  "kind": "mechanism-reconstruction-receipt",
+  "receipt": "openssh-mechanisms-reconstructed",
+  "subphase": "safe-c33 openssh block 4: ASN1_OCSP and RUNTIME_ALLOC_OWNERSHIP reconstruction",
+  "date": "2026-10-26",
+  "question": "Can ASN1_OCSP and RUNTIME_ALLOC_OWNERSHIP be reconstructed to the AGENTS.md section 7 standard for the sites reachable from the openssh closure, and what is honestly true about their state afterwards?",
+  "candidate": {
+    "branch_checked_out": "main",
+    "head": "247925538",
+    "head_note": "the working tree is 247925538 (the merge of integrate/safe-c33) plus this subphase's uncommitted edits; no commit and no push were made",
+    "tracked_tree_dirty_at_measurement": true,
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
+    "inventory_source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463",
+    "artifacts": {
+      "ssh": {
+        "path": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+        "sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57"
+      },
+      "sshd": {
+        "path": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+        "sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+      }
+    },
+    "candidate_note": "the binaries and install are the frozen V1 candidate, so the closure's obligation coordinates and reachable set are the same ones the committed openssh-closure.json measured. The source edits in this subphase are NOT in those binaries; the closure therefore measures the classification effect of the registry and boundary receipts, not the compiled effect of the source changes. That is why DISCHARGED cannot rise from them."
+  },
+  "discrepancy_with_the_task_brief": {
+    "runtime_alloc_site_count": {
+      "brief": "3 reachable obligations, including src/runtime/init.rs:1246 and src/engine/eng_table.rs:148",
+      "receipt_and_closure": "4: src/engine/eng_table.rs:148, src/runtime/ex_data.rs:239, src/runtime/ex_data.rs:251, src/runtime/init.rs:1240",
+      "explanation": "the frozen inventory (and therefore the closure) records four RUNTIME_ALLOC_OWNERSHIP obligations. init.rs is at closure coordinate 1240; at the inventory head that was the unsafe extern C abort block, and the working tree has since added a SAFETY prelude and moved the block to 1246. The two ex_data sites were not named in the brief. All four are enumerated here."
+    }
+  },
+  "mechanisms": [
+    {
+      "id": "ASN1_OCSP",
+      "state_before": "UNSAFE_OPEN",
+      "state_after": "OWNERSHIP_RECONSTRUCTED",
+      "state_reason": "the seven reachable sites now have a safe ownership/borrow model and an explicit contract each, and two of them have no unsafe operation at all. SAFETY_DISCHARGED is not claimed: section 7 requires every remaining unsafe op to have a contract (done), every precondition to be established by a caller or ABI contract (done and enumerated) and no safe caller to reach UB (argued), but sections 15 and 21 also require independent review of the shared mechanism, which this single-author subphase cannot supply.",
+      "contract": "Every callback this mechanism installs is invoked by a named in-crate caller that supplies a live object of the row's declared item type, borrowed for the call and never adopted, plus a live BIO or a correctly sized output cursor. Ownership crosses the ABI edge only at the two documented transitions (d2i_ocsp_nonce's decoded result and i2d_ocsp_nonce's encoder output), each stated on the fn. The one site that allocates transient storage either goes through the crate's CRYPTO_* seam (a_mbstr) or owns a frame-local buffer whose single release is its Rust drop (ocsp_add1_nonce).",
+      "allocation_seam": "crate::runtime::mem CRYPTO_malloc/CRYPTO_free; src/runtime/mem.rs is byte-identical to the pre-subphase tree",
+      "ownership_before": "a C int (*)(unsigned long, void *) callback family writing through an untyped *mut *mut c_uchar cursor; five unsafe extern C fn callbacks whose preconditions lived only in in-body comments",
+      "ownership_after": "an FnMut traversal over &mut c_int / &mut c_ulong / &mut [u8] state; per-fn # Safety contracts naming the invoking crate function; two callbacks whose unsafe marker is gone because they read no argument",
+      "eliminated": [
+        "src/asn1/a_mbstr.rs: the type Rfunc = unsafe extern C fn(c_ulong, *mut c_void) -> c_int callback family and all four unsafe extern C fn cpy_* definitions",
+        "src/asn1/a_mbstr.rs: the untyped void *arg cursor, its &mut *(arg as *mut *mut c_uchar) reconstruction, and the 0xff over-write allowance in cpy_utf8",
+        "src/ocsp/v3_ocsp.rs:312: s2i_ocsp_nocheck's unsafe marker"
+      ],
+      "relocated": [
+        "the i2r/d2i/i2d callback contracts: each is now a # Safety section naming the crate function that invokes the slot",
+        "the a_mbstr output-extent obligation: now Rust slice bounds, not a comment"
+      ],
+      "hidden": 0,
+      "retained": [
+        "ocsp_add1_nonce's nonce scratch is SECRET_DATA and is not cleansed before the Rust Vec is released (the authority's OPENSSL_free is also not a cleansed free). Retained and recorded, not hidden.",
+        "a_mbstr's traverse_string remains an unsafe fn: reading the input buffer for len bytes is a genuine caller obligation, documented in its # Safety."
+      ],
+      "newly_introduced": [
+        "two #[cfg(test)] observation hooks: runtime::release_probe::Call.ptr and ocsp::v3_ocsp::nonce_probe. Both are test-only, thread-local and compiled out of non-test builds; neither is a production obligation."
+      ],
+      "sites": [
+        {
+          "boundary": "P25-OSSH-OCSP-1",
+          "closure_coordinate": "V1:src/asn1/a_mbstr.rs:243:UNSAFE_FN_DEF",
+          "file": "src/asn1/a_mbstr.rs",
+          "line": 243,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "cpy_asc",
+          "authority": "crypto/asn1/a_mbstr.c cpy_asc",
+          "contract": "No caller contract. The C callback type `int (*)(unsigned long, void *)` and its `*mut *mut c_uchar` cursor argument are removed: `traverse_string` takes an `FnMut`, and the four writers take `&mut [u8]` + position, so each write is bounds-checked against the block `ASN1_mbstring_ncopy` allocated.",
+          "preconditions": [],
+          "established_by": [
+            "type invariant: `out` is the `outlen`-byte view of the same frame's `count = outlen + 1` block"
+          ],
+          "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-OCSP-2",
+          "closure_coordinate": "V1:src/ocsp/ocsp_ext.rs:685:UNSAFE_FN_DEF",
+          "file": "src/ocsp/ocsp_ext.rs",
+          "line": 685,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "ocsp_add1_nonce",
+          "authority": "crypto/ocsp/ocsp_ext.c ocsp_add1_nonce",
+          "contract": "`exts` is a writable `STACK_OF(X509_EXTENSION) *` slot; `val` is NULL or readable for a positive `len`; the `Asn1String` this call builds is a borrowed view over a frame-local buffer that `X509V3_add1_i2d` encodes without adopting.",
+          "preconditions": [
+            "exts: live writable slot",
+            "val: NULL or readable for len bytes"
+          ],
+          "established_by": [
+            "caller: OCSP_request_add1_nonce / OCSP_basic_add1_nonce pass the address of their own live extension field; both exported fns carry `# Safety`"
+          ],
+          "obligation_outcome": "CONTRACTED",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-OCSP-3",
+          "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:113:UNSAFE_FN_DEF",
+          "file": "src/ocsp/v3_ocsp.rs",
+          "line": 113,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "i2r_ocsp_crlid",
+          "authority": "crypto/ocsp/v3_ocsp.c i2r_ocsp_crlid",
+          "contract": "`_method` is this row (unread); `in` is the live `OCSP_CRLID` the row's `it` decoder produced, borrowed and never retained; `bp` is a live BIO; each field pointer is NULL or the decoder's live value.",
+          "preconditions": [
+            "in: live OCSP_CRLID",
+            "bp: live BIO",
+            "fields: NULL or live decoder values"
+          ],
+          "established_by": [
+            "caller: X509V3_EXT_print (src/x509/v3_prn.rs) decodes through `method->it` and passes the live BIO"
+          ],
+          "obligation_outcome": "CONTRACTED",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-OCSP-4",
+          "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:200:UNSAFE_FN_DEF",
+          "file": "src/ocsp/v3_ocsp.rs",
+          "line": 200,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "i2d_ocsp_nonce",
+          "authority": "crypto/ocsp/v3_ocsp.c i2d_ocsp_nonce",
+          "contract": "`a` is a live `ASN1_OCTET_STRING` borrowed for the call; `pp` is NULL (size query) or `*pp` is a writable cursor with room for the returned length.",
+          "preconditions": [
+            "a: live ASN1_OCTET_STRING",
+            "pp: NULL or *pp writable for the returned length"
+          ],
+          "established_by": [
+            "caller: do_ext_i2d (src/x509/v3_conf.rs) sizes with a NULL destination, allocates `len`, and passes `&mut p` into that block"
+          ],
+          "obligation_outcome": "CONTRACTED",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-OCSP-5",
+          "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:221:UNSAFE_FN_DEF",
+          "file": "src/ocsp/v3_ocsp.rs",
+          "line": 221,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "d2i_ocsp_nonce",
+          "authority": "crypto/ocsp/v3_ocsp.c d2i_ocsp_nonce",
+          "contract": "`a` is NULL or a live `ASN1_OCTET_STRING *` slot; `*pp` is readable for `length` bytes with `0 <= length <= c_int::MAX`; on success the caller owns the decoded value, on failure a caller-supplied value is untouched and nothing allocated leaks.",
+          "preconditions": [
+            "a: NULL or live slot",
+            "pp: readable cursor for length bytes",
+            "length: 0..=INT_MAX"
+          ],
+          "established_by": [
+            "caller: X509V3_EXT_d2i / X509V3_EXT_print pass a NULL slot and the extension's own value bytes"
+          ],
+          "obligation_outcome": "CONTRACTED",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-OCSP-6",
+          "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:312:UNSAFE_FN_DEF",
+          "file": "src/ocsp/v3_ocsp.rs",
+          "line": 312,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "s2i_ocsp_nocheck",
+          "authority": "crypto/ocsp/v3_ocsp.c s2i_ocsp_nocheck",
+          "contract": "No caller contract: every argument is unread. The item is a safe `extern \"C\" fn` that coerces to the row's slot.",
+          "preconditions": [],
+          "established_by": [
+            "vacuous: the body reads no argument"
+          ],
+          "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-OCSP-7",
+          "closure_coordinate": "V1:src/ocsp/v3_ocsp.rs:326:UNSAFE_FN_DEF",
+          "file": "src/ocsp/v3_ocsp.rs",
+          "line": 326,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "i2r_ocsp_serviceloc",
+          "authority": "crypto/ocsp/v3_ocsp.c i2r_ocsp_serviceloc",
+          "contract": "`_method` is this row (unread); `in` is the live `OCSP_SERVICELOC` the row's `it` decoder produced, borrowed and never retained; `bp` is a live BIO; `issuer`/`locator` are the decoder's own borrowed members.",
+          "preconditions": [
+            "in: live OCSP_SERVICELOC",
+            "bp: live BIO"
+          ],
+          "established_by": [
+            "caller: X509V3_EXT_print (src/x509/v3_prn.rs)"
+          ],
+          "obligation_outcome": "CONTRACTED",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        }
+      ],
+      "site_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-asn1-ocsp-sites.json"
+    },
+    {
+      "id": "RUNTIME_ALLOC_OWNERSHIP",
+      "state_before": "UNSAFE_OPEN",
+      "state_after": "OWNERSHIP_RECONSTRUCTED",
+      "state_reason": "the four reachable sites have a stated contract each; two are no longer unsafe operations. SAFETY_DISCHARGED is not claimed: the lhash stores *mut c_void, so the element-type invariant of engine_pile_hash is maintained by module encapsulation rather than by the type system, and no independent BOUNDARY review exists.",
+      "contract": "An owner allocated through the crate's CRYPTO_* seam is either raw storage (RawCtx, which never runs the destructor body) or validated (OwnedCtx); Drop is the block's single release and assume_init is the one validated transition. Callbacks this mechanism installs receive only values the installing module itself placed (lhash hash/compare over this module's EnginePile allocations) or no argument at all (the ex_data no-ops). The allocator seam, exported symbols and #[repr(C)] layouts are unchanged.",
+      "allocation_seam": "crate::runtime::mem CRYPTO_malloc/CRYPTO_zalloc/CRYPTO_free; src/runtime/mem.rs is byte-identical to the pre-subphase tree",
+      "ownership_before": "two claim-only constructors (RawCtx/OwnedCtx) whose release was already structural, plus three callback definitions marked unsafe while reading nothing (ex_data) and two lhash callbacks whose element-type precondition was a comment",
+      "ownership_after": "the same two-state owner model, now observable by address in tests; ex_data's no-ops are safe fns; the lhash callbacks carry the installer/inserter contract",
+      "eliminated": [
+        "src/runtime/ex_data.rs: the unsafe markers on dummy_new, dummy_free and dummy_dup (all three read no argument)"
+      ],
+      "relocated": [
+        "engine_pile_hash/engine_pile_cmp: the element-type invariant is stated once, in their # Safety, and tied to the module's single production insert site"
+      ],
+      "hidden": 0,
+      "retained": [
+        "the lhash remains an untyped *mut c_void container: a foreign caller that obtained the table pointer could insert a non-pile element. No production caller does, and the table statics are private to the tb_* modules. This is the mechanism's residual boundary and is stated, not hidden.",
+        "src/runtime/init.rs:1240 is the libc abort declaration; its contract already existed in the working tree, so the inventory coordinate is stale rather than unreconstructed."
+      ],
+      "newly_introduced": [
+        "release_probe now records the released address (test-only); OwnedCtx records after destroy_body and before CRYPTO_free so a test can observe the member-then-block order."
+      ],
+      "sites": [
+        {
+          "boundary": "P25-OSSH-ALLOC-1",
+          "closure_coordinate": "V1:src/engine/eng_table.rs:148:UNSAFE_FN_DEF",
+          "file": "src/engine/eng_table.rs",
+          "line": 148,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "engine_pile_hash",
+          "authority": "crypto/engine/eng_table.c engine_pile_hash",
+          "contract": "`c` is a live `EnginePile` stored in an ENGINE table's lhash: `int_table_check` creates the table with this hash and `engine_table_register` is the only production inserter, so every hashed element is one of this module's own `EnginePile` allocations; the lhash never passes NULL for a stored element.",
+          "preconditions": [
+            "c: live EnginePile from this table"
+          ],
+          "established_by": [
+            "caller: OPENSSL_LH_new's HashFunc invocation; element set established by this module's own insert sites"
+          ],
+          "obligation_outcome": "CONTRACTED",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-ALLOC-2",
+          "closure_coordinate": "V1:src/runtime/ex_data.rs:239:UNSAFE_FN_DEF",
+          "file": "src/runtime/ex_data.rs",
+          "line": 239,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "dummy_free",
+          "authority": "crypto/ex_data.c CRYPTO_free_ex_index's no-op free",
+          "contract": "No caller contract: every argument is unread. The no-op is a safe `extern \"C\" fn` coercing to the stored slot.",
+          "preconditions": [],
+          "established_by": [
+            "vacuous: the body reads no argument"
+          ],
+          "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-ALLOC-3",
+          "closure_coordinate": "V1:src/runtime/ex_data.rs:251:UNSAFE_FN_DEF",
+          "file": "src/runtime/ex_data.rs",
+          "line": 251,
+          "kind": "UNSAFE_FN_DEF",
+          "operation": "dummy_dup",
+          "authority": "crypto/ex_data.c CRYPTO_free_ex_index's no-op dup",
+          "contract": "No caller contract: every argument is unread, including the `from_d` slot it answers success for. The no-op is a safe `extern \"C\" fn`.",
+          "preconditions": [],
+          "established_by": [
+            "vacuous: the body reads no argument"
+          ],
+          "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        },
+        {
+          "boundary": "P25-OSSH-ALLOC-4",
+          "closure_coordinate": "V1:src/runtime/init.rs:1240:UNSAFE_EXTERN_BLOCK",
+          "file": "src/runtime/init.rs",
+          "line": 1240,
+          "kind": "UNSAFE_EXTERN_BLOCK",
+          "operation": "abort",
+          "authority": "libc <stdlib.h> void abort(void)",
+          "contract": "`abort` takes no argument, dereferences no memory and never returns; the `<stdlib.h>` signature is the ABI contract.",
+          "preconditions": [],
+          "established_by": [
+            "external ABI contract: libc `<stdlib.h>`"
+          ],
+          "obligation_outcome": "ALREADY_CONTRACTED",
+          "disposition": "CONTRACTED",
+          "closure_status_after": "BLOCKED"
+        }
+      ],
+      "site_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-runtime-alloc-sites.json"
+    }
+  ],
+  "sites_fixed": [
+    {
+      "file": "src/asn1/a_mbstr.rs",
+      "what": "traverse_string now takes `mut rfunc: impl FnMut(c_ulong) -> c_int`; in_utf8/out_utf8/type_str take &mut c_int / &mut c_ulong; cpy_asc/cpy_bmp/cpy_univ/cpy_utf8 are safe fns over &mut [u8] and a position, with get_mut bounds checks and UTF8_putc given the real remaining room instead of 0xff.",
+      "effect": "the flagged unsafe-fn class at :243 is inexpressible; the output extent is enforced by the type system"
+    },
+    {
+      "file": "src/ocsp/v3_ocsp.rs",
+      "what": "s2i_ocsp_nocheck is a safe extern C fn; the other four flagged callbacks carry # Safety naming their invoker and the borrowed/value preconditions.",
+      "effect": "one obligation eliminated, four contracted with in-crate caller establishment"
+    },
+    {
+      "file": "src/ocsp/ocsp_ext.rs",
+      "what": "ocsp_add1_nonce carries a # Safety contract naming both callers and stating that the scratch Asn1String is a borrowed view.",
+      "effect": "one obligation contracted"
+    },
+    {
+      "file": "src/runtime/ex_data.rs",
+      "what": "dummy_new/dummy_free/dummy_dup are safe extern C fns (safe-to-unsafe fn-pointer coercion at the three slot assignments).",
+      "effect": "two (three, counting the unlisted new) obligations eliminated"
+    },
+    {
+      "file": "src/engine/eng_table.rs",
+      "what": "engine_pile_hash and engine_pile_cmp carry a # Safety contract naming int_table_check as the installer and engine_table_register as the only production inserter.",
+      "effect": "one obligation contracted; the lhash residual is stated"
+    }
+  ],
+  "sites_blocked": [],
+  "sites_blocked_note": "no enumerated site is BLOCKED for want of a contract or an establishing caller. Every one of the eleven reachable obligations is BLOCKED at mechanism scope only: the mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt exists, which is the campaign's honest state, not a site defect.",
+  "tests": {
+    "naming": "asn1_ocsp_* and alloc_own_*",
+    "command": "cargo test --lib -- --test-threads=1 asn1_ocsp_   /   cargo test --lib -- --test-threads=1 alloc_own_",
+    "asn1_ocsp": [
+      {
+        "name": "asn1::a_mbstr::asn1_ocsp_mbstr_tests::asn1_ocsp_mbstr_bmp_output_is_exactly_the_sized_block",
+        "result": "ok",
+        "proves": "the conversion writes exactly the nchar*2 content bytes and the authority's NUL at data[length]"
+      },
+      {
+        "name": "asn1::a_mbstr::asn1_ocsp_mbstr_tests::asn1_ocsp_mbstr_refuses_a_length_at_int_max",
+        "result": "ok",
+        "proves": "the length guard refuses before any allocation and leaves the caller's slot untouched"
+      },
+      {
+        "name": "ocsp::ocsp_ext::nonce_site_tests::asn1_ocsp_add1_nonce_refuses_an_unencodable_length_before_allocating",
+        "result": "ok",
+        "proves": "allocation-refusal arm: an unencodable length returns 0 and writes no extension stack"
+      },
+      {
+        "name": "ocsp::v3_ocsp::nonce_tests::asn1_ocsp_nonce_decode_release_is_exactly_once_at_the_decoded_address",
+        "result": "ok",
+        "proves": "exactly-once release by address: the release event names the address the decode returned, and a second release adds none"
+      },
+      {
+        "name": "ocsp::v3_ocsp::nonce_tests::asn1_ocsp_nonce_set_failure_releases_the_new_string_exactly_once",
+        "result": "ok",
+        "proves": "partial initialisation: the object the failed decode created is released exactly once, by the same address, before NULL"
+      },
+      {
+        "name": "ocsp::v3_ocsp::nonce_tests::asn1_ocsp_nonce_set_failure_leaves_a_caller_object_untouched",
+        "result": "ok",
+        "proves": "a caller-supplied object is neither released nor adopted on the failure path (negative control for the free arm)"
+      }
+    ],
+    "alloc_own": [
+      {
+        "name": "runtime::bio::owned::alloc_own_tests::alloc_own_ctx_releases_member_and_block_once_each_by_address",
+        "result": "ok",
+        "proves": "validated owner: member released once at its address, then the block once at its own address"
+      },
+      {
+        "name": "runtime::bio::owned::alloc_own_tests::alloc_own_rawctx_partial_init_releases_the_block_alone",
+        "result": "ok",
+        "proves": "partial initialisation: unvalidated storage never runs the destructor body and releases only the block it acquired"
+      },
+      {
+        "name": "runtime::bio::owned::alloc_own_tests::alloc_own_refused_allocation_answers_none_and_releases_nothing",
+        "result": "ok",
+        "proves": "allocation refusal: the seam's NULL is not adopted and nothing is released"
+      },
+      {
+        "name": "runtime::bio::owned::alloc_own_tests::alloc_own_block_release_is_exactly_once_at_the_allocated_address",
+        "result": "ok",
+        "proves": "exactly-once release at the allocated address for the byte-block owner"
+      }
+    ],
+    "observed_pass_lines": [
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 2229 filtered out; finished in 0.00s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2231 filtered out; finished in 0.00s"
+    ],
+    "address_identity_note": "releases are asserted by address (release_probe::Call.ptr and the site-local nonce_probe event pair), not by counting releases in a window. The refusal tests assert that the refusing path produces no release event at all."
+  },
+  "gates": {
+    "cargo_fmt_all_check": "PASS (exit 0; printed FMT_OK)",
+    "cargo_check_lib": "PASS (Finished dev profile in 3.16s)",
+    "cargo_clippy_all_targets_deny_warnings": "PASS (Finished dev profile in 7.49s)",
+    "cargo_test_lib_test_threads_4": "PASS: test result: ok. 2183 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 127.45s",
+    "test_count_delta": "2173 passed / 52 ignored before this subphase (the provider subphase's full run) -> 2183 / 52; +10 tests, none removed, none newly ignored",
+    "no_mangle_count": "6642 before, 6642 after",
+    "repr_c_count": "1016 before, 1016 after",
+    "exported_symbol_or_layout_diff": "none: git diff contains no #[no_mangle] or #[repr(C)] line",
+    "allocator_seam": "src/runtime/mem.rs byte-identical (sha256 prefix 04fcdaf8c8adb372 before and after); CRYPTO_* sizes, file and line coordinates untouched",
+    "error_codes": "unchanged: no err_sites coordinate or raise call was edited; the OCSP/ASN.1 error paths still raise V3_OCSP_176 / A_MBSTR_*",
+    "lints_weakened": "none"
+  },
+  "closure_rerun": {
+    "tool": "forensics/tools/consumer_closure.py",
+    "tool_self_test": "PASS ([consumer-closure] self-test ok: parsing, adjudication truth table, module/file mapping, export-site index, mechanism routing, precision narrowing and unclassified-site negative control)",
+    "invocation": "--family {openssh|openssh-server} --artifact <binary> --build-record <record> --inventory .../v1b-candidate-freeze.json --install artifacts/phase2/install --output court/tmp/openssh-closure/closure-{ssh,sshd}-reconstructed.json --summary",
+    "state_input": "forensics/memory-safety/campaign/safe-c33/state.json (both mechanisms at OWNERSHIP_RECONSTRUCTED for this run)",
+    "boundary_input": "atlas-refresh/openssh-asn1-ocsp-sites.json + atlas-refresh/openssh-runtime-alloc-sites.json (new)",
+    "before": {
+      "source": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-closure.json (committed)",
+      "ssh": {
+        "reachable_files": 345,
+        "obligations": 120,
+        "DISCHARGED": 0,
+        "BLOCKED": 66,
+        "UNKNOWN": 54,
+        "reachable_files_with_receipt": 18
+      },
+      "sshd": {
+        "reachable_files": 337,
+        "obligations": 120,
+        "DISCHARGED": 0,
+        "BLOCKED": 66,
+        "UNKNOWN": 54,
+        "reachable_files_with_receipt": 18
+      }
+    },
+    "after": {
+      "ssh": {
+        "reachable_files": 345,
+        "obligations": 120,
+        "DISCHARGED": 0,
+        "BLOCKED": 75,
+        "UNKNOWN": 45,
+        "reachable_files_with_receipt": 22,
+        "verdict": "REFUSED",
+        "refusals": [
+          "MISSING_BOUNDARY_RECEIPT",
+          "UNKNOWN_OBLIGATION"
+        ]
+      },
+      "sshd": {
+        "reachable_files": 337,
+        "obligations": 120,
+        "DISCHARGED": 0,
+        "BLOCKED": 75,
+        "UNKNOWN": 45,
+        "reachable_files_with_receipt": 22,
+        "verdict": "REFUSED",
+        "refusals": [
+          "MISSING_BOUNDARY_RECEIPT",
+          "UNKNOWN_OBLIGATION"
+        ]
+      },
+      "by_mechanism_after": {
+        "ASN1_OCSP": 7,
+        "C_ABI_CONTRACT": 8,
+        "ERR": 1,
+        "EVP_PKEY_PROVIDER": 65,
+        "RAND_CMS_STORE_KEYFMT": 9,
+        "RUNTIME_ALLOC_OWNERSHIP": 4,
+        "RUNTIME_CONCURRENCY": 2,
+        "SSL_SESSION": 14,
+        "X509_VERIFY_POLICY": 10
+      },
+      "obligation_set_identical_across_binaries": true
+    },
+    "delta_explained": "BLOCKED 66 -> 75 and UNKNOWN 54 -> 45: the nine ASN1_OCSP/RUNTIME_ALLOC_OWNERSHIP obligations whose files had no boundary receipt (7 + 2) moved from UNKNOWN to BLOCKED now that the two site receipts exist. The two remaining sites (eng_table.rs:148, runtime/init.rs:1240) were already BLOCKED. DISCHARGED stays 0 by design: mechanism state is OWNERSHIP_RECONSTRUCTED, so adjudicate() case 5 returns BLOCKED, and the tool's generic reason text ('the V1 operation is uncontracted') does not reflect the new per-site contracts -- the boundary disposition (CONTRACTED) does.",
+    "why_discharged_cannot_rise_yet": "a DISCHARGED obligation requires either a mechanism-scope SAFETY_DISCHARGED receipt naming the exact site or a scoped-boundary discharge in CAMPAIGN-STATUS. Neither exists for these mechanisms, and AGENTS.md sections 15/21 forbid the author of a safety claim from being its sole adjudicator.",
+    "union_note": "the two closures carry the same 120 obligations with identical records, so the union counts equal the ssh counts (0 DISCHARGED / 75 BLOCKED / 45 UNKNOWN); the union graph was not re-run because no graph input changed."
+  },
+  "non_claims": [
+    "Neither mechanism is SAFETY_DISCHARGED. Both are OWNERSHIP_RECONSTRUCTED: the sites have contracts and an enumerated establishing caller, but no independent BOUNDARY review exists.",
+    "The closure was measured against the frozen V1 binaries, which do not contain this subphase's source edits. The BLOCKED/UNKNOWN shift measures classification only.",
+    "openssh remains REFUSED for SAFE_COMPATIBLE on MISSING_BOUNDARY_RECEIPT (31 files) and UNKNOWN_OBLIGATION (45 obligations).",
+    "The i2r/d2i/i2d contracts are established by in-crate callers; an external C caller of the exported X509V3_EXT_* entry points is bound by the OpenSSL ABI contract, which this receipt does not prove.",
+    "No cryptographic or compatibility court was re-run: no algorithm or wire behaviour changed."
+  ]
+}
