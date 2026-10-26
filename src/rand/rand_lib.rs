@@ -660,10 +660,12 @@ pub extern "C" fn RAND_poll() -> c_int {
 ///
 /// # Safety
 ///
-/// `meth` is NULL or points to a table that stays live for at least as long as it is installed,
-/// and `e` is NULL (the only value any current caller passes). Established by
-/// [`RAND_set_rand_method`]'s C-ABI contract; both values are published to process-wide storage
-/// and are not read back as objects by this function.
+/// `meth` is NULL or points to a table that stays live for at least as long as it is
+/// installed. `e` is NULL or a live engine; this function only stores it in `FUNCT_REF`
+/// and neither dereferences nor consumes it (the authority's `ENGINE_finish` call is not
+/// implemented, see D312), so a live engine keeps its caller's reference. Established by
+/// [`RAND_set_rand_method`]'s and [`RAND_set_rand_engine`]'s C-ABI contracts; both values
+/// are published to process-wide storage and are not read back as objects here.
 unsafe fn rand_set_rand_method_internal(meth: *const RandMethod, e: *mut c_void) -> c_int {
     if run_once_rand_init() == 0 {
         return 0;
