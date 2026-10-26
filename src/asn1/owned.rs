@@ -120,6 +120,7 @@ impl<T> Drop for OwnedBlock<T> {
         #[cfg(test)]
         crate::runtime::release_probe::record(
             crate::runtime::release_probe::Arm::Plain,
+            self.ptr.as_ptr().cast::<c_void>(),
             self.file,
             self.line,
         );
