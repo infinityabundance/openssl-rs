@@ -1,0 +1,138 @@
+{
+  "schema": "openssl-rs/safe-c33/adversarial-mechanism-review/v1",
+  "kind": "independent-adversarial-review",
+  "receipt": "adversarial-asn1-ocsp-alloc",
+  "date": "2026-10-26",
+  "reviewer": "adversarial reviewer (did not author the change); single reviewer",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "head_reviewed": "6749f19b3",
+    "subphase_commit": "5a90d4dd7 (stage/p25/reconstruct-2, merged by 6749f19b3)",
+    "mechanism_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-mechanisms-reconstructed.json",
+    "site_receipts": [
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-asn1-ocsp-sites.json",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-runtime-alloc-sites.json"
+    ],
+    "provenance_defect": "The mechanism receipt records branch_checked_out='main', head='247925538', tracked_tree_dirty_at_measurement=true, and states that no commit was made. The reviewed artefact is commit 6749f19b3, so the receipt does not bind its claims or its gate outputs to the source identity it is filed against (AGENTS.md section 21 requires exact source identity). The ten focused tests were re-run against 6749f19b3 (see commands), but clippy/the full suite were not re-run by this reviewer."
+  },
+  "verdicts": {
+    "ASN1_OCSP": {
+      "verdict": "REFUTED",
+      "scope_of_refutation": "The receipt's claims 'seven sites', 'every remaining unsafe op has an explicit validity contract', 'every contract is true', and 'two callbacks whose unsafe marker is gone because they read no argument' are false in the tree. A caller that conforms to two of the quoted contracts can reach undefined behaviour. I did not find a new safe-Rust-caller UB through the seven enumerated interfaces themselves (all seven are unsafe fn / unsafe extern C fn except the two eliminated items).",
+      "counterexamples": [
+        {
+          "id": "ADV-A1",
+          "kind": "unsound # Safety contract (conforming caller can cause OOB read / non-termination)",
+          "file": "src/asn1/a_mbstr.rs",
+          "line": 93,
+          "quoted_contract": "`p` must be readable for `len` bytes and `inform` must be one of the four `MBSTRING_*` forms, or the `UTF8` arm is taken.",
+          "attack": "The contract states only readability for `len` bytes. The BMP arm (lines 114-119) reads `*p.add(1)` and subtracts 2; the UNIV arm (120-128) reads p[0..4) and subtracts 4. A caller satisfying the quoted text with inform=MBSTRING_BMP and len=1 (one readable byte) causes a two-byte read, i.e. a one-byte out-of-bounds read; UNIV with len not a multiple of 4 reads up to three bytes past. The contract also omits `len >= 0`: with a negative len the ASC arm keeps reading and decrementing (effectively unbounded reads) and the UTF8 arm loops without progress because UTF8_getc returns 0 for len<=0. The live callers (ASN1_mbstring_ncopy:401,409,429; the second traversal at :472) do enforce the multiples and len>=0, so this is a contract defect rather than a live bug, but it refutes 'every contract is true' and it is the one contract the receipt itself names as retained."
+        },
+        {
+          "id": "ADV-A2",
+          "kind": "over-broad # Safety contract (conforming caller can cause invalid free / double free)",
+          "file": "src/asn1/a_mbstr.rs",
+          "line": 348,
+          "quoted_contract": "`out` must be null or point at a writable `ASN1_STRING *`; `in` must be readable for `len` bytes, or NUL-terminated when `len` is `-1`.",
+          "attack": "The same text is on ASN1_mbstring_copy:325. The body reads `*out` (:511) and, when it is non-NULL, calls `ASN1_STRING_set0(dest, NULL, 0)` (:516), which releases `(*out)->data`. The written contract does not require `*out` itself to be NULL or a live, exclusively-owned ASN1_STRING whose data is not aliased; a caller that satisfies only the quoted text (writable slot containing a stale/shared/garbage ASN1_STRING* ) can obtain an invalid free through a path the contract says is conforming. It also omits the BMP/UNIV length-multiple precondition (checked by the body at :401,:409) and the `len >= -1` precondition."
+        },
+        {
+          "id": "ADV-A3",
+          "kind": "under-enumeration: retained unsafe ops with no contract",
+          "file": "src/ocsp/v3_ocsp.rs",
+          "lines": [180, 201, 311, 332],
+          "finding": "The mechanism installs more unsafe extern \"C\" callbacks than the seven enumerated sites. i2r_ocsp_acutoff (:180), ocsp_nonce_new (:201), i2r_ocsp_nonce (:311) and i2r_ocsp_nocheck (:332) are unsafe extern \"C\" fns with only block-level comments and no `# Safety` fn contract. ocsp_nonce_free (:300) does carry one. ocsp_nonce_new takes no arguments and i2r_ocsp_nocheck reads none of its four, so by the subphase's own stated criterion ('the unsafe marker is gone because they read no argument') both should have been converted to safe fns like s2i_ocsp_nocheck; they were not. The frozen inventory's contracts.blockers for this file lists exactly lines 113/200/221/312/326, so the inventory under-enumerates too and the receipt's 'enumerated: 7' / 'every remaining unsafe op has a contract (done)' inherit the omission."
+        },
+        {
+          "id": "ADV-A4",
+          "kind": "fallible-allocation / failure-semantics gap (abort, not return 0)",
+          "file": "src/ocsp/ocsp_ext.rs",
+          "line": 712,
+          "finding": "`vec![0u8; os_length as usize]` is infallible allocation. A large but DER-encodable len (ASN1_object_size admits len up to about INT_MAX-5; e.g. 1_000_000_000) aborts the process if the allocator refuses, where the authority's OPENSSL_malloc arm returns 0. This is not recorded in the receipt and violates the campaign's fallible-allocation rule (AGENTS.md section 3); the refusal test only exercises the ASN1_object_size < 0 arm, never this one."
+        },
+        {
+          "id": "ADV-A5",
+          "kind": "contract omits an invariant needed for soundness (lower severity)",
+          "file": "src/ocsp/v3_ocsp.rs",
+          "line": 210,
+          "quoted_contract": "`a` is a live `ASN1_OCTET_STRING` borrowed for the call; `pp` is NULL (size query) or `*pp` is a writable cursor with room for the returned length.",
+          "finding": "i2d_ocsp_nonce does `copy_nonoverlapping(data, *pp, length as usize)` (:225) where data/length are read from the value. The ASN1_OCTET_STRING invariant (length >= 0 and length == 0 || data readable for length) is not enforced by the Asn1String type (pub(crate) raw fields) and is not stated; 'live ASN1_OCTET_STRING' has to be read as including it. Low severity because every current producer is an authority-shaped octet string, but the contract text does not make the obligation explicit."
+        }
+      ]
+    },
+    "RUNTIME_ALLOC_OWNERSHIP": {
+      "verdict": "REFUTED",
+      "scope_of_refutation": "The receipt's claims 'every remaining unsafe op has a contract', 'the lhash hash/compare see only allocations this module inserted', and 'hidden: 0' are false. The ownership/release model itself (RawCtx/OwnedCtx/OwnedBlock and the register/cleanup transitions) survived this review's double-release, leak and aliasing attacks: I have no counterexample to the release behaviour. The refutation is of the stated contracts/enumeration, not of the core ownership reconstruction.",
+      "counterexamples": [
+        {
+          "id": "ADV-R1",
+          "kind": "false # Safety contract on both lhash callbacks",
+          "file": "src/engine/eng_table.rs",
+          "lines": [149, 167],
+          "quoted_contracts": [
+            "`c` must be a live `EnginePile` stored in an ENGINE table's lhash, which is the only way this callback is installed: [`int_table_check`] creates the table with `OPENSSL_LH_new(Some(engine_pile_hash), ...)` and the module inserts nothing but the `RawCtx::<EnginePile>` allocations at [`engine_table_register`], so every element the lhash hashes was allocated and fully initialised here.",
+            "`a` and `b` must both be live `EnginePile`s from the same ENGINE table's lhash; the same establishment as [`engine_pile_hash`] applies -- [`int_table_check`] installs this comparison and the module inserts only `EnginePile` allocations."
+          ],
+          "attack": "Both contracts are false for this module's own callers. engine_table_register calls OPENSSL_LH_retrieve(lh, ptr::addr_of!(tmplate)) at :268 and :308, and ossl_engine_table_select calls it at :511, with a stack-local `EnginePile tmplate`. The crate's OPENSSL_LH_retrieve (src/runtime/lhash.rs:640-645) calls s.hash(data) on that query key and s.eq(stored, data), so engine_pile_hash is invoked on a stack template that is not stored in any lhash and was not allocated by this module, and engine_pile_cmp is invoked with one argument that is that template. The template is a fully initialised live EnginePile, so this is not UB, but 'every contract is true' and the established_by 'element set established by this module's own insert sites' are false, and the same false statement appears in the site receipt (established_by: 'OPENSSL_LH_new's HashFunc invocation; element set established by this module's own insert sites')."
+        },
+        {
+          "id": "ADV-R2",
+          "kind": "under-enumeration on the release path: unsafe ops with no contract",
+          "file": "src/engine/eng_table.rs",
+          "lines": [376, 437, 602],
+          "finding": "int_unregister_cb (:376), int_cleanup_cb_doall (:437) and int_dall (:602) are unsafe extern \"C\" fns installed into the same lhash family, with only block-level comments and no `# Safety` fn contract. int_cleanup_cb_doall is the function that actually reclaims every pile with OwnedCtx::<EnginePile>::from_raw(p) and frees it, so the release path itself is inside an uncontracted unsafe op. The receipt enumerates only engine_pile_hash/engine_pile_cmp and claims 'every remaining unsafe op has a contract'."
+        },
+        {
+          "id": "ADV-R3",
+          "kind": "hidden obligation: alignment not in the CtxDestroy contract, reachable through safe constructors",
+          "file": "src/runtime/bio/owned.rs",
+          "lines": [67, 130, 250],
+          "quoted_contract": "An implementer takes on both halves of this contract ... (a) destructor ... (b) zero-validity ... (c) coordinate lifetime ...",
+          "attack": "The unsafe trait CtxDestroy's stated obligations are (a) destructor, (b) zero-validity and (c) coordinate lifetime. Nothing requires align_of::<T>() to be no greater than the alignment the allocator seam returns. OwnedCtx::zalloc (:130) is a safe fn, and it (through RawCtx::zalloc/malloc_at, :250/:259) constructs NonNull<T> / NonNull<MaybeUninit<T>> from CRYPTO_malloc(size_of::<T>()) -- mem.rs:191-195 forwards to libc malloc, and a caller-installed CRYPTO_set_mem_functions allocator decides its own alignment -- with no alignment assertion. A crate implementer that satisfies (a)-(c) but uses, say, #[repr(align(32))] produces a misaligned NonNull<T> (UB) via a safe constructor. The generic OwnedBlock::<T>::malloc/zalloc (src/asn1/owned.rs:53,:70) has the same gap. All current implementors are 8-aligned or less, so this is latent; it is nonetheless exactly the 'safe interface can cause UB' class that section 7/9 forbids, and it is not in the receipt's retained list (which claims hidden: 0)."
+        }
+      ]
+    }
+  },
+  "items_attacked_without_counterexample": {
+    "aliasing": "No path found that yields two live &mut to one object. (1) a_mbstr's out_slice (src/asn1/a_mbstr.rs:649) is a &mut [u8] over the block this frame exclusively owns and is not reached from the Asn1String value except through raw pointers; the destination value is only touched through raw pointer fields, not through a Rust reference. (2) The nonce slot in ocsp_add1_nonce is ptr::addr_of_mut!((*req).tbsExtension...) and the stack Asn1String is only read by X509V3_add1_i2d/do_ext_i2d/i2d_ocsp_nonce; the Vec's buffer is never mutably borrowed during the call. (3) OCSP_CRLID_TT / OCSP_SERVICELOC_TT / OCSP_*_ITEM are immutable statics (no static mut); X509V3ExtMethod rows are immutable statics. (4) The lhash stores raw *mut c_void, passes *const to hash/compare and *mut only to doall, and Inner::visit (lhash.rs:301-313) snapshots the item pointers before invoking callbacks, so a doall callback that frees items does not corrupt the walk. I found no aliasing defect.",
+    "double_release_and_leak": "No reachable double release found. Traced: EnginePile register (RawCtx malloc -> block-only release when OPENSSL_sk_new_null fails; otherwise assume_init -> insert -> re-retrieve -> into_raw or single OwnedCtx drop), cleanup (int_cleanup_cb_doall adopts each element once under the engine write lock; OPENSSL_LH_free does not free elements), and OPENSSL_LH_doall's snapshot. d2i_ocsp_nonce's fresh/caller-supplied arms and ocsp_add1_nonce's refusal arms release exactly what they own. Retained latent hazard (not a current defect): engine_table_register ignores OPENSSL_LH_insert's return (:306); if insert ever took its replace branch the old element would be leaked. It cannot today because retrieve and insert use the same nid hash/compare under the engine lock, but changing engine_pile_cmp's equality would silently introduce the leak.",
+    "reentrancy": "Could not construct an inconsistent-state observation. The i2r callbacks hold no crate lock and no &mut across BIO calls; i2r_ocsp_crlid snapshots its three field pointers, and the decoded value is frame-local to X509V3_EXT_print and not reachable from an application BIO callback. i2r_ocsp_serviceloc re-reads (*a).locator per iteration, but a BIO callback cannot name `a`. The lhash hash/compare call no application code. engine_table_doall's application cb does run under the engine read lock; that is documented as a caller restriction, not tested, and is a reentrancy hazard (a cb that registers/unregisters an engine takes the same lock) rather than one of the enumerated ASN1 callback sites.",
+    "eliminated_sites": "Verified in source, not from the receipt. (a) src/ocsp/v3_ocsp.rs:349 s2i_ocsp_nocheck is a safe `extern \"C\" fn` assigned with no cast to X509V3ExtMethod.s2i (v3_lib.rs:133-134, a Some<unsafe extern C fn> slot) at v3_ocsp.rs:493; the crate compiles and the six asn1_ocsp tests run, so the safe-to-unsafe fn-pointer coercion is real. (b) The Rfunc family is gone: `type Rfunc`, the four unsafe extern C cpy_* definitions, the `rfunc: Option<Rfunc>` parameter and the `arg: *mut c_void` are all removed; the only writers are now the safe fns cpy_asc/cpy_bmp/cpy_univ/cpy_utf8, selected through the explicitly typed `let cpyfunc: fn(c_ulong, &mut [u8], &mut usize) -> c_int` (a_mbstr.rs:552). No remaining Rfunc/cpy_* caller or export exists in src/, so no caller can pass a mismatched type. (c) The ex_data no-ops (src/runtime/ex_data.rs:232,245,260) are safe fns assigned to NewFunc/DupFunc/FreeFunc slots at :332-334 with no cast, and each reads no argument, so their `unsafe` removal is sound."
+  },
+  "test_adequacy": {
+    "re_run": "Both filters were re-run against 6749f19b3 in the court container: `cargo test --lib -- --test-threads=4 asn1_ocsp_` -> '6 passed; 0 failed; 2229 filtered out'; `cargo test --lib -- --test-threads=4 alloc_own_` -> '4 passed; 0 failed; 2231 filtered out'. The ten tests exist and pass.",
+    "overclaims": [
+      "asn1_ocsp_nonce_decode_release_is_exactly_once_at_the_decoded_address (v3_ocsp.rs:584) asserts that ocsp_nonce_free(a) emits Released(a) and ocsp_nonce_free(NULL) emits nothing. nonce_probe::released is a statement inside the function body, so the test verifies the probe statements, not the allocator: a double CRYPTO_free inside ASN1_OCTET_STRING_free, or a free of a different address by that callee, would still show exactly one Released(a) event. The claim 'release is exactly once at the decoded address' is not established.",
+      "alloc_own_ctx_releases_member_and_block_once_each_by_address (owned.rs:617) has the same structure: release_probe::record is emitted by OwnedCtx::Drop itself. A destroy_body that also freed the enclosing block -- the exact break of CtxDestroy obligation (a) the comment forbids -- would still produce one Plain record at the block address plus the member record, so the test would pass. Address bookkeeping cannot detect the double-release class it names; that needs the ASan/counting-allocator arm, which the receipt says was not run.",
+      "asn1_ocsp_nonce_set_failure_* pass length = c_int::MAX with a 1-byte pp buffer, which violates d2i_ocsp_nonce's own contract ('pp ... readable for length bytes'); they work only because ASN1_STRING_set's internal INT_MAX-1 guard returns before reading. The caller-object test's SAFETY comment ('pp is readable for the length') is false. A change to that guard would turn the tests into OOB reads.",
+      "asn1_ocsp_add1_nonce_refuses_an_unencodable_length_before_allocating exercises only ASN1_object_size < 0; the allocation-refusal arm and the huge-but-encodable len abort (ADV-A4) are untested.",
+      "asn1_ocsp_mbstr_bmp_output_is_exactly_the_sized_block covers BMP only; the cpy_utf8 real-room change (the subphase's one stated behavioural improvement), UNIV/ASC writers, and the claim 'the two forms agree on every input the guard admits' have no test.",
+      "No test exercises engine_pile_hash/engine_pile_cmp with the stack-template invocation (which is why ADV-R1 is invisible), engine_table_register/cleanup, the EnginePile destroy_body, or the ex_data no-ops after CRYPTO_free_ex_index."
+    ],
+    "claims_with_no_test": [
+      "ASN1_OCSP: traverse_string's BMP/UNIV/negative-len obligations (ADV-A1); ASN1_mbstring_ncopy reuse of a caller-supplied *out (ADV-A2); successful ocsp_add1_nonce install and round trip; i2d_ocsp_nonce copy/advance; i2r_ocsp_crlid/serviceloc/acutoff printing; s2i_ocsp_nocheck; nonce secret-cleansing status.",
+      "RUNTIME_ALLOC_OWNERSHIP: the lhash element-type contract (ADV-R1); the RawCtx -> assume_init -> into_raw transition on EnginePile; int_cleanup_cb_doall/int_unregister_cb/int_dall; alignment of CtxDestroy implementors (ADV-R3)."
+    ]
+  },
+  "commands_run": [
+    "git --no-pager log --oneline -5 (HEAD 6749f19b3; 5a90d4dd7 on stage/p25/reconstruct-2; 247925538 main)",
+    "git --no-pager show --stat 6749f19b3",
+    "git --no-pager show 5a90d4dd7 -- src/runtime/release_probe.rs src/asn1/owned.rs src/asn1/string.rs src/evp/asymcipher.rs src/runtime/rcu.rs",
+    "git --no-pager show 5a90d4dd7 -- src/asn1/a_mbstr.rs (source diff inspected; no check was removed and the copy-pass return was already ignored)",
+    "court: cargo test --lib -- --test-threads=4 asn1_ocsp_ -> 6 passed, 0 failed",
+    "court: cargo test --lib -- --test-threads=4 alloc_own_ -> 4 passed, 0 failed"
+  ],
+  "not_examined": [
+    "The other 113 obligations of the 120-obligation openssh closure, and every mechanism outside ASN1_OCSP and RUNTIME_ALLOC_OWNERSHIP.",
+    "The frozen-V1 binaries (the receipt itself says they do not contain these edits) and the closure tool's adjudication.",
+    "ASan/Miri/Loom, the adv_alloc counting-allocator probes, Wycheproof/ACVP, and the full library suite: not run by this reviewer (only the two focused filters were re-run).",
+    "The authority C source was not re-read for the OCSP callbacks; compatibility claims were not independently re-derived.",
+    "Concurrency: I reasoned from the engine lock and the thread-local probes; no concurrency test, TSAN or Loom run."
+  ],
+  "limits": [
+    "This review cannot prove the absence of bugs: it is a hostile inspection, not a proof.",
+    "It covers only the two named mechanisms, and only the files and paths I could reach from them.",
+    "It is one reviewer, not the independent BOUNDARY review section 15 requires; the state must stay OWNERSHIP_RECONSTRUCTED and DISCHARGED must stay 0.",
+    "A 'no counterexample found' item is not a discharge: absence of a constructed attack is not evidence that no attack exists."
+  ]
+}
