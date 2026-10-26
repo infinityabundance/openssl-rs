@@ -34,7 +34,7 @@ use core::ffi::{c_char, c_int, c_void};
 use core::mem::MaybeUninit;
 use core::ptr::{self, NonNull};
 
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc, SEAM_MALLOC_ALIGN};
 use crate::runtime::mem_coords::SeamFile;
 
 /// Test-only observation of which owner's `Drop` ran, for the OB-3 model
@@ -81,7 +81,12 @@ mod drop_probe {
 /// (c) **coordinate lifetime** — [`FILE`](CtxDestroy::FILE) is NULL or points at a NUL-terminated
 ///     C string with static storage that remains valid for the entire program, because a
 ///     caller-installed `CRYPTO_set_mem_functions` hook may read it during any release.
-///     [`SeamFile::from_static_ptr`] relies on this and cannot establish it.
+///     [`SeamFile::from_static_ptr`] relies on this and cannot establish it; and
+/// (d) **no alignment obligation** — an implementor whose `align_of::<Self>()` exceeds
+///     [`SEAM_MALLOC_ALIGN`] is *refused* by the safe constructors (they answer `None`, the
+///     allocation-refusal arm), so no implementor can be handed a misaligned `NonNull<Self>`
+///     through safe code. This is a fact about the constructors, not a new obligation: an
+///     over-aligned `Self` simply cannot be built by [`OwnedCtx`]/[`RawCtx`].
 ///
 /// Breaking (a) lets safe Rust double-release or release the enclosing block; breaking (b) runs
 /// `destroy_body` on a value that is not a valid `Self`; breaking (c) lets an allocator hook read a
@@ -175,17 +180,26 @@ impl<T: CtxDestroy> OwnedCtx<T> {
     /// Reclaim a block handed to the C caller, releasing it at the given authority site.
     ///
     /// # Safety
-    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released.
+    /// `ptr` is NULL or a live block a previous `into_raw` gave up and `Drop` has not released,
+    /// and it is aligned for `T`. A non-NULL misaligned pointer answering `None` is the
+    /// allocation-refusal arm: the block is not adopted (and therefore not released here), so a
+    /// caller that violates the alignment precondition loses the block instead of obtaining UB.
     pub(crate) unsafe fn from_raw_at(
         ptr: *mut T,
         release_file: SeamFile,
         release_line: c_int,
     ) -> Option<OwnedCtx<T>> {
-        NonNull::new(ptr).map(|ptr| OwnedCtx {
-            ptr,
-            file: release_file,
-            line: release_line,
-        })
+        NonNull::new(ptr)
+            .filter(|ptr| {
+                ptr.as_ptr()
+                    .addr()
+                    .is_multiple_of(core::mem::align_of::<T>())
+            })
+            .map(|ptr| OwnedCtx {
+                ptr,
+                file: release_file,
+                line: release_line,
+            })
     }
 
     /// Re-point the block release at another authority site (a failed push releases at a different
@@ -262,6 +276,13 @@ impl<T: CtxDestroy> RawCtx<T> {
         release_file: SeamFile,
         release_line: c_int,
     ) -> Option<RawCtx<T>> {
+        // The seam guarantees pointer alignment (see `SEAM_MALLOC_ALIGN`); a type above that
+        // bound is refused before the allocator is asked, exactly as a refused allocation. The
+        // check is a compile-time constant per monomorphisation, so no current implementor pays
+        // for it, and no path can produce a misaligned `NonNull<T>` through this safe constructor.
+        if core::mem::align_of::<T>() > SEAM_MALLOC_ALIGN {
+            return None;
+        }
         // `CRYPTO_malloc` is a safe function: it answers NULL or a fresh, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
         let raw = unsafe {
@@ -295,6 +316,11 @@ impl<T: CtxDestroy> RawCtx<T> {
         release_file: SeamFile,
         release_line: c_int,
     ) -> Option<RawCtx<T>> {
+        // As `malloc_at`: the seam's aligned bound is enforced here, so the zeroed block is only
+        // adopted when `NonNull<T>` is actually aligned for `T`.
+        if core::mem::align_of::<T>() > SEAM_MALLOC_ALIGN {
+            return None;
+        }
         // `CRYPTO_zalloc` is a safe function: it answers NULL or a fresh, zeroed, writable block of
         // `size_of::<T>()` bytes, which is exactly `T`'s layout.
         let raw = unsafe {
@@ -537,6 +563,56 @@ mod adv_partial_init_tests {
         );
     }
 
+    /// A test-only context whose alignment the allocator seam cannot guarantee. It is a valid
+    /// `CtxDestroy` implementor (its destructor reads nothing), so it is exactly the shape the
+    /// old constructors would have handed a misaligned `NonNull<T>` through safe code.
+    #[repr(C, align(64))]
+    struct OverAlignedCtx {
+        marker: usize,
+    }
+
+    // SAFETY: (a) `destroy_body` releases nothing and never the enclosing block; (b) an all-zero
+    // `OverAlignedCtx` is a valid value; (c) `FILE` is the default NULL coordinate; (d) the
+    // over-alignment is refused by the constructors, so it never reaches an owner.
+    unsafe impl CtxDestroy for OverAlignedCtx {
+        unsafe fn destroy_body(_ptr: *mut OverAlignedCtx) {}
+    }
+
+    /// The alignment defect ADV-R3: a conforming implementor with a 64-byte alignment used to be
+    /// handed a `CRYPTO_malloc` block (pointer-aligned only) as a `NonNull<Self>`. Every safe
+    /// constructor now answers the allocation-refusal arm instead, so the type is never adopted.
+    #[test]
+    fn over_aligned_ctx_is_refused_not_adopted() {
+        assert!(
+            core::mem::align_of::<OverAlignedCtx>() > SEAM_MALLOC_ALIGN,
+            "the test type must exceed the seam's guarantee for the assertion to mean anything"
+        );
+        assert!(RawCtx::<OverAlignedCtx>::malloc().is_none());
+        assert!(RawCtx::<OverAlignedCtx>::zalloc().is_none());
+        assert!(OwnedCtx::<OverAlignedCtx>::zalloc().is_none());
+        assert!(OwnedCtx::<OverAlignedCtx>::zalloc_at(
+            SeamFile::new(c"test/over-aligned"),
+            1,
+            SeamFile::new(c"test/over-aligned"),
+            2,
+        )
+        .is_none());
+    }
+
+    /// Negative control for the bound itself: a type the seam *can* align is still adopted, and
+    /// the address it returns is aligned for it. A constructor that refused everything would make
+    /// the previous test vacuous.
+    #[test]
+    fn seam_aligned_ctx_is_adopted_and_aligned() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        let owned = OwnedCtx::<ProbeCtx>::zalloc().expect("a pointer-aligned context allocates");
+        assert_eq!(
+            (owned.as_ptr() as usize) % core::mem::align_of::<ProbeCtx>(),
+            0,
+            "the adopted address is aligned for the context"
+        );
+    }
+
     /// `OwnedBlock::take(NULL)` is `None`; a non-NULL block is owned and released by `Drop`.
     #[test]
     fn owned_block_take_null_is_none() {
@@ -567,6 +643,7 @@ mod alloc_own_tests {
     #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
     use super::*;
+    use crate::runtime::mem::free_probe;
     use crate::runtime::release_probe::{self, Arm};
     use core::cell::RefCell;
 
@@ -612,10 +689,13 @@ mod alloc_own_tests {
     }
 
     /// A validated owner releases its member and its block exactly once each, by address, and the
-    /// member goes first.
+    /// member goes first. The exactly-once claim is checked at the **allocator seam** (which sees
+    /// frees performed by callees too), not only at the owner's own probe: a `destroy_body` that
+    /// also released the enclosing block would make the block's seam count 2.
     #[test]
     fn alloc_own_ctx_releases_member_and_block_once_each_by_address() {
         release_probe::clear();
+        free_probe::reset();
         MEMBER_RELEASES.with(|r| r.borrow_mut().clear());
         let member = unsafe {
             // SAFETY: `file` is NULL, which `CRYPTO_malloc` accepts.
@@ -645,6 +725,36 @@ mod alloc_own_tests {
             release_probe::take().is_none(),
             "the block release happens once"
         );
+        // The member was freed by `destroy_body` (a callee), the block by the owner's `Drop`.
+        assert_eq!(
+            free_probe::count(member),
+            1,
+            "the seam saw exactly one release of the member"
+        );
+        assert_eq!(
+            free_probe::count(block_addr as *const c_void),
+            1,
+            "the seam saw exactly one release of the block"
+        );
+        assert_eq!(
+            free_probe::events(),
+            vec![member as usize, block_addr],
+            "member then block, each exactly once"
+        );
+    }
+
+    /// Instrument liveness (§16): the seam counter distinguishes one release at an address from
+    /// two. This is the negative control for the exactly-once assertions above -- if `count`
+    /// could not see a second record, those assertions would be vacuous.
+    #[test]
+    fn free_probe_counts_a_second_release_at_the_same_address() {
+        free_probe::reset();
+        // An address-shaped value; `record` only stores the number and never dereferences it.
+        let p = 0x1000 as *mut c_void;
+        free_probe::record(p);
+        assert_eq!(free_probe::count(p), 1);
+        free_probe::record(p);
+        assert_eq!(free_probe::count(p), 2, "a second release is visible");
     }
 
     /// Storage that was never validated (`RawCtx`) releases the block alone: the member it still
