@@ -565,15 +565,18 @@ pub(crate) unsafe fn engine_load_dynamic_int() {
 
 /// `static int dynamic_init(ENGINE *e)` — `:271-278`.
 ///
-/// The `dynamic` engine itself can never be used, so init always fails.
-unsafe extern "C" fn dynamic_init(_e: *mut Engine) -> c_int {
+/// The `dynamic` engine itself can never be used, so init always fails. It reads no
+/// argument and contains no unsafe operation, so it is a safe `extern "C" fn` (a safe
+/// fn coerces to the ENGINE_GEN_INT_FUNC_PTR slot).
+extern "C" fn dynamic_init(_e: *mut Engine) -> c_int {
     0
 }
 
 /// `static int dynamic_finish(ENGINE *e)` — `:280-287`.
 ///
-/// Never reached, because [`dynamic_init`] always fails.
-unsafe extern "C" fn dynamic_finish(_e: *mut Engine) -> c_int {
+/// Never reached, because [`dynamic_init`] always fails. It reads no argument and
+/// contains no unsafe operation, so it is a safe `extern "C" fn`.
+extern "C" fn dynamic_finish(_e: *mut Engine) -> c_int {
     0
 }
 

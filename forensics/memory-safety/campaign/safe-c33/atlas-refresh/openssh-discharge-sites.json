@@ -1,0 +1,1117 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-discharge",
+  "subphase": "P25 openssh closure: mechanism-level site-enumerating discharge",
+  "date": "2026-10-26",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "head": "b40e1f096",
+    "working_tree_dirty": true,
+    "working_tree_note": "the contract/elimination fixes in this subphase are uncommitted; the closure was re-run at this working tree",
+    "source_fix_file_sha256": {
+      "src/context/namemap.rs": "f05d3d4840563ce5c736406e9f6d7d5050262c08f387fa5f8c53c20f52c74cf7",
+      "src/engine/eng_dyn.rs": "0044c618f70a001c6a54d92d925bfcd5c2a2f4c1bdd55ba1ca899f8e3eb2eae6",
+      "src/engine/tb_asnmth.rs": "ef104135ff9751981051ff8fbbf710b4aa299be7dd0b5a0ed702ea3a2d45a7bb",
+      "src/rand/rand_lib.rs": "ee19112d10a5a9c96d39db3b6d466044acb4185479149810a0585ad520a7c5e5",
+      "src/ssl/ssl_conf.rs": "0ca90877cba6adbaf9ff58734c7e21e3ee7d2b3fc074ec13d372eec8b401b15f"
+    },
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
+    "inventory_source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
+    "artifacts": {
+      "ssh": {
+        "path": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+        "sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57"
+      },
+      "sshd": {
+        "path": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+        "sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+      }
+    },
+    "artifact_note": "the frozen V1 binaries do not contain this subphase source fixes; the closure measures the classification effect of the site receipts, not the compiled effect of the fixes"
+  },
+  "mechanism_results": {
+    "EVP_PKEY_PROVIDER": {
+      "reachable_sites": 65,
+      "discharged": 62,
+      "blocked": 3,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-007",
+        "OSSH-DIS-008",
+        "OSSH-DIS-009",
+        "OSSH-DIS-010",
+        "OSSH-DIS-012",
+        "OSSH-DIS-013",
+        "OSSH-DIS-032",
+        "OSSH-DIS-033",
+        "OSSH-DIS-034",
+        "OSSH-DIS-035",
+        "OSSH-DIS-036",
+        "OSSH-DIS-037",
+        "OSSH-DIS-038",
+        "OSSH-DIS-039",
+        "OSSH-DIS-040",
+        "OSSH-DIS-041",
+        "OSSH-DIS-042",
+        "OSSH-DIS-043",
+        "OSSH-DIS-044",
+        "OSSH-DIS-045",
+        "OSSH-DIS-046",
+        "OSSH-DIS-047",
+        "OSSH-DIS-048",
+        "OSSH-DIS-049",
+        "OSSH-DIS-050",
+        "OSSH-DIS-051",
+        "OSSH-DIS-052",
+        "OSSH-DIS-053",
+        "OSSH-DIS-054",
+        "OSSH-DIS-055",
+        "OSSH-DIS-056",
+        "OSSH-DIS-057",
+        "OSSH-DIS-058",
+        "OSSH-DIS-059",
+        "OSSH-DIS-060",
+        "OSSH-DIS-061",
+        "OSSH-DIS-062",
+        "OSSH-DIS-063",
+        "OSSH-DIS-064",
+        "OSSH-DIS-065",
+        "OSSH-DIS-066",
+        "OSSH-DIS-067",
+        "OSSH-DIS-068",
+        "OSSH-DIS-069",
+        "OSSH-DIS-070",
+        "OSSH-DIS-071",
+        "OSSH-DIS-072",
+        "OSSH-DIS-073",
+        "OSSH-DIS-074",
+        "OSSH-DIS-075",
+        "OSSH-DIS-076",
+        "OSSH-DIS-077",
+        "OSSH-DIS-078",
+        "OSSH-DIS-079",
+        "OSSH-DIS-080",
+        "OSSH-DIS-081",
+        "OSSH-DIS-082",
+        "OSSH-DIS-083",
+        "OSSH-DIS-084",
+        "OSSH-DIS-085",
+        "OSSH-DIS-086",
+        "OSSH-DIS-088"
+      ],
+      "blocked_sites": [
+        {
+          "id": "OSSH-DIS-017",
+          "file": "src/evp/legacy_md5.rs",
+          "line": 147,
+          "operation": "md5_init",
+          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+        },
+        {
+          "id": "OSSH-DIS-018",
+          "file": "src/evp/legacy_sha.rs",
+          "line": 181,
+          "operation": "sha1_init",
+          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+        },
+        {
+          "id": "OSSH-DIS-019",
+          "file": "src/evp/legacy_sha.rs",
+          "line": 224,
+          "operation": "sha224_init",
+          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
+        }
+      ],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "X509_VERIFY_POLICY": {
+      "reachable_sites": 10,
+      "discharged": 10,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-001",
+        "OSSH-DIS-112",
+        "OSSH-DIS-113",
+        "OSSH-DIS-114",
+        "OSSH-DIS-115",
+        "OSSH-DIS-116",
+        "OSSH-DIS-117",
+        "OSSH-DIS-118",
+        "OSSH-DIS-119",
+        "OSSH-DIS-120"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "RAND_CMS_STORE_KEYFMT": {
+      "reachable_sites": 9,
+      "discharged": 9,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-004",
+        "OSSH-DIS-005",
+        "OSSH-DIS-027",
+        "OSSH-DIS-028",
+        "OSSH-DIS-029",
+        "OSSH-DIS-030",
+        "OSSH-DIS-031",
+        "OSSH-DIS-087",
+        "OSSH-DIS-108"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "ASN1_OCSP": {
+      "reachable_sites": 7,
+      "discharged": 7,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-002",
+        "OSSH-DIS-020",
+        "OSSH-DIS-021",
+        "OSSH-DIS-022",
+        "OSSH-DIS-023",
+        "OSSH-DIS-024",
+        "OSSH-DIS-025"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "SSL_SESSION": {
+      "reachable_sites": 14,
+      "discharged": 14,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-094",
+        "OSSH-DIS-095",
+        "OSSH-DIS-096",
+        "OSSH-DIS-097",
+        "OSSH-DIS-098",
+        "OSSH-DIS-099",
+        "OSSH-DIS-100",
+        "OSSH-DIS-101",
+        "OSSH-DIS-102",
+        "OSSH-DIS-103",
+        "OSSH-DIS-104",
+        "OSSH-DIS-105",
+        "OSSH-DIS-106",
+        "OSSH-DIS-107"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "RUNTIME_CONCURRENCY": {
+      "reachable_sites": 2,
+      "discharged": 2,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-006",
+        "OSSH-DIS-093"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "RUNTIME_ALLOC_OWNERSHIP": {
+      "reachable_sites": 4,
+      "discharged": 4,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-015",
+        "OSSH-DIS-090",
+        "OSSH-DIS-091",
+        "OSSH-DIS-092"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+    },
+    "ERR": {
+      "reachable_sites": 1,
+      "discharged": 1,
+      "blocked": 0,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-011"
+      ],
+      "blocked_sites": [],
+      "mechanism_state_after": "SAFETY_DISCHARGED (ERR mechanism scope)"
+    },
+    "C_ABI_CONTRACT": {
+      "reachable_sites": 8,
+      "discharged": 7,
+      "blocked": 1,
+      "unknown": 0,
+      "discharged_site_ids": [
+        "OSSH-DIS-003",
+        "OSSH-DIS-014",
+        "OSSH-DIS-016",
+        "OSSH-DIS-089",
+        "OSSH-DIS-109",
+        "OSSH-DIS-110",
+        "OSSH-DIS-111"
+      ],
+      "blocked_sites": [
+        {
+          "id": "OSSH-DIS-026",
+          "file": "src/passphrase.rs",
+          "line": 499,
+          "operation": "do_ui_passphrase",
+          "criterion": "criterion 2 (caller/ABI establishment): `ui_method`/`ui_data` are installed by a third party through the exported `ossl_pw_set_ui_method`; the crate cannot establish that the `UI_METHOD` table and its callbacks are live and valid. The `# Safety` contract states the precondition but no in-crate caller or proven ABI contract discharges it."
+        }
+      ],
+      "mechanism_state_after": "UNSAFE_OPEN; only the in-crate callback edges named here are scoped-discharged"
+    }
+  },
+  "summary": {
+    "reachable_production_obligations": 120,
+    "discharged": 116,
+    "blocked": 4,
+    "unknown": 0,
+    "by_mechanism": {
+      "EVP_PKEY_PROVIDER": {
+        "discharged": 62,
+        "blocked": 3
+      },
+      "X509_VERIFY_POLICY": {
+        "discharged": 10,
+        "blocked": 0
+      },
+      "RAND_CMS_STORE_KEYFMT": {
+        "discharged": 9,
+        "blocked": 0
+      },
+      "ASN1_OCSP": {
+        "discharged": 7,
+        "blocked": 0
+      },
+      "SSL_SESSION": {
+        "discharged": 14,
+        "blocked": 0
+      },
+      "RUNTIME_CONCURRENCY": {
+        "discharged": 2,
+        "blocked": 0
+      },
+      "RUNTIME_ALLOC_OWNERSHIP": {
+        "discharged": 4,
+        "blocked": 0
+      },
+      "ERR": {
+        "discharged": 1,
+        "blocked": 0
+      },
+      "C_ABI_CONTRACT": {
+        "discharged": 7,
+        "blocked": 1
+      }
+    }
+  },
+  "evidence_receipt": "openssh-discharge.json",
+  "note": "Projection of openssh-discharge.json for consumer_closure.load_boundaries, which admits only *-sites.json with kind site-enumerating-boundary-receipt. The detailed contract/criteria fields live in the evidence receipt.",
+  "boundaries": [
+    {
+      "id": "OSSH-DIS-001",
+      "file": "src/apps/verify.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/apps/verify.rs:104"
+    },
+    {
+      "id": "OSSH-DIS-002",
+      "file": "src/asn1/a_mbstr.rs",
+      "mechanism": "ASN1_OCSP",
+      "disposition": "SAFETY_DISCHARGED: src/asn1/a_mbstr.rs:243"
+    },
+    {
+      "id": "OSSH-DIS-003",
+      "file": "src/async/arch/async_posix.rs",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "SAFETY_DISCHARGED: src/async/arch/async_posix.rs:52"
+    },
+    {
+      "id": "OSSH-DIS-004",
+      "file": "src/cms/cms_asn1.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:495"
+    },
+    {
+      "id": "OSSH-DIS-005",
+      "file": "src/cms/cms_sd.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/cms/cms_sd.rs:2211"
+    },
+    {
+      "id": "OSSH-DIS-006",
+      "file": "src/context/namemap.rs",
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "disposition": "SAFETY_DISCHARGED: src/context/namemap.rs:1067"
+    },
+    {
+      "id": "OSSH-DIS-007",
+      "file": "src/decoder_meth.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/decoder_meth.rs:767"
+    },
+    {
+      "id": "OSSH-DIS-008",
+      "file": "src/decoder_pkey.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/decoder_pkey.rs:548"
+    },
+    {
+      "id": "OSSH-DIS-009",
+      "file": "src/digest/sha2.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/digest/sha2.rs:417"
+    },
+    {
+      "id": "OSSH-DIS-010",
+      "file": "src/digest/sha2.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/digest/sha2.rs:441"
+    },
+    {
+      "id": "OSSH-DIS-011",
+      "file": "src/dso/mod.rs",
+      "mechanism": "ERR",
+      "disposition": "SAFETY_DISCHARGED: src/dso/mod.rs:885"
+    },
+    {
+      "id": "OSSH-DIS-012",
+      "file": "src/ec/asn1.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/ec/asn1.rs:280"
+    },
+    {
+      "id": "OSSH-DIS-013",
+      "file": "src/encoder_meth.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/encoder_meth.rs:269"
+    },
+    {
+      "id": "OSSH-DIS-014",
+      "file": "src/engine/eng_dyn.rs",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "SAFETY_DISCHARGED: src/engine/eng_dyn.rs:576"
+    },
+    {
+      "id": "OSSH-DIS-015",
+      "file": "src/engine/eng_table.rs",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "disposition": "SAFETY_DISCHARGED: src/engine/eng_table.rs:148"
+    },
+    {
+      "id": "OSSH-DIS-016",
+      "file": "src/engine/tb_asnmth.rs",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "SAFETY_DISCHARGED: src/engine/tb_asnmth.rs:330"
+    },
+    {
+      "id": "OSSH-DIS-017",
+      "file": "src/evp/legacy_md5.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED: criterion 2 (caller/ABI establishment) at src/evp/legacy_md5.rs:147"
+    },
+    {
+      "id": "OSSH-DIS-018",
+      "file": "src/evp/legacy_sha.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED: criterion 2 (caller/ABI establishment) at src/evp/legacy_sha.rs:181"
+    },
+    {
+      "id": "OSSH-DIS-019",
+      "file": "src/evp/legacy_sha.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED: criterion 2 (caller/ABI establishment) at src/evp/legacy_sha.rs:224"
+    },
+    {
+      "id": "OSSH-DIS-020",
+      "file": "src/ocsp/ocsp_ext.rs",
+      "mechanism": "ASN1_OCSP",
+      "disposition": "SAFETY_DISCHARGED: src/ocsp/ocsp_ext.rs:685"
+    },
+    {
+      "id": "OSSH-DIS-021",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "mechanism": "ASN1_OCSP",
+      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:113"
+    },
+    {
+      "id": "OSSH-DIS-022",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "mechanism": "ASN1_OCSP",
+      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:200"
+    },
+    {
+      "id": "OSSH-DIS-023",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "mechanism": "ASN1_OCSP",
+      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:221"
+    },
+    {
+      "id": "OSSH-DIS-024",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "mechanism": "ASN1_OCSP",
+      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:312"
+    },
+    {
+      "id": "OSSH-DIS-025",
+      "file": "src/ocsp/v3_ocsp.rs",
+      "mechanism": "ASN1_OCSP",
+      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:326"
+    },
+    {
+      "id": "OSSH-DIS-026",
+      "file": "src/passphrase.rs",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "BLOCKED: criterion 2 (caller/ABI establishment) at src/passphrase.rs:499"
+    },
+    {
+      "id": "OSSH-DIS-027",
+      "file": "src/pem/pem_info.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/pem/pem_info.rs:73"
+    },
+    {
+      "id": "OSSH-DIS-028",
+      "file": "src/pem/pem_pk8.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/pem/pem_pk8.rs:67"
+    },
+    {
+      "id": "OSSH-DIS-029",
+      "file": "src/pem/pem_pkey.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/pem/pem_pkey.rs:110"
+    },
+    {
+      "id": "OSSH-DIS-030",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/pkcs7/pk7_asn1.rs:489"
+    },
+    {
+      "id": "OSSH-DIS-031",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/pkcs7/pk7_asn1.rs:578"
+    },
+    {
+      "id": "OSSH-DIS-032",
+      "file": "src/property/store.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/property/store.rs:1605"
+    },
+    {
+      "id": "OSSH-DIS-033",
+      "file": "src/provider/base.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/base.rs:149"
+    },
+    {
+      "id": "OSSH-DIS-034",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:967"
+    },
+    {
+      "id": "OSSH-DIS-035",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11077"
+    },
+    {
+      "id": "OSSH-DIS-036",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11082"
+    },
+    {
+      "id": "OSSH-DIS-037",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11092"
+    },
+    {
+      "id": "OSSH-DIS-038",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11097"
+    },
+    {
+      "id": "OSSH-DIS-039",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11102"
+    },
+    {
+      "id": "OSSH-DIS-040",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:21686"
+    },
+    {
+      "id": "OSSH-DIS-041",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:21712"
+    },
+    {
+      "id": "OSSH-DIS-042",
+      "file": "src/provider/cipher.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:22168"
+    },
+    {
+      "id": "OSSH-DIS-043",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:300"
+    },
+    {
+      "id": "OSSH-DIS-044",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:407"
+    },
+    {
+      "id": "OSSH-DIS-045",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:418"
+    },
+    {
+      "id": "OSSH-DIS-046",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:559"
+    },
+    {
+      "id": "OSSH-DIS-047",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:567"
+    },
+    {
+      "id": "OSSH-DIS-048",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:599"
+    },
+    {
+      "id": "OSSH-DIS-049",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:610"
+    },
+    {
+      "id": "OSSH-DIS-050",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:895"
+    },
+    {
+      "id": "OSSH-DIS-051",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:900"
+    },
+    {
+      "id": "OSSH-DIS-052",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:908"
+    },
+    {
+      "id": "OSSH-DIS-053",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:912"
+    },
+    {
+      "id": "OSSH-DIS-054",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:923"
+    },
+    {
+      "id": "OSSH-DIS-055",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1054"
+    },
+    {
+      "id": "OSSH-DIS-056",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1063"
+    },
+    {
+      "id": "OSSH-DIS-057",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1095"
+    },
+    {
+      "id": "OSSH-DIS-058",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1106"
+    },
+    {
+      "id": "OSSH-DIS-059",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1255"
+    },
+    {
+      "id": "OSSH-DIS-060",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1281"
+    },
+    {
+      "id": "OSSH-DIS-061",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1377"
+    },
+    {
+      "id": "OSSH-DIS-062",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1391"
+    },
+    {
+      "id": "OSSH-DIS-063",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1463"
+    },
+    {
+      "id": "OSSH-DIS-064",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1471"
+    },
+    {
+      "id": "OSSH-DIS-065",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1548"
+    },
+    {
+      "id": "OSSH-DIS-066",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1781"
+    },
+    {
+      "id": "OSSH-DIS-067",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1793"
+    },
+    {
+      "id": "OSSH-DIS-068",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1804"
+    },
+    {
+      "id": "OSSH-DIS-069",
+      "file": "src/provider/digest.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:2356"
+    },
+    {
+      "id": "OSSH-DIS-070",
+      "file": "src/provider/dsa_sig.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/dsa_sig.rs:1510"
+    },
+    {
+      "id": "OSSH-DIS-071",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:591"
+    },
+    {
+      "id": "OSSH-DIS-072",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:911"
+    },
+    {
+      "id": "OSSH-DIS-073",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:916"
+    },
+    {
+      "id": "OSSH-DIS-074",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:1094"
+    },
+    {
+      "id": "OSSH-DIS-075",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:1099"
+    },
+    {
+      "id": "OSSH-DIS-076",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:1104"
+    },
+    {
+      "id": "OSSH-DIS-077",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:1356"
+    },
+    {
+      "id": "OSSH-DIS-078",
+      "file": "src/provider/encode_key2any.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/encode_key2any.rs:170"
+    },
+    {
+      "id": "OSSH-DIS-079",
+      "file": "src/provider/encode_key2any.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/encode_key2any.rs:2230"
+    },
+    {
+      "id": "OSSH-DIS-080",
+      "file": "src/provider/keymgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/keymgmt.rs:843"
+    },
+    {
+      "id": "OSSH-DIS-081",
+      "file": "src/provider/keymgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/keymgmt.rs:920"
+    },
+    {
+      "id": "OSSH-DIS-082",
+      "file": "src/provider/keymgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/keymgmt.rs:929"
+    },
+    {
+      "id": "OSSH-DIS-083",
+      "file": "src/provider/keymgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/keymgmt.rs:1764"
+    },
+    {
+      "id": "OSSH-DIS-084",
+      "file": "src/provider/mlx_kmgmt.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/mlx_kmgmt.rs:116"
+    },
+    {
+      "id": "OSSH-DIS-085",
+      "file": "src/provider/rsa_sig.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/rsa_sig.rs:462"
+    },
+    {
+      "id": "OSSH-DIS-086",
+      "file": "src/provider/rsa_sig.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/provider/rsa_sig.rs:3183"
+    },
+    {
+      "id": "OSSH-DIS-087",
+      "file": "src/rand/rand_lib.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/rand/rand_lib.rs:660"
+    },
+    {
+      "id": "OSSH-DIS-088",
+      "file": "src/rsa/ossl.rs",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "SAFETY_DISCHARGED: src/rsa/ossl.rs:298"
+    },
+    {
+      "id": "OSSH-DIS-089",
+      "file": "src/runtime/conf/conf_ssl.rs",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "SAFETY_DISCHARGED: src/runtime/conf/conf_ssl.rs:546"
+    },
+    {
+      "id": "OSSH-DIS-090",
+      "file": "src/runtime/ex_data.rs",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "disposition": "SAFETY_DISCHARGED: src/runtime/ex_data.rs:239"
+    },
+    {
+      "id": "OSSH-DIS-091",
+      "file": "src/runtime/ex_data.rs",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "disposition": "SAFETY_DISCHARGED: src/runtime/ex_data.rs:251"
+    },
+    {
+      "id": "OSSH-DIS-092",
+      "file": "src/runtime/init.rs",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "disposition": "SAFETY_DISCHARGED: src/runtime/init.rs:1240"
+    },
+    {
+      "id": "OSSH-DIS-093",
+      "file": "src/runtime/thread.rs",
+      "mechanism": "RUNTIME_CONCURRENCY",
+      "disposition": "SAFETY_DISCHARGED: src/runtime/thread.rs:2104"
+    },
+    {
+      "id": "OSSH-DIS-094",
+      "file": "src/ssl/ssl_ciph.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:709"
+    },
+    {
+      "id": "OSSH-DIS-095",
+      "file": "src/ssl/ssl_ciph.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:759"
+    },
+    {
+      "id": "OSSH-DIS-096",
+      "file": "src/ssl/ssl_ciph.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:810"
+    },
+    {
+      "id": "OSSH-DIS-097",
+      "file": "src/ssl/ssl_conf.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:167"
+    },
+    {
+      "id": "OSSH-DIS-098",
+      "file": "src/ssl/ssl_conf.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:584"
+    },
+    {
+      "id": "OSSH-DIS-099",
+      "file": "src/ssl/ssl_conf.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:981"
+    },
+    {
+      "id": "OSSH-DIS-100",
+      "file": "src/ssl/ssl_conf.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:1061"
+    },
+    {
+      "id": "OSSH-DIS-101",
+      "file": "src/ssl/ssl_conf.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:1438"
+    },
+    {
+      "id": "OSSH-DIS-102",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_lib.rs:331"
+    },
+    {
+      "id": "OSSH-DIS-103",
+      "file": "src/ssl/ssl_lib.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_lib.rs:8845"
+    },
+    {
+      "id": "OSSH-DIS-104",
+      "file": "src/ssl/ssl_rsa.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_rsa.rs:1061"
+    },
+    {
+      "id": "OSSH-DIS-105",
+      "file": "src/ssl/statem/statem_clnt.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/statem/statem_clnt.rs:3597"
+    },
+    {
+      "id": "OSSH-DIS-106",
+      "file": "src/ssl/statem/statem_srvr.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/statem/statem_srvr.rs:2933"
+    },
+    {
+      "id": "OSSH-DIS-107",
+      "file": "src/ssl/t1_trce.rs",
+      "mechanism": "SSL_SESSION",
+      "disposition": "SAFETY_DISCHARGED: src/ssl/t1_trce.rs:1052"
+    },
+    {
+      "id": "OSSH-DIS-108",
+      "file": "src/store/store_lib.rs",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "SAFETY_DISCHARGED: src/store/store_lib.rs:557"
+    },
+    {
+      "id": "OSSH-DIS-109",
+      "file": "src/ui/ui_util.rs",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:145"
+    },
+    {
+      "id": "OSSH-DIS-110",
+      "file": "src/ui/ui_util.rs",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:161"
+    },
+    {
+      "id": "OSSH-DIS-111",
+      "file": "src/ui/ui_util.rs",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:310"
+    },
+    {
+      "id": "OSSH-DIS-112",
+      "file": "src/x509/v3_asid.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:797"
+    },
+    {
+      "id": "OSSH-DIS-113",
+      "file": "src/x509/v3_asid.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:841"
+    },
+    {
+      "id": "OSSH-DIS-114",
+      "file": "src/x509/v3_asid.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:1083"
+    },
+    {
+      "id": "OSSH-DIS-115",
+      "file": "src/x509/v3_lib.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_lib.rs:359"
+    },
+    {
+      "id": "OSSH-DIS-116",
+      "file": "src/x509/v3_timespec.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1326"
+    },
+    {
+      "id": "OSSH-DIS-117",
+      "file": "src/x509/v3_timespec.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1468"
+    },
+    {
+      "id": "OSSH-DIS-118",
+      "file": "src/x509/v3_timespec.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1554"
+    },
+    {
+      "id": "OSSH-DIS-119",
+      "file": "src/x509/v3_timespec.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1572"
+    },
+    {
+      "id": "OSSH-DIS-120",
+      "file": "src/x509/v3_tlsf.rs",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "SAFETY_DISCHARGED: src/x509/v3_tlsf.rs:146"
+    }
+  ],
+  "closure_rerun": {
+    "tool": {
+      "path": "forensics/tools/consumer_closure.py",
+      "version": 3
+    },
+    "ssh": {
+      "artifact": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+      "artifact_sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+      "counts": {
+        "reachable_files": 345,
+        "reachable_production_obligations": 120,
+        "DISCHARGED": 116,
+        "BLOCKED": 4,
+        "UNKNOWN": 0,
+        "by_mechanism": {
+          "ASN1_OCSP": 7,
+          "C_ABI_CONTRACT": 8,
+          "ERR": 1,
+          "EVP_PKEY_PROVIDER": 65,
+          "RAND_CMS_STORE_KEYFMT": 9,
+          "RUNTIME_ALLOC_OWNERSHIP": 4,
+          "RUNTIME_CONCURRENCY": 2,
+          "SSL_SESSION": 14,
+          "X509_VERIFY_POLICY": 10
+        },
+        "v1_production_operations_total": 198,
+        "v1_uncontracted_operations_total": 354
+      },
+      "verdict": {
+        "state": "ACCEPTED",
+        "safe_compatible": false,
+        "reason": "no refusal condition fired"
+      },
+      "refusals": []
+    },
+    "sshd": {
+      "artifact": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+      "artifact_sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002",
+      "counts": {
+        "reachable_files": 337,
+        "reachable_production_obligations": 120,
+        "DISCHARGED": 116,
+        "BLOCKED": 4,
+        "UNKNOWN": 0,
+        "by_mechanism": {
+          "ASN1_OCSP": 7,
+          "C_ABI_CONTRACT": 8,
+          "ERR": 1,
+          "EVP_PKEY_PROVIDER": 65,
+          "RAND_CMS_STORE_KEYFMT": 9,
+          "RUNTIME_ALLOC_OWNERSHIP": 4,
+          "RUNTIME_CONCURRENCY": 2,
+          "SSL_SESSION": 14,
+          "X509_VERIFY_POLICY": 10
+        },
+        "v1_production_operations_total": 198,
+        "v1_uncontracted_operations_total": 354
+      },
+      "verdict": {
+        "state": "ACCEPTED",
+        "safe_compatible": false,
+        "reason": "no refusal condition fired"
+      },
+      "refusals": []
+    },
+    "note": "The tool now returns ACCEPTED because every reachable production obligation is DISCHARGED or BLOCKED and every reachable file has an admitted boundary receipt, with UNKNOWN = 0. ACCEPTED is the structural-closure verdict only: verdict.safe_compatible is false and the BLOCKED sites plus the retained mechanism/file obligations in this receipt still bar a SAFE_COMPATIBLE claim.",
+    "verdict_interpretation": {
+      "structural_closure": "ACCEPTED (no refusal condition fired)",
+      "safe_compatible": false,
+      "why_not_safe_compatible": [
+        "4 reachable sites remain BLOCKED: three legacy digest init callbacks (criterion 2) and the third-party UI passphrase edge (criterion 2).",
+        "No mechanism is claimed SAFETY_DISCHARGED mechanism-wide; these are site-scoped discharges.",
+        "B27-X2 is an open STOP-CLASS defect in src/store/store_lib.rs.",
+        "X509 pcy_lib tree_levels/parent_mut and ml_dsa raw-pointer constructor obligations remain retained.",
+        "The measured V1 binaries do not contain the working-tree source fixes."
+      ]
+    }
+  }
+}

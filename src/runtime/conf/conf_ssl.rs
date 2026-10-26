@@ -543,6 +543,14 @@ pub(crate) fn ossl_config_add_ssl_module() {
 /// The authority truncates the same pointer to `conf_finish_func *` at the call site; the
 /// registry's type here takes `*mut ConfImodule`, so the adapter exists to make the coercion
 /// explicit rather than to change it.
+///
+/// # Safety
+///
+/// No caller precondition on `_md`: it is unread. The obligation is the
+/// `CONF_module_add` finish-callback ABI, and the only installer is [`ossl_config_add_ssl_module`]
+/// in this file. The callback runs after the registry has decided this module is finished, which
+/// is the state `ossl_config_ssl_module_free` requires; no live pointer obtained from the store is
+/// used afterwards.
 unsafe extern "C" fn ssl_module_free_thunk(_md: *mut ConfImodule) {
     // SAFETY: the store is this file's, and no live pointer from it is used after the
     // registry decides a module is finished.
