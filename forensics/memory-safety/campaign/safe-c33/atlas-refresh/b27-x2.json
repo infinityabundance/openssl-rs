@@ -1,0 +1,214 @@
+{
+  "schema": "safe-c33/atlas-refresh/b27-x2/v1",
+  "kind": "stop-class-defect-resolution",
+  "receipt": "B27-X2",
+  "date": "2026-10-26",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "source_head": "30a82e16755f6a794d3338832f5261c07ddf016d",
+    "source_head_short": "30a82e167",
+    "tree_state": "dirty; no commit or push (subagent instruction)",
+    "source_blob": "f5d3086ac35ad301225da5bdbb2b941388c63d5f",
+    "head_blob": "803690d68557c6aa753a6c56adf353c0150ef7c8",
+    "pre_fix_blob": "42160a17fa2f8e1805eac5cffb91a44dd3c9672b",
+    "source_changes": [
+      "src/store/store_lib.rs: +142 lines, the store_attach_* regression test in mod tests; no production change was required because the B28 repair is already in the tree"
+    ],
+    "artifact_changes": [
+      "artifacts/phase2/install/lib/libcrypto.so.3",
+      "artifacts/phase2/install/lib/libssl.so.3",
+      "artifacts/phase2/install/lib/libcrypto.a",
+      "artifacts/phase2/install/lib/libssl.a",
+      "artifacts/phase2/install/bin/openssl",
+      "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "artifacts/phase2/openssl",
+      "forensics/atlas/implemented-surface.json",
+      "forensics/downstream/runtime-functional-atlas.json"
+    ],
+    "record_reconciliation": "README.md, CAMPAIGN-STATUS.json, PERFILE-INDEX.md, STATUS-2026-10-20.md and atlas-refresh/boundary-sweep-B28.json already record B27-X2 CLOSED by B28 (commit efc772d0c). atlas-refresh/openssh-discharge.json was authored after B28 and still carries an OPEN_STOP_CLASS entry for B27-X2. The live re-verification below is the witness that resolves that stale record; the B28 receipt was not rewritten."
+  },
+  "defect": {
+    "id": "B27-X2",
+    "class": "NULL dereference after a provider set_ctx_params refusal",
+    "severity": "high",
+    "file": "src/store/store_lib.rs",
+    "function": "OSSL_STORE_attach",
+    "pre_fix_path": "Fetched branch: p_attach(provctx, cbio) answers a live `attached`; loader_set_params(fetched_loader, attached, params, propq) answers 0 (for the file row, a repeated `expect`/`properties` key is a defined provider refusal). The refusal calls p_close(attached), frees and nulls fetched_loader, and then assigns loader = fetched_loader (NULL). Pre-B28 the local loader_ctx had already been assigned `attached` and stayed non-NULL, so the `loader_ctx.is_null()` guard did not fire. OSSL_STORE_attach allocated and published a context with loader = NULL, fetched_loader = NULL and loader_ctx = an already-closed pointer.",
+    "null_reaches": [
+      "src/store/store_lib.rs:666 — ossl_store_close_it, fetched_loader == NULL arm: `(*(*ctx).loader).closefn` dereferences the NULL loader (reached by OSSL_STORE_close)",
+      "src/store/store_lib.rs:1296 — OSSL_STORE_load, legacy arm: `(*(*ctx).loader).load` dereferences the NULL loader",
+      "src/store/store_lib.rs:1494/:1502 — OSSL_STORE_eof: `(*(*ctx).loader).p_eof` and `(*(*ctx).loader).eof` (reached by OSSL_STORE_load and directly)",
+      "src/store/store_lib.rs:1460 — OSSL_STORE_error: `(*(*ctx).loader).error`",
+      "src/store/store_lib.rs:1808 — openssl_rs_store_vctrl (OSSL_STORE_ctrl): `(*(*ctx).loader).ctrl`"
+    ],
+    "preventing_caller_contract": "OSSL_STORE_attach must not publish a context unless it has a live loader: every constructor (OSSL_STORE_open_ex, OSSL_STORE_open, OSSL_STORE_attach) that yields an OSSL_STORE_CTX must establish `ctx->loader != NULL`, and close/load/eof/error/ctrl may then rely on that invariant for any context returned to them. The C ABI contract `ctx` is a context returned by one of those constructors is sufficient only if every constructor upholds it; pre-B28 the attach constructor violated it itself.",
+    "reachability": "C-valid, no malformed pointer: a terminated OSSL_PARAM array the provider legitimately refuses after a successful attach. The in-tree probe uses a repeated OSSL_STORE_PARAM_EXPECT key, which file_set_ctx_params_decoder rejects (src/provider/file_store.rs:564-571)."
+  },
+  "authority": {
+    "source": "forensics/authorities/src/openssl-3.6.4/crypto/store/store_lib.c",
+    "behavior": "The authority has the identical defect. At :1061-1066 a refused loader_set_params calls p_close(loader_ctx), frees fetched_loader and sets it to NULL; :1067 assigns loader = fetched_loader (NULL). :1071-1074 tests only loader_ctx == NULL, which is false, so :1088-1090 publish ctx->fetched_loader = NULL, ctx->loader = NULL and ctx->loader_ctx = the closed pointer. ossl_store_close_it at :585-590 then takes the fetched_loader == NULL arm and dereferences ctx->loader->closefn; OSSL_STORE_load :420-490 and OSSL_STORE_eof :555-575 do the same.",
+    "crate_divergence": "The crate refuses the operation (returns NULL) instead of reproducing the authority's NULL dereference. This is the deliberate §17 divergence: UB in the C authority is not reproduced. Error semantics are preserved: the provider's own refusal error is discarded by ERR_clear_last_mark on the refusal path, exactly as the authority's :1071-1074 tail does."
+  },
+  "root_fix": {
+    "status": "ALREADY_PRESENT_AND_VERIFIED",
+    "commit": "efc772d0c608c786078603f6fc265597d1e25aae",
+    "subject": "fix(store): B28 refuse the attach before publishing a NULL loader",
+    "landed": "2026-10-20",
+    "current_source": "src/store/store_lib.rs:1690-1710: loader_ctx is assigned only in the accepted-params arm (`else { loader_ctx = attached.cast::<OsslStoreLoaderCtx>(); }`); the refusal arm closes the provider context once, releases the fetched loader once, and leaves both loader_ctx and fetched_loader NULL, so the guard at :1717 returns NULL before the context block is allocated.",
+    "release_guard": "The guarantee is structural in release code: no debug_assert is involved. A context with loader == NULL cannot be constructed through OSSL_STORE_attach, OSSL_STORE_open_ex or OSSL_STORE_open, and the OSSL_STORE_CTX fields are crate-private with no exported constructor.",
+    "new_production_change_in_this_batch": "none"
+  },
+  "regression_test": {
+    "name": "store::store_lib::tests::store_attach_refused_params_returns_null_and_accepted_params_publish_a_store",
+    "file": "src/store/store_lib.rs",
+    "kind": "non-ignored library test (runs in the routine suite)",
+    "covers": [
+      "NULL/refusal case: duplicated `expect` params, assert OSSL_STORE_attach returns NULL (never a store with loader = NULL)",
+      "valid case 1: no params and a NULL scheme (the `file` default), assert non-NULL, loader == fetched_loader != NULL, and OSSL_STORE_close returns 1",
+      "valid case 2: a single accepted `expect` param, assert the attach still publishes a store and closes cleanly (the refusal is not over-broad)"
+    ],
+    "observed_pass": "test store::store_lib::tests::store_attach_refused_params_returns_null_and_accepted_params_publish_a_store ... ok",
+    "observed_pass_summary": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2250 filtered out; finished in 0.00s",
+    "observed_pre_fix_failure": "With the pre-B28 ordering temporarily restored in the court: `test ... FAILED`; panic at `src/store/store_lib.rs:2729:9: a refused params set must refuse the attach, not publish a store with loader = NULL`; `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2250 filtered out`; cargo exit 101. The tree was restored exactly from the saved diff afterwards.",
+    "negative_control": "store::store_lib::adv_probe::canary_published_null_loader_store_faults_on_close_and_load passes: the pre-fix published shape aborts in isolated children at src/store/store_lib.rs:666 (close) and :1502 (load through eof).",
+    "instrumented_probe": "store::store_lib::adv_probe::refused_loader_params_refuses_the_attach_without_publishing_a_null_loader passes under OPENSSL_RS_ADV_PROBE=1."
+  },
+  "artifact_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "3f87831c8c3213c5f847c4ea03b879bdc88f0ce61c8e6eab46b6110420e0fc94",
+    "libssl_so_3_sha256": "d025f1d420763604a04e5dd2681e1c4c469d3b2f45a060606cb9c79845fcde0a",
+    "libcrypto_a_sha256": "6bbc3874873e7328fc603f24dcc37a2f3224ec875a522c354101bed7eb97b498",
+    "libssl_a_sha256": "ab3d5499cec3c0bef0fa952c2afce763dd525d4e110c975f4953633fe9e93fcd",
+    "openssl_bin_sha256": "8a6e1c4328d0b4026e376487a8aae37590b6541b23835deba183b9ff1272a135",
+    "legacy_so_sha256": "6ad31cc3c5fa6f1614f2ce0d67dd81a8303954c356025938ca1dd9eba5d7990b",
+    "abi_courts": {
+      "count": 11,
+      "all_pass": true,
+      "courts": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "receipt": "artifacts/phase2/COURTS.json",
+      "receipt_body_hash": "d4b9e82420753db75260424af6865214a4bcd6384d701d13a757d83fa29b1d53"
+    },
+    "previous_identity": {
+      "libcrypto_so_3_sha256": "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48",
+      "libssl_so_3_sha256": "069c2cb1496ef9cda3aed0da478d67c2822e5de8da123a5f29d365438ebd6851"
+    }
+  },
+  "downstream_measurement": {
+    "tool": "forensics/tools/downstream_runtime.py --measure --only openssh,openssh-server --reuse-committed --reuse-previous-candidate",
+    "venue": "openssl-rs-court-expand:1 (OPENSSL_RS_COURT_IMAGE=openssl-rs-court-expand:1, OPENSSL_RS_COURT_NAME=openssl-rs-court-expand)",
+    "atlas": "forensics/downstream/runtime-functional-atlas.json",
+    "atlas_candidate_identity": {
+      "libcrypto_so_3_sha256": "3f87831c8c3213c5f847c4ea03b879bdc88f0ce61c8e6eab46b6110420e0fc94",
+      "libssl_so_3_sha256": "d025f1d420763604a04e5dd2681e1c4c469d3b2f45a060606cb9c79845fcde0a"
+    },
+    "evidence_reuse": {
+      "mode": "committed-rows-carried-forward",
+      "families_reused": 305,
+      "candidate_identity_match": false,
+      "reason": "Only openssh and openssh-server were re-measured. Every other family's row keeps the prior identity and carries an explicit reused_from_candidate_identity marker; the atlas-level match flag is false by design and is not a claim that those rows were re-run."
+    },
+    "openssh": {
+      "authority": {
+        "level": "L7-functional",
+        "outcome": "reached",
+        "runtime_ok": true,
+        "functional_ok": true,
+        "transcript_sha256": "91128082715a5b50426582a9a31944fc36284e381e0cd2c0cd6d718da5660433",
+        "fresh": true
+      },
+      "candidate": {
+        "level": "L7-functional",
+        "outcome": "reached",
+        "runtime_ok": true,
+        "functional_ok": true,
+        "transcript_sha256": "8dc36890076b0ec8a4a1908bec3b0846c7ee6a081d03f1970eac6ad506e55b5c",
+        "fresh": true,
+        "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
+        "load_proof_proven": true,
+        "libcrypto_resolved_under_candidate_prefix": true,
+        "under_authority": false,
+        "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f"
+      }
+    },
+    "openssh-server": {
+      "authority": {
+        "level": "L7-functional",
+        "outcome": "reached",
+        "runtime_ok": true,
+        "functional_ok": true,
+        "transcript_sha256": "787c94d14515bc7dc04afd2b34b339df5ed3e0c42c603dc8cf8b1db05f43dc4e",
+        "fresh": true
+      },
+      "candidate": {
+        "level": "L7-functional",
+        "outcome": "reached",
+        "runtime_ok": true,
+        "functional_ok": true,
+        "transcript_sha256": "4a7dbfde0044d3817e94dfff5657e2f20285ee9e40b0de5ccee55afeb2bc711e",
+        "fresh": true,
+        "workload": "openssh-server: sshd -D, verified exec, host-key mismatch rejected",
+        "transcript_excerpt_check": "OpenSSH_9.9p1, OpenSSL 3.6.4; ssh exec exit=0; host-key mismatch exit=255 (as required)",
+        "load_proof_proven": true,
+        "libcrypto_resolved_under_candidate_prefix": true,
+        "under_authority": false,
+        "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f"
+      }
+    },
+    "both_families": "candidate L7-functional, reaches_baseline true, authority_applicable_level L7-functional; reused_from_candidate_identity is absent on all four rows, so the transcripts are fresh, not carried forward."
+  },
+  "gates": {
+    "fmt": "cargo fmt --all -- --check: PASS (FMT_OK)",
+    "check": "cargo check --lib: PASS",
+    "focused_test": "cargo test --lib store_attach_: 1 passed, 0 failed",
+    "full_library_test": "cargo test --lib -- --test-threads=4: 2199 passed, 0 failed, 52 ignored (baseline floor 1962 with no unexplained removals; +237 tests since the floor)",
+    "clippy": "cargo clippy --all-targets -- -D warnings: PASS (no warnings)",
+    "phase2_abi_courts": "11/11 pass, all_pass=true",
+    "production_obligations": "No new unsafe operation, no new unsafe assumption, no exported symbol/signature/layout/allocator-seam change. The only source change is the test."
+  },
+  "residuals": [
+    {
+      "id": "B27-R1",
+      "severity": "low",
+      "state": "RETAINED (unchanged)",
+      "description": "OSSL_STORE_attach leaks the fetched loader and the provider loader context when OwnedCtx::zalloc or ossl_pw_set_ui_method refuses after a successful attach. This is the authority's own OOM leak (store_lib.c:1076-1086); it is a leak, not a memory-safety defect."
+    },
+    {
+      "id": "ATLAS-CARRIED",
+      "severity": "none",
+      "state": "DECLARED",
+      "description": "305 families in the refreshed atlas carry the previous candidate identity. They were not re-measured and the atlas-level candidate_identity_match is false. Only openssh and openssh-server are bound to the new install."
+    },
+    {
+      "id": "OPENSSH-DISCHARGE-RECORD",
+      "severity": "none",
+      "state": "STALE, NOT REWRITTEN",
+      "description": "atlas-refresh/openssh-discharge.json still lists B27-X2 as OPEN_STOP_CLASS. It predates the live re-verification in this receipt and was not edited; the orchestrator should reconcile it at the next ledger update."
+    }
+  ],
+  "not_established": [
+    "BOUNDARY gate: no independent caller/dependency-closure review of this resolution.",
+    "SEAL gate: no full forensic regeneration, no Miri/ASan re-run of the new test, and no whole-atlas re-measurement at the new identity.",
+    "The authority differential for openssh/openssh-server is the runtime atlas at the exact recorded source digests; no separate cryptographic assurance campaign was run.",
+    "The new regression test was run in the debug court only; no release-profile test binary run.",
+    "No commit, push or staging-branch update was made (subagent instruction)."
+  ],
+  "non_claims": [
+    "The openssh/openssh-server L7-functional grades are runtime/functional evidence, not a SAFE_COMPATIBLE graduation and not cryptographic assurance.",
+    "The 11/11 phase-2 courts establish the structural ABI shell only; passing them is not parity.",
+    "This receipt resolves the specific B27-X2 NULL path; it does not discharge any other store_lib.rs mechanism or the SAFE_COMPATIBLE dependency closure."
+  ]
+}
