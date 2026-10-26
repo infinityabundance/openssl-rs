@@ -1507,7 +1507,11 @@ unsafe fn dsa_sigalg_signverify_init(
 }
 
 /// `static const char **dsa_sigalg_query_key_types(void)` — `dsa_sig.c.in:936-941`.
-unsafe extern "C" fn dsa_sigalg_query_key_types() -> *mut *const c_char {
+///
+/// Safe: no argument is read and the answer is the address of a `'static` array, so there is no
+/// caller precondition. The dispatch slot it is installed in takes an `unsafe extern "C" fn`,
+/// to which a safe fn coerces.
+extern "C" fn dsa_sigalg_query_key_types() -> *mut *const c_char {
     /// `static const char *keytypes[] = { "DSA", NULL }`.
     #[repr(C)]
     struct KeyTypeNames([*const c_char; 2]);

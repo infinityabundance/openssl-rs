@@ -545,6 +545,12 @@ struct CollectData {
 
 /// `sk_EVP_KEYMGMT_pop_free`'s destructor: the crate's stack frees elements through a `void *`
 /// callback, so `EVP_KEYMGMT_free` is reached through this thunk.
+///
+/// # Safety
+///
+/// `p` is NULL or the `EvpKeyMgmt` whose reference the calling stack owns and is releasing.
+/// Established by `OPENSSL_sk_pop_free`'s callback contract at the sites that install this thunk
+/// over the `keymgmts` stack, whose elements are `EVP_KEYMGMT_up_ref`'d insertions.
 unsafe extern "C" fn keymgmt_free_thunk(p: *mut c_void) {
     // SAFETY: the stack's element is an `EvpKeyMgmt` whose reference the stack owns.
     unsafe { EVP_KEYMGMT_free(p.cast::<EvpKeyMgmt>()) };

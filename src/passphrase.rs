@@ -496,6 +496,40 @@ impl Drop for UiScratch {
 /// The `end:` label frees in the authority's order (verify buffer, then input buffer, then the
 /// prompt, then the `UI`) and neither buffer is NULL-tested for the reasons
 /// `CRYPTO_clear_free`'s contract gives.
+///
+/// # Safety
+///
+/// `pass` is writable for `pass_size` bytes; `pass_len` is a writable `size_t`; `prompt_info` is
+/// NULL or NUL-terminated; `ui_method` is NULL or a live `UI_METHOD` that outlives the call; and
+/// `ui_data` is whatever that method's callbacks expect.
+///
+/// The `ui_method`/`ui_data` half is exactly the **public `UI_METHOD` C ABI**, so §7 criterion 2 is
+/// satisfied by that external contract rather than by an in-crate caller:
+///
+/// * `UI_METHOD` is opaque (`include/openssl/ui.h:293-294`); the only way to create one is the
+///   exported `UI_create_method`, and callbacks are installed only by the exported
+///   `UI_method_set_*` family (`include/openssl/ui.h:339-357`). Its documented callback contract is
+///   *return 0 on error, 1 on success, or -1 for out-of-band events; only the flusher and reader
+///   return -1* (`doc/man3/UI_create_method.pod`), which is what `UI_process`
+///   (`src/ui/ui_lib.rs:1411`) tolerates.
+/// * A reader supplies its answer with `UI_set_result`/`UI_set_result_ex`, whose documented
+///   contract rejects a length outside `result_minsize..result_maxsize`
+///   (`doc/man3/UI_STRING.pod`; `src/ui/ui_lib.rs:2187`). This function installs `pass_size` as the
+///   maxsize (`UI_add_input_string` below), so `UI_get_result_length` cannot exceed the caller's
+///   `pass` extent.
+/// * The optional prompt constructor must return an `OPENSSL_malloc`-allocated string for the
+///   caller to release with `OPENSSL_free` (`crypto/ui/ui_local.h`, `ui_construct_prompt`), which
+///   is the release `UiScratch::drop` performs.
+/// * `ui_method` and `ui_data` are installed through the public
+///   `OSSL_ENCODER_CTX_set_passphrase_ui`/`OSSL_DECODER_CTX_set_passphrase_ui`
+///   (`doc/man3/OSSL_ENCODER_CTX_new_for_pkey.pod`,
+///   `doc/man3/OSSL_DECODER_CTX_new_for_pkey.pod`) and stored borrowed by
+///   `ossl_pw_set_ui_method` (`src/passphrase.rs:375`), so the application keeps them live for the
+///   operation, as the authority does.
+///
+/// The `pass`/`pass_len`/`prompt_info` half is established by the in-file callers
+/// (`ossl_pw_get_passphrase` and the PEM-bridge paths), whose contracts carry it from the
+/// provider passphrase ABI.
 unsafe fn do_ui_passphrase(
     pass: *mut c_char,
     pass_size: usize,

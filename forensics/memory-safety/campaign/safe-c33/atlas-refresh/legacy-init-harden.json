@@ -1,0 +1,143 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/legacy-init-harden/v1",
+  "kind": "conversion-and-adjudication-receipt",
+  "receipt": "legacy-init-harden",
+  "subphase": "safe-c33 openssh closure: harden the three remaining blocked legacy digest initialisers",
+  "date": "2026-10-26",
+  "source_identity": {
+    "branch": "integrate/safe-c33",
+    "parent_sha": "32d373e08a1faea6eb8f93387ad1a264d1845baf",
+    "result_sha": null,
+    "result_state": "uncommitted working tree; this subagent does not commit or push",
+    "changed_files": {
+      "src/evp/legacy_sha.rs": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "src/evp/legacy_md5.rs": "039fe731ba1d4c2228783aab1f60ec4a07644af10857aeb7eeafed8ac6c2973b",
+      "docs/SECURITY_DIVERGENCE_POLICY.md": "4519697fac797c2c5afd879e2d21e2dfff14271eb93baaf8fe025515d4c3e6b6"
+    },
+    "pre_existing_working_tree_changes": "The tree also carries the previous subphase's final-four edits (CAMPAIGN-STATUS.json, openssh-discharge*.json, src/passphrase.rs). This batch builds on them and did not revert them."
+  },
+  "authority": {
+    "openssl": "3.6.4 (forensics/authorities/prefix/openssl-3.6.4-production)",
+    "libcrypto_sha256": "482fca3da906a8d7ac99bd88c6d6633226b6d47c3a20d9a2d60ba3eb2b2640b2",
+    "source": "crypto/evp/legacy_meth.h:10-22, crypto/evp/legacy_sha.c, crypto/evp/legacy_md5.c",
+    "macro_body": "return fn##_Init(EVP_MD_CTX_get0_md_data(ctx)); — no NULL test on ctx or md_data"
+  },
+  "defect": {
+    "id": "D-LEGACY-MD-INIT-MD-DATA-1",
+    "class": "write through a NULL/caller-unestablished md_data",
+    "sites": [
+      "src/evp/legacy_sha.rs:181 sha1_init (inventory line)",
+      "src/evp/legacy_sha.rs:224 sha224_init (inventory line)",
+      "src/evp/legacy_md5.rs:147 md5_init (inventory line)"
+    ],
+    "reachability": "EVP_MD_meth_get_init (src/evp/digest.rs:1565; libcrypto.ld:1886) returns the callback to any C caller. A fresh EVP_MD_CTX_new() is zero-filled, so md_data is NULL; a NULL ctx dereferences NULL as well. The getter's documented contract says nothing about md_data, so the writable-block precondition was never established by the ABI."
+  },
+  "reproduction": {
+    "before_fix_candidate": "cargo test --lib legacy_sha1_init -- --nocapture (court container): thread 'evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context' panicked at core/src/ptr/mod.rs:702: 'unsafe precondition(s) violated: ptr::write_bytes requires that the destination pointer is aligned and non-null'; process aborted (SIGABRT, exit 101).",
+    "before_fix_authority": "Six one-process C probes against the pinned 3.6.4 install, three digests × {fresh EVP_MD_CTX_new(), NULL ctx}. Each printed md_data=(nil) (fresh) or ctx=NULL (null) and died with exit 139 (SIGSEGV) at the *_Init write.",
+    "after_fix_candidate": "The same focused tests return 0 for both fault shapes and 1 for the bound table path; the SHA1/SHA224/MD5(abc) vectors match."
+  },
+  "fix": {
+    "shape": "Each of the three initialisers now calls a private init_md_data(ctx, owner, size) helper before writing. The helper refuses (returns None) when ctx is NULL, md_data is NULL, digest is NULL, or the context is bound to a different method whose ctx_size is smaller than the digest context; otherwise it returns the block. A refusal answers 0, the C initialise failure value, touching no memory.",
+    "normal_path": "A context bound to the callback's own table object, or to a method with ctx_size >= the digest context, still calls the authority's SHA1_Init/SHA224_Init/MD5_Init and returns its value. Digest maths and result values are unchanged.",
+    "authority_comparison": "§17 divergence, not compatibility: the authority performs the NULL write and faults. The crate does not reproduce UB; it returns 0 on exactly the shapes where the authority does not return."
+  },
+  "mechanisms": [
+    {
+      "name": "legacy digest init callback md_data precondition",
+      "eliminated": [
+        "the assumption that a C caller of the exported callback supplies a writable md_data",
+        "the assumption that a fresh EVP_MD_CTX carries a method/block that this callback may write"
+      ],
+      "relocated": [
+        "the remaining raw reads (ctx->md_data, ctx->digest, digest->ctx_size) and the *_Init write into init_md_data + the three callbacks, each with a # Safety contract"
+      ],
+      "hidden": 0
+    }
+  ],
+  "unsafe_ops": {
+    "removed": "none: the raw field reads and the external *_Init call still require unsafe; the unsafe expressions remain visible and documented",
+    "relocated": "the unconditional SHA*_Init(md_data(ctx)) call is replaced by init_md_data(ctx, owner, size) + a validated pointer in all three initialisers",
+    "introduced": "two private unsafe helpers (src/evp/legacy_sha.rs:121-159, src/evp/legacy_md5.rs:79-117), each with a # Safety contract; no new exported symbol, no new unsafe trait or safe interface"
+  },
+  "obligations": {
+    "discharged": [
+      "OSSH-DIS-018 sha1_init: the callback establishes and validates its SHA_CTX; C-valid contexts either have a writable block or are refused before the write",
+      "OSSH-DIS-019 sha224_init: same, over SHA256_CTX",
+      "OSSH-DIS-017 md5_init: same, over MD5_CTX"
+    ],
+    "retained": [
+      "A C-invalid pointer is outside the C contract (not a claim; the same boundary every exported pointer-taking entry point has).",
+      "The owner-table branch accepts a manually bound context with non-NULL md_data; the public API cannot construct that state (a fresh context has NULL md_data and EVP_DigestInit_ex rebinds the method before the callback), so it is not caller-reachable."
+    ],
+    "introduced": [
+      "The helper's caller must pass a live owner method; the three call sites pass the static table address."
+    ]
+  },
+  "compatibility_delta": {
+    "normal_path": "PASS: SHA1(abc)=a9993e364706816aba3e25717850c26c9cd0d89d, SHA224(abc)=23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7, MD5(abc)=900150983cd24fb0d6963f7d28e17f72; init returns 1.",
+    "fault_shapes": "§17 divergence: the authority exits 139; the crate returns 0. Recorded as D-LEGACY-MD-INIT-MD-DATA-1 in docs/SECURITY_DIVERGENCE_POLICY.md.",
+    "scope": "The three callbacks only; the sibling legacy initialisers (sha256/384/512/512_224/512_256 and md5_sha1) keep the authority's unconditional shape and are not in the openssh closure."
+  },
+  "safety_checks": {
+    "tests": [
+      "evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context"
+    ],
+    "focused": "PASS: 3 passed; 0 failed; 2251 filtered out",
+    "library_suite": "PASS: 2202 passed; 0 failed; 52 ignored; 2254 total (cargo test --lib -- --test-threads=4, court container)",
+    "authority_probes": "6/6 exit 139 (SIGSEGV) on the fresh and NULL context shapes",
+    "miri_asan": "NOT_RUN for this batch; the pre-fix Rust test already detects the NULL destination through ptr::write_bytes' precondition check, and the authority probes measure the same fault class",
+    "independent_review": "NOT_RUN (AGENTS.md §15/§21: the author of a safety claim is not its sole adjudicator)"
+  },
+  "gates": {
+    "fmt": "PASS: cargo fmt --all -- --check (no output)",
+    "check": "PASS: cargo check --lib (Finished dev profile)",
+    "clippy": "PASS: cargo clippy --all-targets -- -D warnings (Finished dev profile)",
+    "attribute_diff": "NONE: no #[no_mangle] or #[repr(C)] line added, removed or changed",
+    "allocator_seam_diff": "NONE: no CRYPTO_* / OPENSSL_clear_free line added, removed or changed",
+    "container": "docker/openssl-rs-court.sh, CARGO_BUILD_JOBS=4, CARGO_TARGET_DIR=/work/court/target"
+  },
+  "closure_rerun": {
+    "tool": "forensics/tools/consumer_closure.py v3 adjudicate()",
+    "artifact_identity_preserved": {
+      "ssh": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+      "sshd": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+    },
+    "elf_graph_remeasurement": "NOT_RUN: the exact measured artefacts are absent from court/phase24-build-link; the recorded exact-artifact obligations were re-adjudicated against the current plane",
+    "before_evidence_update": {
+      "ssh": {"DISCHARGED": 117, "BLOCKED": 3, "UNKNOWN": 0, "verdict": "ACCEPTED", "safe_compatible": false},
+      "sshd": {"DISCHARGED": 117, "BLOCKED": 3, "UNKNOWN": 0, "verdict": "ACCEPTED", "safe_compatible": false},
+      "non_discharged": [
+        "V1:src/evp/legacy_md5.rs:147:UNSAFE_FN_DEF",
+        "V1:src/evp/legacy_sha.rs:181:UNSAFE_FN_DEF",
+        "V1:src/evp/legacy_sha.rs:224:UNSAFE_FN_DEF"
+      ]
+    },
+    "after_evidence_update": {
+      "ssh": {"DISCHARGED": 120, "BLOCKED": 0, "UNKNOWN": 0, "verdict": "ACCEPTED", "safe_compatible": false},
+      "sshd": {"DISCHARGED": 120, "BLOCKED": 0, "UNKNOWN": 0, "verdict": "ACCEPTED", "safe_compatible": false},
+      "discharge_receipt": "openssh-discharge",
+      "status_reasons": [
+        "boundary OSSH-DIS-017 is scoped-SAFETY_DISCHARGED and its disposition explicitly names line 147",
+        "boundary OSSH-DIS-018 is scoped-SAFETY_DISCHARGED and its disposition explicitly names line 181",
+        "boundary OSSH-DIS-019 is scoped-SAFETY_DISCHARGED and its disposition explicitly names line 224"
+      ]
+    },
+    "verdict_change": "The verdict state does not change (ACCEPTED both runs); the three BLOCKED sites become DISCHARGED and BLOCKED drops to 0. SAFE_COMPATIBLE remains false: the mechanism is still OWNERSHIP_RECONSTRUCTED mechanism-wide and file-level obligations remain."
+  },
+  "graduation": "SAFETY_DISCHARGED (scoped to OSSH-DIS-017/018/019). EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide; no consumer family graduates, and SAFE_COMPATIBLE is not claimed.",
+  "residuals": [
+    "The sibling legacy initialisers (sha256/384/512/512_224/512_256 and md5_sha1) retain the authority's unconditional md_data shape; they are not in the openssh closure and are queued as the same defect class.",
+    "Independent review of this discharge is NOT_RUN.",
+    "The measured V1 OpenSSH binaries do not contain this source fix; no L4/L7 re-run is offered.",
+    "The exact-artifact ELF graph was not re-measured; only the discharge plane was re-adjudicated.",
+    "The scheme is site-scoped: additional unsafe items in the same files that the V1 inventory does not enumerate are not covered."
+  ],
+  "non_claims": [
+    "This receipt does not claim mechanism-wide SAFETY_DISCHARGED or SAFE_COMPATIBLE.",
+    "The authority's behaviour is not claimed compatible; it is a recorded §17 divergence.",
+    "The pre-existing final-four working-tree edits are not this batch's evidence and were not re-adjudicated here."
+  ]
+}
