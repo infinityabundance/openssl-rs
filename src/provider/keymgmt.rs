@@ -827,7 +827,7 @@ static DH_TYPES: DhTypes = DhTypes([
 ]);
 
 /// `static const OSSL_PARAM *dh_imexport_types(int selection)` — `dh_kmgmt.c:294-303`.
-unsafe extern "C" fn dh_imexport_types(selection: c_int) -> *const OsslParam {
+extern "C" fn dh_imexport_types(selection: c_int) -> *const OsslParam {
     let mut type_select = 0usize;
 
     if (selection & OSSL_KEYMGMT_SELECT_ALL_PARAMETERS) != 0 {
@@ -840,15 +840,14 @@ unsafe extern "C" fn dh_imexport_types(selection: c_int) -> *const OsslParam {
 }
 
 /// `static const OSSL_PARAM *dh_import_types(int selection)` — `dh_kmgmt.c:305-308`.
-unsafe extern "C" fn dh_import_types(selection: c_int) -> *const OsslParam {
-    // SAFETY: the shared helper reads only its argument.
-    unsafe { dh_imexport_types(selection) }
+extern "C" fn dh_import_types(selection: c_int) -> *const OsslParam {
+    dh_imexport_types(selection)
 }
 
 /// `static const OSSL_PARAM *dh_export_types(int selection)` — `dh_kmgmt.c:310-313`.
-unsafe extern "C" fn dh_export_types(selection: c_int) -> *const OsslParam {
-    // SAFETY: as above.
-    unsafe { dh_imexport_types(selection) }
+extern "C" fn dh_export_types(selection: c_int) -> *const OsslParam {
+    // As above.
+    dh_imexport_types(selection)
 }
 
 /// `static ossl_inline int dh_get_params(void *key, OSSL_PARAM params[])` — `dh_kmgmt.c:315-343`.

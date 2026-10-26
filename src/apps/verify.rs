@@ -101,6 +101,10 @@ static mut V_VERBOSE: c_int = 0;
 static mut VFLAGS: c_long = 0;
 
 /// `static int cb(int ok, X509_STORE_CTX *ctx)` — `apps/verify.c:342-406`.
+///
+/// # Safety
+/// `ctx` is the live `X509_STORE_CTX` the core passes to a verification callback for the
+/// duration of the call; it is not released or concurrently mutated while the callback runs.
 unsafe extern "C" fn cb(ok: c_int, ctx: *mut c_void) -> c_int {
     let ctx = ctx.cast::<X509StoreCtx>();
     // SAFETY: `ctx` is the callback's own store context.

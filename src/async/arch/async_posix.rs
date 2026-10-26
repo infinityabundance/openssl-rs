@@ -49,6 +49,14 @@ pub type AsyncStackFreeFn = unsafe extern "C" fn(*mut c_void);
 
 // The platform half of the fibre, kept on the C side of the ABI. See the module header and
 // `src/async/arch/async_ucontext.c`.
+// SAFETY: the seven symbols below are defined by `src/async/arch/async_ucontext.c`, the
+// platform half linked into this crate; their signatures are the contract of that file. The
+// `ctx` arguments must point to a live, aligned block of at least
+// `openssl_rs_ucontext_size()` bytes (this crate allocates it with `CRYPTO_zalloc` and never
+// aliases it with a second owner); `stack` must be readable/writable for `size` bytes for the
+// life of the context; `start` must be a valid `extern "C"` function. `openssl_rs_ucontext_size`
+// and `_align` take no arguments, and `openssl_rs_ucontext_capable` neither reads nor writes
+// caller memory. No symbol may be interposed by a definition with a different signature.
 unsafe extern "C" {
     /// `sizeof(ucontext_t)`, so Rust allocates the opaque storage without naming its size.
     fn openssl_rs_ucontext_size() -> usize;
