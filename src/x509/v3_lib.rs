@@ -356,6 +356,12 @@ static EXT_LIST: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());
 /// — `crypto/x509/v3_lib.c:39-43`.
 ///
 /// The stack comparator receives pointers to element slots, each holding a `X509V3_EXT_METHOD *`.
+///
+/// # Safety
+/// `a` and `b` are pointers to element slots of this list, each live and readable for one
+/// pointer-sized value, and each slot holds a non-NULL `*const X509V3ExtMethod` that outlives
+/// the call. The stack layer installs and calls this comparator, so the obligation is the
+/// stack's, not a caller-supplied arbitrary pointer.
 unsafe extern "C" fn ext_cmp(a: *const c_void, b: *const c_void) -> c_int {
     // SAFETY: the stack layer passes element slots for a comparator installed on this list.
     let (x, y) = unsafe {
