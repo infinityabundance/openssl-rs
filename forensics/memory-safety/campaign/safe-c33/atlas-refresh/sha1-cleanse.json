@@ -1,0 +1,123 @@
+{
+  "receipt": "sha1-cleanse",
+  "branch": "integrate/safe-c33",
+  "worktree": true,
+  "date": "2026-10-26",
+  "source_head": "93ddc52e3",
+  "discharges_residual": "OSSH-R1-RES-1 (openssh-receipts-1.json, class UNCLENSED_SECRET_ON_FAILURE_PATH)",
+  "verdict": "REPAIRED_IN_WORKTREE",
+  "verification_level": "FAST plus BATCH (fmt, check --lib, focused tests, full lib suite, clippy --all-targets). Independent BOUNDARY review and SEAL are NOT_RUN.",
+  "scope": {
+    "files": [
+      "src/digest/sha1.rs",
+      "src/digest/md5_sha1.rs",
+      "src/runtime/mem.rs"
+    ],
+    "operations": [
+      "ossl_sha1_ctrl (src/digest/sha1.rs)",
+      "ossl_md5_sha1_ctrl (src/digest/md5_sha1.rs)"
+    ],
+    "callers": [
+      "provider sha1::set_ctx_params -> ossl_sha1_ctrl",
+      "provider md5_sha1::set_ctx_params -> ossl_md5_sha1_ctrl",
+      "evp/legacy_sha.rs::sha1_int_ctrl -> ossl_sha1_ctrl",
+      "evp/legacy_md5.rs::md5_sha1_int_ctrl -> ossl_md5_sha1_ctrl"
+    ]
+  },
+  "secret_classification": {
+    "src/digest/sha1.rs::ossl_sha1_ctrl": {
+      "secret_derived": [
+        "sha1tmp[20] - the inner SHA-1 of master_secret || pad_1, written by SHA1_Final and then hashed into the outer digest"
+      ],
+      "constant_padding": [
+        "padtmp[40] - filled with 0x36 then 0x5c; constant data, but one of the authority's digest temporaries and cleansed for uniform handling"
+      ]
+    },
+    "src/digest/md5_sha1.rs::ossl_md5_sha1_ctrl": {
+      "secret_derived": [
+        "md5tmp[16] - the inner MD5 of master_secret || pad_1",
+        "sha1tmp[20] - the inner SHA-1 of master_secret || pad_1"
+      ],
+      "constant_padding": [
+        "padtmp[48] - filled with 0x36 then 0x5c; constant data, cleansed for uniform handling"
+      ]
+    }
+  },
+  "leaking_returns_before_fix": {
+    "src/digest/sha1.rs": {
+      "pre_fix_function_line": 333,
+      "success_path": "cleansed sha1tmp only; padtmp was never cleansed",
+      "early_returns": [
+        "pre-fix 351: cmd != EVP_CTRL_SSL3_MASTER_SECRET -> -2 (no secret-derived temporary yet)",
+        "pre-fix 354: NULL context -> 0 (no secret-derived temporary yet)",
+        "pre-fix 357: mslen != 48 -> 0 (no secret-derived temporary yet)",
+        "pre-fix 362: first SHA1_Update fails -> 0 (no secret-derived temporary yet)",
+        "pre-fix 368: pad_1 update fails -> 0 (padtmp holds constants)",
+        "pre-fix 372: inner SHA1_Final fails -> 0 (sha1tmp may hold the inner digest)",
+        "pre-fix 376: SHA1_Init fails -> 0 (sha1tmp holds the inner digest)",
+        "pre-fix 381: second master-secret update fails -> 0 (sha1tmp holds the inner digest)",
+        "pre-fix 387: pad_2 update fails -> 0 (sha1tmp holds the inner digest)",
+        "pre-fix 391: inner-digest update fails -> 0 (sha1tmp holds the inner digest)"
+      ]
+    },
+    "src/digest/md5_sha1.rs": {
+      "pre_fix_function_line": 104,
+      "success_path": "cleansed md5tmp and sha1tmp; padtmp was never cleansed",
+      "early_returns": [
+        "pre-fix 120: cmd != EVP_CTRL_SSL3_MASTER_SECRET -> -2 (no secret-derived temporary yet)",
+        "pre-fix 123: NULL context -> 0 (no secret-derived temporary yet)",
+        "pre-fix 126: mslen != 48 -> 0 (no secret-derived temporary yet)",
+        "pre-fix 131: first master-secret update fails -> 0 (no secret-derived temporary yet)",
+        "pre-fix 146: first update/final block fails -> 0 (either or both intermediates may hold state)",
+        "pre-fix 152: reinitialisation fails -> 0 (md5tmp and sha1tmp hold the inner digests)",
+        "pre-fix 156: second master-secret update fails -> 0 (md5tmp and sha1tmp hold the inner digests)",
+        "pre-fix 179: second update block fails -> 0 (md5tmp and sha1tmp hold the inner digests)"
+      ]
+    }
+  },
+  "fix": [
+    "Both ctrls now hold the temporaries in crate::runtime::mem::CleansedScratch, whose Drop wipes the whole buffer with the volatile CLEANSE primitive. Construction precedes every early return, so every path - success, refusal-before-secret, and mid-computation failure - cleanses each temporary exactly once.",
+    "The explicit success-path OPENSSL_cleanse emulations (write_bytes over sha1tmp; write_bytes over md5tmp and sha1tmp) were removed; a single Drop now owns the obligation. This also covers padtmp, which the success path previously left untouched.",
+    "CleansedScratch gained a safe fill(byte) method for the pad_1 (0x36) and pad_2 (0x5c) fills. This is additive; the type's Drop contract is unchanged.",
+    "A test-only observer module (runtime::mem::cleanse_hooks) records each Drop while the owner's storage is still live: length, non-zero byte count before the wipe, and that every byte reads zero after it. Release builds carry none of it.",
+    "A test-only failure arm at each ctrl's reinitialisation (sha1::test_hooks::set_fail_reinit, md5_sha1::test_hooks::set_fail_init) makes the early-failure return after the intermediates were written reachable without invalid input. The reinitialisation itself still runs as before; only the returned verdict is overridden in test builds."
+  ],
+  "digest_mathematics_unchanged": "No Update/Final call, argument, padding byte, digest length or return value changed. The ctrls' ctrl return values (-2, 0, 1) and their conditions are unchanged; the failure hooks are #[cfg(test)] only and do not alter release control flow.",
+  "unsafe_accounting": {
+    "eliminated": [
+      "One explicit unsafe write_bytes cleanse block in ossl_sha1_ctrl and one in ossl_md5_sha1_ctrl; both are replaced by the safe CleansedScratch Drop."
+    ],
+    "relocated": [],
+    "introduced": [],
+    "hidden": 0,
+    "note": "The Drop's existing single unsafe cleanse operation is unchanged; the new fill method and the test hooks add no unsafe."
+  },
+  "tests": [
+    "digest::sha1::tests::sha1_ctrl_cleanses_on_early_failure",
+    "digest::sha1::tests::sha1_ctrl_cleanses_on_success",
+    "digest::md5_sha1::tests::md5_sha1_ctrl_cleanses_on_early_failure",
+    "digest::md5_sha1::tests::md5_sha1_ctrl_cleanses_on_success"
+  ],
+  "gates": {
+    "cargo_fmt_all_check": "PASS (cargo fmt --all -- --check, exit 0)",
+    "cargo_check_lib": "PASS (Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.03s)",
+    "focused_tests": "PASS (4 passed; 0 failed; 0 ignored; 2245 filtered out)",
+    "full_lib_tests": "PASS (2197 passed; 0 failed; 52 ignored; 2249 total; --test-threads=4; finished in 120.39s)",
+    "clippy_all_targets_deny_warnings": "PASS (Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.08s; no warnings)",
+    "allocator_seam": "PASS (diff touches only the three files above; no CRYPTO_* allocator call, repr(C) layout, #[no_mangle] or exported symbol line changed)",
+    "boundary_independent_review": "NOT_RUN",
+    "seal_forensics": "NOT_RUN"
+  },
+  "same_shape_elsewhere": "None. The only ossl_*_ctrl functions under src/digest are the two repaired here. Their legacy EVP wrappers (evp/legacy_sha.rs::sha1_int_ctrl, evp/legacy_md5.rs::md5_sha1_int_ctrl) keep no secret temporaries of their own and inherit the fix. evp/digest.rs::EVP_MD_CTX_ctrl only constructs OSSL_PARAM entries.",
+  "residuals": [
+    "The digest contexts themselves (ShaCtx / Md5Sha1Ctx) retain secret-derived chaining state after the ctrl by the authority's design: a later _final consumes it. They are caller-owned and are not part of this residual.",
+    "padtmp is constant padding, not secret-derived; it is cleansed anyway so the recorded residual's stated scope is closed and future readers need not classify it again.",
+    "This receipt is worktree evidence. The orchestrator must commit it; no independent reviewer has adjudicated it and no SEAL run exists.",
+    "The hooks are test-only; no runtime sanitizer or leakage test was run for these paths."
+  ],
+  "non_claims": [
+    "Not SAFETY_DISCHARGED: this closes one residual, it does not graduate the digest or provider mechanism.",
+    "Does not claim constant-time behaviour or absence of leakage; this change only completes the wipe obligation.",
+    "Does not discharge the caller-side OSSL_PARAM extent obligations recorded in openssh-receipts-1.json."
+  ]
+}
