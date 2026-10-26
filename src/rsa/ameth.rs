@@ -603,6 +603,10 @@ unsafe fn rsa_pss_param_print(
 }
 
 /// `X509_ALGOR_free` — `crypto/asn1/x_algor.c`, re-exported for the local binding below.
+///
+/// # Safety
+/// `a` is NULL or a live `X509_ALGOR` this crate owns; the call releases it, so the caller must
+/// not use `a` afterwards.
 unsafe fn x509_algor_free_local(a: *mut X509Algor) {
     // SAFETY: `a` is NULL or live.
     unsafe { crate::asn1::x_algor::X509_ALGOR_free(a) };

@@ -187,7 +187,10 @@ struct BarePubkey {
 }
 
 /// `const ASN1_ITEM *BARE_ALGOR_it(void)` — the `ASN1_SEQUENCE_END(BARE_ALGOR)` accessor.
-unsafe extern "C" fn bare_algor_it() -> *const c_void {
+///
+/// No caller precondition: the body returns a pointer to a `'static` descriptor and reads none
+/// of its (absent) arguments, so the `unsafe` marker was vestigial.
+extern "C" fn bare_algor_it() -> *const c_void {
     (&BARE_ALGOR_ITEM as *const Asn1Item).cast()
 }
 

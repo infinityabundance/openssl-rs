@@ -1,140 +1,259 @@
 {
-  "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
-  "kind": "site-enumerating-boundary-receipt",
-  "receipt": "openssh-receipts-2",
-  "subphase": "P25 openssh closure: second cluster (verify, PEM info, async, X509 ext, SHA-2, base provider)",
-  "date": "2026-10-26",
-  "candidate": {
-    "branch": "integrate/safe-c33",
-    "source_head": "9fa946ccc1eb9516090b8096e0aae38e41150602",
-    "inventory": "v1b-candidate-freeze.json (source head 4a95b73a8)",
-    "closure_runs": [
-      "court/tmp/openssh-closure/current-ssh.json",
-      "court/tmp/openssh-closure/current-sshd.json"
-    ]
+ "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "openssh-receipts-2",
+ "subphase": "P25 openssh closure: second cluster (verify, PEM info, async, X509 ext, SHA-2, base provider)",
+ "date": "2026-10-26",
+ "candidate": {
+  "branch": "integrate/safe-c33",
+  "source_head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "inventory": "v1d-candidate-freeze.json (post-fix tree c3b6979); v1c-candidate-freeze.json (HEAD 376ae9608) for the pre-fix reconciliation",
+  "closure_runs": [
+   "court/tmp/openssh-closure/current-ssh.json",
+   "court/tmp/openssh-closure/current-sshd.json"
+  ],
+  "historical": {
+   "source_head": "9fa946ccc1eb9516090b8096e0aae38e41150602",
+   "inventory": "v1b-candidate-freeze.json (source head 4a95b73a8)"
   },
-  "summary": {
-    "sites_enumerated": 8,
-    "by_source_state": {
-      "ELIMINATED": 2,
-      "CONTRACTED": 6
-    },
-    "additional_unsafe_items_by_file": {
-      "src/apps/verify.rs": 0,
-      "src/async/arch/async_posix.rs": 13,
-      "src/digest/sha2.rs": 23,
-      "src/pem/pem_info.rs": 11,
-      "src/provider/base.rs": 4,
-      "src/x509/v3_lib.rs": 11,
-      "src/x509/v3_tlsf.rs": 4
-    },
-    "discharged": 0,
-    "blocked": 8,
-    "unknown": 0
+  "head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "head_commit": "376ae960871129c54be675c6085792bf886864b7",
+  "head_commit_note": "HEAD is the merge commit on main; the exact measured bytes are the git tree object because the eight src edits are uncommitted",
+  "working_tree_dirty": true,
+  "rebound_utc": "2026-10-26T13:05:37Z"
+ },
+ "summary": {
+  "sites_enumerated": 8,
+  "by_source_state": {
+   "ELIMINATED": 2,
+   "CONTRACTED": 6
   },
-  "evidence_receipt": "openssh-receipts-2.json",
-  "correction": {
-    "id": "OSSH-R2-CORR-1",
-    "what": "The first draft said src/async/arch/async_posix.rs had no mechanism mapping. state.json#/obligation_mechanisms maps that exact site to C_ABI_CONTRACT via an obligation-override, so the adjudicator moves it UNKNOWN -> BLOCKED.",
-    "source": "state.json#/obligation_mechanisms + mechanism_for()"
+  "additional_unsafe_items_by_file": {
+   "src/apps/verify.rs": 0,
+   "src/async/arch/async_posix.rs": 13,
+   "src/digest/sha2.rs": 23,
+   "src/pem/pem_info.rs": 11,
+   "src/provider/base.rs": 4,
+   "src/x509/v3_lib.rs": 11,
+   "src/x509/v3_tlsf.rs": 4
   },
-  "note": "Projection of openssh-receipts-2.json for consumer_closure.load_boundaries, which admits only *-sites.json.",
-  "boundaries": [
-    {
-      "id": "OSSH-R2-001",
-      "file": "src/x509/v3_tlsf.rs",
-      "line": 146,
-      "kind": "UNSAFE_FN_DEF",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "BLOCKED",
-      "operation": "tls_feature_it",
-      "source_state": "ELIMINATED",
-      "site_disposition": "ELIMINATED",
-      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
-    },
-    {
-      "id": "OSSH-R2-002",
-      "file": "src/provider/base.rs",
-      "line": 149,
-      "kind": "UNSAFE_FN_DEF",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "BLOCKED",
-      "operation": "base_gettable_params",
-      "source_state": "ELIMINATED",
-      "site_disposition": "ELIMINATED",
-      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
-    },
-    {
-      "id": "OSSH-R2-003",
-      "file": "src/apps/verify.rs",
-      "line": 104,
-      "kind": "UNSAFE_FN_DEF",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "BLOCKED",
-      "operation": "cb",
-      "source_state": "CONTRACTED",
-      "site_disposition": "CONTRACTED",
-      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
-    },
-    {
-      "id": "OSSH-R2-004",
-      "file": "src/pem/pem_info.rs",
-      "line": 73,
-      "kind": "UNSAFE_EXTERN_BLOCK",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "BLOCKED",
-      "operation": "(strstr)",
-      "source_state": "CONTRACTED",
-      "site_disposition": "CONTRACTED",
-      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
-    },
-    {
-      "id": "OSSH-R2-005",
-      "file": "src/async/arch/async_posix.rs",
-      "line": 52,
-      "kind": "UNSAFE_EXTERN_BLOCK",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "BLOCKED",
-      "operation": "(ucontext shims)",
-      "source_state": "CONTRACTED",
-      "site_disposition": "CONTRACTED",
-      "closure": "BLOCKED: mechanism state is UNSAFE_OPEN (no ownership reconstruction and no SAFETY_DISCHARGED receipt); the file is mapped by an obligation-override in state.json"
-    },
-    {
-      "id": "OSSH-R2-006",
-      "file": "src/x509/v3_lib.rs",
-      "line": 359,
-      "kind": "UNSAFE_FN_DEF",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "BLOCKED",
-      "operation": "ext_cmp",
-      "source_state": "CONTRACTED",
-      "site_disposition": "CONTRACTED",
-      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
-    },
-    {
-      "id": "OSSH-R2-007",
-      "file": "src/digest/sha2.rs",
-      "line": 417,
-      "kind": "UNSAFE_FN_DEF",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "BLOCKED",
-      "operation": "sha512_256_init",
-      "source_state": "CONTRACTED",
-      "site_disposition": "CONTRACTED",
-      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
-    },
-    {
-      "id": "OSSH-R2-008",
-      "file": "src/digest/sha2.rs",
-      "line": 441,
-      "kind": "UNSAFE_FN_DEF",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "BLOCKED",
-      "operation": "ossl_sha256_192_init",
-      "source_state": "CONTRACTED",
-      "site_disposition": "CONTRACTED",
-      "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site"
-    }
-  ]
+  "discharged": 0,
+  "blocked": 8,
+  "unknown": 0
+ },
+ "evidence_receipt": "openssh-receipts-2.json",
+ "correction": {
+  "id": "OSSH-R2-CORR-1",
+  "what": "The first draft said src/async/arch/async_posix.rs had no mechanism mapping. state.json#/obligation_mechanisms maps that exact site to C_ABI_CONTRACT via an obligation-override, so the adjudicator moves it UNKNOWN -> BLOCKED.",
+  "source": "state.json#/obligation_mechanisms + mechanism_for()"
+ },
+ "note": "Projection of openssh-receipts-2.json for consumer_closure.load_boundaries, which admits only *-sites.json.",
+ "boundaries": [
+  {
+   "id": "OSSH-R2-001",
+   "file": "src/x509/v3_tlsf.rs",
+   "line": 146,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "ELIMINATED",
+   "operation": "tls_feature_it",
+   "source_state": "ELIMINATED",
+   "site_disposition": "ELIMINATED",
+   "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+   "inventory_line": 146,
+   "original_line": 146,
+   "rebind": {
+    "from_line": 146,
+    "to_line": 146,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 146,
+   "current_kind": "SAFE_FN",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-R2-002",
+   "file": "src/provider/base.rs",
+   "line": 149,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED",
+   "operation": "base_gettable_params",
+   "source_state": "ELIMINATED",
+   "site_disposition": "ELIMINATED",
+   "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+   "inventory_line": 149,
+   "original_line": 149,
+   "rebind": {
+    "from_line": 149,
+    "to_line": 149,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 149,
+   "current_kind": "SAFE_FN",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-R2-003",
+   "file": "src/apps/verify.rs",
+   "line": 108,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "BLOCKED",
+   "operation": "cb",
+   "source_state": "UNSAFE_OPERATION",
+   "site_disposition": "CONTRACTED",
+   "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+   "inventory_line": 104,
+   "original_line": 104,
+   "rebind": {
+    "from_line": 104,
+    "to_line": 108,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 108,
+   "current_kind": "UNSAFE_FN_DEF",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-R2-004",
+   "file": "src/pem/pem_info.rs",
+   "line": 77,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "BLOCKED",
+   "operation": "(strstr)",
+   "source_state": "UNSAFE_OPERATION",
+   "site_disposition": "CONTRACTED",
+   "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+   "inventory_line": 73,
+   "original_line": 73,
+   "rebind": {
+    "from_line": 73,
+    "to_line": 77,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 77,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-R2-005",
+   "file": "src/async/arch/async_posix.rs",
+   "line": 60,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "BLOCKED",
+   "operation": "(ucontext shims)",
+   "source_state": "UNSAFE_OPERATION",
+   "site_disposition": "CONTRACTED",
+   "closure": "BLOCKED: mechanism state is UNSAFE_OPEN (no ownership reconstruction and no SAFETY_DISCHARGED receipt); the file is mapped by an obligation-override in state.json",
+   "inventory_line": 52,
+   "original_line": 52,
+   "rebind": {
+    "from_line": 52,
+    "to_line": 60,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 60,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-R2-006",
+   "file": "src/x509/v3_lib.rs",
+   "line": 365,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "BLOCKED",
+   "operation": "ext_cmp",
+   "source_state": "UNSAFE_OPERATION",
+   "site_disposition": "CONTRACTED",
+   "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+   "inventory_line": 359,
+   "original_line": 359,
+   "rebind": {
+    "from_line": 359,
+    "to_line": 365,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 365,
+   "current_kind": "UNSAFE_FN_DEF",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-R2-007",
+   "file": "src/digest/sha2.rs",
+   "line": 421,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "operation": "sha512_256_init",
+   "source_state": "UNSAFE_OPERATION",
+   "site_disposition": "CONTRACTED",
+   "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+   "inventory_line": 417,
+   "original_line": 417,
+   "rebind": {
+    "from_line": 417,
+    "to_line": 421,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 421,
+   "current_kind": "UNSAFE_FN_DEF",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-R2-008",
+   "file": "src/digest/sha2.rs",
+   "line": 449,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "BLOCKED",
+   "operation": "ossl_sha256_192_init",
+   "source_state": "UNSAFE_OPERATION",
+   "site_disposition": "CONTRACTED",
+   "closure": "BLOCKED: the owning mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+   "inventory_line": 441,
+   "original_line": 441,
+   "rebind": {
+    "from_line": 441,
+    "to_line": 449,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 449,
+   "current_kind": "UNSAFE_FN_DEF",
+   "unsafe_operation_present": true
+  }
+ ],
+ "rebind": {
+  "source_head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "head_commit": "376ae960871129c54be675c6085792bf886864b7",
+  "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1d-candidate-freeze.json",
+  "rebound_utc": "2026-10-26T11:38:17Z",
+  "method": "source scan + anchor-window definition match; no receipt deleted; an eliminated operation is recorded as ELIMINATED rather than re-pointed",
+  "counts": {
+   "ELIMINATED_SAFE": 2,
+   "UNSAFE_OPERATION": 6
+  },
+  "disposition_note": "an operation that became safe is recorded ELIMINATED in both source_state and disposition; it is not re-pointed at another unsafe operation"
+ }
 }

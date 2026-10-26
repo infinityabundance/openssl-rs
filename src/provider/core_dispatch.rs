@@ -363,6 +363,11 @@ pub(crate) unsafe extern "C" fn core_get_params(
 /// body is a named call rather than an inline cast.
 ///
 /// 6.6e-ii, and the entry it publishes is id 3 in the 1024-series table.
+///
+/// # Safety
+/// `handle` is the `OSSL_PROVIDER *` the loader passed to `OSSL_provider_init`; `handfn` is a
+/// valid thread-stop handler or `None`; `arg` is the value the core will pass to `handfn` at
+/// thread exit and is not dereferenced here.
 pub(crate) unsafe extern "C" fn core_thread_start(
     handle: *const c_void,
     handfn: Option<crate::runtime::thread_events::ThreadStopHandlerFn>,
