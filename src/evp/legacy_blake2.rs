@@ -39,6 +39,16 @@
 //! below are to [`crate::digest::blake2::blake2b::Ctx`] and
 //! [`crate::digest::blake2::blake2s::Ctx`], the crate's `BLAKE2B_CTX`/`BLAKE2S_CTX`.
 //!
+//! # The initialisers refuse a context without a writable block
+//!
+//! The authority's local `blake2b_init`/`blake2s_init` wrappers call
+//! `ossl_blake2b_init`/`ossl_blake2s_init` on `EVP_MD_CTX_get0_md_data(ctx)` with no test on the
+//! block. The exported `EVP_MD_meth_get_init` hands that callback to any C caller, and a fresh
+//! `EVP_MD_CTX_new()` is zero-filled, so `md_data` is NULL. The crate validates the context first
+//! and answers the C initialise failure value `0` where the authority performs the NULL write
+//! (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-BLAKE2-INIT-MD-DATA-1`), exactly as the
+//! audited SHA-1/SHA-224/MD5 siblings do under `D-LEGACY-MD-INIT-MD-DATA-1`.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_int, c_uchar, c_ulong, c_void};
@@ -71,6 +81,56 @@ const EVP_ORIG_GLOBAL: c_int = 1;
 unsafe fn md_data(ctx: *mut EvpMdCtx) -> *mut c_void {
     // SAFETY: the caller's contract.
     unsafe { (*ctx).md_data }
+}
+
+/// The writable digest block an initialiser may write, or `None` when the context does not
+/// establish one.
+///
+/// The authority's `IMPLEMENT_LEGACY_EVP_MD_METH_LC` calls its local `blake2b_init`/`blake2s_init`
+/// on `EVP_MD_CTX_get0_md_data(ctx)` without testing it. That is sound only when the EVP layer
+/// supplied the block; the exported `EVP_MD_meth_get_init` also hands this callback to any C
+/// caller, and `EVP_MD_CTX_new()` zero-fills the block, so `md_data` is NULL. The crate refuses
+/// that shape with the C initialise failure value `0` instead of reproducing the authority's
+/// NULL write (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-BLAKE2-INIT-MD-DATA-1`).
+///
+/// A context establishes a writable block in exactly two ways:
+///
+/// * `digest` is this very table object (`owner`) — the transcribed legacy-table shape; or
+/// * `digest` is another live method whose `ctx_size` is at least `size` — the block the EVP layer
+///   allocated for that method, which is the shape a caller produces when it installs this
+///   exported callback on its own method with a sufficient `app_datasize`.
+///
+/// A NULL context, a NULL `md_data`, a NULL method and a too-small `app_datasize` all refuse.
+///
+/// # Safety
+/// `ctx` must be NULL or point to a live `EvpMdCtx`; `owner` must be a live `EvpMd`, the table
+/// object that installs this callback.
+unsafe fn init_md_data(
+    ctx: *mut EvpMdCtx,
+    owner: *const EvpMd,
+    size: usize,
+) -> Option<*mut c_void> {
+    if ctx.is_null() {
+        return None;
+    }
+    // SAFETY: `ctx` is NULL or live per the contract.
+    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: as above.
+    let digest = unsafe { (*ctx).digest };
+    if md_data.is_null() || digest.is_null() {
+        return None;
+    }
+    if core::ptr::eq(digest, owner) {
+        return Some(md_data);
+    }
+    // SAFETY: `digest` is a live method: a context's method is only ever installed from a method
+    // the library owns, and a NULL or dangling method is not a C-valid context state.
+    let ctx_size = unsafe { (*digest).ctx_size };
+    if ctx_size >= 0 && ctx_size as usize >= size {
+        Some(md_data)
+    } else {
+        None
+    }
 }
 
 /// A `static` `EVP_MD`. The wrapper claims `Sync` for a value that is only ever read: a heap
@@ -149,12 +209,32 @@ const fn legacy_md(
 /// `blake2b_int_init` — the lower-case macro over the authority's local `blake2b_init`. The
 /// authority's `BLAKE2B_PARAM P;` is uninitialised and then fully overwritten by
 /// `ossl_blake2b_param_init`, so a zeroed local here is byte-for-byte equivalent.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback checks the context's method
+/// and block before writing: a fresh `EVP_MD_CTX_new()` (`md_data == NULL`), a NULL context, a
+/// context with no method and a method whose `app_datasize` is too small all answer `0`, the C
+/// initialise failure value, instead of performing the authority's NULL write. The normal table
+/// shape — a writable `BLAKE2B_CTX` behind a context bound to this method — still initialises and
+/// returns `1`. The refusal is recorded as `docs/SECURITY_DIVERGENCE_POLICY.md`
+/// `D-LEGACY-BLAKE2-INIT-MD-DATA-1`.
 unsafe extern "C" fn blake2b_int_init(ctx: *mut EvpMdCtx) -> c_int {
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2B_MD` is a live
+    // static method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(BLAKE2B_MD.0),
+            core::mem::size_of::<blake2b::Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
     let mut p = blake2b::Param { b: [0u8; 64] };
     blake2b::param_init(&mut p);
-    // SAFETY: `md_data(ctx)` is the live context's block, which this object's `ctx_size`/method
-    // makes a `BLAKE2B_CTX`, and `p` is a live local.
-    unsafe { blake2b::init(md_data(ctx).cast::<blake2b::Ctx>(), &p) };
+    // SAFETY: `init_md_data` established a writable `BLAKE2B_CTX`, and `p` is a live local.
+    unsafe { blake2b::init(block.cast::<blake2b::Ctx>(), &p) };
     // `ossl_blake2b_init` returns 1 unconditionally (`blake2b_prov.c:125-129`).
     1
 }
@@ -188,12 +268,29 @@ unsafe extern "C" fn blake2b_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> 
 // ---------------------------------------------------------------------------------------------
 
 /// `blake2s_int_init` — the lower-case macro over the authority's local `blake2s_init`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`. The same validation as
+/// [`blake2b_int_init`] applies over a `BLAKE2S_CTX`: a context without a writable block answers
+/// `0` instead of performing the authority's NULL write, and the bound table path still
+/// initialises and returns `1`. Recorded as `D-LEGACY-BLAKE2-INIT-MD-DATA-1`.
 unsafe extern "C" fn blake2s_int_init(ctx: *mut EvpMdCtx) -> c_int {
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `BLAKE2S_MD` is a live
+    // static method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(BLAKE2S_MD.0),
+            core::mem::size_of::<blake2s::Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
     let mut p = blake2s::Param { b: [0u8; 32] };
     blake2s::param_init(&mut p);
-    // SAFETY: `md_data(ctx)` is the live context's block, which this object's method makes a
-    // `BLAKE2S_CTX`, and `p` is a live local.
-    unsafe { blake2s::init(md_data(ctx).cast::<blake2s::Ctx>(), &p) };
+    // SAFETY: `init_md_data` established a writable `BLAKE2S_CTX`, and `p` is a live local.
+    unsafe { blake2s::init(block.cast::<blake2s::Ctx>(), &p) };
     // `ossl_blake2s_init` returns 1 unconditionally (`blake2s_prov.c:118-123`).
     1
 }
@@ -270,7 +367,25 @@ pub extern "C" fn EVP_blake2s256() -> *const EvpMd {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
     use super::*;
+
+    /// A context with the fields the legacy callbacks read: `digest`/`reqdigest` bound to `md` and
+    /// a writable `md_data` block. Every other field is the zero `EVP_MD_CTX_new` leaves behind.
+    fn bound_context(md: *const EvpMd, block: *mut c_void) -> EvpMdCtx {
+        EvpMdCtx {
+            reqdigest: md,
+            digest: md,
+            engine: core::ptr::null_mut(),
+            flags: 0,
+            md_data: block,
+            pctx: core::ptr::null_mut(),
+            update: None,
+            algctx: core::ptr::null_mut(),
+            fetched_digest: core::ptr::null_mut(),
+        }
+    }
 
     /// The two objects against the authority's own fields, read from `legacy_blake2.c:40-48` and
     /// `:55-63`. `flags` and `pkey_type` are both **zero**, which is what the SHA file's helper
@@ -316,5 +431,123 @@ mod tests {
         }
         assert_eq!(EVP_blake2b512(), core::ptr::addr_of!(BLAKE2B_MD.0));
         assert_eq!(EVP_blake2s256(), core::ptr::addr_of!(BLAKE2S_MD.0));
+    }
+
+    /// `EVP_MD_meth_get_init(EVP_blake2b512())` handed to a C caller, then called with a fresh
+    /// `EVP_MD_CTX_new()` (`md_data == NULL`) and with a NULL context. The authority's local
+    /// `blake2b_init` calls `ossl_blake2b_init(EVP_MD_CTX_get0_md_data(ctx), &P)`, so both are a
+    /// NULL write; the crate refuses both with `0`. The table's own path — a context bound to
+    /// `blake2b_md` with a writable `BLAKE2B_CTX` — must still produce the standard
+    /// BLAKE2b-512("abc") digest.
+    #[test]
+    fn legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_get_final, EVP_MD_meth_get_init,
+            EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: `EVP_blake2b512()` answers a live static method.
+        let init =
+            unsafe { EVP_MD_meth_get_init(EVP_blake2b512()) }.expect("blake2b_md has an init");
+        // SAFETY: as above.
+        let update =
+            unsafe { EVP_MD_meth_get_update(EVP_blake2b512()) }.expect("blake2b_md has an update");
+        // SAFETY: as above.
+        let final_ =
+            unsafe { EVP_MD_meth_get_final(EVP_blake2b512()) }.expect("blake2b_md has a final");
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is a live context and the callback accepts any live context.
+        let refused_fresh = unsafe { init(fresh) };
+        assert_eq!(refused_fresh, 0, "init accepted a NULL md_data");
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
+
+        // SAFETY: a NULL context is the input under test; the callback's contract permits it.
+        let refused_null = unsafe { init(core::ptr::null_mut()) };
+        assert_eq!(refused_null, 0);
+
+        let mut store = core::mem::MaybeUninit::<blake2b::Ctx>::uninit();
+        let mut ctx = bound_context(EVP_blake2b512(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `blake2b_md`, and `store` is a writable `BLAKE2B_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 64];
+        // SAFETY: `output` is writable for the BLAKE2b-512 digest length.
+        let finalised = unsafe { final_(&mut ctx, output.as_mut_ptr()) };
+        assert_eq!(finalised, 1);
+        assert_eq!(
+            output,
+            [
+                0xba, 0x80, 0xa5, 0x3f, 0x98, 0x1c, 0x4d, 0x0d, 0x6a, 0x27, 0x97, 0xb6, 0x9f, 0x12,
+                0xf6, 0xe9, 0x4c, 0x21, 0x2f, 0x14, 0x68, 0x5a, 0xc4, 0xb7, 0x4b, 0x12, 0xbb, 0x6f,
+                0xdb, 0xff, 0xa2, 0xd1, 0x7d, 0x87, 0xc5, 0x39, 0x2a, 0xab, 0x79, 0x2d, 0xc2, 0x52,
+                0xd5, 0xde, 0x45, 0x33, 0xcc, 0x95, 0x18, 0xd3, 0x8a, 0xa8, 0xdb, 0xf1, 0x92, 0x5a,
+                0xb9, 0x23, 0x86, 0xed, 0xd4, 0x00, 0x99, 0x23,
+            ],
+            "BLAKE2b-512(\"abc\") changed"
+        );
+    }
+
+    /// As [`legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context`], over
+    /// the `blake2s_md` table entry and `ossl_blake2s_init`'s `BLAKE2S_CTX` block.
+    #[test]
+    fn legacy_blake2s_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_get_final, EVP_MD_meth_get_init,
+            EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: `EVP_blake2s256()` answers a live static method.
+        let init =
+            unsafe { EVP_MD_meth_get_init(EVP_blake2s256()) }.expect("blake2s_md has an init");
+        // SAFETY: as above.
+        let update =
+            unsafe { EVP_MD_meth_get_update(EVP_blake2s256()) }.expect("blake2s_md has an update");
+        // SAFETY: as above.
+        let final_ =
+            unsafe { EVP_MD_meth_get_final(EVP_blake2s256()) }.expect("blake2s_md has a final");
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is a live context and the callback accepts any live context.
+        let refused_fresh = unsafe { init(fresh) };
+        assert_eq!(refused_fresh, 0, "init accepted a NULL md_data");
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
+
+        // SAFETY: a NULL context is the input under test; the callback's contract permits it.
+        let refused_null = unsafe { init(core::ptr::null_mut()) };
+        assert_eq!(refused_null, 0);
+
+        let mut store = core::mem::MaybeUninit::<blake2s::Ctx>::uninit();
+        let mut ctx = bound_context(EVP_blake2s256(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `blake2s_md`, and `store` is a writable `BLAKE2S_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 32];
+        // SAFETY: `output` is writable for the BLAKE2s-256 digest length.
+        let finalised = unsafe { final_(&mut ctx, output.as_mut_ptr()) };
+        assert_eq!(finalised, 1);
+        assert_eq!(
+            output,
+            [
+                0x50, 0x8c, 0x5e, 0x8c, 0x32, 0x7c, 0x14, 0xe2, 0xe1, 0xa7, 0x2b, 0xa3, 0x4e, 0xeb,
+                0x45, 0x2f, 0x37, 0x45, 0x8b, 0x20, 0x9e, 0xd6, 0x3a, 0x29, 0x4d, 0x99, 0x9b, 0x4c,
+                0x86, 0x67, 0x59, 0x82,
+            ],
+            "BLAKE2s-256(\"abc\") changed"
+        );
     }
 }

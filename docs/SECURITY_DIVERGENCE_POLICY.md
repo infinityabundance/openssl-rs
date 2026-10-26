@@ -1018,6 +1018,41 @@ authority and the candidate for this function, and there was never supposed to b
 - **When it changes:** it does not. 3.6.3 and 3.6.4 both fault; the boundary is permanent and the
   claim stays narrowed.
 
+### D-LEGACY-BLAKE2-INIT-MD-DATA-1 — the legacy BLAKE2b/BLAKE2s initialisers write through a
+### NULL `md_data`
+
+- **Obligation:** `blake2b_int_init` and `blake2s_int_init`, emitted by
+  `IMPLEMENT_LEGACY_EVP_MD_METH_LC` (`crypto/evp/legacy_meth.h:24-36`) over the local
+  `blake2b_init`/`blake2s_init` wrappers in `crypto/evp/legacy_blake2.c:18-31`, call
+  `ossl_blake2b_init(EVP_MD_CTX_get0_md_data(ctx), &P)` / `ossl_blake2s_init(...)` with no test
+  on the block. The exported `EVP_MD_meth_get_init` (`crypto/evp/evp_lib.c`;
+  `artifacts/phase2/libcrypto.ld:1886`) hands the callback to any C caller. A fresh
+  `EVP_MD_CTX_new()` is zero-filled, so `md_data == NULL`; a NULL context dereferences NULL too.
+- **Authority:** **measured**. Four probes, each run in its own process against
+  `forensics/authorities/prefix/openssl-3.6.4-production` (BLAKE2b-512 and BLAKE2s-256 × {fresh
+  context, NULL context}). Each printed the method, callback and context shape (`md_data=(nil)`
+  for the fresh shape) and died with **exit 139** (SIGSEGV) in the initialiser write. The fault is
+  the measurement, so there is nothing to compare past it.
+- **Crate:** both callbacks validate the context through `init_md_data` before writing. A NULL
+  context, a NULL `md_data`, a NULL method, or a method whose `ctx_size` is smaller than the
+  BLAKE2 context all answer `0` — the C initialise failure value — and touch no memory. A context
+  bound to the callback's own table object, or to another method with a sufficient `ctx_size`,
+  still calls the authority's `ossl_blake2*_init` and returns `1`. No error is raised, because the
+  authority raises nothing on this path; it does not return.
+- **Reason:** `D-MD-NULL-CALLBACK-1`'s and `D-LEGACY-MD-INIT-MD-DATA-1`'s: a write through a
+  NULL pointer is not a contract to reproduce (AGENTS.md §3). The getter's documented contract
+  says nothing about the context's `md_data`, so the writable-block precondition cannot be
+  discharged by the ABI; the callback must establish it itself.
+- **Claim removed:** calling the exported initialiser pointer with a fresh or NULL context is not
+  claimed compatible — both fault in the authority. On a context that establishes a writable
+  digest block the digest maths and the result are unchanged
+  (`legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context` and
+  `legacy_blake2s_init_refuses_context_without_md_data_and_inits_bound_context`; the vectors are
+  BLAKE2b-512("abc") = `ba80a53f…d4009923` and BLAKE2s-256("abc") = `508c5e8c…86675982` from the
+  pinned authority).
+- **When it changes:** it does not. The authority faults on both methods; the boundary is
+  permanent and the claim stays narrowed.
+
 ### D-MD-DOALL-NULL-1 — `EVP_MD_do_all_provided` calls a NULL visitor
 
 - **Obligation:** `EVP_MD_do_all_provided(libctx, NULL, arg)`.

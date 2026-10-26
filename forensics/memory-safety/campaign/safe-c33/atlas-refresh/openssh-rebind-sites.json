@@ -1,0 +1,2225 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "openssh-rebind",
+ "subphase": "P25 openssh rebind: eight files with no boundary receipt",
+ "date": "2026-10-26",
+ "candidate": {
+  "branch": "integrate/safe-c33 (HEAD 376ae9608; candidate edits uncommitted)",
+  "source_head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "head_commit": "376ae960871129c54be675c6085792bf886864b7",
+  "identity_kind": "git tree object of the exact uncommitted candidate",
+  "inventory": [
+   "v1c-candidate-freeze.json (HEAD, pre-fix: 80 production blockers)",
+   "v1d-candidate-freeze.json (post-fix tree, 67 production blockers)"
+  ],
+  "working_tree_dirty": true,
+  "role": "new receipt for the eight previously uncovered files plus the digest.rs:991 site"
+ },
+ "scope": {
+  "reachable_operation_set": "the 14 V1 production blockers the HEAD inventory reports reachable from ssh/sshd in these eight files",
+  "additional_operations_policy": "the remaining production unsafe fn/trait/impl/extern items in these files are enumerated under additional_operations but are not adjudicated; they are not V1 blockers at this identity",
+  "discharge_claim": "one site (OSSH-RB-001, src/evp/legacy_blake2.rs:152) is now scoped-SAFETY_DISCHARGED by its own contract, test and authority probe; the mechanism states remain OWNERSHIP_RECONSTRUCTED/BIO UNSAFE_OPEN, so no mechanism or consumer graduation is claimed"
+ },
+ "summary": {
+  "v1_operations": 14,
+  "by_disposition": {
+   "BLOCKED": 0,
+   "CONTRACTED": 7,
+   "ELIMINATED": 6,
+   "SAFETY_DISCHARGED": 1
+  },
+  "by_source_state": {
+   "UNSAFE_OPERATION": 8,
+   "ELIMINATED": 6
+  },
+  "additional_operations_enumerated": 227,
+  "vestigial_markers_removed": [
+   "src/provider/decode_der2key.rs:193",
+   "src/provider/ecdsa_sig.rs:1553",
+   "src/provider/legacyprov.rs:154",
+   "src/provider/legacyprov.rs:302",
+   "src/provider/legacyprov.rs:465",
+   "src/provider/legacyprov.rs:510"
+  ],
+  "blockers": []
+ },
+ "boundaries": [
+  {
+   "id": "OSSH-RB-001",
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 152,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 152,
+   "inventory_line": 152,
+   "current_line": 222,
+   "current_kind": "UNSAFE_FN_DEF",
+   "operation": "blake2b_int_init",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "UNSAFE_OPERATION",
+   "disposition": "SAFETY_DISCHARGED: src/evp/legacy_blake2.rs:152 - blake2b_int_init validates ctx, md_data, digest and the block extent through init_md_data before writing; a fresh EVP_MD_CTX_new(), a NULL context, a NULL md_data, a NULL method and a too-small app_datasize all answer 0 and touch no memory, while the bound table path still calls ossl_blake2b_init and returns 1 (evp::legacy_blake2::tests::legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context; \u00a717 D-LEGACY-BLAKE2-INIT-MD-DATA-1)",
+   "contract": "`ctx` is NULL or a live `EVP_MD_CTX`; the callback establishes a writable `BLAKE2B_CTX` from the context before writing. A context bound to `BLAKE2B_MD` (or to another method with `ctx_size >= size_of::<blake2b::Ctx>()`) with a non-NULL `md_data` is initialised; every other C-valid shape is refused with 0.",
+   "established_by": [
+    "source: src/evp/legacy_blake2.rs:108-146 `init_md_data` validates ctx, md_data, digest and the block extent before any write; src/evp/legacy_blake2.rs:222-245 `blake2b_int_init` refuses every shape that does not establish a writable `BLAKE2B_CTX`",
+    "test: evp::legacy_blake2::tests::legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context covers fresh EVP_MD_CTX_new(), NULL ctx, and the bound table path (BLAKE2b-512(\"abc\") = ba80a53f...d4009923). The pre-fix candidate aborts at src/digest/blake2.rs:249 with 'null pointer dereference occurred' (SIGABRT).",
+    "authority: four C probes against forensics/authorities/prefix/openssl-3.6.4-production (BLAKE2b-512/BLAKE2s-256 x {fresh, NULL} context) each exit 139 (SIGSEGV) in the initialiser write; the crate refuses with 0 under \u00a717 D-LEGACY-BLAKE2-INIT-MD-DATA-1",
+    "sibling: src/evp/legacy_blake2.rs:278 blake2s_int_init was hardened with the same helper and has its own regression test; it is not a V1 obligation at this inventory identity"
+   ],
+   "residual": "A C-invalid pointer remains outside the C contract, as for every exported pointer-taking entry point. The owner-table branch accepts a manually bound context with non-NULL md_data; the public API cannot construct that state (a fresh context has NULL md_data and EVP_DigestInit_ex rebinds the method before the callback), so it is not caller-reachable. The sibling legacy initialisers in other files (sha256/384/512/512_224/512_256 and md5_sha1) retain the authority's unconditional shape and remain queued.",
+   "rebind": {
+    "from_line": 152,
+    "to_line": 222,
+    "method": "V1 inventory coordinate retained; current line re-derived on the hardened source"
+   }
+  },
+  {
+   "id": "OSSH-RB-002",
+   "file": "src/provider/core_dispatch.rs",
+   "line": 371,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 366,
+   "inventory_line": 366,
+   "current_line": 371,
+   "current_kind": "UNSAFE_FN_DEF",
+   "operation": "core_thread_start",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "UNSAFE_OPERATION",
+   "disposition": "CONTRACTED",
+   "contract": "`handle` is the `OSSL_PROVIDER *` the loader passed to `OSSL_provider_init`; `handfn` is a valid thread-stop handler or `None`; `arg` is an opaque value the core passes to the handler at thread exit.",
+   "established_by": [
+    "provider core dispatch table: the loader supplies `handle`; the entry is internal and not exported",
+    "`ossl_init_thread_start` uses `handle` only as an opaque deregistration key"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 366,
+    "to_line": 371,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-003",
+   "file": "src/provider/decode_der2key.rs",
+   "line": 193,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 190,
+   "inventory_line": 190,
+   "current_line": 193,
+   "current_kind": "SAFE_FN",
+   "operation": "bare_algor_it",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "ELIMINATED",
+   "disposition": "ELIMINATED",
+   "contract": "No caller precondition. The body returns a pointer to the static `BARE_ALGOR_ITEM` descriptor and reads no argument.",
+   "established_by": [
+    "type invariant: `BARE_ALGOR_ITEM` is a static `Asn1Item`",
+    "the `unsafe` marker was vestigial and was removed"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 190,
+    "to_line": 193,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-004",
+   "file": "src/provider/digest.rs",
+   "line": 996,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 991,
+   "inventory_line": 991,
+   "current_line": 996,
+   "current_kind": "UNSAFE_FN_DEF",
+   "operation": "internal_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "UNSAFE_OPERATION",
+   "disposition": "CONTRACTED",
+   "contract": "`outl` is a live, writable output slot supplied by the provider final dispatch. `ctx` and `out` are not dereferenced (`ctx_final` ignores both) and `outsz` is unused by this override.",
+   "established_by": [
+    "provider digest `final` dispatch passes the caller's `outl` and `outsz`",
+    "`ctx_final` is `extern \"C\" fn ctx_final(_md, _ctx) -> c_int { 1 }`; it reads neither pointer"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 991,
+    "to_line": 996,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-005",
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1553,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 1550,
+   "inventory_line": 1550,
+   "current_line": 1553,
+   "current_kind": "SAFE_FN",
+   "operation": "ecdsa_sigalg_query_key_types",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "ELIMINATED",
+   "disposition": "ELIMINATED",
+   "contract": "No caller precondition. The body returns a pointer into a static array of static literals; the `unsafe impl Sync` for that array keeps its own SAFETY comment.",
+   "established_by": [
+    "type invariant: `KEYTYPES` is static and never mutated",
+    "the `unsafe` marker on the fn was vestigial and was removed"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 1550,
+    "to_line": 1553,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-006",
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 67,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "original_line": 65,
+   "inventory_line": 65,
+   "current_line": 67,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "operation": "unsafe extern block (libc strcmp)",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "UNSAFE_OPERATION",
+   "disposition": "CONTRACTED",
+   "contract": "`strcmp` is the C library symbol; each call passes two NUL-terminated strings live for the call.",
+   "established_by": [
+    "libc ABI: `strcmp` is provided by the C runtime linked into the process",
+    "call sites pass `(*p).key` (a key-terminated parameter entry) and a static literal"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 65,
+    "to_line": 67,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-007",
+   "file": "src/provider/legacyprov.rs",
+   "line": 154,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 151,
+   "inventory_line": 151,
+   "current_line": 154,
+   "current_kind": "SAFE_FN",
+   "operation": "legacy_gettable_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "ELIMINATED",
+   "disposition": "ELIMINATED",
+   "contract": "No caller precondition. The body returns a pointer to a static parameter array and does not read `provctx`.",
+   "established_by": [
+    "type invariant: `LEGACY_PARAM_TYPES` is a static `[OsslParam]`",
+    "the `unsafe` marker was vestigial and was removed"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 151,
+    "to_line": 154,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-008",
+   "file": "src/provider/legacyprov.rs",
+   "line": 302,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 297,
+   "inventory_line": 297,
+   "current_line": 302,
+   "current_kind": "SAFE_FN",
+   "operation": "newctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "ELIMINATED",
+   "disposition": "ELIMINATED",
+   "contract": "No caller precondition. The body allocates through the safe `OwnedCtx::new`, checks `ossl_prov_is_running`, and hands the raw pointer out.",
+   "established_by": [
+    "`OwnedCtx::<Ctx>::new` is safe and returns `None` on allocation failure",
+    "the `unsafe` marker was vestigial and was removed"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 297,
+    "to_line": 302,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-009",
+   "file": "src/provider/legacyprov.rs",
+   "line": 316,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 308,
+   "inventory_line": 308,
+   "current_line": 316,
+   "current_kind": "UNSAFE_FN_DEF",
+   "operation": "freectx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "UNSAFE_OPERATION",
+   "disposition": "CONTRACTED",
+   "contract": "`vctx` is NULL or a live context this row's `newctx` handed to the core and the core has not yet released. The core calls `freectx` exactly once per such pointer.",
+   "established_by": [
+    "provider `freectx` dispatch: the core owns the context lifecycle from `newctx` to `freectx`",
+    "`OwnedCtx::from_raw` reclaims the block and `Drop` releases it; NULL is a no-op"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 308,
+    "to_line": 316,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-010",
+   "file": "src/provider/legacyprov.rs",
+   "line": 465,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 454,
+   "inventory_line": 454,
+   "current_line": 465,
+   "current_kind": "SAFE_FN",
+   "operation": "mdc2_settable_ctx_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "ELIMINATED",
+   "disposition": "ELIMINATED",
+   "contract": "No caller precondition. The body returns a pointer to a static parameter array and reads neither argument.",
+   "established_by": [
+    "type invariant: `MDC2_SETTABLE_CTX_PARAMS` is a static `[OsslParam]`",
+    "the `unsafe` marker was vestigial and was removed"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 454,
+    "to_line": 465,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-011",
+   "file": "src/provider/legacyprov.rs",
+   "line": 510,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 497,
+   "inventory_line": 497,
+   "current_line": 510,
+   "current_kind": "SAFE_FN",
+   "operation": "newctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "ELIMINATED",
+   "disposition": "ELIMINATED",
+   "contract": "No caller precondition. The body allocates through the safe `OwnedCtx::new` and hands the raw pointer out.",
+   "established_by": [
+    "`OwnedCtx::<Mdc2Ctx>::new` is safe and returns `None` on allocation failure",
+    "the `unsafe` marker was vestigial and was removed"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 497,
+    "to_line": 510,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-012",
+   "file": "src/provider/legacyprov.rs",
+   "line": 524,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 508,
+   "inventory_line": 508,
+   "current_line": 524,
+   "current_kind": "UNSAFE_FN_DEF",
+   "operation": "freectx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "UNSAFE_OPERATION",
+   "disposition": "CONTRACTED",
+   "contract": "`vctx` is NULL or a live `Mdc2Ctx` this row's `newctx` handed to the core and the core has not yet released. The core calls `freectx` exactly once per such pointer.",
+   "established_by": [
+    "provider `freectx` dispatch: the core owns the context lifecycle from `newctx` to `freectx`",
+    "`OwnedCtx::from_raw` reclaims the block; NULL is a no-op"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 508,
+    "to_line": 524,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-013",
+   "file": "src/rsa/ameth.rs",
+   "line": 610,
+   "kind": "UNSAFE_FN_DEF",
+   "original_line": 606,
+   "inventory_line": 606,
+   "current_line": 610,
+   "current_kind": "UNSAFE_FN_DEF",
+   "operation": "x509_algor_free_local",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "source_state": "UNSAFE_OPERATION",
+   "disposition": "CONTRACTED",
+   "contract": "`a` is NULL or a live `X509_ALGOR` this crate owns; the call releases it and the caller must not use `a` afterwards.",
+   "established_by": [
+    "internal caller `pkey_rsa_print` passes the `mask_hash` it allocated with `X509_ALGOR_new`/pack, or NULL",
+    "`X509_ALGOR_free` accepts NULL"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 606,
+    "to_line": 610,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  },
+  {
+   "id": "OSSH-RB-014",
+   "file": "src/runtime/bio/owned.rs",
+   "line": 101,
+   "kind": "UNSAFE_TRAIT",
+   "original_line": 95,
+   "inventory_line": 95,
+   "current_line": 101,
+   "current_kind": "UNSAFE_TRAIT",
+   "operation": "CtxDestroy",
+   "mechanism": "BIO",
+   "source_state": "UNSAFE_OPERATION",
+   "disposition": "CONTRACTED",
+   "contract": "An implementor must uphold (a)-(d): `destroy_body` releases exactly the members the type owns, exactly once, never the enclosing block, and accepts the declared initialisation state; `FILE` is NULL or a static NUL-terminated string; `Self` has no alignment requirement beyond `SEAM_MALLOC_ALIGN`.",
+   "established_by": [
+    "`unsafe impl CtxDestroy` sites state the contract for their own type",
+    "`OwnedCtx`/`RawCtx` constructors validate size and alignment and return `None` rather than build an over-aligned owner"
+   ],
+   "residual": null,
+   "rebind": {
+    "from_line": 95,
+    "to_line": 101,
+    "method": "V1 blocker coordinate re-derived on the post-fix source"
+   }
+  }
+ ],
+ "additional_operations": [
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 71,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md_data",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 87,
+   "kind": "UNSAFE_IMPL",
+   "operation": "<top-level>",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 163,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2b_int_update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 180,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2b_int_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 191,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2s_int_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 202,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2s_int_update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/evp/legacy_blake2.rs",
+   "line": 218,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2s_int_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 299,
+   "kind": "UNSAFE_IMPL",
+   "operation": "<top-level>",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 308,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_gettable_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 321,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 391,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_get_libctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 413,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_get_entropy",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 432,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_get_user_entropy",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 452,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_cleanup_entropy",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 467,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_cleanup_user_entropy",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 483,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_get_nonce",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 503,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_get_user_nonce",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 526,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_cleanup_nonce",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 541,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_cleanup_user_nonce",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 560,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_new_error",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 570,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_set_error_debug",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 594,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_vset_error",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 617,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_set_error_mark",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 626,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_clear_last_error_mark",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 635,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_pop_error_to_mark",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 644,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_count_to_mark",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 659,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_indicator_get_callback",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 682,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_self_test_get_callback",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 709,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_obj_add_sigid",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 751,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_obj_create",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 772,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_provider_get0_name",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 782,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_provider_get0_provider_ctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 794,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_provider_get0_dispatch",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 818,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_provider_up_ref_intern",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 835,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "core_provider_free_intern",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/core_dispatch.rs",
+   "line": 889,
+   "kind": "UNSAFE_IMPL",
+   "operation": "<top-level>",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 299,
+   "kind": "UNSAFE_IMPL",
+   "operation": "<top-level>",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 331,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "der2key_set_ctx_params_decoder",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 364,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "der2key_settable_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 372,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "der2key_set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 403,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "der2key_decode_p8",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 450,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "der2key_newctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 471,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "der2key_freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 509,
+   "kind": "UNSAFE_IMPL",
+   "operation": "<top-level>",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 510,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "destroy_body",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 524,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "raise_msg",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 540,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cleanse_der",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 554,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "der2key_decode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 744,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "der2key_export_object",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 905,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ec_check",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 921,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_check",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 1019,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_dsa_d2i_pkcs8",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/decode_der2key.rs",
+   "line": 1094,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "slh_dsa_d2i_pubkey",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 149,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_param_is_empty",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 174,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_digest_default_get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 260,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "repeated_digest_param_site",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 344,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dup",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 374,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "from_raw",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 423,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 433,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 449,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "copyctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 465,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 479,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 501,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 515,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 596,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 642,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 647,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 658,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "copyctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 670,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 682,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 700,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 705,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 954,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 959,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 970,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "copyctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1019,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1103,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1149,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1154,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1165,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "copyctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1177,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1189,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1207,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1214,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1303,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "new_keccak",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1332,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1337,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1348,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "copyctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1360,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1371,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1377,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "keccak_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1403,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "shake_squeeze",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1446,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "shake_set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1481,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "shake_get_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1530,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "keccak_init_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1548,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "newctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1556,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1616,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "newctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1624,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1879,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1885,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1898,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "copyctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1912,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1948,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 1975,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 2000,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 2013,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 2039,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 2323,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "deflt_query",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 2393,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "deflt_teardown",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 2452,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "deflt_get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/digest.rs",
+   "line": 2528,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_default_provider_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 188,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_newctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 233,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_setup_md",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 324,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_setup_md_err",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 335,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_signverify_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 377,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_sign_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 400,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_sign_directly",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 474,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_signverify_message_update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 493,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_sign_message_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 528,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_sign",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 562,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_verify_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 584,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_verify_directly",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 607,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_verify_set_sig",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 627,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_verify_message_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 660,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_verify",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 688,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_digest_signverify_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 738,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_digest_signverify_init_err",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 751,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_digest_sign_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 774,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_digest_signverify_update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 803,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_digest_sign_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 833,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_digest_verify_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 857,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_digest_verify_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 891,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 923,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1014,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_dupctx_err",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1036,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_get_ctx_params_decoder",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1104,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_get_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1159,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_gettable_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1183,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_common_set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1200,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_set_ctx_params_decoder",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1270,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1333,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_settable_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1344,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_get_ctx_md_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1362,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_gettable_ctx_md_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1379,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_set_ctx_md_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1397,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_settable_ctx_md_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1506,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_sigalg_signverify_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1559,
+   "kind": "UNSAFE_IMPL",
+   "operation": "ecdsa_sigalg_query_key_types",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1571,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_sigalg_set_ctx_params_decoder",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1624,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_sigalg_settable_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/ecdsa_sig.rs",
+   "line": 1643,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecdsa_sigalg_set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 85,
+   "kind": "UNSAFE_IMPL",
+   "operation": "<top-level>",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 90,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "destroy_body",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 101,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "key2ms_newctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 121,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "key2ms_freectx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 144,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "key2pvk_settable_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 153,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "key2pvk_set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 196,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "write_msblob",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 219,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "write_pvk",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 249,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_set1",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 258,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dsa_set1",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 455,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "key2msblob_encode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/encode_key2ms.rs",
+   "line": 490,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "key2pvk_encode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 162,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "legacy_get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 238,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dup",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 263,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "from_raw",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 323,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 336,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "copyctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 349,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 360,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 378,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 387,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 477,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "mdc2_set_ctx_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 531,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dupctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 544,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "copyctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 556,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 564,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "internal_final",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 582,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 587,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "get_params",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 830,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "legacy_query",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 858,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "legacy_teardown",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/provider/legacyprov.rs",
+   "line": 907,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_legacy_provider_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 114,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "pkey_is_pss",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 132,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "evp_get_digestbynid",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 142,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_param_encode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 182,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pub_encode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 236,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pub_decode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 294,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pub_cmp",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 320,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "old_rsa_priv_decode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 346,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "old_rsa_priv_encode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 356,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_priv_encode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 419,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_priv_decode",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 444,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "int_rsa_size",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 453,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_bits",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 462,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_security_bits",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 471,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "int_rsa_free",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 481,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pss_param_print",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 620,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "pkey_rsa_print",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 756,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pub_print",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 771,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_priv_print",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 786,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_sig_print",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 821,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pkey_ctrl",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 876,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_ctx_to_pss",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 932,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_rsa_pss_params_create",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 978,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_rsa_ctx_to_pss_string",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 999,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_rsa_pss_to_ctx",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1097,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pss_verify_param",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1125,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_rsa_pss_get_param",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1146,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_item_verify",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1175,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_item_sign",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1298,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_sig_info_set",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1365,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pkey_check",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1374,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pkey_dirty_cnt",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1385,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_int_export_to",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1495,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_int_import_from",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1618,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pkey_export_to",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1635,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pss_pkey_export_to",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1660,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pkey_import_from",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1670,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pss_pkey_import_from",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/rsa/ameth.rs",
+   "line": 1682,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pkey_copy",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/runtime/bio/owned.rs",
+   "line": 118,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "destroy_body",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/runtime/bio/owned.rs",
+   "line": 180,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "from_raw",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/runtime/bio/owned.rs",
+   "line": 193,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "from_raw_at",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/runtime/bio/owned.rs",
+   "line": 369,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "assume_init",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  },
+  {
+   "file": "src/runtime/bio/owned.rs",
+   "line": 420,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "take",
+   "audited": false,
+   "note": "enumerated by the block scanner for completeness; not adjudicated in this receipt and not a V1 blocker at this identity"
+  }
+ ],
+ "non_claims": [
+  "A CONTRACTED disposition means the source states the contract and this receipt names its witness; it is not a SAFETY_DISCHARGED mechanism and no independent BOUNDARY review was performed.",
+  "The additional_operations list is an enumeration, not an audit.",
+  "The one BLOCKED site is retained: the BLAKE2 legacy initialisers have the same unestablished md_data ABI precondition as the hardened legacy_md5/legacy_sha initialisers.",
+  "No cargo/Miri/ASan/cryptographic court was run by this receipt's generator."
+ ]
+}
