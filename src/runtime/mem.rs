@@ -1244,6 +1244,12 @@ impl<const N: usize> CleansedScratch<N> {
     pub(crate) fn as_slice(&self) -> &[u8] {
         &self.0
     }
+
+    /// Fill the whole buffer with `byte` — the SSLv3 `pad_1`/`pad_2` arms fill their pad
+    /// temporary with a constant before hashing it.
+    pub(crate) fn fill(&mut self, byte: u8) {
+        self.0.fill(byte);
+    }
 }
 
 impl<const N: usize> Default for CleansedScratch<N> {
@@ -1254,8 +1260,62 @@ impl<const N: usize> Default for CleansedScratch<N> {
 
 impl<const N: usize> Drop for CleansedScratch<N> {
     fn drop(&mut self) {
+        #[cfg(test)]
+        let nonzero_before = self.0.iter().filter(|&&b| b != 0).count();
         // SAFETY: the array is live for `N` writable bytes for the duration of `Drop`.
         unsafe { cleanse(self.0.as_mut_ptr(), N) }
+        // A test-only observation of the wipe for callers whose secret temporaries must be
+        // cleansed on their early-failure returns (for example `ossl_sha1_ctrl`). It reads
+        // this owner's still-live storage inside `Drop`, never freed stack, and release
+        // builds carry none of it.
+        #[cfg(test)]
+        cleanse_hooks::record(N, nonzero_before, self.0.iter().all(|&b| b == 0));
+    }
+}
+
+/// Test-only observation of [`CleansedScratch`]'s wipe.
+///
+/// A caller cannot inspect a scratch buffer after it has gone out of scope without reading
+/// freed stack. This records what the wipe did from inside `Drop`, while the storage is still
+/// live: how many bytes it covered, how many were non-zero beforehand, and that every byte read
+/// zero afterwards. It is thread-local, so tests using it need no global lock.
+#[cfg(test)]
+pub(crate) mod cleanse_hooks {
+    use core::cell::RefCell;
+
+    /// One `CleansedScratch::drop`, described without exposing the bytes themselves.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub(crate) struct Event {
+        /// `N` — the length the wipe covered.
+        pub len: usize,
+        /// Bytes that were non-zero immediately before the wipe.
+        pub nonzero_before: usize,
+        /// Whether every byte read zero immediately after the wipe.
+        pub zero_after: bool,
+    }
+
+    thread_local! {
+        static EVENTS: RefCell<Vec<Event>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Forget every wipe recorded on this thread.
+    pub(crate) fn reset() {
+        EVENTS.with(|events| events.borrow_mut().clear());
+    }
+
+    /// Every wipe recorded on this thread since the last [`reset`].
+    pub(crate) fn events() -> Vec<Event> {
+        EVENTS.with(|events| events.borrow().clone())
+    }
+
+    pub(super) fn record(len: usize, nonzero_before: usize, zero_after: bool) {
+        EVENTS.with(|events| {
+            events.borrow_mut().push(Event {
+                len,
+                nonzero_before,
+                zero_after,
+            });
+        });
     }
 }
 
