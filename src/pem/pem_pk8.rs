@@ -64,6 +64,10 @@ use crate::runtime::bio::{BIO_free, BIO_new_fp, Bio, BIO_NOCLOSE};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::OPENSSL_cleanse;
 
+// SAFETY: `strlen` is libc's `size_t strlen(const char *)`. Its argument is a non-NULL pointer to
+// a NUL-terminated string readable for the call; the result is a value and nothing is written or
+// freed through this declaration. The single call site uses it only on the caller-supplied `u`
+// password string, which `do_pk8pkey`'s contract requires to be NUL-terminated.
 unsafe extern "C" {
     /// The C library's `strlen`, which the authority's `u`-as-password fallback calls.
     fn strlen(s: *const c_char) -> usize;

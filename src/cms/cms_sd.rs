@@ -2208,6 +2208,12 @@ pub(crate) unsafe extern "C" fn CMS_add_standard_smimecap(smcap: *mut *mut OpenS
 }
 
 /// The `void (*)(void *)` shape `OPENSSL_sk_pop_free` takes for [`X509_ALGOR_free`].
+///
+/// # Safety
+///
+/// `p` is NULL or the `X509_ALGOR` whose reference the calling stack owns and is releasing.
+/// Established by the single call site, where the stack is the `STACK_OF(X509_ALGOR)` that
+/// `CMS_add_standard_smimecap` built and that this frame exclusively owns.
 unsafe extern "C" fn x509_algor_free_void(p: *mut c_void) {
     // SAFETY: `p` is an `X509_ALGOR` per the stack's element type.
     unsafe { X509_ALGOR_free(p.cast()) };

@@ -1,0 +1,627 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-receipts-3",
+  "subphase": "P25 openssh closure: third cluster (X509 ext printers, cipher-list callbacks, UI/ex-data callbacks, ASN.1 free/stream callbacks, legacy digests, encoder/decoder thunks, vendor helpers)",
+  "date": "2026-10-26",
+  "candidate": {
+    "branch": "main (integrate/safe-c33 merged; see source_head_note)",
+    "source_head": "791e01e220168d8fc2bc477a9df0c70529ad8a32",
+    "source_head_note": "measured on the working tree at 791e01e220168d8fc2bc477a9df0c70529ad8a32 plus this subphase's uncommitted source edits; the subagent did not commit or push",
+    "inventory": "v1b-candidate-freeze.json (source head 4a95b73a8)",
+    "closure_runs": [
+      "court/tmp/openssh-closure/closure-ssh-r3-after.json",
+      "court/tmp/openssh-closure/closure-sshd-r3-after.json"
+    ],
+    "closure_runs_note": "the post-receipt runs use the exact artefacts the build records name: court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh (sha256 c8723f34...) and court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd (sha256 dccccf07...). An earlier re-run in this subphase used copied binaries under court/tmp/openssh-closure/{client,server} whose digests do not match the build records; the closure refused it on STALE_HASH and it is NOT offered as identity evidence. Its counts were nevertheless 345 reachable files / 120 obligations / 0 DISCHARGED / 83 BLOCKED / 37 UNKNOWN, i.e. the campaign's recorded pre-state."
+  },
+  "summary": {
+    "sites_enumerated": 37,
+    "by_source_state": {
+      "ELIMINATED": 7,
+      "CONTRACTED": 30
+    },
+    "discharged": 0,
+    "site_dispositions": {
+      "ELIMINATED": 7,
+      "CONTRACTED": 27,
+      "BLOCKED": 3
+    },
+    "expected_blocked": 36,
+    "expected_unknown": 1,
+    "additional_unsafe_items_by_file": {
+      "src/cms/cms_asn1.rs": {
+        "unsafe_fn_items": 18,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 35,
+        "unsafe_impls": 3
+      },
+      "src/cms/cms_sd.rs": {
+        "unsafe_fn_items": 40,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 307,
+        "unsafe_impls": 0
+      },
+      "src/decoder_meth.rs": {
+        "unsafe_fn_items": 57,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 96,
+        "unsafe_impls": 1
+      },
+      "src/decoder_pkey.rs": {
+        "unsafe_fn_items": 27,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 182,
+        "unsafe_impls": 0
+      },
+      "src/dso/mod.rs": {
+        "unsafe_fn_items": 37,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 63,
+        "unsafe_impls": 1
+      },
+      "src/ec/asn1.rs": {
+        "unsafe_fn_items": 35,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 49,
+        "unsafe_impls": 1
+      },
+      "src/encoder_meth.rs": {
+        "unsafe_fn_items": 55,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 81,
+        "unsafe_impls": 2
+      },
+      "src/evp/legacy_md5.rs": {
+        "unsafe_fn_items": 8,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 8,
+        "unsafe_impls": 1
+      },
+      "src/evp/legacy_sha.rs": {
+        "unsafe_fn_items": 21,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 21,
+        "unsafe_impls": 1
+      },
+      "src/passphrase.rs": {
+        "unsafe_fn_items": 21,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 95,
+        "unsafe_impls": 0
+      },
+      "src/pem/pem_pk8.rs": {
+        "unsafe_fn_items": 35,
+        "unsafe_extern_blocks": 1,
+        "unsafe_blocks": 74,
+        "unsafe_impls": 0
+      },
+      "src/pem/pem_pkey.rs": {
+        "unsafe_fn_items": 31,
+        "unsafe_extern_blocks": 1,
+        "unsafe_blocks": 131,
+        "unsafe_impls": 0
+      },
+      "src/pkcs7/pk7_asn1.rs": {
+        "unsafe_fn_items": 38,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 63,
+        "unsafe_impls": 4
+      },
+      "src/provider/dsa_sig.rs": {
+        "unsafe_fn_items": 42,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 45,
+        "unsafe_impls": 1
+      },
+      "src/provider/encode_key2any.rs": {
+        "unsafe_fn_items": 74,
+        "unsafe_extern_blocks": 1,
+        "unsafe_blocks": 221,
+        "unsafe_impls": 1
+      },
+      "src/provider/mlx_kmgmt.rs": {
+        "unsafe_fn_items": 34,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 36,
+        "unsafe_impls": 1
+      },
+      "src/provider/rsa_sig.rs": {
+        "unsafe_fn_items": 57,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 58,
+        "unsafe_impls": 2
+      },
+      "src/rand/rand_lib.rs": {
+        "unsafe_fn_items": 52,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 250,
+        "unsafe_impls": 2
+      },
+      "src/rsa/ossl.rs": {
+        "unsafe_fn_items": 22,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 64,
+        "unsafe_impls": 1
+      },
+      "src/ssl/ssl_ciph.rs": {
+        "unsafe_fn_items": 42,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 88,
+        "unsafe_impls": 0
+      },
+      "src/ssl/t1_trce.rs": {
+        "unsafe_fn_items": 25,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 327,
+        "unsafe_impls": 1
+      },
+      "src/ui/ui_util.rs": {
+        "unsafe_fn_items": 9,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 34,
+        "unsafe_impls": 0
+      },
+      "src/x509/v3_asid.rs": {
+        "unsafe_fn_items": 31,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 248,
+        "unsafe_impls": 0
+      },
+      "src/x509/v3_timespec.rs": {
+        "unsafe_fn_items": 46,
+        "unsafe_extern_blocks": 0,
+        "unsafe_blocks": 173,
+        "unsafe_impls": 0
+      }
+    }
+  },
+  "evidence_receipt": "openssh-receipts-3.json",
+  "note": "Projection of openssh-receipts-3.json for consumer_closure.load_boundaries, which admits only *-sites.json. The detailed per-site contract, established_by and residual fields live in the evidence receipt.",
+  "boundaries": [
+    {
+      "id": "OSSH-R3-001",
+      "file": "src/x509/v3_timespec.rs",
+      "line": 1326,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "i2r_OSSL_TIME_SPEC_ABSOLUTE",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-002",
+      "file": "src/x509/v3_timespec.rs",
+      "line": 1468,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "print_bit_month",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-003",
+      "file": "src/x509/v3_timespec.rs",
+      "line": 1554,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "print_int_named_day",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-004",
+      "file": "src/x509/v3_timespec.rs",
+      "line": 1572,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "print_bit_named_day",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-005",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 709,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "disposition": "BLOCKED",
+      "operation": "ssl_cipher_ptr_id_cmp",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: SSL_SESSION is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-006",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 759,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "disposition": "BLOCKED",
+      "operation": "update_cipher_list",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: SSL_SESSION is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-007",
+      "file": "src/ssl/ssl_ciph.rs",
+      "line": 810,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "disposition": "BLOCKED",
+      "operation": "ciphersuite_cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: SSL_SESSION is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-008",
+      "file": "src/ui/ui_util.rs",
+      "line": 145,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "BLOCKED",
+      "operation": "ui_new_method_data",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged."
+    },
+    {
+      "id": "OSSH-R3-009",
+      "file": "src/ui/ui_util.rs",
+      "line": 161,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "BLOCKED",
+      "operation": "ui_dup_method_data",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: C_ABI_CONTRACT is UNSAFE_OPEN and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-010",
+      "file": "src/ui/ui_util.rs",
+      "line": 310,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "BLOCKED",
+      "operation": "ui_close",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged."
+    },
+    {
+      "id": "OSSH-R3-011",
+      "file": "src/x509/v3_asid.rs",
+      "line": 797,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "i2r_ASIdentifiers",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-012",
+      "file": "src/x509/v3_asid.rs",
+      "line": 841,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "asid_or_range_cmp",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-013",
+      "file": "src/x509/v3_asid.rs",
+      "line": 1083,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "X509_VERIFY_POLICY",
+      "disposition": "BLOCKED",
+      "operation": "as_identifier_choice_is_canonical",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: X509_VERIFY_POLICY is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-014",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 181,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "sha1_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-015",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 224,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "sha224_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-016",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "line": 489,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "BLOCKED",
+      "operation": "pk7_cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-017",
+      "file": "src/pkcs7/pk7_asn1.rs",
+      "line": 578,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "BLOCKED",
+      "operation": "si_cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-018",
+      "file": "src/provider/encode_key2any.rs",
+      "line": 170,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "(strcmp)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-019",
+      "file": "src/provider/encode_key2any.rs",
+      "line": 2230,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "key2any_unused_k2d",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged."
+    },
+    {
+      "id": "OSSH-R3-020",
+      "file": "src/provider/rsa_sig.rs",
+      "line": 462,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "rsa_pss_restricted",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-021",
+      "file": "src/provider/rsa_sig.rs",
+      "line": 3183,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "rsa_sigalg_query_key_types",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged."
+    },
+    {
+      "id": "OSSH-R3-022",
+      "file": "src/cms/cms_asn1.rs",
+      "line": 495,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "BLOCKED",
+      "operation": "cms_si_cb",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-023",
+      "file": "src/cms/cms_sd.rs",
+      "line": 2211,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "BLOCKED",
+      "operation": "x509_algor_free_void",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-024",
+      "file": "src/decoder_meth.rs",
+      "line": 767,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "decoder_instance_free_thunk",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-025",
+      "file": "src/decoder_pkey.rs",
+      "line": 548,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "keymgmt_free_thunk",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-026",
+      "file": "src/dso/mod.rs",
+      "line": 885,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "ERR",
+      "disposition": "UNKNOWN",
+      "operation": "add_error_data_pathbyaddr",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "UNKNOWN: ERR is SAFETY_DISCHARGED at mechanism scope, but mechanism-discharge-ERR.json's declared surface does not name this file/line; consumer-scope re-adjudication is required. The source marker is gone, but the V1 obligation coordinate is unchanged in the frozen inventory."
+    },
+    {
+      "id": "OSSH-R3-027",
+      "file": "src/ec/asn1.rs",
+      "line": 280,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "decode_der_length",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-028",
+      "file": "src/encoder_meth.rs",
+      "line": 269,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "ossl_encoder_new",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged."
+    },
+    {
+      "id": "OSSH-R3-029",
+      "file": "src/evp/legacy_md5.rs",
+      "line": 147,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "md5_init",
+      "source_state": "CONTRACTED",
+      "site_disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-030",
+      "file": "src/passphrase.rs",
+      "line": 499,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "C_ABI_CONTRACT",
+      "disposition": "BLOCKED",
+      "operation": "do_ui_passphrase",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: C_ABI_CONTRACT is UNSAFE_OPEN and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-031",
+      "file": "src/pem/pem_pk8.rs",
+      "line": 67,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "BLOCKED",
+      "operation": "(strlen)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-032",
+      "file": "src/pem/pem_pkey.rs",
+      "line": 110,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "BLOCKED",
+      "operation": "(strcmp, strlen)",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-033",
+      "file": "src/provider/dsa_sig.rs",
+      "line": 1510,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "dsa_sigalg_query_key_types",
+      "source_state": "ELIMINATED",
+      "site_disposition": "ELIMINATED",
+      "closure": "BLOCKED: the V1 operation is ELIMINATED in the current source (the marker was vestigial), but the mechanism's state and the missing SAFETY_DISCHARGED scope keep the inventory obligation from being discharged."
+    },
+    {
+      "id": "OSSH-R3-034",
+      "file": "src/provider/mlx_kmgmt.rs",
+      "line": 116,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "mlx_kem_have_pubkey",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-035",
+      "file": "src/rand/rand_lib.rs",
+      "line": 660,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "BLOCKED",
+      "operation": "rand_set_rand_method_internal",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: RAND_CMS_STORE_KEYFMT is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-036",
+      "file": "src/rsa/ossl.rs",
+      "line": 298,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "disposition": "BLOCKED",
+      "operation": "is_mont_bn_mod_exp",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    },
+    {
+      "id": "OSSH-R3-037",
+      "file": "src/ssl/t1_trce.rs",
+      "line": 1052,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "SSL_SESSION",
+      "disposition": "BLOCKED",
+      "operation": "is_dtls",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "closure": "BLOCKED: SSL_SESSION is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site."
+    }
+  ]
+}
