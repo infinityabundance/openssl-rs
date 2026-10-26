@@ -297,7 +297,7 @@ unsafe fn repeated_digest_param_site(
 }
 
 /// `const OSSL_PARAM *ossl_digest_default_gettable_params(void *provctx)`.
-pub(crate) unsafe extern "C" fn ossl_digest_default_gettable_params(
+pub(crate) extern "C" fn ossl_digest_default_gettable_params(
     _provctx: *mut c_void,
 ) -> *const OsslParam {
     DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()
@@ -556,7 +556,7 @@ mod sha1 {
         END,
     ];
 
-    unsafe extern "C" fn settable_ctx_params(
+    extern "C" fn settable_ctx_params(
         _ctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -892,20 +892,16 @@ mod nullmd {
     }
 
     /// `static int null_init(NULLMD_CTX *ctx)` — `null_prov.c:18-21`.
-    unsafe extern "C" fn ctx_init(_ctx: *mut NullMdCtx) -> c_int {
+    extern "C" fn ctx_init(_ctx: *mut NullMdCtx) -> c_int {
         1
     }
     /// `static int null_update(NULLMD_CTX *ctx, const void *data, size_t datalen)` —
     /// `null_prov.c:23-26`.
-    unsafe extern "C" fn ctx_update(
-        _ctx: *mut NullMdCtx,
-        _data: *const c_void,
-        _datalen: usize,
-    ) -> c_int {
+    extern "C" fn ctx_update(_ctx: *mut NullMdCtx, _data: *const c_void, _datalen: usize) -> c_int {
         1
     }
     /// `static int null_final(unsigned char *md, NULLMD_CTX *ctx)` — `null_prov.c:28-31`.
-    unsafe extern "C" fn ctx_final(_md: *mut u8, _ctx: *mut NullMdCtx) -> c_int {
+    extern "C" fn ctx_final(_md: *mut u8, _ctx: *mut NullMdCtx) -> c_int {
         1
     }
 
@@ -952,8 +948,7 @@ mod nullmd {
         if ossl_prov_is_running() == 0 {
             return 0;
         }
-        // SAFETY: `ctx` is the context the provider allocated.
-        c_int::from(unsafe { ctx_init(ctx.cast::<NullMdCtx>()) } != 0)
+        c_int::from(ctx_init(ctx.cast::<NullMdCtx>()) != 0)
     }
 
     /// `null_prov.c`'s overridden `PROV_FUNC_DIGEST_FINAL`: no `outsz` comparison, because
@@ -967,8 +962,8 @@ mod nullmd {
         if ossl_prov_is_running() == 0 {
             return 0;
         }
-        // SAFETY: `ctx` is the context the provider allocated; `outl` is the caller's slot.
-        if unsafe { ctx_final(out, ctx.cast::<NullMdCtx>()) } != 0 {
+        // `ctx_final` ignores both arguments, so only the `outl` store is unsafe.
+        if ctx_final(out, ctx.cast::<NullMdCtx>()) != 0 {
             // SAFETY: `outl` is the caller's output slot.
             unsafe { *outl = 0 };
             return 1;
@@ -977,8 +972,8 @@ mod nullmd {
     }
 
     unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
-        // SAFETY: `ctx` is the context the provider allocated; the authority ignores the bytes.
-        c_int::from(unsafe { ctx_update(ctx.cast::<NullMdCtx>(), in_.cast::<c_void>(), inl) } != 0)
+        // The authority's `null_update` ignores the context and the bytes.
+        c_int::from(ctx_update(ctx.cast::<NullMdCtx>(), in_.cast::<c_void>(), inl) != 0)
     }
 
     unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
@@ -1051,7 +1046,7 @@ mod md5_sha1 {
         END,
     ];
 
-    unsafe extern "C" fn settable_ctx_params(
+    extern "C" fn settable_ctx_params(
         _ctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -1374,7 +1369,7 @@ mod sha3 {
     /// whose third member is NULL (`sha3_prov.c:174-178`), while `SHAKE_SET_MD` installs
     /// `shake_generic_md`, whose third member is `generic_sha3_squeeze` (`:180-185`). So a
     /// `EVP_DigestSqueeze` on a `KECCAK-KMAC-*` method is refused, and this is that refusal.
-    unsafe extern "C" fn refuse_squeeze(
+    extern "C" fn refuse_squeeze(
         _ctx: *mut c_void,
         _out: *mut u8,
         _outl: *mut usize,
@@ -1460,7 +1455,7 @@ mod sha3 {
         END,
     ];
 
-    unsafe extern "C" fn settable_ctx_params(
+    extern "C" fn settable_ctx_params(
         _ctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -1778,7 +1773,7 @@ mod blake2 {
         END,
     ];
 
-    unsafe extern "C" fn settable_ctx_params(
+    extern "C" fn settable_ctx_params(
         _ctx: *mut c_void,
         _provctx: *mut c_void,
     ) -> *const OsslParam {
@@ -2353,7 +2348,7 @@ static DEFLT_PARAM_TYPES: [OsslParam; 5] = [
 /// The authority's body returns the table and reads neither argument. `provctx` is a live
 /// context here rather than NULL (see `ossl_default_provider_init` below), so ignoring it is
 /// faithful and not a shortcut.
-unsafe extern "C" fn deflt_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn deflt_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     DEFLT_PARAM_TYPES.as_ptr()
 }
 
