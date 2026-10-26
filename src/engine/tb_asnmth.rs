@@ -327,6 +327,16 @@ struct EngineFindStr {
 
 /// `static void look_str_cb(int nid, STACK_OF(ENGINE) *sk, ENGINE *def, void *arg)` —
 /// `:168-186`.
+///
+/// # Safety
+///
+/// `nid` is a value. `sk` must be the live `STACK_OF(ENGINE)` of the pile
+/// `engine_table_doall` is walking, under the engine lock, and every element must be
+/// a NULL-or-live `ENGINE` inserted by this table's registration path. `_def` is
+/// unread. `arg` must be the `*mut EngineFindStr` passed to `engine_table_doall`,
+/// live and exclusively borrowed for the duration of the walk; this callback writes
+/// only `(*lk).e` and `(*lk).ameth` and retains neither past the call. Each engine's
+/// `pkey_asn1_meths` slot is NULL or a callback governed by the ENGINE ABI.
 unsafe extern "C" fn look_str_cb(
     nid: c_int,
     sk: *mut OpenSslStack,
