@@ -70,6 +70,10 @@ use crate::runtime::stack::{
 use crate::x509::x_crl::d2i_X509_CRL;
 use crate::x509::x_x509::{d2i_X509_AUX, X509_new_ex, X509};
 
+// SAFETY: `strstr` is the C library's `char *strstr(const char *, const char *)`, resolved
+// from the process libc. Both arguments must be non-NULL pointers to NUL-terminated byte
+// strings readable for the call; the return value aliases the haystack and is never freed or
+// written through this declaration. The `<string.h>` signature is the ABI contract.
 unsafe extern "C" {
     /// The C library's `strstr`, which the reader's `PRIVATE KEY` classification calls.
     fn strstr(haystack: *const c_char, needle: *const c_char) -> *mut c_char;

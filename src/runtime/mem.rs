@@ -114,6 +114,26 @@ const CRYPTO_R_INTEGER_OVERFLOW: c_int = 127;
 /// same way. `ERR_LIB_CRYPTO << 23 | ERR_R_MALLOC_FAILURE` packs to 126615808.
 const ERR_R_MALLOC_FAILURE: c_int = 786688;
 
+/// The alignment this seam guarantees for every block it answers.
+///
+/// Both branches reach a C allocator: the default forwards to libc `malloc`, and
+/// an allocator installed with `CRYPTO_set_mem_functions` is documented to be a
+/// drop-in replacement for it. The C standard requires such a block to be aligned
+/// for every object type with *fundamental* alignment, but the strongest claim
+/// that holds for both branches without assuming a particular C library is
+/// **pointer alignment**: a pointer is one of those fundamental types, so a
+/// conforming `malloc` must return storage suitable for it.
+///
+/// Generic owners (`OwnedCtx`, `RawCtx`, `OwnedBlock<T>`) take a type parameter,
+/// so they cannot rely on a per-type compile-time assertion the way a concrete
+/// `#[repr(C)]` context can. They compare `align_of::<T>()` against this bound and
+/// answer the allocation-refusal arm (`None`) when the seam cannot satisfy it, so
+/// a `#[repr(align(N))]` implementor never receives a misaligned `NonNull<T>`.
+/// This is deliberately conservative: a wider guarantee (`max_align_t`) would
+/// admit more types, but only by assuming a C library detail the seam contract
+/// does not state.
+pub(crate) const SEAM_MALLOC_ALIGN: usize = core::mem::align_of::<*mut c_void>();
+
 /// The allocator function types, exactly as `crypto.h` declares them.
 type MallocFn = unsafe extern "C" fn(usize, *const c_char, c_int) -> *mut c_void;
 type ReallocFn = unsafe extern "C" fn(*mut c_void, usize, *const c_char, c_int) -> *mut c_void;
@@ -461,8 +481,64 @@ unsafe fn dealloc(p: *mut c_void, file: *const c_char, line: c_int) {
     if p.is_null() {
         return;
     }
+    // Test-only, thread-local observation at the one funnel every seam release
+    // passes through. Recording here (rather than in each owner's `Drop`) is what
+    // lets a test detect a *second* release of the same address even when it is a
+    // callee -- `ASN1_STRING_free`, a `destroy_body`, a `Drop` -- that performs it.
+    #[cfg(test)]
+    free_probe::record(p);
     // SAFETY: `p` is a live block from this allocator per the caller's contract.
     unsafe { (free_fn())(p, file, line) }
+}
+
+/// Test-only, address-indexed observation of every block the seam releases.
+///
+/// Unlike [`crate::runtime::release_probe`], which a family's own `Drop` records,
+/// this counter sits at the allocator funnel: a release performed by a callee is
+/// observed too. A test that expects one release at an address asserts
+/// `count(addr) == 1`; a second release of that address, from any frame, makes it
+/// 2. Thread-local (tests on other threads cannot contribute) and compiled out of
+/// every non-test build. It does not install an allocator hook: installation is a
+/// process-global, one-shot act that stays reserved for the `adv_alloc` probes.
+#[cfg(test)]
+pub(crate) mod free_probe {
+    use core::cell::RefCell;
+    use core::ffi::c_void;
+
+    thread_local! {
+        static RELEASES: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Record that the seam is about to release `p` (NULL records nothing).
+    ///
+    /// This runs on arbitrary threads, including a free performed while the thread's own
+    /// thread-locals are being destroyed. `try_with` makes that case a no-op instead of a panic:
+    /// the observation is test-only and any test that asserts on it does so before teardown.
+    pub(crate) fn record(p: *mut c_void) {
+        if !p.is_null() {
+            let _ = RELEASES.try_with(|r| {
+                if let Ok(mut r) = r.try_borrow_mut() {
+                    r.push(p as usize);
+                }
+            });
+        }
+    }
+
+    /// Forget every observation made on this thread.
+    pub(crate) fn reset() {
+        RELEASES.with(|r| r.borrow_mut().clear());
+    }
+
+    /// How many releases of `p` the seam has performed on this thread.
+    pub(crate) fn count(p: *const c_void) -> usize {
+        let addr = p as usize;
+        RELEASES.with(|r| r.borrow().iter().filter(|&&a| a == addr).count())
+    }
+
+    /// Every released address, in release order, on this thread.
+    pub(crate) fn events() -> Vec<usize> {
+        RELEASES.with(|r| r.borrow().clone())
+    }
 }
 
 /// Cleanse then release. Used by `CRYPTO_clear_free` and by the shrinking and
@@ -1168,6 +1244,12 @@ impl<const N: usize> CleansedScratch<N> {
     pub(crate) fn as_slice(&self) -> &[u8] {
         &self.0
     }
+
+    /// Fill the whole buffer with `byte` — the SSLv3 `pad_1`/`pad_2` arms fill their pad
+    /// temporary with a constant before hashing it.
+    pub(crate) fn fill(&mut self, byte: u8) {
+        self.0.fill(byte);
+    }
 }
 
 impl<const N: usize> Default for CleansedScratch<N> {
@@ -1178,8 +1260,62 @@ impl<const N: usize> Default for CleansedScratch<N> {
 
 impl<const N: usize> Drop for CleansedScratch<N> {
     fn drop(&mut self) {
+        #[cfg(test)]
+        let nonzero_before = self.0.iter().filter(|&&b| b != 0).count();
         // SAFETY: the array is live for `N` writable bytes for the duration of `Drop`.
         unsafe { cleanse(self.0.as_mut_ptr(), N) }
+        // A test-only observation of the wipe for callers whose secret temporaries must be
+        // cleansed on their early-failure returns (for example `ossl_sha1_ctrl`). It reads
+        // this owner's still-live storage inside `Drop`, never freed stack, and release
+        // builds carry none of it.
+        #[cfg(test)]
+        cleanse_hooks::record(N, nonzero_before, self.0.iter().all(|&b| b == 0));
+    }
+}
+
+/// Test-only observation of [`CleansedScratch`]'s wipe.
+///
+/// A caller cannot inspect a scratch buffer after it has gone out of scope without reading
+/// freed stack. This records what the wipe did from inside `Drop`, while the storage is still
+/// live: how many bytes it covered, how many were non-zero beforehand, and that every byte read
+/// zero afterwards. It is thread-local, so tests using it need no global lock.
+#[cfg(test)]
+pub(crate) mod cleanse_hooks {
+    use core::cell::RefCell;
+
+    /// One `CleansedScratch::drop`, described without exposing the bytes themselves.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub(crate) struct Event {
+        /// `N` — the length the wipe covered.
+        pub len: usize,
+        /// Bytes that were non-zero immediately before the wipe.
+        pub nonzero_before: usize,
+        /// Whether every byte read zero immediately after the wipe.
+        pub zero_after: bool,
+    }
+
+    thread_local! {
+        static EVENTS: RefCell<Vec<Event>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Forget every wipe recorded on this thread.
+    pub(crate) fn reset() {
+        EVENTS.with(|events| events.borrow_mut().clear());
+    }
+
+    /// Every wipe recorded on this thread since the last [`reset`].
+    pub(crate) fn events() -> Vec<Event> {
+        EVENTS.with(|events| events.borrow().clone())
+    }
+
+    pub(super) fn record(len: usize, nonzero_before: usize, zero_after: bool) {
+        EVENTS.with(|events| {
+            events.borrow_mut().push(Event {
+                len,
+                nonzero_before,
+                zero_after,
+            });
+        });
     }
 }
 

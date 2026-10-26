@@ -413,6 +413,10 @@ pub(crate) unsafe fn sha512_224_init(c: *mut Sha512Ctx) -> c_int {
 
 /// `sha512_256_init` — `crypto/sha/sha512.c:86-100`. Internal, for `sha512_224_init`'s
 /// reason.
+///
+/// # Safety
+/// `c` is a live, aligned, writable `Sha512Ctx` this module allocated; it is not aliased by
+/// another exclusive reference for the call.
 #[allow(dead_code)] // the landing caller is `providers/implementations/digests/sha2_prov.c`, 8.1b's
 pub(crate) unsafe fn sha512_256_init(c: *mut Sha512Ctx) -> c_int {
     // SAFETY: the caller's contract.
@@ -437,6 +441,10 @@ pub(crate) unsafe fn sha512_256_init(c: *mut Sha512Ctx) -> c_int {
 
 /// `ossl_sha256_192_init` — `crypto/sha/sha256.c:53-58`. Internal: `sha.h` has no
 /// `SHA256_192_Init`, and the 192-bit spelling is a provider-only name.
+///
+/// # Safety
+/// `c` is a live, aligned, writable `Sha256Ctx` this module allocated; it is not aliased by
+/// another exclusive reference for the call.
 #[allow(dead_code)] // the landing caller is `providers/implementations/digests/sha2_prov.c`, 8.1b's
 pub(crate) unsafe fn ossl_sha256_192_init(c: *mut Sha256Ctx) -> c_int {
     // SAFETY: `c` is live per the caller's contract; `SHA256_Init` is this file's.

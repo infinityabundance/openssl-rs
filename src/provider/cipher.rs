@@ -963,6 +963,10 @@ const SET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 5] = [
 
 /// The block function an `initkey` stored, or a refusal if it stored none — the authority would
 /// call through a NULL pointer, which no correct transcription reaches.
+///
+/// # Safety
+/// `ctx` is a live `ProvCipherCtx` produced by this provider's `newctx`/`dupctx`; the pointer is
+/// not released or concurrently mutated for the duration of the call.
 #[inline]
 unsafe fn block_fn(ctx: *mut ProvCipherCtx) -> Option<Block128F> {
     // SAFETY: the caller holds a live context.
@@ -21683,6 +21687,10 @@ pub(crate) mod legacy {
     };
 
     /// `tdes_newctx`'s DESX instantiation, with the row's `ossl_tdes_get_params`.
+    ///
+    /// # Safety
+    /// No caller precondition on `provctx` (it is stored, not dereferenced); the returned block
+    /// is owned by the caller and must be passed exactly once to `tdes_freectx`.
     unsafe extern "C" fn tdes_desx_cbc_newctx(provctx: *mut c_void) -> *mut c_void {
         if is_running() == 0 {
             return ptr::null_mut();
@@ -21709,6 +21717,10 @@ pub(crate) mod legacy {
     }
 
     /// `tdes_desx_cbc_get_params` — `cipher_desx.c:20`'s `IMPLEMENT_tdes_cipher`.
+    ///
+    /// # Safety
+    /// `params` is NULL or a key-terminated `OSSL_PARAM` array whose located `data` slots are
+    /// writable for their `data_size` (the dispatch's `GET_PARAMS` contract).
     unsafe extern "C" fn tdes_desx_cbc_get_params(params: *mut OsslParam) -> c_int {
         // SAFETY: the dispatch contract.
         unsafe { ossl_tdes_get_params(params, EVP_CIPH_CBC_MODE, TDES_FLAGS, 192, 64, 64) }
@@ -22165,6 +22177,10 @@ pub(crate) mod legacy {
     }
 
     /// `rc4_hmac_md5_get_params` — `cipher_rc4_hmac_md5.c:215-222`.
+    ///
+    /// # Safety
+    /// `params` is NULL or a key-terminated `OSSL_PARAM` array whose located `data` slots are
+    /// writable for their `data_size` (the dispatch's `GET_PARAMS` contract).
     unsafe extern "C" fn rc4_hmac_md5_get_params(params: *mut OsslParam) -> c_int {
         // SAFETY: the dispatch contract.
         unsafe { ossl_cipher_generic_get_params(params, 0, RC4_HMAC_MD5_FLAGS, 128, 8, 0) }

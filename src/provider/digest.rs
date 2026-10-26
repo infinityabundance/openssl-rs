@@ -404,7 +404,7 @@ macro_rules! digest_impl {
         mod $module {
             use super::*;
 
-            unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+            extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
                 if ossl_prov_is_running() == 0 {
                     return ptr::null_mut();
                 }
@@ -415,6 +415,11 @@ macro_rules! digest_impl {
                 ctx.into_raw().cast()
             }
 
+            /// # Safety
+            /// `vctx` is NULL or a live `$ctx` this row's `newctx`/`dupctx` handed to the core and
+            /// the core has not yet released. The core calls `freectx` exactly once per such
+            /// pointer, through the dispatch row that installed this function; a non-NULL pointer
+            /// from another row would be reclaimed at the wrong `size_of::<$ctx>()`.
             unsafe extern "C" fn freectx(vctx: *mut c_void) {
                 // `OPENSSL_clear_free(ctx, sizeof(*ctx))` — the context holds a chaining state.
                 // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is
@@ -422,6 +427,9 @@ macro_rules! digest_impl {
                 unsafe { drop(OwnedCtx::<$ctx>::from_raw(vctx.cast())) };
             }
 
+            /// # Safety
+            /// `ctx` is NULL or a live context of this row, not concurrently mutated, and
+            /// readable for `size_of::<$ctx>()` bytes.
             unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
                 if ossl_prov_is_running() == 0 || ctx.is_null() {
                     return ptr::null_mut();
@@ -435,6 +443,9 @@ macro_rules! digest_impl {
                 ret.into_raw().cast()
             }
 
+            /// # Safety
+            /// `outctx` is writable and `inctx` readable for `size_of::<$ctx>()` bytes. They may
+            /// alias: `EVP_MD_CTX_copy_ex`'s provider self-copy arm passes the same pointer.
             unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
                 // SAFETY: both regions are valid for `size_of::<$ctx>()` bytes. They may be the
                 // same block: `EVP_MD_CTX_copy_ex`'s provider self-copy arm calls
@@ -448,6 +459,9 @@ macro_rules! digest_impl {
                 }
             }
 
+            /// # Safety
+            /// `ctx` is NULL or a live context allocated by this row's `newctx`; `_params` is
+            /// unread.
             unsafe extern "C" fn internal_init(
                 ctx: *mut c_void,
                 _params: *const OsslParam,
@@ -459,6 +473,9 @@ macro_rules! digest_impl {
                 c_int::from(unsafe { $init(ctx.cast::<$ctx>()) } != 0)
             }
 
+            /// # Safety
+            /// `ctx` is a live context of this row; `out` is writable for `outsz` bytes with
+            /// `outsz >= $dgstsz` (checked below); `outl` is writable for one `usize`.
             unsafe extern "C" fn internal_final(
                 ctx: *mut c_void,
                 out: *mut u8,
@@ -478,6 +495,9 @@ macro_rules! digest_impl {
                 0
             }
 
+            /// # Safety
+            /// `ctx` is a live context of this row; `in_` is readable for `inl` bytes (or `inl`
+            /// is zero).
             unsafe extern "C" fn update(
                 ctx: *mut c_void,
                 in_: *const c_uchar,
@@ -488,6 +508,10 @@ macro_rules! digest_impl {
                 c_int::from(unsafe { $update(ctx.cast::<$ctx>(), in_.cast::<c_void>(), inl) } != 0)
             }
 
+            /// # Safety
+            /// `params` satisfies `ossl_digest_default_get_params`'s contract: NULL or a
+            /// key-terminated `OSSL_PARAM` array whose located `data` slots are writable for their
+            /// `data_size`.
             unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
                 // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
                 unsafe { ossl_digest_default_get_params(params, $blksz, $dgstsz, $flags) }
@@ -564,6 +588,11 @@ mod sha1 {
     }
 
     /// `static int sha1_set_ctx_params(void *vctx, const OSSL_PARAM params[])`.
+    ///
+    /// # Safety
+    /// `vctx` is NULL or a live `ShaCtx` this row's `newctx`/`dupctx` produced; `params` is
+    /// NULL or a key-terminated `OSSL_PARAM` array, and a located OCTET_STRING entry's `data`
+    /// is readable for its `data_size`.
     unsafe extern "C" fn set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
         if vctx.is_null() {
             return 0;
@@ -596,7 +625,7 @@ mod sha1 {
         1
     }
 
-    unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+    extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 {
             return ptr::null_mut();
         }
@@ -607,6 +636,9 @@ mod sha1 {
         ctx.into_raw().cast()
     }
 
+    /// # Safety
+    /// `vctx` is NULL or a live `ShaCtx` this row's `newctx`/`dupctx` handed to the core and
+    /// the core has not yet released; the core calls this exactly once per such pointer.
     unsafe extern "C" fn freectx(vctx: *mut c_void) {
         // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
         unsafe { drop(OwnedCtx::<ShaCtx>::from_raw(vctx.cast())) };
@@ -675,7 +707,7 @@ mod sha1 {
         unsafe { ossl_digest_default_get_params(params, SHA_CBLOCK, SHA_DIGEST_LENGTH, SHA2_FLAGS) }
     }
 
-    unsafe extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+    extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
         DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()
     }
 
@@ -905,7 +937,7 @@ mod nullmd {
         1
     }
 
-    unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+    extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 {
             return ptr::null_mut();
         }
@@ -916,6 +948,9 @@ mod nullmd {
         ctx.into_raw().cast()
     }
 
+    /// # Safety
+    /// `vctx` is NULL or a live `NullMdCtx` this row's `newctx`/`dupctx` handed to the core and
+    /// the core has not yet released; the core calls this exactly once per such pointer.
     unsafe extern "C" fn freectx(vctx: *mut c_void) {
         // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
         unsafe { drop(OwnedCtx::<NullMdCtx>::from_raw(vctx.cast())) };
@@ -944,7 +979,7 @@ mod nullmd {
         }
     }
 
-    unsafe extern "C" fn internal_init(ctx: *mut c_void, _params: *const OsslParam) -> c_int {
+    extern "C" fn internal_init(ctx: *mut c_void, _params: *const OsslParam) -> c_int {
         if ossl_prov_is_running() == 0 {
             return 0;
         }
@@ -971,7 +1006,7 @@ mod nullmd {
         0
     }
 
-    unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
+    extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
         // The authority's `null_update` ignores the context and the bytes.
         c_int::from(ctx_update(ctx.cast::<NullMdCtx>(), in_.cast::<c_void>(), inl) != 0)
     }
@@ -981,7 +1016,7 @@ mod nullmd {
         unsafe { ossl_digest_default_get_params(params, 0, 0, 0) }
     }
 
-    unsafe extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+    extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
         DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()
     }
 
@@ -1055,6 +1090,11 @@ mod md5_sha1 {
 
     /// `static int md5_sha1_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
     /// `md5_sha1_prov.c:40-55`.
+    ///
+    /// # Safety
+    /// `vctx` is NULL or a live `Md5Sha1Ctx` this row's `newctx`/`dupctx` produced; `params`
+    /// is NULL or a key-terminated `OSSL_PARAM` array, and a located OCTET_STRING entry's
+    /// `data` is readable for its `data_size`.
     unsafe extern "C" fn set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
         if vctx.is_null() {
             return 0;
@@ -1087,7 +1127,7 @@ mod md5_sha1 {
         1
     }
 
-    unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+    extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 {
             return ptr::null_mut();
         }
@@ -1098,6 +1138,9 @@ mod md5_sha1 {
         ctx.into_raw().cast()
     }
 
+    /// # Safety
+    /// `vctx` is NULL or a live `Md5Sha1Ctx` this row's `newctx`/`dupctx` handed to the core
+    /// and the core has not yet released; the core calls this exactly once per such pointer.
     unsafe extern "C" fn freectx(vctx: *mut c_void) {
         // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
         unsafe { drop(OwnedCtx::<Md5Sha1Ctx>::from_raw(vctx.cast())) };
@@ -1170,7 +1213,7 @@ mod md5_sha1 {
         }
     }
 
-    unsafe extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+    extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
         DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()
     }
 
@@ -1247,6 +1290,11 @@ mod sha3 {
     const KMAC_FLAGS: c_ulong = PROV_DIGEST_FLAG_XOF;
 
     /// `SHA3_newctx`/`SHAKE_newctx`/`KMAC_newctx` — one body, differing in what `mdlen` is.
+    ///
+    /// # Safety
+    /// No caller precondition on the arguments: `pad`, `bitlen` and `mdlen` are the row's
+    /// compile-time constants. The returned block is owned by the caller and must be passed
+    /// exactly once to the matching `freectx`.
     unsafe fn new_keccak(pad: u8, bitlen: usize, mdlen: Option<usize>) -> *mut c_void {
         if ossl_prov_is_running() == 0 {
             return ptr::null_mut();
@@ -1273,6 +1321,9 @@ mod sha3 {
         owner.into_raw().cast()
     }
 
+    /// # Safety
+    /// `vctx` is NULL or a live `KeccakCtx` this row's `newctx`/`dupctx` handed to the core
+    /// and the core has not yet released; the core calls this exactly once per such pointer.
     unsafe extern "C" fn freectx(vctx: *mut c_void) {
         // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its release.
         unsafe { drop(OwnedCtx::<KeccakCtx>::from_raw(vctx.cast())) };
@@ -1383,6 +1434,10 @@ mod sha3 {
 
     /// `shake_set_ctx_params` — `sha3_prov.c:726-740` with its generated decoder collapsed to
     /// the two keys the decoder accepts. Both map to `ctx->md_size`; a repeated key is refused.
+    ///
+    /// # Safety
+    /// `vctx` is NULL or a live `KeccakCtx` this row produced; `params` is NULL or a
+    /// key-terminated `OSSL_PARAM` array whose located size_t entries are readable.
     unsafe extern "C" fn shake_set_ctx_params(
         vctx: *mut c_void,
         params: *const OsslParam,
@@ -1463,6 +1518,10 @@ mod sha3 {
     }
 
     /// `keccak_init_params` — `sha3_prov.c:72-76`.
+    ///
+    /// # Safety
+    /// `vctx` is NULL or a live `KeccakCtx` this row produced; `params` is NULL or a
+    /// key-terminated `OSSL_PARAM` array.
     unsafe extern "C" fn keccak_init_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
         if ossl_prov_is_running() == 0 {
             return 0;
@@ -1478,11 +1537,17 @@ mod sha3 {
             pub(super) mod $module {
                 use super::*;
 
+                /// # Safety
+                /// No caller precondition on `_provctx` (unread). The block returned by
+                /// `new_keccak` is owned by the caller and released by the matching `freectx`.
                 unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
                     // SAFETY: `super` is the `sha3` provider module.
                     unsafe { super::new_keccak($pad, $bitlen, None) }
                 }
 
+                /// # Safety
+                /// `params` satisfies `ossl_digest_default_get_params`'s contract (NULL or a
+                /// key-terminated array with writable `data` slots).
                 unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
                     // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
                     unsafe { ossl_digest_default_get_params(params, $blksz, $dgstsz, $flags) }
@@ -1540,11 +1605,17 @@ mod sha3 {
             pub(super) mod $module {
                 use super::*;
 
+                /// # Safety
+                /// No caller precondition on `_provctx` (unread). The block returned by
+                /// `new_keccak` is owned by the caller and released by the matching `freectx`.
                 unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
                     // SAFETY: `super` is the `sha3` provider module.
                     unsafe { super::new_keccak($pad, $bitlen, Some($mdlen)) }
                 }
 
+                /// # Safety
+                /// `params` satisfies `ossl_digest_default_get_params`'s contract (NULL or a
+                /// key-terminated array with writable `data` slots).
                 unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
                     // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
                     unsafe { ossl_digest_default_get_params(params, $blksz, $dgstsz, $flags) }
@@ -1785,7 +1856,7 @@ mod blake2 {
             pub(super) mod $row {
                 use super::*;
 
-                unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+                extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
                     if ossl_prov_is_running() == 0 {
                         return ptr::null_mut();
                     }
@@ -1796,6 +1867,10 @@ mod blake2 {
                     ctx.into_raw().cast()
                 }
 
+                /// # Safety
+                /// `vctx` is NULL or a live `$flavour::MdData` this row's `newctx`/`dupctx`
+                /// handed to the core and the core has not yet released; the core calls this
+                /// exactly once per such pointer.
                 unsafe extern "C" fn freectx(vctx: *mut c_void) {
                     // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is
                     // its release.

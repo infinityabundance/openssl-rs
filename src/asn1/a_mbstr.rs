@@ -70,11 +70,6 @@ fn is_unicode_valid(value: c_ulong) -> bool {
     value <= UNICODE_MAX && !(SURROGATE_MIN..=SURROGATE_MAX).contains(&value)
 }
 
-/// The callback `traverse_string` applies to each character, as a C function
-/// pointer because that is what the authority passes and because the four shapes
-/// differ in what they expect the argument to point at.
-type Rfunc = unsafe extern "C" fn(c_ulong, *mut c_void) -> c_int;
-
 /// `static int traverse_string(const unsigned char *p, int len, int inform,
 /// int (*rfunc)(unsigned long value, void *in), void *arg)`
 ///
@@ -82,23 +77,49 @@ type Rfunc = unsafe extern "C" fn(c_ulong, *mut c_void) -> c_int;
 /// non-positive answer — which is how `in_utf8`'s `-2` for an invalid scalar and
 /// `out_utf8`'s `-1` for an over-long output reach the caller.
 ///
+/// The authority passes a C function pointer plus an untyped `void *arg`; this
+/// reconstruction passes an `FnMut` instead, so the per-character work is a closure
+/// that borrows the counter or write cursor it updates (`&mut c_int`, `&mut c_ulong`
+/// or `&mut [u8]`). No `void *` argument is reconstructed and no `unsafe extern "C"`
+/// callback definition remains, so the state a callback may touch is expressed by the
+/// borrow rather than asserted in a comment.
+///
 /// The `ASC`, `BMP` and `UNIV` arms consume a *fixed* number of bytes per
 /// character, so a length that is not a multiple of the unit would run past the
-/// end; the caller has already rejected that for `BMP` and `UNIV`, and `ASC` is
-/// one byte per character by definition. Only the `UTF8` arm is variable-length,
-/// and it is the one that can fail.
+/// end. This function now **enforces** that relationship itself rather than
+/// relying on its callers: a negative `len`, a `BMP` length that is not a
+/// multiple of two, a `UNIV` length that is not a multiple of four, or an
+/// `inform` that is not one of the four `MBSTRING_*` forms answers `-1` before
+/// reading a single byte. (The authority's callers reject the same inputs first,
+/// so the guard is not observable in the library; it removes an obligation a
+/// conforming caller could otherwise violate.) Only the `UTF8` arm is
+/// variable-length, and it is the one that can fail.
 ///
 /// # Safety
 ///
-/// `p` must be readable for `len` bytes and `inform` must be one of the four
-/// `MBSTRING_*` forms, or the `UTF8` arm is taken.
+/// `p` must be readable for `len` bytes when `len > 0` (it may be any pointer,
+/// including one past a zero-length slice, when `len == 0`). No other
+/// precondition is placed on `len` or `inform`: the guards below reject every
+/// combination whose width would overrun that extent.
 unsafe fn traverse_string(
     p: *const c_uchar,
     len: c_int,
     inform: c_int,
-    rfunc: Option<Rfunc>,
-    arg: *mut c_void,
+    mut rfunc: impl FnMut(c_ulong) -> c_int,
 ) -> c_int {
+    // Reject every length/width pair whose fixed-width read would exceed `len`
+    // before the loop reads anything. `BMP` consumes two bytes and `UNIV` four, so
+    // their lengths must be exact multiples; a negative length would make the loop
+    // read (and decrement) without bound.
+    if len < 0 {
+        return -1;
+    }
+    match inform {
+        MBSTRING_ASC | MBSTRING_UTF8 => {}
+        MBSTRING_BMP if len & 1 == 0 => {}
+        MBSTRING_UNIV if len & 3 == 0 => {}
+        _ => return -1,
+    }
     let mut len = len;
     let mut p = p;
     while len != 0 {
@@ -139,13 +160,9 @@ unsafe fn traverse_string(
             // subtraction.
             p = unsafe { p.add(ret as usize) };
         }
-        if let Some(f) = rfunc {
-            // SAFETY: the callback is one of this module's four, and `arg` is the
-            // pointer `traverse_string`'s caller prepared for it.
-            let ret = unsafe { f(value, arg) };
-            if ret <= 0 {
-                return ret;
-            }
+        let ret = rfunc(value);
+        if ret <= 0 {
+            return ret;
         }
     }
     1
@@ -153,19 +170,22 @@ unsafe fn traverse_string(
 
 /// `static int in_utf8(unsigned long value, void *arg)` — count, rejecting an
 /// invalid scalar.
-unsafe extern "C" fn in_utf8(value: c_ulong, arg: *mut c_void) -> c_int {
+///
+/// The authority's `arg` is an `int *`; here the counter is a `&mut c_int`, so the
+/// function reads and writes no raw pointer and needs no caller contract.
+fn in_utf8(value: c_ulong, nchar: &mut c_int) -> c_int {
     if !is_unicode_valid(value) {
         return -2;
     }
-    // SAFETY: `traverse_string` passes a `*mut c_int` to this callback, and every
-    // call site of it for this function does.
-    unsafe { *(arg as *mut c_int) += 1 };
+    *nchar += 1;
     1
 }
 
 /// `static int out_utf8(unsigned long value, void *arg)` — measure, with the
 /// authority's `INT_MAX - len` guard against an output length that would overflow.
-unsafe extern "C" fn out_utf8(value: c_ulong, arg: *mut c_void) -> c_int {
+///
+/// The authority's `arg` is an `int *`; here the accumulator is a `&mut c_int`.
+fn out_utf8(value: c_ulong, outlen: &mut c_int) -> c_int {
     // A null destination asks `UTF8_putc` for the width.
     // SAFETY: a null destination is explicitly the width query.
     let len = unsafe { UTF8_putc(core::ptr::null_mut(), -1, value) };
@@ -174,8 +194,6 @@ unsafe extern "C" fn out_utf8(value: c_ulong, arg: *mut c_void) -> c_int {
         unsafe { raise_site(&err_sites::A_MBSTR_305) };
         return len;
     }
-    // SAFETY: `traverse_string` passes a `*mut c_int` to this callback.
-    let outlen = unsafe { &mut *(arg as *mut c_int) };
     if *outlen >= c_int::MAX - len {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::A_MBSTR_310) };
@@ -187,9 +205,9 @@ unsafe extern "C" fn out_utf8(value: c_ulong, arg: *mut c_void) -> c_int {
 
 /// `static int type_str(unsigned long value, void *arg)` — clear from the mask
 /// every type this value cannot be held in, and fail when nothing is left.
-unsafe extern "C" fn type_str(value: c_ulong, arg: *mut c_void) -> c_int {
-    // SAFETY: `traverse_string` passes a `*mut c_ulong` to this callback.
-    let mask = unsafe { &mut *(arg as *mut c_ulong) };
+///
+/// The authority's `arg` is an `unsigned long *`; here the mask is a `&mut c_ulong`.
+fn type_str(value: c_ulong, mask: &mut c_ulong) -> c_int {
     let usable_types = *mask;
     let mut types = usable_types;
     // `value > INT_MAX ? INT_MAX : ossl_fromascii(value)` — the cast is a
@@ -240,71 +258,81 @@ unsafe extern "C" fn type_str(value: c_ulong, arg: *mut c_void) -> c_int {
 }
 
 /// `static int cpy_asc(unsigned long value, void *arg)` — one byte per character.
-unsafe extern "C" fn cpy_asc(value: c_ulong, arg: *mut c_void) -> c_int {
-    // SAFETY: `traverse_string` passes a `*mut *mut c_uchar` to this callback, and
-    // the pointer it holds is the write cursor.
-    let p = unsafe { &mut *(arg as *mut *mut c_uchar) };
-    let cur = *p;
-    // SAFETY: the caller sized the output as one byte per character, so `cur`
-    // points at a writable byte.
-    unsafe { *cur = value as c_uchar };
-    // SAFETY: one byte was written and the caller's output has room for the cursor
-    // to advance by one.
-    *p = unsafe { cur.add(1) };
+///
+/// The authority's `arg` is the address of a write cursor into a buffer it sized as one byte per
+/// character. Here the cursor is `out` (the content bytes of the block `ASN1_mbstring_ncopy`
+/// allocated) plus the position, so every write is bounds-checked by the slice rather than
+/// asserted in a comment.
+fn cpy_asc(value: c_ulong, out: &mut [u8], pos: &mut usize) -> c_int {
+    let Some(slot) = out.get_mut(*pos) else {
+        return -1;
+    };
+    *slot = value as c_uchar;
+    *pos += 1;
     1
 }
 
 /// `static int cpy_bmp(unsigned long value, void *arg)` — two bytes, big-endian.
-unsafe extern "C" fn cpy_bmp(value: c_ulong, arg: *mut c_void) -> c_int {
-    // SAFETY: as in `cpy_asc`.
-    let p = unsafe { &mut *(arg as *mut *mut c_uchar) };
-    let cur = *p;
-    // SAFETY: the caller sized the output as two bytes per character, so `cur`
-    // points at two writable bytes.
-    unsafe {
-        *cur = ((value >> 8) & 0xff) as c_uchar;
-        *cur.add(1) = (value & 0xff) as c_uchar;
-    }
-    // SAFETY: two bytes were written and the caller's output has room for the
-    // cursor to advance by two.
-    *p = unsafe { cur.add(2) };
+///
+/// As [`cpy_asc`]: `out` was sized as two bytes per character, so the two-byte window is checked
+/// against the slice.
+fn cpy_bmp(value: c_ulong, out: &mut [u8], pos: &mut usize) -> c_int {
+    let Some(end) = pos.checked_add(2) else {
+        return -1;
+    };
+    let Some(window) = out.get_mut(*pos..end) else {
+        return -1;
+    };
+    window[0] = ((value >> 8) & 0xff) as c_uchar;
+    window[1] = (value & 0xff) as c_uchar;
+    *pos = end;
     1
 }
 
 /// `static int cpy_univ(unsigned long value, void *arg)` — four bytes, big-endian.
-unsafe extern "C" fn cpy_univ(value: c_ulong, arg: *mut c_void) -> c_int {
-    // SAFETY: as in `cpy_asc`.
-    let p = unsafe { &mut *(arg as *mut *mut c_uchar) };
-    let cur = *p;
-    // SAFETY: the caller sized the output as four bytes per character, so `cur`
-    // points at four writable bytes.
-    unsafe {
-        *cur = ((value >> 24) & 0xff) as c_uchar;
-        *cur.add(1) = ((value >> 16) & 0xff) as c_uchar;
-        *cur.add(2) = ((value >> 8) & 0xff) as c_uchar;
-        *cur.add(3) = (value & 0xff) as c_uchar;
-    }
-    // SAFETY: four bytes were written and the caller's output has room for the
-    // cursor to advance by four.
-    *p = unsafe { cur.add(4) };
+///
+/// As [`cpy_asc`]: `out` was sized as four bytes per character, so the four-byte window is
+/// checked against the slice.
+fn cpy_univ(value: c_ulong, out: &mut [u8], pos: &mut usize) -> c_int {
+    let Some(end) = pos.checked_add(4) else {
+        return -1;
+    };
+    let Some(window) = out.get_mut(*pos..end) else {
+        return -1;
+    };
+    window[0] = ((value >> 24) & 0xff) as c_uchar;
+    window[1] = ((value >> 16) & 0xff) as c_uchar;
+    window[2] = ((value >> 8) & 0xff) as c_uchar;
+    window[3] = (value & 0xff) as c_uchar;
+    *pos = end;
     1
 }
 
 /// `static int cpy_utf8(unsigned long value, void *arg)` — `UTF8_putc` with the
 /// length guard already discharged by `out_utf8`, so the authority passes `0xff`.
-unsafe extern "C" fn cpy_utf8(value: c_ulong, arg: *mut c_void) -> c_int {
-    // SAFETY: as in `cpy_asc`.
-    let p = unsafe { &mut *(arg as *mut *mut c_uchar) };
-    let cur = *p;
-    // SAFETY: the caller's output has room for the widest encoding, which is what
-    // the `0xff` length lets `UTF8_putc` write up to.
-    let ret = unsafe { UTF8_putc(cur, 0xff, value) };
+///
+/// This reconstruction passes the **actual remaining room** instead of the authority's `0xff`.
+/// The measuring pass (`out_utf8`) sized `out` so every character's encoding fits, so the two
+/// forms agree on every input the guard admits; passing the real length makes `UTF8_putc`'s own
+/// bounds check (`len` too small answers `-1`) the enforcement, instead of an unconditional
+/// `0xff` that would let a mis-sized buffer be overrun.
+fn cpy_utf8(value: c_ulong, out: &mut [u8], pos: &mut usize) -> c_int {
+    let Some(rest) = out.get_mut(*pos..) else {
+        return -1;
+    };
+    // `out` is at most `INT_MAX` bytes by construction: `outlen` is `nchar`, `nchar << 1`,
+    // `nchar << 2` or the measuring pass's `int` result, and each of those is an `int`.
+    let Ok(room) = c_int::try_from(rest.len()) else {
+        return -1;
+    };
+    // SAFETY: `rest` is a live mutable slice of `room` bytes and `UTF8_putc` writes at most `room`
+    // bytes (it answers `-1` rather than writing when the encoding does not fit), so the write
+    // stays inside the slice.
+    let ret = unsafe { UTF8_putc(rest.as_mut_ptr(), room, value) };
     if ret < 0 {
         return ret;
     }
-    // SAFETY: `ret` bytes were written at the cursor, so advancing by `ret` stays
-    // inside the allocation.
-    *p = unsafe { cur.add(ret as usize) };
+    *pos += ret as usize;
     1
 }
 
@@ -316,8 +344,15 @@ unsafe extern "C" fn cpy_utf8(value: c_ulong, arg: *mut c_void) -> c_int {
 ///
 /// # Safety
 ///
-/// `out` must be null or point at a writable `ASN1_STRING *`; `in` must be
-/// readable for `len` bytes, or NUL-terminated when `len` is `-1`.
+/// `out` must be null or point at a writable `ASN1_STRING *` slot. When `*out` is
+/// non-NULL it must be a live, **exclusively owned** `ASN1_STRING` whose `data` is
+/// NULL or a live allocation from this crate's seam that no other owner holds and
+/// that `in` does not alias: the function may release that data
+/// (`ASN1_STRING_set0(dest, NULL, 0)`) and then overwrite the object. `in` must be
+/// readable for `len` bytes when `len >= 0`, or NUL-terminated when `len == -1`;
+/// `len >= -1`; when `inform` is `MBSTRING_BMP`/`MBSTRING_UNIV`, `len` must be a
+/// multiple of two/four respectively; and `len` must be less than `INT_MAX`.
+/// `inform` must be one of the four `MBSTRING_*` forms.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_mbstring_copy(
     out: *mut *mut Asn1String,
@@ -339,8 +374,15 @@ pub unsafe extern "C" fn ASN1_mbstring_copy(
 ///
 /// # Safety
 ///
-/// `out` must be null or point at a writable `ASN1_STRING *`; `in` must be
-/// readable for `len` bytes, or NUL-terminated when `len` is `-1`.
+/// `out` must be null or point at a writable `ASN1_STRING *` slot. When `*out` is
+/// non-NULL it must be a live, **exclusively owned** `ASN1_STRING` whose `data` is
+/// NULL or a live allocation from this crate's seam that no other owner holds and
+/// that `in` does not alias: the function may release that data
+/// (`ASN1_STRING_set0(dest, NULL, 0)`) and then overwrite the object. `in` must be
+/// readable for `len` bytes when `len >= 0`, or NUL-terminated when `len == -1`;
+/// `len >= -1`; when `inform` is `MBSTRING_BMP`/`MBSTRING_UNIV`, `len` must be a
+/// multiple of two/four respectively; and `len` must be less than `INT_MAX`.
+/// `inform` must be one of the four `MBSTRING_*` forms.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
 // The authority's own test is `len >= INT_MAX`, which is *satisfiable* — it fires
@@ -410,13 +452,7 @@ pub unsafe extern "C" fn ASN1_mbstring_ncopy(
                 // SAFETY: `in` is readable for `len` bytes and `UTF8` is a legal
                 // `inform`.
                 if unsafe {
-                    traverse_string(
-                        in_,
-                        len,
-                        MBSTRING_UTF8,
-                        Some(in_utf8),
-                        (&raw mut nchar).cast::<c_void>(),
-                    )
+                    traverse_string(in_, len, MBSTRING_UTF8, |value| in_utf8(value, &mut nchar))
                 } < 0
                 {
                     // SAFETY: a compile-time-constant site.
@@ -467,15 +503,7 @@ pub unsafe extern "C" fn ASN1_mbstring_ncopy(
         {
             // SAFETY: `in` is readable for `len` bytes and `inform` is one of the
             // four legal forms — the match above rejected anything else.
-            if unsafe {
-                traverse_string(
-                    in_,
-                    len,
-                    inform,
-                    Some(type_str),
-                    (&raw mut mask).cast::<c_void>(),
-                )
-            } < 0
+            if unsafe { traverse_string(in_, len, inform, |value| type_str(value, &mut mask)) } < 0
             {
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::A_MBSTR_125) };
@@ -553,7 +581,9 @@ pub unsafe extern "C" fn ASN1_mbstring_ncopy(
         }
 
         // The output length, and the copier that will fill it.
-        let cpyfunc: Rfunc;
+        // The copier is a safe `fn` over the output slice and its position; the authority's
+        // `int (*)(unsigned long, void *)` plus cursor `void *` is not reconstructed.
+        let cpyfunc: fn(c_ulong, &mut [u8], &mut usize) -> c_int;
         let outlen: c_int;
         match outform {
             MBSTRING_ASC => {
@@ -593,15 +623,7 @@ pub unsafe extern "C" fn ASN1_mbstring_ncopy(
             _ => {
                 let mut o: c_int = 0;
                 // SAFETY: `in` is readable for `len` bytes and `inform` is legal.
-                if unsafe {
-                    traverse_string(
-                        in_,
-                        len,
-                        inform,
-                        Some(out_utf8),
-                        (&raw mut o).cast::<c_void>(),
-                    )
-                } < 0
+                if unsafe { traverse_string(in_, len, inform, |value| out_utf8(value, &mut o)) } < 0
                 {
                     if free_out {
                         // SAFETY: `dest` was allocated above and is not shared.
@@ -650,18 +672,208 @@ pub unsafe extern "C" fn ASN1_mbstring_ncopy(
         // The block is now `dest`'s: give up the local owner so it is not released here. The
         // authority transfers it by the field store above, and `dest` releases it through
         // `ASN1_STRING_free` later.
-        let mut cursor = p.into_raw();
-        // SAFETY: The output was sized for exactly this traversal, and the
-        // traversal cannot fail: `cpy_*` always answers 1.
+        let cursor = p.into_raw();
+        // The content view of the block: `outlen_usize` bytes, the block being `outlen + 1` so the
+        // NUL at `[outlen]` written above is outside this slice. The slice is derived from the
+        // block this frame exclusively owns and is not used after the owner is given to `dest`.
+        // SAFETY: `cursor` is the `count = outlen + 1`-byte block `OwnedBlock::malloc` returned and
+        // this frame still owns (the block was handed to `dest` by the field stores above, and
+        // `into_raw` gave up the local owner so it is not released here); `outlen_usize = count - 1`
+        // bytes are live and writable, and nothing else aliases them.
+        let out_slice = unsafe { core::slice::from_raw_parts_mut(cursor, outlen_usize) };
+        let mut pos = 0usize;
+        // SAFETY: `in` is readable for `len` bytes and `inform` is legal; the copier is bounds-checked
+        // against `out_slice`, so the traversal writes only inside the block that was allocated for it.
         unsafe {
-            traverse_string(
-                in_,
-                len,
-                inform,
-                Some(cpyfunc),
-                (&raw mut cursor).cast::<c_void>(),
-            )
+            traverse_string(in_, len, inform, |value| {
+                cpyfunc(value, out_slice, &mut pos)
+            })
         };
         str_type
     })
+}
+
+#[cfg(test)]
+mod asn1_ocsp_mbstr_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+
+    /// A BMP conversion writes exactly the `nchar * 2` content bytes the measuring pass sized,
+    /// and leaves the authority's single NUL at `data[length]`: the writer is bounded by the
+    /// output slice, so the block is written neither short nor past its content.
+    #[test]
+    fn asn1_ocsp_mbstr_bmp_output_is_exactly_the_sized_block() {
+        let input = *b"AB";
+        let mut out: *mut Asn1String = core::ptr::null_mut();
+        // SAFETY: `out` is a writable slot that starts NULL; `in` is readable for two bytes and
+        // `B_ASN1_BMPSTRING` is a legal mask, so the function allocates the result.
+        let ret = unsafe {
+            ASN1_mbstring_ncopy(
+                &raw mut out,
+                input.as_ptr(),
+                input.len() as c_int,
+                MBSTRING_UTF8,
+                B_ASN1_BMPSTRING,
+                0,
+                0,
+            )
+        };
+        assert_eq!(ret, V_ASN1_BMPSTRING);
+        assert!(!out.is_null());
+        // SAFETY: `out` is the fresh object this call produced and this frame owns.
+        unsafe {
+            assert_eq!((*out).length, 4, "two BMP characters are four bytes");
+            let data = (*out).data;
+            assert_eq!((*data, *data.add(1)), (0x00, b'A'));
+            assert_eq!((*data.add(2), *data.add(3)), (0x00, b'B'));
+            assert_eq!(*data.add(4), 0, "the authority's NUL sits past the content");
+            ASN1_STRING_free(out);
+        }
+    }
+
+    /// A length at `INT_MAX` is refused by the site's own arithmetic guard before any allocation
+    /// or conversion: the caller's slot is untouched and no block is created.
+    #[test]
+    fn asn1_ocsp_mbstr_refuses_a_length_at_int_max() {
+        let input = *b"x";
+        let mut out: *mut Asn1String = core::ptr::null_mut();
+        // SAFETY: `out` is a writable slot; the input is never read because the length guard
+        // fires first.
+        let ret = unsafe {
+            ASN1_mbstring_ncopy(
+                &raw mut out,
+                input.as_ptr(),
+                c_int::MAX,
+                MBSTRING_ASC,
+                DIRSTRING_TYPE,
+                0,
+                0,
+            )
+        };
+        assert_eq!(ret, -1, "a length at INT_MAX is refused");
+        assert!(out.is_null(), "the refusal writes no output");
+    }
+
+    /// Run `traverse_string` over exactly `buf` with the reported `len`, counting the values the
+    /// callback sees. Returns the function's answer and the count.
+    fn traverse(buf: &[u8], len: c_int, inform: c_int) -> (c_int, c_int) {
+        let mut n = 0;
+        // SAFETY: `buf` is the readable extent; every accepting call has `len <= buf.len()` and
+        // the guard rejects a width that would overrun it before any read.
+        let ret = unsafe {
+            traverse_string(buf.as_ptr(), len, inform, |_value| {
+                n += 1;
+                1
+            })
+        };
+        (ret, n)
+    }
+
+    /// ADV-A1: `traverse_string` enforces the per-form length/width relationship itself. `BMP`
+    /// needs a multiple of two and `UNIV` a multiple of four, so the odd/short lengths are
+    /// refused before the first read; `ASC` and `UTF8` accept any non-negative length; a negative
+    /// length is refused rather than looping past the extent; and an `inform` outside the four
+    /// forms is refused instead of silently taking the UTF8 arm.
+    #[test]
+    fn asn1_ocsp_mbstr_traverse_rejects_every_width_mismatch_before_reading() {
+        // BMP: exactly two bytes per value.
+        assert_eq!(traverse(&[], 0, MBSTRING_BMP), (1, 0));
+        assert_eq!(traverse(&[0x00], 1, MBSTRING_BMP), (-1, 0));
+        assert_eq!(traverse(&[0x00, b'A'], 2, MBSTRING_BMP), (1, 1));
+        assert_eq!(traverse(&[0x00, b'A', 0x00], 3, MBSTRING_BMP), (-1, 0));
+        assert_eq!(traverse(&[0x00, b'A', 0x00, b'B'], 4, MBSTRING_BMP), (1, 2));
+
+        // UNIV: exactly four bytes per value.
+        assert_eq!(traverse(&[], 0, MBSTRING_UNIV), (1, 0));
+        for short in 1..=3 {
+            assert_eq!(
+                traverse(&[0u8; 4][..short], short as c_int, MBSTRING_UNIV),
+                (-1, 0),
+                "a UNIV length of {short} must be refused before any read"
+            );
+        }
+        assert_eq!(traverse(&[0; 4], 4, MBSTRING_UNIV), (1, 1));
+        assert_eq!(traverse(&[0; 5], 5, MBSTRING_UNIV), (-1, 0));
+        assert_eq!(traverse(&[0; 8], 8, MBSTRING_UNIV), (1, 2));
+
+        // ASC: one byte per value, so every non-negative length is exact.
+        assert_eq!(traverse(&[], 0, MBSTRING_ASC), (1, 0));
+        assert_eq!(traverse(b"abc", 3, MBSTRING_ASC), (1, 3));
+
+        // UTF8: variable width, so the extent is the only bound.
+        assert_eq!(traverse(&[], 0, MBSTRING_UTF8), (1, 0));
+        assert_eq!(traverse(b"A", 1, MBSTRING_UTF8), (1, 1));
+        assert_eq!(traverse("\u{a2}".as_bytes(), 2, MBSTRING_UTF8), (1, 1));
+        assert_eq!(traverse(&[0xc2], 1, MBSTRING_UTF8), (-1, 0));
+        assert_eq!(traverse(&[0xff], 1, MBSTRING_UTF8), (-1, 0));
+
+        // A negative length used to keep the loop alive past the extent.
+        assert_eq!(traverse(b"x", -1, MBSTRING_ASC), (-1, 0));
+
+        // Any other `inform` used to fall into the UTF8 arm.
+        assert_eq!(traverse(b"x", 1, MBSTRING_FLAG | 0x10), (-1, 0));
+    }
+
+    /// ADV-A2: the caller-supplied `*out` path reuses the object and releases its old `data`
+    /// exactly once. The seam counter (not a statement inside the owner) establishes the release,
+    /// so a second free by `ASN1_STRING_set0` or `ASN1_STRING_set` would be visible as 2.
+    #[test]
+    fn asn1_ocsp_mbstr_reuses_a_caller_supplied_out_and_releases_its_old_data_once() {
+        use crate::runtime::mem::free_probe;
+
+        let input = *b"AB";
+        let mut out: *mut Asn1String = core::ptr::null_mut();
+        // SAFETY: `out` starts NULL and `in` is readable for two bytes.
+        let ret = unsafe {
+            ASN1_mbstring_ncopy(
+                &raw mut out,
+                input.as_ptr(),
+                2,
+                MBSTRING_UTF8,
+                B_ASN1_BMPSTRING,
+                0,
+                0,
+            )
+        };
+        assert_eq!(ret, V_ASN1_BMPSTRING);
+        let dest = out;
+        assert!(!dest.is_null());
+        // SAFETY: `dest` is the fresh object this test owns.
+        let old_data = unsafe { (*dest).data };
+        assert!(!old_data.is_null());
+
+        free_probe::reset();
+        // SAFETY: `out` is a writable slot holding a live, exclusively owned octet string; `in`
+        // does not alias its data.
+        let ret = unsafe {
+            ASN1_mbstring_ncopy(
+                &raw mut out,
+                input.as_ptr(),
+                2,
+                MBSTRING_UTF8,
+                B_ASN1_BMPSTRING,
+                0,
+                0,
+            )
+        };
+        assert_eq!(ret, V_ASN1_BMPSTRING);
+        assert_eq!(out, dest, "the caller's object is reused, not replaced");
+        // SAFETY: `dest` is still the live object this test owns.
+        unsafe {
+            assert_eq!(
+                free_probe::count(old_data.cast::<c_void>()),
+                1,
+                "the old data block is released exactly once"
+            );
+            assert_eq!((*dest).length, 4);
+            let data = (*dest).data;
+            assert!(!data.is_null(), "the conversion installs a block");
+            assert_eq!(
+                (*data, *data.add(1), *data.add(2), *data.add(3)),
+                (0, b'A', 0, b'B')
+            );
+            ASN1_STRING_free(dest);
+        }
+    }
 }

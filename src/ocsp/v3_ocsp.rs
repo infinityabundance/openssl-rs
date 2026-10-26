@@ -110,6 +110,15 @@ const V3_OCSP_176: crate::runtime::err::err_sites::ErrSite =
 /// Prints whichever of `crlUrl`/`crlNum`/`crlTime` are present, each prefixed by an `ind`-space
 /// indent and suffixed by a newline. Every write is a refusal arm: a non-positive answer aborts
 /// with 0.
+///
+/// # Safety
+///
+/// Installed as `ossl_v3_ocsp_crlid.i2r` and invoked only by `X509V3_EXT_print`
+/// (`src/x509/v3_prn.rs`), which establishes the preconditions: `_method` is this row (unread),
+/// `in` is the live `OCSP_CRLID` that row's `it` decoder produced (borrowed for the call, never
+/// retained) and `bp` is a live BIO owned by the caller. Each field pointer is NULL or the live
+/// `ASN1_IA5STRING`/`ASN1_INTEGER`/`ASN1_GENERALIZEDTIME` the decoder installed, borrowed for the
+/// call only.
 unsafe extern "C" fn i2r_ocsp_crlid(
     _method: *const X509V3ExtMethod,
     in_: *mut c_void,
@@ -168,6 +177,13 @@ unsafe extern "C" fn i2r_ocsp_crlid(
 /// `crypto/ocsp/v3_ocsp.c:123-131`.
 ///
 /// Indents, then prints the `ASN1_GENERALIZEDTIME` itself (no field label, no trailing newline).
+///
+/// # Safety
+///
+/// Installed as `ossl_v3_ocsp_acutoff.i2r` and invoked only by `X509V3_EXT_print`, which
+/// establishes the preconditions: `_method` is this row (unread), `cutoff` is the live
+/// `ASN1_GENERALIZEDTIME` that row's `it` decoder produced (borrowed for the call, never
+/// retained), and `bp` is a live BIO owned by the caller.
 unsafe extern "C" fn i2r_ocsp_acutoff(
     _method: *const X509V3ExtMethod,
     cutoff: *mut c_void,
@@ -189,7 +205,11 @@ unsafe extern "C" fn i2r_ocsp_acutoff(
 ///
 /// The nonce has no ASN.1 item, so the row supplies its own allocator: a bare
 /// `ASN1_OCTET_STRING_new`.
-unsafe extern "C" fn ocsp_nonce_new() -> *mut c_void {
+///
+/// It reads no argument, so no caller precondition exists; it is a safe `extern "C" fn`, which
+/// coerces to the `unsafe extern "C" fn` slot `X509V3ExtNew` stores. The returned pointer is a
+/// fresh octet string the caller owns.
+extern "C" fn ocsp_nonce_new() -> *mut c_void {
     ASN1_OCTET_STRING_new().cast::<c_void>()
 }
 
@@ -197,6 +217,18 @@ unsafe extern "C" fn ocsp_nonce_new() -> *mut c_void {
 ///
 /// Not an ASN.1 encoder: it copies the octet string's raw bytes to `*pp` and advances the cursor,
 /// returning the length. A NULL `pp` only measures.
+///
+/// # Safety
+///
+/// Installed as `ossl_v3_ocsp_nonce.i2d` and invoked only by `do_ext_i2d`
+/// (`src/x509/v3_conf.rs`), which establishes the twice-pass encoder contract: the first call
+/// passes `pp == NULL` to size the output, and the second passes `*pp` pointing at a writable
+/// cursor with room for the `length` bytes this function returns. `a` is a live
+/// `ASN1_OCTET_STRING` (the one [`d2i_ocsp_nonce`] decoded, or one the caller owns) borrowed for
+/// the call: its invariant `length >= 0 && (length == 0 || data is readable for length bytes)`
+/// must hold, and when `pp` is non-NULL the source must not overlap the destination `*pp`
+/// (`copy_nonoverlapping`). "Live `ASN1_OCTET_STRING`" includes that invariant; the type itself
+/// does not enforce it because its fields are `pub(crate)` raw storage.
 unsafe extern "C" fn i2d_ocsp_nonce(a: *const c_void, pp: *mut *mut c_uchar) -> c_int {
     let os = a.cast::<Asn1String>();
     // SAFETY: `os` is a live `ASN1_OCTET_STRING` per the caller's contract.
@@ -218,11 +250,31 @@ unsafe extern "C" fn i2d_ocsp_nonce(a: *const c_void, pp: *mut *mut c_uchar) -> 
 /// Decodes the raw octets into an `ASN1_OCTET_STRING`, reusing the slot at `*a` when one is given
 /// (and writing the result back), and advancing `*pp` by `length`. Any failure raises
 /// [`V3_OCSP_176`] and answers NULL.
+///
+/// # Safety
+///
+/// Invoked by `X509V3_EXT_d2i`/`X509V3_EXT_print` (`src/x509/v3_lib.rs`, `src/x509/v3_prn.rs`) with
+/// `a` NULL (allocate) or pointing at a live `ASN1_OCTET_STRING *` slot whose value is NULL or an
+/// octet string the caller owns, and with `pp` pointing at a readable cursor holding at least
+/// `length` bytes. `0 <= length <= c_int::MAX - 1`: a negative length and a length above
+/// `ASN1_STRING_set`'s own `INT_MAX - 1` bound are **refused before `*pp` is read** (this
+/// reconstruction makes explicit what the authority leaves to that guard, so the caller's
+/// readability obligation is never narrower than the extent the function may read). On success
+/// the decoded value is stored through `a` when `a` is non-NULL, and the caller owns it; on
+/// failure a caller-supplied value is left untouched and nothing this call allocated is leaked.
 unsafe extern "C" fn d2i_ocsp_nonce(
     a: *mut c_void,
     pp: *mut *const c_uchar,
     length: c_long,
 ) -> *mut c_void {
+    if length < 0 || length > (c_int::MAX - 1) as c_long {
+        // The authority leaves this to `ASN1_STRING_set`'s `INT_MAX - 1` guard, which returns 0
+        // before reading the data. Refusing here makes the same refusal the stated contract and
+        // keeps `pp` unread, so a conforming caller's readability obligation is exactly `length`.
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&V3_OCSP_176) };
+        return ptr::null_mut();
+    }
     let pos = a.cast::<*mut Asn1String>();
     let os;
     // SAFETY: `pos` is NULL or a writable slot per the caller's contract; the short-circuit reads
@@ -235,6 +287,8 @@ unsafe extern "C" fn d2i_ocsp_nonce(
             unsafe { raise_site(&V3_OCSP_176) };
             return ptr::null_mut();
         }
+        #[cfg(test)]
+        nonce_probe::created(os.cast::<c_void>());
     } else {
         // SAFETY: `pos` is non-NULL and its slot holds a live value per the contract.
         os = unsafe { *pos };
@@ -245,6 +299,8 @@ unsafe extern "C" fn d2i_ocsp_nonce(
         // SAFETY: `pos` is NULL or a live slot; `os` is live, so the comparison reads no freed
         // memory.
         if pos.is_null() || unsafe { *pos != os } {
+            #[cfg(test)]
+            nonce_probe::released(os.cast::<c_void>());
             // SAFETY: `os` is a live value this call owns.
             unsafe { ASN1_OCTET_STRING_free(os) };
         }
@@ -267,6 +323,8 @@ unsafe extern "C" fn d2i_ocsp_nonce(
 ///
 /// `a` is NULL or an `ASN1_OCTET_STRING` this unit's [`d2i_ocsp_nonce`]/[`ocsp_nonce_new`] made.
 unsafe extern "C" fn ocsp_nonce_free(a: *mut c_void) {
+    #[cfg(test)]
+    nonce_probe::released(a);
     // SAFETY: `a` is NULL or a live octet string per the contract.
     unsafe { ASN1_OCTET_STRING_free(a.cast::<Asn1String>()) };
 }
@@ -275,6 +333,14 @@ unsafe extern "C" fn ocsp_nonce_free(a: *mut c_void) {
 /// `crypto/ocsp/v3_ocsp.c:185-193`.
 ///
 /// Indents, then spells the bytes through `i2a_ASN1_STRING` as an `OCTET STRING`.
+///
+/// # Safety
+///
+/// Installed as `ossl_v3_ocsp_nonce.i2r` and invoked only by `X509V3_EXT_print`, which
+/// establishes the preconditions: `_method` is this row (unread), `nonce` is the live
+/// `ASN1_OCTET_STRING` that row's `d2i` (or the caller's own object) supplied, borrowed for the
+/// call and including its `length`/`data` invariant, and `out` is a live BIO owned by the
+/// caller.
 unsafe extern "C" fn i2r_ocsp_nonce(
     _method: *const X509V3ExtMethod,
     nonce: *mut c_void,
@@ -295,8 +361,10 @@ unsafe extern "C" fn i2r_ocsp_nonce(
 /// `static int i2r_ocsp_nocheck(const X509V3_EXT_METHOD *method, void *nocheck, BIO *out, int
 /// indent)` — `crypto/ocsp/v3_ocsp.c:197-201`.
 ///
-/// Nocheck is a single NULL; the authority prints nothing and always succeeds.
-unsafe extern "C" fn i2r_ocsp_nocheck(
+/// Nocheck is a single NULL; the authority prints nothing and always succeeds. It reads none of
+/// its four arguments, so no caller precondition exists; it is a safe `extern "C" fn` and the
+/// safe-to-unsafe coercion into `X509V3ExtI2r` is the same one [`s2i_ocsp_nocheck`] uses.
+extern "C" fn i2r_ocsp_nocheck(
     _method: *const X509V3ExtMethod,
     _nocheck: *mut c_void,
     _out: *mut Bio,
@@ -309,7 +377,11 @@ unsafe extern "C" fn i2r_ocsp_nocheck(
 /// *str)` — `crypto/ocsp/v3_ocsp.c:203-207`.
 ///
 /// The text form contributes nothing; the value is always a fresh `ASN1_NULL`.
-unsafe extern "C" fn s2i_ocsp_nocheck(
+///
+/// It is a safe `extern "C" fn`: no argument is read, so no caller precondition exists and a safe
+/// fn coerces to the `unsafe extern "C" fn` slot `X509V3ExtMethod::s2i` stores. The value it
+/// answers is the returned pointer's own (a fresh `ASN1_NULL`, released by the caller).
+extern "C" fn s2i_ocsp_nocheck(
     _method: *const X509V3ExtMethod,
     _ctx: *mut c_void,
     _str: *const c_char,
@@ -323,6 +395,14 @@ unsafe extern "C" fn s2i_ocsp_nocheck(
 /// Prints `Issuer:`, then the issuer name on one line, then one `method - location` line per
 /// `ACCESS_DESCRIPTION` in the locator stack, each indented by `2 * ind`. Every write is a refusal
 /// arm.
+///
+/// # Safety
+///
+/// Installed as `ossl_v3_ocsp_serviceloc.i2r` and invoked only by `X509V3_EXT_print`, which
+/// establishes the preconditions: `_method` is this row (unread), `in` is the live
+/// `OCSP_SERVICELOC` that row's `it` decoder produced (borrowed for the call, never retained) and
+/// `bp` is a live BIO owned by the caller. `issuer` and every `locator` element are the decoder's
+/// own borrowed members; this callback retains neither.
 unsafe extern "C" fn i2r_ocsp_serviceloc(
     _method: *const X509V3ExtMethod,
     in_: *mut c_void,
@@ -473,3 +553,226 @@ pub static ossl_v3_ocsp_serviceloc: X509V3ExtMethod = X509V3ExtMethod {
     r2i: None,
     usr_data: ptr::null_mut(),
 };
+
+// ---------------------------------------------------------------------------------------------
+// Test-only observation of the nonce object's lifetime
+// ---------------------------------------------------------------------------------------------
+
+/// Address-indexed observation of the octet string [`d2i_ocsp_nonce`] creates and releases.
+///
+/// The campaign cannot install a counting allocator in the ordinary suite (that is a
+/// process-global act reserved for the `adv_alloc` probes), so the two release sites record the
+/// **address** they release here, and [`nonce_probe::created`] records the address the decode
+/// allocated. A test can then assert that the address released is the address created, exactly
+/// once, instead of counting every release in a window. Thread-local, so concurrent tests cannot
+/// contribute, and compiled out of every non-test build.
+#[cfg(test)]
+mod nonce_probe {
+    use core::cell::RefCell;
+    use core::ffi::c_void;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub(super) enum Event {
+        Created(usize),
+        Released(usize),
+    }
+
+    thread_local! {
+        static EVENTS: RefCell<Vec<Event>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Forget every observation made on this thread.
+    pub(super) fn reset() {
+        EVENTS.with(|events| events.borrow_mut().clear());
+    }
+
+    /// Record that the decode allocated an octet string at `p` (NULL records nothing).
+    pub(super) fn created(p: *mut c_void) {
+        if !p.is_null() {
+            EVENTS.with(|events| events.borrow_mut().push(Event::Created(p as usize)));
+        }
+    }
+
+    /// Record that `p` is about to be released (NULL records nothing).
+    pub(super) fn released(p: *mut c_void) {
+        if !p.is_null() {
+            EVENTS.with(|events| events.borrow_mut().push(Event::Released(p as usize)));
+        }
+    }
+
+    /// Everything observed on this thread since the last [`reset`].
+    pub(super) fn events() -> Vec<Event> {
+        EVENTS.with(|events| events.borrow().clone())
+    }
+}
+
+#[cfg(test)]
+mod nonce_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::nonce_probe::{self, Event};
+    use super::*;
+    use crate::runtime::mem::free_probe;
+
+    /// `d2i_ocsp_nonce` decodes the raw octets and advances the cursor by exactly `length`; the
+    /// decoded object and its data block are each released exactly once, at their own addresses,
+    /// observed at the allocator seam (so a second free by `ASN1_STRING_free` would count 2).
+    #[test]
+    fn asn1_ocsp_nonce_decode_release_is_exactly_once_at_the_decoded_address() {
+        nonce_probe::reset();
+        free_probe::reset();
+        let data = [0x01u8, 0x02, 0x03, 0x04];
+        let mut pp: *const c_uchar = data.as_ptr();
+        // SAFETY: a NULL `a` asks for a fresh octet string; `pp` is readable for four bytes.
+        let a = unsafe { d2i_ocsp_nonce(ptr::null_mut(), &mut pp, 4) };
+        assert!(!a.is_null(), "the decode must answer the octet string");
+        assert_eq!(
+            pp as usize,
+            // SAFETY: `data` is a four-byte array and the decode advanced by its length.
+            unsafe { data.as_ptr().add(4) } as usize,
+            "the cursor advances past the decoded octets"
+        );
+        // SAFETY: `a` is the fresh object this call produced and this frame owns.
+        let (length, first, content) = unsafe {
+            let os = a.cast::<Asn1String>();
+            ((*os).length, *(*os).data, (*os).data)
+        };
+        assert_eq!((length, first), (4, 0x01));
+        assert_eq!(
+            nonce_probe::events(),
+            vec![Event::Created(a as usize)],
+            "the decode records exactly the object it created"
+        );
+
+        nonce_probe::reset();
+        free_probe::reset();
+        // SAFETY: `a` is live and this frame owns it; `ocsp_nonce_free` is its single release.
+        unsafe { ocsp_nonce_free(a) };
+        assert_eq!(
+            nonce_probe::events(),
+            vec![Event::Released(a as usize)],
+            "the release names the decoded address, exactly once"
+        );
+        assert_eq!(
+            free_probe::count(a.cast::<c_void>()),
+            1,
+            "the allocator seam saw exactly one release of the object"
+        );
+        assert_eq!(
+            free_probe::count(content.cast::<c_void>()),
+            1,
+            "the allocator seam saw exactly one release of the object's data"
+        );
+        assert_eq!(
+            free_probe::events().len(),
+            2,
+            "the seam saw no third release in the window: {:?}",
+            free_probe::events()
+        );
+
+        // A second release of the cleared slot is the NULL no-op: nothing is released again.
+        // SAFETY: NULL is the documented no-op input.
+        unsafe { ocsp_nonce_free(ptr::null_mut()) };
+        assert_eq!(
+            free_probe::count(a.cast::<c_void>()),
+            1,
+            "a NULL release adds no second release"
+        );
+        assert_eq!(free_probe::events().len(), 2);
+    }
+
+    /// `i2d_ocsp_nonce` copies the raw bytes and advances the cursor (ADV-A5's interface, and the
+    /// missing coverage the review listed): the sizing pass answers the length without writing,
+    /// the copy pass writes exactly `length` bytes and leaves `*pp` past them.
+    #[test]
+    fn asn1_ocsp_nonce_i2d_copies_and_advances_the_cursor() {
+        let raw = [0x0au8, 0x0b, 0x0c];
+        let mut pp: *const c_uchar = raw.as_ptr();
+        // SAFETY: a NULL `a` asks for a fresh octet string; `pp` is readable for three bytes.
+        let a = unsafe { d2i_ocsp_nonce(ptr::null_mut(), &mut pp, 3) };
+        assert!(!a.is_null());
+        // SAFETY: `a` is the live object this test owns and `pp` is NULL (size query).
+        let sized = unsafe { i2d_ocsp_nonce(a, ptr::null_mut()) };
+        assert_eq!(sized, 3, "the sizing pass answers the raw length");
+        let mut buf = [0u8; 3];
+        let mut cursor = buf.as_mut_ptr();
+        // SAFETY: `a` is live, `*pp` has room for `length` bytes, and the buffers do not overlap.
+        assert_eq!(unsafe { i2d_ocsp_nonce(a, &mut cursor) }, 3);
+        assert_eq!(buf, raw, "the copy is the octet string's own bytes");
+        // SAFETY: `buf` is a three-byte array, so the one-past-the-end address is valid to form.
+        let expected_cursor = unsafe { buf.as_mut_ptr().add(3) };
+        assert_eq!(cursor, expected_cursor, "the cursor advances");
+        // SAFETY: `a` is live and this frame owns it; this is its single release.
+        unsafe { ocsp_nonce_free(a) };
+    }
+
+    /// A length above `ASN1_STRING_set`'s `INT_MAX - 1` bound is refused **before `*pp` is read**,
+    /// so the test's one-byte cursor is a conforming input for the stated contract. Nothing is
+    /// allocated, released, or advanced (the newly explicit refusal arm of ADV-A2/ADV-A4).
+    #[test]
+    fn asn1_ocsp_nonce_refuses_a_length_the_set_cannot_accept_before_reading() {
+        nonce_probe::reset();
+        free_probe::reset();
+        let data = [0x00u8];
+        let mut pp: *const c_uchar = data.as_ptr();
+        // SAFETY: `length` exceeds the bound the contract refuses before reading, so `pp` need
+        // only be a valid one-byte cursor.
+        let r = unsafe { d2i_ocsp_nonce(ptr::null_mut(), &mut pp, c_int::MAX as c_long) };
+        assert!(r.is_null(), "an unsettable length answers NULL");
+        assert!(
+            nonce_probe::events().is_empty(),
+            "no object is created for a refused length"
+        );
+        assert!(
+            free_probe::events().is_empty(),
+            "no block is allocated or released: {:?}",
+            free_probe::events()
+        );
+        assert_eq!(
+            pp as usize,
+            data.as_ptr() as usize,
+            "a refused length does not advance the cursor"
+        );
+    }
+
+    /// A refused length over a caller-supplied object leaves that object owned by the caller: the
+    /// refusal path releases nothing, so a later single release is the first.
+    #[test]
+    fn asn1_ocsp_nonce_refusal_leaves_a_caller_object_untouched() {
+        let mut os = ASN1_OCTET_STRING_new();
+        assert!(!os.is_null());
+        let addr = os as usize;
+        let addr_ptr = os.cast::<c_void>();
+        let slot = (&raw mut os).cast::<c_void>();
+        let data = [0x00u8];
+        let mut pp: *const c_uchar = data.as_ptr();
+        nonce_probe::reset();
+        free_probe::reset();
+        // SAFETY: `slot` points at a live `ASN1_OCTET_STRING *`; `length` is refused before `pp`
+        // is read, so the one-byte cursor satisfies the contract.
+        let r = unsafe { d2i_ocsp_nonce(slot, &mut pp, c_int::MAX as c_long) };
+        assert!(r.is_null());
+        assert_eq!(
+            os as usize, addr,
+            "the caller's slot still names its object"
+        );
+        assert_eq!(
+            nonce_probe::events(),
+            Vec::new(),
+            "a caller-supplied object is neither released nor adopted"
+        );
+        assert!(
+            free_probe::events().is_empty(),
+            "the refusal releases nothing: {:?}",
+            free_probe::events()
+        );
+        // SAFETY: `os` is the live object this test still owns; this is its first release.
+        unsafe { ocsp_nonce_free(os.cast::<c_void>()) };
+        assert_eq!(nonce_probe::events(), vec![Event::Released(addr)]);
+        assert_eq!(
+            free_probe::count(addr_ptr),
+            1,
+            "the seam saw exactly one release of the caller's object"
+        );
+    }
+}
