@@ -1,0 +1,252 @@
+{
+  "schema": "openssl-rs/safe-c33/openssh-mechanism-map/v1",
+  "kind": "mechanism-classification-receipt",
+  "generated_utc": "2026-10-26T00:26:31Z",
+  "branch": "integrate/safe-c33",
+  "source_head": "4fe9e3dbff62e818a6cbaef30d34520780e698a6",
+  "worktree": "modified: forensics/memory-safety/campaign/safe-c33/state.json, forensics/tools/consumer_closure.py, this receipt. No Rust source changed; no commit or push made.",
+  "scope": "The 9 reachable files / 11 production obligations that the openssh consumer closure could not classify (UNKNOWN_MECHANISM). Each obligation is classified individually; no ownership reconstruction is claimed and no discharge is manufactured.",
+  "registry": {
+    "location": "forensics/memory-safety/campaign/safe-c33/state.json",
+    "read_by": "forensics/tools/consumer_closure.py (build_receipt loads state.json as --state; mechanism_for resolves the mechanism per obligation)",
+    "added": [
+      {
+        "field": "mechanisms[] entry id=C_ABI_CONTRACT",
+        "state": "UNSAFE_OPEN",
+        "purpose": "Cross-cutting ABI-edge contract mechanism for unsafe extern \"C\" fn callback definitions, unsafe extern \"C\" {} shim blocks, and internal unsafe fn adapters whose caller contract is a raw C/ABI contract rather than an ownership interior."
+      },
+      {
+        "field": "obligation_mechanisms[] (11 records keyed by file, line, kind)",
+        "purpose": "Exact per-site classification. These records only classify; the mechanism's own state and receipts still decide whether anything is discharged."
+      },
+      {
+        "field": "consumer_closure.py: load_obligation_mechanisms() and the optional obligation/obligation_mechanisms arguments of mechanism_for()",
+        "purpose": "Read the per-site records before the file-level converted_files_on_branch/directory rules. The existing self-test still passes and now covers the override and its absence."
+      }
+    ],
+    "why_not_converted_files_on_branch": "Adding these files to converted_files_on_branch would assert they were converted. They were not. Per-site records avoid both that false claim and the coarser directory-rule misattribution of heterogeneous files (dso/mod.rs, eng_table.rs, async_posix.rs, passphrase.rs)."
+  },
+  "new_mechanism": {
+    "id": "C_ABI_CONTRACT",
+    "justification": "The campaign already treats the affected surfaces as callback/loader boundaries and defers them (M52: eng_dyn/eng_table excluded as loader/callback boundaries; M41: async fibre/ucontext shim; M29: init/atexit callback boundaries; M83: ui_openssl console callback boundary). No ownership mechanism can state a callback's caller contract, so routing these obligations to ENGINE/UI/CONF/async ownership mechanisms would manufacture a discharge path that does not exist. One cross-cutting mechanism for the ABI-edge function contract is the smallest honest class.",
+    "state": "UNSAFE_OPEN",
+    "reconstruction_required": true,
+    "discharge_requirement": "A per-site # Safety contract naming the caller, the pointer/alias/initialisation preconditions it must establish, and caller-closure evidence, reviewed at BOUNDARY. An ownership receipt in another mechanism does not discharge an ABI-edge function contract."
+  },
+  "obligations": [
+    {
+      "id": "V1:src/apps/verify.rs:104:UNSAFE_FN_DEF",
+      "file": "src/apps/verify.rs",
+      "line": 104,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "cb",
+      "mechanism": "X509_VERIFY_POLICY",
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "rationale": "cb is the X509_STORE_set_verify_cb callback. The caller that establishes ctx liveness/type is the crypto/x509 store-context verifier, which X509_VERIFY_POLICY owns. The existing mechanism does not enumerate this consumer-side app callback, so no discharge is implied.",
+      "boundary_ids": [],
+      "status_after": "UNKNOWN"
+    },
+    {
+      "id": "V1:src/async/arch/async_posix.rs:52:UNSAFE_EXTERN_BLOCK",
+      "file": "src/async/arch/async_posix.rs",
+      "line": 52,
+      "kind": "UNSAFE_EXTERN_BLOCK",
+      "symbol": "ucontext_t C shim declarations",
+      "mechanism": "C_ABI_CONTRACT",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "Declarations of the C-side ucontext_t shim in src/async/arch/async_ucontext.c. Layout/size/alignment stay on the C side of the ABI. No existing ownership mechanism covers a platform shim; the same file's allocator and lock sites belong to other mechanisms. Classified at the ABI edge, not as async-stack ownership.",
+      "boundary_ids": [],
+      "status_after": "UNKNOWN"
+    },
+    {
+      "id": "V1:src/dso/mod.rs:885:UNSAFE_FN_DEF",
+      "file": "src/dso/mod.rs",
+      "line": 885,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "add_error_data_pathbyaddr",
+      "mechanism": "ERR",
+      "mechanism_state": "SAFETY_DISCHARGED",
+      "rationale": "The body is the ERR_add_error_data adapter: its unsafe obligations are the libc dlerror() string and the openssl_rs_err_add_data append, both ERR-owned. ERR-1 is SAFETY_DISCHARGED at mechanism scope, but its declared surface does not name this site; the closure therefore returns UNKNOWN, not DISCHARGED.",
+      "boundary_ids": [],
+      "status_after": "UNKNOWN",
+      "discharge_checked": "mechanism-discharge-ERR.json parse_scope_sites: no dso/mod.rs range"
+    },
+    {
+      "id": "V1:src/engine/eng_dyn.rs:576:UNSAFE_FN_DEF",
+      "file": "src/engine/eng_dyn.rs",
+      "line": 576,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "dynamic_finish",
+      "mechanism": "C_ABI_CONTRACT",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "dynamic_finish is an ENGINE method callback installed through the ENGINE finish-function slot. No ENGINE ownership mechanism exists, and ENGINE ownership would not by itself state this callback's caller contract.",
+      "boundary_ids": ["B20-DYN-1", "B20-DYN-2", "B20-DYN-3", "B20-DYN-4"],
+      "boundary_dispositions": ["CONTRACTED"],
+      "status_after": "BLOCKED"
+    },
+    {
+      "id": "V1:src/engine/eng_table.rs:148:UNSAFE_FN_DEF",
+      "file": "src/engine/eng_table.rs",
+      "line": 148,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "engine_pile_hash",
+      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "engine_pile_hash is the OPENSSL_LH_new hash callback over a stored ENGINE_PILE. The lhash representation and callback-invocation contract are in crypto/lhash, which RUNTIME_ALLOC_OWNERSHIP declares. RUNTIME_ALLOC_OWNERSHIP is UNSAFE_OPEN: reconstruction is required before any discharge; this mapping is not a soundness claim.",
+      "boundary_ids": ["B20-TBL-1", "B20-TBL-2", "B20-TBL-3", "B20-TBL-4", "B20-TBL-5"],
+      "boundary_dispositions": ["CONTRACTED"],
+      "status_after": "BLOCKED",
+      "unsafe_open_reconstruction_required": true
+    },
+    {
+      "id": "V1:src/engine/tb_asnmth.rs:330:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_asnmth.rs",
+      "line": 330,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "look_str_cb",
+      "mechanism": "C_ABI_CONTRACT",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "look_str_cb is an ENGINE_TABLE_DOALL_CB callback invoked by engine_table_doall under the engine lock. No ENGINE ownership mechanism exists; the obligation is the callback's ABI contract.",
+      "boundary_ids": ["B16-ASN1-1", "B16-ASN1-2", "B16-ASN1-3"],
+      "boundary_dispositions": ["CONTRACTED"],
+      "status_after": "BLOCKED"
+    },
+    {
+      "id": "V1:src/passphrase.rs:499:UNSAFE_FN_DEF",
+      "file": "src/passphrase.rs",
+      "line": 499,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "do_ui_passphrase",
+      "mechanism": "C_ABI_CONTRACT",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "do_ui_passphrase is an internal unsafe fn whose raw-pointer caller contract (pass/pass_len writability, prompt_info NUL-termination, ui_method validity) is documented only at block level. It is a UI/passphrase ABI-edge helper, not an ownership interior; its secret buffers are separately owned by the allocator seam.",
+      "boundary_ids": [],
+      "status_after": "UNKNOWN"
+    },
+    {
+      "id": "V1:src/runtime/conf/conf_ssl.rs:546:UNSAFE_FN_DEF",
+      "file": "src/runtime/conf/conf_ssl.rs",
+      "line": 546,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "ssl_module_free_thunk",
+      "mechanism": "C_ABI_CONTRACT",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "ssl_module_free_thunk is the CONF_module_add finish callback. The CONF module-registry callback contract is an ABI edge; no CONF ownership mechanism exists. The existing B7-CONF-2 receipt covers the diagnostic builders, not this thunk.",
+      "boundary_ids": ["B7-CONF-2"],
+      "boundary_dispositions": ["CONTRACTED"],
+      "status_after": "BLOCKED"
+    },
+    {
+      "id": "V1:src/ui/ui_util.rs:145:UNSAFE_FN_DEF",
+      "file": "src/ui/ui_util.rs",
+      "line": 145,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "ui_new_method_data",
+      "mechanism": "C_ABI_CONTRACT",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "ui_new_method_data is a CRYPTO_EX_new callback called through a function pointer by the ex-data machinery. No UI ownership mechanism exists; classified at the ABI edge.",
+      "boundary_ids": [],
+      "status_after": "UNKNOWN"
+    },
+    {
+      "id": "V1:src/ui/ui_util.rs:161:UNSAFE_FN_DEF",
+      "file": "src/ui/ui_util.rs",
+      "line": 161,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "ui_dup_method_data",
+      "mechanism": "C_ABI_CONTRACT",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "ui_dup_method_data is a CRYPTO_EX_dup callback that receives and replaces the ex-data slot pointer. Its pointer-to-pointer contract is the ex-data ABI edge, not an ownership interior owned by an existing mechanism.",
+      "boundary_ids": [],
+      "status_after": "UNKNOWN"
+    },
+    {
+      "id": "V1:src/ui/ui_util.rs:310:UNSAFE_FN_DEF",
+      "file": "src/ui/ui_util.rs",
+      "line": 310,
+      "kind": "UNSAFE_FN_DEF",
+      "symbol": "ui_close",
+      "mechanism": "C_ABI_CONTRACT",
+      "mechanism_state": "UNSAFE_OPEN",
+      "rationale": "ui_close is a UI_METHOD close callback installed on the wrapper method. No UI ownership mechanism exists; the obligation is the method-table callback contract.",
+      "boundary_ids": [],
+      "status_after": "UNKNOWN"
+    }
+  ],
+  "unsafe_open": {
+    "mechanisms_with_obligations": [
+      {
+        "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+        "obligations": ["V1:src/engine/eng_table.rs:148:UNSAFE_FN_DEF"],
+        "statement": "UNSAFE_OPEN. Reconstruction is required before any discharge. The mapping records the owner of the lhash callback contract; it does not assert that the mechanism is sound."
+      },
+      {
+        "mechanism": "C_ABI_CONTRACT",
+        "obligations": [
+          "V1:src/async/arch/async_posix.rs:52:UNSAFE_EXTERN_BLOCK",
+          "V1:src/engine/eng_dyn.rs:576:UNSAFE_FN_DEF",
+          "V1:src/engine/tb_asnmth.rs:330:UNSAFE_FN_DEF",
+          "V1:src/passphrase.rs:499:UNSAFE_FN_DEF",
+          "V1:src/runtime/conf/conf_ssl.rs:546:UNSAFE_FN_DEF",
+          "V1:src/ui/ui_util.rs:145:UNSAFE_FN_DEF",
+          "V1:src/ui/ui_util.rs:161:UNSAFE_FN_DEF",
+          "V1:src/ui/ui_util.rs:310:UNSAFE_FN_DEF"
+        ],
+        "statement": "UNSAFE_OPEN. The mechanism is new and has no reconstruction or receipt; every site still needs its # Safety contract and caller closure."
+      }
+    ],
+    "asn1_ocsp": "Not touched by this mapping. It remains UNSAFE_OPEN; any obligation mapped there would require reconstruction before discharge."
+  },
+  "closure_rerun": {
+    "tool": "forensics/tools/consumer_closure.py",
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
+    "family_runs": [
+      {
+        "family": "openssh",
+        "artifact": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+        "before": {"reachable_files": 345, "obligations": 120, "DISCHARGED": 0, "BLOCKED": 15, "UNKNOWN": 105, "refusals": ["MISSING_BOUNDARY_RECEIPT", "UNKNOWN_OBLIGATION", "UNKNOWN_MECHANISM"]},
+        "after": {"reachable_files": 345, "obligations": 120, "DISCHARGED": 0, "BLOCKED": 19, "UNKNOWN": 101, "refusals": ["MISSING_BOUNDARY_RECEIPT", "UNKNOWN_OBLIGATION"]}
+      },
+      {
+        "family": "openssh-server",
+        "artifact": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+        "before": {"reachable_files": 337, "obligations": 120, "DISCHARGED": 0, "BLOCKED": 15, "UNKNOWN": 105},
+        "after": {"reachable_files": 337, "obligations": 120, "DISCHARGED": 0, "BLOCKED": 19, "UNKNOWN": 101, "refusals": ["MISSING_BOUNDARY_RECEIPT", "UNKNOWN_OBLIGATION"]}
+      }
+    ],
+    "unknown_mechanism_reached_zero": true,
+    "obligation_set_identical_across_binaries": true,
+    "by_mechanism_after": {
+      "ASN1_OCSP": 7,
+      "C_ABI_CONTRACT": 8,
+      "ERR": 1,
+      "EVP_PKEY_PROVIDER": 65,
+      "RAND_CMS_STORE_KEYFMT": 9,
+      "RUNTIME_ALLOC_OWNERSHIP": 4,
+      "RUNTIME_CONCURRENCY": 2,
+      "SSL_SESSION": 14,
+      "X509_VERIFY_POLICY": 10
+    },
+    "changes_explained": "The 11 former unmapped obligations are now classified: 4 became BLOCKED because their files have a CONTRACTED boundary receipt and the mapped mechanism is not SAFETY_DISCHARGED at the site; 7 remained UNKNOWN because their files have no boundary receipt (the adjudicator checks that before the mechanism state). DISCHARGED stayed 0.",
+    "remaining_refusals": [
+      "MISSING_BOUNDARY_RECEIPT (39 reachable files)",
+      "UNKNOWN_OBLIGATION (101 reachable production obligations)"
+    ]
+  },
+  "gates": {
+    "rust_source_changed": false,
+    "cargo_fmt": "NOT_RUN (not applicable: no Rust source changed)",
+    "cargo_check_lib": "NOT_RUN (not applicable: no Rust source changed)",
+    "cargo_clippy_all_targets": "NOT_RUN (not applicable: no Rust source changed)",
+    "cargo_test_lib": "NOT_RUN (not applicable: no Rust source changed)",
+    "consumer_closure_self_test": "PASS ([consumer-closure] self-test ok: parsing, adjudication truth table, module/file mapping, export-site index, mechanism routing, precision narrowing and unclassified-site negative control)"
+  },
+  "non_claims": [
+    "Classification is not discharge. DISCHARGED remains 0 and no mechanism here is SAFETY_DISCHARGED at these sites.",
+    "No ownership reconstruction was performed for ENGINE, UI, CONF, async, passphrase or the C ABI edge.",
+    "C_ABI_CONTRACT is a contract-completeness mechanism, not an ownership mechanism; it does not claim the data those callbacks operate on is safely owned.",
+    "The four BLOCKED obligations are blocked by the mapped mechanism state, not by a defect finding; their CONTRACTED boundary receipts do not cover the obligation at issue (conf_ssl thunk in particular).",
+    "The seven UNKNOWN obligations remain unknown because their files have no boundary-sweep receipt; the mechanism classification does not substitute for that missing receipt.",
+    "No family is SAFE_COMPATIBLE: the closure remains REFUSED on MISSING_BOUNDARY_RECEIPT and UNKNOWN_OBLIGATION."
+  ]
+}

@@ -2930,6 +2930,19 @@ fn write_cert_status_body(out: &mut [u8], status_type: u8, resp: &[u8]) -> bool 
     true
 }
 
+/// `CON_FUNC_RETURN tls_construct_cert_status(SSL_CONNECTION *s)` —
+/// `statem_srvr.c:4538-4553` over `tls_construct_cert_status_body` (`:4514-4536`), for
+/// TLS1.2.
+///
+/// # Safety
+/// `s` must be non-NULL, aligned, and point to a live, fully initialised `Ssl` that this
+/// call has exclusive access to. When `(*s).ext_ocsp_resp` is non-NULL it must be the base
+/// pointer of an allocation from this crate's `CRYPTO_*` allocator seam holding exactly
+/// `(*s).ext_ocsp_resp_len` readable, initialised bytes, owned by `s` and not
+/// concurrently freed or mutated; `ext_ocsp_resp_len` must be the true length of that
+/// allocation. A NULL response or zero length is the authority's documented no-op; a
+/// length above `0xff_ffff` is refused. The function copies `len` bytes into a
+/// frame-owned buffer and never retains `resp` past `write_handshake_message`.
 unsafe fn tls12_construct_cert_status(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc::write_handshake_message;
     // SAFETY: `s` is live per this function's contract; `ext_ocsp_resp` /

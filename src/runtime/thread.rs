@@ -2101,6 +2101,15 @@ fn sleep_millis(millis: u64) {
     unsafe { nanosleep(&ts, core::ptr::null_mut()) };
 }
 
+// SAFETY: `nanosleep` is the C standard library's
+// `int nanosleep(const struct timespec *req, struct timespec *rem)`, resolved from the
+// process libc (`<time.h>`); `Timespec` is `#[repr(C)]` with `c_long` fields, so it has
+// libc's `struct timespec` layout. Caller obligations: `req` must be non-NULL and point
+// to a live, aligned, fully initialised `Timespec` readable for the call; `rem` must be
+// NULL (the crate's only caller passes NULL) or point to a live, aligned, writable
+// `Timespec`. The function reads only `*req` and writes only `*rem`; the `int` return is
+// an errno indication, not a pointer. A pointer to any other type, or an uninitialised
+// `Timespec`, is undefined behaviour.
 unsafe extern "C" {
     /// `int nanosleep(const struct timespec *req, struct timespec *rem)`, from
     /// `<time.h>`.

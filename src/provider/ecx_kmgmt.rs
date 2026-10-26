@@ -588,7 +588,7 @@ unsafe extern "C" fn ecx_export(
 }
 
 /// `static const OSSL_PARAM *ecx_imexport_types(int selection)` — `ecx_kmgmt.c:350-355`.
-unsafe extern "C" fn ecx_imexport_types(selection: c_int) -> *const OsslParam {
+extern "C" fn ecx_imexport_types(selection: c_int) -> *const OsslParam {
     if (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) != 0 {
         return ECX_IMEXPORT_TYPES_LIST.as_ptr();
     }
@@ -908,12 +908,12 @@ unsafe extern "C" fn x448_gettable_params(_provctx: *mut c_void) -> *const OsslP
 }
 
 /// `static const OSSL_PARAM *ed25519_gettable_params(void *provctx)` — `ecx_kmgmt.c:836-839`.
-unsafe extern "C" fn ed25519_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn ed25519_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     ED_GET_PARAMS_LIST.as_ptr()
 }
 
 /// `static const OSSL_PARAM *ed448_gettable_params(void *provctx)` — `ecx_kmgmt.c:841-844`.
-unsafe extern "C" fn ed448_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn ed448_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     ED_GET_PARAMS_LIST.as_ptr()
 }
 
@@ -1091,17 +1091,17 @@ unsafe extern "C" fn x25519_settable_params(_provctx: *mut c_void) -> *const Oss
 }
 
 /// `static const OSSL_PARAM *x448_settable_params(void *provctx)` — `ecx_kmgmt.c:973-976`.
-unsafe extern "C" fn x448_settable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn x448_settable_params(_provctx: *mut c_void) -> *const OsslParam {
     ECX_SET_PARAMS_LIST.as_ptr()
 }
 
 /// `static const OSSL_PARAM *ed25519_settable_params(void *provctx)` — `ecx_kmgmt.c:978-981`.
-unsafe extern "C" fn ed25519_settable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn ed25519_settable_params(_provctx: *mut c_void) -> *const OsslParam {
     ED_SETTABLE_PARAMS.as_ptr()
 }
 
 /// `static const OSSL_PARAM *ed448_settable_params(void *provctx)` — `ecx_kmgmt.c:983-986`.
-unsafe extern "C" fn ed448_settable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn ed448_settable_params(_provctx: *mut c_void) -> *const OsslParam {
     ED_SETTABLE_PARAMS.as_ptr()
 }
 
@@ -1353,7 +1353,7 @@ unsafe extern "C" fn ecx_gen_set_params(genctx: *mut c_void, params: *const Ossl
 
 /// `static const OSSL_PARAM *ecx_gen_settable_params(void *genctx, void *provctx)` —
 /// `ecx_kmgmt.c:1171-1175`.
-unsafe extern "C" fn ecx_gen_settable_params(
+extern "C" fn ecx_gen_settable_params(
     _genctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
