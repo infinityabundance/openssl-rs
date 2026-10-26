@@ -709,7 +709,15 @@ unsafe fn ocsp_add1_nonce(exts: *mut *mut OpenSslStack, val: *mut c_uchar, len: 
             return 0;
         }
 
-        let mut buf = vec![0u8; os_length as usize];
+        // The authority's `OPENSSL_malloc(os_length)`. `os_length` is non-negative here, but the
+        // allocation is still fallible: an infallible `vec![0u8; n]` aborts the process when the
+        // allocator refuses a large-but-DER-encodable length, where the authority returns 0. The
+        // reservation is explicit so that refusal is the function's failure answer, not an abort.
+        let mut buf: Vec<u8> = Vec::new();
+        if buf.try_reserve_exact(os_length as usize).is_err() {
+            return 0;
+        }
+        buf.resize(os_length as usize, 0);
         let mut os = Asn1String {
             length: os_length,
             type_: V_ASN1_OCTET_STRING,
