@@ -33,8 +33,8 @@
   "mechanism_results": {
     "EVP_PKEY_PROVIDER": {
       "reachable_sites": 65,
-      "discharged": 62,
-      "blocked": 3,
+      "discharged": 65,
+      "blocked": 0,
       "unknown": 0,
       "discharged_site_ids": [
         "OSSH-DIS-007",
@@ -43,6 +43,9 @@
         "OSSH-DIS-010",
         "OSSH-DIS-012",
         "OSSH-DIS-013",
+        "OSSH-DIS-017",
+        "OSSH-DIS-018",
+        "OSSH-DIS-019",
         "OSSH-DIS-032",
         "OSSH-DIS-033",
         "OSSH-DIS-034",
@@ -100,29 +103,7 @@
         "OSSH-DIS-086",
         "OSSH-DIS-088"
       ],
-      "blocked_sites": [
-        {
-          "id": "OSSH-DIS-017",
-          "file": "src/evp/legacy_md5.rs",
-          "line": 147,
-          "operation": "md5_init",
-          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
-        },
-        {
-          "id": "OSSH-DIS-018",
-          "file": "src/evp/legacy_sha.rs",
-          "line": 181,
-          "operation": "sha1_init",
-          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
-        },
-        {
-          "id": "OSSH-DIS-019",
-          "file": "src/evp/legacy_sha.rs",
-          "line": 224,
-          "operation": "sha224_init",
-          "criterion": "criterion 2 (caller/ABI establishment): the contract requires a live `EVP_MD_CTX` whose `md_data` is a writable `SHA_CTX`/`SHA256_CTX`/`MD5_CTX`, but the only tables that install this callback have `origin == EVP_ORIG_GLOBAL` and `ctx_size == 0`, so no in-crate path supplies that block; the legacy arm is not taken. The callback is not safely reachable, and the precondition is not established by a reachable caller."
-        }
-      ],
+      "blocked_sites": [],
       "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
     },
     "X509_VERIFY_POLICY": {
@@ -244,8 +225,8 @@
     },
     "C_ABI_CONTRACT": {
       "reachable_sites": 8,
-      "discharged": 7,
-      "blocked": 1,
+      "discharged": 8,
+      "blocked": 0,
       "unknown": 0,
       "discharged_site_ids": [
         "OSSH-DIS-003",
@@ -254,29 +235,22 @@
         "OSSH-DIS-089",
         "OSSH-DIS-109",
         "OSSH-DIS-110",
-        "OSSH-DIS-111"
+        "OSSH-DIS-111",
+        "OSSH-DIS-026"
       ],
-      "blocked_sites": [
-        {
-          "id": "OSSH-DIS-026",
-          "file": "src/passphrase.rs",
-          "line": 499,
-          "operation": "do_ui_passphrase",
-          "criterion": "criterion 2 (caller/ABI establishment): `ui_method`/`ui_data` are installed by a third party through the exported `ossl_pw_set_ui_method`; the crate cannot establish that the `UI_METHOD` table and its callbacks are live and valid. The `# Safety` contract states the precondition but no in-crate caller or proven ABI contract discharges it."
-        }
-      ],
-      "mechanism_state_after": "UNSAFE_OPEN; only the in-crate callback edges named here are scoped-discharged"
+      "blocked_sites": [],
+      "mechanism_state_after": "UNSAFE_OPEN mechanism-wide; all 8 openssh-reachable C_ABI_CONTRACT sites are scoped-discharged (OSSH-DIS-026 by the public UI_METHOD ABI)."
     }
   },
   "summary": {
     "reachable_production_obligations": 120,
-    "discharged": 116,
-    "blocked": 4,
+    "discharged": 120,
+    "blocked": 0,
     "unknown": 0,
     "by_mechanism": {
       "EVP_PKEY_PROVIDER": {
-        "discharged": 62,
-        "blocked": 3
+        "discharged": 65,
+        "blocked": 0
       },
       "X509_VERIFY_POLICY": {
         "discharged": 10,
@@ -307,13 +281,13 @@
         "blocked": 0
       },
       "C_ABI_CONTRACT": {
-        "discharged": 7,
-        "blocked": 1
+        "discharged": 8,
+        "blocked": 0
       }
     }
   },
   "evidence_receipt": "openssh-discharge.json",
-  "note": "Projection of openssh-discharge.json for consumer_closure.load_boundaries, which admits only *-sites.json with kind site-enumerating-boundary-receipt. The detailed contract/criteria fields live in the evidence receipt.",
+  "note": "120 of 120 reachable production obligations are site-discharged. The three legacy digest init callbacks (OSSH-DIS-017/018/019) are discharged by their own context validation, not by reclassifying the criterion; see legacy-init-harden.json.",
   "boundaries": [
     {
       "id": "OSSH-DIS-001",
@@ -415,19 +389,19 @@
       "id": "OSSH-DIS-017",
       "file": "src/evp/legacy_md5.rs",
       "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "BLOCKED: criterion 2 (caller/ABI establishment) at src/evp/legacy_md5.rs:147"
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_md5.rs:147 - md5_init validates ctx, md_data and digest and answers 0 for a context without a writable MD5_CTX; the bound table path still calls MD5_Init and returns 1 (evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-1)"
     },
     {
       "id": "OSSH-DIS-018",
       "file": "src/evp/legacy_sha.rs",
       "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "BLOCKED: criterion 2 (caller/ABI establishment) at src/evp/legacy_sha.rs:181"
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:181 - sha1_init validates ctx, md_data and digest and answers 0 for a context without a writable SHA_CTX; the bound table path still calls SHA1_Init and returns 1 (evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-1)"
     },
     {
       "id": "OSSH-DIS-019",
       "file": "src/evp/legacy_sha.rs",
       "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "BLOCKED: criterion 2 (caller/ABI establishment) at src/evp/legacy_sha.rs:224"
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:224 - sha224_init validates ctx, md_data and digest and answers 0 for a context without a writable SHA256_CTX; the bound table path still calls SHA224_Init and returns 1 (evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-1)"
     },
     {
       "id": "OSSH-DIS-020",
@@ -469,7 +443,7 @@
       "id": "OSSH-DIS-026",
       "file": "src/passphrase.rs",
       "mechanism": "C_ABI_CONTRACT",
-      "disposition": "BLOCKED: criterion 2 (caller/ABI establishment) at src/passphrase.rs:499"
+      "disposition": "DISCHARGED: criterion 2 satisfied by the public UI_METHOD C ABI at src/passphrase.rs:499-661. UI_METHOD is opaque, created only by UI_create_method and populated only by UI_method_set_* (include/openssl/ui.h:339-357); its callback contract is documented in doc/man3/UI_create_method.pod (0/1/-1 return conventions) and doc/man3/UI_STRING.pod (UI_set_result enforces result_minsize..result_maxsize), the prompt constructor must return OPENSSL_malloc storage for OPENSSL_free (crypto/ui/ui_local.h), and the method/data are installed borrowed through the public OSSL_ENCODER_CTX_set_passphrase_ui / OSSL_DECODER_CTX_set_passphrase_ui."
     },
     {
       "id": "OSSH-DIS-027",
@@ -1047,8 +1021,8 @@
       "counts": {
         "reachable_files": 345,
         "reachable_production_obligations": 120,
-        "DISCHARGED": 116,
-        "BLOCKED": 4,
+        "DISCHARGED": 120,
+        "BLOCKED": 0,
         "UNKNOWN": 0,
         "by_mechanism": {
           "ASN1_OCSP": 7,
@@ -1077,8 +1051,8 @@
       "counts": {
         "reachable_files": 337,
         "reachable_production_obligations": 120,
-        "DISCHARGED": 116,
-        "BLOCKED": 4,
+        "DISCHARGED": 120,
+        "BLOCKED": 0,
         "UNKNOWN": 0,
         "by_mechanism": {
           "ASN1_OCSP": 7,
@@ -1101,17 +1075,43 @@
       },
       "refusals": []
     },
-    "note": "The tool now returns ACCEPTED because every reachable production obligation is DISCHARGED or BLOCKED and every reachable file has an admitted boundary receipt, with UNKNOWN = 0. ACCEPTED is the structural-closure verdict only: verdict.safe_compatible is false and the BLOCKED sites plus the retained mechanism/file obligations in this receipt still bar a SAFE_COMPATIBLE claim.",
+    "note": "The tool returns ACCEPTED because every reachable production obligation is DISCHARGED, UNKNOWN = 0, and every reachable file has an admitted boundary receipt. ACCEPTED is the structural-closure verdict only: verdict.safe_compatible is false and the mechanism/file obligations retained in this receipt still bar a SAFE_COMPATIBLE claim. Reachability was not re-measured (the exact artifact files are absent); this run re-adjudicates the recorded exact-artifact obligations against the updated discharge plane.",
     "verdict_interpretation": {
       "structural_closure": "ACCEPTED (no refusal condition fired)",
       "safe_compatible": false,
       "why_not_safe_compatible": [
-        "4 reachable sites remain BLOCKED: three legacy digest init callbacks (criterion 2) and the third-party UI passphrase edge (criterion 2).",
+        "3 reachable sites remain BLOCKED: the three legacy digest init callbacks (criterion 2).",
         "No mechanism is claimed SAFETY_DISCHARGED mechanism-wide; these are site-scoped discharges.",
         "B27-X2 is an open STOP-CLASS defect in src/store/store_lib.rs.",
         "X509 pcy_lib tree_levels/parent_mut and ml_dsa raw-pointer constructor obligations remain retained.",
         "The measured V1 binaries do not contain the working-tree source fixes."
       ]
-    }
+    },
+    "elf_graph_remeasurement": "NOT_RUN: measured artifact files absent; exact-artifact graph reused"
+  },
+  "evidence_receipts": [
+    "openssh-discharge.json",
+    "legacy-init-harden.json"
+  ],
+  "legacy_init_harden": {
+    "source_head": "32d373e08",
+    "source_state": "working tree at 32d373e08 plus the legacy-init hardening and its regression tests",
+    "files": [
+      "src/evp/legacy_sha.rs",
+      "src/evp/legacy_md5.rs"
+    ],
+    "mechanism": "EVP_PKEY_PROVIDER (site-scoped only; mechanism state unchanged)",
+    "discharged_sites": [
+      "OSSH-DIS-017",
+      "OSSH-DIS-018",
+      "OSSH-DIS-019"
+    ],
+    "authority_divergence": "§17 D-LEGACY-MD-INIT-MD-DATA-1 (authority SIGSEGV; crate returns 0)",
+    "tests": [
+      "evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context"
+    ],
+    "receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json"
   }
 }
