@@ -86,20 +86,40 @@ fn is_unicode_valid(value: c_ulong) -> bool {
 ///
 /// The `ASC`, `BMP` and `UNIV` arms consume a *fixed* number of bytes per
 /// character, so a length that is not a multiple of the unit would run past the
-/// end; the caller has already rejected that for `BMP` and `UNIV`, and `ASC` is
-/// one byte per character by definition. Only the `UTF8` arm is variable-length,
-/// and it is the one that can fail.
+/// end. This function now **enforces** that relationship itself rather than
+/// relying on its callers: a negative `len`, a `BMP` length that is not a
+/// multiple of two, a `UNIV` length that is not a multiple of four, or an
+/// `inform` that is not one of the four `MBSTRING_*` forms answers `-1` before
+/// reading a single byte. (The authority's callers reject the same inputs first,
+/// so the guard is not observable in the library; it removes an obligation a
+/// conforming caller could otherwise violate.) Only the `UTF8` arm is
+/// variable-length, and it is the one that can fail.
 ///
 /// # Safety
 ///
-/// `p` must be readable for `len` bytes and `inform` must be one of the four
-/// `MBSTRING_*` forms, or the `UTF8` arm is taken.
+/// `p` must be readable for `len` bytes when `len > 0` (it may be any pointer,
+/// including one past a zero-length slice, when `len == 0`). No other
+/// precondition is placed on `len` or `inform`: the guards below reject every
+/// combination whose width would overrun that extent.
 unsafe fn traverse_string(
     p: *const c_uchar,
     len: c_int,
     inform: c_int,
     mut rfunc: impl FnMut(c_ulong) -> c_int,
 ) -> c_int {
+    // Reject every length/width pair whose fixed-width read would exceed `len`
+    // before the loop reads anything. `BMP` consumes two bytes and `UNIV` four, so
+    // their lengths must be exact multiples; a negative length would make the loop
+    // read (and decrement) without bound.
+    if len < 0 {
+        return -1;
+    }
+    match inform {
+        MBSTRING_ASC | MBSTRING_UTF8 => {}
+        MBSTRING_BMP if len & 1 == 0 => {}
+        MBSTRING_UNIV if len & 3 == 0 => {}
+        _ => return -1,
+    }
     let mut len = len;
     let mut p = p;
     while len != 0 {
@@ -324,8 +344,15 @@ fn cpy_utf8(value: c_ulong, out: &mut [u8], pos: &mut usize) -> c_int {
 ///
 /// # Safety
 ///
-/// `out` must be null or point at a writable `ASN1_STRING *`; `in` must be
-/// readable for `len` bytes, or NUL-terminated when `len` is `-1`.
+/// `out` must be null or point at a writable `ASN1_STRING *` slot. When `*out` is
+/// non-NULL it must be a live, **exclusively owned** `ASN1_STRING` whose `data` is
+/// NULL or a live allocation from this crate's seam that no other owner holds and
+/// that `in` does not alias: the function may release that data
+/// (`ASN1_STRING_set0(dest, NULL, 0)`) and then overwrite the object. `in` must be
+/// readable for `len` bytes when `len >= 0`, or NUL-terminated when `len == -1`;
+/// `len >= -1`; when `inform` is `MBSTRING_BMP`/`MBSTRING_UNIV`, `len` must be a
+/// multiple of two/four respectively; and `len` must be less than `INT_MAX`.
+/// `inform` must be one of the four `MBSTRING_*` forms.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_mbstring_copy(
     out: *mut *mut Asn1String,
@@ -347,8 +374,15 @@ pub unsafe extern "C" fn ASN1_mbstring_copy(
 ///
 /// # Safety
 ///
-/// `out` must be null or point at a writable `ASN1_STRING *`; `in` must be
-/// readable for `len` bytes, or NUL-terminated when `len` is `-1`.
+/// `out` must be null or point at a writable `ASN1_STRING *` slot. When `*out` is
+/// non-NULL it must be a live, **exclusively owned** `ASN1_STRING` whose `data` is
+/// NULL or a live allocation from this crate's seam that no other owner holds and
+/// that `in` does not alias: the function may release that data
+/// (`ASN1_STRING_set0(dest, NULL, 0)`) and then overwrite the object. `in` must be
+/// readable for `len` bytes when `len >= 0`, or NUL-terminated when `len == -1`;
+/// `len >= -1`; when `inform` is `MBSTRING_BMP`/`MBSTRING_UNIV`, `len` must be a
+/// multiple of two/four respectively; and `len` must be less than `INT_MAX`.
+/// `inform` must be one of the four `MBSTRING_*` forms.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
 // The authority's own test is `len >= INT_MAX`, which is *satisfiable* — it fires
@@ -719,5 +753,127 @@ mod asn1_ocsp_mbstr_tests {
         };
         assert_eq!(ret, -1, "a length at INT_MAX is refused");
         assert!(out.is_null(), "the refusal writes no output");
+    }
+
+    /// Run `traverse_string` over exactly `buf` with the reported `len`, counting the values the
+    /// callback sees. Returns the function's answer and the count.
+    fn traverse(buf: &[u8], len: c_int, inform: c_int) -> (c_int, c_int) {
+        let mut n = 0;
+        // SAFETY: `buf` is the readable extent; every accepting call has `len <= buf.len()` and
+        // the guard rejects a width that would overrun it before any read.
+        let ret = unsafe {
+            traverse_string(buf.as_ptr(), len, inform, |_value| {
+                n += 1;
+                1
+            })
+        };
+        (ret, n)
+    }
+
+    /// ADV-A1: `traverse_string` enforces the per-form length/width relationship itself. `BMP`
+    /// needs a multiple of two and `UNIV` a multiple of four, so the odd/short lengths are
+    /// refused before the first read; `ASC` and `UTF8` accept any non-negative length; a negative
+    /// length is refused rather than looping past the extent; and an `inform` outside the four
+    /// forms is refused instead of silently taking the UTF8 arm.
+    #[test]
+    fn asn1_ocsp_mbstr_traverse_rejects_every_width_mismatch_before_reading() {
+        // BMP: exactly two bytes per value.
+        assert_eq!(traverse(&[], 0, MBSTRING_BMP), (1, 0));
+        assert_eq!(traverse(&[0x00], 1, MBSTRING_BMP), (-1, 0));
+        assert_eq!(traverse(&[0x00, b'A'], 2, MBSTRING_BMP), (1, 1));
+        assert_eq!(traverse(&[0x00, b'A', 0x00], 3, MBSTRING_BMP), (-1, 0));
+        assert_eq!(traverse(&[0x00, b'A', 0x00, b'B'], 4, MBSTRING_BMP), (1, 2));
+
+        // UNIV: exactly four bytes per value.
+        assert_eq!(traverse(&[], 0, MBSTRING_UNIV), (1, 0));
+        for short in 1..=3 {
+            assert_eq!(
+                traverse(&[0u8; 4][..short], short as c_int, MBSTRING_UNIV),
+                (-1, 0),
+                "a UNIV length of {short} must be refused before any read"
+            );
+        }
+        assert_eq!(traverse(&[0; 4], 4, MBSTRING_UNIV), (1, 1));
+        assert_eq!(traverse(&[0; 5], 5, MBSTRING_UNIV), (-1, 0));
+        assert_eq!(traverse(&[0; 8], 8, MBSTRING_UNIV), (1, 2));
+
+        // ASC: one byte per value, so every non-negative length is exact.
+        assert_eq!(traverse(&[], 0, MBSTRING_ASC), (1, 0));
+        assert_eq!(traverse(b"abc", 3, MBSTRING_ASC), (1, 3));
+
+        // UTF8: variable width, so the extent is the only bound.
+        assert_eq!(traverse(&[], 0, MBSTRING_UTF8), (1, 0));
+        assert_eq!(traverse(b"A", 1, MBSTRING_UTF8), (1, 1));
+        assert_eq!(traverse("\u{a2}".as_bytes(), 2, MBSTRING_UTF8), (1, 1));
+        assert_eq!(traverse(&[0xc2], 1, MBSTRING_UTF8), (-1, 0));
+        assert_eq!(traverse(&[0xff], 1, MBSTRING_UTF8), (-1, 0));
+
+        // A negative length used to keep the loop alive past the extent.
+        assert_eq!(traverse(b"x", -1, MBSTRING_ASC), (-1, 0));
+
+        // Any other `inform` used to fall into the UTF8 arm.
+        assert_eq!(traverse(b"x", 1, MBSTRING_FLAG | 0x10), (-1, 0));
+    }
+
+    /// ADV-A2: the caller-supplied `*out` path reuses the object and releases its old `data`
+    /// exactly once. The seam counter (not a statement inside the owner) establishes the release,
+    /// so a second free by `ASN1_STRING_set0` or `ASN1_STRING_set` would be visible as 2.
+    #[test]
+    fn asn1_ocsp_mbstr_reuses_a_caller_supplied_out_and_releases_its_old_data_once() {
+        use crate::runtime::mem::free_probe;
+
+        let input = *b"AB";
+        let mut out: *mut Asn1String = core::ptr::null_mut();
+        // SAFETY: `out` starts NULL and `in` is readable for two bytes.
+        let ret = unsafe {
+            ASN1_mbstring_ncopy(
+                &raw mut out,
+                input.as_ptr(),
+                2,
+                MBSTRING_UTF8,
+                B_ASN1_BMPSTRING,
+                0,
+                0,
+            )
+        };
+        assert_eq!(ret, V_ASN1_BMPSTRING);
+        let dest = out;
+        assert!(!dest.is_null());
+        // SAFETY: `dest` is the fresh object this test owns.
+        let old_data = unsafe { (*dest).data };
+        assert!(!old_data.is_null());
+
+        free_probe::reset();
+        // SAFETY: `out` is a writable slot holding a live, exclusively owned octet string; `in`
+        // does not alias its data.
+        let ret = unsafe {
+            ASN1_mbstring_ncopy(
+                &raw mut out,
+                input.as_ptr(),
+                2,
+                MBSTRING_UTF8,
+                B_ASN1_BMPSTRING,
+                0,
+                0,
+            )
+        };
+        assert_eq!(ret, V_ASN1_BMPSTRING);
+        assert_eq!(out, dest, "the caller's object is reused, not replaced");
+        // SAFETY: `dest` is still the live object this test owns.
+        unsafe {
+            assert_eq!(
+                free_probe::count(old_data.cast::<c_void>()),
+                1,
+                "the old data block is released exactly once"
+            );
+            assert_eq!((*dest).length, 4);
+            let data = (*dest).data;
+            assert!(!data.is_null(), "the conversion installs a block");
+            assert_eq!(
+                (*data, *data.add(1), *data.add(2), *data.add(3)),
+                (0, b'A', 0, b'B')
+            );
+            ASN1_STRING_free(dest);
+        }
     }
 }

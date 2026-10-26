@@ -23,7 +23,7 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc, SEAM_MALLOC_ALIGN};
 use crate::runtime::mem_coords::SeamFile;
 
 /// An owned `CRYPTO_*` block.
@@ -51,6 +51,13 @@ impl<T> OwnedBlock<T> {
     /// on that path, so nothing is leaked, and when the product does not overflow the
     /// request is byte-for-byte the authority's own size.
     pub(crate) fn malloc(count: usize, file: SeamFile, line: c_int) -> Option<OwnedBlock<T>> {
+        // The seam guarantees pointer alignment (see `SEAM_MALLOC_ALIGN`). A type whose
+        // alignment exceeds that bound is refused here, before the allocator is asked, so this
+        // safe constructor cannot hand out a misaligned `NonNull<T>`. The comparison is a
+        // constant for a monomorphisation.
+        if core::mem::align_of::<T>() > SEAM_MALLOC_ALIGN {
+            return None;
+        }
         let file = file.as_ptr();
         let size = count.checked_mul(core::mem::size_of::<T>())?;
         let raw = unsafe {
@@ -68,6 +75,10 @@ impl<T> OwnedBlock<T> {
     /// an overflow answers the module's failure outcome without ever asking the
     /// allocator for a wrapped size.
     pub(crate) fn zalloc(count: usize, file: SeamFile, line: c_int) -> Option<OwnedBlock<T>> {
+        // As `malloc`: an over-aligned `T` is refused rather than handed a misaligned block.
+        if core::mem::align_of::<T>() > SEAM_MALLOC_ALIGN {
+            return None;
+        }
         let file = file.as_ptr();
         let size = count.checked_mul(core::mem::size_of::<T>())?;
         let raw = unsafe {
@@ -84,14 +95,22 @@ impl<T> OwnedBlock<T> {
     /// # Safety
     ///
     /// `ptr` is NULL or a live block of `T` from the crate's allocator that a
-    /// previous `into_raw` gave up and `Drop` has not released; `file`/`line` are
-    /// the values that block's allocation recorded.
+    /// previous `into_raw` gave up and `Drop` has not released, and it is aligned
+    /// for `T`. A non-NULL misaligned pointer answers `None` (the allocation-refusal
+    /// arm), so a caller that violates the alignment precondition loses the block
+    /// instead of obtaining UB.
     pub(crate) unsafe fn from_raw(
         ptr: *mut T,
         file: *const c_char,
         line: c_int,
     ) -> Option<OwnedBlock<T>> {
-        ptr::NonNull::new(ptr).map(|ptr| OwnedBlock { ptr, file, line })
+        ptr::NonNull::new(ptr)
+            .filter(|ptr| {
+                ptr.as_ptr()
+                    .addr()
+                    .is_multiple_of(core::mem::align_of::<T>())
+            })
+            .map(|ptr| OwnedBlock { ptr, file, line })
     }
 
     /// The block's stable address, for the raw C calls the codec makes.
@@ -162,5 +181,30 @@ mod release_family_tests {
         assert_eq!(call.arm, Arm::Plain);
         assert_eq!(call.file, FILE.as_ptr());
         assert_eq!(call.line, 7);
+    }
+
+    /// A type with an alignment the seam cannot guarantee is refused by the safe constructor
+    /// (ADV-R3): the block is never allocated, so no misaligned `NonNull<T>` can exist.
+    #[test]
+    fn over_aligned_block_is_refused() {
+        #[repr(align(64))]
+        #[allow(dead_code)]
+        struct OverAligned(u8);
+
+        assert!(core::mem::align_of::<OverAligned>() > SEAM_MALLOC_ALIGN);
+        assert!(OwnedBlock::<OverAligned>::malloc(1, SeamFile::new(FILE), 1).is_none());
+        assert!(OwnedBlock::<OverAligned>::zalloc(1, SeamFile::new(FILE), 2).is_none());
+    }
+
+    /// Negative control: a type the seam can align is still allocated, and the returned block is
+    /// aligned for it. A constructor that refused everything would make the test above vacuous.
+    #[test]
+    fn seam_aligned_block_is_adopted_and_aligned() {
+        let block = OwnedBlock::<u64>::zalloc(1, SeamFile::new(FILE), 3).expect("8 bytes allocate");
+        assert_eq!(
+            (block.as_ptr() as usize) % core::mem::align_of::<u64>(),
+            0,
+            "the adopted block is aligned for T"
+        );
     }
 }

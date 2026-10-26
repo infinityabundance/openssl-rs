@@ -1,0 +1,153 @@
+{
+  "schema": "openssl-rs/safe-c33/adversarial-refutations-fixed/v1",
+  "kind": "defect-repair-receipt",
+  "receipt": "openssh-refutations-fixed",
+  "date": "2026-10-26",
+  "answers": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/adversarial-asn1-ocsp-alloc.json",
+  "reviewer_of_repair": "conversion engineer (not the author of the adversarial review; also not an independent BOUNDARY reviewer, so no graduation state rises)",
+  "candidate": {
+    "branch_checked_out": "integrate/safe-c33",
+    "head": "6668fc7cef06e68c4cf27556ba426807fad59aa1",
+    "head_note": "the tree is HEAD plus this batch's uncommitted edits; nothing was committed or pushed, so these claims are bound to the pre-existing commit plus an explicit dirty-tree marker, not to a new source identity",
+    "tracked_tree_dirty_at_measurement": true,
+    "files_changed": [
+      "src/asn1/a_mbstr.rs",
+      "src/asn1/owned.rs",
+      "src/engine/eng_table.rs",
+      "src/ocsp/ocsp_ext.rs",
+      "src/ocsp/v3_ocsp.rs",
+      "src/runtime/bio/owned.rs",
+      "src/runtime/mem.rs"
+    ]
+  },
+  "verdicts": {
+    "alignment_defect_was_real": true,
+    "review_was_substantively_correct": "All seven named items were reproduced in source. Items 1, 2, 3, 5, 6 and 7 required code or contract changes; item 4 was a false contract with no UB, corrected as such. The ownership/release model itself (RawCtx/OwnedCtx/OwnedBlock transitions) was not contradicted and was not changed.",
+    "alignment_note": "The defect is real even though every current implementor is pointer-aligned: `OwnedCtx::zalloc` and `RawCtx::malloc` are safe fns, and a conforming CtxDestroy implementor with `#[repr(align(64))]` received `NonNull<Self>` built over a merely pointer-aligned `CRYPTO_malloc` block. `size_of::<T>()` and the allocation were otherwise authority-exact, which is exactly why the alignment obligation was hidden."
+  },
+  "items": [
+    {
+      "id": "ADV-R3",
+      "priority": 1,
+      "class": "soundness: misaligned NonNull<T> through a safe constructor",
+      "outcome": "FIXED",
+      "change": "Added `crate::runtime::mem::SEAM_MALLOC_ALIGN` (the alignment the seam guarantees) and refuse, with the allocation-refusal arm (`None`), any type whose `align_of::<T>()` exceeds it: `RawCtx::malloc_at`/`zalloc_at` (and therefore `OwnedCtx::zalloc`/`zalloc_at`), and `asn1::owned::OwnedBlock::malloc`/`zalloc`. `OwnedCtx::from_raw_at` and `OwnedBlock::from_raw` additionally refuse a non-NULL misaligned pointer instead of constructing an owner that would dereference it. The `CtxDestroy` contract now states that over-aligned implementors are refused by the constructors, so the alignment gap is not a hidden implementor obligation.",
+      "why_this_bound": "`CRYPTO_malloc`'s default branch is libc `malloc` and an installed branch must be malloc-compatible, but neither the OpenSSL interface nor this crate's seam contract promises more than fundamental-type alignment. The conservative, always-conforming bound used is `align_of::<*mut c_void>()` (pointer alignment). `max_align_t` would admit more types, but only by assuming a C-library detail that a caller-installed hook is not contractually required to honour.",
+      "accepted_limitation": "A type aligned above pointer alignment is refused even where libc malloc would in fact align it. The result is a refused allocation (authority failure semantics), never a misaligned owner. No current CtxDestroy implementor or OwnedBlock<T> instantiation is affected (all are align <= pointer alignment).",
+      "tests": [
+        "runtime::bio::owned::adv_partial_init_tests::over_aligned_ctx_is_refused_not_adopted (64-byte-aligned CtxDestroy; all four safe constructors answer None)",
+        "asn1::owned::release_family_tests::over_aligned_block_is_refused (64-byte-aligned T; malloc and zalloc answer None)",
+        "runtime::bio::owned::adv_partial_init_tests::seam_aligned_ctx_is_adopted_and_aligned (negative control: a satisfiable type is still adopted and the address is aligned)",
+        "asn1::owned::release_family_tests::seam_aligned_block_is_adopted_and_aligned (negative control for the block owner)"
+      ]
+    },
+    {
+      "id": "ADV-A1",
+      "priority": 2,
+      "class": "wrong contract: traverse_string admitted BMP/UNIV width mismatches and a negative len",
+      "outcome": "FIXED",
+      "change": "`traverse_string` now enforces the relationship itself, before any read: `len < 0` answers -1; `MBSTRING_BMP` requires an even length and `MBSTRING_UNIV` a multiple of four; any `inform` outside the four `MBSTRING_*` forms answers -1 instead of silently taking the UTF8 arm. The `# Safety` contract is narrowed to the remaining genuine obligation: `p` is readable for `len` bytes when `len > 0`.",
+      "compatibility": "No in-crate caller passes an invalid pair (ASN1_mbstring_ncopy validates first), so library behaviour is unchanged. The private helper is not exported.",
+      "tests": [
+        "asn1::a_mbstr::asn1_ocsp_mbstr_tests::asn1_ocsp_mbstr_traverse_rejects_every_width_mismatch_before_reading: BMP 0/1/2/3/4, UNIV 0..8, ASC 0/3, UTF8 0/1/2/truncated/invalid, len -1, unknown inform; each rejection asserts the callback ran zero times"
+      ]
+    },
+    {
+      "id": "ADV-A2",
+      "priority": 3,
+      "class": "wrong contract: ASN1_mbstring_ncopy/copy did not require a usable *out",
+      "outcome": "FIXED (contract; the authority-shaped reuse is retained)",
+      "change": "Both functions now state the real precondition: `*out`, when non-NULL, is a live, exclusively owned `ASN1_STRING` whose `data` is NULL or a live seam allocation no other owner holds and that `in` does not alias (the function releases it with `ASN1_STRING_set0(dest, NULL, 0)`); `len >= -1`; BMP/UNIV multiples; `len < INT_MAX`; `inform` one of the four forms. `in` must not alias the released data. No runtime change: C callers legitimately pass their own object to be overwritten, so making the slot null-only would break the authority interface.",
+      "tests": [
+        "asn1::a_mbstr::asn1_ocsp_mbstr_tests::asn1_ocsp_mbstr_reuses_a_caller_supplied_out_and_releases_its_old_data_once: two conversions through the same slot; the slot is unchanged, the new content is correct, and the old data block is released exactly once as observed at the allocator seam"
+      ]
+    },
+    {
+      "id": "ADV-R1",
+      "priority": 4,
+      "class": "false contracts: engine_pile_hash / engine_pile_cmp described only stored elements",
+      "outcome": "FIXED (contracts)",
+      "change": "Both contracts now say the argument is a live, fully initialised `EnginePile` that is either a stored element or the caller's stack query template of the same shape, and that only `nid` is read. Named the three template call sites (`engine_table_register` :268 and :308, `ossl_engine_table_select` :511) and the fact that `OPENSSL_LH_retrieve` hashes the key and calls `eq(stored, data)`. The false 'element set established by this module's own insert sites' establishment is removed.",
+      "tests": [
+        "engine::eng_table::tests::lhash_hash_and_compare_accept_a_stack_query_template: hash of a stack template finds the stored pile, a different-nid template misses, and the release path (`int_cleanup_cb_doall`) reclaims the stored pile"
+      ]
+    },
+    {
+      "id": "ADV-A3, ADV-R2",
+      "priority": 5,
+      "class": "under-enumeration: retained unsafe extern callbacks without a contract",
+      "outcome": "FIXED",
+      "change": "Contracts added to `i2r_ocsp_acutoff`, `i2r_ocsp_nonce`, `i2d_ocsp_nonce` (including the octet-string `length`/`data` invariant and the `copy_nonoverlapping` non-alias requirement), `int_unregister_cb`, `int_cleanup_cb_doall` (the actual release path, with the engine-lock requirement for a non-NULL `funct`) and `int_dall`. `ocsp_nonce_new` and `i2r_ocsp_nocheck` read no argument and are now safe `extern \"C\" fn`s; the safe-to-unsafe function-pointer coercion is exercised by the crate build and the row statics.",
+      "unsafe_ops_removed": 2,
+      "tests": [
+        "ocsp::v3_ocsp::nonce_tests::asn1_ocsp_nonce_i2d_copies_and_advances_the_cursor (sizing pass, copy pass, exact bytes, cursor advance; also covers the ADV-A5 interface)",
+        "engine::eng_table::tests::engine_table_doall_forwards_each_pile_to_the_callback (the `int_dall` adapter)",
+        "engine::eng_table::tests::lhash_hash_and_compare_accept_a_stack_query_template (also exercises `int_cleanup_cb_doall`)"
+      ],
+      "not_tested": "`int_unregister_cb` is contracted but has no focused test: driving it needs a live `ENGINE` removal through the table while holding the engine lock, which the existing register/unregister tests cover indirectly but not by name. `i2r_ocsp_crlid`/`i2r_ocsp_serviceloc`/`i2r_ocsp_acutoff`/`i2r_ocsp_nonce` printing and `s2i_ocsp_nocheck` still have no focused test."
+    },
+    {
+      "id": "ADV-A4",
+      "priority": 6,
+      "class": "failure semantics: infallible `vec![0u8; len]` aborts where the authority returns 0",
+      "outcome": "FIXED",
+      "change": "`ocsp_add1_nonce` now reserves explicitly with `Vec::try_reserve_exact(os_length)` and returns 0 on refusal, then `resize`s to the same zeroed extent. A large-but-DER-encodable length is therefore the authority's allocation-failure answer, not a process abort.",
+      "not_tested": "No test forces the large reservation to fail (or succeed): doing so would ask the court container for a ~1 GB block, which the campaign's OOM discipline forbids. The `ASN1_object_size < 0` refusal arm remains tested. The fallible path is enforced by construction, not observed by a test."
+    },
+    {
+      "id": "test-adequacy",
+      "priority": 7,
+      "class": "exactly-once assertions fired inside the release function",
+      "outcome": "FIXED",
+      "change": "Added a test-only, thread-local counting seam at the single `dealloc` funnel in `src/runtime/mem.rs` (every `CRYPTO_free`/`CRYPTO_clear_free`/clear-realloc release passes through it). Tests now assert release counts at the allocator, so a second release performed by a callee (`ASN1_STRING_free`, a `destroy_body`, another `Drop`) is visible as count 2. The existing owner-internal `release_probe` is retained for arm/coordinate/order checks but is no longer the evidence for exactly-once.",
+      "tests": [
+        "runtime::bio::owned::alloc_own_tests::alloc_own_ctx_releases_member_and_block_once_each_by_address now also asserts seam counts of 1 for the member and the block, and the [member, block] order",
+        "runtime::bio::owned::alloc_own_tests::free_probe_counts_a_second_release_at_the_same_address (instrument liveness / negative control)",
+        "ocsp::v3_ocsp::nonce_tests::asn1_ocsp_nonce_decode_release_is_exactly_once_at_the_decoded_address now asserts exactly one seam release for both the object and its data block, and no third release in the window",
+        "ocsp::v3_ocsp::nonce_tests::asn1_ocsp_nonce_refuses_a_length_the_set_cannot_accept_before_reading (replaces the two tests whose `pp` was not readable for the requested length; their SAFETY comments were false)",
+        "ocsp::v3_ocsp::nonce_tests::asn1_ocsp_nonce_refusal_leaves_a_caller_object_untouched (same, over a caller-supplied object)"
+      ],
+      "related_fix": "The first full-suite run exposed that the new thread-local probe panicked during thread-local destruction (`AccessError` reported through `guard_ffi`), because some frees run while a thread's TLS is being torn down. `free_probe::record` now uses `try_with` + `try_borrow_mut` and treats that case as a no-op. The rerun is clean.",
+      "contract_change": "`d2i_ocsp_nonce` now refuses `length < 0` and `length > c_int::MAX - 1` before reading `*pp`, with the same error site. This makes the stated readability obligation exactly `length` bytes; it also removes an out-of-contract input that the authority would have processed (negative length: NUL-terminated read followed by a negative cursor advance). Recorded as a deliberate safety narrowing (AGENTS.md section 17: do not reproduce the C authority's UB), not as compatibility."
+    }
+  ],
+  "structural_guards": {
+    "no_mangle_or_repr_C_diffs": "No exported symbol, signature or production `#[no_mangle]`/`#[repr(C)]` was added, removed or changed. The only `#[repr(C, ...)]` added is a test-local `#[repr(C, align(64))]` type.",
+    "allocator_seam_coordinates": "No `(file, line)` coordinate, allocation size argument or `CRYPTO_*` call site was changed. `src/runtime/mem.rs` is no longer byte-identical to the pre-batch tree: it gained `pub(crate) const SEAM_MALLOC_ALIGN` and a `#[cfg(test)]` record call at the existing `dealloc` funnel. Both are inert in release builds and do not alter allocation or release behaviour."
+  },
+  "gates": {
+    "command_environment": "docker/openssl-rs-court.sh exec, CARGO_BUILD_JOBS=4, CARGO_TARGET_DIR=/work/court/target",
+    "cargo_fmt_all_check": "PASS",
+    "cargo_check_lib": "PASS",
+    "focused_tests": "PASS: asn1_ocsp_ (9), alloc_own_ (5), free_probe_ (1), over_aligned (2), seam_aligned (2), lhash_hash_and_compare (1), engine_table_doall (1)",
+    "cargo_test_lib_test_threads_4": "PASS: 2193 passed; 0 failed; 52 ignored; 0 measured; 2245 total (observed after all edits)",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "not_run": [
+      "ASan/Miri/Loom: not run in this batch",
+      "independent BOUNDARY review: not run (this receipt is by the conversion engineer)",
+      "downstream/consumer compatibility courts: not run"
+    ]
+  },
+  "obligations": {
+    "eliminated": [
+      "the hidden alignment obligation of the generic safe constructors: an over-aligned type can no longer be turned into a `NonNull<T>` by `OwnedCtx::zalloc`/`RawCtx::malloc`/`OwnedBlock<T>::malloc` (refused instead)",
+      "the width/negative-length obligation on `traverse_string`'s callers (enforced in the function)",
+      "the two vacuous `unsafe` markers on `ocsp_nonce_new` and `i2r_ocsp_nocheck`"
+    ],
+    "relocated": [
+      "the `*out` reuse obligation of `ASN1_mbstring_ncopy` is now stated on the unsafe fn (the authority-shaped reuse itself is unchanged)",
+      "the lhash element-type obligation is now stated as 'stored element or same-shaped query template, only nid read' and names each call site"
+    ],
+    "newly_introduced": [
+      "a test-only counting seam at `runtime::mem::dealloc` (thread-local, `#[cfg(test)]`, teardown-safe)",
+      "a conservative refusal of over-aligned generic owners (pointer alignment bound)"
+    ],
+    "hidden_after_this_batch": 0,
+    "state_of_mechanisms": "ASN1_OCSP and RUNTIME_ALLOC_OWNERSHIP remain OWNERSHIP_RECONSTRUCTED. This batch repairs contracts and one soundness gap; it does not supply the independent review section 7/15/21 requires for SAFETY_DISCHARGED, and the repair author is not an independent adjudicator."
+  },
+  "limits": [
+    "The review's provenance defect (its claims were not bound to the source identity it was filed against) is not repaired by this receipt: these edits are uncommitted, so the receipt binds to HEAD plus a dirty-tree marker, not to a new commit.",
+    "This is a repair, not a proof. The absence of a constructed counterexample is not evidence that no counterexample exists.",
+    "No third-party crypto implementations were introduced; `Vec::try_reserve_exact` is the standard library's fallible reservation."
+  ]
+}

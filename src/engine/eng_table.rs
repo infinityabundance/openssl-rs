@@ -148,17 +148,17 @@ pub extern "C" fn ENGINE_set_table_flags(flags: c_uint) {
 ///
 /// # Safety
 ///
-/// `c` must be a live `EnginePile` stored in an ENGINE table's lhash, which is the only way this
-/// callback is installed: [`int_table_check`] creates the table with
-/// `OPENSSL_LH_new(Some(engine_pile_hash), …)` and the module inserts nothing but the
-/// `RawCtx::<EnginePile>` allocations at [`engine_table_register`], so every element the lhash
-/// hashes was allocated and fully initialised here. The lhash never passes NULL for an element it
-/// stored (and a NULL element is never inserted). The callback keeps the `unsafe extern "C"`
-/// shape because the authority's `OPENSSL_LH_HASHFUNC` is a C function pointer over untyped
-/// storage; the lhash itself remains the narrow untyped boundary this obligation lives in.
+/// `c` must be a live, fully initialised `EnginePile`; only its `nid` field is read, so no other
+/// member's state is relevant. It is **not** required that `c` be stored in the table: the lhash
+/// also hashes the caller's stack-local query template. `engine_table_register` passes
+/// `ptr::addr_of!(tmplate)` to `OPENSSL_LH_retrieve` at `:268` and `:308`, and
+/// `ossl_engine_table_select` passes it at `:511`; the template is not an element of any table
+/// and was not allocated by this module. The obligation is therefore "a live `EnginePile`, either
+/// a stored element or a query template of the same shape", and both are established at those
+/// call sites. A NULL pointer is never passed (the lhash rejects a NULL key before hashing).
 unsafe extern "C" fn engine_pile_hash(c: *const c_void) -> core::ffi::c_ulong {
     let pile = c.cast::<EnginePile>();
-    // SAFETY: the lhash calls the hash with a stored pile pointer.
+    // SAFETY: `c` is a live pile or query template per the contract; `nid` is initialised in both.
     unsafe { (*pile).nid as core::ffi::c_ulong }
 }
 
@@ -166,15 +166,18 @@ unsafe extern "C" fn engine_pile_hash(c: *const c_void) -> core::ffi::c_ulong {
 ///
 /// # Safety
 ///
-/// `a` and `b` must both be live `EnginePile`s from the same ENGINE table's lhash; the same
-/// establishment as [`engine_pile_hash`] applies — [`int_table_check`] installs this comparison
-/// and the module inserts only `EnginePile` allocations.
+/// `a` and `b` must each be a live, fully initialised `EnginePile`, and only their `nid` fields
+/// are read. One of them may be the caller's stack-local query template rather than a table
+/// element: the crate's `OPENSSL_LH_retrieve` calls the comparator as `eq(stored, data)`, where
+/// `data` is `ptr::addr_of!(tmplate)` at `:268`, `:308` and `:511`. The same obligation as
+/// [`engine_pile_hash`] applies — "a stored pile or a query template of the same shape" — and is
+/// established at those call sites. Neither argument is NULL.
 unsafe extern "C" fn engine_pile_cmp(a: *const c_void, b: *const c_void) -> c_int {
     let a = a.cast::<EnginePile>();
     let b = b.cast::<EnginePile>();
-    // SAFETY: the lhash calls the comparison with two stored pile pointers. Wrapping
-    // subtraction is the authority's two's-complement result without a debug-build
-    // overflow panic across the `extern "C"` edge (the C subtraction is UB there).
+    // SAFETY: both arguments are live piles or a stored pile and a query template; both `nid`s are
+    // initialised. Wrapping subtraction is the authority's two's-complement result without a
+    // debug-build overflow panic across the `extern "C"` edge (the C subtraction is UB there).
     unsafe { (*a).nid.wrapping_sub((*b).nid) }
 }
 
@@ -373,6 +376,12 @@ pub(crate) unsafe fn engine_table_register(
 }
 
 /// `static void int_unregister_cb(ENGINE_PILE *pile, ENGINE *e)` — `:151-163`.
+///
+/// # Safety
+///
+/// `pile` must be a live `EnginePile` the table's `OPENSSL_LH_doall_arg` walk supplies and `e`
+/// must be the live `ENGINE` being removed. The caller must hold the engine lock: when the pile's
+/// cached `funct` is `e` the body calls `engine_unlocked_finish`, which requires it.
 unsafe extern "C" fn int_unregister_cb(pile: *mut c_void, e: *mut c_void) {
     let pile = pile.cast::<EnginePile>();
     let e = e.cast::<Engine>();
@@ -434,6 +443,15 @@ pub(crate) unsafe fn engine_table_unregister_locked(table: *mut *mut OpenSslLhas
 }
 
 /// `static void int_cleanup_cb_doall(ENGINE_PILE *p)` — `:177-185`.
+///
+/// # Safety
+///
+/// `p` is NULL or a live `EnginePile` this crate allocated with `RawCtx::<EnginePile>` and
+/// inserted, and the lhash still owns it. The walk must visit each element once and must not
+/// itself release the pile: this callback adopts it with [`OwnedCtx::from_raw`], whose `Drop`
+/// runs the authority's destructor body and then the block release. The caller must hold the
+/// engine lock for any pile whose `funct` is non-NULL (`engine_unlocked_finish` requires it);
+/// `engine_table_cleanup` does.
 unsafe extern "C" fn int_cleanup_cb_doall(p: *mut c_void) {
     let p = p.cast::<EnginePile>();
     // `p` is a pile the lhash owns; the handle's `Drop` runs the authority's own
@@ -599,6 +617,14 @@ unsafe fn select_end(fnd: *mut EnginePile, ret: *mut Engine) -> *mut Engine {
 }
 
 /// `static void int_dall(const ENGINE_PILE *pile, ENGINE_PILE_DOALL *dall)` — `:301-304`.
+///
+/// # Safety
+///
+/// `pile` must be a live `EnginePile` from the table the walk is visiting, and `dall` must point
+/// at the live [`EnginePileDoall`] that [`engine_table_doall`] set up for this walk (whose `cb`
+/// and `arg` the application supplied). The caller must hold the engine lock (read or write) and
+/// must not mutate or free the table from `cb`: the body hands the callback the pile's borrowed
+/// `nid`, stack and cached engine.
 unsafe extern "C" fn int_dall(pile: *mut c_void, dall: *mut c_void) {
     let pile = pile.cast::<EnginePile>();
     let dall = dall.cast::<EnginePileDoall>();
@@ -637,6 +663,8 @@ pub(crate) unsafe fn engine_table_doall(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
+
     use super::*;
     use crate::engine::eng_lib::{ENGINE_free, ENGINE_new};
     use crate::test_support::lock_global_state;
@@ -817,6 +845,98 @@ mod tests {
         unsafe {
             assert!((*slot).is_null());
             drop(Box::from_raw(slot));
+        }
+    }
+
+    /// Build one pile the way `engine_table_register` does (a `RawCtx` block, every field
+    /// initialised, then `assume_init` -> `into_raw`), with a NULL stack and no cached default so
+    /// its destructor has nothing to finish.
+    fn make_pile(nid: c_int) -> *mut EnginePile {
+        let raw = RawCtx::<EnginePile>::malloc().expect("a pile block allocates");
+        // SAFETY: `raw` is fresh storage for an `EnginePile`; the caller writes every field.
+        unsafe {
+            let p = raw.as_ptr();
+            (*p).nid = nid;
+            (*p).sk = ptr::null_mut();
+            (*p).funct = ptr::null_mut();
+            (*p).uptodate = 1;
+        }
+        // SAFETY: all four fields are written and `raw` is the only owner.
+        unsafe { raw.assume_init() }.into_raw()
+    }
+
+    fn template(nid: c_int) -> EnginePile {
+        EnginePile {
+            nid,
+            sk: ptr::null_mut(),
+            funct: ptr::null_mut(),
+            uptodate: 1,
+        }
+    }
+
+    /// ADV-R1: the hash and comparator contracts must describe the **stack query template**, not
+    /// only stored elements. `OPENSSL_LH_retrieve` hashes the caller's `data` key and compares it
+    /// against stored nodes, so both callbacks run on `ptr::addr_of!(template)`. This test drives
+    /// that path directly and also exercises the release path (`int_cleanup_cb_doall`) that
+    /// actually reclaims the stored pile.
+    #[test]
+    fn lhash_hash_and_compare_accept_a_stack_query_template() {
+        // SAFETY: the table and the one pile are this test's; the template is a live local.
+        unsafe {
+            let lh = OPENSSL_LH_new(Some(engine_pile_hash), Some(engine_pile_cmp));
+            assert!(!lh.is_null());
+            let stored = make_pile(0x3344);
+            OPENSSL_LH_insert(lh, stored.cast::<c_void>());
+
+            let hit = template(0x3344);
+            assert_eq!(
+                OPENSSL_LH_retrieve(lh, ptr::addr_of!(hit).cast::<c_void>()),
+                stored.cast::<c_void>(),
+                "the stack template is hashed and compared like a stored element"
+            );
+            let miss = template(0x3355);
+            assert!(
+                OPENSSL_LH_retrieve(lh, ptr::addr_of!(miss).cast::<c_void>()).is_null(),
+                "a template with another nid does not match"
+            );
+
+            // The release path: `int_cleanup_cb_doall` adopts and frees each stored pile.
+            OPENSSL_LH_doall(lh, Some(int_cleanup_cb_doall));
+            OPENSSL_LH_free(lh);
+        }
+    }
+
+    unsafe extern "C" fn record_nid(
+        nid: c_int,
+        _sk: *mut OpenSslStack,
+        _def: *mut Engine,
+        arg: *mut c_void,
+    ) {
+        // SAFETY: `arg` is the `c_int` slot `engine_table_doall`'s caller supplied below.
+        unsafe { *arg.cast::<c_int>() = nid };
+    }
+
+    /// The `doall` adapter (`int_dall`) forwards the stored pile's `nid` and borrowed members to
+    /// the application callback. This is the walk `engine_table_doall` installs it for.
+    #[test]
+    fn engine_table_doall_forwards_each_pile_to_the_callback() {
+        // SAFETY: the table, pile and argument slot are this test's.
+        unsafe {
+            let lh = OPENSSL_LH_new(Some(engine_pile_hash), Some(engine_pile_cmp));
+            assert!(!lh.is_null());
+            let stored = make_pile(0x3346);
+            OPENSSL_LH_insert(lh, stored.cast::<c_void>());
+
+            let mut seen: c_int = -1;
+            engine_table_doall(
+                lh,
+                Some(record_nid),
+                ptr::addr_of_mut!(seen).cast::<c_void>(),
+            );
+            assert_eq!(seen, 0x3346, "the callback saw the pile's nid");
+
+            OPENSSL_LH_doall(lh, Some(int_cleanup_cb_doall));
+            OPENSSL_LH_free(lh);
         }
     }
 }
