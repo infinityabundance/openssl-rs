@@ -408,8 +408,9 @@ unsafe extern "C" fn dlfcn_pathbyaddr(addr: *mut c_void, path: *mut c_char, sz: 
     // state, so the substitution really is reachable here: a caller that drained the
     // error gets `dlfcn_pathbyaddr(): <NULL>` on the authority, and did not before this
     // was corrected. `RT-DSO` compares the text.
-    // SAFETY: the helper reads `dlerror()` and appends to the current error slot.
-    unsafe { crate::dso::add_error_data_pathbyaddr() };
+    // The helper reads `dlerror()` and appends to the current error slot; it takes no argument
+    // and has no caller precondition, so the call itself is safe.
+    crate::dso::add_error_data_pathbyaddr();
     -1
 }
 

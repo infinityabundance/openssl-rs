@@ -1323,6 +1323,14 @@ static MONTH_NAMES: [&core::ffi::CStr; 12] = [
 
 /// `static int i2r_OSSL_TIME_SPEC_ABSOLUTE(X509V3_EXT_METHOD *method, OSSL_TIME_SPEC_ABSOLUTE
 /// *time, BIO *out, int indent)` — `crypto/x509/v3_timespec.c:127-156`.
+///
+/// # Safety
+///
+/// `time` is a non-NULL, live `OSSL_TIME_SPEC_ABSOLUTE` and `out` a live `BIO`; both stay valid
+/// for the call. `_method` and `_indent` are unread. `X509V3_EXT_print` establishes this: it
+/// only calls `i2r` with the non-NULL object its own `d2i` produced and the caller's live BIO
+/// (`src/x509/v3_prn.rs:247`, `:288`). The in-file callers likewise pass a live
+/// `OSSL_TIME_SPEC` member.
 unsafe fn i2r_OSSL_TIME_SPEC_ABSOLUTE(
     _method: *const X509V3ExtMethod,
     time: *mut OsslTimeSpecAbsolute,
@@ -1465,6 +1473,12 @@ unsafe fn print_int_month(out: *mut Bio, month: i64) -> c_int {
 }
 
 /// `static int print_bit_month(BIO *out, ASN1_BIT_STRING *bs)` — `crypto/x509/v3_timespec.c:231-246`.
+///
+/// # Safety
+///
+/// `out` is a live `BIO` and `bs` a non-NULL, live `ASN1_BIT_STRING` that is a member of the
+/// object being printed. Established by [`i2r_OSSL_PERIOD`], which passes an `ASN1_BIT_STRING`
+/// field of the decoded `OSSL_TIME_PERIOD` and the live output BIO it was handed.
 unsafe fn print_bit_month(out: *mut Bio, bs: *mut Asn1String) -> c_int {
     let mut i = OSSL_TIME_SPEC_BIT_MONTH_JAN;
     let mut j = 0;
@@ -1551,6 +1565,11 @@ unsafe fn print_int_day_of_week(out: *mut Bio, dow: i64) -> c_int {
 }
 
 /// `static int print_int_named_day(BIO *out, int64_t nd)` — `crypto/x509/v3_timespec.c:310-331`.
+///
+/// # Safety
+///
+/// `out` is a live `BIO`; `nd` is a value. Established by [`i2r_OSSL_PERIOD`], which passes the
+/// live output BIO it was handed.
 unsafe fn print_int_named_day(out: *mut Bio, nd: i64) -> c_int {
     // SAFETY: `out` is live per the caller's contract; each literal is static.
     unsafe {
@@ -1569,6 +1588,11 @@ unsafe fn print_int_named_day(out: *mut Bio, nd: i64) -> c_int {
 
 /// `static int print_bit_named_day(BIO *out, ASN1_BIT_STRING *bs)` —
 /// `crypto/x509/v3_timespec.c:333-336`.
+///
+/// # Safety
+///
+/// `out` is a live `BIO` and `bs` a non-NULL, live `ASN1_BIT_STRING` member of the object being
+/// printed; this is [`print_day_of_week`]'s contract, forwarded unchanged.
 unsafe fn print_bit_named_day(out: *mut Bio, bs: *mut Asn1String) -> c_int {
     // SAFETY: `out` and `bs` are live per the caller's contract.
     unsafe { print_day_of_week(out, bs) }

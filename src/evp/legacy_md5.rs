@@ -144,6 +144,17 @@ const fn legacy_md(
 // ---------------------------------------------------------------------------------------------
 
 /// `md5_init` — `legacy_meth.h:11-14`, with `fn` = `MD5`.
+///
+/// # Safety
+///
+/// `ctx` is the live `EVP_MD_CTX` this legacy method is being initialised on, and
+/// `EVP_MD_CTX_get0_md_data(ctx)` is a writable `MD5_CTX`. The establishing condition is the
+/// method's `ctx_size`: `evp_md_init_legacy` allocates `md_data` from `(*type).ctx_size` and calls
+/// `init` only afterwards (`src/evp/digest.rs:2302`, `:2339`). This file's tables have
+/// `ctx_size == 0` and `origin == EVP_ORIG_GLOBAL`, so `evp_md_init_internal` never routes them to
+/// the legacy arm (`src/evp/digest.rs:2146`): the provider implementation is fetched by NID and
+/// replaces the method first. The callback is therefore only reachable if a caller made this
+/// table its own legacy method with a matching `ctx_size`, which no exported entry point does.
 unsafe extern "C" fn md5_init(ctx: *mut EvpMdCtx) -> c_int {
     // SAFETY: the caller's contract; `md_data` reads a field of a live context and `MD5_Init`
     // writes the block it points at.

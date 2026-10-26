@@ -33,6 +33,7 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
 
 use crate::asn1::a_dup::ASN1_item_dup;
+use crate::asn1::bio_asn1::Asn1StreamArg;
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::fre::ASN1_item_free;
 use crate::asn1::i2d::{ASN1_item_i2d, ASN1_item_ndef_i2d};
@@ -486,6 +487,15 @@ fn pkcs7_adb() -> *const c_void {
 /// `pk7_cb` — `pk7_asn1.c:33-58`. The four streaming operations call Phase 12.2's
 /// `PKCS7_stream`/`PKCS7_dataInit`/`PKCS7_dataFinal`; every other operation falls through and
 /// answers 1.
+///
+/// # Safety
+///
+/// `pval` is the live value slot of the `PKCS7` item being encoded (`*pval` a live `PKCS7`), and
+/// `exarg` is NULL on every operation except the four streaming ones, where it is a live
+/// `ASN1_STREAM_ARG` laid out as `asn1t.h` declares it (`out`, `ndef_bio`, `boundary`).
+/// `_it` is unread. Established in-crate by `bio_asn1`'s `BIO_new_NDEF`, which passes
+/// `&mut ASN1_STREAM_ARG`, and by `asn_mime` for the detached arms; the non-streaming operations
+/// pass NULL and are handled by the `_ => {}` arm.
 unsafe extern "C" fn pk7_cb(
     operation: c_int,
     pval: *mut *mut c_void,
@@ -554,17 +564,12 @@ static PKCS7_AUX: SyncAux = SyncAux(Asn1Aux {
     asn1_const_cb: None,
 });
 
-/// `ASN1_STREAM_ARG` — `include/openssl/asn1.h`: the boundary, the input/output BIOs and the
-/// `ndef_bio` the callback hands back. Modelled where the streaming callback reads it.
-#[repr(C)]
-struct Asn1StreamArg {
-    /// `BIO *out`.
-    out: *mut Bio,
-    /// `unsigned char ***boundary`.
-    boundary: *mut *mut u8,
-    /// `BIO *ndef_bio`.
-    ndef_bio: *mut Bio,
-}
+// `ASN1_STREAM_ARG` is `asn1::bio_asn1`'s type, the one the streaming machinery actually passes.
+// It used to be redefined here as `{ out, boundary, ndef_bio }`, which disagreed with both
+// `asn1t.h`'s and `bio_asn1`'s `{ out, ndef_bio, boundary }`: `pk7_cb` then wrote `ndef_bio` into
+// the caller's `boundary` slot and read the caller's `ndef_bio` as the boundary, so
+// `BIO_new_NDEF` returned the address of an `ASN1_OCTET_STRING`'s `data` field where a BIO was
+// expected. Importing the canonical definition removes the mismatch.
 
 /// A tiny forwarder so `pk7_cb`'s `STREAM_PRE` arm can spell the authority's
 /// `PKCS7_dataInit(*pp7, sarg->out)`.
@@ -575,6 +580,13 @@ fn pkcs7_get_octet_string_address(_p7: *mut Pkcs7) -> *mut Bio {
 
 /// `si_cb` — `pk7_asn1.c:136-144`. On `ASN1_OP_FREE_POST` the signer's private key, which the
 /// item layer does not own, is released.
+///
+/// # Safety
+///
+/// `pval` is the live value slot of the `PKCS7_SIGNER_INFO` being freed; on `ASN1_OP_FREE_POST`
+/// `*pval` is still the live object (the item layer frees the enclosing block afterwards, not
+/// before). `_it`/`_exarg` are unread. Established by `asn1::fre`'s free walk, which calls
+/// `ASN1_OP_FREE_POST` with the caller's slot after releasing the template's fields.
 unsafe extern "C" fn si_cb(
     operation: c_int,
     pval: *mut *mut c_void,
@@ -1784,4 +1796,23 @@ pub unsafe extern "C" fn PKCS7_print_ctx(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe { ASN1_item_print(out, x.cast(), indent, PKCS7_it(), pctx) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `ASN1_STREAM_ARG` must be the authority's three-pointer record in the field order
+    /// `asn1t.h:709-716` declares (`out`, `ndef_bio`, `boundary`). `pk7_cb` casts the item
+    /// layer's `exarg` to this type, so any other order would make it write `ndef_bio` into the
+    /// caller's `boundary` slot -- which is what a local redefinition of the struct did before
+    /// it was replaced by the `asn1::bio_asn1` type.
+    #[test]
+    fn asn1_stream_arg_keeps_the_authority_field_order() {
+        let word = core::mem::size_of::<*mut c_void>();
+        assert_eq!(core::mem::offset_of!(Asn1StreamArg, out), 0);
+        assert_eq!(core::mem::offset_of!(Asn1StreamArg, ndef_bio), word);
+        assert_eq!(core::mem::offset_of!(Asn1StreamArg, boundary), 2 * word);
+        assert_eq!(core::mem::size_of::<Asn1StreamArg>(), 3 * word);
+    }
 }
