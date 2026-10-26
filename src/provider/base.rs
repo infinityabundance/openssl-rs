@@ -146,7 +146,7 @@ static BASE_PARAM_TYPES: [OsslParam; 5] = [
 /// `static const OSSL_PARAM *base_gettable_params(void *provctx)` — `providers/baseprov.c:41-44`.
 ///
 /// The authority's body returns the table and reads neither argument.
-unsafe extern "C" fn base_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn base_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     BASE_PARAM_TYPES.as_ptr()
 }
 

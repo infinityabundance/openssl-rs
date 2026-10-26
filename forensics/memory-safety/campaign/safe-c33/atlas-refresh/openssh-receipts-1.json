@@ -1,0 +1,5661 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-receipts-1",
+  "subphase": "P25 openssh closure: provider cluster (digest, cipher, ecx_kmgmt, keymgmt)",
+  "date": "2026-10-26",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "source_head": "9fa946ccc1eb9516090b8096e0aae38e41150602",
+    "inventory": "v1b-candidate-freeze.json (source head 4a95b73a8)",
+    "closure_runs": [
+      "court/tmp/openssh-closure/current-ssh.json",
+      "court/tmp/openssh-closure/current-sshd.json"
+    ],
+    "line_note": "inventory line is the V1b coordinate; current_line is the post-repair line in the checkout. Removing the `unsafe` token does not move lines; collapsing a NullMd call-site unsafe block did move the later NullMd coordinates, recorded per site."
+  },
+  "scope": {
+    "mechanism": "EVP_PKEY_PROVIDER",
+    "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+    "reachable_operation_set": "the openssh closure's V1 production obligation coordinates for these four files (the tool's reachability claim), plus every other unsafe item in the files listed under additional_operations",
+    "additional_operations_policy": "additional_operations enumerates every other unsafe fn returned by a brace-matched scan of the file. Their contracts were NOT individually re-audited in this subphase; audited=false means enumerated, not adjudicated.",
+    "discharge_claim": "none. No site is DISCHARGED: the shared mechanism is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names any of these sites. A site receipt can only move an obligation from UNKNOWN to BLOCKED."
+  },
+  "summary": {
+    "sites_enumerated": 47,
+    "by_source_state": {
+      "ELIMINATED": 25,
+      "VESTIGIAL_REMOVED": 6,
+      "CONTRACTED": 16
+    },
+    "by_mechanism": {
+      "EVP_PKEY_PROVIDER": 47
+    },
+    "additional_unsafe_items_by_file": {
+      "src/provider/cipher.rs": 443,
+      "src/provider/digest.rs": 47,
+      "src/provider/ecx_kmgmt.rs": 55,
+      "src/provider/keymgmt.rs": 38
+    },
+    "discharged": 0,
+    "blocked": 47,
+    "unknown": 0
+  },
+  "boundaries": [
+    {
+      "id": "OSSH-R1-001",
+      "file": "src/provider/digest.rs",
+      "line": 300,
+      "inventory_line": 300,
+      "current_line": 300,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_digest_default_gettable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. The unsafe marker was removed; a safe `extern \"C\" fn` coerces to the dispatch slot.",
+      "established_by": [
+        "type invariant: DIGEST_DEFAULT_GETTABLE_PARAMS is a 'static array"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-002",
+      "file": "src/provider/digest.rs",
+      "line": 407,
+      "inventory_line": 407,
+      "current_line": 407,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "digest_impl::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new` is safe and `into_raw` is safe. The body contains no unsafe operation, so the marker was removed.",
+      "established_by": [
+        "body inspection: no unsafe operation; safe fn coerces to the dispatch slot"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-003",
+      "file": "src/provider/digest.rs",
+      "line": 418,
+      "inventory_line": 418,
+      "current_line": 423,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "digest_impl::freectx",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `$ctx` this row's `newctx`/`dupctx` handed to the core and the core has not released; the core calls `freectx` exactly once per such pointer, through the dispatch row that installed this function.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop = one CRYPTO_clear_free at size_of::<$ctx>()"
+      ],
+      "residual": "secret-clearing: Drop calls CRYPTO_clear_free at the exact block size"
+    },
+    {
+      "id": "OSSH-R1-004",
+      "file": "src/provider/digest.rs",
+      "line": 559,
+      "inventory_line": 559,
+      "current_line": 559,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1::settable_ctx_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table. The unsafe marker was removed.",
+      "established_by": [
+        "type invariant: SETTABLE is a 'static array"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-005",
+      "file": "src/provider/digest.rs",
+      "line": 567,
+      "inventory_line": 567,
+      "current_line": 596,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1::set_ctx_params",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `ShaCtx` this row produced; `params` is NULL or a key-terminated `OSSL_PARAM` array and a located OCTET_STRING entry's `data` is readable for its `data_size`. `ossl_sha1_ctrl` consumes the value only when `data_size == 48`.",
+      "established_by": [
+        "C ABI: OSSL_PARAM termination/extent (include/openssl/params.h)",
+        "caller: internal_init and the dispatch pass the array unchanged",
+        "type invariant: data_type is checked before data/data_size are read"
+      ],
+      "residual": "DEFECT (recorded): the SSL3 master-secret digest temporaries in digest/sha1.rs are not cleansed on the early-failure returns; see residuals"
+    },
+    {
+      "id": "OSSH-R1-006",
+      "file": "src/provider/digest.rs",
+      "line": 599,
+      "inventory_line": 599,
+      "current_line": 628,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new`/`into_raw` are safe. Marker removed.",
+      "established_by": [
+        "body inspection: no unsafe operation"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-007",
+      "file": "src/provider/digest.rs",
+      "line": 610,
+      "inventory_line": 610,
+      "current_line": 642,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha1::freectx",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `ShaCtx` from this row's `newctx`/`dupctx`, not yet released; the core calls this once per such pointer.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-008",
+      "file": "src/provider/digest.rs",
+      "line": 895,
+      "inventory_line": 895,
+      "current_line": 895,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::ctx_init",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_ctx` is unread and the fn returns a constant. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-009",
+      "file": "src/provider/digest.rs",
+      "line": 900,
+      "inventory_line": 900,
+      "current_line": 900,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::ctx_update",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: all three arguments are unread and the fn returns a constant. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-010",
+      "file": "src/provider/digest.rs",
+      "line": 908,
+      "inventory_line": 908,
+      "current_line": 904,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::ctx_final",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: both arguments are unread and the fn returns a constant. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-011",
+      "file": "src/provider/digest.rs",
+      "line": 912,
+      "inventory_line": 912,
+      "current_line": 940,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new`/`into_raw` are safe. Marker removed.",
+      "established_by": [
+        "body inspection: no unsafe operation"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-012",
+      "file": "src/provider/digest.rs",
+      "line": 923,
+      "inventory_line": 923,
+      "current_line": 954,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "null_md::freectx",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `NullMdCtx` from this row's `newctx`/`dupctx`, not yet released.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-013",
+      "file": "src/provider/digest.rs",
+      "line": 1054,
+      "inventory_line": 1054,
+      "current_line": 1049,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_sha1::settable_ctx_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table.",
+      "established_by": [
+        "type invariant: SETTABLE is a 'static array"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-014",
+      "file": "src/provider/digest.rs",
+      "line": 1063,
+      "inventory_line": 1063,
+      "current_line": 1098,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_sha1::set_ctx_params",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `Md5Sha1Ctx` this row produced; `params` is NULL or a key-terminated `OSSL_PARAM` array and a located OCTET_STRING entry's `data` is readable for its `data_size`; `ossl_md5_sha1_ctrl` consumes it only when `data_size == 48`.",
+      "established_by": [
+        "C ABI: OSSL_PARAM termination/extent",
+        "caller: internal_init and the dispatch pass the array unchanged",
+        "type invariant: data_type is checked before data/data_size are read"
+      ],
+      "residual": "DEFECT (recorded): md5_sha1_ctrl's secret-derived temporaries are not cleansed on early failure returns; see residuals"
+    },
+    {
+      "id": "OSSH-R1-015",
+      "file": "src/provider/digest.rs",
+      "line": 1095,
+      "inventory_line": 1095,
+      "current_line": 1130,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_sha1::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new`/`into_raw` are safe. Marker removed.",
+      "established_by": [
+        "body inspection: no unsafe operation"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-016",
+      "file": "src/provider/digest.rs",
+      "line": 1106,
+      "inventory_line": 1106,
+      "current_line": 1144,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "md5_sha1::freectx",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `Md5Sha1Ctx` from this row's `newctx`/`dupctx`, not yet released.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-017",
+      "file": "src/provider/digest.rs",
+      "line": 1255,
+      "inventory_line": 1255,
+      "current_line": 1298,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::new_keccak",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition on the arguments (`pad`, `bitlen`, `mdlen` are row constants). On success the returned block is owned by the caller and returned exactly once to `freectx`; on failure it answers NULL and transfers nothing.",
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of size_of::<KeccakCtx>()",
+        "body: the state is initialised through ossl_sha3_init/ossl_keccak_init before hand-out"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-018",
+      "file": "src/provider/digest.rs",
+      "line": 1281,
+      "inventory_line": 1281,
+      "current_line": 1327,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::freectx",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `KeccakCtx` from this row's `newctx`/`dupctx`, not yet released.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-019",
+      "file": "src/provider/digest.rs",
+      "line": 1377,
+      "inventory_line": 1377,
+      "current_line": 1372,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::refuse_squeeze",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: every argument is unread and the fn refuses the operation. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-020",
+      "file": "src/provider/digest.rs",
+      "line": 1391,
+      "inventory_line": 1391,
+      "current_line": 1441,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::shake_set_ctx_params",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `KeccakCtx` this row produced; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located size_t entries are readable.",
+      "established_by": [
+        "C ABI: OSSL_PARAM termination/extent",
+        "type invariant: the located entries are checked for null before use"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-021",
+      "file": "src/provider/digest.rs",
+      "line": 1463,
+      "inventory_line": 1463,
+      "current_line": 1458,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::settable_ctx_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table.",
+      "established_by": [
+        "type invariant: CTX_PARAMS is a 'static array"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-022",
+      "file": "src/provider/digest.rs",
+      "line": 1471,
+      "inventory_line": 1471,
+      "current_line": 1525,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3::keccak_init_params",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `KeccakCtx` this row produced; `params` is NULL or a key-terminated `OSSL_PARAM` array (forwarded to shake_set_ctx_params).",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_INIT + OSSL_PARAM termination/extent"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-023",
+      "file": "src/provider/digest.rs",
+      "line": 1548,
+      "inventory_line": 1548,
+      "current_line": 1543,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "sha3_xof_row::newctx",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition on `_provctx` (unread). The block returned by `new_keccak` is owned by the caller and released exactly once by the matching `freectx`.",
+      "established_by": [
+        "type invariant: new_keccak's ownership transfer",
+        "body: the only unsafe operation is the call to new_keccak"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-024",
+      "file": "src/provider/digest.rs",
+      "line": 1781,
+      "inventory_line": 1781,
+      "current_line": 1776,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "blake2::settable_ctx_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table.",
+      "established_by": [
+        "type invariant: CTX_PARAMS is a 'static array"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-025",
+      "file": "src/provider/digest.rs",
+      "line": 1793,
+      "inventory_line": 1793,
+      "current_line": 1859,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "blake2::newctx",
+      "source_state": "VESTIGIAL_REMOVED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread; `OwnedCtx::new`/`into_raw` are safe. Marker removed.",
+      "established_by": [
+        "body inspection: no unsafe operation"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-026",
+      "file": "src/provider/digest.rs",
+      "line": 1804,
+      "inventory_line": 1804,
+      "current_line": 1874,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "blake2::freectx",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`vctx` is NULL or a live `$flavour::MdData` from this row's `newctx`/`dupctx`, not yet released.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FREECTX lifecycle",
+        "type invariant: OwnedCtx::from_raw + Drop"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-027",
+      "file": "src/provider/digest.rs",
+      "line": 2356,
+      "inventory_line": 2356,
+      "current_line": 2351,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "deflt_gettable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table.",
+      "established_by": [
+        "type invariant: the returned table is 'static"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-028",
+      "file": "src/provider/cipher.rs",
+      "line": 967,
+      "inventory_line": 967,
+      "current_line": 971,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "block_fn",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`ctx` is a live `ProvCipherCtx` produced by this provider's `newctx`/`dupctx`; it is not released or concurrently mutated for the call. The returned block function is the one the matching `initkey` stored.",
+      "established_by": [
+        "type invariant: every caller holds the context created by newctx/dupctx",
+        "body: only (*ctx).block is read"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-029",
+      "file": "src/provider/cipher.rs",
+      "line": 11077,
+      "inventory_line": 11077,
+      "current_line": 11077,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: no pointer argument; returns the AES-NI capability bit. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-030",
+      "file": "src/provider/cipher.rs",
+      "line": 11082,
+      "inventory_line": 11082,
+      "current_line": 11082,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: no pointer argument; returns the AES-NI capability bit. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-031",
+      "file": "src/provider/cipher.rs",
+      "line": 11092,
+      "inventory_line": 11092,
+      "current_line": 11092,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1_etm",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: no pointer argument; the x86-64 stub returns 0. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-032",
+      "file": "src/provider/cipher.rs",
+      "line": 11097,
+      "inventory_line": 11097,
+      "current_line": 11097,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256_etm",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: no pointer argument; the x86-64 stub returns 0. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-033",
+      "file": "src/provider/cipher.rs",
+      "line": 11102,
+      "inventory_line": 11102,
+      "current_line": 11102,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ossl_cipher_capable_aes_cbc_hmac_sha512_etm",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: no pointer argument; the x86-64 stub returns 0. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-034",
+      "file": "src/provider/cipher.rs",
+      "line": 21686,
+      "inventory_line": 21686,
+      "current_line": 21694,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "tdes_desx_cbc_newctx",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition on `provctx` (stored, not dereferenced). On success the returned `ProvTdesCtx` block is owned by the caller and returned exactly once to `tdes_freectx`; on failure it answers NULL.",
+      "established_by": [
+        "type invariant: OwnedCtx::new allocates a zeroed block of size_of::<ProvTdesCtx>()",
+        "body: ossl_cipher_generic_initkey initialises the block before hand-out"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-035",
+      "file": "src/provider/cipher.rs",
+      "line": 21712,
+      "inventory_line": 21712,
+      "current_line": 21724,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "tdes_desx_cbc_get_params",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array whose located `data` slots are writable for their `data_size` (the dispatch GET_PARAMS contract).",
+      "established_by": [
+        "C ABI: OSSL_FUNC_CIPHER_GET_PARAMS / OSSL_PARAM termination/extent"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-036",
+      "file": "src/provider/cipher.rs",
+      "line": 22168,
+      "inventory_line": 22168,
+      "current_line": 22184,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "rc4_hmac_md5_get_params",
+      "source_state": "CONTRACTED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array whose located `data` slots are writable for their `data_size` (the dispatch GET_PARAMS contract).",
+      "established_by": [
+        "C ABI: OSSL_FUNC_CIPHER_GET_PARAMS / OSSL_PARAM termination/extent"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-037",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 591,
+      "inventory_line": 591,
+      "current_line": 591,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ecx_imexport_types",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `selection` is a value and the fn returns a 'static table or NULL. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-038",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 911,
+      "inventory_line": 911,
+      "current_line": 911,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ed25519_gettable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-039",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 916,
+      "inventory_line": 916,
+      "current_line": 916,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ed448_gettable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-040",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 1094,
+      "inventory_line": 1094,
+      "current_line": 1094,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "x448_settable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-041",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 1099,
+      "inventory_line": 1099,
+      "current_line": 1099,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ed25519_settable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-042",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 1104,
+      "inventory_line": 1104,
+      "current_line": 1104,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ed448_settable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-043",
+      "file": "src/provider/ecx_kmgmt.rs",
+      "line": 1356,
+      "inventory_line": 1356,
+      "current_line": 1356,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "ecx_gen_settable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: both arguments are unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-044",
+      "file": "src/provider/keymgmt.rs",
+      "line": 843,
+      "inventory_line": 843,
+      "current_line": 843,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dh_import_types",
+      "source_state": "VESTIGIAL_REMOVED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `selection` is a value, `dh_imexport_types` only indexes a four-entry 'static table with a mask-derived in-range index, and the function reads no pointer. The marker was removed from this fn and from `dh_imexport_types`/`dh_export_types`.",
+      "established_by": [
+        "body inspection: no unsafe operation in any of the three functions",
+        "type invariant: selection masks produce index 0..3 of a [4] table"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-045",
+      "file": "src/provider/keymgmt.rs",
+      "line": 920,
+      "inventory_line": 920,
+      "current_line": 919,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dh_gettable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-046",
+      "file": "src/provider/keymgmt.rs",
+      "line": 929,
+      "inventory_line": 929,
+      "current_line": 928,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dh_settable_params",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_provctx` is unread and the fn returns a 'static table. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-R1-047",
+      "file": "src/provider/keymgmt.rs",
+      "line": 1764,
+      "inventory_line": 1764,
+      "current_line": 1763,
+      "kind": "UNSAFE_FN_DEF",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "operation": "dhx_query_operation_name",
+      "source_state": "ELIMINATED",
+      "site_disposition": "CONTRACTED",
+      "disposition": "BLOCKED",
+      "closure": "BLOCKED: EVP_PKEY_PROVIDER is OWNERSHIP_RECONSTRUCTED and no scoped SAFETY_DISCHARGED receipt names this site",
+      "contract": "No caller precondition: `_operation_id` is unread and the fn returns a 'static C string. Marker removed.",
+      "established_by": [
+        "body inspection"
+      ],
+      "residual": null
+    }
+  ],
+  "additional_operations": {
+    "src/provider/cipher.rs": [
+      {
+        "line": 389,
+        "name": "bits",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 400,
+        "name": "bits_set",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 480,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 526,
+        "name": "from_raw",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 575,
+        "name": "adopt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 609,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 620,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 631,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 642,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 653,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 664,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 675,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 690,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 700,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 710,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 720,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 740,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 750,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 761,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 772,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 795,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 806,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 817,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 828,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 872,
+        "name": "repeated_param_site",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 984,
+        "name": "ossl_cipher_fillblock",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1010,
+        "name": "ossl_cipher_trailingdata",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1036,
+        "name": "ossl_cipher_padblock",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1052,
+        "name": "ossl_cipher_unpadblock",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1080,
+        "name": "ossl_cipher_generic_reset_ctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1105,
+        "name": "cipher_generic_init_internal",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1160,
+        "name": "ossl_cipher_generic_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1176,
+        "name": "ossl_cipher_generic_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1192,
+        "name": "ossl_cipher_generic_skey_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1209,
+        "name": "ossl_cipher_generic_skey_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1228,
+        "name": "ossl_cipher_generic_block_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1323,
+        "name": "ossl_cipher_generic_block_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1401,
+        "name": "ossl_cipher_generic_stream_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1435,
+        "name": "ossl_cipher_generic_stream_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1459,
+        "name": "ossl_cipher_generic_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1492,
+        "name": "ossl_cipher_common_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1551,
+        "name": "ossl_cipher_generic_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1573,
+        "name": "ossl_cipher_common_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1622,
+        "name": "ossl_cipher_generic_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1646,
+        "name": "ossl_param_is_empty",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1658,
+        "name": "ossl_cipher_generic_initiv",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1695,
+        "name": "ossl_cipher_generic_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1965,
+        "name": "ossl_cipher_generic_gettable_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1987,
+        "name": "ossl_cipher_generic_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2008,
+        "name": "ossl_cipher_generic_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2020,
+        "name": "ossl_cipher_generic_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2097,
+        "name": "set_uint_flag",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2112,
+        "name": "set_int_flag",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2127,
+        "name": "set_size_param",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2156,
+        "name": "ossl_cipher_hw_generic_cbc",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2200,
+        "name": "ossl_cipher_hw_generic_ecb",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2231,
+        "name": "ossl_cipher_hw_generic_ofb128",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2259,
+        "name": "ossl_cipher_hw_generic_cfb128",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2288,
+        "name": "ossl_cipher_hw_generic_cfb8",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2317,
+        "name": "ossl_cipher_hw_generic_cfb1",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2380,
+        "name": "ossl_cipher_hw_generic_ctr",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2429,
+        "name": "ossl_cipher_hw_chunked_cbc",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2458,
+        "name": "ossl_cipher_hw_chunked_cfb8",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2490,
+        "name": "ossl_cipher_hw_chunked_cfb128",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2522,
+        "name": "ossl_cipher_hw_chunked_ofb128",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2622,
+        "name": "aes_block_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2631,
+        "name": "aes_block_decrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2640,
+        "name": "aes_cbc_run",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2656,
+        "name": "camellia_block_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2665,
+        "name": "camellia_block_decrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2674,
+        "name": "camellia_cbc_run",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2690,
+        "name": "cipher_hw_aes_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2725,
+        "name": "cipher_hw_aes_copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2739,
+        "name": "cipher_hw_camellia_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2771,
+        "name": "cipher_hw_camellia_copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2792,
+        "name": "cipher_hw_tdes_ede3_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2813,
+        "name": "cipher_hw_tdes_ede2_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2834,
+        "name": "cipher_hw_tdes_copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2851,
+        "name": "ossl_cipher_hw_tdes_ecb",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2885,
+        "name": "ossl_cipher_hw_tdes_cbc",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2933,
+        "name": "ossl_cipher_hw_tdes_ofb",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2983,
+        "name": "ossl_cipher_hw_tdes_cfb",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3035,
+        "name": "ossl_cipher_hw_tdes_cfb8",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3085,
+        "name": "ossl_cipher_hw_tdes_cfb1",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3135,
+        "name": "aes_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3144,
+        "name": "aes_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3173,
+        "name": "camellia_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3182,
+        "name": "camellia_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3211,
+        "name": "tdes_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3220,
+        "name": "tdes_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3253,
+        "name": "ossl_tdes_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3289,
+        "name": "ossl_tdes_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3307,
+        "name": "ossl_tdes_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3319,
+        "name": "ossl_tdes_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3331,
+        "name": "ossl_tdes_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3658,
+        "name": "aes_wrap_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3697,
+        "name": "aes_wrap_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3738,
+        "name": "aes_wrap_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3747,
+        "name": "aes_wrap_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3809,
+        "name": "aes_wrap_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3825,
+        "name": "aes_wrap_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3844,
+        "name": "aes_wrap_cipher_internal",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3920,
+        "name": "aes_wrap_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 3949,
+        "name": "aes_wrap_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4013,
+        "name": "aes_wrap_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4260,
+        "name": "cts_mode_name2id",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4279,
+        "name": "cts_hw_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4296,
+        "name": "cts_do_xor",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4311,
+        "name": "cts128_cs1_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4347,
+        "name": "cts128_cs1_decrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4415,
+        "name": "cts128_cs3_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4464,
+        "name": "cts128_cs3_decrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4541,
+        "name": "cts128_cs2_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4564,
+        "name": "cts128_cs2_decrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4587,
+        "name": "ossl_cipher_cbc_cts_block_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4641,
+        "name": "ossl_cipher_cbc_cts_block_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4658,
+        "name": "cts_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4679,
+        "name": "cts_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4700,
+        "name": "cts_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4719,
+        "name": "cts_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4754,
+        "name": "cts_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 4773,
+        "name": "cts_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5028,
+        "name": "aes_xts_check_keys_differ",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5045,
+        "name": "cipher_hw_aes_xts_generic_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5077,
+        "name": "cipher_hw_aes_xts_copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5095,
+        "name": "cipher_hw_aes_xts_cipher_unused",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5117,
+        "name": "aes_xts_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5128,
+        "name": "aes_xts_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5153,
+        "name": "aes_xts_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5190,
+        "name": "aes_xts_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5199,
+        "name": "aes_xts_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5232,
+        "name": "aes_xts_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5271,
+        "name": "aes_xts_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5287,
+        "name": "aes_xts_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5303,
+        "name": "aes_xts_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5349,
+        "name": "aes_xts_stream_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5377,
+        "name": "aes_xts_stream_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5647,
+        "name": "cipher_hw_sm4_xts_generic_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5681,
+        "name": "cipher_hw_sm4_xts_copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5707,
+        "name": "ossl_prov_cipher_hw_sm4_xts",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5720,
+        "name": "sm4_xts_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5757,
+        "name": "sm4_xts_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5773,
+        "name": "sm4_xts_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5794,
+        "name": "sm4_xts_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5828,
+        "name": "sm4_xts_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5842,
+        "name": "sm4_xts_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5878,
+        "name": "sm4_xts_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5962,
+        "name": "sm4_xts_stream_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 5987,
+        "name": "sm4_xts_stream_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6025,
+        "name": "sm4_xts_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6040,
+        "name": "sm4_xts_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6173,
+        "name": "aes_generic_ocb_setiv",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6189,
+        "name": "aes_generic_ocb_setaad",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6202,
+        "name": "aes_generic_ocb_gettag",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6212,
+        "name": "aes_generic_ocb_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6229,
+        "name": "aes_generic_ocb_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6253,
+        "name": "aes_generic_ocb_copy_ctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6272,
+        "name": "cipher_hw_aes_ocb_generic_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6310,
+        "name": "cipher_hw_aes_ocb_cipher_unused",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6337,
+        "name": "cipher_hw_aes_ocb_copyctx_unused",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6347,
+        "name": "aes_ocb_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6398,
+        "name": "aes_ocb_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6414,
+        "name": "aes_ocb_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6432,
+        "name": "aes_ocb_block_update_internal",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6495,
+        "name": "cipher_updateaad",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6510,
+        "name": "update_iv",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6536,
+        "name": "aes_ocb_block_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6579,
+        "name": "aes_ocb_block_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6637,
+        "name": "aes_ocb_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6676,
+        "name": "aes_ocb_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6687,
+        "name": "aes_ocb_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6718,
+        "name": "aes_ocb_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6785,
+        "name": "aes_ocb_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6864,
+        "name": "cipher_ocb_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6883,
+        "name": "cipher_ocb_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 6895,
+        "name": "aes_ocb_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8488,
+        "name": "ccm_get_ivlen",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8501,
+        "name": "ccm_tls_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8550,
+        "name": "ccm_tls_iv_set_fixed",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8626,
+        "name": "ossl_ccm_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8642,
+        "name": "ossl_ccm_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8723,
+        "name": "ossl_ccm_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8734,
+        "name": "ossl_ccm_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8820,
+        "name": "ccm_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8868,
+        "name": "ossl_ccm_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8884,
+        "name": "ossl_ccm_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8900,
+        "name": "ossl_ccm_stream_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8925,
+        "name": "ossl_ccm_stream_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 8969,
+        "name": "ossl_ccm_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9006,
+        "name": "ccm_set_iv",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9023,
+        "name": "ccm_tls_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9136,
+        "name": "ccm_cipher_internal",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9226,
+        "name": "ossl_ccm_initctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9273,
+        "name": "ccm_generic_aes_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9301,
+        "name": "ossl_ccm_generic_setiv",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9318,
+        "name": "ossl_ccm_generic_setaad",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9331,
+        "name": "ossl_ccm_generic_gettag",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9341,
+        "name": "ossl_ccm_generic_auth_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9367,
+        "name": "ossl_ccm_generic_auth_decrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9416,
+        "name": "ossl_prov_aes_hw_ccm",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9424,
+        "name": "aes_ccm_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9446,
+        "name": "aes_ccm_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9480,
+        "name": "aes_ccm_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9680,
+        "name": "ccm_aria_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9708,
+        "name": "ccm_sm4_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9754,
+        "name": "ossl_prov_aria_hw_ccm",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9763,
+        "name": "ossl_prov_sm4_hw_ccm",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9771,
+        "name": "aria_ccm_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9793,
+        "name": "aria_ccm_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9827,
+        "name": "aria_ccm_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9836,
+        "name": "sm4_ccm_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9857,
+        "name": "sm4_ccm_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 9891,
+        "name": "sm4_ccm_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10023,
+        "name": "aes_siv_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10055,
+        "name": "aes_siv_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10065,
+        "name": "siv_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10093,
+        "name": "siv_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10128,
+        "name": "siv_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10144,
+        "name": "siv_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10163,
+        "name": "siv_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10200,
+        "name": "siv_stream_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10233,
+        "name": "aes_siv_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10275,
+        "name": "aes_siv_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10292,
+        "name": "aes_siv_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10350,
+        "name": "aes_siv_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10370,
+        "name": "aes_siv_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10425,
+        "name": "aes_siv_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10470,
+        "name": "aes_siv_settag",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10482,
+        "name": "aes_siv_setspeed",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10494,
+        "name": "aes_siv_cleanup",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10512,
+        "name": "aes_siv_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10687,
+        "name": "null_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10703,
+        "name": "null_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10712,
+        "name": "null_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10734,
+        "name": "null_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10752,
+        "name": "null_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10789,
+        "name": "null_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10809,
+        "name": "null_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10826,
+        "name": "null_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10837,
+        "name": "null_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10868,
+        "name": "null_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 10879,
+        "name": "null_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11234,
+        "name": "aux_tls_ver",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11246,
+        "name": "aux_set_tls_ver",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11259,
+        "name": "ctx_enc",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11276,
+        "name": "sha1_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11285,
+        "name": "sha256_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11297,
+        "name": "copy_state",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11306,
+        "name": "aesni_cbc_hmac_sha1_init_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11341,
+        "name": "aesni_cbc_hmac_sha1_set_mac_key_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11388,
+        "name": "aesni_cbc_hmac_sha1_set_mac_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11409,
+        "name": "aesni_cbc_hmac_sha1_set_tls1_aad",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11463,
+        "name": "aesni_cbc_hmac_sha1_tls1_multiblock_max_bufsize",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11477,
+        "name": "aesni_cbc_hmac_sha1_tls1_multiblock_aad",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11568,
+        "name": "tls1_multi_block_encrypt_sha1",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11699,
+        "name": "aesni_cbc_hmac_sha1_tls1_multiblock_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11730,
+        "name": "aesni_cbc_hmac_sha1_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11932,
+        "name": "aux_aad_byte",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11957,
+        "name": "ossl_prov_cipher_hw_aes_cbc_hmac_sha1",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11965,
+        "name": "aesni_cbc_hmac_sha256_init_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 11999,
+        "name": "aesni_cbc_hmac_sha256_set_mac_key_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12045,
+        "name": "aesni_cbc_hmac_sha256_set_mac_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12062,
+        "name": "aesni_cbc_hmac_sha256_set_tls1_aad",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12112,
+        "name": "aesni_cbc_hmac_sha256_tls1_multiblock_max_bufsize",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12125,
+        "name": "aesni_cbc_hmac_sha256_tls1_multiblock_aad",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12202,
+        "name": "tls1_multi_block_encrypt_sha256",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12320,
+        "name": "aesni_cbc_hmac_sha256_tls1_multiblock_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12352,
+        "name": "aesni_cbc_hmac_sha256_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12519,
+        "name": "sha1_style_sha256_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12542,
+        "name": "ossl_prov_cipher_hw_aes_cbc_hmac_sha256",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12584,
+        "name": "aes_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12609,
+        "name": "aes_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12625,
+        "name": "aes_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12739,
+        "name": "aes_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12816,
+        "name": "cbchmac_base_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12845,
+        "name": "aes_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12866,
+        "name": "aes_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12887,
+        "name": "aes_cbc_hmac_sha1_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12921,
+        "name": "aes_cbc_hmac_sha1_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12940,
+        "name": "aes_cbc_hmac_sha1_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12949,
+        "name": "aes_cbc_hmac_sha256_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 12983,
+        "name": "aes_cbc_hmac_sha256_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13002,
+        "name": "aes_cbc_hmac_sha256_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13430,
+        "name": "gsiv_flag",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13440,
+        "name": "gsiv_set",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13455,
+        "name": "gcm_siv_initkey_err",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13476,
+        "name": "aes_gcm_siv_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13593,
+        "name": "aes_gcm_siv_aad",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13627,
+        "name": "aes_gcm_siv_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13714,
+        "name": "aes_gcm_siv_decrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13805,
+        "name": "aes_gcm_siv_finish",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13839,
+        "name": "aes_gcm_siv_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13867,
+        "name": "aes_gcm_siv_clean_ctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13882,
+        "name": "aes_gcm_siv_dup_ctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13918,
+        "name": "ossl_prov_cipher_hw_aes_gcm_siv",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 13932,
+        "name": "aes_gcm_siv_ctr32",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14006,
+        "name": "ossl_aes_gcm_siv_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14034,
+        "name": "ossl_aes_gcm_siv_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14044,
+        "name": "ossl_aes_gcm_siv_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14086,
+        "name": "gcm_siv_dupctx_err",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14101,
+        "name": "ossl_aes_gcm_siv_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14144,
+        "name": "ossl_aes_gcm_siv_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14160,
+        "name": "ossl_aes_gcm_siv_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14177,
+        "name": "ossl_aes_gcm_siv_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14214,
+        "name": "ossl_aes_gcm_siv_stream_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14251,
+        "name": "ossl_aes_gcm_siv_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14294,
+        "name": "ossl_aes_gcm_siv_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14309,
+        "name": "aes_gcm_siv_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 14370,
+        "name": "ossl_aes_gcm_siv_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15223,
+        "name": "chacha20_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15254,
+        "name": "chacha20_initiv",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15294,
+        "name": "chacha20_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15429,
+        "name": "ossl_chacha20_initctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15449,
+        "name": "chacha20_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15471,
+        "name": "chacha20_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15487,
+        "name": "chacha20_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15529,
+        "name": "chacha20_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15557,
+        "name": "chacha20_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15600,
+        "name": "chacha20_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15622,
+        "name": "chacha20_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15665,
+        "name": "chacha20_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15687,
+        "name": "ossl_chacha20_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15716,
+        "name": "ossl_chacha20_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15967,
+        "name": "cpp_flag",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 15980,
+        "name": "cpp_set",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16088,
+        "name": "chacha20_poly1305_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16139,
+        "name": "chacha20_poly1305_initiv",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16204,
+        "name": "chacha_poly1305_tls_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16268,
+        "name": "chacha_poly1305_tls_iv_set_fixed",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16323,
+        "name": "chacha20_poly1305_tls_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16527,
+        "name": "chacha20_poly1305_aead_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16763,
+        "name": "chacha20_poly1305_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16801,
+        "name": "chacha20_poly1305_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16844,
+        "name": "chacha20_poly1305_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16854,
+        "name": "chacha20_poly1305_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16910,
+        "name": "chacha20_poly1305_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16931,
+        "name": "chacha20_poly1305_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 16988,
+        "name": "chacha20_poly1305_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17052,
+        "name": "chacha20_poly1305_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17156,
+        "name": "chacha20_poly1305_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17184,
+        "name": "chacha20_poly1305_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17216,
+        "name": "chacha20_poly1305_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17252,
+        "name": "chacha20_poly1305_update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17284,
+        "name": "chacha20_poly1305_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17432,
+        "name": "sm4_block_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17441,
+        "name": "sm4_block_decrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17479,
+        "name": "cipher_hw_sm4_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17510,
+        "name": "cipher_hw_sm4_copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17523,
+        "name": "sm4_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17535,
+        "name": "sm4_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17775,
+        "name": "aria_block_encrypt",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17809,
+        "name": "cipher_hw_aria_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17838,
+        "name": "cipher_hw_aria_copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17851,
+        "name": "aria_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 17861,
+        "name": "aria_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18665,
+        "name": "var_keylen_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18676,
+        "name": "var_keylen_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18718,
+        "name": "cipher_hw_cast5_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18735,
+        "name": "cipher_hw_cast5_cbc_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18778,
+        "name": "cipher_hw_cast5_ecb_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18805,
+        "name": "cipher_hw_cast5_ofb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18850,
+        "name": "cipher_hw_cast5_cfb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18914,
+        "name": "cast5_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 18923,
+        "name": "cast5_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19066,
+        "name": "cipher_hw_blowfish_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19083,
+        "name": "cipher_hw_blowfish_cbc_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19126,
+        "name": "cipher_hw_blowfish_ecb_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19153,
+        "name": "cipher_hw_blowfish_ofb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19198,
+        "name": "cipher_hw_blowfish_cfb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19262,
+        "name": "blowfish_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19271,
+        "name": "blowfish_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19418,
+        "name": "cipher_hw_idea_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19450,
+        "name": "cipher_hw_idea_cbc_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19493,
+        "name": "cipher_hw_idea_ecb_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19520,
+        "name": "cipher_hw_idea_ofb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19565,
+        "name": "cipher_hw_idea_cfb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19629,
+        "name": "idea_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19638,
+        "name": "idea_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19781,
+        "name": "cipher_hw_seed_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19799,
+        "name": "cipher_hw_seed_cbc_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19835,
+        "name": "cipher_hw_seed_ecb_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19862,
+        "name": "cipher_hw_seed_ofb128_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19893,
+        "name": "cipher_hw_seed_cfb128_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19957,
+        "name": "seed_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 19966,
+        "name": "seed_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20111,
+        "name": "cipher_hw_rc2_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20133,
+        "name": "cipher_hw_rc2_cbc_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20176,
+        "name": "cipher_hw_rc2_ecb_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20203,
+        "name": "cipher_hw_rc2_ofb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20248,
+        "name": "cipher_hw_rc2_cfb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20337,
+        "name": "rc2_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20346,
+        "name": "rc2_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20364,
+        "name": "rc2_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20441,
+        "name": "rc2_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20516,
+        "name": "rc2_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20537,
+        "name": "rc2_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20548,
+        "name": "rc2_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20569,
+        "name": "rc2_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20798,
+        "name": "cipher_hw_rc4_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20815,
+        "name": "cipher_hw_rc4_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20843,
+        "name": "rc4_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20852,
+        "name": "rc4_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20870,
+        "name": "rc4_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20891,
+        "name": "rc4_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 20993,
+        "name": "cipher_hw_des_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21011,
+        "name": "cipher_hw_des_copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21025,
+        "name": "cipher_hw_des_ecb_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21057,
+        "name": "cipher_hw_des_cbc_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21105,
+        "name": "cipher_hw_des_ofb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21150,
+        "name": "cipher_hw_des_cfb64_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21193,
+        "name": "cipher_hw_des_cfb1_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21248,
+        "name": "cipher_hw_des_cfb8_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21324,
+        "name": "des_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21333,
+        "name": "des_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21365,
+        "name": "des_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21408,
+        "name": "des_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21424,
+        "name": "des_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21612,
+        "name": "cipher_hw_desx_cbc_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21639,
+        "name": "cipher_hw_desx_cbc",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21783,
+        "name": "cipher_hw_rc4_hmac_md5_initkey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21809,
+        "name": "cipher_hw_rc4_hmac_md5_cipher",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21883,
+        "name": "cipher_hw_rc4_hmac_md5_tls_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21914,
+        "name": "cipher_hw_rc4_hmac_md5_init_mackey",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21966,
+        "name": "rc4_hmac_md5_hw",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21975,
+        "name": "rc4_hmac_md5_freectx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 21984,
+        "name": "rc4_hmac_md5_dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 22010,
+        "name": "rc4_hmac_md5_einit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 22031,
+        "name": "rc4_hmac_md5_dinit",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 22060,
+        "name": "rc4_hmac_md5_gettable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 22071,
+        "name": "rc4_hmac_md5_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 22106,
+        "name": "rc4_hmac_md5_settable_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 22117,
+        "name": "rc4_hmac_md5_set_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 22193,
+        "name": "rc4_hmac_md5_newctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 22242,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22253,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22264,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22275,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22286,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22297,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22308,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22319,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22794,
+        "name": "refuses",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 22798,
+        "name": "accepts",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      }
+    ],
+    "src/provider/digest.rs": [
+      {
+        "line": 149,
+        "name": "ossl_param_is_empty",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 174,
+        "name": "ossl_digest_default_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 260,
+        "name": "repeated_digest_param_site",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 344,
+        "name": "dup",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 374,
+        "name": "from_raw",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 433,
+        "name": "dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 449,
+        "name": "copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 465,
+        "name": "internal_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 479,
+        "name": "internal_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 501,
+        "name": "update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 515,
+        "name": "get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 647,
+        "name": "dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 658,
+        "name": "copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 670,
+        "name": "internal_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 682,
+        "name": "internal_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 700,
+        "name": "update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 705,
+        "name": "get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 959,
+        "name": "dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 970,
+        "name": "copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 991,
+        "name": "internal_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1014,
+        "name": "get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1149,
+        "name": "dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1160,
+        "name": "copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1172,
+        "name": "internal_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1184,
+        "name": "internal_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1202,
+        "name": "update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1209,
+        "name": "get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1332,
+        "name": "dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1343,
+        "name": "copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1355,
+        "name": "init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1366,
+        "name": "update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1372,
+        "name": "keccak_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1398,
+        "name": "shake_squeeze",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1476,
+        "name": "shake_get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1551,
+        "name": "get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1619,
+        "name": "get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1880,
+        "name": "dupctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1893,
+        "name": "copyctx",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1943,
+        "name": "get_ctx_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1970,
+        "name": "internal_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 1995,
+        "name": "update",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 2008,
+        "name": "internal_final",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 2034,
+        "name": "get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 2318,
+        "name": "deflt_query",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2388,
+        "name": "deflt_teardown",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2447,
+        "name": "deflt_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 2523,
+        "name": "ossl_default_provider_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      }
+    ],
+    "src/provider/ecx_kmgmt.rs": [
+      {
+        "line": 192,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 218,
+        "name": "x25519_new_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 238,
+        "name": "x448_new_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 258,
+        "name": "ed25519_new_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 278,
+        "name": "ed448_new_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 298,
+        "name": "ecx_has",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 327,
+        "name": "ecx_match",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 397,
+        "name": "ecx_repeated_param_site",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 449,
+        "name": "ecx_imexport_types_decoder",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 467,
+        "name": "ecx_import",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 497,
+        "name": "key_to_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 542,
+        "name": "ecx_export",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 648,
+        "name": "ecx_get_params_decoder",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 702,
+        "name": "ed_get_params_decoder",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 725,
+        "name": "ecx_ed_common_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 763,
+        "name": "ecx_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 809,
+        "name": "ed_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 844,
+        "name": "x25519_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 861,
+        "name": "x448_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 878,
+        "name": "ed25519_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 895,
+        "name": "ed448_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 901,
+        "name": "x25519_gettable_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 906,
+        "name": "x448_gettable_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 924,
+        "name": "set_property_query",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 970,
+        "name": "ecx_set_params_decoder",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1003,
+        "name": "ecx_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1055,
+        "name": "x25519_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1064,
+        "name": "x448_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1073,
+        "name": "ed25519_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1081,
+        "name": "ed448_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1089,
+        "name": "x25519_settable_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1116,
+        "name": "ecx_gen_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1153,
+        "name": "x25519_gen_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1174,
+        "name": "x448_gen_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1195,
+        "name": "ed25519_gen_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1216,
+        "name": "ed448_gen_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1258,
+        "name": "ecx_gen_set_params_decoder",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1277,
+        "name": "ecx_gen_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1371,
+        "name": "ecx_gen",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1455,
+        "name": "ecx_gen_err",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1466,
+        "name": "x25519_gen",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1486,
+        "name": "x448_gen",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1506,
+        "name": "ed25519_gen",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1526,
+        "name": "ed448_gen",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1545,
+        "name": "ecx_gen_cleanup",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1559,
+        "name": "ecx_load",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1578,
+        "name": "ecx_dup",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1590,
+        "name": "ecx_key_pairwise_check",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1619,
+        "name": "ecd_key_pairwise_check",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1664,
+        "name": "ecx_validate",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1712,
+        "name": "x25519_validate",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1733,
+        "name": "x448_validate",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1754,
+        "name": "ed25519_validate",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1775,
+        "name": "ed448_validate",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1795,
+        "name": "ecx_free_key",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      }
+    ],
+    "src/provider/keymgmt.rs": [
+      {
+        "line": 201,
+        "name": "ossl_kdf_data_new",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 235,
+        "name": "ossl_kdf_data_free",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 262,
+        "name": "ossl_kdf_data_up_ref",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 276,
+        "name": "kdf_newdata",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 285,
+        "name": "kdf_freedata",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 295,
+        "name": "kdf_has",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 438,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 448,
+        "name": "destroy_body",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": false,
+        "audited": false
+      },
+      {
+        "line": 509,
+        "name": "dh_gen_type_name2id_w_default",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 527,
+        "name": "param_is_empty",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 539,
+        "name": "dh_newdata",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 563,
+        "name": "dhx_newdata",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 580,
+        "name": "dh_freedata",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 592,
+        "name": "dh_has",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 625,
+        "name": "dh_match",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 675,
+        "name": "dh_import",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 708,
+        "name": "dh_export",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 861,
+        "name": "dh_get_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 936,
+        "name": "dh_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 957,
+        "name": "dh_validate_public",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 983,
+        "name": "dh_validate_private",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1001,
+        "name": "dh_validate",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1051,
+        "name": "dh_gen_init_base",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1102,
+        "name": "dh_gen_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1116,
+        "name": "dhx_gen_init",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1129,
+        "name": "dh_gen_set_template",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1146,
+        "name": "dh_set_gen_seed",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1185,
+        "name": "dh_gen_common_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1260,
+        "name": "dh_gen_settable_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1286,
+        "name": "dhx_gen_settable_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": false,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1298,
+        "name": "dhx_gen_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1384,
+        "name": "dh_gen_set_params",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1421,
+        "name": "dh_gencb",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1453,
+        "name": "dh_gen",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1609,
+        "name": "dh_gen_end",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1627,
+        "name": "dh_gen_cleanup",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1641,
+        "name": "dh_load",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      },
+      {
+        "line": 1660,
+        "name": "dh_dup",
+        "kind": "UNSAFE_FN_DEF",
+        "body_has_unsafe": true,
+        "safety_doc_preceding": true,
+        "audited": false
+      }
+    ]
+  },
+  "residuals": [
+    {
+      "id": "OSSH-R1-RES-1",
+      "file": "src/digest/sha1.rs",
+      "operation": "ossl_sha1_ctrl",
+      "class": "UNCLENSED_SECRET_ON_FAILURE_PATH",
+      "detail": "`padtmp` and `sha1tmp` (secret-derived SSLv3 master-secret state) are stack locals that are not cleansed on the early-failure returns; only the success path leaves the function. The same shape exists in src/digest/md5_sha1.rs (`ossl_md5_sha1_ctrl`). Reached from sha1::set_ctx_params / md5_sha1::set_ctx_params with an application supplied master secret.",
+      "disposition": "RECORDED_NOT_FIXED",
+      "why_not_fixed": "The fix is in a different file that this receipt does not own; changing it needs its own site enumeration and the batch gate. It is not reclassified as safe."
+    },
+    {
+      "id": "OSSH-R1-RES-2",
+      "file": "src/provider/digest.rs",
+      "operation": "sha1::set_ctx_params / md5_sha1::set_ctx_params",
+      "class": "AUTHORITY_DIVERGENCE",
+      "detail": "The authority's sha1_set_ctx_params/md5_sha1_set_ctx_params has the same non-cleansing failure paths; conserving it would reproduce a known secret-lifetime weakness. Recorded as a deliberate open divergence pending the digest/sha1.rs fix.",
+      "disposition": "RECORDED_NOT_FIXED"
+    }
+  ],
+  "gates": {
+    "cargo_fmt_check": "PASS (cargo fmt --all -- --check, court, exit 0)",
+    "cargo_clippy": "PASS (cargo clippy --all-targets -- -D warnings, court, exit 0)",
+    "cargo_test_lib": "PASS (cargo test --lib -- --test-threads=4: 2193 passed, 0 failed, 52 ignored)",
+    "host_build": "none: every gate ran in docker/openssl-rs-court.sh"
+  },
+  "non_claims": [
+    "No site is SAFETY_DISCHARGED. The mechanism needs independent BOUNDARY review.",
+    "A contract written in source is documentation of the ABI obligation; it is not runtime enforcement and does not discharge the obligation by itself.",
+    "additional_operations are enumerated, not adjudicated.",
+    "This receipt does not claim the whole of src/provider/cipher.rs: the file has many unsafe functions outside the closure's obligation set; they are listed as additional operations with audited=false, not claimed as reviewed.",
+    "No Miri, ASan or cryptographic court was run for this subphase."
+  ]
+}
