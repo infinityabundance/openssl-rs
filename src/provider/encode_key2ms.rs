@@ -62,6 +62,8 @@ const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int =
 /// `OSSL_ENCODER_PARAM_ENCRYPT_LEVEL` — `core_names.h`, `"encrypt-level"`.
 const OSSL_ENCODER_PARAM_ENCRYPT_LEVEL: *const c_char = c"encrypt-level".as_ptr();
 
+// SAFETY: `strcmp` is the C library symbol. Each call below passes two NUL-terminated
+// strings that are live for the call: the parameter's `key` pointer and a `'static` literal.
 unsafe extern "C" {
     /// The C library's `strcmp`, the generated parameter decoder's own comparison.
     fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
