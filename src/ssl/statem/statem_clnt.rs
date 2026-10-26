@@ -3594,6 +3594,19 @@ fn read_cert_status_response(
     Ok(response)
 }
 
+/// The TLS1.2 client read/write driver (`statem.c`'s read/write sub-state machines,
+/// reduced). Returns `1` when the handshake finishes and `-1` while waiting for the peer.
+///
+/// # Safety
+/// `s` must be non-NULL, aligned, and point to a live, fully initialised `Ssl` that this
+/// call has exclusive access to: every read and write targets that object. The driver
+/// re-enters the application's certificate hook
+/// ([`crate::ssl::statem::statem_srvr::invoke_cert_cb`]) at the
+/// `CertificateRequest`/`TLS_ST_CW_CERT` transition, and that hook may mutate `s` (it is
+/// how a caller installs its certificate). The caller must therefore hold no Rust
+/// reference — shared or exclusive — into `s` across the call, and the connection's
+/// `cert`, `rbio`/`wbio` and handshake-transcript fields must satisfy the crate's
+/// connection invariants on entry. The return value is a `c_int` state, not a pointer.
 unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
     use crate::ssl::statem::statem_srvr::{
         tls12_construct_certificate, tls12_construct_finished, tls12_read_handshake,

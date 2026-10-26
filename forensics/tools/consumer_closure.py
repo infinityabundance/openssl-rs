@@ -1652,6 +1652,8 @@ def index_export_sites(repo: Path, inventory_files: list[str]) -> dict:
 # obligations, boundaries, mechanism state
 # --------------------------------------------------------------------------- #
 
+SITE_RECEIPT_KIND = "site-enumerating-boundary-receipt"
+
 MECHANISM_RULES = [
     (re.compile(r"^src/runtime/err\.rs$|^src/runtime/dso_shared\.rs$"), "ERR"),
     (re.compile(r"^src/runtime/bio/"), "BIO"),
@@ -1672,7 +1674,31 @@ MECHANISM_RULES = [
 ]
 
 
-def mechanism_for(file: str, mechanisms: dict) -> tuple[str | None, str]:
+def load_obligation_mechanisms(state_doc: dict) -> dict:
+    """Exact (file, line, kind) -> mechanism record from state.json.
+
+    Per-site classifications for obligations a file-level rule would
+    misattribute (a heterogeneous file, or an operation whose owner is not the
+    file's dominant subsystem).  They only classify: the mechanism's own state
+    and receipts still decide whether anything is discharged.
+    """
+    out = {}
+    for rec in state_doc.get("obligation_mechanisms") or []:
+        key = (rec.get("file"), rec.get("line"), rec.get("kind"))
+        if rec.get("mechanism"):
+            out[key] = rec
+    return out
+
+
+def mechanism_for(file: str, mechanisms: dict,
+                  obligation: dict | None = None,
+                  obligation_mechanisms: dict | None = None) -> tuple[str | None, str]:
+    if obligation is not None and obligation_mechanisms:
+        rec = obligation_mechanisms.get(
+            (file, obligation.get("line"), obligation.get("kind")))
+        if rec is not None:
+            return rec["mechanism"], (
+                "obligation-override:state.json#/obligation_mechanisms")
     for mid, rec in mechanisms.items():
         if file in (rec.get("converted_files_on_branch") or []):
             return mid, "converted_files_on_branch"
@@ -1683,10 +1709,27 @@ def mechanism_for(file: str, mechanisms: dict) -> tuple[str | None, str]:
 
 
 def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
-    """Return (by_file, by_id) across every boundary-sweep receipt."""
+    """Return (by_file, by_id) across every boundary receipt.
+
+    Two receipt families are admitted: the ``boundary-sweep-B*.json`` sweep
+    receipts, and site-enumerating receipts named ``*-sites.json`` that declare
+    ``kind`` as :data:`SITE_RECEIPT_KIND`.  A site receipt is evidence that a
+    file's reachable operations were enumerated and given a disposition.  It is
+    *not* evidence that any site is discharged: the adjudicator still requires
+    a SAFETY_DISCHARGED scope whose disposition names the exact site, so a site
+    receipt alone can only move an obligation from UNKNOWN to BLOCKED.
+    """
     by_file = collections.defaultdict(list)
     by_id = {}
     paths = sorted(boundary_dir.glob("boundary-sweep-B*.json"))
+    for p in sorted(boundary_dir.glob("*-sites.json")):
+        try:
+            doc = json.loads(p.read_text())
+        except Exception:
+            continue
+        if doc.get("kind") != SITE_RECEIPT_KIND:
+            continue
+        paths.append(p)
     for p in paths:
         try:
             doc = json.loads(p.read_text())
@@ -1954,6 +1997,7 @@ def build_receipt(args) -> dict:
                                    state_scope=rec.get("scope"))
     boundaries_by_file, _boundaries_by_id = load_boundaries(boundary_dir)
     plane = discharge_plane(status_doc, boundary_dir)
+    obligation_mechanisms = load_obligation_mechanisms(state_doc)
 
     refusals = []
     notes = []
@@ -2201,7 +2245,7 @@ def build_receipt(args) -> dict:
         f = b.get("file")
         if f not in files_upper:
             continue
-        mech, basis = mechanism_for(f, mechanisms)
+        mech, basis = mechanism_for(f, mechanisms, b, obligation_mechanisms)
         obligations.append({
             "id": f"V1:{f}:{b.get('line')}:{b.get('kind')}",
             "file": f,
@@ -2696,6 +2740,26 @@ def self_test() -> int:
         "SAFETY_DISCHARGED (scope: src/ui/ui_openssl.rs:111-124, 269-290)"),
         {"src/ui/ui_openssl.rs": [(111, 124), (269, 290)]})
 
+    # site receipts: only the declared kind is admitted, and it never discharges
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        (d / "good-sites.json").write_text(json.dumps({
+            "kind": SITE_RECEIPT_KIND, "receipt": "good-sites",
+            "boundaries": [{"id": "X-1", "file": "src/x.rs",
+                            "mechanism": "EVP_PKEY_PROVIDER",
+                            "disposition": "BLOCKED"}]}))
+        (d / "other-sites.json").write_text(json.dumps({
+            "kind": "something-else",
+            "boundaries": [{"id": "Y-1", "file": "src/y.rs",
+                            "mechanism": "EVP_PKEY_PROVIDER",
+                            "disposition": "BLOCKED"}]}))
+        bf, _ = load_boundaries(d)
+        check("site receipt admitted", sorted(bf), ["src/x.rs"])
+        check("site receipt alone is BLOCKED",
+              adjudicate(ob("src/x.rs", 1, "EVP_PKEY_PROVIDER"), mechs,
+                         bf["src/x.rs"], plane)["status"], "BLOCKED")
+
     # ---- negative control: an unclassified indirect site is broad ---------- #
     class _FakeG:
         name = "control.so"
@@ -2752,6 +2816,16 @@ def self_test() -> int:
     check("mechanism ssl", mechanism_for("src/ssl/ssl_lib.rs", {})[0], "SSL_SESSION")
     check("mechanism x509", mechanism_for("src/x509/v3_utl.rs", {})[0], "X509_VERIFY_POLICY")
     check("mechanism none", mechanism_for("src/apps/verify.rs", {})[0], None)
+    overrides = {("src/apps/verify.rs", 104, "UNSAFE_FN_DEF"):
+                 {"mechanism": "X509_VERIFY_POLICY"}}
+    check("mechanism obligation override",
+          mechanism_for("src/apps/verify.rs", {},
+                        {"line": 104, "kind": "UNSAFE_FN_DEF"},
+                        overrides)[0], "X509_VERIFY_POLICY")
+    check("mechanism override absent",
+          mechanism_for("src/apps/verify.rs", {},
+                        {"line": 999, "kind": "UNSAFE_FN_DEF"},
+                        overrides)[0], None)
 
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")

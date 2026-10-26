@@ -917,7 +917,7 @@ static DH_PARAMS: [OsslParam; 18] = dh_imexportable_table!(
 );
 
 /// `static const OSSL_PARAM *dh_gettable_params(void *provctx)` — `dh_kmgmt.c:357-360`.
-unsafe extern "C" fn dh_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn dh_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     DH_PARAMS.as_ptr()
 }
 
@@ -926,7 +926,7 @@ static DH_KNOWN_SETTABLE_PARAMS: [OsslParam; 2] =
     [param_octet_string(OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY), END];
 
 /// `static const OSSL_PARAM *dh_settable_params(void *provctx)` — `dh_kmgmt.c:367-370`.
-unsafe extern "C" fn dh_settable_params(_provctx: *mut c_void) -> *const OsslParam {
+extern "C" fn dh_settable_params(_provctx: *mut c_void) -> *const OsslParam {
     DH_KNOWN_SETTABLE_PARAMS.as_ptr()
 }
 
@@ -1761,7 +1761,7 @@ pub(crate) static DH_KEYMGMT_FUNCTIONS: [OsslDispatch; 22] = [
 
 /// `static const char *dhx_query_operation_name(int operation_id)` — `dh_kmgmt.c:878-882`. For any
 /// DH key, the "DH" algorithms are used regardless of sub-type.
-unsafe extern "C" fn dhx_query_operation_name(_operation_id: c_int) -> *const c_char {
+extern "C" fn dhx_query_operation_name(_operation_id: c_int) -> *const c_char {
     c"DH".as_ptr()
 }
 
