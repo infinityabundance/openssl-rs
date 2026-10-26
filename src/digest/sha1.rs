@@ -32,6 +32,7 @@ use core::ffi::{c_int, c_void};
 use core::ptr;
 
 use crate::digest::md32::{self, load_word, Md32, MD32_CBLOCK};
+use crate::runtime::mem::CleansedScratch;
 
 /// `SHA_CTX` — `include/openssl/sha.h:41-48`.
 #[repr(C)]
@@ -344,8 +345,8 @@ pub(crate) unsafe fn ossl_sha1_ctrl(
     /// pads the master secret with a full digest's worth of bytes on each side of the outer hash.
     const PAD_LENGTH: usize = 40;
 
-    let mut padtmp = [0u8; PAD_LENGTH];
-    let mut sha1tmp = [0u8; SHA_DIGEST_LENGTH];
+    let mut padtmp = CleansedScratch::<PAD_LENGTH>::new();
+    let mut sha1tmp = CleansedScratch::<SHA_DIGEST_LENGTH>::new();
 
     if cmd != EVP_CTRL_SSL3_MASTER_SECRET {
         return -2;
@@ -371,8 +372,15 @@ pub(crate) unsafe fn ossl_sha1_ctrl(
     if unsafe { SHA1_Final(sha1tmp.as_mut_ptr(), sha1) } == 0 {
         return 0;
     }
-    // SAFETY: `sha1` is live.
-    if unsafe { SHA1_Init(sha1) } == 0 {
+    // SAFETY: `sha1` is live. A test may also refuse the result below, so that the
+    // early-failure return after `sha1tmp` was written can be reached and its cleanse
+    // observed; the reinitialisation itself still happens exactly as the authority's does.
+    let reinit = unsafe { SHA1_Init(sha1) };
+    #[cfg(test)]
+    let reinit_fails = test_hooks::fail_reinit();
+    #[cfg(not(test))]
+    let reinit_fails = false;
+    if reinit_fails || reinit == 0 {
         return 0;
     }
 
@@ -391,11 +399,29 @@ pub(crate) unsafe fn ossl_sha1_ctrl(
         return 0;
     }
 
-    // `OPENSSL_cleanse(sha1tmp, sizeof(sha1tmp))`.
-    // SAFETY: `sha1tmp` is a live local of the digest length.
-    unsafe { ptr::write_bytes(sha1tmp.as_mut_ptr(), 0, SHA_DIGEST_LENGTH) };
-
+    // `sha1tmp` is secret-derived; `CleansedScratch::drop` wipes it (and the pad temporary) on
+    // this success path and on every early return, exactly once each.
     1
+}
+
+#[cfg(test)]
+mod test_hooks {
+    use core::cell::Cell;
+
+    thread_local! {
+        /// Set by a test to make the ctrl's reinitialisation answer 0 exactly once.
+        static FAIL_REINIT: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// Consume a pending reinitialisation failure.
+    pub(super) fn fail_reinit() -> bool {
+        FAIL_REINIT.with(|flag| flag.replace(false))
+    }
+
+    /// Ask the next `ossl_sha1_ctrl` reinitialisation to fail.
+    pub(crate) fn set_fail_reinit() {
+        FAIL_REINIT.with(|flag| flag.set(true));
+    }
 }
 
 #[cfg(test)]
@@ -415,6 +441,20 @@ mod tests {
             "32d10c7b8cf96570ca04ce37f2a19d84240d3a89",
         ),
     ];
+
+    fn ctx() -> ShaCtx {
+        ShaCtx {
+            h0: 0,
+            h1: 0,
+            h2: 0,
+            h3: 0,
+            h4: 0,
+            nl: 0,
+            nh: 0,
+            data: [0; 16],
+            num: 0,
+        }
+    }
 
     fn hex(bytes: &[u8]) -> String {
         bytes.iter().map(|b| format!("{b:02x}")).collect()
@@ -491,5 +531,57 @@ mod tests {
             assert!(!ret.is_null());
         }
         assert_eq!(hex(&out), "a9993e364706816aba3e25717850c26c9cd0d89d");
+    }
+
+    /// The ctrl's secret temporaries are cleansed on the early-failure return that follows the
+    /// inner `SHA1_Final`: the reinitialisation is refused, so `padtmp` and `sha1tmp` still hold
+    /// master-secret-derived state when the function returns. The observation is the test-only
+    /// hook in `CleansedScratch::drop`, which reads the owner's live storage, never freed stack.
+    #[test]
+    fn sha1_ctrl_cleanses_on_early_failure() {
+        let mut c = ctx();
+        let secret = [0x5au8; 48];
+        crate::runtime::mem::cleanse_hooks::reset();
+        test_hooks::set_fail_reinit();
+        // SAFETY: every pointer is a live local and `secret` is 48 bytes.
+        let ret = unsafe { ossl_sha1_ctrl(&mut c, 0x1d, 48, secret.as_ptr().cast_mut().cast()) };
+        assert_eq!(ret, 0, "the injected reinitialisation failure answers 0");
+
+        let events = crate::runtime::mem::cleanse_hooks::events();
+        assert_eq!(events.len(), 2, "both temporaries are wiped: {events:?}");
+        let pad = events
+            .iter()
+            .find(|e| e.len == 40)
+            .map(|e| e.nonzero_before);
+        let inner = events
+            .iter()
+            .find(|e| e.len == 20)
+            .map(|e| e.nonzero_before);
+        assert_eq!(pad, Some(40), "the 0x36 padding was present: {events:?}");
+        assert!(
+            inner.is_some_and(|nonzero| nonzero > 0),
+            "the inner digest was secret-derived: {events:?}"
+        );
+        assert!(events.iter().all(|e| e.zero_after), "{events:?}");
+    }
+
+    /// The success path cleanses both temporaries exactly once as well; the wipe is the owner's
+    /// `Drop`, not a separate call on one arm.
+    #[test]
+    fn sha1_ctrl_cleanses_on_success() {
+        let mut c = ctx();
+        let secret = [0x5au8; 48];
+        crate::runtime::mem::cleanse_hooks::reset();
+        // SAFETY: every pointer is a live local and `secret` is 48 bytes.
+        let ret = unsafe { ossl_sha1_ctrl(&mut c, 0x1d, 48, secret.as_ptr().cast_mut().cast()) };
+        assert_eq!(ret, 1);
+
+        let events = crate::runtime::mem::cleanse_hooks::events();
+        assert_eq!(events.len(), 2, "wiped exactly once each: {events:?}");
+        assert!(
+            events.iter().any(|e| e.len == 20 && e.nonzero_before > 0),
+            "the inner digest held state: {events:?}"
+        );
+        assert!(events.iter().all(|e| e.zero_after), "{events:?}");
     }
 }
