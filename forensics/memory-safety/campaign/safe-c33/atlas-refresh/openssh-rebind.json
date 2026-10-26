@@ -1,0 +1,414 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/consumer-rebind/v1",
+  "kind": "consumer-rebind-receipt",
+  "subject": "openssh (family:openssh and family:openssh-server)",
+  "generated_utc": "2026-10-26T11:55:00Z",
+  "status": "BINDING_REPAIRED",
+  "decision": {
+    "safe_compatible": false,
+    "closure_complete": true,
+    "reason": "The inventory, the reachable obligation set and every boundary receipt are now bound to the exact measured source and candidate. The closure no longer refuses: ssh and sshd each report 1 reachable production obligation, 0 DISCHARGED, 1 BLOCKED, 0 UNKNOWN. SAFE_COMPATIBLE is still false because one obligation is retained as BLOCKED and the mechanism remains OWNERSHIP_RECONSTRUCTED.",
+    "blocker_retained": "V1:src/evp/legacy_blake2.rs:152:UNSAFE_FN_DEF (BLAKE2 legacy init: unestablished md_data ABI precondition)"
+  },
+  "source_identity": {
+    "checked_out_branch": "main",
+    "repository_head": "376ae960871129c54be675c6085792bf886864b7",
+    "head_subject": "Merge pull request #74 from infinityabundance/integrate/safe-c33",
+    "integrate_safe_c33_tip": "bea01e108",
+    "branch_note": "the request named integrate/safe-c33 at HEAD 376ae9608; the checkout resolves to main at that merge commit, whose parent is the integrate/safe-c33 tip bea01e108. No commit, branch move or push was performed.",
+    "src_rs_files": 877,
+    "src_content_sha256_at_head": "351be5005f243479ddf49da30ea4f3f9b607dfed740dac41e6811dddc826ac63",
+    "src_content_sha256_post_fix": "f92a4b2fae3bfd85887c7db140ba0918566ee499eb32bb0ad06f299ad0f30e6d",
+    "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+    "candidate_tree_object": "c3b697959d83b95807d959ee8785f4d88c46de99",
+    "candidate_tree_note": "git tree object produced by git write-tree from a temporary index seeded with HEAD plus the eight uncommitted src edits. git cat-file <tree>:<path> resolves the exact measured bytes, so the inventory's per-file hashes and the closure's freshness check agree without a commit.",
+    "working_tree": "dirty: 8 src files plus the rebuilt phase-2 install artefacts and the regenerated implemented-surface atlas; nothing committed or pushed",
+    "inventory": {
+      "head_identity": {
+        "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1c-candidate-freeze.json",
+        "sha256": "3866a93f0d6523d51551c24b0031aaa80b8d92f1b64d5a51a5741e5a5f9fea7f",
+        "source_head": "376ae960871129c54be675c6085792bf886864b7",
+        "generated_by": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1_census.py (unmodified)",
+        "compiler_command": "cargo clippy --lib --tests --message-format=json -- --cap-lints warn -W clippy::undocumented_unsafe_blocks -W clippy::missing_safety_doc, with RUSTFLAGS='-W unsafe-code'",
+        "crate_production_blockers": 80,
+        "crate_test_only_blockers": 154,
+        "crate_total_blockers": 234,
+        "compiler_sites": 61288
+      },
+      "post_fix_identity": {
+        "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1d-candidate-freeze.json",
+        "sha256": "c5ac17187414c5695517d305a14357c8fc7fbbaa3f2ec9bc2bf7aa0fb2abf738",
+        "source_head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+        "parent_head": "376ae960871129c54be675c6085792bf886864b7",
+        "crate_production_blockers": 67,
+        "crate_test_only_blockers": 154,
+        "crate_total_blockers": 221,
+        "compiler_sites": 61282
+      }
+    }
+  },
+  "candidate_identity": {
+    "install_prefix": "artifacts/phase2/install",
+    "artefacts": {
+      "libcrypto.so.3": "fa0514011e6ea19b37c87136ebf5828f715efada65f3d629c9db840384c20a5c",
+      "libssl.so.3": "9dcae363d5758b2f91a6f291beba5d07d955885a6e18ecd1ee9b411630d61995",
+      "legacy.so": "883d4c82859561844a2db3880d68ad1b35b0c0d41a6674bc6f2d9f42abd7c108",
+      "openssl": "db989c090ef51695cf22dcea7fab6bcc46396afe71a93858f8b3b74ae5a8cb15"
+    },
+    "rebuild": "forensics/tools/build_phase2.sh from git tree c3b6979; build log sha256 af4a35f54b11e5952cf51c7e6c20a184ea7af0dffae849a065ea9ff226b7232e",
+    "hash_change_note": "the post-fix hashes differ from the HEAD install (648f8f3e/97791355/0cb180e4/91a2d42f) because the added contract text shifts embedded line/error coordinates; the change is in line constants, not in the reachability-bearing code",
+    "abi_courts": {
+      "count": 11,
+      "all_pass": true,
+      "body_hash": "d4b9e82420753db75260424af6865214a4bcd6384d701d13a757d83fa29b1d53",
+      "courts_json_sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e",
+      "names": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "scaffold_warning": "the 11 courts establish the structural distribution shell only; they are not semantic parity"
+    }
+  },
+  "reconciliation": {
+    "earlier_120": {
+      "inventory": "v1b-candidate-freeze.json (source head 4a95b73a), install e10b0254",
+      "crate_production_blockers": 198,
+      "excluded_from_upper_bound": 78,
+      "reachable_production_blockers": 120,
+      "receipt_files": 53
+    },
+    "adjudicator_14": {
+      "inventory": "regenerated at c7dc87ffb, install 648f8f3e",
+      "crate_production_blockers": 80,
+      "excluded_from_upper_bound": 66,
+      "reachable_production_blockers": 14,
+      "receipt_files_with_obligations": 9
+    },
+    "this_measurement": {
+      "head_inventory": "v1c at 376ae9608",
+      "crate_production_blockers": 80,
+      "reachable_production_blockers": 14,
+      "post_fix_inventory": "v1d at tree c3b6979",
+      "post_fix_crate_production_blockers": 67,
+      "post_fix_reachable_production_blockers": 1
+    },
+    "denominators": {
+      "closure_denominator": "reachable *uncontracted production blockers* in the linked-function upper bound. This is what consumer_closure.py adjudicates and what the 120 and the 14 count.",
+      "all_operations_denominator": "all reachable production unsafe operations in the same 333 (ssh) / 321 (sshd) files, contracted or not: 43353 (ssh) and 42054 (sshd) at this identity, including every unsafe block, unsafe fn, unsafe impl/trait, unsafe extern block and high-risk/FFI call.",
+      "why_two_numbers_exist": "the 120 was the old blocker denominator under v1b + install e10b0254 (198 production blockers, 78 outside the then reachable set). It was never the all-operations denominator. The 14 is the same blocker denominator after 118 blocker sites were converted between 4a95b73a and c7dc87ffb (198 -> 80) and after the binary rebuild changed the reachable file set (345 -> 333). The two figures are not comparable as a like-for-like claim and must not be carried side by side."
+    },
+    "intersection": {
+      "old_120_vs_new_14_ids": 0,
+      "reason": "the v1b blockers and the current blockers are disjoint by (file,line,kind): source changed between 4a95b73a and 376ae9608, and the eight newly reachable files had v1b blockers that were outside the old binary's upper bound. No old receipt is re-pointed at a new operation; each old operation is re-located by name or recorded eliminated."
+    }
+  },
+  "rebinding": {
+    "method": "for every boundary in every site and evidence receipt, resolve the audited operation on the current source: anchor-window definition match first, then module-aware unsafe-definition match, then nearest safe definition by anchor distance. A receipt is never deleted and never re-pointed at a different operation; an operation that became safe is recorded ELIMINATED.",
+    "receipts": {
+      "openssh-discharge-sites.json": {
+        "total": 120,
+        "rebound_unsafe_operation": 74,
+        "recorded_eliminated": 46,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-provider-sites.json": {
+        "total": 47,
+        "rebound_unsafe_operation": 16,
+        "recorded_eliminated": 31,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-receipts-1-sites.json": {
+        "total": 47,
+        "rebound_unsafe_operation": 16,
+        "recorded_eliminated": 31,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-receipts-2-sites.json": {
+        "total": 8,
+        "rebound_unsafe_operation": 6,
+        "recorded_eliminated": 2,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-receipts-3-sites.json": {
+        "total": 37,
+        "rebound_unsafe_operation": 30,
+        "recorded_eliminated": 7,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-asn1-ocsp-sites.json": {
+        "total": 7,
+        "rebound_unsafe_operation": 5,
+        "recorded_eliminated": 2,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-runtime-alloc-sites.json": {
+        "total": 4,
+        "rebound_unsafe_operation": 2,
+        "recorded_eliminated": 2,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-discharge.json": {
+        "total": 120,
+        "rebound_unsafe_operation": 74,
+        "recorded_eliminated": 46,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-receipts-1.json": {
+        "total": 47,
+        "rebound_unsafe_operation": 16,
+        "recorded_eliminated": 31,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-receipts-2.json": {
+        "total": 8,
+        "rebound_unsafe_operation": 6,
+        "recorded_eliminated": 2,
+        "removed": 0,
+        "kind_changed": 0
+      },
+      "openssh-receipts-3.json": {
+        "total": 37,
+        "rebound_unsafe_operation": 30,
+        "recorded_eliminated": 7,
+        "removed": 0,
+        "kind_changed": 0
+      }
+    },
+    "integrity": {
+      "every_rebound_unsafe_line_is_a_scanner_site": true,
+      "every_eliminated_line_names_the_safe_fn": true,
+      "deleted_receipts": 0
+    },
+    "adjudicator_spot_check_rerun": {
+      "sampled": 25,
+      "unsafe_operation_with_contract": 13,
+      "recorded_eliminated": 12,
+      "named_line_is_not_an_unsafe_operation_and_not_marked_eliminated": 0,
+      "missing": 0,
+      "note": "the adjudicator's 14 stale coordinates now resolve to the same audited operation (13 still unsafe with a contract, 12 recorded as eliminated)."
+    }
+  },
+  "new_receipts": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-rebind-sites.json",
+    "sha256": "796aa9095e9100ccae1b19b55864b035d14d70dc7846e3f5d7ddc19090ef7503",
+    "kind": "site-enumerating-boundary-receipt",
+    "covers": "the eight files that had no boundary receipt plus the previously uncovered digest.rs:991 site",
+    "v1_operations": 14,
+    "by_disposition": {
+      "CONTRACTED": 7,
+      "ELIMINATED": 6,
+      "BLOCKED": 1
+    },
+    "additional_operations_enumerated": 227,
+    "additional_operations_note": "the 227 non-V1 production unsafe fn/trait/impl/extern items in the same files are enumerated with audited=false. Unsafe blocks, high-risk calls and non-alloc FFI calls are counted by the inventory's per-file operation counts (43353 production operations across the reachable ssh files) but are not itemised here. This receipt does not claim them audited.",
+    "files": {
+      "src/evp/legacy_blake2.rs": [
+        {
+          "line": 152,
+          "operation": "blake2b_int_init",
+          "disposition": "BLOCKED",
+          "reason": "md_data ABI precondition not established"
+        }
+      ],
+      "src/provider/core_dispatch.rs": [
+        {
+          "line": 371,
+          "operation": "core_thread_start",
+          "disposition": "CONTRACTED",
+          "witness": "provider core dispatch ABI"
+        }
+      ],
+      "src/provider/decode_der2key.rs": [
+        {
+          "line": 193,
+          "operation": "bare_algor_it",
+          "disposition": "ELIMINATED",
+          "reason": "vestigial unsafe marker removed; returns a static descriptor"
+        }
+      ],
+      "src/provider/ecdsa_sig.rs": [
+        {
+          "line": 1553,
+          "operation": "ecdsa_sigalg_query_key_types",
+          "disposition": "ELIMINATED",
+          "reason": "vestigial unsafe marker removed; returns a static array"
+        }
+      ],
+      "src/provider/encode_key2ms.rs": [
+        {
+          "line": 67,
+          "operation": "unsafe extern block (libc strcmp)",
+          "disposition": "CONTRACTED",
+          "witness": "libc ABI and NUL-terminated call sites"
+        }
+      ],
+      "src/provider/legacyprov.rs": [
+        {
+          "line": 154,
+          "operation": "legacy_gettable_params",
+          "disposition": "ELIMINATED",
+          "reason": "vestigial unsafe marker removed; returns a static array"
+        },
+        {
+          "line": 302,
+          "operation": "newctx",
+          "disposition": "ELIMINATED",
+          "reason": "vestigial unsafe marker removed; safe OwnedCtx::new"
+        },
+        {
+          "line": 316,
+          "operation": "freectx",
+          "disposition": "CONTRACTED",
+          "witness": "provider freectx dispatch lifecycle"
+        },
+        {
+          "line": 465,
+          "operation": "mdc2_settable_ctx_params",
+          "disposition": "ELIMINATED",
+          "reason": "vestigial unsafe marker removed; returns a static array"
+        },
+        {
+          "line": 510,
+          "operation": "newctx",
+          "disposition": "ELIMINATED",
+          "reason": "vestigial unsafe marker removed; safe OwnedCtx::new"
+        },
+        {
+          "line": 524,
+          "operation": "freectx",
+          "disposition": "CONTRACTED",
+          "witness": "provider freectx dispatch lifecycle"
+        }
+      ],
+      "src/rsa/ameth.rs": [
+        {
+          "line": 610,
+          "operation": "x509_algor_free_local",
+          "disposition": "CONTRACTED",
+          "witness": "internal caller passes a live or NULL X509_ALGOR"
+        }
+      ],
+      "src/runtime/bio/owned.rs": [
+        {
+          "line": 101,
+          "operation": "CtxDestroy",
+          "disposition": "CONTRACTED",
+          "witness": "implementer obligations plus constructor size/alignment validation"
+        }
+      ],
+      "src/provider/digest.rs": [
+        {
+          "line": 996,
+          "operation": "internal_final",
+          "disposition": "CONTRACTED",
+          "witness": "provider digest final dispatch supplies outl; ctx/out are not dereferenced"
+        }
+      ]
+    }
+  },
+  "digest_991_resolution": {
+    "id": "V1:src/provider/digest.rs:991:UNSAFE_FN_DEF",
+    "function": "internal_final (null digest provider)",
+    "old_line": 991,
+    "current_line": 996,
+    "resolution": "kept unsafe and documented with a # Safety contract: outl is a live, writable output slot supplied by the provider final dispatch; ctx and out are not dereferenced (ctx_final ignores both) and outsz is unused by this override.",
+    "why_not_safe": "the function still performs a raw write through the caller-supplied outl pointer; it cannot be a safe fn without changing the provider final ABI or copying the value through a safe abstraction that does not exist at this boundary",
+    "witness": "provider digest final dispatch; ctx_final is extern \"C\" fn ctx_final(_md, _ctx) -> c_int { 1 } and reads neither pointer"
+  },
+  "vestigial_markers_removed": [
+    "src/provider/decode_der2key.rs: bare_algor_it (unsafe extern -> extern)",
+    "src/provider/ecdsa_sig.rs: ecdsa_sigalg_query_key_types (unsafe extern -> extern)",
+    "src/provider/legacyprov.rs: legacy_gettable_params (unsafe extern -> extern)",
+    "src/provider/legacyprov.rs: legacy_digest_impl::newctx (unsafe extern -> extern)",
+    "src/provider/legacyprov.rs: mdc2_settable_ctx_params (unsafe extern -> extern)",
+    "src/provider/legacyprov.rs: mdc2::newctx (unsafe extern -> extern)"
+  ],
+  "gates": {
+    "cargo_fmt_all_check": "pass (exit 0)",
+    "cargo_check_lib": "pass (exit 0)",
+    "cargo_clippy_all_targets_deny_warnings": "pass (exit 0)",
+    "cargo_test_lib_test_threads_4": "pass: 2202 passed, 0 failed, 52 ignored",
+    "ignored_tests_note": "the current tree's ignored count is 52; the diff adds no #[ignore] and removes no test. The 1962/42 figure in AGENTS.md is a historical floor, not a frozen literal.",
+    "abi_courts": "11/11 pass at the rebuilt identity (body_hash d4b9e824)"
+  },
+  "closure": {
+    "engine": "forensics/tools/consumer_closure.py v3",
+    "inventory": "v1d-candidate-freeze.json at git tree c3b6979",
+    "ssh": {
+      "receipt": "/work/court/tmp/rebind/closure-ssh-final3.json",
+      "receipt_sha256": "36e873d3b9b00c7b4b1063ad889b7e04f1ff0695df19e4cf94036033d90abdf8",
+      "artifact": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+      "artifact_sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+      "reachable_files": 333,
+      "counts": {
+        "reachable_production_obligations": 1,
+        "DISCHARGED": 0,
+        "BLOCKED": 1,
+        "UNKNOWN": 0
+      },
+      "verdict": "ACCEPTED",
+      "refusals": []
+    },
+    "sshd": {
+      "receipt": "/work/court/tmp/rebind/closure-sshd-final3.json",
+      "receipt_sha256": "1297c5c4012000ce1abceff106369f7d7c277fd7e4a1aeeeb55b509d932f5419",
+      "artifact": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+      "artifact_sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002",
+      "reachable_files": 321,
+      "counts": {
+        "reachable_production_obligations": 1,
+        "DISCHARGED": 0,
+        "BLOCKED": 1,
+        "UNKNOWN": 0
+      },
+      "verdict": "ACCEPTED",
+      "refusals": []
+    },
+    "blocked_obligation": {
+      "id": "V1:src/evp/legacy_blake2.rs:152:UNSAFE_FN_DEF",
+      "status": "BLOCKED",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "mechanism_state": "OWNERSHIP_RECONSTRUCTED",
+      "boundary_receipt_present": true,
+      "boundary_ids": [
+        "OSSH-RB-001"
+      ],
+      "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is BLOCKED; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it"
+    },
+    "verdict_interpretation": "ACCEPTED means no refusal condition fired. It does not mean SAFE_COMPATIBLE and it does not mean any obligation is discharged."
+  },
+  "not_reached": [
+    "element 7 (no unresolved dynamic dispatch or callback edge) is still not established: the closure reports 135 (ssh) / 132 (sshd) reachable unresolved indirect sites out of 679 unresolved sites, 5242 address-taken candidates and 1 reachable callback registrar. Unclassified reachable sites are 0, but unresolved edges are not zero.",
+    "BOUNDARY instruments (Miri/ASan/Loom/mutation) were not run at this identity.",
+    "SEAL requirements were not run at this identity.",
+    "independent review of the openssh discharge was not performed; this receipt is an author's rebind, not an independent adjudication.",
+    "the L7 runtime rows still do not record the consumer binary digest; the closure and runtime binaries are not shown to be the same bytes. This receipt does not repair that element.",
+    "the 13 CONTRACTED/ELIMINATED sites are not SAFETY_DISCHARGED: the mechanism states remain OWNERSHIP_RECONSTRUCTED (EVP_PKEY_PROVIDER) and UNSAFE_OPEN (BIO) for the runtime/bio/owned trait.",
+    "the 227 additional_operations in the eight files are enumerated, not audited."
+  ],
+  "non_claims": [
+    "This is a binding-repair receipt, not a SAFE_COMPATIBLE promotion.",
+    "A CONTRACTED disposition means the source states the contract and the receipt names a witness; it is not an independently checked discharge.",
+    "The 120 -> 14 change is a denominator change (old blocker set and old binary vs current blocker set and current binary), not a claim that 106 sites were discharged in this subphase.",
+    "The rebuilt install hashes differ from the HEAD install because of embedded line coordinates; they are the exact post-edit candidate, not a toolchain change.",
+    "No Miri, ASan, LSan, TSan, Loom, Kani, mutation, dudect, ctgrind or Wycheproof/ACVP court was run for this rebind."
+  ]
+}

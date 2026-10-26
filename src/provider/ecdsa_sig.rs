@@ -1547,7 +1547,10 @@ unsafe fn ecdsa_sigalg_signverify_init(
 }
 
 /// `static const char **ecdsa_sigalg_query_key_types(void)` — `ecdsa_sig.c.in:967-972`.
-unsafe extern "C" fn ecdsa_sigalg_query_key_types() -> *mut *const c_char {
+///
+/// No caller precondition: the body returns a pointer into a `'static` array of `'static`
+/// literals and reads no argument, so the `unsafe` marker was vestigial.
+extern "C" fn ecdsa_sigalg_query_key_types() -> *mut *const c_char {
     /// `static const char *keytypes[] = { "EC", NULL }`.
     #[repr(C)]
     struct KeyTypeNames([*const c_char; 2]);

@@ -1,224 +1,338 @@
 {
-  "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
-  "kind": "site-enumerating-boundary-receipt",
-  "receipt": "openssh-asn1-ocsp-sites",
-  "subphase": "safe-c33 openssh block 4: ASN1_OCSP mechanism reconstruction",
-  "date": "2026-10-26",
-  "mechanism": "ASN1_OCSP",
-  "candidate": {
-    "branch": "integrate/safe-c33",
-    "head": "247925538",
-    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
-    "line_number_basis": "closure coordinates are the frozen inventory's; current_definition_line is the item's line in the working tree"
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "openssh-asn1-ocsp-sites",
+ "subphase": "safe-c33 openssh block 4: ASN1_OCSP mechanism reconstruction",
+ "date": "2026-10-26",
+ "mechanism": "ASN1_OCSP",
+ "candidate": {
+  "branch": "integrate/safe-c33",
+  "head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "inventory": "v1d-candidate-freeze.json (post-fix tree c3b6979); v1c-candidate-freeze.json (HEAD 376ae9608) for the pre-fix reconciliation",
+  "line_number_basis": "closure coordinates are the frozen inventory's; current_definition_line is the item's line in the working tree",
+  "historical": {
+   "head": "247925538",
+   "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json"
   },
-  "mechanism_receipt": "openssh-mechanisms-reconstructed.json",
-  "summary": {
-    "enumerated": 7,
-    "eliminated_structurally": 2,
-    "contracted": 5,
-    "blocked": 0,
-    "discharged": 0,
-    "statement": "All seven sites are enumerated and either eliminated structurally or contracted with an in-crate caller that establishes the precondition. DISCHARGED stays 0: no independent BOUNDARY review of these contracts exists, so the mechanism is OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED."
+  "source_head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "head_commit": "376ae960871129c54be675c6085792bf886864b7",
+  "head_commit_note": "HEAD is the merge commit on main; the exact measured bytes are the git tree object because the eight src edits are uncommitted",
+  "working_tree_dirty": true,
+  "rebound_utc": "2026-10-26T13:05:37Z"
+ },
+ "mechanism_receipt": "openssh-mechanisms-reconstructed.json",
+ "summary": {
+  "enumerated": 7,
+  "eliminated_structurally": 2,
+  "contracted": 5,
+  "blocked": 0,
+  "discharged": 0,
+  "statement": "All seven sites are enumerated and either eliminated structurally or contracted with an in-crate caller that establishes the precondition. DISCHARGED stays 0: no independent BOUNDARY review of these contracts exists, so the mechanism is OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED."
+ },
+ "boundaries": [
+  {
+   "id": "P25-OSSH-OCSP-1",
+   "file": "src/asn1/a_mbstr.rs",
+   "line": 266,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cpy_asc",
+   "authority": "crypto/asn1/a_mbstr.c cpy_asc",
+   "body_class": "unsafe-fn-definition",
+   "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
+   "required_contract": "No caller contract. The C callback type `int (*)(unsigned long, void *)` and its `*mut *mut c_uchar` cursor argument are removed: `traverse_string` takes an `FnMut`, and the four writers take `&mut [u8]` + position, so each write is bounds-checked against the block `ASN1_mbstring_ncopy` allocated.",
+   "preconditions": [],
+   "established_by": [
+    "type invariant: `out` is the `outlen`-byte view of the same frame's `count = outlen + 1` block"
+   ],
+   "hazard_analysis": {
+    "out_parameter_extent": "no out-parameter: the destination is now a slice whose length is the extent",
+    "input_output_aliasing": "none: the slice is derived from the block the frame exclusively owns",
+    "partial_init_on_failure": "the writer returns -1 rather than writing past the slice",
+    "callback_reentrancy": "none: no callback crosses an ABI edge",
+    "secret_cleansing": "n/a: no secret-bearing storage"
+   },
+   "disposition": "ELIMINATED",
+   "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+   "blocker": "No independent BOUNDARY review; the mechanism is OWNERSHIP_RECONSTRUCTED, so the closure reports BLOCKED, not DISCHARGED.",
+   "source_change_to_discharge": "Applied: the unsafe extern \"C\" callback family and the raw cursor are gone (see the a_mbstr diff in commit-scope receipt openssh-mechanisms-reconstructed.json).",
+   "inventory_line": 243,
+   "original_line": 243,
+   "rebind": {
+    "from_line": 243,
+    "to_line": 266,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 266,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
   },
-  "boundaries": [
-    {
-      "id": "P25-OSSH-OCSP-1",
-      "file": "src/asn1/a_mbstr.rs",
-      "line": 243,
-      "kind": "UNSAFE_FN_DEF",
-      "operation": "cpy_asc",
-      "authority": "crypto/asn1/a_mbstr.c cpy_asc",
-      "body_class": "unsafe-fn-definition",
-      "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
-      "required_contract": "No caller contract. The C callback type `int (*)(unsigned long, void *)` and its `*mut *mut c_uchar` cursor argument are removed: `traverse_string` takes an `FnMut`, and the four writers take `&mut [u8]` + position, so each write is bounds-checked against the block `ASN1_mbstring_ncopy` allocated.",
-      "preconditions": [],
-      "established_by": [
-        "type invariant: `out` is the `outlen`-byte view of the same frame's `count = outlen + 1` block"
-      ],
-      "hazard_analysis": {
-        "out_parameter_extent": "no out-parameter: the destination is now a slice whose length is the extent",
-        "input_output_aliasing": "none: the slice is derived from the block the frame exclusively owns",
-        "partial_init_on_failure": "the writer returns -1 rather than writing past the slice",
-        "callback_reentrancy": "none: no callback crosses an ABI edge",
-        "secret_cleansing": "n/a: no secret-bearing storage"
-      },
-      "disposition": "CONTRACTED",
-      "obligation_outcome": "ELIMINATED_STRUCTURALLY",
-      "blocker": "No independent BOUNDARY review; the mechanism is OWNERSHIP_RECONSTRUCTED, so the closure reports BLOCKED, not DISCHARGED.",
-      "source_change_to_discharge": "Applied: the unsafe extern \"C\" callback family and the raw cursor are gone (see the a_mbstr diff in commit-scope receipt openssh-mechanisms-reconstructed.json)."
-    },
-    {
-      "id": "P25-OSSH-OCSP-2",
-      "file": "src/ocsp/ocsp_ext.rs",
-      "line": 685,
-      "kind": "UNSAFE_FN_DEF",
-      "operation": "ocsp_add1_nonce",
-      "authority": "crypto/ocsp/ocsp_ext.c ocsp_add1_nonce",
-      "body_class": "unsafe-fn-definition",
-      "contract_in_source": "block-level SAFETY comment only; no # Safety fn contract",
-      "required_contract": "`exts` is a writable `STACK_OF(X509_EXTENSION) *` slot; `val` is NULL or readable for a positive `len`; the `Asn1String` this call builds is a borrowed view over a frame-local buffer that `X509V3_add1_i2d` encodes without adopting.",
-      "preconditions": [
-        "exts: live writable slot",
-        "val: NULL or readable for len bytes"
-      ],
-      "established_by": [
-        "caller: OCSP_request_add1_nonce / OCSP_basic_add1_nonce pass the address of their own live extension field; both exported fns carry `# Safety`"
-      ],
-      "hazard_analysis": {
-        "out_parameter_extent": "the slot is written only through X509V3_add1_i2d under X509V3_ADD_REPLACE",
-        "input_output_aliasing": "the scratch Asn1String aliases only its own buffer, which outlives the call",
-        "partial_init_on_failure": "every early return drops the single buffer; no object is half-installed",
-        "callback_reentrancy": "X509V3_add1_i2d is a crate call, not an application callback",
-        "secret_cleansing": "the nonce is SECRET_DATA; the scratch buffer is a Rust Vec that is not cleansed before release (retained obligation, unchanged from the authority's OPENSSL_free)"
-      },
-      "disposition": "CONTRACTED",
-      "obligation_outcome": "CONTRACTED",
-      "blocker": "No independent BOUNDARY review; retained secret-cleansing obligation is recorded, not hidden.",
-      "source_change_to_discharge": "Applied: `# Safety` contract naming both callers and the borrow-only scratch representation."
-    },
-    {
-      "id": "P25-OSSH-OCSP-3",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "line": 113,
-      "kind": "UNSAFE_FN_DEF",
-      "operation": "i2r_ocsp_crlid",
-      "authority": "crypto/ocsp/v3_ocsp.c i2r_ocsp_crlid",
-      "body_class": "unsafe-fn-definition",
-      "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
-      "required_contract": "`_method` is this row (unread); `in` is the live `OCSP_CRLID` the row's `it` decoder produced, borrowed and never retained; `bp` is a live BIO; each field pointer is NULL or the decoder's live value.",
-      "preconditions": [
-        "in: live OCSP_CRLID",
-        "bp: live BIO",
-        "fields: NULL or live decoder values"
-      ],
-      "established_by": [
-        "caller: X509V3_EXT_print (src/x509/v3_prn.rs) decodes through `method->it` and passes the live BIO"
-      ],
-      "hazard_analysis": {
-        "out_parameter_extent": "n/a: writes only to the BIO",
-        "input_output_aliasing": "none: every member is borrowed from the decoded value",
-        "partial_init_on_failure": "n/a: no allocation or initialisation in this body",
-        "callback_reentrancy": "none: no callback reenters",
-        "secret_cleansing": "n/a: no secret-bearing storage"
-      },
-      "disposition": "CONTRACTED",
-      "obligation_outcome": "CONTRACTED",
-      "blocker": "No independent BOUNDARY review.",
-      "source_change_to_discharge": "Applied: `# Safety` contract naming the invoking crate function and the borrowed/value preconditions."
-    },
-    {
-      "id": "P25-OSSH-OCSP-4",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "line": 200,
-      "kind": "UNSAFE_FN_DEF",
-      "operation": "i2d_ocsp_nonce",
-      "authority": "crypto/ocsp/v3_ocsp.c i2d_ocsp_nonce",
-      "body_class": "unsafe-fn-definition",
-      "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
-      "required_contract": "`a` is a live `ASN1_OCTET_STRING` borrowed for the call; `pp` is NULL (size query) or `*pp` is a writable cursor with room for the returned length.",
-      "preconditions": [
-        "a: live ASN1_OCTET_STRING",
-        "pp: NULL or *pp writable for the returned length"
-      ],
-      "established_by": [
-        "caller: do_ext_i2d (src/x509/v3_conf.rs) sizes with a NULL destination, allocates `len`, and passes `&mut p` into that block"
-      ],
-      "hazard_analysis": {
-        "out_parameter_extent": "the cursor advance is exactly the returned length",
-        "input_output_aliasing": "none: the value is read only",
-        "partial_init_on_failure": "a NULL destination is the size query, not a partial write",
-        "callback_reentrancy": "none: no callback",
-        "secret_cleansing": "the nonce is SECRET_DATA copied to the caller's DER buffer; no local copy is retained"
-      },
-      "disposition": "CONTRACTED",
-      "obligation_outcome": "CONTRACTED",
-      "blocker": "No independent BOUNDARY review.",
-      "source_change_to_discharge": "Applied: `# Safety` contract naming the twice-pass encoder contract and its establishing caller."
-    },
-    {
-      "id": "P25-OSSH-OCSP-5",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "line": 221,
-      "kind": "UNSAFE_FN_DEF",
-      "operation": "d2i_ocsp_nonce",
-      "authority": "crypto/ocsp/v3_ocsp.c d2i_ocsp_nonce",
-      "body_class": "unsafe-fn-definition",
-      "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
-      "required_contract": "`a` is NULL or a live `ASN1_OCTET_STRING *` slot; `*pp` is readable for `length` bytes with `0 <= length <= c_int::MAX`; on success the caller owns the decoded value, on failure a caller-supplied value is untouched and nothing allocated leaks.",
-      "preconditions": [
-        "a: NULL or live slot",
-        "pp: readable cursor for length bytes",
-        "length: 0..=INT_MAX"
-      ],
-      "established_by": [
-        "caller: X509V3_EXT_d2i / X509V3_EXT_print pass a NULL slot and the extension's own value bytes"
-      ],
-      "hazard_analysis": {
-        "out_parameter_extent": "on success *a receives the decoded object; the cursor advances by exactly length",
-        "input_output_aliasing": "a caller-supplied object is compared by address and never freed through the new value",
-        "partial_init_on_failure": "a failed set frees exactly the object this call created (test: asn1_ocsp_nonce_set_failure_releases_the_new_string_exactly_once)",
-        "callback_reentrancy": "none: no callback inside the decode",
-        "secret_cleansing": "the nonce is SECRET_DATA; the caller's object is not cleansed on free (authority behaviour)"
-      },
-      "disposition": "CONTRACTED",
-      "obligation_outcome": "CONTRACTED",
-      "blocker": "No independent BOUNDARY review.",
-      "source_change_to_discharge": "Applied: `# Safety` contract including the ownership transfer and the failure dispositions."
-    },
-    {
-      "id": "P25-OSSH-OCSP-6",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "line": 312,
-      "kind": "UNSAFE_FN_DEF",
-      "operation": "s2i_ocsp_nocheck",
-      "authority": "crypto/ocsp/v3_ocsp.c s2i_ocsp_nocheck",
-      "body_class": "unsafe-fn-definition",
-      "contract_in_source": "no SAFETY contract and no unsafe operation: every argument is unread",
-      "required_contract": "No caller contract: every argument is unread. The item is a safe `extern \"C\" fn` that coerces to the row's slot.",
-      "preconditions": [],
-      "established_by": [
-        "vacuous: the body reads no argument"
-      ],
-      "hazard_analysis": {
-        "out_parameter_extent": "the returned fresh ASN1_NULL is the caller's",
-        "input_output_aliasing": "none",
-        "partial_init_on_failure": "n/a",
-        "callback_reentrancy": "none: no callback",
-        "secret_cleansing": "n/a: no secret-bearing storage"
-      },
-      "disposition": "CONTRACTED",
-      "obligation_outcome": "ELIMINATED_STRUCTURALLY",
-      "blocker": "No independent BOUNDARY review; nothing remains to review at this site.",
-      "source_change_to_discharge": "Applied: `unsafe` removed from the declaration."
-    },
-    {
-      "id": "P25-OSSH-OCSP-7",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "line": 326,
-      "kind": "UNSAFE_FN_DEF",
-      "operation": "i2r_ocsp_serviceloc",
-      "authority": "crypto/ocsp/v3_ocsp.c i2r_ocsp_serviceloc",
-      "body_class": "unsafe-fn-definition",
-      "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
-      "required_contract": "`_method` is this row (unread); `in` is the live `OCSP_SERVICELOC` the row's `it` decoder produced, borrowed and never retained; `bp` is a live BIO; `issuer`/`locator` are the decoder's own borrowed members.",
-      "preconditions": [
-        "in: live OCSP_SERVICELOC",
-        "bp: live BIO"
-      ],
-      "established_by": [
-        "caller: X509V3_EXT_print (src/x509/v3_prn.rs)"
-      ],
-      "hazard_analysis": {
-        "out_parameter_extent": "n/a: writes only to the BIO",
-        "input_output_aliasing": "none: every member is borrowed from the decoded value",
-        "partial_init_on_failure": "n/a: no allocation in this body",
-        "callback_reentrancy": "none: no callback reenters",
-        "secret_cleansing": "n/a: no secret-bearing storage"
-      },
-      "disposition": "CONTRACTED",
-      "obligation_outcome": "CONTRACTED",
-      "blocker": "No independent BOUNDARY review.",
-      "source_change_to_discharge": "Applied: `# Safety` contract naming the invoking crate function."
-    }
-  ]
+  {
+   "id": "P25-OSSH-OCSP-2",
+   "file": "src/ocsp/ocsp_ext.rs",
+   "line": 698,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ocsp_add1_nonce",
+   "authority": "crypto/ocsp/ocsp_ext.c ocsp_add1_nonce",
+   "body_class": "unsafe-fn-definition",
+   "contract_in_source": "block-level SAFETY comment only; no # Safety fn contract",
+   "required_contract": "`exts` is a writable `STACK_OF(X509_EXTENSION) *` slot; `val` is NULL or readable for a positive `len`; the `Asn1String` this call builds is a borrowed view over a frame-local buffer that `X509V3_add1_i2d` encodes without adopting.",
+   "preconditions": [
+    "exts: live writable slot",
+    "val: NULL or readable for len bytes"
+   ],
+   "established_by": [
+    "caller: OCSP_request_add1_nonce / OCSP_basic_add1_nonce pass the address of their own live extension field; both exported fns carry `# Safety`"
+   ],
+   "hazard_analysis": {
+    "out_parameter_extent": "the slot is written only through X509V3_add1_i2d under X509V3_ADD_REPLACE",
+    "input_output_aliasing": "the scratch Asn1String aliases only its own buffer, which outlives the call",
+    "partial_init_on_failure": "every early return drops the single buffer; no object is half-installed",
+    "callback_reentrancy": "X509V3_add1_i2d is a crate call, not an application callback",
+    "secret_cleansing": "the nonce is SECRET_DATA; the scratch buffer is a Rust Vec that is not cleansed before release (retained obligation, unchanged from the authority's OPENSSL_free)"
+   },
+   "disposition": "CONTRACTED",
+   "obligation_outcome": "CONTRACTED",
+   "blocker": "No independent BOUNDARY review; retained secret-cleansing obligation is recorded, not hidden.",
+   "source_change_to_discharge": "Applied: `# Safety` contract naming both callers and the borrow-only scratch representation.",
+   "inventory_line": 685,
+   "original_line": 685,
+   "rebind": {
+    "from_line": 685,
+    "to_line": 698,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 698,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "P25-OSSH-OCSP-3",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "line": 122,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_crlid",
+   "authority": "crypto/ocsp/v3_ocsp.c i2r_ocsp_crlid",
+   "body_class": "unsafe-fn-definition",
+   "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
+   "required_contract": "`_method` is this row (unread); `in` is the live `OCSP_CRLID` the row's `it` decoder produced, borrowed and never retained; `bp` is a live BIO; each field pointer is NULL or the decoder's live value.",
+   "preconditions": [
+    "in: live OCSP_CRLID",
+    "bp: live BIO",
+    "fields: NULL or live decoder values"
+   ],
+   "established_by": [
+    "caller: X509V3_EXT_print (src/x509/v3_prn.rs) decodes through `method->it` and passes the live BIO"
+   ],
+   "hazard_analysis": {
+    "out_parameter_extent": "n/a: writes only to the BIO",
+    "input_output_aliasing": "none: every member is borrowed from the decoded value",
+    "partial_init_on_failure": "n/a: no allocation or initialisation in this body",
+    "callback_reentrancy": "none: no callback reenters",
+    "secret_cleansing": "n/a: no secret-bearing storage"
+   },
+   "disposition": "CONTRACTED",
+   "obligation_outcome": "CONTRACTED",
+   "blocker": "No independent BOUNDARY review.",
+   "source_change_to_discharge": "Applied: `# Safety` contract naming the invoking crate function and the borrowed/value preconditions.",
+   "inventory_line": 113,
+   "original_line": 113,
+   "rebind": {
+    "from_line": 113,
+    "to_line": 122,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 122,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "P25-OSSH-OCSP-4",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "line": 232,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2d_ocsp_nonce",
+   "authority": "crypto/ocsp/v3_ocsp.c i2d_ocsp_nonce",
+   "body_class": "unsafe-fn-definition",
+   "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
+   "required_contract": "`a` is a live `ASN1_OCTET_STRING` borrowed for the call; `pp` is NULL (size query) or `*pp` is a writable cursor with room for the returned length.",
+   "preconditions": [
+    "a: live ASN1_OCTET_STRING",
+    "pp: NULL or *pp writable for the returned length"
+   ],
+   "established_by": [
+    "caller: do_ext_i2d (src/x509/v3_conf.rs) sizes with a NULL destination, allocates `len`, and passes `&mut p` into that block"
+   ],
+   "hazard_analysis": {
+    "out_parameter_extent": "the cursor advance is exactly the returned length",
+    "input_output_aliasing": "none: the value is read only",
+    "partial_init_on_failure": "a NULL destination is the size query, not a partial write",
+    "callback_reentrancy": "none: no callback",
+    "secret_cleansing": "the nonce is SECRET_DATA copied to the caller's DER buffer; no local copy is retained"
+   },
+   "disposition": "CONTRACTED",
+   "obligation_outcome": "CONTRACTED",
+   "blocker": "No independent BOUNDARY review.",
+   "source_change_to_discharge": "Applied: `# Safety` contract naming the twice-pass encoder contract and its establishing caller.",
+   "inventory_line": 200,
+   "original_line": 200,
+   "rebind": {
+    "from_line": 200,
+    "to_line": 232,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 232,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "P25-OSSH-OCSP-5",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "line": 265,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "d2i_ocsp_nonce",
+   "authority": "crypto/ocsp/v3_ocsp.c d2i_ocsp_nonce",
+   "body_class": "unsafe-fn-definition",
+   "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
+   "required_contract": "`a` is NULL or a live `ASN1_OCTET_STRING *` slot; `*pp` is readable for `length` bytes with `0 <= length <= c_int::MAX`; on success the caller owns the decoded value, on failure a caller-supplied value is untouched and nothing allocated leaks.",
+   "preconditions": [
+    "a: NULL or live slot",
+    "pp: readable cursor for length bytes",
+    "length: 0..=INT_MAX"
+   ],
+   "established_by": [
+    "caller: X509V3_EXT_d2i / X509V3_EXT_print pass a NULL slot and the extension's own value bytes"
+   ],
+   "hazard_analysis": {
+    "out_parameter_extent": "on success *a receives the decoded object; the cursor advances by exactly length",
+    "input_output_aliasing": "a caller-supplied object is compared by address and never freed through the new value",
+    "partial_init_on_failure": "a failed set frees exactly the object this call created (test: asn1_ocsp_nonce_set_failure_releases_the_new_string_exactly_once)",
+    "callback_reentrancy": "none: no callback inside the decode",
+    "secret_cleansing": "the nonce is SECRET_DATA; the caller's object is not cleansed on free (authority behaviour)"
+   },
+   "disposition": "CONTRACTED",
+   "obligation_outcome": "CONTRACTED",
+   "blocker": "No independent BOUNDARY review.",
+   "source_change_to_discharge": "Applied: `# Safety` contract including the ownership transfer and the failure dispositions.",
+   "inventory_line": 221,
+   "original_line": 221,
+   "rebind": {
+    "from_line": 221,
+    "to_line": 265,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 265,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "P25-OSSH-OCSP-6",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "line": 384,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_ocsp_nocheck",
+   "authority": "crypto/ocsp/v3_ocsp.c s2i_ocsp_nocheck",
+   "body_class": "unsafe-fn-definition",
+   "contract_in_source": "no SAFETY contract and no unsafe operation: every argument is unread",
+   "required_contract": "No caller contract: every argument is unread. The item is a safe `extern \"C\" fn` that coerces to the row's slot.",
+   "preconditions": [],
+   "established_by": [
+    "vacuous: the body reads no argument"
+   ],
+   "hazard_analysis": {
+    "out_parameter_extent": "the returned fresh ASN1_NULL is the caller's",
+    "input_output_aliasing": "none",
+    "partial_init_on_failure": "n/a",
+    "callback_reentrancy": "none: no callback",
+    "secret_cleansing": "n/a: no secret-bearing storage"
+   },
+   "disposition": "ELIMINATED",
+   "obligation_outcome": "ELIMINATED_STRUCTURALLY",
+   "blocker": "No independent BOUNDARY review; nothing remains to review at this site.",
+   "source_change_to_discharge": "Applied: `unsafe` removed from the declaration.",
+   "inventory_line": 312,
+   "original_line": 312,
+   "rebind": {
+    "from_line": 312,
+    "to_line": 384,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 384,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "P25-OSSH-OCSP-7",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "line": 406,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_serviceloc",
+   "authority": "crypto/ocsp/v3_ocsp.c i2r_ocsp_serviceloc",
+   "body_class": "unsafe-fn-definition",
+   "contract_in_source": "block-level SAFETY comments only; no # Safety fn contract",
+   "required_contract": "`_method` is this row (unread); `in` is the live `OCSP_SERVICELOC` the row's `it` decoder produced, borrowed and never retained; `bp` is a live BIO; `issuer`/`locator` are the decoder's own borrowed members.",
+   "preconditions": [
+    "in: live OCSP_SERVICELOC",
+    "bp: live BIO"
+   ],
+   "established_by": [
+    "caller: X509V3_EXT_print (src/x509/v3_prn.rs)"
+   ],
+   "hazard_analysis": {
+    "out_parameter_extent": "n/a: writes only to the BIO",
+    "input_output_aliasing": "none: every member is borrowed from the decoded value",
+    "partial_init_on_failure": "n/a: no allocation in this body",
+    "callback_reentrancy": "none: no callback reenters",
+    "secret_cleansing": "n/a: no secret-bearing storage"
+   },
+   "disposition": "CONTRACTED",
+   "obligation_outcome": "CONTRACTED",
+   "blocker": "No independent BOUNDARY review.",
+   "source_change_to_discharge": "Applied: `# Safety` contract naming the invoking crate function.",
+   "inventory_line": 326,
+   "original_line": 326,
+   "rebind": {
+    "from_line": 326,
+    "to_line": 406,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "current_line": 406,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  }
+ ],
+ "rebind": {
+  "source_head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "head_commit": "376ae960871129c54be675c6085792bf886864b7",
+  "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1d-candidate-freeze.json",
+  "rebound_utc": "2026-10-26T11:38:17Z",
+  "method": "source scan + anchor-window definition match; no receipt deleted; an eliminated operation is recorded as ELIMINATED rather than re-pointed",
+  "counts": {
+   "ELIMINATED_SAFE": 2,
+   "UNSAFE_OPERATION": 5
+  },
+  "disposition_note": "an operation that became safe is recorded ELIMINATED in both source_state and disposition; it is not re-pointed at another unsafe operation"
+ }
 }

@@ -92,6 +92,12 @@ mod drop_probe {
 /// `destroy_body` on a value that is not a valid `Self`; breaking (c) lets an allocator hook read a
 /// dangling file string during release. Each is undefined behaviour reachable without `unsafe` at
 /// the call site.
+///
+/// # Safety
+/// An implementor must uphold (a) through (d) above: `destroy_body` releases exactly the members
+/// this type owns, exactly once, never the enclosing block, and accepts the declared initialisation
+/// state; `FILE` is NULL or a NUL-terminated string with static storage; and `Self` has no
+/// alignment requirement beyond [`SEAM_MALLOC_ALIGN`].
 pub(crate) unsafe trait CtxDestroy: Sized {
     /// `__FILE__` for this context's `CRYPTO_*` calls, or NULL where the authority passes none.
     ///

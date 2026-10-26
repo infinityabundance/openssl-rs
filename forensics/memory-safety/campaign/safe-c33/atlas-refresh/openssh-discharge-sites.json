@@ -1,1117 +1,3105 @@
 {
-  "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
-  "kind": "site-enumerating-boundary-receipt",
-  "receipt": "openssh-discharge",
-  "subphase": "P25 openssh closure: mechanism-level site-enumerating discharge",
-  "date": "2026-10-26",
-  "candidate": {
-    "branch": "integrate/safe-c33",
-    "head": "b40e1f096",
-    "working_tree_dirty": true,
-    "working_tree_note": "the contract/elimination fixes in this subphase are uncommitted; the closure was re-run at this working tree",
-    "source_fix_file_sha256": {
-      "src/context/namemap.rs": "f05d3d4840563ce5c736406e9f6d7d5050262c08f387fa5f8c53c20f52c74cf7",
-      "src/engine/eng_dyn.rs": "0044c618f70a001c6a54d92d925bfcd5c2a2f4c1bdd55ba1ca899f8e3eb2eae6",
-      "src/engine/tb_asnmth.rs": "ef104135ff9751981051ff8fbbf710b4aa299be7dd0b5a0ed702ea3a2d45a7bb",
-      "src/rand/rand_lib.rs": "ee19112d10a5a9c96d39db3b6d466044acb4185479149810a0585ad520a7c5e5",
-      "src/ssl/ssl_conf.rs": "0ca90877cba6adbaf9ff58734c7e21e3ee7d2b3fc074ec13d372eec8b401b15f"
-    },
-    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
-    "inventory_source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
-    "artifacts": {
-      "ssh": {
-        "path": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
-        "sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57"
-      },
-      "sshd": {
-        "path": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
-        "sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
-      }
-    },
-    "artifact_note": "the frozen V1 binaries do not contain this subphase source fixes; the closure measures the classification effect of the site receipts, not the compiled effect of the fixes"
+ "schema": "openssl-rs/campaign/safe-c33/site-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "openssh-discharge",
+ "subphase": "P25 openssh closure: mechanism-level site-enumerating discharge",
+ "date": "2026-10-26",
+ "candidate": {
+  "branch": "integrate/safe-c33",
+  "head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "working_tree_dirty": true,
+  "working_tree_note": "the contract/elimination fixes in this subphase are uncommitted; the closure was re-run at this working tree",
+  "source_fix_file_sha256": {
+   "src/context/namemap.rs": "f05d3d4840563ce5c736406e9f6d7d5050262c08f387fa5f8c53c20f52c74cf7",
+   "src/engine/eng_dyn.rs": "0044c618f70a001c6a54d92d925bfcd5c2a2f4c1bdd55ba1ca899f8e3eb2eae6",
+   "src/engine/tb_asnmth.rs": "ef104135ff9751981051ff8fbbf710b4aa299be7dd0b5a0ed702ea3a2d45a7bb",
+   "src/rand/rand_lib.rs": "ee19112d10a5a9c96d39db3b6d466044acb4185479149810a0585ad520a7c5e5",
+   "src/ssl/ssl_conf.rs": "0ca90877cba6adbaf9ff58734c7e21e3ee7d2b3fc074ec13d372eec8b401b15f"
   },
-  "mechanism_results": {
-    "EVP_PKEY_PROVIDER": {
-      "reachable_sites": 65,
-      "discharged": 65,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-007",
-        "OSSH-DIS-008",
-        "OSSH-DIS-009",
-        "OSSH-DIS-010",
-        "OSSH-DIS-012",
-        "OSSH-DIS-013",
-        "OSSH-DIS-017",
-        "OSSH-DIS-018",
-        "OSSH-DIS-019",
-        "OSSH-DIS-032",
-        "OSSH-DIS-033",
-        "OSSH-DIS-034",
-        "OSSH-DIS-035",
-        "OSSH-DIS-036",
-        "OSSH-DIS-037",
-        "OSSH-DIS-038",
-        "OSSH-DIS-039",
-        "OSSH-DIS-040",
-        "OSSH-DIS-041",
-        "OSSH-DIS-042",
-        "OSSH-DIS-043",
-        "OSSH-DIS-044",
-        "OSSH-DIS-045",
-        "OSSH-DIS-046",
-        "OSSH-DIS-047",
-        "OSSH-DIS-048",
-        "OSSH-DIS-049",
-        "OSSH-DIS-050",
-        "OSSH-DIS-051",
-        "OSSH-DIS-052",
-        "OSSH-DIS-053",
-        "OSSH-DIS-054",
-        "OSSH-DIS-055",
-        "OSSH-DIS-056",
-        "OSSH-DIS-057",
-        "OSSH-DIS-058",
-        "OSSH-DIS-059",
-        "OSSH-DIS-060",
-        "OSSH-DIS-061",
-        "OSSH-DIS-062",
-        "OSSH-DIS-063",
-        "OSSH-DIS-064",
-        "OSSH-DIS-065",
-        "OSSH-DIS-066",
-        "OSSH-DIS-067",
-        "OSSH-DIS-068",
-        "OSSH-DIS-069",
-        "OSSH-DIS-070",
-        "OSSH-DIS-071",
-        "OSSH-DIS-072",
-        "OSSH-DIS-073",
-        "OSSH-DIS-074",
-        "OSSH-DIS-075",
-        "OSSH-DIS-076",
-        "OSSH-DIS-077",
-        "OSSH-DIS-078",
-        "OSSH-DIS-079",
-        "OSSH-DIS-080",
-        "OSSH-DIS-081",
-        "OSSH-DIS-082",
-        "OSSH-DIS-083",
-        "OSSH-DIS-084",
-        "OSSH-DIS-085",
-        "OSSH-DIS-086",
-        "OSSH-DIS-088"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
-    },
-    "X509_VERIFY_POLICY": {
-      "reachable_sites": 10,
-      "discharged": 10,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-001",
-        "OSSH-DIS-112",
-        "OSSH-DIS-113",
-        "OSSH-DIS-114",
-        "OSSH-DIS-115",
-        "OSSH-DIS-116",
-        "OSSH-DIS-117",
-        "OSSH-DIS-118",
-        "OSSH-DIS-119",
-        "OSSH-DIS-120"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
-    },
-    "RAND_CMS_STORE_KEYFMT": {
-      "reachable_sites": 9,
-      "discharged": 9,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-004",
-        "OSSH-DIS-005",
-        "OSSH-DIS-027",
-        "OSSH-DIS-028",
-        "OSSH-DIS-029",
-        "OSSH-DIS-030",
-        "OSSH-DIS-031",
-        "OSSH-DIS-087",
-        "OSSH-DIS-108"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
-    },
-    "ASN1_OCSP": {
-      "reachable_sites": 7,
-      "discharged": 7,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-002",
-        "OSSH-DIS-020",
-        "OSSH-DIS-021",
-        "OSSH-DIS-022",
-        "OSSH-DIS-023",
-        "OSSH-DIS-024",
-        "OSSH-DIS-025"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
-    },
-    "SSL_SESSION": {
-      "reachable_sites": 14,
-      "discharged": 14,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-094",
-        "OSSH-DIS-095",
-        "OSSH-DIS-096",
-        "OSSH-DIS-097",
-        "OSSH-DIS-098",
-        "OSSH-DIS-099",
-        "OSSH-DIS-100",
-        "OSSH-DIS-101",
-        "OSSH-DIS-102",
-        "OSSH-DIS-103",
-        "OSSH-DIS-104",
-        "OSSH-DIS-105",
-        "OSSH-DIS-106",
-        "OSSH-DIS-107"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
-    },
-    "RUNTIME_CONCURRENCY": {
-      "reachable_sites": 2,
-      "discharged": 2,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-006",
-        "OSSH-DIS-093"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
-    },
-    "RUNTIME_ALLOC_OWNERSHIP": {
-      "reachable_sites": 4,
-      "discharged": 4,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-015",
-        "OSSH-DIS-090",
-        "OSSH-DIS-091",
-        "OSSH-DIS-092"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
-    },
-    "ERR": {
-      "reachable_sites": 1,
-      "discharged": 1,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-011"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "SAFETY_DISCHARGED (ERR mechanism scope)"
-    },
-    "C_ABI_CONTRACT": {
-      "reachable_sites": 8,
-      "discharged": 8,
-      "blocked": 0,
-      "unknown": 0,
-      "discharged_site_ids": [
-        "OSSH-DIS-003",
-        "OSSH-DIS-014",
-        "OSSH-DIS-016",
-        "OSSH-DIS-089",
-        "OSSH-DIS-109",
-        "OSSH-DIS-110",
-        "OSSH-DIS-111",
-        "OSSH-DIS-026"
-      ],
-      "blocked_sites": [],
-      "mechanism_state_after": "UNSAFE_OPEN mechanism-wide; all 8 openssh-reachable C_ABI_CONTRACT sites are scoped-discharged (OSSH-DIS-026 by the public UI_METHOD ABI)."
-    }
+  "inventory": "v1d-candidate-freeze.json (post-fix tree c3b6979); v1c-candidate-freeze.json (HEAD 376ae9608) for the pre-fix reconciliation",
+  "inventory_source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
+  "artifacts": {
+   "ssh": {
+    "path": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+    "sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57"
+   },
+   "sshd": {
+    "path": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+    "sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+   }
   },
-  "summary": {
-    "reachable_production_obligations": 120,
-    "discharged": 120,
-    "blocked": 0,
-    "unknown": 0,
-    "by_mechanism": {
-      "EVP_PKEY_PROVIDER": {
-        "discharged": 65,
-        "blocked": 0
-      },
-      "X509_VERIFY_POLICY": {
-        "discharged": 10,
-        "blocked": 0
-      },
-      "RAND_CMS_STORE_KEYFMT": {
-        "discharged": 9,
-        "blocked": 0
-      },
-      "ASN1_OCSP": {
-        "discharged": 7,
-        "blocked": 0
-      },
-      "SSL_SESSION": {
-        "discharged": 14,
-        "blocked": 0
-      },
-      "RUNTIME_CONCURRENCY": {
-        "discharged": 2,
-        "blocked": 0
-      },
-      "RUNTIME_ALLOC_OWNERSHIP": {
-        "discharged": 4,
-        "blocked": 0
-      },
-      "ERR": {
-        "discharged": 1,
-        "blocked": 0
-      },
-      "C_ABI_CONTRACT": {
-        "discharged": 8,
-        "blocked": 0
-      }
-    }
+  "artifact_note": "the frozen V1 binaries do not contain this subphase source fixes; the closure measures the classification effect of the site receipts, not the compiled effect of the fixes",
+  "historical": {
+   "head": "b40e1f096",
+   "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1b-candidate-freeze.json",
+   "inventory_source_head": "4a95b73a868352eec6b4fabe32b20ba0fcce9a89",
+   "working_tree_dirty": true,
+   "working_tree_note": "the contract/elimination fixes in this subphase are uncommitted; the closure was re-run at this working tree"
   },
-  "evidence_receipt": "openssh-discharge.json",
-  "note": "120 of 120 reachable production obligations are site-discharged. The three legacy digest init callbacks (OSSH-DIS-017/018/019) are discharged by their own context validation, not by reclassifying the criterion; see legacy-init-harden.json.",
-  "boundaries": [
-    {
-      "id": "OSSH-DIS-001",
-      "file": "src/apps/verify.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/apps/verify.rs:104"
-    },
-    {
-      "id": "OSSH-DIS-002",
-      "file": "src/asn1/a_mbstr.rs",
-      "mechanism": "ASN1_OCSP",
-      "disposition": "SAFETY_DISCHARGED: src/asn1/a_mbstr.rs:243"
-    },
-    {
-      "id": "OSSH-DIS-003",
-      "file": "src/async/arch/async_posix.rs",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "SAFETY_DISCHARGED: src/async/arch/async_posix.rs:52"
-    },
-    {
-      "id": "OSSH-DIS-004",
-      "file": "src/cms/cms_asn1.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:495"
-    },
-    {
-      "id": "OSSH-DIS-005",
-      "file": "src/cms/cms_sd.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/cms/cms_sd.rs:2211"
-    },
-    {
-      "id": "OSSH-DIS-006",
-      "file": "src/context/namemap.rs",
-      "mechanism": "RUNTIME_CONCURRENCY",
-      "disposition": "SAFETY_DISCHARGED: src/context/namemap.rs:1067"
-    },
-    {
-      "id": "OSSH-DIS-007",
-      "file": "src/decoder_meth.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/decoder_meth.rs:767"
-    },
-    {
-      "id": "OSSH-DIS-008",
-      "file": "src/decoder_pkey.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/decoder_pkey.rs:548"
-    },
-    {
-      "id": "OSSH-DIS-009",
-      "file": "src/digest/sha2.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/digest/sha2.rs:417"
-    },
-    {
-      "id": "OSSH-DIS-010",
-      "file": "src/digest/sha2.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/digest/sha2.rs:441"
-    },
-    {
-      "id": "OSSH-DIS-011",
-      "file": "src/dso/mod.rs",
-      "mechanism": "ERR",
-      "disposition": "SAFETY_DISCHARGED: src/dso/mod.rs:885"
-    },
-    {
-      "id": "OSSH-DIS-012",
-      "file": "src/ec/asn1.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/ec/asn1.rs:280"
-    },
-    {
-      "id": "OSSH-DIS-013",
-      "file": "src/encoder_meth.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/encoder_meth.rs:269"
-    },
-    {
-      "id": "OSSH-DIS-014",
-      "file": "src/engine/eng_dyn.rs",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "SAFETY_DISCHARGED: src/engine/eng_dyn.rs:576"
-    },
-    {
-      "id": "OSSH-DIS-015",
-      "file": "src/engine/eng_table.rs",
-      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
-      "disposition": "SAFETY_DISCHARGED: src/engine/eng_table.rs:148"
-    },
-    {
-      "id": "OSSH-DIS-016",
-      "file": "src/engine/tb_asnmth.rs",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "SAFETY_DISCHARGED: src/engine/tb_asnmth.rs:330"
-    },
-    {
-      "id": "OSSH-DIS-017",
-      "file": "src/evp/legacy_md5.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_md5.rs:147 - md5_init validates ctx, md_data and digest and answers 0 for a context without a writable MD5_CTX; the bound table path still calls MD5_Init and returns 1 (evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-1)"
-    },
-    {
-      "id": "OSSH-DIS-018",
-      "file": "src/evp/legacy_sha.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:181 - sha1_init validates ctx, md_data and digest and answers 0 for a context without a writable SHA_CTX; the bound table path still calls SHA1_Init and returns 1 (evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-1)"
-    },
-    {
-      "id": "OSSH-DIS-019",
-      "file": "src/evp/legacy_sha.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:224 - sha224_init validates ctx, md_data and digest and answers 0 for a context without a writable SHA256_CTX; the bound table path still calls SHA224_Init and returns 1 (evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-1)"
-    },
-    {
-      "id": "OSSH-DIS-020",
-      "file": "src/ocsp/ocsp_ext.rs",
-      "mechanism": "ASN1_OCSP",
-      "disposition": "SAFETY_DISCHARGED: src/ocsp/ocsp_ext.rs:685"
-    },
-    {
-      "id": "OSSH-DIS-021",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "mechanism": "ASN1_OCSP",
-      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:113"
-    },
-    {
-      "id": "OSSH-DIS-022",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "mechanism": "ASN1_OCSP",
-      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:200"
-    },
-    {
-      "id": "OSSH-DIS-023",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "mechanism": "ASN1_OCSP",
-      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:221"
-    },
-    {
-      "id": "OSSH-DIS-024",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "mechanism": "ASN1_OCSP",
-      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:312"
-    },
-    {
-      "id": "OSSH-DIS-025",
-      "file": "src/ocsp/v3_ocsp.rs",
-      "mechanism": "ASN1_OCSP",
-      "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:326"
-    },
-    {
-      "id": "OSSH-DIS-026",
-      "file": "src/passphrase.rs",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "DISCHARGED: criterion 2 satisfied by the public UI_METHOD C ABI at src/passphrase.rs:499-661. UI_METHOD is opaque, created only by UI_create_method and populated only by UI_method_set_* (include/openssl/ui.h:339-357); its callback contract is documented in doc/man3/UI_create_method.pod (0/1/-1 return conventions) and doc/man3/UI_STRING.pod (UI_set_result enforces result_minsize..result_maxsize), the prompt constructor must return OPENSSL_malloc storage for OPENSSL_free (crypto/ui/ui_local.h), and the method/data are installed borrowed through the public OSSL_ENCODER_CTX_set_passphrase_ui / OSSL_DECODER_CTX_set_passphrase_ui."
-    },
-    {
-      "id": "OSSH-DIS-027",
-      "file": "src/pem/pem_info.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/pem/pem_info.rs:73"
-    },
-    {
-      "id": "OSSH-DIS-028",
-      "file": "src/pem/pem_pk8.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/pem/pem_pk8.rs:67"
-    },
-    {
-      "id": "OSSH-DIS-029",
-      "file": "src/pem/pem_pkey.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/pem/pem_pkey.rs:110"
-    },
-    {
-      "id": "OSSH-DIS-030",
-      "file": "src/pkcs7/pk7_asn1.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/pkcs7/pk7_asn1.rs:489"
-    },
-    {
-      "id": "OSSH-DIS-031",
-      "file": "src/pkcs7/pk7_asn1.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/pkcs7/pk7_asn1.rs:578"
-    },
-    {
-      "id": "OSSH-DIS-032",
-      "file": "src/property/store.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/property/store.rs:1605"
-    },
-    {
-      "id": "OSSH-DIS-033",
-      "file": "src/provider/base.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/base.rs:149"
-    },
-    {
-      "id": "OSSH-DIS-034",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:967"
-    },
-    {
-      "id": "OSSH-DIS-035",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11077"
-    },
-    {
-      "id": "OSSH-DIS-036",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11082"
-    },
-    {
-      "id": "OSSH-DIS-037",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11092"
-    },
-    {
-      "id": "OSSH-DIS-038",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11097"
-    },
-    {
-      "id": "OSSH-DIS-039",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:11102"
-    },
-    {
-      "id": "OSSH-DIS-040",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:21686"
-    },
-    {
-      "id": "OSSH-DIS-041",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:21712"
-    },
-    {
-      "id": "OSSH-DIS-042",
-      "file": "src/provider/cipher.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:22168"
-    },
-    {
-      "id": "OSSH-DIS-043",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:300"
-    },
-    {
-      "id": "OSSH-DIS-044",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:407"
-    },
-    {
-      "id": "OSSH-DIS-045",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:418"
-    },
-    {
-      "id": "OSSH-DIS-046",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:559"
-    },
-    {
-      "id": "OSSH-DIS-047",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:567"
-    },
-    {
-      "id": "OSSH-DIS-048",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:599"
-    },
-    {
-      "id": "OSSH-DIS-049",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:610"
-    },
-    {
-      "id": "OSSH-DIS-050",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:895"
-    },
-    {
-      "id": "OSSH-DIS-051",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:900"
-    },
-    {
-      "id": "OSSH-DIS-052",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:908"
-    },
-    {
-      "id": "OSSH-DIS-053",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:912"
-    },
-    {
-      "id": "OSSH-DIS-054",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:923"
-    },
-    {
-      "id": "OSSH-DIS-055",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1054"
-    },
-    {
-      "id": "OSSH-DIS-056",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1063"
-    },
-    {
-      "id": "OSSH-DIS-057",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1095"
-    },
-    {
-      "id": "OSSH-DIS-058",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1106"
-    },
-    {
-      "id": "OSSH-DIS-059",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1255"
-    },
-    {
-      "id": "OSSH-DIS-060",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1281"
-    },
-    {
-      "id": "OSSH-DIS-061",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1377"
-    },
-    {
-      "id": "OSSH-DIS-062",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1391"
-    },
-    {
-      "id": "OSSH-DIS-063",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1463"
-    },
-    {
-      "id": "OSSH-DIS-064",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1471"
-    },
-    {
-      "id": "OSSH-DIS-065",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1548"
-    },
-    {
-      "id": "OSSH-DIS-066",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1781"
-    },
-    {
-      "id": "OSSH-DIS-067",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1793"
-    },
-    {
-      "id": "OSSH-DIS-068",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1804"
-    },
-    {
-      "id": "OSSH-DIS-069",
-      "file": "src/provider/digest.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:2356"
-    },
-    {
-      "id": "OSSH-DIS-070",
-      "file": "src/provider/dsa_sig.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/dsa_sig.rs:1510"
-    },
-    {
-      "id": "OSSH-DIS-071",
-      "file": "src/provider/ecx_kmgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:591"
-    },
-    {
-      "id": "OSSH-DIS-072",
-      "file": "src/provider/ecx_kmgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:911"
-    },
-    {
-      "id": "OSSH-DIS-073",
-      "file": "src/provider/ecx_kmgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:916"
-    },
-    {
-      "id": "OSSH-DIS-074",
-      "file": "src/provider/ecx_kmgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:1094"
-    },
-    {
-      "id": "OSSH-DIS-075",
-      "file": "src/provider/ecx_kmgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:1099"
-    },
-    {
-      "id": "OSSH-DIS-076",
-      "file": "src/provider/ecx_kmgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:1104"
-    },
-    {
-      "id": "OSSH-DIS-077",
-      "file": "src/provider/ecx_kmgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/ecx_kmgmt.rs:1356"
-    },
-    {
-      "id": "OSSH-DIS-078",
-      "file": "src/provider/encode_key2any.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/encode_key2any.rs:170"
-    },
-    {
-      "id": "OSSH-DIS-079",
-      "file": "src/provider/encode_key2any.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/encode_key2any.rs:2230"
-    },
-    {
-      "id": "OSSH-DIS-080",
-      "file": "src/provider/keymgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/keymgmt.rs:843"
-    },
-    {
-      "id": "OSSH-DIS-081",
-      "file": "src/provider/keymgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/keymgmt.rs:920"
-    },
-    {
-      "id": "OSSH-DIS-082",
-      "file": "src/provider/keymgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/keymgmt.rs:929"
-    },
-    {
-      "id": "OSSH-DIS-083",
-      "file": "src/provider/keymgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/keymgmt.rs:1764"
-    },
-    {
-      "id": "OSSH-DIS-084",
-      "file": "src/provider/mlx_kmgmt.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/mlx_kmgmt.rs:116"
-    },
-    {
-      "id": "OSSH-DIS-085",
-      "file": "src/provider/rsa_sig.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/rsa_sig.rs:462"
-    },
-    {
-      "id": "OSSH-DIS-086",
-      "file": "src/provider/rsa_sig.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/provider/rsa_sig.rs:3183"
-    },
-    {
-      "id": "OSSH-DIS-087",
-      "file": "src/rand/rand_lib.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/rand/rand_lib.rs:660"
-    },
-    {
-      "id": "OSSH-DIS-088",
-      "file": "src/rsa/ossl.rs",
-      "mechanism": "EVP_PKEY_PROVIDER",
-      "disposition": "SAFETY_DISCHARGED: src/rsa/ossl.rs:298"
-    },
-    {
-      "id": "OSSH-DIS-089",
-      "file": "src/runtime/conf/conf_ssl.rs",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "SAFETY_DISCHARGED: src/runtime/conf/conf_ssl.rs:546"
-    },
-    {
-      "id": "OSSH-DIS-090",
-      "file": "src/runtime/ex_data.rs",
-      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
-      "disposition": "SAFETY_DISCHARGED: src/runtime/ex_data.rs:239"
-    },
-    {
-      "id": "OSSH-DIS-091",
-      "file": "src/runtime/ex_data.rs",
-      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
-      "disposition": "SAFETY_DISCHARGED: src/runtime/ex_data.rs:251"
-    },
-    {
-      "id": "OSSH-DIS-092",
-      "file": "src/runtime/init.rs",
-      "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
-      "disposition": "SAFETY_DISCHARGED: src/runtime/init.rs:1240"
-    },
-    {
-      "id": "OSSH-DIS-093",
-      "file": "src/runtime/thread.rs",
-      "mechanism": "RUNTIME_CONCURRENCY",
-      "disposition": "SAFETY_DISCHARGED: src/runtime/thread.rs:2104"
-    },
-    {
-      "id": "OSSH-DIS-094",
-      "file": "src/ssl/ssl_ciph.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:709"
-    },
-    {
-      "id": "OSSH-DIS-095",
-      "file": "src/ssl/ssl_ciph.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:759"
-    },
-    {
-      "id": "OSSH-DIS-096",
-      "file": "src/ssl/ssl_ciph.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:810"
-    },
-    {
-      "id": "OSSH-DIS-097",
-      "file": "src/ssl/ssl_conf.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:167"
-    },
-    {
-      "id": "OSSH-DIS-098",
-      "file": "src/ssl/ssl_conf.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:584"
-    },
-    {
-      "id": "OSSH-DIS-099",
-      "file": "src/ssl/ssl_conf.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:981"
-    },
-    {
-      "id": "OSSH-DIS-100",
-      "file": "src/ssl/ssl_conf.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:1061"
-    },
-    {
-      "id": "OSSH-DIS-101",
-      "file": "src/ssl/ssl_conf.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:1438"
-    },
-    {
-      "id": "OSSH-DIS-102",
-      "file": "src/ssl/ssl_lib.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_lib.rs:331"
-    },
-    {
-      "id": "OSSH-DIS-103",
-      "file": "src/ssl/ssl_lib.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_lib.rs:8845"
-    },
-    {
-      "id": "OSSH-DIS-104",
-      "file": "src/ssl/ssl_rsa.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_rsa.rs:1061"
-    },
-    {
-      "id": "OSSH-DIS-105",
-      "file": "src/ssl/statem/statem_clnt.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/statem/statem_clnt.rs:3597"
-    },
-    {
-      "id": "OSSH-DIS-106",
-      "file": "src/ssl/statem/statem_srvr.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/statem/statem_srvr.rs:2933"
-    },
-    {
-      "id": "OSSH-DIS-107",
-      "file": "src/ssl/t1_trce.rs",
-      "mechanism": "SSL_SESSION",
-      "disposition": "SAFETY_DISCHARGED: src/ssl/t1_trce.rs:1052"
-    },
-    {
-      "id": "OSSH-DIS-108",
-      "file": "src/store/store_lib.rs",
-      "mechanism": "RAND_CMS_STORE_KEYFMT",
-      "disposition": "SAFETY_DISCHARGED: src/store/store_lib.rs:557"
-    },
-    {
-      "id": "OSSH-DIS-109",
-      "file": "src/ui/ui_util.rs",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:145"
-    },
-    {
-      "id": "OSSH-DIS-110",
-      "file": "src/ui/ui_util.rs",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:161"
-    },
-    {
-      "id": "OSSH-DIS-111",
-      "file": "src/ui/ui_util.rs",
-      "mechanism": "C_ABI_CONTRACT",
-      "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:310"
-    },
-    {
-      "id": "OSSH-DIS-112",
-      "file": "src/x509/v3_asid.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:797"
-    },
-    {
-      "id": "OSSH-DIS-113",
-      "file": "src/x509/v3_asid.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:841"
-    },
-    {
-      "id": "OSSH-DIS-114",
-      "file": "src/x509/v3_asid.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:1083"
-    },
-    {
-      "id": "OSSH-DIS-115",
-      "file": "src/x509/v3_lib.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_lib.rs:359"
-    },
-    {
-      "id": "OSSH-DIS-116",
-      "file": "src/x509/v3_timespec.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1326"
-    },
-    {
-      "id": "OSSH-DIS-117",
-      "file": "src/x509/v3_timespec.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1468"
-    },
-    {
-      "id": "OSSH-DIS-118",
-      "file": "src/x509/v3_timespec.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1554"
-    },
-    {
-      "id": "OSSH-DIS-119",
-      "file": "src/x509/v3_timespec.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1572"
-    },
-    {
-      "id": "OSSH-DIS-120",
-      "file": "src/x509/v3_tlsf.rs",
-      "mechanism": "X509_VERIFY_POLICY",
-      "disposition": "SAFETY_DISCHARGED: src/x509/v3_tlsf.rs:146"
-    }
-  ],
-  "closure_rerun": {
-    "tool": {
-      "path": "forensics/tools/consumer_closure.py",
-      "version": 3
-    },
-    "ssh": {
-      "artifact": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
-      "artifact_sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
-      "counts": {
-        "reachable_files": 345,
-        "reachable_production_obligations": 120,
-        "DISCHARGED": 120,
-        "BLOCKED": 0,
-        "UNKNOWN": 0,
-        "by_mechanism": {
-          "ASN1_OCSP": 7,
-          "C_ABI_CONTRACT": 8,
-          "ERR": 1,
-          "EVP_PKEY_PROVIDER": 65,
-          "RAND_CMS_STORE_KEYFMT": 9,
-          "RUNTIME_ALLOC_OWNERSHIP": 4,
-          "RUNTIME_CONCURRENCY": 2,
-          "SSL_SESSION": 14,
-          "X509_VERIFY_POLICY": 10
-        },
-        "v1_production_operations_total": 198,
-        "v1_uncontracted_operations_total": 354
-      },
-      "verdict": {
-        "state": "ACCEPTED",
-        "safe_compatible": false,
-        "reason": "no refusal condition fired"
-      },
-      "refusals": []
-    },
-    "sshd": {
-      "artifact": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
-      "artifact_sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002",
-      "counts": {
-        "reachable_files": 337,
-        "reachable_production_obligations": 120,
-        "DISCHARGED": 120,
-        "BLOCKED": 0,
-        "UNKNOWN": 0,
-        "by_mechanism": {
-          "ASN1_OCSP": 7,
-          "C_ABI_CONTRACT": 8,
-          "ERR": 1,
-          "EVP_PKEY_PROVIDER": 65,
-          "RAND_CMS_STORE_KEYFMT": 9,
-          "RUNTIME_ALLOC_OWNERSHIP": 4,
-          "RUNTIME_CONCURRENCY": 2,
-          "SSL_SESSION": 14,
-          "X509_VERIFY_POLICY": 10
-        },
-        "v1_production_operations_total": 198,
-        "v1_uncontracted_operations_total": 354
-      },
-      "verdict": {
-        "state": "ACCEPTED",
-        "safe_compatible": false,
-        "reason": "no refusal condition fired"
-      },
-      "refusals": []
-    },
-    "note": "The tool returns ACCEPTED because every reachable production obligation is DISCHARGED, UNKNOWN = 0, and every reachable file has an admitted boundary receipt. ACCEPTED is the structural-closure verdict only: verdict.safe_compatible is false and the mechanism/file obligations retained in this receipt still bar a SAFE_COMPATIBLE claim. Reachability was not re-measured (the exact artifact files are absent); this run re-adjudicates the recorded exact-artifact obligations against the updated discharge plane.",
-    "verdict_interpretation": {
-      "structural_closure": "ACCEPTED (no refusal condition fired)",
-      "safe_compatible": false,
-      "why_not_safe_compatible": [
-        "3 reachable sites remain BLOCKED: the three legacy digest init callbacks (criterion 2).",
-        "No mechanism is claimed SAFETY_DISCHARGED mechanism-wide; these are site-scoped discharges.",
-        "B27-X2 is an open STOP-CLASS defect in src/store/store_lib.rs.",
-        "X509 pcy_lib tree_levels/parent_mut and ml_dsa raw-pointer constructor obligations remain retained.",
-        "The measured V1 binaries do not contain the working-tree source fixes."
-      ]
-    },
-    "elf_graph_remeasurement": "NOT_RUN: measured artifact files absent; exact-artifact graph reused"
+  "source_head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "head_commit": "376ae960871129c54be675c6085792bf886864b7",
+  "head_commit_note": "HEAD is the merge commit on main; the exact measured bytes are the git tree object because the eight src edits are uncommitted",
+  "rebound_utc": "2026-10-26T13:05:37Z"
+ },
+ "mechanism_results": {
+  "EVP_PKEY_PROVIDER": {
+   "reachable_sites": 65,
+   "discharged": 65,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-007",
+    "OSSH-DIS-008",
+    "OSSH-DIS-009",
+    "OSSH-DIS-010",
+    "OSSH-DIS-012",
+    "OSSH-DIS-013",
+    "OSSH-DIS-017",
+    "OSSH-DIS-018",
+    "OSSH-DIS-019",
+    "OSSH-DIS-032",
+    "OSSH-DIS-033",
+    "OSSH-DIS-034",
+    "OSSH-DIS-035",
+    "OSSH-DIS-036",
+    "OSSH-DIS-037",
+    "OSSH-DIS-038",
+    "OSSH-DIS-039",
+    "OSSH-DIS-040",
+    "OSSH-DIS-041",
+    "OSSH-DIS-042",
+    "OSSH-DIS-043",
+    "OSSH-DIS-044",
+    "OSSH-DIS-045",
+    "OSSH-DIS-046",
+    "OSSH-DIS-047",
+    "OSSH-DIS-048",
+    "OSSH-DIS-049",
+    "OSSH-DIS-050",
+    "OSSH-DIS-051",
+    "OSSH-DIS-052",
+    "OSSH-DIS-053",
+    "OSSH-DIS-054",
+    "OSSH-DIS-055",
+    "OSSH-DIS-056",
+    "OSSH-DIS-057",
+    "OSSH-DIS-058",
+    "OSSH-DIS-059",
+    "OSSH-DIS-060",
+    "OSSH-DIS-061",
+    "OSSH-DIS-062",
+    "OSSH-DIS-063",
+    "OSSH-DIS-064",
+    "OSSH-DIS-065",
+    "OSSH-DIS-066",
+    "OSSH-DIS-067",
+    "OSSH-DIS-068",
+    "OSSH-DIS-069",
+    "OSSH-DIS-070",
+    "OSSH-DIS-071",
+    "OSSH-DIS-072",
+    "OSSH-DIS-073",
+    "OSSH-DIS-074",
+    "OSSH-DIS-075",
+    "OSSH-DIS-076",
+    "OSSH-DIS-077",
+    "OSSH-DIS-078",
+    "OSSH-DIS-079",
+    "OSSH-DIS-080",
+    "OSSH-DIS-081",
+    "OSSH-DIS-082",
+    "OSSH-DIS-083",
+    "OSSH-DIS-084",
+    "OSSH-DIS-085",
+    "OSSH-DIS-086",
+    "OSSH-DIS-088"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
   },
-  "evidence_receipts": [
-    "openssh-discharge.json",
-    "legacy-init-harden.json"
-  ],
-  "legacy_init_harden": {
-    "source_head": "32d373e08",
-    "source_state": "working tree at 32d373e08 plus the legacy-init hardening and its regression tests",
-    "files": [
-      "src/evp/legacy_sha.rs",
-      "src/evp/legacy_md5.rs"
-    ],
-    "mechanism": "EVP_PKEY_PROVIDER (site-scoped only; mechanism state unchanged)",
-    "discharged_sites": [
-      "OSSH-DIS-017",
-      "OSSH-DIS-018",
-      "OSSH-DIS-019"
-    ],
-    "authority_divergence": "§17 D-LEGACY-MD-INIT-MD-DATA-1 (authority SIGSEGV; crate returns 0)",
-    "tests": [
-      "evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context",
-      "evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context",
-      "evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context"
-    ],
-    "receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json"
+  "X509_VERIFY_POLICY": {
+   "reachable_sites": 10,
+   "discharged": 10,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-001",
+    "OSSH-DIS-112",
+    "OSSH-DIS-113",
+    "OSSH-DIS-114",
+    "OSSH-DIS-115",
+    "OSSH-DIS-116",
+    "OSSH-DIS-117",
+    "OSSH-DIS-118",
+    "OSSH-DIS-119",
+    "OSSH-DIS-120"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+  },
+  "RAND_CMS_STORE_KEYFMT": {
+   "reachable_sites": 9,
+   "discharged": 9,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-004",
+    "OSSH-DIS-005",
+    "OSSH-DIS-027",
+    "OSSH-DIS-028",
+    "OSSH-DIS-029",
+    "OSSH-DIS-030",
+    "OSSH-DIS-031",
+    "OSSH-DIS-087",
+    "OSSH-DIS-108"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+  },
+  "ASN1_OCSP": {
+   "reachable_sites": 7,
+   "discharged": 7,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-002",
+    "OSSH-DIS-020",
+    "OSSH-DIS-021",
+    "OSSH-DIS-022",
+    "OSSH-DIS-023",
+    "OSSH-DIS-024",
+    "OSSH-DIS-025"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+  },
+  "SSL_SESSION": {
+   "reachable_sites": 14,
+   "discharged": 14,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-094",
+    "OSSH-DIS-095",
+    "OSSH-DIS-096",
+    "OSSH-DIS-097",
+    "OSSH-DIS-098",
+    "OSSH-DIS-099",
+    "OSSH-DIS-100",
+    "OSSH-DIS-101",
+    "OSSH-DIS-102",
+    "OSSH-DIS-103",
+    "OSSH-DIS-104",
+    "OSSH-DIS-105",
+    "OSSH-DIS-106",
+    "OSSH-DIS-107"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+  },
+  "RUNTIME_CONCURRENCY": {
+   "reachable_sites": 2,
+   "discharged": 2,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-006",
+    "OSSH-DIS-093"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+  },
+  "RUNTIME_ALLOC_OWNERSHIP": {
+   "reachable_sites": 4,
+   "discharged": 4,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-015",
+    "OSSH-DIS-090",
+    "OSSH-DIS-091",
+    "OSSH-DIS-092"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "OWNERSHIP_RECONSTRUCTED; not a mechanism-wide SAFETY_DISCHARGED claim"
+  },
+  "ERR": {
+   "reachable_sites": 1,
+   "discharged": 1,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-011"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "SAFETY_DISCHARGED (ERR mechanism scope)"
+  },
+  "C_ABI_CONTRACT": {
+   "reachable_sites": 8,
+   "discharged": 8,
+   "blocked": 0,
+   "unknown": 0,
+   "discharged_site_ids": [
+    "OSSH-DIS-003",
+    "OSSH-DIS-014",
+    "OSSH-DIS-016",
+    "OSSH-DIS-089",
+    "OSSH-DIS-109",
+    "OSSH-DIS-110",
+    "OSSH-DIS-111",
+    "OSSH-DIS-026"
+   ],
+   "blocked_sites": [],
+   "mechanism_state_after": "UNSAFE_OPEN mechanism-wide; all 8 openssh-reachable C_ABI_CONTRACT sites are scoped-discharged (OSSH-DIS-026 by the public UI_METHOD ABI)."
   }
+ },
+ "summary": {
+  "reachable_production_obligations": 120,
+  "discharged": 120,
+  "blocked": 0,
+  "unknown": 0,
+  "by_mechanism": {
+   "EVP_PKEY_PROVIDER": {
+    "discharged": 65,
+    "blocked": 0
+   },
+   "X509_VERIFY_POLICY": {
+    "discharged": 10,
+    "blocked": 0
+   },
+   "RAND_CMS_STORE_KEYFMT": {
+    "discharged": 9,
+    "blocked": 0
+   },
+   "ASN1_OCSP": {
+    "discharged": 7,
+    "blocked": 0
+   },
+   "SSL_SESSION": {
+    "discharged": 14,
+    "blocked": 0
+   },
+   "RUNTIME_CONCURRENCY": {
+    "discharged": 2,
+    "blocked": 0
+   },
+   "RUNTIME_ALLOC_OWNERSHIP": {
+    "discharged": 4,
+    "blocked": 0
+   },
+   "ERR": {
+    "discharged": 1,
+    "blocked": 0
+   },
+   "C_ABI_CONTRACT": {
+    "discharged": 8,
+    "blocked": 0
+   }
+  }
+ },
+ "evidence_receipt": "openssh-discharge.json",
+ "note": "120 of 120 reachable production obligations are site-discharged. The three legacy digest init callbacks (OSSH-DIS-017/018/019) are discharged by their own context validation, not by reclassifying the criterion; see legacy-init-harden.json.",
+ "boundaries": [
+  {
+   "id": "OSSH-DIS-001",
+   "file": "src/apps/verify.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/apps/verify.rs:108",
+   "inventory_line": 104,
+   "original_line": 104,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cb",
+   "rebind": {
+    "from_line": 104,
+    "to_line": 108,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 108,
+   "current_line": 108,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-002",
+   "file": "src/asn1/a_mbstr.rs",
+   "mechanism": "ASN1_OCSP",
+   "disposition": "ELIMINATED: src/asn1/a_mbstr.rs:266 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 243,
+   "original_line": 243,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cpy_asc",
+   "rebind": {
+    "from_line": 243,
+    "to_line": 266,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 266,
+   "current_line": 266,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-003",
+   "file": "src/async/arch/async_posix.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "SAFETY_DISCHARGED: src/async/arch/async_posix.rs:60",
+   "inventory_line": 52,
+   "original_line": 52,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "operation": "(ucontext shims)",
+   "rebind": {
+    "from_line": 52,
+    "to_line": 60,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 60,
+   "current_line": 60,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-004",
+   "file": "src/cms/cms_asn1.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:502",
+   "inventory_line": 495,
+   "original_line": 495,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cms_si_cb",
+   "rebind": {
+    "from_line": 495,
+    "to_line": 502,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 502,
+   "current_line": 502,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-005",
+   "file": "src/cms/cms_sd.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_sd.rs:2217",
+   "inventory_line": 2211,
+   "original_line": 2211,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x509_algor_free_void",
+   "rebind": {
+    "from_line": 2211,
+    "to_line": 2217,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 2217,
+   "current_line": 2217,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-006",
+   "file": "src/context/namemap.rs",
+   "mechanism": "RUNTIME_CONCURRENCY",
+   "disposition": "ELIMINATED: src/context/namemap.rs:1076 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1067,
+   "original_line": 1067,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "raise_too_many_names",
+   "rebind": {
+    "from_line": 1067,
+    "to_line": 1076,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1076,
+   "current_line": 1076,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-007",
+   "file": "src/decoder_meth.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/decoder_meth.rs:774",
+   "inventory_line": 767,
+   "original_line": 767,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "decoder_instance_free_thunk",
+   "rebind": {
+    "from_line": 767,
+    "to_line": 774,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 774,
+   "current_line": 774,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-008",
+   "file": "src/decoder_pkey.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/decoder_pkey.rs:554",
+   "inventory_line": 548,
+   "original_line": 548,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "keymgmt_free_thunk",
+   "rebind": {
+    "from_line": 548,
+    "to_line": 554,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 554,
+   "current_line": 554,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-009",
+   "file": "src/digest/sha2.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/digest/sha2.rs:421",
+   "inventory_line": 417,
+   "original_line": 417,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha512_256_init",
+   "rebind": {
+    "from_line": 417,
+    "to_line": 421,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 421,
+   "current_line": 421,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-010",
+   "file": "src/digest/sha2.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/digest/sha2.rs:449",
+   "inventory_line": 441,
+   "original_line": 441,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_sha256_192_init",
+   "rebind": {
+    "from_line": 441,
+    "to_line": 449,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 449,
+   "current_line": 449,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-011",
+   "file": "src/dso/mod.rs",
+   "mechanism": "ERR",
+   "disposition": "ELIMINATED: src/dso/mod.rs:893 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 885,
+   "original_line": 885,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "add_error_data_pathbyaddr",
+   "rebind": {
+    "from_line": 885,
+    "to_line": 893,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 893,
+   "current_line": 893,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-012",
+   "file": "src/ec/asn1.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/ec/asn1.rs:287",
+   "inventory_line": 280,
+   "original_line": 280,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "decode_der_length",
+   "rebind": {
+    "from_line": 280,
+    "to_line": 287,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 287,
+   "current_line": 287,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-013",
+   "file": "src/encoder_meth.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/encoder_meth.rs:272 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 269,
+   "original_line": 269,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_encoder_new",
+   "rebind": {
+    "from_line": 269,
+    "to_line": 272,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 272,
+   "current_line": 272,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-014",
+   "file": "src/engine/eng_dyn.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "ELIMINATED: src/engine/eng_dyn.rs:579 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 576,
+   "original_line": 576,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dynamic_finish",
+   "rebind": {
+    "from_line": 576,
+    "to_line": 579,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 579,
+   "current_line": 579,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-015",
+   "file": "src/engine/eng_table.rs",
+   "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+   "disposition": "SAFETY_DISCHARGED: src/engine/eng_table.rs:159",
+   "inventory_line": 148,
+   "original_line": 148,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "engine_pile_hash",
+   "rebind": {
+    "from_line": 148,
+    "to_line": 159,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 159,
+   "current_line": 159,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-016",
+   "file": "src/engine/tb_asnmth.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "SAFETY_DISCHARGED: src/engine/tb_asnmth.rs:340",
+   "inventory_line": 330,
+   "original_line": 330,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "look_str_cb",
+   "rebind": {
+    "from_line": 330,
+    "to_line": 340,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 340,
+   "current_line": 340,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-017",
+   "file": "src/evp/legacy_md5.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/evp/legacy_md5.rs:199 - md5_init validates ctx, md_data and digest and answers 0 for a context without a writable MD5_CTX; the bound table path still calls MD5_Init and returns 1 (evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context; \u00a717 D-LEGACY-MD-INIT-MD-DATA-1)",
+   "inventory_line": 147,
+   "original_line": 147,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_init",
+   "rebind": {
+    "from_line": 147,
+    "to_line": 199,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 199,
+   "current_line": 199,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-018",
+   "file": "src/evp/legacy_sha.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:245 - sha1_init validates ctx, md_data and digest and answers 0 for a context without a writable SHA_CTX; the bound table path still calls SHA1_Init and returns 1 (evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context; \u00a717 D-LEGACY-MD-INIT-MD-DATA-1)",
+   "inventory_line": 181,
+   "original_line": 181,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha1_init",
+   "rebind": {
+    "from_line": 181,
+    "to_line": 245,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 245,
+   "current_line": 245,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-019",
+   "file": "src/evp/legacy_sha.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:306 - sha224_init validates ctx, md_data and digest and answers 0 for a context without a writable SHA256_CTX; the bound table path still calls SHA224_Init and returns 1 (evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context; \u00a717 D-LEGACY-MD-INIT-MD-DATA-1)",
+   "inventory_line": 224,
+   "original_line": 224,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha224_init",
+   "rebind": {
+    "from_line": 224,
+    "to_line": 306,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 306,
+   "current_line": 306,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-020",
+   "file": "src/ocsp/ocsp_ext.rs",
+   "mechanism": "ASN1_OCSP",
+   "disposition": "SAFETY_DISCHARGED: src/ocsp/ocsp_ext.rs:698",
+   "inventory_line": 685,
+   "original_line": 685,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ocsp_add1_nonce",
+   "rebind": {
+    "from_line": 685,
+    "to_line": 698,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 698,
+   "current_line": 698,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-021",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "mechanism": "ASN1_OCSP",
+   "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:122",
+   "inventory_line": 113,
+   "original_line": 113,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_crlid",
+   "rebind": {
+    "from_line": 113,
+    "to_line": 122,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 122,
+   "current_line": 122,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-022",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "mechanism": "ASN1_OCSP",
+   "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:232",
+   "inventory_line": 200,
+   "original_line": 200,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2d_ocsp_nonce",
+   "rebind": {
+    "from_line": 200,
+    "to_line": 232,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 232,
+   "current_line": 232,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-023",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "mechanism": "ASN1_OCSP",
+   "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:265",
+   "inventory_line": 221,
+   "original_line": 221,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "d2i_ocsp_nonce",
+   "rebind": {
+    "from_line": 221,
+    "to_line": 265,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 265,
+   "current_line": 265,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-024",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "mechanism": "ASN1_OCSP",
+   "disposition": "ELIMINATED: src/ocsp/v3_ocsp.rs:384 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 312,
+   "original_line": 312,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_ocsp_nocheck",
+   "rebind": {
+    "from_line": 312,
+    "to_line": 384,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 384,
+   "current_line": 384,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-025",
+   "file": "src/ocsp/v3_ocsp.rs",
+   "mechanism": "ASN1_OCSP",
+   "disposition": "SAFETY_DISCHARGED: src/ocsp/v3_ocsp.rs:406",
+   "inventory_line": 326,
+   "original_line": 326,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ocsp_serviceloc",
+   "rebind": {
+    "from_line": 326,
+    "to_line": 406,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 406,
+   "current_line": 406,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-026",
+   "file": "src/passphrase.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "SAFETY_DISCHARGED: src/passphrase.rs:533",
+   "inventory_line": 499,
+   "original_line": 499,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "do_ui_passphrase",
+   "rebind": {
+    "from_line": 499,
+    "to_line": 533,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 533,
+   "current_line": 533,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-027",
+   "file": "src/pem/pem_info.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/pem/pem_info.rs:77",
+   "inventory_line": 73,
+   "original_line": 73,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "operation": "(strstr)",
+   "rebind": {
+    "from_line": 73,
+    "to_line": 77,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 77,
+   "current_line": 77,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-028",
+   "file": "src/pem/pem_pk8.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/pem/pem_pk8.rs:71",
+   "inventory_line": 67,
+   "original_line": 67,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "operation": "(strlen)",
+   "rebind": {
+    "from_line": 67,
+    "to_line": 71,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 71,
+   "current_line": 71,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-029",
+   "file": "src/pem/pem_pkey.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/pem/pem_pkey.rs:114",
+   "inventory_line": 110,
+   "original_line": 110,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "operation": "(strcmp, strlen)",
+   "rebind": {
+    "from_line": 110,
+    "to_line": 114,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 114,
+   "current_line": 114,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-030",
+   "file": "src/pkcs7/pk7_asn1.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/pkcs7/pk7_asn1.rs:499",
+   "inventory_line": 489,
+   "original_line": 489,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "pk7_cb",
+   "rebind": {
+    "from_line": 489,
+    "to_line": 499,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 499,
+   "current_line": 499,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-031",
+   "file": "src/pkcs7/pk7_asn1.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/pkcs7/pk7_asn1.rs:590",
+   "inventory_line": 578,
+   "original_line": 578,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "si_cb",
+   "rebind": {
+    "from_line": 578,
+    "to_line": 590,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 590,
+   "current_line": 590,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-032",
+   "file": "src/property/store.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/property/store.rs:1614",
+   "inventory_line": 1605,
+   "original_line": 1605,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "unused_free",
+   "rebind": {
+    "from_line": 1605,
+    "to_line": 1614,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1614,
+   "current_line": 1614,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-033",
+   "file": "src/provider/base.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/base.rs:149 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 149,
+   "original_line": 149,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "base_gettable_params",
+   "rebind": {
+    "from_line": 149,
+    "to_line": 149,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 149,
+   "current_line": 149,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-034",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:971",
+   "inventory_line": 967,
+   "original_line": 967,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "block_fn",
+   "rebind": {
+    "from_line": 967,
+    "to_line": 971,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 971,
+   "current_line": 971,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-035",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/cipher.rs:11081 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 11077,
+   "original_line": 11077,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1",
+   "rebind": {
+    "from_line": 11077,
+    "to_line": 11081,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 11081,
+   "current_line": 11081,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-036",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/cipher.rs:11086 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 11082,
+   "original_line": 11082,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256",
+   "rebind": {
+    "from_line": 11082,
+    "to_line": 11086,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 11086,
+   "current_line": 11086,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-037",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/cipher.rs:11096 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 11092,
+   "original_line": 11092,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_cipher_capable_aes_cbc_hmac_sha1_etm",
+   "rebind": {
+    "from_line": 11092,
+    "to_line": 11096,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 11096,
+   "current_line": 11096,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-038",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/cipher.rs:11101 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 11097,
+   "original_line": 11097,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_cipher_capable_aes_cbc_hmac_sha256_etm",
+   "rebind": {
+    "from_line": 11097,
+    "to_line": 11101,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 11101,
+   "current_line": 11101,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-039",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/cipher.rs:11106 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 11102,
+   "original_line": 11102,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_cipher_capable_aes_cbc_hmac_sha512_etm",
+   "rebind": {
+    "from_line": 11102,
+    "to_line": 11106,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 11106,
+   "current_line": 11106,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-040",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:21694",
+   "inventory_line": 21686,
+   "original_line": 21686,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "tdes_desx_cbc_newctx",
+   "rebind": {
+    "from_line": 21686,
+    "to_line": 21694,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 21694,
+   "current_line": 21694,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-041",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:21724",
+   "inventory_line": 21712,
+   "original_line": 21712,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "tdes_desx_cbc_get_params",
+   "rebind": {
+    "from_line": 21712,
+    "to_line": 21724,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 21724,
+   "current_line": 21724,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-042",
+   "file": "src/provider/cipher.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/cipher.rs:22184",
+   "inventory_line": 22168,
+   "original_line": 22168,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rc4_hmac_md5_get_params",
+   "rebind": {
+    "from_line": 22168,
+    "to_line": 22184,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 22184,
+   "current_line": 22184,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-043",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:300 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 300,
+   "original_line": 300,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_digest_default_gettable_params",
+   "rebind": {
+    "from_line": 300,
+    "to_line": 300,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 300,
+   "current_line": 300,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-044",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:407 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 407,
+   "original_line": 407,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "digest_impl::newctx",
+   "rebind": {
+    "from_line": 407,
+    "to_line": 407,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 407,
+   "current_line": 407,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-045",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:423",
+   "inventory_line": 418,
+   "original_line": 418,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "digest_impl::freectx",
+   "rebind": {
+    "from_line": 418,
+    "to_line": 423,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 423,
+   "current_line": 423,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-046",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:583 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 559,
+   "original_line": 559,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha1::settable_ctx_params",
+   "rebind": {
+    "from_line": 559,
+    "to_line": 583,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 583,
+   "current_line": 583,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-047",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:596",
+   "inventory_line": 567,
+   "original_line": 567,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha1::set_ctx_params",
+   "rebind": {
+    "from_line": 567,
+    "to_line": 596,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 596,
+   "current_line": 596,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-048",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:628 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 599,
+   "original_line": 599,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha1::newctx",
+   "rebind": {
+    "from_line": 599,
+    "to_line": 628,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 628,
+   "current_line": 628,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-049",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:642",
+   "inventory_line": 610,
+   "original_line": 610,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha1::freectx",
+   "rebind": {
+    "from_line": 610,
+    "to_line": 642,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 642,
+   "current_line": 642,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-050",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:927 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 895,
+   "original_line": 895,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "null_md::ctx_init",
+   "rebind": {
+    "from_line": 895,
+    "to_line": 927,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 927,
+   "current_line": 927,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-051",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:932 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 900,
+   "original_line": 900,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "null_md::ctx_update",
+   "rebind": {
+    "from_line": 900,
+    "to_line": 932,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 932,
+   "current_line": 932,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-052",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:936 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 908,
+   "original_line": 908,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "null_md::ctx_final",
+   "rebind": {
+    "from_line": 908,
+    "to_line": 936,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 936,
+   "current_line": 936,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-053",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:940 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 912,
+   "original_line": 912,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "null_md::newctx",
+   "rebind": {
+    "from_line": 912,
+    "to_line": 940,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 940,
+   "current_line": 940,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-054",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:954",
+   "inventory_line": 923,
+   "original_line": 923,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "null_md::freectx",
+   "rebind": {
+    "from_line": 923,
+    "to_line": 954,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 954,
+   "current_line": 954,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-055",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:1089 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1054,
+   "original_line": 1054,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_sha1::settable_ctx_params",
+   "rebind": {
+    "from_line": 1054,
+    "to_line": 1089,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1089,
+   "current_line": 1089,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-056",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1103",
+   "inventory_line": 1063,
+   "original_line": 1063,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_sha1::set_ctx_params",
+   "rebind": {
+    "from_line": 1063,
+    "to_line": 1103,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1103,
+   "current_line": 1103,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-057",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:1135 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1095,
+   "original_line": 1095,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_sha1::newctx",
+   "rebind": {
+    "from_line": 1095,
+    "to_line": 1135,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1135,
+   "current_line": 1135,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-058",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1149",
+   "inventory_line": 1106,
+   "original_line": 1106,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "md5_sha1::freectx",
+   "rebind": {
+    "from_line": 1106,
+    "to_line": 1149,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1149,
+   "current_line": 1149,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-059",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1303",
+   "inventory_line": 1255,
+   "original_line": 1255,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3::new_keccak",
+   "rebind": {
+    "from_line": 1255,
+    "to_line": 1303,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1303,
+   "current_line": 1303,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-060",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1332",
+   "inventory_line": 1281,
+   "original_line": 1281,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3::freectx",
+   "rebind": {
+    "from_line": 1281,
+    "to_line": 1332,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1332,
+   "current_line": 1332,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-061",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:1428 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1377,
+   "original_line": 1377,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3::refuse_squeeze",
+   "rebind": {
+    "from_line": 1377,
+    "to_line": 1428,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1428,
+   "current_line": 1428,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-062",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1446",
+   "inventory_line": 1391,
+   "original_line": 1391,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3::shake_set_ctx_params",
+   "rebind": {
+    "from_line": 1391,
+    "to_line": 1446,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1446,
+   "current_line": 1446,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-063",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:1518 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1463,
+   "original_line": 1463,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3::settable_ctx_params",
+   "rebind": {
+    "from_line": 1463,
+    "to_line": 1518,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1518,
+   "current_line": 1518,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-064",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1530",
+   "inventory_line": 1471,
+   "original_line": 1471,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3::keccak_init_params",
+   "rebind": {
+    "from_line": 1471,
+    "to_line": 1530,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1530,
+   "current_line": 1530,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-065",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1548",
+   "inventory_line": 1548,
+   "original_line": 1548,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "sha3_xof_row::newctx",
+   "rebind": {
+    "from_line": 1548,
+    "to_line": 1548,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1548,
+   "current_line": 1548,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-066",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:1852 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1781,
+   "original_line": 1781,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2::settable_ctx_params",
+   "rebind": {
+    "from_line": 1781,
+    "to_line": 1852,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1852,
+   "current_line": 1852,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-067",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:1864 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1793,
+   "original_line": 1793,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2::newctx",
+   "rebind": {
+    "from_line": 1793,
+    "to_line": 1864,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1864,
+   "current_line": 1864,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-068",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1879",
+   "inventory_line": 1804,
+   "original_line": 1804,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "blake2::freectx",
+   "rebind": {
+    "from_line": 1804,
+    "to_line": 1879,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1879,
+   "current_line": 1879,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-069",
+   "file": "src/provider/digest.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/digest.rs:2431 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 2356,
+   "original_line": 2356,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "deflt_gettable_params",
+   "rebind": {
+    "from_line": 2356,
+    "to_line": 2431,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 2431,
+   "current_line": 2431,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-070",
+   "file": "src/provider/dsa_sig.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/dsa_sig.rs:1514 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1510,
+   "original_line": 1510,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dsa_sigalg_query_key_types",
+   "rebind": {
+    "from_line": 1510,
+    "to_line": 1514,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1514,
+   "current_line": 1514,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-071",
+   "file": "src/provider/ecx_kmgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/ecx_kmgmt.rs:591 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 591,
+   "original_line": 591,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecx_imexport_types",
+   "rebind": {
+    "from_line": 591,
+    "to_line": 591,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 591,
+   "current_line": 591,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-072",
+   "file": "src/provider/ecx_kmgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/ecx_kmgmt.rs:911 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 911,
+   "original_line": 911,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ed25519_gettable_params",
+   "rebind": {
+    "from_line": 911,
+    "to_line": 911,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 911,
+   "current_line": 911,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-073",
+   "file": "src/provider/ecx_kmgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/ecx_kmgmt.rs:916 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 916,
+   "original_line": 916,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ed448_gettable_params",
+   "rebind": {
+    "from_line": 916,
+    "to_line": 916,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 916,
+   "current_line": 916,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-074",
+   "file": "src/provider/ecx_kmgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/ecx_kmgmt.rs:1094 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1094,
+   "original_line": 1094,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "x448_settable_params",
+   "rebind": {
+    "from_line": 1094,
+    "to_line": 1094,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1094,
+   "current_line": 1094,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-075",
+   "file": "src/provider/ecx_kmgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/ecx_kmgmt.rs:1099 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1099,
+   "original_line": 1099,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ed25519_settable_params",
+   "rebind": {
+    "from_line": 1099,
+    "to_line": 1099,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1099,
+   "current_line": 1099,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-076",
+   "file": "src/provider/ecx_kmgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/ecx_kmgmt.rs:1104 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1104,
+   "original_line": 1104,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ed448_settable_params",
+   "rebind": {
+    "from_line": 1104,
+    "to_line": 1104,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1104,
+   "current_line": 1104,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-077",
+   "file": "src/provider/ecx_kmgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/ecx_kmgmt.rs:1356 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1356,
+   "original_line": 1356,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ecx_gen_settable_params",
+   "rebind": {
+    "from_line": 1356,
+    "to_line": 1356,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1356,
+   "current_line": 1356,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-078",
+   "file": "src/provider/encode_key2any.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/encode_key2any.rs:175",
+   "inventory_line": 170,
+   "original_line": 170,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "operation": "(strcmp)",
+   "rebind": {
+    "from_line": 170,
+    "to_line": 175,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 175,
+   "current_line": 175,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-079",
+   "file": "src/provider/encode_key2any.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/encode_key2any.rs:2237 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 2230,
+   "original_line": 2230,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "key2any_unused_k2d",
+   "rebind": {
+    "from_line": 2230,
+    "to_line": 2237,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 2237,
+   "current_line": 2237,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-080",
+   "file": "src/provider/keymgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/keymgmt.rs:843 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 843,
+   "original_line": 843,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dh_import_types",
+   "rebind": {
+    "from_line": 843,
+    "to_line": 843,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 843,
+   "current_line": 843,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-081",
+   "file": "src/provider/keymgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/keymgmt.rs:919 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 920,
+   "original_line": 920,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dh_gettable_params",
+   "rebind": {
+    "from_line": 920,
+    "to_line": 919,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 919,
+   "current_line": 919,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-082",
+   "file": "src/provider/keymgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/keymgmt.rs:928 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 929,
+   "original_line": 929,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dh_settable_params",
+   "rebind": {
+    "from_line": 929,
+    "to_line": 928,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 928,
+   "current_line": 928,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-083",
+   "file": "src/provider/keymgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/keymgmt.rs:1763 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 1764,
+   "original_line": 1764,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dhx_query_operation_name",
+   "rebind": {
+    "from_line": 1764,
+    "to_line": 1763,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1763,
+   "current_line": 1763,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-084",
+   "file": "src/provider/mlx_kmgmt.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/mlx_kmgmt.rs:121",
+   "inventory_line": 116,
+   "original_line": 116,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "mlx_kem_have_pubkey",
+   "rebind": {
+    "from_line": 116,
+    "to_line": 121,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 121,
+   "current_line": 121,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-085",
+   "file": "src/provider/rsa_sig.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/provider/rsa_sig.rs:467",
+   "inventory_line": 462,
+   "original_line": 462,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_pss_restricted",
+   "rebind": {
+    "from_line": 462,
+    "to_line": 467,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 467,
+   "current_line": 467,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-086",
+   "file": "src/provider/rsa_sig.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "ELIMINATED: src/provider/rsa_sig.rs:3192 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 3183,
+   "original_line": 3183,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rsa_sigalg_query_key_types",
+   "rebind": {
+    "from_line": 3183,
+    "to_line": 3192,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 3192,
+   "current_line": 3192,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-087",
+   "file": "src/rand/rand_lib.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/rand/rand_lib.rs:669",
+   "inventory_line": 660,
+   "original_line": 660,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rand_set_rand_method_internal",
+   "rebind": {
+    "from_line": 660,
+    "to_line": 669,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 669,
+   "current_line": 669,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-088",
+   "file": "src/rsa/ossl.rs",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "disposition": "SAFETY_DISCHARGED: src/rsa/ossl.rs:303",
+   "inventory_line": 298,
+   "original_line": 298,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "is_mont_bn_mod_exp",
+   "rebind": {
+    "from_line": 298,
+    "to_line": 303,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 303,
+   "current_line": 303,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-089",
+   "file": "src/runtime/conf/conf_ssl.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/conf/conf_ssl.rs:554",
+   "inventory_line": 546,
+   "original_line": 546,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ssl_module_free_thunk",
+   "rebind": {
+    "from_line": 546,
+    "to_line": 554,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 554,
+   "current_line": 554,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-090",
+   "file": "src/runtime/ex_data.rs",
+   "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+   "disposition": "ELIMINATED: src/runtime/ex_data.rs:245 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 239,
+   "original_line": 239,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dummy_free",
+   "rebind": {
+    "from_line": 239,
+    "to_line": 245,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 245,
+   "current_line": 245,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-091",
+   "file": "src/runtime/ex_data.rs",
+   "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+   "disposition": "ELIMINATED: src/runtime/ex_data.rs:260 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 251,
+   "original_line": 251,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dummy_dup",
+   "rebind": {
+    "from_line": 251,
+    "to_line": 260,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 260,
+   "current_line": 260,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-092",
+   "file": "src/runtime/init.rs",
+   "mechanism": "RUNTIME_ALLOC_OWNERSHIP",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/init.rs:1246",
+   "inventory_line": 1240,
+   "original_line": 1240,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "operation": "abort",
+   "rebind": {
+    "from_line": 1240,
+    "to_line": 1246,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1246,
+   "current_line": 1246,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-093",
+   "file": "src/runtime/thread.rs",
+   "mechanism": "RUNTIME_CONCURRENCY",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/thread.rs:2113",
+   "inventory_line": 2104,
+   "original_line": 2104,
+   "kind": "UNSAFE_EXTERN_BLOCK",
+   "operation": "(nanosleep extern block)",
+   "rebind": {
+    "from_line": 2104,
+    "to_line": 2113,
+    "method": "anchor-window unsafe extern block",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 2113,
+   "current_line": 2113,
+   "current_kind": "UNSAFE_EXTERN_BLOCK",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-094",
+   "file": "src/ssl/ssl_ciph.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:716",
+   "inventory_line": 709,
+   "original_line": 709,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ssl_cipher_ptr_id_cmp",
+   "rebind": {
+    "from_line": 709,
+    "to_line": 716,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 716,
+   "current_line": 716,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-095",
+   "file": "src/ssl/ssl_ciph.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:773",
+   "inventory_line": 759,
+   "original_line": 759,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "update_cipher_list",
+   "rebind": {
+    "from_line": 759,
+    "to_line": 773,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 773,
+   "current_line": 773,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-096",
+   "file": "src/ssl/ssl_ciph.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_ciph.rs:831",
+   "inventory_line": 810,
+   "original_line": 810,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ciphersuite_cb",
+   "rebind": {
+    "from_line": 810,
+    "to_line": 831,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 831,
+   "current_line": 831,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-097",
+   "file": "src/ssl/ssl_conf.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:178",
+   "inventory_line": 167,
+   "original_line": 167,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ssl_set_option",
+   "rebind": {
+    "from_line": 167,
+    "to_line": 178,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 178,
+   "current_line": 178,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-098",
+   "file": "src/ssl/ssl_conf.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:605",
+   "inventory_line": 584,
+   "original_line": 584,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "cmd_NumTickets",
+   "rebind": {
+    "from_line": 584,
+    "to_line": 605,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 605,
+   "current_line": 605,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-099",
+   "file": "src/ssl/ssl_conf.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:1023",
+   "inventory_line": 981,
+   "original_line": 981,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "skip_prefix",
+   "rebind": {
+    "from_line": 981,
+    "to_line": 1023,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1023,
+   "current_line": 1023,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-100",
+   "file": "src/ssl/ssl_conf.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:1111",
+   "inventory_line": 1061,
+   "original_line": 1061,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ctrl_switch_option",
+   "rebind": {
+    "from_line": 1061,
+    "to_line": 1111,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1111,
+   "current_line": 1111,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-101",
+   "file": "src/ssl/ssl_conf.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_conf.rs:1498",
+   "inventory_line": 1438,
+   "original_line": 1438,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "free_cert_filename",
+   "rebind": {
+    "from_line": 1438,
+    "to_line": 1498,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1498,
+   "current_line": 1498,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-102",
+   "file": "src/ssl/ssl_lib.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_lib.rs:342",
+   "inventory_line": 331,
+   "original_line": 331,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ssl_security_default_callback",
+   "rebind": {
+    "from_line": 331,
+    "to_line": 342,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 342,
+   "current_line": 342,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-103",
+   "file": "src/ssl/ssl_lib.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_lib.rs:8864",
+   "inventory_line": 8845,
+   "original_line": 8845,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ct_strict",
+   "rebind": {
+    "from_line": 8845,
+    "to_line": 8864,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 8864,
+   "current_line": 8864,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-104",
+   "file": "src/ssl/ssl_rsa.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/ssl_rsa.rs:1070",
+   "inventory_line": 1061,
+   "original_line": 1061,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "serverinfo_srv_add_cb",
+   "rebind": {
+    "from_line": 1061,
+    "to_line": 1070,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1070,
+   "current_line": 1070,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-105",
+   "file": "src/ssl/statem/statem_clnt.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/statem/statem_clnt.rs:3610",
+   "inventory_line": 3597,
+   "original_line": 3597,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "tls12_client_drive",
+   "rebind": {
+    "from_line": 3597,
+    "to_line": 3610,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 3610,
+   "current_line": 3610,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-106",
+   "file": "src/ssl/statem/statem_srvr.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/statem/statem_srvr.rs:2946",
+   "inventory_line": 2933,
+   "original_line": 2933,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "tls12_construct_cert_status",
+   "rebind": {
+    "from_line": 2933,
+    "to_line": 2946,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 2946,
+   "current_line": 2946,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-107",
+   "file": "src/ssl/t1_trce.rs",
+   "mechanism": "SSL_SESSION",
+   "disposition": "SAFETY_DISCHARGED: src/ssl/t1_trce.rs:1058",
+   "inventory_line": 1052,
+   "original_line": 1052,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "is_dtls",
+   "rebind": {
+    "from_line": 1052,
+    "to_line": 1058,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1058,
+   "current_line": 1058,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-108",
+   "file": "src/store/store_lib.rs",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "disposition": "SAFETY_DISCHARGED: src/store/store_lib.rs:568",
+   "inventory_line": 557,
+   "original_line": 557,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "store_info_free_thunk",
+   "rebind": {
+    "from_line": 557,
+    "to_line": 568,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 568,
+   "current_line": 568,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-109",
+   "file": "src/ui/ui_util.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "ELIMINATED: src/ui/ui_util.rs:148 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 145,
+   "original_line": 145,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ui_new_method_data",
+   "rebind": {
+    "from_line": 145,
+    "to_line": 148,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 148,
+   "current_line": 148,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-110",
+   "file": "src/ui/ui_util.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:172",
+   "inventory_line": 161,
+   "original_line": 161,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ui_dup_method_data",
+   "rebind": {
+    "from_line": 161,
+    "to_line": 172,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 172,
+   "current_line": 172,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-111",
+   "file": "src/ui/ui_util.rs",
+   "mechanism": "C_ABI_CONTRACT",
+   "disposition": "ELIMINATED: src/ui/ui_util.rs:330 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 310,
+   "original_line": 310,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ui_close",
+   "rebind": {
+    "from_line": 310,
+    "to_line": 330,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 330,
+   "current_line": 330,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  },
+  {
+   "id": "OSSH-DIS-112",
+   "file": "src/x509/v3_asid.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:804",
+   "inventory_line": 797,
+   "original_line": 797,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_ASIdentifiers",
+   "rebind": {
+    "from_line": 797,
+    "to_line": 804,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 804,
+   "current_line": 804,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-113",
+   "file": "src/x509/v3_asid.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:855",
+   "inventory_line": 841,
+   "original_line": 841,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "asid_or_range_cmp",
+   "rebind": {
+    "from_line": 841,
+    "to_line": 855,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 855,
+   "current_line": 855,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-114",
+   "file": "src/x509/v3_asid.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_asid.rs:1104",
+   "inventory_line": 1083,
+   "original_line": 1083,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "as_identifier_choice_is_canonical",
+   "rebind": {
+    "from_line": 1083,
+    "to_line": 1104,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1104,
+   "current_line": 1104,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-115",
+   "file": "src/x509/v3_lib.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_lib.rs:365",
+   "inventory_line": 359,
+   "original_line": 359,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ext_cmp",
+   "rebind": {
+    "from_line": 359,
+    "to_line": 365,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 365,
+   "current_line": 365,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-116",
+   "file": "src/x509/v3_timespec.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1334",
+   "inventory_line": 1326,
+   "original_line": 1326,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_OSSL_TIME_SPEC_ABSOLUTE",
+   "rebind": {
+    "from_line": 1326,
+    "to_line": 1334,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1334,
+   "current_line": 1334,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-117",
+   "file": "src/x509/v3_timespec.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1482",
+   "inventory_line": 1468,
+   "original_line": 1468,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "print_bit_month",
+   "rebind": {
+    "from_line": 1468,
+    "to_line": 1482,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1482,
+   "current_line": 1482,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-118",
+   "file": "src/x509/v3_timespec.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1573",
+   "inventory_line": 1554,
+   "original_line": 1554,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "print_int_named_day",
+   "rebind": {
+    "from_line": 1554,
+    "to_line": 1573,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1573,
+   "current_line": 1573,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-119",
+   "file": "src/x509/v3_timespec.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_timespec.rs:1596",
+   "inventory_line": 1572,
+   "original_line": 1572,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "print_bit_named_day",
+   "rebind": {
+    "from_line": 1572,
+    "to_line": 1596,
+    "method": "anchor-window unsafe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 1596,
+   "current_line": 1596,
+   "current_kind": "UNSAFE_FN_DEF",
+   "source_state": "UNSAFE_OPERATION",
+   "unsafe_operation_present": true
+  },
+  {
+   "id": "OSSH-DIS-120",
+   "file": "src/x509/v3_tlsf.rs",
+   "mechanism": "X509_VERIFY_POLICY",
+   "disposition": "ELIMINATED: src/x509/v3_tlsf.rs:146 \u2014 the audited operation is now a safe fn; no unsafe operation remains at this site",
+   "inventory_line": 146,
+   "original_line": 146,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "tls_feature_it",
+   "rebind": {
+    "from_line": 146,
+    "to_line": 146,
+    "method": "anchor-window safe fn",
+    "bound_to_source": "git tree c3b697959d83b95807d959ee8785f4d88c46de99",
+    "rebound_utc": "2026-10-26T11:38:17Z"
+   },
+   "line": 146,
+   "current_line": 146,
+   "current_kind": "SAFE_FN",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "eliminated_to": "safe fn; no unsafe operation remains at this site"
+  }
+ ],
+ "closure_rerun": {
+  "tool": {
+   "path": "forensics/tools/consumer_closure.py",
+   "version": 3
+  },
+  "ssh": {
+   "artifact": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh",
+   "artifact_sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+   "counts": {
+    "reachable_files": 345,
+    "reachable_production_obligations": 120,
+    "DISCHARGED": 120,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "by_mechanism": {
+     "ASN1_OCSP": 7,
+     "C_ABI_CONTRACT": 8,
+     "ERR": 1,
+     "EVP_PKEY_PROVIDER": 65,
+     "RAND_CMS_STORE_KEYFMT": 9,
+     "RUNTIME_ALLOC_OWNERSHIP": 4,
+     "RUNTIME_CONCURRENCY": 2,
+     "SSL_SESSION": 14,
+     "X509_VERIFY_POLICY": 10
+    },
+    "v1_production_operations_total": 198,
+    "v1_uncontracted_operations_total": 354
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": []
+  },
+  "sshd": {
+   "artifact": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd",
+   "artifact_sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002",
+   "counts": {
+    "reachable_files": 337,
+    "reachable_production_obligations": 120,
+    "DISCHARGED": 120,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "by_mechanism": {
+     "ASN1_OCSP": 7,
+     "C_ABI_CONTRACT": 8,
+     "ERR": 1,
+     "EVP_PKEY_PROVIDER": 65,
+     "RAND_CMS_STORE_KEYFMT": 9,
+     "RUNTIME_ALLOC_OWNERSHIP": 4,
+     "RUNTIME_CONCURRENCY": 2,
+     "SSL_SESSION": 14,
+     "X509_VERIFY_POLICY": 10
+    },
+    "v1_production_operations_total": 198,
+    "v1_uncontracted_operations_total": 354
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": []
+  },
+  "note": "The tool returns ACCEPTED because every reachable production obligation is DISCHARGED, UNKNOWN = 0, and every reachable file has an admitted boundary receipt. ACCEPTED is the structural-closure verdict only: verdict.safe_compatible is false and the mechanism/file obligations retained in this receipt still bar a SAFE_COMPATIBLE claim. Reachability was not re-measured (the exact artifact files are absent); this run re-adjudicates the recorded exact-artifact obligations against the updated discharge plane.",
+  "verdict_interpretation": {
+   "structural_closure": "ACCEPTED (no refusal condition fired)",
+   "safe_compatible": false,
+   "why_not_safe_compatible": [
+    "3 reachable sites remain BLOCKED: the three legacy digest init callbacks (criterion 2).",
+    "No mechanism is claimed SAFETY_DISCHARGED mechanism-wide; these are site-scoped discharges.",
+    "B27-X2 is an open STOP-CLASS defect in src/store/store_lib.rs.",
+    "X509 pcy_lib tree_levels/parent_mut and ml_dsa raw-pointer constructor obligations remain retained.",
+    "The measured V1 binaries do not contain the working-tree source fixes."
+   ]
+  },
+  "elf_graph_remeasurement": "NOT_RUN: measured artifact files absent; exact-artifact graph reused"
+ },
+ "evidence_receipts": [
+  "openssh-discharge.json",
+  "legacy-init-harden.json"
+ ],
+ "legacy_init_harden": {
+  "source_head": "32d373e08",
+  "source_state": "working tree at 32d373e08 plus the legacy-init hardening and its regression tests",
+  "files": [
+   "src/evp/legacy_sha.rs",
+   "src/evp/legacy_md5.rs"
+  ],
+  "mechanism": "EVP_PKEY_PROVIDER (site-scoped only; mechanism state unchanged)",
+  "discharged_sites": [
+   "OSSH-DIS-017",
+   "OSSH-DIS-018",
+   "OSSH-DIS-019"
+  ],
+  "authority_divergence": "\u00a717 D-LEGACY-MD-INIT-MD-DATA-1 (authority SIGSEGV; crate returns 0)",
+  "tests": [
+   "evp::legacy_md5::tests::legacy_md5_init_refuses_context_without_md_data_and_inits_bound_context",
+   "evp::legacy_sha::tests::legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context",
+   "evp::legacy_sha::tests::legacy_sha224_init_refuses_context_without_md_data_and_inits_bound_context"
+  ],
+  "receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json"
+ },
+ "rebind": {
+  "source_head": "c3b697959d83b95807d959ee8785f4d88c46de99",
+  "head_commit": "376ae960871129c54be675c6085792bf886864b7",
+  "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1d-candidate-freeze.json",
+  "rebound_utc": "2026-10-26T11:38:17Z",
+  "method": "source scan + anchor-window definition match; no receipt deleted; an eliminated operation is recorded as ELIMINATED rather than re-pointed",
+  "counts": {
+   "ELIMINATED_SAFE": 46,
+   "UNSAFE_OPERATION": 74
+  }
+ }
 }

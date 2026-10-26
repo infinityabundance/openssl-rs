@@ -1,0 +1,273 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/openssh-final-blockers/v1",
+  "kind": "conversion-and-closure-receipt",
+  "receipt": "openssh-final-blockers",
+  "subphase": "safe-c33 openssh closure: discharge the BLAKE2 legacy-init obligation and classify the reachable unresolved indirect sites",
+  "date": "2026-10-26",
+  "source_identity": {
+    "branch": "integrate/safe-c33",
+    "repository_head": "376ae960871129c54be675c6085792bf886864b7",
+    "working_tree": "dirty: the previous subphase's eight src edits plus this batch's src/evp/legacy_blake2.rs and docs edit and the updated receipts; nothing committed or pushed",
+    "changed_files": {
+      "src/evp/legacy_blake2.rs": "6561ff56853954c86ea5bfa041afbacd9c008e675dfc3b18fbc5a61790468f11",
+      "docs/SECURITY_DIVERGENCE_POLICY.md": "5dac045cf55f9ea675f2c91bb83575c2d4633f4be45ad5b9ed6080164bd32466",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-rebind-sites.json": "7aa3ed2290f7e8670c9d6e77dc358fa0f2c3e7a987880e9ae5d4a4bb3364b4c5",
+      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "d99bec194b3f291b3dc46f1523529f04cedb86d97552a69b173bb8be0ff530f5"
+    },
+    "src_content_sha256_post_edit": "ee7523e6b8887d1b2c6b1f22b76740210cf284b8c5cafaf3b2238733d8c3651f",
+    "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+    "inventory": "v1d-candidate-freeze.json at tree c3b6979 (pre-edit)",
+    "inventory_note": "v1d is bound to the eight pre-existing edits and does not contain this batch's legacy_blake2.rs change. The change adds one unsafe fn with a # Safety contract and five unsafe blocks with SAFETY comments (six production operations), none of them an uncontracted blocker. A full v1e re-census is NOT_RUN and queued."
+  },
+  "authority": {
+    "openssl": "3.6.4 (forensics/authorities/prefix/openssl-3.6.4-production)",
+    "libcrypto_sha256": "482fca3da906a8d7ac99bd88c6d6633226b6d47c3a20d9a2d60ba3eb2b2640b2",
+    "source": "crypto/evp/legacy_blake2.c:18-31 and crypto/evp/legacy_meth.h:24-36",
+    "macro_body": "ossl_blake2b_init(EVP_MD_CTX_get0_md_data(ctx), &P) / ossl_blake2s_init(...), no NULL test"
+  },
+  "defect": {
+    "id": "D-LEGACY-BLAKE2-INIT-MD-DATA-1",
+    "class": "write through a NULL/caller-unestablished md_data",
+    "sites": [
+      "src/evp/legacy_blake2.rs:152 blake2b_int_init (V1 inventory line; current 222)",
+      "src/evp/legacy_blake2.rs:191 blake2s_int_init (same class; not a V1 obligation; current 278)"
+    ],
+    "reachability": "EVP_MD_meth_get_init (src/evp/digest.rs:1565; libcrypto.ld:1886) returns the callback to any C caller. A fresh EVP_MD_CTX_new() is zero-filled, so md_data is NULL; a NULL ctx dereferences NULL as well."
+  },
+  "reproduction": {
+    "before_fix_candidate": "cargo test --lib legacy_blake2b_init -- --test-threads=4: the test panicked at src/digest/blake2.rs:249 with 'null pointer dereference occurred' and the process aborted (SIGABRT, exit 101).",
+    "before_fix_authority": "Four one-process C probes against the pinned 3.6.4 install (BLAKE2b-512/BLAKE2s-256 x {fresh EVP_MD_CTX_new(), NULL ctx}); each printed md_data=(nil) or ctx=NULL and died with exit 139 (SIGSEGV) in the initialiser write.",
+    "after_fix_candidate": "The focused tests return 0 for both fault shapes and 1 for the bound table path; BLAKE2b-512(abc) and BLAKE2s-256(abc) match the pinned authority vectors."
+  },
+  "fix": {
+    "shape": "blake2b_int_init and blake2s_int_init now call a private init_md_data(ctx, owner, size) before writing. The helper refuses (None) when ctx is NULL, md_data is NULL, digest is NULL, or the context is bound to a different method whose ctx_size is smaller than the BLAKE2 context; otherwise it returns the block. A refusal answers 0, the C initialise failure value, touching no memory.",
+    "normal_path": "a context bound to the callback's own table object, or to a method with ctx_size >= size_of::<blake2b::Ctx>() / <blake2s::Ctx>(), still calls ossl_blake2*_init and returns 1; digest maths and result values are unchanged.",
+    "authority_comparison": "§17 divergence, not compatibility: the authority performs the NULL write and faults; the crate returns 0 on exactly the shapes where the authority does not return.",
+    "lines": {
+      "helper": "src/evp/legacy_blake2.rs:108",
+      "blake2b_int_init": "src/evp/legacy_blake2.rs:222",
+      "blake2s_int_init": "src/evp/legacy_blake2.rs:278",
+      "divergence": "docs/SECURITY_DIVERGENCE_POLICY.md:1021 (D-LEGACY-BLAKE2-INIT-MD-DATA-1)"
+    }
+  },
+  "tests": {
+    "names": [
+      "evp::legacy_blake2::tests::legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context",
+      "evp::legacy_blake2::tests::legacy_blake2s_init_refuses_context_without_md_data_and_inits_bound_context"
+    ],
+    "lines": [
+      "src/evp/legacy_blake2.rs:443",
+      "src/evp/legacy_blake2.rs:501"
+    ],
+    "negative_control": "the pre-fix candidate aborts with SIGABRT at src/digest/blake2.rs:249"
+  },
+  "gates": {
+    "cargo_fmt_all_check": "PASS (exit 0)",
+    "cargo_check_lib": "PASS (Finished dev profile)",
+    "focused_tests": "PASS: 4 passed; 0 failed; 2252 filtered out",
+    "cargo_test_lib_test_threads_4": "PASS: 2204 passed; 0 failed; 52 ignored",
+    "cargo_clippy_all_targets_deny_warnings": "PASS (Finished dev profile)",
+    "authority_probes": "4/4 exit 139 (SIGSEGV) on the fresh and NULL shapes",
+    "abi_courts": "NOT_RUN at this identity (no rebuild; see residuals)"
+  },
+  "closure_rerun": {
+    "tool": "forensics/tools/consumer_closure.py v3 (unmodified)",
+    "invocation": "--family {openssh|openssh-server} --artifact <binary> --build-record <record> --inventory .../v1d-candidate-freeze.json --install artifacts/phase2/install --state .../state.json --campaign-status .../CAMPAIGN-STATUS.json --boundary-dir .../atlas-refresh --workdir court/tmp/rebind/closure-work4",
+    "before": {
+      "source": "court/tmp/rebind/closure-ssh-final3.json / closure-sshd-final3.json",
+      "ssh": {
+        "reachable_files": 333,
+        "reachable_production_obligations": 1,
+        "DISCHARGED": 0,
+        "BLOCKED": 1,
+        "UNKNOWN": 0,
+        "verdict": "ACCEPTED",
+        "precision": {
+          "indirect_sites": 51983,
+          "resolved_sites": 51304,
+          "unresolved_sites": 679,
+          "reachable_unresolved_sites": 135,
+          "unclassified_reachable_sites": 0
+        }
+      },
+      "sshd": {
+        "reachable_files": 321,
+        "reachable_production_obligations": 1,
+        "DISCHARGED": 0,
+        "BLOCKED": 1,
+        "UNKNOWN": 0,
+        "verdict": "ACCEPTED",
+        "precision": {
+          "indirect_sites": 51983,
+          "resolved_sites": 51304,
+          "unresolved_sites": 679,
+          "reachable_unresolved_sites": 132,
+          "unclassified_reachable_sites": 0
+        }
+      }
+    },
+    "after": {
+      "ssh_receipt": "court/tmp/rebind/closure-ssh-final6.json",
+      "ssh_receipt_sha256": "ae7821cf518a5553869a05610712063eb966c0ee5278679191d1a143032d960a",
+      "sshd_receipt": "court/tmp/rebind/closure-sshd-final6.json",
+      "sshd_receipt_sha256": "f8f1037895b79672ac8bc70695993c3d61135810a8956c8068a8c9ee2185556e",
+      "ssh": {
+        "reachable_files": 333,
+        "reachable_production_obligations": 1,
+        "DISCHARGED": 1,
+        "BLOCKED": 0,
+        "UNKNOWN": 0,
+        "verdict": "ACCEPTED",
+        "precision": {
+          "indirect_sites": 51983,
+          "resolved_sites": 51304,
+          "unresolved_sites": 679,
+          "reachable_unresolved_sites": 135,
+          "unclassified_reachable_sites": 0
+        }
+      },
+      "sshd": {
+        "reachable_files": 321,
+        "reachable_production_obligations": 1,
+        "DISCHARGED": 1,
+        "BLOCKED": 0,
+        "UNKNOWN": 0,
+        "verdict": "ACCEPTED",
+        "precision": {
+          "indirect_sites": 51983,
+          "resolved_sites": 51304,
+          "unresolved_sites": 679,
+          "reachable_unresolved_sites": 132,
+          "unclassified_reachable_sites": 0
+        }
+      },
+      "obligation": {
+        "id": "V1:src/evp/legacy_blake2.rs:152:UNSAFE_FN_DEF",
+        "status": "DISCHARGED",
+        "reason": "boundary OSSH-RB-001 is scoped-SAFETY_DISCHARGED and its disposition explicitly names line 152"
+      }
+    },
+    "predicate_element_7": {
+      "established": false,
+      "why": "the closure's precision resolver still reports 135 (ssh) / 132 (sshd) reachable unresolved indirect sites out of 679 unresolved sites; 0 unclassified. This audit classifies them, but the resolver's evidence is unchanged: R2/R3/A1/A2 are not encoded as resolved target sets and the O1 seam is ABI-open. The predicate requires no unresolved dynamic dispatch or callback edge, so it still fails.",
+      "ssh_reachable_unresolved_sites": 135,
+      "sshd_reachable_unresolved_sites": 132,
+      "unresolved_sites_total": 679,
+      "unclassified_reachable_sites": 0,
+      "what_would_establish_it": [
+        "encode dlsym-literal/static-table/Rust-vtable resolution in the resolver",
+        "add a machine-checked manifest of the built-in provider and legacy method tables",
+        "establish or exclude external provider-module loading for these two workloads",
+        "encode the CRYPTO_set_mem_functions reachability predicate"
+      ]
+    }
+  },
+  "unresolved_indirect_classification": {
+    "ssh_total": 135,
+    "sshd_total": 132,
+    "classes": [
+      {
+        "id": "R1",
+        "name": "dlsym(RTLD_DEFAULT, literal) edges resolved by evidence",
+        "ssh": 21,
+        "sshd": 19,
+        "evidence_class": "literal symbol name in .rodata plus the candidate's exported-symbol index",
+        "resolved_target_set": "ERR_get_state (14 ssh / 12 sshd), CRYPTO_malloc (2/2), CRYPTO_free (1/1), OPENSSL_init_crypto (1/1), conf_ssl_name_find + conf_ssl_get + conf_ssl_get_cmd (3/3); each names an exported candidate libcrypto symbol",
+        "note": "dlsym uses RTLD_DEFAULT, so a process interposer could replace a target; neither workload defines or imports an interposer for these names."
+      },
+      {
+        "id": "R2",
+        "name": "Rust std/core trait-object and internal function-pointer dispatch resolved by evidence",
+        "ssh": 67,
+        "sshd": 67,
+        "evidence_class": "compiler-constructed trait-object vtables and std/core-internal function pointers (panic hook, Once initializer, libc/syscall weak pointers, backtrace callback) inside monomorphized core/std code",
+        "resolved_target_set": "the linked std/core implementation: impls of core::fmt::Write, core::fmt::Debug, core::ops::Drop and std::io::Write; the installed panic hook; the Once initializer; the libc syscall/open64/set_permissions/getrandom entry points; the libunwind trace callback. No application-supplied OpenSSL callback.",
+        "note": "the resolver's class is materialised/field because it loses the value through a stack slot; the audit's evidence is the symbol/API identity of the enclosing std/core routine."
+      },
+      {
+        "id": "R3",
+        "name": "link-time-constant OpenSSL table edges resolved by evidence",
+        "ssh": 6,
+        "sshd": 5,
+        "evidence_class": "static table or embedded pointer at a link-time-constant address",
+        "resolved_target_set": "PMETH_STANDARD_METHODS (int_ctx_new), DEFAULT_CONF_METHOD (def_load_bio), static ASN1_TEMPLATE/ASN1_ADB (template_clear/do_adb), static EVP_CIPHER (camellia_ecb_cipher), default EC_KEY_METHOD (ECDH_compute_key; ssh only)",
+        "note": "the table entries are in-image; no application registration API is involved."
+      },
+      {
+        "id": "A1",
+        "name": "provider / method-store dispatch bounded by the public provider ABI",
+        "ssh": 25,
+        "sshd": 25,
+        "abi_contract": "OSSL_FUNC_* function IDs, OSSL_METHOD_CONSTRUCT_METHOD, OSSL_provider_init and OSSL_PROVIDER_do_all; the contract fixes the callback signature, lifecycle and registration path",
+        "target_set": "the provider implementations registered in the process; the built-in provider is in-image",
+        "note": "not a finite link-time set if an external provider module is loaded. Neither workload imports OSSL_PROVIDER_load, OSSL_PROVIDER_try_load or OSSL_PROVIDER_do_all, so no workload-supplied provider can be registered; a config-driven load inside libcrypto is not excluded by this closure."
+      },
+      {
+        "id": "A2",
+        "name": "legacy method-table dispatch bounded by the public method-table ABIs",
+        "ssh": 13,
+        "sshd": 13,
+        "abi_contract": "EVP_PKEY_METHOD, EVP_PKEY_ASN1_METHOD, EVP_MD, EVP_CIPHER, BIO_METHOD, UI_METHOD, X509_LOOKUP_METHOD and CONF_METHOD; each public setter fixes the callback signature and the table that is dispatched",
+        "target_set": "the method tables registered in the process; the crate's built-in tables are in-image",
+        "note": "neither workload imports EVP_*_meth_new, BIO_meth_new, UI_create_method or X509_LOOKUP_meth_new, so no workload-supplied method table is registered."
+      },
+      {
+        "id": "O1",
+        "name": "allocator override seam (genuinely open at the ABI)",
+        "ssh": 3,
+        "sshd": 3,
+        "public_contract": "CRYPTO_set_mem_functions(void *(*)(size_t,const char*,int), void *(*)(void*,size_t,const char*,int), void (*)(void*,const char*,int))",
+        "target_set": "unknowable in general: any caller-installed allocator/reallocator/free triple",
+        "sites": "MALLOC_FN (1: runtime::err::append_current) and FREE_FN (2: core::ptr::drop_glue for runtime::err::SlotStr, runtime::err::PendingReleaseGuard::drop)",
+        "reachability": "the three sites execute on the ssh/sshd error paths, but neither binary imports CRYPTO_set_mem_functions; the globals are NULL and the cmov/cmove selects the in-image default_malloc/default_free. No application-supplied target is reachable from these two workloads; the open alternative is reachable only from a process that installs hooks (not these binaries).",
+        "note": "the same seam also appears indirectly inside CRYPTO_malloc/CRYPTO_realloc, whose dispatch sites the resolver already resolved; those are not among the 135."
+      }
+    ],
+    "genuinely_open_reachability": "3 of 3 O1 sites execute in ssh/sshd, but no application-supplied target is reachable: neither binary imports CRYPTO_set_mem_functions and the in-image default is selected. Every other class is either evidence-resolved or bounded by a public OpenSSL ABI contract; the A1 external-provider residual is the only contract-bounded edge whose target set could still grow, and it requires a provider module that these workloads do not load.",
+    "import_evidence": {
+      "checked": "nm -D --undefined-only on both binaries for CRYPTO_set_mem_functions, OSSL_PROVIDER_*, BIO_meth_new, UI_create_method, OSSL_ENCODER/DECODER, EVP_*_meth_new, X509_LOOKUP_meth_new, ENGINE_* and RAND_set*",
+      "result": "no match in either binary; the OpenSSH 9.9p1 source tree does not call them"
+    }
+  },
+  "mechanisms": [
+    {
+      "name": "legacy BLAKE2 legacy-init md_data precondition",
+      "eliminated": [
+        "the assumption that a C caller of the exported init callback supplies a writable md_data",
+        "the assumption that a fresh EVP_MD_CTX carries a method/block this callback may write"
+      ],
+      "relocated": [
+        "the raw reads ctx->md_data/ctx->digest/digest->ctx_size and the write into init_md_data + the two callbacks, each with a # Safety contract"
+      ],
+      "hidden": 0
+    }
+  ],
+  "obligations": {
+    "discharged": [
+      "OSSH-RB-001 (V1:src/evp/legacy_blake2.rs:152:UNSAFE_FN_DEF)"
+    ],
+    "retained": [
+      "EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide; this is a site-scoped discharge only.",
+      "The O1 allocator-seam sites remain genuinely open at the ABI; no application-supplied target is reachable from these two binaries.",
+      "The A1 provider dispatch remains ABI-bounded, not resolved; an external provider module loaded from configuration is not excluded by this closure.",
+      "A C-invalid pointer remains outside the C contract, as for every exported pointer-taking entry point."
+    ],
+    "introduced": [
+      "one private unsafe fn init_md_data and five unsafe blocks, all contracted; no new exported symbol, no new unsafe trait or safe interface, no new blocker."
+    ]
+  },
+  "residuals": [
+    "The measured candidate install (libcrypto fa051401) predates this source edit; no rebuild was run, so the closure's reachability graph is the pre-edit binary. The edited function is in the same reachable file and the helper adds no exported symbol or new call edge; a post-edit rebuild and L4/L7 re-run are NOT_RUN.",
+    "v1d is pre-edit; a full v1e re-census is NOT_RUN. The six added operations are contracted and none is a blocker.",
+    "BOUNDARY instruments (Miri/ASan/Loom/mutation) and SEAL requirements were not run at this identity.",
+    "Independent review of this discharge was NOT_RUN; this receipt is an author's measurement.",
+    "The sibling legacy initialisers in other files (sha256/384/512/512_224/512_256 and md5_sha1) retain the authority's unconditional shape and remain queued.",
+    "The 135/132 classification is an external audit of the resolver's output; it does not change the resolver's counts or establish predicate element 7."
+  ],
+  "non_claims": [
+    "This is not a SAFE_COMPATIBLE promotion and not a mechanism-wide SAFETY_DISCHARGED claim.",
+    "The authority's NULL write is a §17 divergence, not compatible behaviour.",
+    "DISCHARGED means the V1 obligation is covered by OSSH-RB-001's contract, test and authority probe; it does not make the mechanism SAFETY_DISCHARGED.",
+    "The unresolved-indirect classification does not claim that the closure's element 7 passes."
+  ]
+}
