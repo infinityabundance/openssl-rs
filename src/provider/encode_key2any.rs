@@ -167,6 +167,11 @@ type KeyToDerFn = unsafe extern "C" fn(
 ) -> c_int;
 
 // The C library's `strcmp`, the generated parameter decoder's own comparison.
+//
+// SAFETY: `strcmp` is libc's `int strcmp(const char *, const char *)`. Both arguments are
+// non-NULL pointers to NUL-terminated strings readable for the call; the result is a value and
+// nothing is written or freed through this declaration. The single call site inside
+// `generate_decoder` passes a key string it has already tested for NULL and a `c"…"` literal.
 unsafe extern "C" {
     fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
 }
@@ -2226,8 +2231,10 @@ const MASK_ALL: c_int = MASK_PRIV | MASK_PUB | MASK_PARAMS;
 const MASK_NO_PUB: c_int = MASK_PRIV | MASK_PARAMS;
 
 /// The DER producer a table arm that has no producer passes; it is never called, because the arm
-/// it belongs to is unreachable under its row's selection mask.
-unsafe extern "C" fn key2any_unused_k2d(
+/// it belongs to is unreachable under its row's selection mask. A safe `extern "C" fn`:
+/// every argument is unread and the body contains no unsafe operation, so there is no caller
+/// precondition, and a safe fn coerces to the `KeyToDerFn` slot it is passed through.
+extern "C" fn key2any_unused_k2d(
     _key: *const c_void,
     _pder: *mut *mut c_uchar,
     _ctx: *mut c_void,

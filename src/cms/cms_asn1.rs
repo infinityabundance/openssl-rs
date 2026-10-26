@@ -492,6 +492,13 @@ pub(crate) struct CmsOriForKemOtherInfo {
 // ---------------------------------------------------------------------------------------------
 
 /// `cms_si_cb` — `cms_asn1.c:38-48`. On `FREE_POST`, release the signer key, cert and contexts.
+///
+/// # Safety
+///
+/// `pval` is the live value slot of the `CMS_SIGNER_INFO` being freed; on `ASN1_OP_FREE_POST`
+/// `*pval` is still the live object, and its `pkey`, `signer`, `mctx` and `pctx` members are NULL
+/// or owned by it. `_it`/`_exarg` are unread. Established by `asn1::fre`'s free walk, which calls
+/// the item callback with the caller's slot after releasing the template's own fields.
 unsafe extern "C" fn cms_si_cb(
     operation: c_int,
     pval: *mut *mut c_void,

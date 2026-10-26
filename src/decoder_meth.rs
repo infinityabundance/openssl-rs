@@ -764,6 +764,13 @@ unsafe impl CtxDestroy for OsslDecoderCtx {
 
 /// `sk_OSSL_DECODER_INSTANCE_pop_free`'s destructor: the crate's stack frees elements through a
 /// `void *`-shaped callback, so `ossl_decoder_instance_free` is reached through this thunk.
+///
+/// # Safety
+///
+/// `p` is NULL or the `OsslDecoderInstance` the stack owns a reference to, and that reference is
+/// the one being released. Established by `OPENSSL_sk_pop_free`'s callback contract at the single
+/// site that installs this thunk: the context's `decoder_insts` stack, whose elements are
+/// allocated by `ossl_decoder_instance_new`/`_dup` and each hold one reference.
 unsafe extern "C" fn decoder_instance_free_thunk(p: *mut c_void) {
     // SAFETY: the stack's element is an `OsslDecoderInstance` this crate allocated and owns.
     unsafe { crate::decoder_lib::ossl_decoder_instance_free(p.cast()) };

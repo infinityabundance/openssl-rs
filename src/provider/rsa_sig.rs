@@ -458,6 +458,11 @@ unsafe fn freectx_body(ptr: *mut ProvRsaCtx) {
 type SetCtxParamsFn = unsafe extern "C" fn(*mut c_void, *const OsslParam) -> c_int;
 
 /// `rsa_pss_restricted(prsactx)` — `rsa_sig.c.in:166`.
+///
+/// # Safety
+///
+/// `ctx` is a live `PROV_RSA_CTX`. Established by every caller in this file, which holds the
+/// context it was handed by the provider dispatch.
 #[inline]
 unsafe fn rsa_pss_restricted(ctx: *const ProvRsaCtx) -> bool {
     // SAFETY: `ctx` is the caller's context.
@@ -3180,7 +3185,11 @@ unsafe fn rsa_sigalg_signverify_init(
 }
 
 /// `static const char **rsa_sigalg_query_key_types(void)` — `rsa_sig.c:2472-2477`.
-unsafe extern "C" fn rsa_sigalg_query_key_types() -> *mut *const c_char {
+///
+/// Safe: no argument is read and the answer is the address of a `'static` array, so there is no
+/// caller precondition. The address-taken slot it is installed in takes an `unsafe extern "C"
+/// fn`, to which a safe fn coerces.
+extern "C" fn rsa_sigalg_query_key_types() -> *mut *const c_char {
     /// `static const char *keytypes[] = { "RSA", NULL }`.
     #[repr(C)]
     struct KeyTypeNames([*const c_char; 2]);

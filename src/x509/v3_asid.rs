@@ -794,6 +794,13 @@ unsafe fn i2r_ASIdentifierChoice(
 /// `static int i2r_ASIdentifiers(const X509V3_EXT_METHOD *method, void *ext, BIO *out, int indent)`
 /// — `crypto/x509/v3_asid.c:109-117`. The two choices are printed with `&&`, so a refusal on the
 /// first short-circuits the second.
+///
+/// # Safety
+///
+/// `ext` is a non-NULL, live `ASIdentifiers` of the method's own item type and `out` is a live
+/// `BIO`; both stay valid for the call. `_method` is unread. `X509V3_EXT_print` establishes the
+/// object: it calls `i2r` only after its own `d2i` returned a non-NULL value and passes the
+/// caller's live output BIO (`src/x509/v3_prn.rs:247`, `:288`).
 unsafe extern "C" fn i2r_ASIdentifiers(
     _method: *const X509V3ExtMethod,
     ext: *mut c_void,
@@ -838,6 +845,13 @@ unsafe extern "C" fn i2r_ASIdentifiers(
 /// The stack layer hands a comparator the addresses of the *slots*, so each argument is
 /// dereferenced once to reach the element. The two `assert`s (`:127`, `:129`) are compiled out under
 /// `NDEBUG`, as `ossl_assert` is in this build.
+///
+/// # Safety
+///
+/// `a_` and `b_` point to element slots, each holding a non-NULL, live `ASIdOrRange` that stays
+/// valid for the call and whose selected union arm is the one its `type_` names. Established by
+/// `OPENSSL_sk_sort`, which passes the addresses of the slots of a stack this module filled with
+/// objects from its own constructors; no NULL is ever pushed.
 unsafe extern "C" fn asid_or_range_cmp(a_: *const c_void, b_: *const c_void) -> c_int {
     // SAFETY: the stack passes element slots for a comparator installed on this list.
     let a = unsafe { *a_.cast::<*const AsIdOrRange>() };
@@ -1080,6 +1094,13 @@ unsafe fn extract_min_max(
 ///
 /// An absent or inheriting choice is canonical; a non-list or an empty list is not; a list is
 /// canonical when it is strictly ascending, non-overlapping, non-adjacent and un-inverted.
+///
+/// # Safety
+///
+/// `choice` is NULL or a live `ASIdentifierChoice`; when its `asIdsOrRanges` arm is selected, that
+/// arm is a live stack whose elements are NULL or live `ASIdOrRange` objects. Established by
+/// `X509v3_asid_is_canonical`/`X509v3_asid_subset`, which pass either a member of a decoded
+/// `ASIdentifiers` or NULL.
 unsafe fn as_identifier_choice_is_canonical(choice: *mut AsIdentifierChoice) -> c_int {
     let mut a_max_plus_one: *mut Asn1String = ptr::null_mut();
     let mut bn: *mut BigNum = ptr::null_mut();

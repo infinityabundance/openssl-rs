@@ -107,6 +107,10 @@ use crate::runtime::err::{
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_free};
 use crate::x509::x_pubkey::ossl_d2i_PUBKEY_legacy;
 
+// SAFETY: both are libc declarations. `strcmp` takes two non-NULL NUL-terminated strings and
+// `strlen` one; each result is a value and neither writes or frees through its arguments. The
+// call sites pass either `'static` literals or caller-supplied strings that the entry points'
+// contracts require to be NUL-terminated.
 unsafe extern "C" {
     /// The C library's `strcmp`, which the authority's two name tests are.
     fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
