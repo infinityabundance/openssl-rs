@@ -148,7 +148,10 @@ static LEGACY_PARAM_TYPES: [OsslParam; 5] = [
 ];
 
 /// `static const OSSL_PARAM *legacy_gettable_params(void *provctx)` — `legacyprov.c:63-66`.
-unsafe extern "C" fn legacy_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+///
+/// No caller precondition: the body returns a pointer to a `'static` parameter array and does
+/// not read `provctx`, so the `unsafe` marker was vestigial.
+extern "C" fn legacy_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
     LEGACY_PARAM_TYPES.as_ptr()
 }
 
@@ -294,7 +297,9 @@ macro_rules! legacy_digest_impl {
         mod $module {
             use super::*;
 
-            unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+            /// No caller precondition: the body allocates through the safe owner and hands the
+            /// raw pointer out; the `unsafe` marker was vestigial.
+            extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
                 if ossl_prov_is_running() == 0 {
                     return ptr::null_mut();
                 }
@@ -305,6 +310,9 @@ macro_rules! legacy_digest_impl {
                 ctx.into_raw().cast()
             }
 
+            /// # Safety
+            /// `vctx` is NULL or a live context this row's `newctx` handed to the core and the
+            /// core has not yet released. The core calls `freectx` exactly once per such pointer.
             unsafe extern "C" fn freectx(vctx: *mut c_void) {
                 // `OPENSSL_clear_free(ctx, sizeof(*ctx))` — the context holds a chaining state.
                 // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is
@@ -451,7 +459,10 @@ legacy_digest_impl!(
 static MDC2_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_uint(OSSL_DIGEST_PARAM_PAD_TYPE), END];
 
 /// `mdc2_settable_ctx_params` — `mdc2_prov.c:33-37`.
-unsafe extern "C" fn mdc2_settable_ctx_params(
+///
+/// No caller precondition: the body returns a pointer to a `'static` parameter array and reads
+/// neither argument, so the `unsafe` marker was vestigial.
+extern "C" fn mdc2_settable_ctx_params(
     _ctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -494,7 +505,9 @@ unsafe extern "C" fn mdc2_set_ctx_params(vctx: *mut c_void, params: *const OsslP
 mod mdc2 {
     use super::*;
 
-    unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+    /// No caller precondition: the body allocates through the safe owner and hands the raw
+    /// pointer out; the `unsafe` marker was vestigial.
+    extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 {
             return ptr::null_mut();
         }
@@ -505,6 +518,9 @@ mod mdc2 {
         ctx.into_raw().cast()
     }
 
+    /// # Safety
+    /// `vctx` is NULL or a live context this row's `newctx` handed to the core and the core has
+    /// not yet released. The core calls `freectx` exactly once per such pointer.
     unsafe extern "C" fn freectx(vctx: *mut c_void) {
         // `OPENSSL_clear_free(ctx, sizeof(*ctx))` — the context holds a chaining state.
         // SAFETY: `vctx` is NULL or a live context; `from_raw` reclaims it and `Drop` is its

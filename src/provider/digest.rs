@@ -988,6 +988,11 @@ mod nullmd {
 
     /// `null_prov.c`'s overridden `PROV_FUNC_DIGEST_FINAL`: no `outsz` comparison, because
     /// `dgstsize` is zero and the guard the shared macro writes is vacuous.
+    ///
+    /// # Safety
+    /// `outl` is a live, writable output slot supplied by the provider final dispatch. `ctx` and
+    /// `out` are not dereferenced (`ctx_final` ignores both, because the null digest writes no
+    /// bytes) and `outsz` is unused by this override.
     unsafe extern "C" fn internal_final(
         ctx: *mut c_void,
         out: *mut u8,

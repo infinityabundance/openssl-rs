@@ -1,0 +1,424 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/openssh-edge-bounds/v1",
+  "kind": "closure-evidence-and-boundary-receipt",
+  "receipt": "openssh-edge-bounds",
+  "subphase": "safe-c33 openssh closure: encode the six evidence classes for the reachable unresolved indirect sites, add their negative controls, and run the BOUNDARY gate at the same identity",
+  "date": "2026-10-26",
+  "source_identity": {
+    "branch": "integrate/safe-c33",
+    "repository_head": "376ae960871129c54be675c6085792bf886864b7",
+    "working_tree": "dirty: forensics/tools/consumer_closure.py and this receipt are this batch's files; the previous subphases' src edits, artifacts/phase2 rebuild and receipts remain uncommitted; nothing committed or pushed",
+    "candidate_install": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "fa0514011e6ea19b37c87136ebf5828f715efada65f3d629c9db840384c20a5c",
+    "artifacts": {
+      "ssh": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+      "sshd": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002"
+    },
+    "inventory": "v1d-candidate-freeze.json (pre-edit); no post-edit rebuild was run"
+  },
+  "tool_change": {
+    "path": "forensics/tools/consumer_closure.py",
+    "scope": "the precision resolver gains an evidence layer and per-site evidence classes; the ordinary test suite and the normal-source tree are unchanged",
+    "classes": [
+      {
+        "id": "R1",
+        "mechanism": "dlsym(RTLD_DEFAULT, literal)",
+        "encoding": "at the dlsym call the interpreter reads the NUL-terminated identifier at the pointer in %rsi from the exact image, checks the candidate's dynamic export index, and models the return as ('sym', name); the subsequent store/load/call then resolves to that named exported symbol",
+        "invariant": "the second argument is a single in-image address holding an identifier and the candidate exports the name; a computed, loaded or multi-valued argument is not evidence and leaves the site unresolved",
+        "negative_control": "self-test: dlsym TOP argument, symbolic argument and non-string address each return None; the ordinary site stays unresolved"
+      },
+      {
+        "id": "R2",
+        "mechanism": "Rust std/core trait-object and runtime-hook dispatch",
+        "encoding": "a site whose enclosing symbol is in the linked core/std image is resolved to the address-taken functions of that image",
+        "invariant": "these are compiler-constructed vtables and runtime hooks (fmt Write/Debug/Drop, the panic hook, Once, libc/syscall weak pointers, the libunwind trace callback); the only code that writes such a slot is the same std/core routine, so no application-supplied OpenSSL callback can be a member",
+        "negative_control": "self-test: a core-named site resolves; an application-named site is not given R2 and stays unresolved"
+      },
+      {
+        "id": "R3",
+        "mechanism": "link-time-constant OpenSSL tables",
+        "encoding": "the tool re-reads the table from the exact candidate: PMETH_STANDARD_METHODS (10 x 8-byte entries), DEFAULT_CONF_METHOD.load_bio (DEFAULT_METHOD+0x10), the EvpCamelliaKey.block store set, the static ASN1_TEMPLATE/ASN1_ADB entries the resolver could follow, and the default EC_KEY_METHOD table; an entry that is zero, unreadable or a non-code value is reported incomplete",
+        "invariant": "every admitted entry is a relocation-resolved in-image function pointer; a table with an unfilled or non-code entry is not evidence-complete",
+        "negative_control": "self-test: a table with a non-code third entry reports that entry incomplete"
+      },
+      {
+        "id": "A1",
+        "mechanism": "provider / method-store ABI",
+        "encoding": "left unresolved as ABI_OPEN_PROVIDER_CONFIG; the in-image built-in provider remains the conservative target bound but is not claimed complete",
+        "invariant": "the immediate callee of a fetch/method-store site is a built-in provider implementation, but the target set can grow through a provider module named by a configuration file",
+        "negative_control": "the class is not applied as resolved; every A1 site is counted in precision.abi_open.provider_config"
+      },
+      {
+        "id": "A2",
+        "mechanism": "legacy method-table ABI",
+        "encoding": "resolved to the in-image link-time method-table entries only when the workload imports no setter for EVP_PKEY_METHOD/EVP_MD/EVP_CIPHER/BIO_METHOD/UI_METHOD/X509_LOOKUP_METHOD/CONF_METHOD",
+        "invariant": "the dispatched table is a built-in table in the image and the workload cannot install an entry through any of those public setter families",
+        "negative_control": "self-test: the same A2 site stays unresolved when the workload imports EVP_MD_meth_new"
+      },
+      {
+        "id": "O1",
+        "mechanism": "allocator override seam",
+        "encoding": "the interpreter marks a load from runtime::mem MALLOC_FN/REALLOC_FN/FREE_FN; the three audited reachable sites are recorded as ABI_OPEN_CONFIG_BOUND and are never resolved",
+        "invariant": "the public CRYPTO_set_mem_functions ABI admits any caller-supplied triple; the NULL globals in this configuration are a runtime fact, not a static bound",
+        "negative_control": "self-test: the O1 site stays unresolved after the evidence pass"
+      }
+    ],
+    "residual_bound_note": "a resolved evidence-class site keeps the resolver's previous conservative residual contribution (taken_code + reachable field stores + unknown call-argument targets) as part of its target set, so the closure's reachability upper bound is preserved rather than narrowed by the new evidence",
+    "self_test": "PASS: python3 forensics/tools/consumer_closure.py --self-test"
+  },
+  "classification_result": {
+    "audit_totals": {
+      "ssh": 135,
+      "sshd": 132
+    },
+    "per_class": [
+      {
+        "id": "R1",
+        "ssh": {
+          "audited": 21,
+          "resolved": 21,
+          "unresolved": 0
+        },
+        "sshd": {
+          "audited": 19,
+          "resolved": 19,
+          "unresolved": 0
+        },
+        "invariant": "the literal names an exported candidate symbol; the dlsym result is that symbol"
+      },
+      {
+        "id": "R2",
+        "ssh": {
+          "audited": 67,
+          "resolved": 67,
+          "unresolved": 0
+        },
+        "sshd": {
+          "audited": 67,
+          "resolved": 67,
+          "unresolved": 0
+        },
+        "invariant": "the linked core/std image; no application callback"
+      },
+      {
+        "id": "R3",
+        "ssh": {
+          "audited": 6,
+          "resolved": 6,
+          "unresolved": 0
+        },
+        "sshd": {
+          "audited": 5,
+          "resolved": 5,
+          "unresolved": 0
+        },
+        "invariant": "link-time constant table entries read from the exact image"
+      },
+      {
+        "id": "A1",
+        "ssh": {
+          "audited": 25,
+          "resolved": 0,
+          "unresolved": 26
+        },
+        "sshd": {
+          "audited": 25,
+          "resolved": 0,
+          "unresolved": 26
+        },
+        "invariant": "ABI_OPEN_PROVIDER_CONFIG: config-driven external provider loading is reachable",
+        "note": "the audited 25 remain open; one additional provider-dispatch site became reachable through the improved graph and is also open"
+      },
+      {
+        "id": "A2",
+        "ssh": {
+          "audited": 13,
+          "resolved": 13,
+          "unresolved": 0
+        },
+        "sshd": {
+          "audited": 13,
+          "resolved": 13,
+          "unresolved": 0
+        },
+        "invariant": "built-in EVP_PKEY_METHOD/EVP_MD/EVP_CIPHER/BIO_METHOD/UI_METHOD/X509_LOOKUP_METHOD/CONF_METHOD tables; no setter for those families is imported"
+      },
+      {
+        "id": "O1",
+        "ssh": {
+          "audited": 3,
+          "resolved": 0,
+          "unresolved": 3
+        },
+        "sshd": {
+          "audited": 3,
+          "resolved": 0,
+          "unresolved": 3
+        },
+        "invariant": "ABI_OPEN_CONFIG_BOUND: the public allocator-override ABI is not statically bounded"
+      }
+    ],
+    "audited_sites_accounting": {
+      "ssh": {
+        "audited": 135,
+        "resolved": 107,
+        "still_open": 28,
+        "newly_reachable_open": 1,
+        "final_reachable_unresolved": 29
+      },
+      "sshd": {
+        "audited": 132,
+        "resolved": 104,
+        "still_open": 28,
+        "newly_reachable_open": 1,
+        "final_reachable_unresolved": 29
+      }
+    },
+    "new_reachable_site": {
+      "function": "provider::cipher::cipher_generic_init_internal",
+      "function_address": "0x197c40",
+      "site_address": "0x197d2b",
+      "class": "ABI_OPEN_PROVIDER_CONFIG",
+      "why": "the improved dlsym/table targets made this provider cipher function reachable from the workload; it is not one of the audit's 135/132"
+    },
+    "dlsym_literals": {
+      "libcrypto.so.3": {
+        "ERR_get_state": {
+          "sites": 25,
+          "exported": true
+        },
+        "CRYPTO_malloc": {
+          "sites": 6,
+          "exported": true
+        },
+        "CRYPTO_realloc": {
+          "sites": 1,
+          "exported": true
+        },
+        "CRYPTO_free": {
+          "sites": 3,
+          "exported": true
+        },
+        "OPENSSL_init_crypto": {
+          "sites": 2,
+          "exported": true
+        },
+        "conf_ssl_name_find": {
+          "sites": 2,
+          "exported": true
+        },
+        "conf_ssl_get": {
+          "sites": 2,
+          "exported": true
+        },
+        "conf_ssl_get_cmd": {
+          "sites": 2,
+          "exported": true
+        },
+        "__pthread_get_minstack": {
+          "sites": 1,
+          "exported": false
+        }
+      }
+    },
+    "dlsym_literals_naming_missing_exports": [
+      "__pthread_get_minstack"
+    ],
+    "dlsym_missing_note": "the one literal that names no candidate export is glibc's __pthread_get_minstack, looked up inside the linked std thread runtime. The site is R2-bounded (std/core) and the target is a libc hook, not an application callback. The resolver records the missing export and does not fabricate an export-index target for it."
+  },
+  "abi_decisions": {
+    "A1": {
+      "decision": "unresolved (ABI_OPEN_PROVIDER_CONFIG)",
+      "why": "SSL_CTX_new_ex calls OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS), which in this candidate unconditionally adds OPENSSL_INIT_LOAD_CONFIG; the candidate's OPENSSL_init_crypto then runs the configuration load, and src/provider/conf.rs turns a providers section into a real provider activation (provider_conf_activate) whose module path can name an external DSO. Neither workload imports OSSL_PROVIDER_load, but that does not exclude a config-driven load inside libcrypto. The target set can therefore grow beyond the built-in provider, so A1 is not statically bounded."
+    },
+    "A2": {
+      "decision": "resolved for the 13 audited sites; a separate RSA_METHOD residual is recorded",
+      "why": "the 13 sites dispatch built-in EVP_PKEY_METHOD/EVP_MD/EVP_CIPHER/BIO_METHOD/UI_METHOD/X509_LOOKUP_METHOD/CONF_METHOD tables; neither workload imports a setter for those families. The audit's import predicate omitted RSA_meth_*, and ssh does import RSA_meth_dup, RSA_meth_set1_name, RSA_meth_set_priv_enc and RSA_meth_set_priv_dec (its PKCS#11 RSA method). That installs application callbacks into an RSA_METHOD, so the broader statement 'no workload-supplied method table is registered' is false. None of the 13 A2 sites dispatches an RSA_METHOD, so this does not widen their immediate targets; the RSA_METHOD seam is reachable through the built-in RSA pkey-method implementation and is outside the 13. It is a retained residual for the consumer's overall safety, not an element-7 resolution.",
+      "audit_gap": "RSA_meth_dup/RSA_meth_set* were not in the audit's import-evidence list"
+    },
+    "O1": {
+      "decision": "unresolved (ABI_OPEN_CONFIG_BOUND)",
+      "sites": {
+        "ssh": [
+          "0x2372d0 (core::ptr::drop_glue for runtime::err::SlotStr): 0x2373b5 FREE_FN",
+          "0x241c80 (runtime::err::append_current): 0x241fd1 MALLOC_FN",
+          "0x25fda0 (runtime::err::PendingReleaseGuard::drop): 0x25ff1e FREE_FN"
+        ],
+        "sshd": [
+          "0x2372d0: 0x2373b5 FREE_FN",
+          "0x241c80: 0x241fd1 MALLOC_FN",
+          "0x25fda0: 0x25ff1e FREE_FN"
+        ]
+      },
+      "public_contract": "CRYPTO_set_mem_functions(void *(*)(size_t,const char*,int), void *(*)(void*,size_t,const char*,int), void (*)(void*,const char*,int))",
+      "runtime_fact_not_static_bound": "the three globals are NULL in this configuration, so the cmp/cmov selects the in-image default_malloc/default_free; that is a runtime fact about this configuration, not a link-time bound. A process that installs hooks can reach a target outside this image.",
+      "predicate_element_left_failing": 7,
+      "same_seam_elsewhere": "inlined CRYPTO_free/CRYPTO_malloc selections in reachable code resolve through the static fallback and are outside the audited residual; they are not counted as O1 here (the audit's own 3-site scope)"
+    }
+  },
+  "negative_controls": {
+    "resolver_self_test": [
+      "R1: dlsym with a TOP argument, a symbolic argument, a non-string address and a literal naming a missing export are not resolved",
+      "R2: an application-named site is not given R2",
+      "R3: a table with a non-code entry is reported incomplete",
+      "A2: the same site stays unresolved when the workload imports EVP_MD_meth_new",
+      "O1: the seam site stays ABI_OPEN_CONFIG_BOUND and unresolved"
+    ],
+    "instrument_controls": {
+      "miri": "a temporary two-&mut-alias test in src/runtime/miri_tcb.rs reported Undefined Behavior under Stacked Borrows; the file was restored byte-for-byte (git diff empty)",
+      "asan": "forensics/tools/asan_canary.rs (built with -Zsanitizer=address) exited 1 with an AddressSanitizer use-after-free report",
+      "tsan_c": "forensics/tools/tsan_canary.c exited 66 with a ThreadSanitizer data-race report",
+      "tsan_rs": "forensics/tools/tsan_canary.rs rebuilt with nightly-2026-10-01 exited 66 with a data-race report. The pre-existing stale binary printed NOT-DETECTED; rebuilding with the pinned nightly fixed the control. A stale instrument control is not a pass."
+    }
+  },
+  "boundary_gate": {
+    "identity": "the dirty source tree at HEAD 376ae9608; the candidate install is the pre-edit fa051401 libcrypto. The instruments built the dirty Rust source; they did not rebuild the downstream install.",
+    "miri": {
+      "toolchain": "nightly-2026-10-01, miri 0.1.0",
+      "stacked_borrows": {
+        "miri_tcb": "PASS: 9 passed, 0 failed (MIRIFLAGS='-Zmiri-strict-provenance')",
+        "legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context": "FAIL: Undefined Behavior at src/digest/blake2.rs:67 (load64), reached from src/evp/legacy_blake2.rs:262 (blake2b_int_final). The error reports that the SharedReadOnly tag of the buffer was invalidated by a Unique function-entry retag inside the compress call: a Stacked Borrows aliasing violation.",
+        "runtime::bio::owned": "PASS without strict provenance (26 passed); UNSUPPORTED with -Zmiri-strict-provenance (integer-to-pointer casts)",
+        "provider::legacyprov": "PASS: 1 passed",
+        "provider::digest": "UNSUPPORTED: inline assembly",
+        "rsa::ameth": "0 tests matched"
+      },
+      "tree_borrows": {
+        "miri_tcb": "PASS: 9 passed",
+        "legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context": "PASS: 1 passed"
+      },
+      "disagreement": "Stacked Borrows reports UB in the BLAKE2b final path; Tree Borrows accepts the same test. Per the campaign standard the disagreement is a review item and is never averaged away. It is not a Miri verdict that the BLAKE2 mechanism is aliasing-discharged; it blocks that claim and is the reason Miri is recorded as a BOUNDARY finding rather than a pass. The UB location is pre-existing src/digest/blake2.rs, not this batch's tool edit; the new legacy_blake2 test is what exercises it."
+    },
+    "asan": {
+      "toolchain": "nightly-2026-10-01, -Zsanitizer=address -Zbuild-std, clang linker, C adapters through the asan-cc wrapper",
+      "focused": {
+        "legacy_blake2": "PASS: 4 passed",
+        "provider::legacyprov": "PASS: 1 passed",
+        "provider::core_dispatch": "PASS: 6 passed",
+        "provider::digest": "PASS: 7 passed",
+        "provider::ecdsa_sig": "0 tests matched",
+        "provider::encode_key2ms": "PASS: 1 passed",
+        "provider::decode_der2key": "PASS: 5 passed",
+        "rsa::ameth": "0 tests matched",
+        "runtime::bio::owned": "PASS: 26 passed with ASAN_OPTIONS=allocator_may_return_null=1"
+      },
+      "full_lib_suite": {
+        "result": "2199 passed; 5 failed; 52 ignored; 0 AddressSanitizer errors",
+        "failures": [
+          "bn::recp::tests::hook_observes_authority_size_and_single_release",
+          "runtime::thread::tests::lock_hook::hook_observes_authority_size_and_single_release",
+          "asn1::string::release_family_tests::release_is_plain_at_the_module_coordinates",
+          "runtime::err::tests::a_failed_error_string_allocation_runs_before_the_state_borrow",
+          "runtime::rcu::release_family_tests::release_is_plain_at_the_module_file_and_instance_line"
+        ],
+        "classification": "the five failures are pointer-identity assertions (the file/line string pointer or the release-site pointer differs from the expected address) and are a sanitizer-codegen/venue interaction, not memory-safety findings: the same five pass in the ordinary suite (2204 passed, 0 failed, 52 ignored). No ASan report was produced.",
+        "venue_interaction": "the test runtime::bio::owned::alloc_own_tests::alloc_own_refused_allocation_answers_none_and_releases_nothing calls CRYPTO_malloc(usize::MAX). With ASan's default allocator_may_return_null=0, ASan aborts with 'requested allocation size 0xffffffffffffffff ... exceeds maximum supported size'. Setting allocator_may_return_null=1 (the documented option for exercising allocation refusal) makes the test pass. This option is NOT set by forensics/tools/ms_asan.py; that is a tooling/config gap recorded here, not a product finding."
+      }
+    },
+    "tsan": {
+      "toolchain": "nightly-2026-10-01, -Zsanitizer=thread -Zbuild-std, SERIAL schedule (--test-threads=1), TSAN_OPTIONS=halt_on_error=1:allocator_may_return_null=1",
+      "results": {
+        "context::": "PASS: 21 passed, 0 races",
+        "runtime::": "PASS: 403 passed, 0 races",
+        "digest::": "PASS: 71 passed, 0 races",
+        "evp::": "PASS: 264 passed, 0 races"
+      },
+      "venue_interaction": "without allocator_may_return_null=1 the same usize::MAX refusal test makes TSan exit 66 with 'requested allocation size ... exceeds maximum supported size'; this is the allocator-size check, not a data race. With the option the runs are clean.",
+      "parallel_gate": "NOT_RUN (the default-thread whole-suite gate was not executed; it is the ms_tsan parallel schedule and remains queued)"
+    },
+    "phase2_abi_courts": {
+      "command": "python3 forensics/tools/phase2_courts.py",
+      "authority": "openssl-3.6.4-production",
+      "ran": 11,
+      "passed": 11,
+      "courts": [
+        "ABI-SYMBOL PASS",
+        "ABI-VERSION PASS",
+        "ABI-DYNAMIC PASS",
+        "ABI-LAYOUT PASS",
+        "ABI-LINK PASS",
+        "ABI-LOAD PASS",
+        "ABI-CONSTANTS PASS",
+        "ABI-MATRIX PASS",
+        "ABI-SUBSTITUTION PASS",
+        "ABI-INSTALL-LAYOUT PASS",
+        "libcrypto-contamination PASS"
+      ],
+      "scope": "structural distribution-shell courts only; passing is not semantic parity"
+    }
+  },
+  "closure_rerun": {
+    "tool": "forensics/tools/consumer_closure.py (with the evidence layer)",
+    "invocation": "--family {openssh|openssh-server} --artifact <binary> --build-record <record> --inventory .../v1d-candidate-freeze.json --install artifacts/phase2/install --state .../state.json --campaign-status .../CAMPAIGN-STATUS.json --boundary-dir .../atlas-refresh --workdir court/tmp/rebind/closure-work-ev",
+    "ssh": {
+      "receipt": "court/tmp/rebind/closure-ssh-evidence4.json",
+      "reachable_files": 345,
+      "reachable_files_before": 333,
+      "reachable_production_obligations": 1,
+      "DISCHARGED": 1,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "precision": {
+        "indirect_sites": 51983,
+        "resolved_sites": 51691,
+        "unresolved_sites": 292,
+        "reachable_unresolved_sites": 29,
+        "unclassified_reachable_sites": 0,
+        "unresolved_reachable_by_class": {
+          "ABI_OPEN_PROVIDER_CONFIG": 26,
+          "ABI_OPEN_CONFIG_BOUND": 3
+        }
+      }
+    },
+    "sshd": {
+      "receipt": "court/tmp/rebind/closure-sshd-evidence4.json",
+      "reachable_files": 340,
+      "reachable_files_before": 321,
+      "reachable_production_obligations": 1,
+      "DISCHARGED": 1,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "precision": {
+        "indirect_sites": 51983,
+        "resolved_sites": 51691,
+        "unresolved_sites": 292,
+        "reachable_unresolved_sites": 29,
+        "unclassified_reachable_sites": 0,
+        "unresolved_reachable_by_class": {
+          "ABI_OPEN_PROVIDER_CONFIG": 26,
+          "ABI_OPEN_CONFIG_BOUND": 3
+        }
+      }
+    },
+    "predicate_element_7": {
+      "established": false,
+      "ssh_reachable_unresolved_sites": 29,
+      "sshd_reachable_unresolved_sites": 29,
+      "unclassified_reachable_sites": 0,
+      "why": "all R1/R2/R3/A2 sites are reported resolved, but 26 provider-configuration sites and 3 allocator-override sites remain unresolved in each binary. The provider sites are not statically bounded because configuration can load an external provider module; the allocator sites are the public CRYPTO_set_mem_functions seam. The element therefore still fails, on exactly those two classes and no others.",
+      "what_would_establish_it": [
+        "exclude or bound config-driven provider-module loading for these two workloads (for example by proving the effective configuration cannot name a module, or by discharging the provider-config ABI as a bounded set)",
+        "establish the CRYPTO_set_mem_functions reachability predicate statically, or record O1 as an accepted ABI-open exception at the promotion gate"
+      ]
+    }
+  },
+  "regressions_and_findings": [
+    "The reachable-file set grew (ssh 333 -> 345; sshd 321 -> 340) because the new dlsym and table evidence admits precise edges the prior residual bound did not. The obligations remain 1 DISCHARGED, 0 BLOCKED, 0 UNKNOWN. The newly reachable provider cipher site is A1-open and is reported.",
+    "A1 is genuinely open: the audit's note that a config-driven load is 'not excluded' is confirmed, and the concrete path is SSL_CTX_new_ex -> OPENSSL_init_ssl (which adds OPENSSL_INIT_LOAD_CONFIG unconditionally in this candidate) -> OPENSSL_init_crypto -> provider_conf_activate. This is a compatibility-relevant divergence from the authority's default-config behavior only if the authority's default differs; the closure does not claim that.",
+    "A2 audit gap: the audit's import predicate did not include RSA_meth_*. ssh imports RSA_meth_dup/RSA_meth_set1_name/RSA_meth_set_priv_enc/RSA_meth_set_priv_dec and installs application callbacks in an RSA_METHOD. The 13 A2 sites are not RSA_METHOD dispatch, but the broader 'no workload-supplied method table' statement is false and is retained as a residual.",
+    "Miri Stacked Borrows reports UB in the BLAKE2b final path (src/digest/blake2.rs:67) exercised by the new legacy_blake2 test; Tree Borrows accepts it. This is a review item that blocks an aliasing discharge for the BLAKE2 mechanism. It is pre-existing digest code, not the tool edit.",
+    "ASan and TSan both require allocator_may_return_null=1 for the new usize::MAX allocation-refusal test. The committed ms_asan.py/ms_tsan.py option sets do not include it; this is a standing instrument-configuration gap.",
+    "The pre-existing TSan Rust canary binary printed NOT-DETECTED; rebuilding with the pinned nightly made it fire. A stale control is not evidence that the instrument works.",
+    "No post-edit rebuild of the downstream install was run; the closure and instruments are at the dirty source identity with the pre-edit fa051401 libcrypto."
+  ],
+  "non_claims": [
+    "This is not a SAFE_COMPATIBLE promotion and not a mechanism-wide SAFETY_DISCHARGED claim.",
+    "Predicate element 7 is not established; the receipt says precisely which classes remain open.",
+    "Miri is a research instrument, not the normative aliasing spec; the Stacked/Tree Borrows disagreement is recorded, not resolved by averaging.",
+    "ASan/TSan absence of a report is not a proof of memory safety; coverage is the named filters and the full lib suite, with the five pointer-identity failures classified as venue interactions.",
+    "The phase-2 ABI courts establish the structural distribution shell only; they are not semantic parity.",
+    "The closure's graph is an upper bound over the exact candidate DSOs; application code (including ssh's RSA_METHOD callbacks) is not a node in that graph, which is why the A2/RSA_METHOD residual is stated rather than converted into a target node."
+  ]
+}
