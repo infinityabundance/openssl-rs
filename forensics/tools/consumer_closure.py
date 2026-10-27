@@ -15,10 +15,14 @@ For a named downstream family it:
    GOT/PLT relocations, immutable dispatch and vtable tables (`.data.rel.ro`),
    compiler relative jump tables, literal callback stores, field-offset store
    summaries for reachable code, and an interprocedural argument summary for
-   callback parameters.  A site that cannot be resolved is admitted at its
-   evidence class (field / materialised / argument); only a site with no class at
-   all admits the global address-taken union, and every such site is listed in the
-   receipt.  A dynamic trace, when supplied, is recorded as observed execution
+   callback parameters.  A callback argument whose target set is otherwise
+   unbounded is narrowed to the values contributed by callers that are
+   themselves reachable in this family (reachable-caller target bounding); a
+   non-image value from any reachable caller keeps the site unresolved.  A site
+   that cannot be resolved is admitted at its evidence class (field /
+   materialised / argument); only a site with no class at all admits the global
+   address-taken union, and every such site is listed in the receipt.  A dynamic
+   trace, when supplied, is recorded as observed execution
    only; it never narrows the graph, because executing a function does not prove
    unobserved paths unreachable.
 3. joins every reachable source file to the safety obligations recorded in the
@@ -786,6 +790,10 @@ class PrecisionResolver:
         self.switch_bounds = {}
         self.calls = []
         self.summary = collections.defaultdict(lambda: [set() for _ in _ARGREGS])
+        # The calls list is the single owner of interprocedural argument values:
+        # entries are (caller_fstart, callee_fstart, args, call_site).  Keeping
+        # the call site in the existing list avoids a second per-call record.
+        self.insns_by_func = dict(g.functions)
         self.summary_open = collections.defaultdict(set)
         self.exports = set(g.dynamic_defs.values())
         self.import_addrs = set(imports or ())
@@ -949,7 +957,7 @@ class PrecisionResolver:
         while changed and rounds < 8:
             changed = False
             rounds += 1
-            for caller, callee, args in self.calls:
+            for caller, callee, args, _call_site in self.calls:
                 if callee is None:
                     continue
                 for k, vs in enumerate(args):
@@ -1105,7 +1113,8 @@ class PrecisionResolver:
     # ---- site classification --------------------------------------------- #
 
     def note_site(self, kind, fstart, addr, text, targets, unresolved, reason,
-                  klass, field_offsets=(), seam=None):
+                  klass, field_offsets=(), seam=None, arg_deps=(),
+                  arg_targets=()):
         key = (fstart, addr, kind)
         prev = self.sites.get(key)
         if prev is None:
@@ -1114,10 +1123,14 @@ class PrecisionResolver:
                 "targets": set(targets), "unresolved": unresolved,
                 "reason": reason, "class": klass,
                 "field_offsets": set(field_offsets), "seam": seam,
+                "arg_deps": set(arg_deps),
+                "arg_targets": set(arg_targets),
             }
             return
         prev["targets"] |= targets
         prev["field_offsets"] |= set(field_offsets)
+        prev["arg_deps"] |= set(arg_deps)
+        prev["arg_targets"] |= set(arg_targets)
         if seam and not prev.get("seam"):
             prev["seam"] = seam
         if unresolved and not prev["unresolved"]:
@@ -1181,9 +1194,14 @@ class PrecisionResolver:
                 targets = set()
                 unresolved = False
                 seam = None
+                arg_deps = set()
+                arg_raw = set()
                 for x in sv.s:
                     if isinstance(x, tuple) and x[0] == "arg":
-                        targets |= self.summary[fstart][x[1]]
+                        vals = self.summary[fstart][x[1]]
+                        targets |= vals
+                        arg_deps.add(x[1])
+                        arg_raw |= vals
                     elif isinstance(x, tuple) and x[0] == "field":
                         targets |= self.field_bound(x[1])
                     elif isinstance(x, tuple) and x[0] == "sym":
@@ -1199,7 +1217,10 @@ class PrecisionResolver:
                 self.note_site(kind, fstart, addr, text, targets, unresolved,
                                "stack-slot" if not unresolved else "stack-slot-partial",
                                "resolved" if not unresolved else "materialised",
-                               seam=seam)
+                               seam=seam, arg_deps=arg_deps,
+                               arg_targets={v for v in arg_raw
+                                            if isinstance(v, int)
+                                            and v in self.g.start_set})
                 return targets, unresolved
             base = _as_value(frame.regs.get(m.group(2)))
             if base.is_top():
@@ -1262,10 +1283,14 @@ class PrecisionResolver:
                                "materialised")
                 return set(), True
             resolved, arg_open = set(), False
+            arg_deps = set()
+            arg_raw = set()
             for b in v.s:
                 if isinstance(b, tuple) and b[0] == "arg":
                     vals = self.summary[fstart][b[1]]
                     resolved |= vals
+                    arg_deps.add(b[1])
+                    arg_raw |= vals
                     if not vals and b[1] in self.summary_open[fstart]:
                         arg_open = True
                 else:
@@ -1328,7 +1353,11 @@ class PrecisionResolver:
             self.note_site(kind, fstart, addr, text, targets, unresolved,
                            "reg-value" if not unresolved else
                            "reg-value-partial[" + ",".join(sorted(partial)) + "]",
-                           klass, field_offsets=field_offsets, seam=seam)
+                           klass, field_offsets=field_offsets, seam=seam,
+                           arg_deps=arg_deps,
+                           arg_targets={x for x in arg_raw
+                                        if isinstance(x, int)
+                                        and x in self.g.start_set})
             return targets, unresolved
         self.note_site(kind, fstart, addr, text, set(), True,
                        "unsupported-operand:" + opnd, "unclassified")
@@ -1358,6 +1387,35 @@ class PrecisionResolver:
                 self.field_open.add(off)
             else:
                 self.field_stores[off] |= v.s
+
+    @staticmethod
+    def _arg_witness(insns, i):
+        """First writer of each argument register on the linear path to a call.
+
+        A single backward scan from the call instruction.  The abstract value
+        at the call is the real evidence; this only records which instruction
+        established it, and is deliberately local to the call site.
+        """
+        want = {_canon(r): r for r in _ARGREGS}
+        found = {}
+        for j in range(i - 1, max(-1, i - 64), -1):
+            body = insns[j][1].split("#", 1)[0].strip()
+            if not body:
+                continue
+            toks = body.split(None, 1)
+            mn = toks[0]
+            rest = toks[1].strip() if len(toks) > 1 else ""
+            if mn.startswith("call"):
+                break
+            ops = _split_ops(rest)
+            if not ops:
+                continue
+            dst = _canon(ops[-1]) if ops[-1] in _SUBREG else ops[-1]
+            if dst in want and want[dst] not in found:
+                found[want[dst]] = (insns[j][0], insns[j][1])
+                if len(found) == len(want):
+                    break
+        return found
 
     def record_store(self, slot, v):
         cur = self.store_slots.get(slot)
@@ -1418,7 +1476,7 @@ class PrecisionResolver:
             retvals = set()
             for t in targets:
                 if isinstance(t, int):
-                    self.calls.append((fstart, t, args))
+                    self.calls.append((fstart, t, args, addr))
                     retvals |= self.returns.get(t, set())
             if any(isinstance(t, tuple) and t[0] == "sym"
                    and t[1].split("@")[0] == "dlsym" for t in targets):
@@ -1452,7 +1510,7 @@ class PrecisionResolver:
             if m:
                 callee = self.g.containing(int(m.group(1), 16))
                 if callee is not None:
-                    self.calls.append((fstart, callee, args))
+                    self.calls.append((fstart, callee, args, addr))
             for r in _CALLER_SAVED:
                 frame.regs[r] = PValue()
             cname = (self.g.funcs.get(callee, "") if callee is not None else "")
@@ -1966,7 +2024,9 @@ INTERNAL_SLOT_NOTES = (
      "AlgorithmData.unreserve_store (offset 0x10), an in-image walk callback"),
     ("ossl_provider_doall_activated", None,
      "the cb argument; OSSL_PROVIDER_do_all (exported) forwards an "
-     "application-supplied callback, so no in-image target bound exists"),
+     "application-supplied callback, so no whole-function in-image target bound "
+     "exists unless every caller reachable in this family contributes an "
+     "in-image constant (reachable-caller target bounding)"),
 )
 
 
@@ -2057,6 +2117,12 @@ CIPHER_HW_INIT_TARGETS = (
 
 EDGE_TARGET_WITNESS_SCHEMA = (
     "openssl-rs/consumer-closure/in-image-slot-target/v1")
+
+# Reachable-caller target bounding is a *narrowing of an unbounded target set*,
+# not an ABI contract.  It is deliberately absent from ABI_CONTRACT_CLASSES and
+# never attaches a WITNESS_SCHEMA record: the site becomes target-resolved.
+REACHABLE_CALLER_SCHEMA = (
+    "openssl-rs/consumer-closure/reachable-caller-target-bound/v1")
 
 EDGE_TARGET_SLOTS = (
     {
@@ -2295,6 +2361,191 @@ def edge_target_witness(g: "DsoGraph", site: dict, name: str,
                 continue
         return targets, spec
     return None
+
+
+def _reloc_names(g: "DsoGraph", symbol: str) -> bool:
+    base = (symbol or "").split("@")[0]
+    if not base:
+        return False
+    for rec in getattr(g, "relocs", ()) or ():
+        sym = (rec[2] or "").split("@")[0] if len(rec) > 2 else ""
+        if sym and sym == base:
+            return True
+    return False
+
+
+def _caller_exclusion(g: "DsoGraph", caller: int, import_addrs: set) -> dict:
+    """Structured reason a caller is not part of the family's reachable set."""
+    funcs = getattr(g, "funcs", {}) or {}
+    all_syms = getattr(g, "all_syms", {}) or {}
+    symbol = funcs.get(caller) or all_syms.get(caller) or "?"
+    imported = caller in import_addrs
+    relocated = _reloc_names(g, symbol)
+    references = []
+    if caller in (getattr(g, "taken_code", set()) or set()):
+        references.append("lea/mov address materialisation")
+    if caller in (getattr(g, "slot_func_targets", set()) or set()):
+        references.append("function-pointer data slot")
+    direct = getattr(g, "direct", {}) or {}
+    callers = sorted(c for c, targets in direct.items() if caller in targets)
+    if callers:
+        references.append("direct call from " + ", ".join(hex(c) for c in callers))
+    return {
+        "function": hex(caller),
+        "symbol": symbol,
+        "in_reachable_set": False,
+        "imported_by_consumer": imported,
+        "in_image_relocation": relocated,
+        "in_image_references": references,
+        "reason": (
+            "not in this family's reachable set: "
+            + ("imported by the consumer" if imported
+               else "not imported by the consumer")
+            + (", has an in-image relocation" if relocated
+               else ", no in-image relocation")
+            + (", in-image references: " + "; ".join(references)
+               if references else ", no in-image reference")),
+    }
+
+
+def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
+                             reachable: set | None):
+    """Bound an indirect site by the targets its *reachable* callers pass.
+
+    This is a target-resolution rule, not an ABI contract.  It fires only when
+    the site's unresolved target set derives solely from a function argument,
+    every caller of that function is known from in-image call records, and
+    every caller in the family's reachable set passes a finite set of in-image
+    function starts for that argument.  Callers outside the reachable set are
+    recorded, not admitted.  Any non-image argument from a reachable caller, a
+    caller whose reachability cannot be established, or a non-argument target
+    keeps the site unresolved.
+
+    Returns (record, None) or (None, refusal_reason).
+    """
+    if reachable is None:
+        return None, "no reachability evidence was supplied"
+    deps = sorted(site.get("arg_deps") or ())
+    if not deps:
+        return None, "the site does not read a function argument"
+    fstart = site["func"]
+    dynamic = getattr(g, "dynamic_defs", {}) or {}
+    if fstart in set(dynamic.values()):
+        return None, ("the containing function is a dynamic export; callers outside "
+                      "the image cannot be bounded")
+    precision = getattr(g, "precision", None)
+    if precision is None:
+        return None, "no resolver call-record evidence"
+    calls = getattr(precision, "calls", ()) or ()
+    records = collections.defaultdict(dict)
+    edges = set()
+    for caller, callee, args, call_addr in calls:
+        edges.add((caller, call_addr, callee))
+        if callee == fstart:
+            records[caller][call_addr] = args
+    direct = getattr(g, "direct", {}) or {}
+    direct_callers = {c for c, targets in direct.items() if fstart in targets}
+    for caller in sorted(direct_callers):
+        if not records.get(caller):
+            return None, f"caller {hex(caller)} has no recorded call arguments"
+    # A function target reached from an unresolved indirect site has an unknown
+    # caller argument; a resolved indirect site must carry its argument record.
+    for (site_func, site_addr, kind), other in (getattr(g, "sites", {}) or {}).items():
+        if kind != "call" or fstart not in (other.get("targets") or ()):
+            continue
+        if other.get("unresolved"):
+            return None, (f"indirect call site {hex(site_addr)} can target this "
+                          "function with an unbounded argument")
+        if (site_func, site_addr, fstart) not in edges:
+            return None, (f"indirect call site {hex(site_addr)} targets this "
+                          "function without an argument record")
+    callers = set(records) | direct_callers
+    if not callers:
+        return None, "no in-image caller"
+    site_targets = set(site.get("targets") or ())
+    if any(not isinstance(t, int) for t in site_targets):
+        return None, "the site has a non-address target"
+    arg_targets = {t for t in (site.get("arg_targets") or ()) if isinstance(t, int)}
+    if site_targets - arg_targets:
+        return None, "the site has targets that do not derive from the argument"
+    import_addrs = (getattr(precision, "import_addrs", set()) or set()) \
+        | (getattr(g, "import_addrs", set()) or set())
+    bounded = set()
+    reachable_rows, excluded_rows = [], []
+    for caller in sorted(callers):
+        recs = records.get(caller) or {}
+        if caller not in reachable:
+            excluded_rows.append(_caller_exclusion(g, caller, import_addrs))
+            continue
+        if not recs:
+            return None, (f"reachable caller {hex(caller)} has no recorded call "
+                          "arguments")
+        caller_targets = set()
+        call_rows = []
+        for call_addr in sorted(recs):
+            args = recs[call_addr]
+            insns = getattr(precision, "insns_by_func", {}).get(caller, ())
+            idx = next((j for j, (a, _t) in enumerate(insns)
+                        if a == call_addr), None)
+            witness = (PrecisionResolver._arg_witness(insns, idx)
+                       if idx is not None else {})
+            arg_rows = []
+            for k in deps:
+                if k >= len(args):
+                    return None, (f"call site {hex(call_addr)} does not record "
+                                  f"argument {k}")
+                val = args[k]
+                if val is None or val.is_top():
+                    return None, (f"reachable caller {hex(caller)} passes an unknown "
+                                  f"value as argument {k}")
+                vals = val.s
+                if not vals:
+                    return None, (f"reachable caller {hex(caller)} passes an empty "
+                                  f"value as argument {k}")
+                bad = sorted(str(v) for v in vals
+                             if not (isinstance(v, int) and v != 0
+                                     and v in g.start_set))
+                if bad:
+                    return None, (f"reachable caller {hex(caller)} passes a "
+                                  f"non-image value as argument {k}: "
+                                  + ", ".join(bad[:4]))
+                caller_targets |= set(vals)
+                w = witness.get(_ARGREGS[k]) if k < len(_ARGREGS) else None
+                arg_rows.append({
+                    "argument": k,
+                    "value": [hex(v) for v in sorted(vals)],
+                    "witness_instruction": (
+                        [{"addr": hex(w[0]), "text": w[1]}] if w else []),
+                })
+            call_rows.append({"call_site": hex(call_addr), "arguments": arg_rows})
+        bounded |= caller_targets
+        reachable_rows.append({
+            "function": hex(caller),
+            "symbol": getattr(g, "funcs", {}).get(caller, "?"),
+            "call_sites": call_rows,
+            "contributed_targets": [hex(t) for t in sorted(caller_targets)],
+        })
+    if not reachable_rows:
+        return None, "no reachable in-image caller"
+    if not bounded:
+        return None, "the reachable callers contribute no in-image target"
+    if not (bounded <= site_targets):
+        return None, ("a reachable caller contributes a target absent from the "
+                      "recorded site set")
+    if not excluded_rows:
+        return None, ("no caller is excluded; the site is not narrowed from a "
+                      "wider caller set")
+    return {
+        "schema": REACHABLE_CALLER_SCHEMA,
+        "rule": "reachable-caller target bounding",
+        "not_a_contract_class": True,
+        "contract_bounded": False,
+        "call_site": hex(site["addr"]),
+        "argument_indices": deps,
+        "reachable_callers": reachable_rows,
+        "excluded_callers": excluded_rows,
+        "bounded_targets": [hex(t) for t in sorted(bounded)],
+    }, None
 
 
 def _image_defines(g: "DsoGraph", fragments) -> bool:
@@ -2672,6 +2923,25 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             }
             stats["T_in_image_slot_resolved"] += 1
             continue
+        # Reachable-caller target bounding: an unbounded argument target set is
+        # narrowed to the values contributed by callers that are themselves
+        # reachable.  This is a target claim, not an ABI contract; a reachable
+        # caller passing a non-image value keeps the site unresolved.
+        bound, refusal = reachable_caller_targets(g, site, name, reachable)
+        if bound is not None:
+            targets = {int(t, 16) for t in bound["bounded_targets"]}
+            site["targets"] = set(targets)
+            site["unresolved"] = False
+            site["class"] = "reachable-caller-target"
+            site["reason"] = ("reachable-caller target bounding: callers "
+                              + ", ".join(r["function"] for r in bound["reachable_callers"])
+                              + " pass in-image callback addresses")
+            site["reachable_caller_bound"] = bound
+            stats["RCB_reachable_caller_resolved"] += 1
+            continue
+        if site.get("arg_deps"):
+            site["reachable_caller_bound_refusal"] = refusal
+            stats["RCB_reachable_caller_unresolved"] += 1
         if _match(name, A1_FUNCTIONS):
             witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
             if witness is not None:
@@ -3440,6 +3710,37 @@ def build_receipt(args) -> dict:
     direct_reach = closure["direct_reachable"]
     upper_reach = closure["upper_reachable"]
 
+    # Reachable-caller bounding uses the pre-closure reachable set, while the
+    # final upper bound can admit a few additional targets from evidence
+    # classes.  An "excluded" caller that the final upper bound admits would
+    # make the exclusion unsafe, so the closure refuses rather than accepting
+    # the narrowed set.
+    rcb_audit = []
+    for g in graphs.values():
+        for s in g.sites.values():
+            rcb = s.get("reachable_caller_bound")
+            if not rcb:
+                continue
+            for excluded in rcb["excluded_callers"]:
+                node = (g.name, int(excluded["function"], 16))
+                rcb_audit.append({
+                    "dso": g.name,
+                    "site": hex(s["addr"]),
+                    "excluded_caller": excluded["function"],
+                    "excluded_symbol": excluded["symbol"],
+                    "in_final_upper_bound": node in upper_reach,
+                })
+    rcb_violations = [r for r in rcb_audit if r["in_final_upper_bound"]]
+    if rcb_violations:
+        refusals.append({
+            "code": "RCB_EXCLUDED_CALLER_REACHABLE",
+            "detail": (
+                "a caller excluded by reachable-caller target bounding is in "
+                "the final upper bound: "
+                + ", ".join(f"{r['excluded_symbol']} at {r['site']}"
+                             for r in rcb_violations)),
+        })
+
     reachable_names = set()
     for dso_name, addr in upper_reach:
         sym = graphs[dso_name].funcs.get(addr)
@@ -3849,6 +4150,9 @@ def build_receipt(args) -> dict:
                     1 for _d, _f, s in closure["reachable_residual_sites"]
                     if s.get("class") in ABI_CONTRACT_CLASSES),
                 "unclassified_reachable_sites": len(closure["unclassified_sites"]),
+                "resolved_by_reachable_caller": sum(
+                    1 for g in graphs.values() for s in g.sites.values()
+                    if s.get("reachable_caller_bound")),
             },
             "classes": {
                 "got_or_table": {
@@ -3958,6 +4262,37 @@ def build_receipt(args) -> dict:
                         if s.get("contract_class_candidate") and s["unresolved"]
                         and s.get("class") not in ABI_CONTRACT_CLASSES),
                 },
+            },
+            "reachable_caller_target_bounding": {
+                "rule": (
+                    "an indirect site whose target set was unbounded is bounded by "
+                    "the argument values contributed by callers that are themselves "
+                    "in this family's reachable set; a non-image argument from any "
+                    "reachable caller, an unknown caller, or a non-argument target "
+                    "keeps the site unresolved"),
+                "schema": REACHABLE_CALLER_SCHEMA,
+                "not_a_contract_class": True,
+                "abi_contract_class": None,
+                "sites": [
+                    {"dso": name,
+                     "function": g.funcs.get(s["func"], "?"),
+                     "call_site": hex(s["addr"]),
+                     "class": s["class"],
+                     "argument_indices": s["reachable_caller_bound"][
+                         "argument_indices"],
+                     "reachable_callers": s["reachable_caller_bound"][
+                         "reachable_callers"],
+                     "excluded_callers": s["reachable_caller_bound"][
+                         "excluded_callers"],
+                     "bounded_targets": s["reachable_caller_bound"][
+                         "bounded_targets"]}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    if s.get("reachable_caller_bound")],
+                "count": sum(
+                    1 for g in graphs.values() for s in g.sites.values()
+                    if s.get("reachable_caller_bound")),
+                "excluded_caller_audit": rcb_audit,
+                "excluded_caller_violations": rcb_violations,
             },
             "abi_contract_bounded": {
                 "allocator": {
@@ -4455,6 +4790,100 @@ def self_test() -> int:
     check("static initialiser refuses a non-table target",
           _static_initialiser_covers(_SIG(), {0x2000}, ("_HW",)), False)
 
+    # ---- reachable-caller target bounding --------------------------------- #
+    # A synthetic two-caller case: the fixed caller is reachable and the
+    # parameter-forwarding caller is not -> resolved to the fixed target.
+    # Inverting reachability must leave the site unresolved.
+    class _P:
+        import_addrs = set()
+
+        def __init__(self, calls, insns=None):
+            self.calls = calls
+            self.insns_by_func = insns or {}
+
+    class _RCG:
+        name = "control.so"
+        funcs = {0x10: "root", 0x20: "fixed_caller", 0x30: "param_caller",
+                 0x40: "doall_like", 0x50: "fixed_target",
+                 0x60: "other_target"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        direct = {0x10: {0x20}, 0x20: {0x40}, 0x30: {0x40}}
+        dynamic_defs = {}
+        taken_code = set()
+        taken_data = set()
+        slot_funcs = {}
+        field_stores = {}
+        unknown_call_arg_targets = set()
+        relocs = []
+        evidence_classes = collections.Counter()
+        residual_sites = []
+        resolved_targets = set()
+        precision_counts = collections.Counter()
+
+        @property
+        def slot_func_targets(self):
+            return set()
+
+    def _rcb_graph():
+        g = _RCG()
+        g.sites = {(0x40, 0x41, "call"): {
+            "kind": "call", "func": 0x40, "addr": 0x41,
+            "text": "call *%rbp", "targets": {0x50, 0x60},
+            "unresolved": True, "reason": "reg-value-partial[arg]",
+            "class": "materialised", "field_offsets": set(), "seam": None,
+            "arg_deps": {1}, "arg_targets": {0x50, 0x60}}}
+        g.precision = _P([
+            (0x20, 0x40, [PValue(), PValue.one(0x50)], 0x25),
+            (0x30, 0x40, [PValue(), PValue.one(("arg", 1))], 0x35),
+        ], {
+            0x20: [
+                (0x24, "lea    0x2c8(%rip),%rsi  # 50 <fixed_target>"),
+                (0x25, "call   0x40 <doall_like>")],
+            0x30: [(0x35, "call   0x40 <doall_like>")],
+        })
+        return g, g.sites[(0x40, 0x41, "call")]
+
+    g, s = _rcb_graph()
+    apply_evidence_classes(g, set(), {0x10, 0x20, 0x40})
+    check("reachable fixed caller resolves the site", s["unresolved"], False)
+    check("reachable fixed caller bounds the target set", s["targets"], {0x50})
+    check("reachable-caller bound is not a contract class",
+          s["class"] in ABI_CONTRACT_CLASSES, False)
+    check("reachable-caller bound has no ABI witness",
+          "witness" in s, False)
+    rcb = s.get("reachable_caller_bound") or {}
+    check("reachable-caller bound records its schema",
+          rcb.get("schema"), REACHABLE_CALLER_SCHEMA)
+    check("reachable-caller bound records the excluded caller",
+          [r["function"] for r in rcb.get("excluded_callers", [])], ["0x30"])
+    check("reachable-caller bound records the witness instruction",
+          rcb["reachable_callers"][0]["call_sites"][0]["arguments"][0]
+          ["witness_instruction"][0]["text"].startswith("lea"), True)
+
+    # Inverse: the parameter-forwarding caller is reachable -> unresolved.
+    g, s = _rcb_graph()
+    apply_evidence_classes(g, set(), {0x10, 0x30, 0x40})
+    check("reachable parameter caller keeps the site unresolved",
+          s["unresolved"], True)
+    check("reachable parameter caller is not absorbed by a contract class",
+          s["class"] in ABI_CONTRACT_CLASSES, False)
+    check("reachable parameter caller records the refusal",
+          "non-image value" in (s.get("reachable_caller_bound_refusal") or ""),
+          True)
+
+    # Both callers reachable is the same refusal.
+    g, s = _rcb_graph()
+    apply_evidence_classes(g, set(), {0x10, 0x20, 0x30, 0x40})
+    check("reachable fixed and parameter callers keep the site unresolved",
+          s["unresolved"], True)
+
+    # No reachability evidence -> unresolved (negative control).
+    g, s = _rcb_graph()
+    apply_evidence_classes(g, set(), None)
+    check("no reachability evidence keeps caller bounding off",
+          s["unresolved"], True)
+
     # Negative control: an allocator seam with no global/setter in the image is
     # not evidence for CRYPTO_set_mem_functions.
     eg = _EG()
@@ -4534,8 +4963,9 @@ def self_test() -> int:
           f"module/file mapping, export-site index, mechanism routing, precision "
           f"narrowing, unclassified-site negative control, R1/R2/R3/A2/O1 "
           f"evidence-class controls, the per-call-site witness rule "
-          f"(AGENTS.md section 22), and the in-image slot target rule "
-          f"(reachable-writer and static-initialiser negative controls)")
+          f"(AGENTS.md section 22), the in-image slot target rule "
+          f"(reachable-writer and static-initialiser negative controls), and "
+          f"reachable-caller target bounding (fixed-vs-parameter caller controls)")
     return 0
 
 

@@ -1,0 +1,398 @@
+{
+  "schema": "safe-c33/freeze/S-double-prime/v1",
+  "kind": "candidate-freeze-receipt",
+  "candidate": "S''",
+  "subphase": "safe-c33/repair-legacy-md-init-md-data-v1j",
+  "generated_utc": "2026-10-27T21:26:52Z",
+  "S": {
+    "candidate": "S''",
+    "candidate_state": "uncommitted working tree over the recorded HEAD; the subphase instruction is 'do not commit or push'",
+    "base_commit": "bcafae7dceea9bb61cf853bf3e28544a37f3ea42",
+    "base_tree": "a55a7077b1450f898c38e00c8c389424dfb0e677",
+    "branch": "stage/p25/rcb-v1f",
+    "tracked_status_porcelain": "M src/evp/legacy_sha.rs",
+    "source_diff_stat_vs_head": "src/evp/legacy_sha.rs | 341 ++++++++++++++++++++++++++++++++++++++++++++++++--\n 1 file changed, 331 insertions(+), 10 deletions(-)",
+    "crate_version": "0.0.41",
+    "src_rs_file_count": 877,
+    "src_content_sha256": "add0d599816339e1e3427aa2ccee8de6639bd3c43b634b57275b3d1b10c41339",
+    "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + for each sorted relpath: relpath + '\\0' + bytes + '\\0'); only src/**/*.rs",
+    "input_sets": {
+      "src": {
+        "file_count": 884,
+        "tree_sha256": "0ce076b98fa620f1413f25b6d2b1953a6f4fa09406fc037ee075c064df75d072"
+      },
+      "artifacts_phase2_shell": {
+        "file_count": 5,
+        "tree_sha256": "918f2e9106333430464282a0bd37dac435dbcf78f08184a8ad39a9bb81b5a1f2"
+      },
+      "artifacts_phase2_include": {
+        "file_count": 143,
+        "tree_sha256": "e0a39f8b1fc6cd32429aee707b3ccf4a3f7fc8db21d58e7a9e63808a12e366df"
+      },
+      "pkgconfig_templates": {
+        "file_count": 3,
+        "tree_sha256": "2243cc83578f07d0ceb34e80fa631901b56699d8ce9b39b9fc0e6469701d8452"
+      }
+    },
+    "input_files": {
+      "Cargo.toml": {
+        "path": "Cargo.toml",
+        "sha256": "daa4aebe240006663b33c757c0de2e3ec6a66c024ac9c3c2d44e3d4e7923b34b",
+        "size": 8714
+      },
+      "Cargo.lock": {
+        "path": "Cargo.lock",
+        "sha256": "3300f5e60caf53f0bfc1be67e16b55e58adcbd976ae499d0b551aaec008cdcef",
+        "size": 6902
+      },
+      "build.rs": {
+        "path": "build.rs",
+        "sha256": "33d80345497d54478b1aa80355f08348395d8dbaaa30d7f346d79ef4c664b391",
+        "size": 21243
+      },
+      "rust-toolchain.toml": {
+        "path": "rust-toolchain.toml",
+        "sha256": "51b89aac2174179a4470434e6666f9f54d52309005332324154cdeeb1f66dd58",
+        "size": 263
+      },
+      "build_phase2.sh": {
+        "path": "forensics/tools/build_phase2.sh",
+        "sha256": "ebcad0e3a71d9b81927701019a0482fb881fa3c6f8cd7742263c3626552407e5",
+        "size": 12598
+      },
+      "implemented_surface.py": {
+        "path": "forensics/tools/implemented_surface.py",
+        "sha256": "f5df950e8f08b14777ef427e5ee5cca07e54880fd0599d17c9adb15e2d87401a",
+        "size": 11759
+      },
+      "phase2_shell.py": {
+        "path": "forensics/tools/phase2_shell.py",
+        "sha256": "dc9c72aa3ad298c7feb449b2de725a708feb5a035c85d6432be663e6c263f355",
+        "size": 23984
+      },
+      "phase2_courts.py": {
+        "path": "forensics/tools/phase2_courts.py",
+        "sha256": "9a0c7c450322dbf95f75525d8a7ad1768f3c9b3b56f9f99f593778d857867eda",
+        "size": 32110
+      },
+      "require_court.sh": {
+        "path": "forensics/tools/require_court.sh",
+        "sha256": "51077d2cfb3997a807e6aab051faa3d8ad4e020d21aa229758c0abdc6cf8907f",
+        "size": 1500
+      },
+      "consumer_closure.py": {
+        "path": "forensics/tools/consumer_closure.py",
+        "sha256": "59aea07c1ec2269a7ab21e973f64cf38c0eef632a6f7a47d64108c56c81e9e48",
+        "size": 231904
+      },
+      "v1_census.py": {
+        "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1_census.py",
+        "sha256": "b40c8a361f331e9efedd4f559d93f55f8da1d26ff7cd334df537c00a2c5f8712",
+        "size": 67292
+      }
+    },
+    "combined_build_input_sha256": "66957d1ab6b21749de9490e699cf22c9341e7efd5f0e0de4c6193d5f84cb63aa",
+    "changed_source_file": {
+      "path": "src/evp/legacy_sha.rs",
+      "sha256": "a25d3a49b527893657bbbfe788e24c783fd06cf74de3908497aed31105fdcb80"
+    },
+    "note": "S'' is uncommitted because the subphase instruction is 'do not commit or push'; every receipt names this working-tree identity and the base commit it descends from."
+  },
+  "build": {
+    "recipe": "forensics/tools/build_phase2.sh",
+    "recipe_sha256": "ebcad0e3a71d9b81927701019a0482fb881fa3c6f8cd7742263c3626552407e5",
+    "target_dir": "/work/target (hardwired by the recipe; CARGO_TARGET_DIR unset)",
+    "build_log": "court/tmp/freeze-v1j/logs/build-phase2.log",
+    "build_log_sha256": "a23b4cb08882416c0bcd4c9a7b81ae8b3af48c1d6bd95ebbac0109402be53c0e",
+    "exit_code": 0,
+    "completion_marker": "phase 2 shell built",
+    "abi_courts": {
+      "source": "artifacts/phase2/COURTS.json",
+      "all_pass": true,
+      "count": 11,
+      "names": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ]
+    },
+    "stray_outputs_removed_before_build": [
+      "artifacts/phase2/libcrypto.so.3",
+      "artifacts/phase2/libssl.so.3",
+      "artifacts/phase2/legacy.so",
+      "artifacts/phase2/openssl"
+    ],
+    "regenerated_build_outputs": {
+      "forensics/atlas/implemented-surface.json": {
+        "sha256": "3909c6e3bd3b053493c25d5c0562ae23343a13c476b963afef9511d37b748fd5",
+        "note": "build-product observation; compiler_emitted_count 18884 -> 18980 and the crate-archive digest changed with this build"
+      },
+      "artifacts/phase2/COURTS.json": {
+        "sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e"
+      }
+    }
+  },
+  "artifacts": {
+    "libcrypto.so.3": {
+      "install_path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "top_level_path": "artifacts/phase2/libcrypto.so.3",
+      "install_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+      "top_level_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+      "size": 16860960,
+      "install_matches_top_level": true
+    },
+    "libssl.so.3": {
+      "install_path": "artifacts/phase2/install/lib/libssl.so.3",
+      "top_level_path": "artifacts/phase2/libssl.so.3",
+      "install_sha256": "82051ef8ba6c9891d70a95b43d6b82c4c9be0a4865504984f5024c6a302d9b4e",
+      "top_level_sha256": "82051ef8ba6c9891d70a95b43d6b82c4c9be0a4865504984f5024c6a302d9b4e",
+      "size": 16574032,
+      "install_matches_top_level": true
+    },
+    "ossl-modules/legacy.so": {
+      "install_path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "top_level_path": "artifacts/phase2/legacy.so",
+      "install_sha256": "cc2044da6e4ddf2d1751fd95f9f0af238e74751a9b2aafe4a7c8a1a30bbfbd97",
+      "top_level_sha256": "cc2044da6e4ddf2d1751fd95f9f0af238e74751a9b2aafe4a7c8a1a30bbfbd97",
+      "size": 16536944,
+      "install_matches_top_level": true
+    },
+    "bin/openssl": {
+      "install_path": "artifacts/phase2/install/bin/openssl",
+      "top_level_path": "artifacts/phase2/openssl",
+      "install_sha256": "67718264fc65a6d2f87968660d7a0537265db04ce4580bb17af01d962a32deed",
+      "top_level_sha256": "67718264fc65a6d2f87968660d7a0537265db04ce4580bb17af01d962a32deed",
+      "size": 12372360,
+      "install_matches_top_level": true
+    }
+  },
+  "export_set_delta": {
+    "compared_against": {
+      "libcrypto.so.3": "cb45a6ec8323a333c69d8b24fc3e62bc8441dba7ba631d47d132d8d375fd7e44",
+      "libssl.so.3": "527ec167ebb9db04f64bb93b697e0add26bb1a8dce416afb1eab512e98efc4d1"
+    },
+    "libcrypto": {
+      "previous_exports": 5906,
+      "new_exports": 5906,
+      "added": 0,
+      "removed": 0,
+      "sets_identical": true,
+      "normalisation": "nm -D --defined-only | last field | sed 's/@.*//' | sort -u"
+    },
+    "libssl": {
+      "previous_exports": 608,
+      "new_exports": 608,
+      "added": 0,
+      "removed": 0,
+      "sets_identical": true,
+      "normalisation": "nm -D --defined-only | last field | sed 's/@.*//' | sort -u"
+    },
+    "required": "0 added and 0 removed",
+    "result": "PASS: 0 added, 0 removed for both libraries"
+  },
+  "consumers": {
+    "ssh": {
+      "artifact_path": "court/tmp/openssh-closure/client-v1j/openssh-9.9p1/ssh",
+      "artifact_sha256": "f2ca91f4e3926702b97e687788281b15428c0a6eb6e0f2b4ed1bb9435130f6d4",
+      "artifact_size": 3401744,
+      "build_record_path": "court/tmp/openssh-closure/openssh-v1j-build-record.json",
+      "build_record_sha256": "28bc6f88ebf25ec0eaaa380239db32a7d39e7f8d19f654a64c4f6ca26405789f",
+      "candidate_libcrypto_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+      "ldd": [
+        "\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f19bda00000)"
+      ],
+      "workload": "openssh: ssh-keygen Ed25519 sign/verify (libcrypto)",
+      "workload_pass": true,
+      "workload_negative_control": true,
+      "workload_receipt": "court/tmp/openssh-closure/consumer-workloads-v1j.json"
+    },
+    "sshd": {
+      "artifact_path": "court/tmp/openssh-closure/server-v1j/openssh-9.9p1/sshd",
+      "artifact_sha256": "ed0c7aa884225eb4eac740450e6d27dd7e572db9bbc22949a2b309762cb0d185",
+      "artifact_size": 1763248,
+      "build_record_path": "court/tmp/openssh-closure/openssh-server-v1j-build-record.json",
+      "build_record_sha256": "97ad553c281d6a25f7e4babad6caca7a59df5f8513c171dc72422bbb52637072",
+      "candidate_libcrypto_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+      "ldd": [
+        "\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007fad0cc00000)"
+      ],
+      "workload": "openssh-server: sshd -D, verified exec, host-key mismatch rejected",
+      "workload_pass": true,
+      "workload_negative_control": true,
+      "workload_receipt": "court/tmp/openssh-closure/consumer-workloads-v1j.json"
+    },
+    "relink_contract": {
+      "source": "openssh-9.9p1.tar.gz",
+      "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+      "patches_applied": [],
+      "ldflags": "-Wl,--no-as-needed -Wl,-rpath,/work/artifacts/phase2/install/lib",
+      "install_used": "artifacts/phase2/install only"
+    }
+  },
+  "inventory": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1j-candidate-freeze.json",
+    "sha256": "c72426e3cfddc2719cac80876bc70369fca7875ebdd680c4082457695e80571f",
+    "source_head": "bcafae7dceea9bb61cf853bf3e28544a37f3ea42",
+    "src_content_sha256": "add0d599816339e1e3427aa2ccee8de6639bd3c43b634b57275b3d1b10c41339",
+    "compiler_sites": 61387,
+    "production_blockers": 320,
+    "bound_artefacts": {
+      "libcrypto.so.3": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+      "libssl.so.3": "82051ef8ba6c9891d70a95b43d6b82c4c9be0a4865504984f5024c6a302d9b4e",
+      "legacy.so": "cc2044da6e4ddf2d1751fd95f9f0af238e74751a9b2aafe4a7c8a1a30bbfbd97",
+      "openssl": "67718264fc65a6d2f87968660d7a0537265db04ce4580bb17af01d962a32deed"
+    },
+    "committed_install_matches_this_source": null,
+    "census_scope_note": "NOT_ESTABLISHED_BY_THIS_CENSUS: the census binds the source tree and the install artefact digests as found; it does not rebuild the crate, so source/install correspondence remains the build record's claim"
+  },
+  "repair": {
+    "receipt_path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1j-sites.json",
+    "receipt_sha256": "a7fa47163cae0c3d1073dface4142611425cb5871122e24b88cf5ddfa00edbe4",
+    "sites": 18,
+    "guarded_and_contracted": 5,
+    "retained_blocked": 13,
+    "answer_to_the_18": "The eighteen did not move to DISCHARGED as a group. Five initialiser sites are now contracted and guarded and therefore leave the uncontracted-operation census (production blockers 325 -> 320); they are recorded SAFETY_DISCHARGED in openssh-v1j-sites.json. The thirteen update/final/ctrl sites remain in the census and remain BLOCKED because their bodies still dereference md_data without a check. No obligation newly became DISCHARGED in the closure.",
+    "probe": "court/tmp/freeze-v1j/logs/negctl-v1j.out (18/18 refused with 0, RESULT PASS)",
+    "scratch_guard_removal": "court/tmp/freeze-v1j/logs/negctl-scratch.out (sha384 cases SIGSEGV, RESULT FAIL)",
+    "unit_tests": "5 new tests; 15 passed / 0 failed for the legacy_sha filter"
+  },
+  "closure": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-closure-v1j.json",
+    "sha256": "9cf7a8abc83537a5b407f74204d8118a2ff5e184251d5ff6b461806ace4ac5a6",
+    "ssh": {
+      "verdict": "REFUSED",
+      "safe_compatible": false,
+      "reachable_files": 312,
+      "reachable_production_obligations": 146,
+      "DISCHARGED": 62,
+      "BLOCKED": 55,
+      "UNKNOWN": 29
+    },
+    "sshd": {
+      "verdict": "REFUSED",
+      "safe_compatible": false,
+      "reachable_files": 302,
+      "reachable_production_obligations": 146,
+      "DISCHARGED": 62,
+      "BLOCKED": 55,
+      "UNKNOWN": 29
+    },
+    "element_7": {
+      "ssh": {
+        "v1i": "PASS (contract-bounded)",
+        "v1j": "FAIL"
+      },
+      "sshd": {
+        "v1i": "PASS (contract-bounded)",
+        "v1j": "FAIL"
+      },
+      "scope_note": "consumer-specific: the two contract-bounded sites remain callable from any other importer; OSSL_PROVIDER_do_all remains an exported entry point"
+    },
+    "refusals": {
+      "ssh": [
+        "STALE_HASH",
+        "MISSING_BOUNDARY_RECEIPT",
+        "UNKNOWN_OBLIGATION",
+        "UNKNOWN_MECHANISM"
+      ],
+      "sshd": [
+        "STALE_HASH",
+        "MISSING_BOUNDARY_RECEIPT",
+        "UNKNOWN_OBLIGATION",
+        "UNKNOWN_MECHANISM"
+      ]
+    },
+    "reachable_set_changed_by_rebuild": {
+      "ssh": {
+        "removed": [
+          "src/apps/req.rs",
+          "src/digest/blake2.rs",
+          "src/digest/mdc2.rs",
+          "src/evp/bio_enc.rs",
+          "src/evp/e_rc4_hmac_md5.rs",
+          "src/evp/legacy_blake2.rs",
+          "src/evp/legacy_mdc2.rs",
+          "src/provider/dsa_sig.rs",
+          "src/provider/legacyprov.rs",
+          "src/provider/rsa_kem.rs",
+          "src/provider/securitycheck.rs",
+          "src/provider/seed_src.rs",
+          "src/x509/v3_conf.rs"
+        ],
+        "added": [
+          "src/modes/siv128.rs",
+          "src/params/build.rs",
+          "src/provider/der_dsa_sig.rs",
+          "src/runtime/bio/bss_dgram.rs",
+          "src/ts/ts_req_utils.rs",
+          "src/ts/ts_rsp_utils.rs"
+        ]
+      },
+      "sshd": {
+        "removed": [
+          "src/apps/req.rs",
+          "src/digest/blake2.rs",
+          "src/digest/mdc2.rs",
+          "src/evp/bio_enc.rs",
+          "src/evp/e_rc4_hmac_md5.rs",
+          "src/evp/legacy_blake2.rs",
+          "src/evp/legacy_mdc2.rs",
+          "src/provider/dsa_sig.rs",
+          "src/provider/legacyprov.rs",
+          "src/provider/rsa_kem.rs",
+          "src/provider/securitycheck.rs",
+          "src/provider/seed_src.rs",
+          "src/x509/v3_conf.rs"
+        ],
+        "added": [
+          "src/modes/siv128.rs",
+          "src/params/build.rs",
+          "src/provider/der_dsa_sig.rs",
+          "src/runtime/bio/bss_dgram.rs",
+          "src/ts/ts_req_utils.rs",
+          "src/ts/ts_rsp_utils.rs"
+        ]
+      }
+    },
+    "reachable_set_instability_note": "The closure graph is derived from the rebuilt DSOs and is not stable across the S' -> S'' rebuild: the ssh upper bound lost 13 files (including provider/legacyprov.rs, legacy_blake2.rs and legacy_mdc2.rs) and gained 6. The 12 legacyprov DISCHARGED sites therefore leave the v1j reachable set; that is a reachability change in this binary, not a reopened safety obligation. Counts are not a like-for-like delta."
+  },
+  "gates": {
+    "cargo_fmt": "PASS (cargo fmt --all -- --check, exit 0)",
+    "cargo_clippy": "PASS (cargo clippy --all-targets -- -D warnings, exit 0)",
+    "rust_suite": "test result: ok. 2213 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 182.72s",
+    "rust_suite_floor": "previous floor 2260 total / 52 ignored; now 2265 total / 52 ignored (+5 tests, none removed or newly ignored)",
+    "negative_control_probe": "PASS (18/18 initialiser/shape cases refused 0)",
+    "negative_control_scratch": "PASS (guard removal reproduces SIGSEGV)",
+    "gates_log": "court/tmp/freeze-v1j/logs/gates-run.txt",
+    "gates_log_sha256": "84de39c84125e8557b65daec3f7904fda65e34757f808a5f7f509f08d13f1b89"
+  },
+  "what_is_now_proven": [
+    "The five previously unguarded legacy digest initialisers (SHA-256, SHA-384, SHA-512, SHA-512/224, SHA-512/256) refuse a NULL context and a fresh EVP_MD_CTX_new() with md_data NULL, returning 0, without dereferencing anything.",
+    "Valid table inputs are unchanged: all seven legacy SHA entry points still produce the known SHA(\"abc\") digests.",
+    "S'' builds once, all 11 ABI courts pass, top-level and install copies agree, and the dynamic export set is byte-identical to S' (5906/608, 0 added, 0 removed).",
+    "ssh and sshd relink from pristine 9.9p1 against the S'' install only; both L7 workloads pass, including their negative controls.",
+    "The negative control proves the probe catches a removed guard: the scratch sha384_init SIGSEGVs while the working tree passes."
+  ],
+  "what_remains_unproven": [
+    "UNKNOWN: the thirteen update/final/ctrl callbacks in src/evp/legacy_sha.rs still dereference md_data without a check; they remain BLOCKED and can still be reached through the exported EVP_MD_meth_get_* accessors with a C-valid fresh context.",
+    "UNKNOWN: the S'' census/closure identity is uncommitted; the closure records STALE_HASH for src/evp/legacy_sha.rs against bcafae7dc, and no receipt can bind S'' to a commit until it is committed.",
+    "UNKNOWN: the closure reachable set is not stable across the rebuild (13 files left, 6 entered the ssh upper bound). The 12 legacyprov DISCHARGED sites are outside the v1j reachable set; the count drop is not evidence of a safety improvement in those files.",
+    "UNKNOWN: element 7 FAILs at S'' (9 target-bounded reachable unresolved sites; v1i had 0). The additional sites are unexplained by the source diff and require a BOUNDARY check before any promotion.",
+    "UNKNOWN: neither consumer is SAFE_COMPATIBLE; the closure still REFUSES with MISSING_BOUNDARY_RECEIPT 19, UNKNOWN_OBLIGATION 29 and UNKNOWN_MECHANISM 17.",
+    "UNKNOWN: no independent review, Miri, ASan, Loom, mutation test, dudect or Wycheproof/ACVP evidence was produced at S''.",
+    "UNKNOWN: EVP_PKEY_PROVIDER is not mechanism-wide SAFETY_DISCHARGED; the five site discharges do not graduate the mechanism."
+  ],
+  "non_claims": [
+    "This freeze does not make S'' a release candidate or either consumer safe.",
+    "The closure counts are not a like-for-like delta from v1i because the rebuilt reachable set changed.",
+    "DISCHARGED is site-scoped and contract-bounded; the probe and receipts share one author."
+  ]
+}

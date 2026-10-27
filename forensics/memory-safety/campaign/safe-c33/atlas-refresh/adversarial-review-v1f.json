@@ -1,0 +1,82 @@
+{
+  "schema": "safe-c33/atlas-refresh/adversarial-review/v1",
+  "kind": "adversarial-review",
+  "target": "openssh closure v1f (ssh + sshd), freeze fa6e1b7d / HEAD cef757e09",
+  "reviewed_identity": {
+    "head_under_review": "cef757e099fc684e68e611e8bbbcfdebe5eb97f5",
+    "branch": "stage/p25/rcb-v1f",
+    "head_tree": "58f0438d1cf06ab45a854b4cc7dab5b8f07e0d1a",
+    "freeze_sha256": "4ce62a9baa696ba0432c497d33a7df31de0de8331e80060f8c6d365197fd9169",
+    "closure_sha256": "a26225b98b312bf4299814e7d8fd6b712332b00549c8f0b22fe9702e3e39b8f4",
+    "ssh_sha256": "4d67a7f0ede3fca2f551bed9b6373b07b82edc6758faee20fadf735972a2f603",
+    "sshd_sha256": "95ae6380e17004774f4ce7314728b5419081099c0ea43b21590771104abd1ce2",
+    "libcrypto_install_sha256": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0"
+  },
+  "verdict": "PARTIALLY_REFUTED",
+  "summary": "The specific indirect-edge narrowing (0x46b9c5 -> {0x51dc20}) and the two ABI_CONTRACT_PROVIDER witnesses survive an independent attack. The central 'zero reachable production obligations' does not: the census's contract predicate accepts any SAFETY token within 14 lines, including an unrelated comment in the preceding function, and at least two reachable production unsafe fns (src/engine/eng_fat.rs:197, src/apps/ciphers.rs:93) are counted contracted without any contract of their own. The source->libcrypto 26ba36ff link is also unproven and contradicted by the repository's own artefact copies and build-link ledger. The ACCEPTED verdict therefore does not survive, although safe_compatible is (honestly) false.",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "STOP",
+      "claim": "The zero reachable production obligations (0/0/0) is produced by an unsound contract predicate: a SAFETY token in the previous function's body satisfies the unsafe-fn contract check.",
+      "evidence": "v1_census.py: FN_LOOKBACK=14 (line 74), _has_safety() joins lines[idx-14:idx+1] (lines 394-397), and contract_check accepts it at line 576 (elif _has_safety(lines, idx, FN_LOOKBACK): contracted = True). Replay over the ssh reachable set: 110 reachable files contain at least one unsafe fn whose only contract is this lookback. Two are production and reachable in BOTH ssh and sshd, with no # Safety and an unrelated nearby comment: (a) src/engine/eng_fat.rs:197 push_cstr_or_null, unsafe fn with real precondition 'p is NUL-terminated and live' (its body says 'per the contract' but states no contract); the 14-line window 183..197 contains '// SAFETY: `arg` is a writable `unsigned int` accumulator' from the PREVIOUS function (line 190); freeze per_file records 8 UNSAFE_FN_DEF_contracted, and its only blocker is the cfg(test) line 348. (b) src/apps/ciphers.rs:93 dummy_psk, unsafe extern \"C\" fn that reads no argument and returns 0; the window 78..92 contains '// SAFETY: `stdout` is ... FILE *' from bio_out (line 90); freeze per_file records 1 UNSAFE_FN_DEF_contracted/0 uncontracted. Neither appears in the 60 production blockers, so the intersection test with those 60 cannot detect them.",
+      "command": "python3 replay of v1_census._has_safety over freeze contracts.per_file and the ssh reachable set (court); sed -n '180,215p' src/engine/eng_fat.rs; sed -n '84,110p' src/apps/ciphers.rs"
+    },
+    {
+      "id": "F2",
+      "severity": "BLOCKER",
+      "claim": "The source at cef757e09 is not shown to correspond to the analysed libcrypto 26ba36ff; the v1f freeze explicitly declines the claim, and the repository's artefact state contradicts the only build record that links a source to that digest.",
+      "evidence": "v1f-candidate-freeze.json: committed_install_matches_this_source=null, rebuild_performed=false, match_basis='NOT_ESTABLISHED_BY_THIS_CENSUS'. source_head=fa6e1b7d (branch main), while HEAD=cef757e09; git diff fa6e1b7d..HEAD -- src Cargo.toml Cargo.lock build.rs is empty (so the compiled input surface is equal), but no rebuild from either commit is recorded by v1f. s-release-0.0.40.json records a rebuild at c7b7054bc (exit 0, log sha256 83fbfaf05a9e77c6399d788bbbe3c9ba76eb36322cbddefc117965a8504a7a73) producing 26ba36ff and libssl 1e7a9e8f, with install_copy_hashes_match_top_level=true; git diff c7b7054bc..HEAD -- src Cargo.toml Cargo.lock build.rs shows only the Cargo version fields, so that record is at best transitive evidence. It is also no longer true: artifacts/phase2/libcrypto.so.3=cb45a6ec8323a333c69d8b24fc3e62bc8441dba7ba631d47d132d8d375fd7e44 and artifacts/phase2/libssl.so.3=527ec167ebb9db04f64bb93b697e0add26bb1a8dce416afb1eab512e98efc4d1, while install/lib has 26ba36ff / 1e7a9e8f; both mtimes are 11:36. The closure ledger rows record a DIFFERENT candidate install, be578c866e20f78e4f2241ced9e9c1b0d7283d2e3aa3d3d99e26c0635beb16d3 (0.0.39), and artifact_matches_this_build=false (recorded ssh c8723f34..., sshd dccccf07...), while the measured binaries are 4d67a7f0... / 95ae6380.... The closure itself notes 'the build-link atlas row was produced against a different candidate install'.",
+      "command": "sha256sum artifacts/phase2/{libcrypto.so.3,libssl.so.3,install/lib/libcrypto.so.3,install/lib/libssl.so.3}; git --no-pager diff --stat c7b7054bc HEAD -- src Cargo.toml Cargo.lock build.rs; python3 print cl.ledger_record"
+    },
+    {
+      "id": "F3",
+      "severity": "NOTE",
+      "claim": "The recorded 60 production blockers do not intersect either reachable file set, but 46 (ssh) / 44 (sshd) of the 97 uncontracted files are reachable, carrying 122 (ssh) test-only blockers; the engine drops that whole partition at consumer_closure.py:3839-3841.",
+      "evidence": "production = [b for b in blockers if b.get('partition') == V1_PARTITION_PRODUCTION] (consumer_closure.py:3839-3841). All 122 test-only blocker lines in the 46 ssh-reachable files were re-checked by brace-matching to lie inside a #[cfg(test)] mod span (0 exceptions), so their exclusion from linked-code obligations is defensible. Zero obligations therefore follows from non-zero uncontracted files only because every reachable uncontracted operation is cfg(test)-only. This does not excuse F1, whose operations are production and accepted by the predicate.",
+      "command": "python3: set(per_file uncontracted) & graph.reachable_files; brace-match each test_only blocker line against #[cfg(test)] mod spans"
+    },
+    {
+      "id": "F4",
+      "severity": "NOTE",
+      "claim": "The 315 ssh reachable files contain 42,432 production unsafe operations (27,421 production unsafe blocks) in 311 files; the 'zero obligations' counts only operations the census labels uncontracted, so it measures missing SAFETY text, not safety.",
+      "evidence": "Sum of partition.files[*].production_operations over graph.reachable_files (ssh) = 42432; unsafe_blocks_production = 27421; files with production_operations>0 = 311. sshd: 30,501/26,591/41286/301 (305 files). A reachable file is counted contracted from textual/lint proximity (F1), so 'zero' is not a statement about reachable unsafe code.",
+      "command": "python3 sum of freeze partition.files production_operations over closure graph.reachable_files"
+    },
+    {
+      "id": "F5",
+      "severity": "NOTE",
+      "claim": "Independent direct-call reachability spot-check agrees on 10/10 files OUTSIDE the reachable set but only 1/10 INSIDE it; the 315-file set is not reproducible by a direct-call walk from the consumer's imports and rests on the resolver's indirect-edge model.",
+      "evidence": "Seed 1234; 10 in / 10 out. Direct objdump call/jmp edges plus GOT/PLT-name-resolved indirect calls from the 178 resolved libcrypto imports reached 696 functions / 84 source files. OUT: all 10 had 0 reached functions (agreement). IN: only src/context/mod.rs was reached; the other 9 (src/apps/ocsp.rs, src/asn1/d2i_pr.rs, src/cmp/cmp_server.rs, src/cms/cms_io.rs, src/des/mod.rs, src/evp/exchange.rs, src/provider/conf.rs, src/runtime/conf/conf_ssl.rs, src/x509/v3_pci.rs) were not. Only src/context/mod.rs appears in any imported symbol's direct_reachable_files; the rest are reached solely through resolved indirect/residual edges. This is a limitation of the evidence, not by itself a refutation.",
+      "command": "python3 objdump/nm/readelf direct+GOT walk on artifacts/phase2/install/lib/libcrypto.so.3 rooted at ssh imports"
+    }
+  ],
+  "survives": [
+    {
+      "claim": "The 0x46b9c5 site is bounded to {0x51dc20} by reachable-caller bounding for these two consumers.",
+      "evidence": "0x46b9c5 is 'call *%rbp'; %rbp is the callback stack slot (0x18(%rsp)), the argument is 0x20(%rsp) (prologue 0x46b75e: rdx->r14, rsi->r15; 0x46b9a0 loads rbp, 0x46b9c2 sets rsi=arg). The containing fn 0x46b750 has exactly two object-code callers: 0x441867 (OSSL_PROVIDER_do_all) and 0x51deeb. At 0x51dee1 lea -0x2c8(%rip),%rsi = 0x51dc20, then 0x51deeb call 0x46b750; the callback is thus fixed at this site. OSSL_PROVIDER_do_all 0x441860 is exported, but: objdump has no call/jmp to 0x441860; readelf has no relocation naming/adding it; the only 8-byte occurrences of 0x441860 are .dynsym/.symtab st_value fields (not .data/.rodata); no string 'OSSL_PROVIDER_do_all' in ssh/sshd; no import and no dlsym literal. So no reachable path was found.",
+      "command": "objdump -d --start-address=0x51ded0/-0x46b750; nm/readelf -rW; python byte scan for 0x441860; strings/readelf -Ws on ssh and sshd",
+      "caveat": "The exclusion is consumer-specific. 0x441860 remains an exported entry point callable by any other application that imports it, so element 7 is a statement about these two binaries, not whole-library safety."
+    },
+    {
+      "claim": "The two ABI_CONTRACT_PROVIDER witnesses are per-call-site and connect the specific slots to the documented provider ABI.",
+      "evidence": "Site 0x2b9771 in provider_init: 'mov 0x40(%rdi),%rax; call *%rax' with rdi=provider, rsi=CORE_DISPATCH, rdx=&out, rcx=&provctx, matching OSSL_provider_init; OsslProvider field layout places init_function at 0x40; writers are provider_new (0x44c3c0, caller-supplied init_function) and provider_init's module branch, and provider_init's callers 0x46adf2/0x46b697 are provider_activate/provider_activate_fallbacks. Site 0x407fc7 in encoder_import_cb: 'mov 0x70(%rcx),%rcx; call *%rcx' with rdi=encoderctx, esi=selection; OsslEncoder base+8*8 places import_object at 0x70; the writer is the provider OSSL_DISPATCH scan (encoder_meth.rs:446) and the callback address is materialised by lea at 0x40829b. The contract cites OSSL_provider_init/OSSL_FUNC_ENCODER_IMPORT_OBJECT and explicitly does not cover the external provider's own memory safety. No generic absorbing class was observed: each site carries a distinct slot and interface.",
+      "command": "objdump -d --start-address=0x2b9720 / 0x407f90; read OsslProvider/OsslEncoder layouts; grep provider_new/init_function/import_object writers",
+      "caveat": "The encoder's null-dispatch branch at 0x407fb2 contains 'mov 0x70,%rcx' (absolute load from address 0x70) and calls it if non-zero; this is not the classified site and I could not show a reachable caller that violates the encoder-instance contract, but it is an unreferenced wild-call path worth a follow-up."
+    },
+    {
+      "claim": "The four legacy-digest files moved to fully contracted are substantive, not vacuous.",
+      "evidence": "6acbdc844 adds init_md_data/init_keccak refusal paths with per-fn '# Safety' sections and regression tests for MDC2/SHA3/SHAKE/SM3; legacy_blake2 has the same init refusal. src/provider/encode_key2text.rs re-signs key2text_newctx and key2text_freectx from unsafe to safe extern \"C\"; both bodies read none of their arguments (one returns provctx, one is empty), so the unsafe marker was genuinely vestigial and removing it is sound (lint-only, no behavioural change). The answer to 'is the conversion real': REAL for all five, with the path correction src/provider/encode_key2text.rs (not src/pem/...).",
+      "command": "git show 6acbdc844 -- src/evp/legacy_sha3.rs src/provider/encode_key2text.rs; read legacy_mdc2/sm3/blake2 init bodies"
+    }
+  ],
+  "does_not_prove": [
+    "That the 60 production blockers are the complete set of reachable production uncontracted operations; F1 shows the predicate accepts an unrelated nearby SAFETY comment, so the true count is at least 2 higher (push_cstr_or_null, dummy_psk) and the zero is not established.",
+    "That any reachable unsafe operation is safe: 42,432 production operations / 27,421 production blocks are in the ssh reachable files; the closure counts documentation status, not memory safety.",
+    "That libcrypto 26ba36ff was built from the frozen source S (cef757e09 / fa6e1b7d / c7b7054bc). No rebuild is recorded by v1f, the top-level artefact copies are different builds (cb45a6ec / 527ec167), and the build-link ledger records a different candidate install (be578c86) with artifact_matches_this_build=false.",
+    "That the consumer binaries (4d67a7f0 / 95ae6380) were linked or executed against the analysed install; the ledger's recorded artifacts (c8723f34 / dccccf07) do not match them.",
+    "That the 315-file reachable set is independently confirmed; a direct-call walk reproduces 1/10 sampled IN files and 10/10 OUT files, and the set depends on the resolver's indirect-edge model.",
+    "That element 7 proves global library safety: the exported OSSL_PROVIDER_do_all remains callable by any app that imports it; the bounded edge is consumer-specific and the two provider sites are explicitly disclaimed as external-provider obligations.",
+    "That the freeze is identity-valid under AGENTS.md §22: the tool that derives evidence (consumer_closure.py, sha256 59aea07c...) was modified in the same commit as the evidence, while the freeze records source_head fa6e1b7d rather than the HEAD that contains that tool."
+  ]
+}

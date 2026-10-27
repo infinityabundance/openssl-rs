@@ -333,9 +333,27 @@ unsafe extern "C" fn sha224_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int
 }
 
 /// `sha256_init`.
+///
+/// # Safety
+///
+/// As [`sha1_init`]: `ctx` must be NULL or point to a live `EVP_MD_CTX`; the callback establishes
+/// its own writable `SHA256_CTX` from the context's method and block, and answers `0` when the
+/// caller supplied a shape that does not contain one. The table's own path (a context bound to
+/// `sha256_md` with a writable block) is unchanged and returns `1`.
 unsafe extern "C" fn sha256_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe { SHA256_Init(md_data(ctx).cast::<Sha256Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA256_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SHA256_MD.0),
+            core::mem::size_of::<Sha256Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SHA256_CTX`.
+    unsafe { SHA256_Init(block.cast::<Sha256Ctx>()) }
 }
 
 /// `sha256_update`.
@@ -351,9 +369,27 @@ unsafe extern "C" fn sha256_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int
 }
 
 /// `sha384_init` — `IMPLEMENT_LEGACY_EVP_MD_METH(sha384, SHA384)`.
+///
+/// # Safety
+///
+/// As [`sha1_init`]: `ctx` must be NULL or point to a live `EVP_MD_CTX`; the callback establishes
+/// its own writable `SHA512_CTX` from the context's method and block, and answers `0` when the
+/// caller supplied a shape that does not contain one. The table's own path (a context bound to
+/// `sha384_md` with a writable block) is unchanged and returns `1`.
 unsafe extern "C" fn sha384_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe { SHA384_Init(md_data(ctx).cast::<Sha512Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA384_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SHA384_MD.0),
+            core::mem::size_of::<Sha512Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SHA512_CTX`.
+    unsafe { SHA384_Init(block.cast::<Sha512Ctx>()) }
 }
 
 /// `sha384_update` — `SHA384_Update` is `sha.h`'s `#define` for `SHA512_Update`.
@@ -369,9 +405,27 @@ unsafe extern "C" fn sha384_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int
 }
 
 /// `sha512_init`.
+///
+/// # Safety
+///
+/// As [`sha1_init`]: `ctx` must be NULL or point to a live `EVP_MD_CTX`; the callback establishes
+/// its own writable `SHA512_CTX` from the context's method and block, and answers `0` when the
+/// caller supplied a shape that does not contain one. The table's own path (a context bound to
+/// `sha512_md` with a writable block) is unchanged and returns `1`.
 unsafe extern "C" fn sha512_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe { SHA512_Init(md_data(ctx).cast::<Sha512Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SHA512_MD.0),
+            core::mem::size_of::<Sha512Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SHA512_CTX`.
+    unsafe { SHA512_Init(block.cast::<Sha512Ctx>()) }
 }
 
 /// `sha512_update`.
@@ -390,9 +444,27 @@ unsafe extern "C" fn sha512_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_int
 /// `legacy_sha.c:46-47` `#define`s `sha512_224_Init` to `sha512_224_init`. So this calls the
 /// **lower-case** `sha512_224_init`, which is the truncated-initialisation the crate already has,
 /// and not `SHA512_Init`.
+///
+/// # Safety
+///
+/// As [`sha1_init`]: `ctx` must be NULL or point to a live `EVP_MD_CTX`; the callback establishes
+/// its own writable `SHA512_CTX` from the context's method and block, and answers `0` when the
+/// caller supplied a shape that does not contain one. The table's own path (a context bound to
+/// `sha512_224_md` with a writable block) is unchanged and returns `1`.
 unsafe extern "C" fn sha512_224_int_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe { sha512_224_init(md_data(ctx).cast::<Sha512Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_224_MD` is a live
+    // static method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SHA512_224_MD.0),
+            core::mem::size_of::<Sha512Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SHA512_CTX`.
+    unsafe { sha512_224_init(block.cast::<Sha512Ctx>()) }
 }
 
 /// `sha512_224_int_final` — the same table's final, over `SHA512_Final`.
@@ -402,9 +474,27 @@ unsafe extern "C" fn sha512_224_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) 
 }
 
 /// `sha512_256_int_init` — `sha512_256_init`, for the reason `sha512_224_int_init` gives.
+///
+/// # Safety
+///
+/// As [`sha1_init`]: `ctx` must be NULL or point to a live `EVP_MD_CTX`; the callback establishes
+/// its own writable `SHA512_CTX` from the context's method and block, and answers `0` when the
+/// caller supplied a shape that does not contain one. The table's own path (a context bound to
+/// `sha512_256_md` with a writable block) is unchanged and returns `1`.
 unsafe extern "C" fn sha512_256_int_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe { sha512_256_init(md_data(ctx).cast::<Sha512Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SHA512_256_MD` is a live
+    // static method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SHA512_256_MD.0),
+            core::mem::size_of::<Sha512Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SHA512_CTX`.
+    unsafe { sha512_256_init(block.cast::<Sha512Ctx>()) }
 }
 
 /// `sha512_256_int_final`.
@@ -685,6 +775,23 @@ mod tests {
         }
     }
 
+    /// The two shapes a C caller can hand an exported legacy initialiser that do not contain a
+    /// writable digest block: a fresh `EVP_MD_CTX_new()` (`md_data == NULL`) and a NULL context.
+    /// Both must answer the C initialise failure value `0` without dereferencing anything.
+    fn assert_init_refuses_contexts_without_md_data(init: MdLegacyInitFn) {
+        use crate::evp::digest::{EVP_MD_CTX_free, EVP_MD_CTX_new};
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is a live context and the callback accepts any live context.
+        assert_eq!(unsafe { init(fresh) }, 0, "init accepted a NULL md_data");
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
+
+        // SAFETY: a NULL context is the input under test; the callback's contract permits it.
+        assert_eq!(unsafe { init(core::ptr::null_mut()) }, 0);
+    }
+
     /// `EVP_MD_meth_get_init(EVP_sha1())` handed to a C caller, then called with the two context
     /// shapes the getter's documented contract does not exclude: a fresh `EVP_MD_CTX_new()`
     /// (`md_data == NULL`) and a NULL context. The authority's `sha1_init` writes through
@@ -785,6 +892,220 @@ mod tests {
                 0x55, 0xb3, 0x2a, 0xad, 0xbc, 0xe4, 0xbd, 0xa0, 0xb3, 0xf7, 0xe3, 0x6c, 0x9d, 0xa7,
             ],
             "SHA224(\"abc\") changed"
+        );
+    }
+
+    /// As [`legacy_sha1_init_refuses_context_without_md_data_and_inits_bound_context`], over the
+    /// `sha256_md` table entry and `SHA256_Init`'s `SHA256_CTX` block.
+    #[test]
+    fn legacy_sha256_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_meth_get_final, EVP_MD_meth_get_init, EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: each accessor answers a live static method.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_sha256()) }.expect("sha256_md has an init");
+        // SAFETY: as above.
+        let update =
+            unsafe { EVP_MD_meth_get_update(EVP_sha256()) }.expect("sha256_md has an update");
+        // SAFETY: as above.
+        let final_ = unsafe { EVP_MD_meth_get_final(EVP_sha256()) }.expect("sha256_md has a final");
+
+        assert_init_refuses_contexts_without_md_data(init);
+
+        let mut store = core::mem::MaybeUninit::<Sha256Ctx>::uninit();
+        let mut ctx = bound_context(EVP_sha256(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sha256_md`, and `store` is a writable `SHA256_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 32];
+        // SAFETY: `output` is writable for the SHA-256 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40, 0xde, 0x5d, 0xae,
+                0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61,
+                0xf2, 0x00, 0x15, 0xad,
+            ],
+            "SHA256(\"abc\") changed"
+        );
+    }
+
+    /// As above, over the `sha384_md` table entry and `SHA384_Init`'s `SHA512_CTX` block.
+    #[test]
+    fn legacy_sha384_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_meth_get_final, EVP_MD_meth_get_init, EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: each accessor answers a live static method.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_sha384()) }.expect("sha384_md has an init");
+        // SAFETY: as above.
+        let update =
+            unsafe { EVP_MD_meth_get_update(EVP_sha384()) }.expect("sha384_md has an update");
+        // SAFETY: as above.
+        let final_ = unsafe { EVP_MD_meth_get_final(EVP_sha384()) }.expect("sha384_md has a final");
+
+        assert_init_refuses_contexts_without_md_data(init);
+
+        let mut store = core::mem::MaybeUninit::<Sha512Ctx>::uninit();
+        let mut ctx = bound_context(EVP_sha384(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sha384_md`, and `store` is a writable `SHA512_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 48];
+        // SAFETY: `output` is writable for the SHA-384 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0xcb, 0x00, 0x75, 0x3f, 0x45, 0xa3, 0x5e, 0x8b, 0xb5, 0xa0, 0x3d, 0x69, 0x9a, 0xc6,
+                0x50, 0x07, 0x27, 0x2c, 0x32, 0xab, 0x0e, 0xde, 0xd1, 0x63, 0x1a, 0x8b, 0x60, 0x5a,
+                0x43, 0xff, 0x5b, 0xed, 0x80, 0x86, 0x07, 0x2b, 0xa1, 0xe7, 0xcc, 0x23, 0x58, 0xba,
+                0xec, 0xa1, 0x34, 0xc8, 0x25, 0xa7,
+            ],
+            "SHA384(\"abc\") changed"
+        );
+    }
+
+    /// As above, over the `sha512_md` table entry and `SHA512_Init`'s `SHA512_CTX` block.
+    #[test]
+    fn legacy_sha512_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_meth_get_final, EVP_MD_meth_get_init, EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: each accessor answers a live static method.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_sha512()) }.expect("sha512_md has an init");
+        // SAFETY: as above.
+        let update =
+            unsafe { EVP_MD_meth_get_update(EVP_sha512()) }.expect("sha512_md has an update");
+        // SAFETY: as above.
+        let final_ = unsafe { EVP_MD_meth_get_final(EVP_sha512()) }.expect("sha512_md has a final");
+
+        assert_init_refuses_contexts_without_md_data(init);
+
+        let mut store = core::mem::MaybeUninit::<Sha512Ctx>::uninit();
+        let mut ctx = bound_context(EVP_sha512(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sha512_md`, and `store` is a writable `SHA512_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 64];
+        // SAFETY: `output` is writable for the SHA-512 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0xdd, 0xaf, 0x35, 0xa1, 0x93, 0x61, 0x7a, 0xba, 0xcc, 0x41, 0x73, 0x49, 0xae, 0x20,
+                0x41, 0x31, 0x12, 0xe6, 0xfa, 0x4e, 0x89, 0xa9, 0x7e, 0xa2, 0x0a, 0x9e, 0xee, 0xe6,
+                0x4b, 0x55, 0xd3, 0x9a, 0x21, 0x92, 0x99, 0x2a, 0x27, 0x4f, 0xc1, 0xa8, 0x36, 0xba,
+                0x3c, 0x23, 0xa3, 0xfe, 0xeb, 0xbd, 0x45, 0x4d, 0x44, 0x23, 0x64, 0x3c, 0xe8, 0x0e,
+                0x2a, 0x9a, 0xc9, 0x4f, 0xa5, 0x4c, 0xa4, 0x9f,
+            ],
+            "SHA512(\"abc\") changed"
+        );
+    }
+
+    /// As above, over the `sha512_224_md` table entry and its truncated `SHA512_CTX`
+    /// initialisation.
+    #[test]
+    fn legacy_sha512_224_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_meth_get_final, EVP_MD_meth_get_init, EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: each accessor answers a live static method.
+        let init =
+            unsafe { EVP_MD_meth_get_init(EVP_sha512_224()) }.expect("sha512_224_md has an init");
+        // SAFETY: as above.
+        let update = unsafe { EVP_MD_meth_get_update(EVP_sha512_224()) }
+            .expect("sha512_224_md has an update");
+        // SAFETY: as above.
+        let final_ =
+            unsafe { EVP_MD_meth_get_final(EVP_sha512_224()) }.expect("sha512_224_md has a final");
+
+        assert_init_refuses_contexts_without_md_data(init);
+
+        let mut store = core::mem::MaybeUninit::<Sha512Ctx>::uninit();
+        let mut ctx = bound_context(EVP_sha512_224(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sha512_224_md`, and `store` is a writable `SHA512_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 28];
+        // SAFETY: `output` is writable for the SHA-512/224 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0x46, 0x34, 0x27, 0x0f, 0x70, 0x7b, 0x6a, 0x54, 0xda, 0xae, 0x75, 0x30, 0x46, 0x08,
+                0x42, 0xe2, 0x0e, 0x37, 0xed, 0x26, 0x5c, 0xee, 0xe9, 0xa4, 0x3e, 0x89, 0x24, 0xaa,
+            ],
+            "SHA512/224(\"abc\") changed"
+        );
+    }
+
+    /// As above, over the `sha512_256_md` table entry and its truncated `SHA512_CTX`
+    /// initialisation.
+    #[test]
+    fn legacy_sha512_256_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_meth_get_final, EVP_MD_meth_get_init, EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: each accessor answers a live static method.
+        let init =
+            unsafe { EVP_MD_meth_get_init(EVP_sha512_256()) }.expect("sha512_256_md has an init");
+        // SAFETY: as above.
+        let update = unsafe { EVP_MD_meth_get_update(EVP_sha512_256()) }
+            .expect("sha512_256_md has an update");
+        // SAFETY: as above.
+        let final_ =
+            unsafe { EVP_MD_meth_get_final(EVP_sha512_256()) }.expect("sha512_256_md has a final");
+
+        assert_init_refuses_contexts_without_md_data(init);
+
+        let mut store = core::mem::MaybeUninit::<Sha512Ctx>::uninit();
+        let mut ctx = bound_context(EVP_sha512_256(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sha512_256_md`, and `store` is a writable `SHA512_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 32];
+        // SAFETY: `output` is writable for the SHA-512/256 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0x53, 0x04, 0x8e, 0x26, 0x81, 0x94, 0x1e, 0xf9, 0x9b, 0x2e, 0x29, 0xb7, 0x6b, 0x4c,
+                0x7d, 0xab, 0xe4, 0xc2, 0xd0, 0xc6, 0x34, 0xfc, 0x6d, 0x46, 0xe0, 0xe2, 0xf1, 0x31,
+                0x07, 0xe7, 0xaf, 0x23,
+            ],
+            "SHA512/256(\"abc\") changed"
         );
     }
 }
