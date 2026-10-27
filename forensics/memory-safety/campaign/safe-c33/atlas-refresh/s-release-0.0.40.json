@@ -1,0 +1,259 @@
+{
+  "schema": "safe-c33/atlas-refresh/release/v1",
+  "kind": "release-preparation",
+  "subphase": "s-release-0.0.40",
+  "branch": "main",
+  "source_head": "c7b7054bc",
+  "source_head_subject": "Merge pull request #76 from infinityabundance/integrate/safe-c33",
+  "date": "2026-10-27",
+  "purpose": "Prepare crate 0.0.40 from a tree that carries the openssh closure campaign and its repairs but is otherwise unchanged from published 0.0.39: the swapped repr(C) field fix in the PKCS/7 stream callback, the BLAKE2 Stacked-Borrows repair, six legacy digest initialisers that now refuse instead of crashing, the alignment soundness guard on owner constructors, the master-secret cleansing owner, the resolver switch-bound correctness fix, and four ABI-contract-bounded edge classes. Version bump, Phase-2 rebuild from this exact source, atlas identity rebind with every measured row carried forward, documentation regeneration and packaging inventory. No publish, no commit, no push.",
+  "version_bump": {
+    "from": "0.0.39",
+    "to": "0.0.40",
+    "cargo_toml": "version = \"0.0.40\"",
+    "cargo_lock": "the openssl-rs package entry reads 0.0.40",
+    "dependency_versions_changed": false,
+    "src_changed_by_this_receipt": false
+  },
+  "published_release": {
+    "version": "0.0.39",
+    "status": "PUBLISHED",
+    "registry": "crates-io",
+    "date": "2026-10-25",
+    "published_at": "2026-10-25T13:30:45Z",
+    "checksum": "48888f37c705dae453c19574021b3b7fde76a50ccd5fcdd96d0dadbb1a51159d",
+    "checksum_prefix": "48888f37",
+    "crate_size": 8898646,
+    "files": 1010,
+    "source_commit": "see merge commit of PR #69",
+    "artefacts": {
+      "libcrypto.so.3": "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48",
+      "libssl.so.3": "069c2cb1496ef9cda3aed0da478d67c2822e5de8da123a5f29d365438ebd6851",
+      "legacy.so": "57dc86fd4493aab8c78ad412306ba3fad0b87652007472617d5843572f9ad925",
+      "openssl": "412324e6806defc9a40e36f1534ef711b06644aa595eda24eb9189cabd584f66"
+    },
+    "receipt": "atlas-refresh/publish-0.0.39.json",
+    "does_not_contain": "the openssh closure campaign or its repairs: the swapped repr(C) PKCS/7 stream-callback field, the BLAKE2 Stacked-Borrows repair, the six refusing legacy digest initialisers, the owner-constructor alignment guard, the master-secret cleansing owner, the resolver switch-bound fix and the four ABI-contract-bounded edge classes"
+  },
+  "working_tree_release": {
+    "version": "0.0.40",
+    "status": "NOT_PUBLISHED",
+    "publish_receipt_exists": false,
+    "cargo_publish_run": false,
+    "note": "No registry write of any kind was performed."
+  },
+  "rebuild": {
+    "command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh (CARGO_TARGET_DIR unset)",
+    "exit_code": 0,
+    "completion_marker": "phase 2 shell built.",
+    "log": "court/tmp/s-release-0.0.40-build.log",
+    "log_sha256": "83fbfaf05a9e77c6399d788bbbe3c9ba76eb36322cbddefc117965a8504a7a73",
+    "target_dir_note": "build_phase2.sh hardwires CRATE=/work/target/release/libopenssl_rs.a and the rlib/--extern paths, so CARGO_TARGET_DIR was unset and the script's own /work/target was used. TMPDIR stayed on /work/court/tmp. One heavy command at a time; host MemAvailable was about 73 GB before the build.",
+    "artefacts": {
+      "libcrypto.so.3": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+      "libssl.so.3": "1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b",
+      "legacy.so": "eb297736c89b8d37065d822692c656ef95b3215f8113b2f44316e2c48133dff4",
+      "openssl": "acac3dfd07a240892eab61d445b6a59d99dde61e7efd75921de1d466c109d24f"
+    },
+    "install_copy_hashes_match_top_level": true,
+    "previous_identity": {
+      "label": "committed 0.0.39 working tree after the C4/measurement rebuild",
+      "libcrypto.so.3": "be578c866e20f78e4f2241ced9e9c1b0d7283d2e3aa3d3d99e26c0635beb16d3",
+      "libssl.so.3": "c6eddcfe2ce43007019c5ab208ea7d58092ab893994227b9fcf36b35f49d6e94"
+    },
+    "published_0.0.39_identity": {
+      "libcrypto.so.3": "eb0d7c0372c47e19edbe69506376a9bd2554cd5053eeea1fac8315a2c64c7c48",
+      "libssl.so.3": "069c2cb1496ef9cda3aed0da478d67c2822e5de8da123a5f29d365438ebd6851"
+    },
+    "identity_delta_cause": "The crate version participates in rustc crate metadata and the tree also carries the openssh closure campaign source repairs, so every linked object changes. The rebuild also rewrote forensics/atlas/implemented-surface.json (crate-archive sha256 and compiler-emitted counts), a build-product observation rather than contract evidence.",
+    "legacy_provider_runpath": {
+      "readelf_d": [
+        "NEEDED libcrypto.so.3",
+        "NEEDED libm.so.6",
+        "NEEDED libgcc_s.so.1",
+        "NEEDED libc.so.6",
+        "NEEDED ld-linux-x86-64.so.2",
+        "RUNPATH [$ORIGIN/..]"
+      ],
+      "ldd_install_copy": "libcrypto.so.3 => /work/artifacts/phase2/install/lib/ossl-modules/../libcrypto.so.3",
+      "verdict": "legacy.so carries RUNPATH $ORIGIN/.. and resolves the install's own libcrypto without LD_LIBRARY_PATH"
+    },
+    "abi_courts": {
+      "all_pass": true,
+      "passed": 11,
+      "total": 11,
+      "courts": [
+        "ABI-SYMBOL",
+        "ABI-VERSION",
+        "ABI-DYNAMIC",
+        "ABI-LAYOUT",
+        "ABI-LINK",
+        "ABI-LOAD",
+        "ABI-CONSTANTS",
+        "ABI-MATRIX",
+        "ABI-SUBSTITUTION",
+        "ABI-INSTALL-LAYOUT",
+        "libcrypto-contamination"
+      ],
+      "ABI_INSTALL_LAYOUT_result": "pass",
+      "libcrypto_contamination_result": "pass",
+      "artifact": "artifacts/phase2/COURTS.json",
+      "file_sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e"
+    }
+  },
+  "provider_proof": {
+    "probe": "artifacts/s48/provider-probe.c rebuilt against artifacts/phase2/install/include with -L.../lib and -Wl,-rpath,/work/artifacts/phase2/install/lib; ldd resolves libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3",
+    "probe_binary": "court/tmp/s-release-0.0.40-provider-probe",
+    "without_OPENSSL_MODULES": {
+      "log": "court/tmp/s-release-0.0.40-provider-without.log",
+      "log_sha256": "b9b54e2bc22f7c18441fcbb074a9f0154223a654c270de78c1bad6463cc787de",
+      "observed": ["version=OpenSSL 3.6.4 25 Aug 2026", "modulesdir=(null)", "default=loaded", "legacy=NULL", "fetch_md4=NULL"],
+      "exit": 1,
+      "meaning": "the compiled-in MODULESDIR is still the empty sentinel (the recorded distribution divergence); the module is not discovered without the environment variable"
+    },
+    "with_OPENSSL_MODULES": {
+      "command": "OPENSSL_MODULES=/work/artifacts/phase2/install/lib/ossl-modules ./court/tmp/s-release-0.0.40-provider-probe",
+      "log": "court/tmp/s-release-0.0.40-provider-with.log",
+      "log_sha256": "810b45917f65240f2406d7fb2b71021df09ae8370bbe06ab9d6e187183e71263",
+      "observed": ["modulesdir=(null)", "default=loaded", "legacy=loaded", "fetch_md4=ok", "md4_abc=a448017aaf21d8525fc10ae87aa6729d"],
+      "exit": 0,
+      "verdict": "OSSL_PROVIDER_load(NULL,\"legacy\") returns non-NULL and MD4(abc) works after the 0.0.40 rebuild"
+    }
+  },
+  "atlas_rebind": {
+    "atlas": "forensics/downstream/runtime-functional-atlas.json",
+    "command": "python3 forensics/tools/downstream_runtime.py --measure --only __identity_rebind_no_measurement__ --reuse-committed --reuse-previous-candidate",
+    "log": "court/tmp/s-release-0.0.40-atlas-rebind.log",
+    "log_sha256": "6b9d9324355d736afb6a992099b85e14528152262f8dd9dce7d683f740784b45",
+    "candidate_identity": {
+      "install_prefix": "artifacts/phase2/install",
+      "libcrypto_so_3_sha256": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+      "libssl_so_3_sha256": "1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b"
+    },
+    "superseded_identity": {
+      "libcrypto_so_3_sha256": {
+        "committed": "be578c866e20f78e4f2241ced9e9c1b0d7283d2e3aa3d3d99e26c0635beb16d3",
+        "current": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0"
+      },
+      "libssl_so_3_sha256": {
+        "committed": "c6eddcfe2ce43007019c5ab208ea7d58092ab893994227b9fcf36b35f49d6e94",
+        "current": "1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b"
+      }
+    },
+    "per_row_marker": "614 reused subject rows (307 families x 2 subjects) carry reused_from_candidate_identity = the superseded be578c86/c6eddcfe identity; the 1386 no-recipe rows are regenerated not-attempted records",
+    "evidence_reuse": {
+      "mode": "committed-rows-carried-forward",
+      "families_reused": 307,
+      "candidate_identity_match": false,
+      "counts_after": {
+        "candidate_loaded": 223,
+        "candidate_runtime": 209,
+        "candidate_functional": 207,
+        "candidate_failed": 7,
+        "authority_loaded": 224,
+        "authority_runtime": 211,
+        "authority_functional": 209,
+        "authority_failed": 5,
+        "recipes": 307,
+        "no_recipe": 693
+      },
+      "note": "207 candidate / 209 authority L7 over 223 candidate loaded families and 307 recipes was measured at the superseded dc17cfdd/75cc3979 identity. Every recipe-backed row is carried forward, not re-measured at 0.0.40."
+    },
+    "evidence_status_upgraded": false,
+    "levels_changed": false,
+    "levels_check": "all 2000 subject rows have the same level and outcome as HEAD; counts.by_subject is byte-identical",
+    "row_fields_changed": "only reused_from_candidate_identity on the 614 carried rows and the live resource_limits metadata (memory_swap_max max -> 0) on the 1386 regenerated no-recipe rows; no measurement outcome changed",
+    "specimens_and_variants_unchanged": true,
+    "remeasurement": "none. No downstream build or workload was run.",
+    "build_link_atlas_note": "forensics/downstream/build-link-atlas.json is left at its own committed measurement identity; rebinding it without re-running that measurement would claim work that was not done. The documentation generator reads candidate identity from the runtime atlas.",
+    "body_hash": "df226a5c716728d52df9170273c9e9d98170b77e1572be26b116676881320df1",
+    "file_sha256": "42be6e38fe004fdb0740949fa7baf73d603f7538e4fbd598e7c4336874de3dab",
+    "self_check": {
+      "command": "python3 forensics/tools/downstream_runtime.py --check",
+      "exit_code": 0,
+      "result": "with_recipe=307 cand_loaded=223 cand_functional=207 reaches_baseline=305 findings=0 control honest=True"
+    }
+  },
+  "documentation": {
+    "generator": "forensics/tools/render_docs.py",
+    "changes": [
+      "README.md generated blocks: identity 0.0.40 not published at this candidate identity, new candidate hashes, 207 candidate / 209 authority L7 of 223 loaded over 307 recipes, 307 of 307 recipe-backed families carried forward, and the Safe-33 cohort row marked carried forward",
+      "STATUS-2026-10-20.md generated blocks: working-tree 0.0.40 not published, published release 0.0.39 checksum 48888f37, evidence bound to the 0.0.40 tree, and the current corpus/reuse rows",
+      "STATUS-2026-10-20.md hand-written Source identity, downstream-evidence, library-test and Release sections reconciled to the same facts; the S-era history is retained",
+      "CAMPAIGN-STATUS.json: source_head c7b7054bc, s-release-0.0.40 note, ABI court identity, release readiness, library-test floor note and downstream non-claims",
+      "forensics/STATUS.md regenerated by render_status.py"
+    ],
+    "hand_written_corrections": [
+      {
+        "file": "STATUS-2026-10-20.md",
+        "before": "The working tree is 0.0.39 and is the published crate; candidate hashes match publish-0.0.39.json; evidence bound to the current 0.0.39 tree.",
+        "after": "The working tree is 0.0.40 and is not published; candidate hashes match no publish receipt; evidence bound to the current 0.0.40 tree."
+      },
+      {
+        "file": "STATUS-2026-10-20.md",
+        "before": "The published 0.0.39 artefact contained the S49-S61 and V3-C4 code with no statement about the later openssh repairs.",
+        "after": "The published 0.0.39 artefact does not contain the openssh closure campaign or its repairs; those are in the 0.0.40 working tree."
+      }
+    ],
+    "published_release_statement": "The published release is 0.0.39 (checksum 48888f37..., built with libcrypto eb0d7c03 / libssl 069c2cb1); it does not contain the openssh closure campaign or its repairs.",
+    "working_tree_statement": "The working tree is 0.0.40 and is not published.",
+    "evidence_binding_statement": "The evidence is bound to the 0.0.40 tree, not to the published 0.0.39 crate; all 307 of 307 recipe-backed downstream families are carried forward at candidate_identity_match=false from dc17cfdd/75cc3979.",
+    "render_docs_write": {
+      "exit_code": 0,
+      "result": "wrote README.md and STATUS-2026-10-20.md generated blocks"
+    },
+    "render_status": {
+      "exit_code": 0,
+      "result": "wrote forensics/STATUS.md"
+    },
+    "render_docs_check": {
+      "exit_code": 0,
+      "result": "render_docs: clean - all generated blocks match their evidence"
+    }
+  },
+  "packaging": {
+    "command": "cargo package --list --offline --allow-dirty",
+    "command_note": "The bare --offline form requires --allow-dirty until the orchestrator commits. Nothing is published.",
+    "exit_code": 0,
+    "version_reported": "path+file:///work#openssl-rs@0.0.40 (cargo pkgid)",
+    "version_metadata": "cargo metadata --no-deps reads 0.0.40",
+    "files": 1010,
+    "previous_published_packaging_files": 1010,
+    "shape_unchanged": true,
+    "list": "court/tmp/s-release-0.0.40-package-list.txt",
+    "list_sha256": "aa9692fea97045f9f20e7771841f2a8273a5c295c853eeda27d138567199c62f",
+    "warnings": "four pre-existing reserved-Windows-filename warnings for src/{dsa,rsa,ec,dh}/prn.rs",
+    "cargo_publish_run": false
+  },
+  "ledger": {
+    "downstream_at_previous_identity": "207 candidate / 209 authority L7 of 223 candidate loaded (224 authority loaded) over 307 recipes, measured at dc17cfdd/75cc3979; no row was re-measured at 0.0.40.",
+    "no_recipe": 693,
+    "safe_compatible": "0/33",
+    "boundary_gate": "NOT_RUN",
+    "seal_gate": "NOT_RUN",
+    "residuals": "unchanged from the openssh closure campaign receipts; this receipt adds no source change and therefore no new unsafe assumption."
+  },
+  "infrastructure": {
+    "court_image": "openssl-rs-court:1; no file under docker/ was edited.",
+    "writable_host_bind_mount": "The documented read-write /work bind mount remains a standing infrastructure task; this release preparation did not change it."
+  },
+  "not_run": [
+    "full library test suite at 0.0.40",
+    "the adversarial probes at 0.0.40",
+    "any downstream family re-measurement at the 0.0.40 identity (all 307 recipe-backed families are carried forward)",
+    "the ASan sibling install at 0.0.40",
+    "BOUNDARY and SEAL gates (unchanged: NOT_RUN)",
+    "cargo publish / any registry write",
+    "git commit, push or branch creation"
+  ],
+  "non_claims": [
+    "The version bump and rebuild add no assurance; they only prevent the published 0.0.39 from being confused with the newer tree.",
+    "The 207/209 L7 result is not a measurement at the 0.0.40 identity; every downstream row is carried forward at candidate_identity_match=false.",
+    "The 11 ABI courts are structural only; passing them is not parity or memory safety.",
+    "The provider-load and MD4 probe prove module discovery and one legacy digest, not general legacy-provider compatibility.",
+    "SAFE_COMPATIBLE remains 0/33; no consumer family has graduated.",
+    "The provider module still needs OPENSSL_MODULES because libcrypto's compiled-in MODULESDIR is the empty sentinel; this is a harness/discovery status, not a baked distribution path.",
+    "0.0.40 is not published; the tracked install and atlases are working-tree evidence.",
+    "No evidence status was upgraded and no family was re-measured."
+  ]
+}
