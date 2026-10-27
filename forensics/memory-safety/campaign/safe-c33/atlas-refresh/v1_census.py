@@ -25,6 +25,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from collections import Counter, defaultdict
@@ -115,6 +116,91 @@ def sha256_file(path: Path) -> str | None:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def crate_version(root: Path) -> str | None:
+    """The crate version at the measured source tree (never hard-coded)."""
+    try:
+        text = (root / "Cargo.toml").read_text()
+    except OSError:
+        return None
+    m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+    return m.group(1) if m else None
+
+
+def classification_delta(current: dict, previous: dict) -> dict:
+    """Per-file classification changes of ``current`` against ``previous``.
+
+    Classification is the pair (recomputed category, all_operations_contracted).
+    A file is listed when either element changes; the reason records the exact
+    source-hash and operation-count movement that produced the change.
+    """
+    def index(doc: dict):
+        part = {r["path"]: r
+                for r in ((doc.get("partition") or {}).get("files") or [])}
+        per_file = (doc.get("contracts") or {}).get("per_file") or {}
+        return part, per_file
+
+    cur_part, cur_pf = index(current)
+    old_part, old_pf = index(previous)
+    added = sorted(set(cur_part) - set(old_part))
+    removed = sorted(set(old_part) - set(cur_part))
+    changes = []
+    count_changes = []
+    for path in sorted(set(cur_part) & set(old_part)):
+        c, o = cur_part[path], old_part[path]
+        ccat, ocat = c.get("category"), o.get("category")
+        ccontr = (cur_pf.get(path) or {}).get("all_operations_contracted")
+        ocontr = (old_pf.get(path) or {}).get("all_operations_contracted")
+        csha, osha = c.get("source_sha256"), o.get("source_sha256")
+        cops, oops = c.get("production_operations"), o.get("production_operations")
+        if cops != oops:
+            count_changes.append({
+                "path": path,
+                "old_production_operations": oops,
+                "new_production_operations": cops,
+                "source_sha256_changed": csha != osha,
+                "category_changed": ccat != ocat,
+                "all_operations_contracted_changed": ccontr != ocontr,
+            })
+        if ccat == ocat and ccontr == ocontr:
+            continue
+        reasons = [
+            ("source bytes changed" if csha != osha
+             else "source bytes identical (classification/bookkeeping delta)"),
+        ]
+        if cops != oops:
+            reasons.append(f"production operations {oops}->{cops}")
+        if ccat != ocat:
+            reasons.append(f"category {ocat}->{ccat}")
+        if ccontr != ocontr:
+            reasons.append(
+                f"all_operations_contracted {ocontr}->{ccontr}")
+        changes.append({
+            "path": path,
+            "old_category": ocat,
+            "new_category": ccat,
+            "old_all_operations_contracted": ocontr,
+            "new_all_operations_contracted": ccontr,
+            "old_production_operations": oops,
+            "new_production_operations": cops,
+            "source_sha256_changed": csha != osha,
+            "why": "; ".join(reasons),
+        })
+    return {
+        "previous": None,
+        "files_added": added,
+        "files_removed": removed,
+        "classification_change_count": len(changes),
+        "classification_changes": changes,
+        "operation_count_change_count": len(count_changes),
+        "operation_count_changes": count_changes,
+        "definition": (
+            "classification = (recomputed category, all_operations_contracted); "
+            "a file is listed when either changes.  Production-operation count "
+            "movement is listed separately so a count delta is never mistaken "
+            "for a classification delta"),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -887,6 +973,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--compiler-json", required=True)
     ap.add_argument("--gate-log")
     ap.add_argument("--gate-exit", type=int)
+    ap.add_argument("--delta-vs",
+                    help="previous candidate-freeze JSON to classify against")
     ap.add_argument("--out", default=str(HERE / OUT_NAME))
     args = ap.parse_args(argv)
 
@@ -999,56 +1087,26 @@ def main(argv: list[str]) -> int:
             "working_tree_clean": status == "",
             "tracked_working_tree_clean": status == "",
             "untracked_files": untracked,
-            "crate_version": "0.0.38",
+            "crate_version": crate_version(root),
             "src_rs_files": len(paths),
             "src_content_sha256": src_content_hash(root, paths),
             "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
             "binary": {
                 "install_prefix": "artifacts/phase2/install",
                 "artefacts": binary_identity(root),
-                "committed_install_matches_this_source": True,
-                "evidence": "build_phase2 rebuilt from this exact HEAD reproduced all four "
-                "committed hashes byte-for-byte; `git diff a4e511865..HEAD -- src Cargo.toml "
-                "Cargo.lock build.rs artifacts` is empty, so the committed install's compiled "
-                "input surface is this source",
-                "source_delta_since_published_install": {
-                    "install_source": "a4e511865 (0.0.38 rebuild, S62)",
-                    "compiled_inputs_changed": [],
-                    "non_compiled_paths_changed": [
-                        "README.md",
-                        "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
-                        "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md",
-                        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/publish-0.0.38.json",
-                        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s63-admission-inventory.json",
-                        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s63-admission-inventory.md",
-                        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s64-dependency-registry.json",
-                        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s65-workload-templates.json",
-                        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s66-bootgen-segfault.json",
-                        "forensics/tools/downstream_admission_discover.py",
-                        "forensics/tools/downstream_build_link.py",
-                        "forensics/tools/downstream_deps.json",
-                        "forensics/tools/downstream_deps.py",
-                        "forensics/tools/downstream_runtime.py",
-                        "forensics/tools/downstream_template_families.json",
-                        "forensics/tools/downstream_templates.py",
-                        "forensics/tools/l7_poco_aead.cpp",
-                    ],
-                },
+                "committed_install_matches_this_source": None,
+                "match_basis": (
+                    "NOT_ESTABLISHED_BY_THIS_CENSUS: the census binds the source "
+                    "tree and the install artefact digests as found; it does not "
+                    "rebuild the crate, so source/install correspondence remains "
+                    "the build record's claim"),
                 "build_metadata": {
-                    "command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh "
-                    "(CARGO_TARGET_DIR unset; script hardwires /work/target)",
-                    "exit_code": 0,
-                    "log": "court/tmp/v1-build.log",
-                    "log_sha256": sha256_file(root / "court/tmp/v1-build.log"),
-                    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
-                    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
-                    "target": "x86_64-unknown-linux-gnu",
-                    "abi_courts": "11/11 pass (artifacts/phase2/COURTS.json)",
-                },
-                "previous_published_identity": {
-                    "version": "0.0.38",
-                    "source_commit": "a4e511865",
-                    "receipt": "atlas-refresh/publish-0.0.38.json",
+                    "rebuild_performed": False,
+                    "note": (
+                        "This run re-derives the compiler-visible census at the "
+                        "measured source tree; it does not rebuild or relink the "
+                        "install.  The artefact digests above are the binding used "
+                        "by the consumer-closure engine."),
                 },
             },
         },
@@ -1145,32 +1203,19 @@ def main(argv: list[str]) -> int:
         },
         "gates": {
             "v1_clippy_all_targets": gate,
-            "note": "The gate is recorded as observed at this identity. Its failures are "
-            "blockers: eight are Clippy macro-position false positives with a SAFETY "
-            "comment in source, one is a real missing SAFETY in cfg(test) code, and one "
-            "is clippy::absurd_extreme_comparisons in the same cfg(test) module.",
+            "note": (
+                "No pass/fail gate was recorded for this census run: the compiler "
+                "JSON is a census input, not a gate result, and this run did not "
+                "execute the -D warnings gate.  A null gate is NOT a PASS."),
         },
         "commands": [
-            "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec "
-            "bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:$PATH && "
-            "export TMPDIR=/work/court/tmp && export CARGO_BUILD_JOBS=4 && "
-            "unset CARGO_TARGET_DIR && bash forensics/tools/build_phase2.sh'",
-            "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec "
-            "bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:$PATH && "
-            "export TMPDIR=/work/court/tmp && export CARGO_BUILD_JOBS=4 && "
-            "export CARGO_TARGET_DIR=/work/court/target && "
-            "export RUSTFLAGS=\"-W unsafe-code\" && cargo clippy --lib --tests "
-            "--message-format=json -- --cap-lints warn "
-            "-W clippy::undocumented_unsafe_blocks -W clippy::missing_safety_doc'",
-            "python3 forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1_census.py "
-            "--root . --compiler-json court/tmp/v1-clippy.json --gate-log "
-            "court/tmp/v1-gate-clippy.log --gate-exit 101",
-            "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec "
-            "bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:$PATH && "
-            "export TMPDIR=/work/court/tmp && export CARGO_BUILD_JOBS=4 && "
-            "export CARGO_TARGET_DIR=/work/court/target && "
-            "cargo clippy --all-targets --message-format=short -- -D warnings'",
+            "python3 " + " ".join(shlex.quote(a) for a in sys.argv),
+            "compiler input: " + COMPILER_COMMAND + " (message-format=json)",
         ],
+        "commands_note": (
+            "this run regenerates the compiler-visible census and binds the "
+            "existing install artefacts; it does not rebuild or relink the "
+            "crate, so no build command is recorded as executed here"),
         "non_claims": [
             "This is an inventory at one identity, not a discharge of any obligation.",
             "A located SAFETY comment is a statement, not a proof that its preconditions hold.",
@@ -1182,6 +1227,32 @@ def main(argv: list[str]) -> int:
         ],
     }
 
+    if args.delta_vs:
+        prev_path = Path(args.delta_vs)
+        if not prev_path.is_absolute():
+            prev_path = (root / prev_path).resolve()
+        previous = json.loads(prev_path.read_text())
+        delta = classification_delta(result, previous)
+        delta["previous"] = {
+            "path": str(prev_path.relative_to(root))
+            if str(prev_path).startswith(str(root)) else str(prev_path),
+            "source_head": (previous.get("identity") or {}).get("source_head"),
+            "src_content_sha256": (previous.get("identity") or {}).get(
+                "src_content_sha256"),
+            "libcrypto_so_3_sha256": (
+                ((previous.get("identity") or {}).get("binary") or {})
+                .get("artefacts", {}).get("libcrypto.so.3", {}).get("sha256")),
+            "census_carried_forward": bool(previous.get("rebind")),
+            "census_basis": (
+                "the previous census was carried forward rather than regenerated "
+                "at its own source head; the delta therefore includes the source "
+                "movement since the carried census, not only since the previous "
+                "document's source_head" if previous.get("rebind") else
+                "the previous document's census was generated at its source head"),
+            "previous_rebind": previous.get("rebind"),
+        }
+        result["delta_vs_previous"] = delta
+
     Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=False) + "\n")
     print(
         json.dumps(
@@ -1189,19 +1260,25 @@ def main(argv: list[str]) -> int:
                 "out": str(args.out),
                 "source_head": head,
                 "files": len(paths),
+                "crate_version": crate_version(root),
+                "libcrypto_so_3_sha256": result["identity"]["binary"][
+                    "artefacts"]["libcrypto.so.3"]["sha256"],
+                "libssl_so_3_sha256": result["identity"]["binary"][
+                    "artefacts"]["libssl.so.3"]["sha256"],
                 "recomputed_partition": result["partition"]["recomputed"]["partition"],
                 "recomputed_partition_test_first": result["partition"]["recomputed"][
-                    "partition_test_first"
-                ],
+                    "partition_test_first"],
                 "comparable_delta": result["partition"]["recomputed"][
-                    "comparable_delta_vs_normalized_recorded"
-                ],
+                    "comparable_delta_vs_normalized_recorded"],
                 "recorded_partition": result["partition"]["recorded"]["partition"],
                 "changed_category": result["partition"]["delta"]["changed_category_count"],
                 "changed_unsafe_blocks": result["partition"]["delta"]["changed_unsafe_block_count"],
                 "blockers": result["contracts"]["operation_counts"],
                 "compiler_sites": compiler["unique_sites"],
                 "lexical_ops": sum(lexical_by_kind.get(k, 0) for k in uc.OPERATION_KINDS),
+                "classification_change_count": (
+                    result.get("delta_vs_previous", {})
+                    .get("classification_change_count")),
             },
             indent=1,
         )
