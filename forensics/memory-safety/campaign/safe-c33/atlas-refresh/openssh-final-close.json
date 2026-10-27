@@ -1,0 +1,281 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/openssh-final-close/v1",
+  "kind": "conversion-resolver-and-closure-receipt",
+  "receipt": "openssh-final-close",
+  "subphase": "safe-c33 openssh closure: close the six production obligations and the five target-bounded indirect sites, and re-run the BOUNDARY instrument canaries",
+  "date": "2026-10-27",
+  "source_identity": {
+    "branch": "integrate/safe-c33",
+    "head": "2ff3019472b31d76dbf521ebec055d8d6b5f49a0",
+    "working_tree": "dirty; this subagent did not commit or push",
+    "changed_source_sha256": {
+      "src/evp/legacy_mdc2.rs": "32a97e79661a12fc6339b5c357e80e387c9aeb98704a55d5e93a0d58042030e4",
+      "src/evp/legacy_sha3.rs": "bdda6643901a4a034d1beb6e5a853532ed291f3501f1fea9b09dc7c30ee1231f",
+      "src/provider/encode_key2text.rs": "5a5abd782b93786d148a7de62f82caa03e75152c2313562e80769bb7c5c6fb85",
+      "src/sm3/legacy_sm3.rs": "493cef9fe4486a00c6c71efb42dbe82fae2d1ff02eaffee01f134c0a9368c0b1",
+      "docs/SECURITY_DIVERGENCE_POLICY.md": "bc774acdee0d638a3dbfa428834fe72818aa04a0d88820d417beeb71595eed82",
+      "forensics/tools/consumer_closure.py": "73c4a238b262a0525b1fd4e7bb0d0f66f6d5e35b4255974232cd93e9cc75d3d9",
+      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "063bf2917c7ee31ec3bf1f70120fcdb2f9b9665649ed031be51938440f4efb7c",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-close-sites.json": "7c601cead5ea9e066963fc063d3d95d90be3a2255cc5eb260497b239244c12ef"
+    },
+    "pre_existing_working_tree_changes": "artifacts/phase2/install/, forensics/atlas/implemented-surface.json, forensics/downstream/*.json, src/digest/blake2.rs and the previous subphase's consumer_closure.py edits; this batch built on them and did not revert them."
+  },
+  "authority": {
+    "openssl": "3.6.4 (forensics/authorities/prefix/openssl-3.6.4-production)",
+    "libcrypto_sha256": "482fca3da906a8d7ac99bd88c6d6633226b6d47c3a20d9a2d60ba3eb2b2640b2",
+    "source": "crypto/evp/legacy_meth.h:10-36, crypto/evp/legacy_mdc2.c, crypto/evp/legacy_sha.c, crypto/sm3/legacy_sm3.c, providers/implementations/encode_decode/encode_key2text.c:625-632"
+  },
+  "task_a_obligations": {
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1e-candidate-freeze.json",
+    "inventory_blockers_in_scope": 6,
+    "discharge_receipt": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-close-sites.json",
+    "authority_measurement": "Eight one-process C probes (mdc2, SHA3-256, SHAKE128, SM3 x fresh EVP_MD_CTX_new()/NULL ctx) against the pinned 3.6.4 install: every probe printed md_data=(nil) digest=(nil) or ctx=NULL and exited 139 (SIGSEGV). key2text_newctx/freectx are static provider callbacks (encode_key2text.c:625-632); a conforming C caller cannot obtain them outside the OSSL_DISPATCH table and they dereference nothing, so no crash shape exists.",
+    "sites": [
+      {
+        "id": "OSSH-FC-001",
+        "inventory_site": "src/evp/legacy_mdc2.rs:123 mdc2_init",
+        "pre_fix_crash": "cargo test --lib legacy_mdc2_init_refuses_context_without_md_data_and_inits_bound_context: panicked at src/digest/mdc2.rs:133:9 'null pointer dereference occurred'; process aborted (SIGABRT).",
+        "fix": "mdc2_init validates ctx, md_data, digest and the block extent through init_md_data before writing; refused shapes return 0.",
+        "test": "evp::legacy_mdc2::tests::legacy_mdc2_init_refuses_context_without_md_data_and_inits_bound_context",
+        "authority_comparison": "8/8 authority init probes SIGSEGV; the crate returns 0 on exactly those shapes and initialises the bound path. Section 17 D-LEGACY-MD-INIT-MD-DATA-2."
+      },
+      {
+        "id": "OSSH-FC-002",
+        "inventory_site": "src/evp/legacy_sha3.rs:198 sha3_int_init",
+        "pre_fix_crash": "cargo test --lib legacy_sha3_init_refuses_context_without_md_data_and_inits_bound_context: panicked at src/evp/legacy_sha3.rs:203:22 'null pointer dereference occurred'; process aborted (SIGABRT).",
+        "fix": "sha3_int_init validates ctx, md_data, digest, the owner table set and md_size through init_keccak before reading or writing; refused shapes return 0.",
+        "test": "evp::legacy_sha3::tests::legacy_sha3_init_refuses_context_without_md_data_and_inits_bound_context",
+        "authority_comparison": "authority SHA3-256 fresh/NULL probes SIGSEGV; the crate returns 0, and the bound path still gives SHA3-256(abc)=3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532. Section 17 D-LEGACY-MD-INIT-MD-DATA-2."
+      },
+      {
+        "id": "OSSH-FC-003",
+        "inventory_site": "src/evp/legacy_sha3.rs:237 shake_init",
+        "pre_fix_crash": "cargo test --lib legacy_shake_init_refuses_context_without_md_data_and_inits_bound_context: panicked at src/evp/legacy_sha3.rs:240:22 'null pointer dereference occurred'; process aborted (SIGABRT).",
+        "fix": "shake_init applies the same init_keccak validation over the two SHAKE table objects; refused shapes return 0.",
+        "test": "evp::legacy_sha3::tests::legacy_shake_init_refuses_context_without_md_data_and_inits_bound_context",
+        "authority_comparison": "authority SHAKE128 fresh/NULL probes SIGSEGV; the crate returns 0 and the bound path initialises. Section 17 D-LEGACY-MD-INIT-MD-DATA-2."
+      },
+      {
+        "id": "OSSH-FC-004",
+        "inventory_site": "src/provider/encode_key2text.rs:179 key2text_newctx",
+        "pre_fix_crash": "none: the authority function returns provctx unchanged and dereferences nothing. The unsafe marker was vestigial.",
+        "fix": "removed the unsafe marker; key2text_newctx is now a safe extern \"C\" fn. No unsafe operation remains.",
+        "test": "provider dispatch table construction is unchanged (the entry is still stored as *mut c_void); no new runtime test is needed for a function with no operation.",
+        "authority_comparison": "authority encode_key2text.c:625-628 is `return provctx;`; static; reachable only through OSSL_DISPATCH."
+      },
+      {
+        "id": "OSSH-FC-005",
+        "inventory_site": "src/provider/encode_key2text.rs:185 key2text_freectx",
+        "pre_fix_crash": "none: the authority function is empty and dereferences/releases nothing. The unsafe marker was vestigial.",
+        "fix": "removed the unsafe marker; key2text_freectx is now a safe extern \"C\" fn. No unsafe operation remains.",
+        "test": "provider dispatch table construction is unchanged; no runtime operation exists to fault.",
+        "authority_comparison": "authority encode_key2text.c:630-632 is an empty body with ossl_unused void *vctx."
+      },
+      {
+        "id": "OSSH-FC-006",
+        "inventory_site": "src/sm3/legacy_sm3.rs:125 sm3_int_init",
+        "pre_fix_crash": "cargo test --lib legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context: panicked at library/core/src/ptr/mod.rs:702:9 'ptr::write_bytes requires that the destination pointer is aligned and non-null'; process aborted (SIGABRT).",
+        "fix": "sm3_int_init validates ctx, md_data, digest and the block extent through init_md_data before writing; refused shapes return 0.",
+        "test": "sm3::legacy_sm3::tests::legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context",
+        "authority_comparison": "authority SM3 fresh/NULL probes SIGSEGV; the crate returns 0, and the bound path still gives SM3(abc)=66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0. Section 17 D-LEGACY-MD-INIT-MD-DATA-2."
+      }
+    ],
+    "focused_result": "PASS: 4/4 focused tests passed (1 passed each, 0 failed)."
+  },
+  "task_b_indirect_sites": {
+    "resolver_changes": [
+      "switch-table length: a relative jump table is now decoded only to the compiler's own bound (`cmp $N, idx` + unsigned-above branch; N+1 entries, N for jae), keyed by the jump address and accepted only when the compare's register is the same register as the table load's scaled index; an unrecognised or mismatched bound keeps the conservative scan. The previous 64 KiB scan read past the table into unrelated .rodata and invented target addresses.",
+      "compare suffix: objdump prints a size suffix on memory-operand compares (`cmpq $0,(%rsp)`). The bare-`cmp` test missed it and the generic fall-through treated the compare operand as a store destination, clearing the tracked stack slot at 0x3a12b9."
+    ],
+    "sites": [
+      {
+        "address": "0x3a11d0",
+        "symbol": "openssl_rs::ec::smpl2::ossl_ec_GF2m_simple_is_on_curve",
+        "old_reason": "stack-slot-open",
+        "store_traced": "The slot is written at 0x3a125d (`mov %rax,(%rsp)`); %rax was loaded at 0x3a1256 from 0x100(%rax), where %rax at 0x3a124c is `*(group)` (EC_GROUP->meth). Offset 0x100 of the in-image EcMethod layout is `field_sqr`. The slot was lost because `cmpq $0x0,(%rsp)` at 0x3a12b9 was treated as a store and set it TOP; with the compare fix it stays ('field',0x100).",
+        "bounded_targets": [
+          "0x285de0 ossl_ec_GFp_mont_field_sqr (EC_GFP_MONT_METHOD, 0x7ee410 + 0x100)",
+          "0x2f6a50 ossl_ec_GFp_simple_field_sqr (EC_GFP_SIMPLE_METHOD, 0x801e78 + 0x100)",
+          "0x39d200 ossl_ec_GFp_nist_field_sqr (EC_GFP_NIST_METHOD, 0x81c330 + 0x100)",
+          "0x3a05e0 ossl_ec_GF2m_simple_field_sqr (EC_GF2M_SIMPLE_METHOD, 0x81c838 + 0x100)"
+        ],
+        "evidence": "The four are the only defined data symbols of size 448 in .data.rel.ro in this image; each is a link-time EcMethod table, and the entries at 0x100 are relocation-resolved function pointers. EC_METHOD is opaque in OpenSSL 3.x, so a conforming caller cannot install an external table; the four exported constructors return these tables.",
+        "closure_status": "Not reachable. Its only referring edge was the switch at 0x379b0c in tls12_client_drive (base 0x64980c, real bound 17 entries); the real table does not contain 0x3a11d0. The old 64 KiB over-scan did. After the bound fix there are zero referrers, so the site does not enter the residual list."
+      },
+      {
+        "address": "0x470220",
+        "symbol": "CRYPTO_nistcts128_decrypt_block",
+        "old_reason": "reg-value-partial[int] (call *%r9)",
+        "operand": "The fifth argument (`block128_f block`, %r9), propagated to %r14 for the second call.",
+        "evidence": "The two only referring edges were the switches at 0x45fb5f in dgram_ctrl (base 0x65dc40, real bound 98 entries) and 0x4697a0 in ossl_x509v3_cache_extensions (base 0x65ddd8, real bound 52 entries). Neither real table contains 0x470220; the old 64 KiB scans did. After the bound fix there are zero referrers.",
+        "resolution": "Not resolvable from the image: `block` is a caller-supplied block function (the public CRYPTO_nistcts128_decrypt_block ABI), and the only in-image callers do not exist. The value is not claimed as a bounded target set.",
+        "closure_status": "Not reachable after the switch-bound correction."
+      },
+      {
+        "address": "0x470220",
+        "symbol": "CRYPTO_nistcts128_decrypt_block",
+        "old_reason": "reg-value-partial[int] (call *%r14)",
+        "operand": "The same fifth argument after the in-function move to %r14.",
+        "evidence": "Same two referring switch edges and the same real-table exclusion as the %r9 site.",
+        "resolution": "Not resolvable from the image for the same caller-supplied block-function reason; not claimed.",
+        "closure_status": "Not reachable after the switch-bound correction."
+      },
+      {
+        "address": "0x34eb30",
+        "symbol": "EVP_PKEY_type_names_do_all",
+        "old_reason": "reg-value-partial[int] (call *%r14)",
+        "operand": "The second argument (`void (*fn)(const char *, void *)`, %rsi -> %r14).",
+        "evidence": "The only referring edge was the switch at 0x2d514e in rsa_pss_to_text (base 0x63ef3c, real bound 4 entries: 0x2d5150, 0x2d519e, 0x2d5183, 0x2d5195). The real table does not contain 0x34eb30; the old 64 KiB scan did. After the bound fix there are zero referrers.",
+        "resolution": "Not resolvable from the image: `fn` is a caller-supplied callback (public EVP_PKEY_type_names_do_all ABI). The value is not claimed as a bounded target set.",
+        "closure_status": "Not reachable after the switch-bound correction."
+      },
+      {
+        "address": "0x54cec0",
+        "symbol": "openssl_rs::provider::cipher::ossl_aes_gcm_siv_dinit",
+        "old_reason": "base-slot-partial (call *(%rax))",
+        "operand": "%rax is loaded from 0x8(%r14), i.e. the context field `ctx->hw` (ProvAesGcmSivCtx.hw).",
+        "base_recovered": "`ossl_aes_gcm_siv_newctx` stores `ossl_prov_cipher_hw_aes_gcm_siv(keybits)` into `(*ctx).hw`; that function returns `&AES_GCM_SIV_HW`, a 32-byte static table at 0x87d550 in .data.rel.ro. Its slot 0 is `aes_gcm_siv_initkey` (0x549dd0), so the target set for this call is {aes_gcm_siv_initkey}.",
+        "resolver_limitation": "The resolver's field-store summary is keyed by byte offset only. Offset 8 is written with a TOP value by unrelated types, so the summary is open and cannot express 'the constructor of this context installed AES_GCM_SIV_HW at offset 8'. The base was recovered by reading the constructor store and the static table from the exact image, not by the offset-only abstract domain; the rule cannot be encoded without type-aware field tracking, so no invented bound is claimed.",
+        "closure_status": "Not reachable. The only referring edge was the switch at 0x50ed85 in evp_rand_from_algorithm (base 0x68c838, real bound 20 entries); the real table does not contain 0x54cec0. After the bound fix there are zero referrers."
+      }
+    ],
+    "summary": "All five sites disappear from the reachable residual set because their only referring edges were switch over-scans past the compiler's table bound. Independently, the 0x3a11d0 store is traced to group->meth->field_sqr and bounded by the four in-image EcMethod tables; 0x54cec0's base is recovered to &AES_GCM_SIV_HW and its target to aes_gcm_siv_initkey. The three caller-callback sites (0x470220 x2, 0x34eb30) are not resolvable from the image and are not claimed."
+  },
+  "resolver_negative_controls": {
+    "self_test_command": "python3 forensics/tools/consumer_closure.py --self-test",
+    "result": "PASS",
+    "checks": [
+      "compare mnemonic with size suffix: cmp/cmpq/testb true, cmovne false",
+      "switch bound decodes only the live entries: a 3-entry bound returns {0x200,0x300,0x400} and excludes the following 0x500 entry",
+      "switch without a bound keeps the conservative scan (negative control): 0x500 is admitted when no bound is decodable",
+      "switch bound recorded from cmp/ja: a synthetic `cmp $0x2; ja; lea #1000; movslq; jmp *rax` records 3 entries at the jump address",
+      "switch without cmp keeps no bound (negative control): an indirect jump with no cmp records no bound",
+      "switch bound ignores a compare of a different register (negative control): a cmp of %ebx beside a table indexed by %rax records no bound"
+    ]
+  },
+  "task_c_boundary_canaries": {
+    "venue": "docker/openssl-rs-court.sh with OPENSSL_RS_COURT_DATA=unlimited; the default 4 GiB RLIMIT_DATA cannot reserve ASan's shadow, so the disposable court was recreated with the documented override. No docker/ file was edited.",
+    "miri": {
+      "toolchain": "nightly-2026-10-01, miri 0.1.0 (21b707e3f9 2026-09-30)",
+      "canary": "temporary test runtime::miri_tcb::miri_negative_control_detects_heap_use_after_free (deliberate use-after-free through std::alloc); removed with `git checkout -- src/runtime/miri_tcb.rs` after the run",
+      "stacked_borrows": "MIRIFLAGS='-Zmiri-strict-provenance' cargo +nightly-2026-10-01 miri test --lib miri_negative_control_detects_heap_use_after_free -> 'error: Undefined Behavior: memory access failed: alloc... has been freed, so this pointer is dangling'; exit 1 (test failed by design)",
+      "tree_borrows": "same with -Zmiri-tree-borrows -> same Undefined Behavior; exit 1",
+      "conclusion": "the Miri detector fires under both borrow models at this source identity"
+    },
+    "asan": {
+      "toolchain": "nightly-2026-10-01, rustc -Zsanitizer=address -Cdebuginfo=1 -Clinker=clang",
+      "canary": "forensics/tools/asan_canary.rs (committed deliberate heap use-after-free and heap overflow)",
+      "result": "ERROR: AddressSanitizer: heap-use-after-free; SUMMARY: AddressSanitizer: heap-use-after-free; exit 1",
+      "conclusion": "the ASan instrument fires with the same -Zsanitizer=address used for the crate"
+    },
+    "tsan": {
+      "toolchain": "nightly-2026-10-01, rustc -Zsanitizer=thread -Cunsafe-allow-abi-mismatch=sanitizer -Cdebuginfo=1 -Clinker=clang",
+      "canary": "forensics/tools/tsan_canary.rs (committed deliberate unsynchronised read/write)",
+      "result": "WARNING: ThreadSanitizer: data race; SUMMARY: ThreadSanitizer: data race ... core::ptr::read_volatile; exit 66",
+      "conclusion": "the TSan instrument fires at this venue"
+    },
+    "not_run": [
+      "the full instrumented library suites and the Loom/Kani/mutation controls at this source identity; only the deliberate-failure canaries were requested and run for this batch"
+    ]
+  },
+  "gates": {
+    "fmt": "PASS: cargo fmt --all -- --check (no output)",
+    "check": "PASS: cargo check --lib",
+    "clippy": "PASS: cargo clippy --all-targets -- -D warnings",
+    "full_library": "PASS: cargo test --lib -- --test-threads=4: 2208 passed, 0 failed, 52 ignored",
+    "container": "docker/openssl-rs-court.sh, CARGO_BUILD_JOBS=4, CARGO_TARGET_DIR=/work/court/target"
+  },
+  "closure_rerun": {
+    "tool": "forensics/tools/consumer_closure.py (this batch's resolver plus the ABI_CONTRACT_* encoding)",
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1e-candidate-freeze.json",
+    "install": "artifacts/phase2/install (libcrypto c2d736..., libssl 1ffdf7...)",
+    "ssh": {
+      "receipt": "court/tmp/seal-closure-final2/closure-ssh.json",
+      "artifact": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh (c8723f34...)",
+      "reachable_files": 316,
+      "reachable_production_obligations": 1,
+      "DISCHARGED": 1,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "refusals": [],
+      "precision": {
+        "indirect_sites": 51944,
+        "resolved_sites": 51671,
+        "unresolved_sites": 273,
+        "reachable_unresolved_sites": 28,
+        "reachable_target_bounded_unresolved_sites": 0,
+        "reachable_contract_bounded_sites": 28,
+        "unclassified_reachable_sites": 0,
+        "contract_bounded_by_class": {
+          "ABI_CONTRACT_PROVIDER": 25,
+          "ABI_CONTRACT_ALLOCATOR": 3
+        }
+      },
+      "receipt_sha256": "bca3c26238d78d3d337b8edbd7139415a56ed6d313e8887ab996705583b57d71"
+    },
+    "sshd": {
+      "receipt": "court/tmp/seal-closure-final2/closure-sshd.json",
+      "artifact": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd (dccccf07...)",
+      "reachable_files": 306,
+      "reachable_production_obligations": 1,
+      "DISCHARGED": 1,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "refusals": [],
+      "precision": {
+        "indirect_sites": 51944,
+        "resolved_sites": 51671,
+        "unresolved_sites": 273,
+        "reachable_unresolved_sites": 28,
+        "reachable_target_bounded_unresolved_sites": 0,
+        "reachable_contract_bounded_sites": 28,
+        "unclassified_reachable_sites": 0,
+        "contract_bounded_by_class": {
+          "ABI_CONTRACT_PROVIDER": 25,
+          "ABI_CONTRACT_ALLOCATOR": 3
+        }
+      },
+      "receipt_sha256": "97339d817a528a7b191319264828cab0419083f09ee060d82a3f56dd8d657371"
+    },
+    "obligation_count_note": "The inventory still contains the six blocker entries in the four files; the closure's reachable set is the intersection with the current graph. After the switch-bound correction only src/sm3/legacy_sm3.rs:125 remains reachable; the other five are not reachable in this workload. The site receipt covers all six so a future workload that reaches them still has the disposition.",
+    "predicate_element_7": {
+      "established": true,
+      "status": "PASS (contract-bounded)",
+      "reachable_unresolved_sites": 28,
+      "target_bounded_unresolved_sites": 0,
+      "contract_bounded_sites": 28,
+      "unclassified_reachable_sites": 0,
+      "why": "every reachable unresolved site is contract-bounded by a public OpenSSL ABI contract (section 7 criterion 2); no target-bounded unresolved site and no unclassified site remains"
+    },
+    "other_elements": {
+      "1_exact_candidate_identity": "PARTIAL: the source tree is dirty and nothing is committed; the install identity is the v1e one.",
+      "2_exact_consumer_identity": "PARTIAL: the ssh/sshd digests are recorded and unchanged; the runtime rows still do not embed the consumer digest.",
+      "3_fresh_l7_parity": "PASS (carried from openssh-seal-prep; not re-measured in this batch).",
+      "4_loader_and_abi": "PASS (carried from openssh-seal-prep; not re-measured in this batch).",
+      "5_dependency_closure_complete": "PASS at this closure run: 0 refusals, 0 UNKNOWN, 1 reachable obligation discharged.",
+      "6_every_applicable_obligation_discharged": "PASS at this closure run: DISCHARGED=1, BLOCKED=0, UNKNOWN=0 for each binary.",
+      "7_no_unresolved_dynamic_dispatch": "PASS (contract-bounded): 0 target-bounded, 28 contract-bounded, 0 unclassified.",
+      "8_relevant_boundary_instruments": "PARTIAL: the Miri/ASan/TSan deliberate-failure canaries ran and fired; the full instrumented suites and Loom/Kani/mutation are NOT_RUN for this source identity.",
+      "9_seal_requirements": "PARTIAL: the gates and the closure rerun ran; full forensic regeneration and a release-candidate seal are NOT_RUN.",
+      "10_independent_review": "NOT_RUN."
+    },
+    "verdict_change": "The openssh and openssh-server closures move from REFUSED to ACCEPTED and element 7 moves from FAIL to PASS. SAFE_COMPATIBLE remains false and no family graduates."
+  },
+  "regressions_and_findings": [
+    "The 64 KiB switch-table scan was inventing reachability: three small compiler tables were decoded far past their bounds and admitted the five sites' containing functions. Bounding the decode to the compiler's own cmp/ja bound reduced the reachable set from the pre-fix reproduction's 354 (ssh) / 343 (sshd) to 316 / 306 and removed all five target-bounded sites. The stricter rule requires the bound compare to use the table's own index register; a table whose bound is not recognisable keeps the conservative scan.",
+    "The `cmpq`/`testb` suffix miss was a real resolver defect: a compare of a stack slot cleared the slot, which is why the 0x3a11d0 store appeared open even though it was written in the same frame.",
+    "The 0x3a11d0 store is a method-table load, not an object-field store: the four EcMethod tables bound it to their field_sqr entries. The resolver's offset-only field abstraction cannot express that relation; the site is not reachable in this closure.",
+    "The 0x54cec0 base is recoverable from the constructor store and the AES_GCM_SIV_HW static table, but the resolver's open offset-8 summary cannot express the constructor/type relation. It is not claimed as a resolver resolution.",
+    "The two key2text provider callbacks carried only a vestigial unsafe marker; removing it is an elimination, not a contract."
+  ],
+  "non_claims": [
+    "This is not a SAFE_COMPATIBLE promotion and not a mechanism-wide SAFETY_DISCHARGED claim; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED.",
+    "The three caller-supplied callback sites (0x470220 x2, 0x34eb30) are not resolved to a bounded target set and are not claimed to be; they are closed only because the switch-bound correction removes their false reachability in this closure.",
+    "The 0x3a11d0 and 0x54cec0 base recoveries are image-level evidence, not a new resolver rule; the tool did not encode them.",
+    "Absence of an ASan/TSan report is not a proof of memory safety; the canaries prove the instruments fire, not that the crate has no defect.",
+    "The measured V1 OpenSSH binaries do not contain the four legacy-init source fixes; no L4/L7 re-run is offered for this source edit.",
+    "Independent review (element 10) is NOT_RUN."
+  ]
+}

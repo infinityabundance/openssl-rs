@@ -1,0 +1,195 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/site-enumerating-boundary-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-final-close",
+  "subphase": "safe-c33 openssh closure: the six remaining production obligations in the four legacy initialiser / text-encoder files",
+  "date": "2026-10-27",
+  "candidate": {
+    "branch": "integrate/safe-c33",
+    "parent_head": "2ff3019472b31d76dbf521ebec055d8d6b5f49a0",
+    "source_state": "uncommitted working tree on top of the parent head; this subagent does not commit or push",
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1e-candidate-freeze.json",
+    "inventory_head": "2ff3019472b31d76dbf521ebec055d8d6b5f49a0"
+  },
+  "authority": {
+    "openssl": "3.6.4 (forensics/authorities/prefix/openssl-3.6.4-production)",
+    "libcrypto_sha256": "482fca3da906a8d7ac99bd88c6d6633226b6d47c3a20d9a2d60ba3eb2b2640b2",
+    "source": "crypto/evp/legacy_meth.h:10-36, crypto/evp/legacy_mdc2.c, crypto/evp/legacy_sha.c, crypto/sm3/legacy_sm3.c, providers/implementations/encode_decode/encode_key2text.c:625-632",
+    "macro_body": "IMPLEMENT_LEGACY_EVP_MD_METH(_LC) emits `return fn##_Init(EVP_MD_CTX_get0_md_data(ctx))` with no NULL test on ctx or md_data; the SHA-3/SHAKE initialisers additionally read ctx->digest->md_size. key2text_newctx/freectx are static provider callbacks: newctx returns provctx, freectx is empty."
+  },
+  "defect": {
+    "id": "D-LEGACY-MD-INIT-MD-DATA-2 (extension of D-1)",
+    "class": "write or read through a NULL / caller-unestablished md_data and digest",
+    "sites": [
+      "src/evp/legacy_mdc2.rs:123 mdc2_init",
+      "src/evp/legacy_sha3.rs:198 sha3_int_init",
+      "src/evp/legacy_sha3.rs:237 shake_init",
+      "src/sm3/legacy_sm3.rs:125 sm3_int_init"
+    ],
+    "reachability": "EVP_MD_meth_get_init (src/evp/digest.rs; libcrypto.ld) returns the callback to any C caller. A fresh EVP_MD_CTX_new() is zero-filled, so md_data and digest are NULL; a NULL ctx dereferences NULL as well. The getter's documented contract does not establish either precondition.",
+    "vestigial_unsafe": [
+      "src/provider/encode_key2text.rs:179 key2text_newctx",
+      "src/provider/encode_key2text.rs:185 key2text_freectx"
+    ]
+  },
+  "reproduction": {
+    "authority": "Eight one-process C probes against the pinned 3.6.4 install, four digests x {fresh EVP_MD_CTX_new(), NULL ctx}: every probe printed md_data=(nil) digest=(nil) (fresh) or ctx=NULL and exited 139 (SIGSEGV).",
+    "before_fix_candidate": {
+      "mdc2": "cargo test --lib legacy_mdc2_init_refuses_context_without_md_data_and_inits_bound_context: panicked at src/digest/mdc2.rs:133:9 'null pointer dereference occurred'; process aborted (SIGABRT).",
+      "sha3": "cargo test --lib legacy_sha3_init_refuses_context_without_md_data_and_inits_bound_context: panicked at src/evp/legacy_sha3.rs:203:22 'null pointer dereference occurred'; process aborted (SIGABRT).",
+      "shake": "cargo test --lib legacy_shake_init_refuses_context_without_md_data_and_inits_bound_context: panicked at src/evp/legacy_sha3.rs:240:22 'null pointer dereference occurred'; process aborted (SIGABRT).",
+      "sm3": "cargo test --lib legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context: panicked at library/core/src/ptr/mod.rs:702:9 'ptr::write_bytes requires that the destination pointer is aligned and non-null'; process aborted (SIGABRT).",
+      "key2text": "No crash shape exists: the authority's key2text_newctx/freectx are static provider callbacks that dereference no pointer, and a conforming C caller cannot obtain them outside the OSSL_DISPATCH table."
+    },
+    "after_fix_candidate": "The four focused tests pass (1 passed each, 0 failed) and the bound paths produce MDC2 init=1, SHA3-256(\"abc\")=3a985da7..., SHAKE128 init=1, SM3(\"abc\")=66c7f0f4..."
+  },
+  "fix": {
+    "shape": "Each of the four legacy initialisers calls a private init helper before writing. MDC2 and SM3 use init_md_data(ctx, owner, size), the same contract as the hardened SHA-1/SHA-224/MD5/BLAKE2 initialisers: it refuses a NULL ctx, NULL md_data, NULL digest and a method whose ctx_size is smaller than the digest context. SHA-3/SHAKE use init_keccak(ctx, owners), which applies the same checks over the set of table objects the shared callback is installed on and additionally requires a positive digest md_size. A refusal answers 0, the C initialise failure value, touching no memory.",
+    "normal_path": "A context bound to the callback's own table object (or to a method with ctx_size >= the digest context) still calls the authority's *_Init/ossl_sha3_init and returns its value. Digest maths and result values are unchanged.",
+    "key2text": "The two provider callbacks were safe all along: the `unsafe` marker was vestigial. It was removed; they are now safe extern \"C\" fns with no unsafe operation left.",
+    "authority_comparison": "§17 divergence, not compatibility: the authority performs the NULL write/read and faults. The crate does not reproduce UB; it returns 0 on exactly the shapes where the authority does not return. Recorded as D-LEGACY-MD-INIT-MD-DATA-2 in docs/SECURITY_DIVERGENCE_POLICY.md."
+  },
+  "boundaries": [
+    {
+      "id": "OSSH-FC-001",
+      "file": "src/evp/legacy_mdc2.rs",
+      "line": 123,
+      "inventory_line": 123,
+      "current_line": 179,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "mdc2_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_state": "UNSAFE_OPERATION",
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_mdc2.rs:123 - mdc2_init validates ctx, md_data, digest and the block extent through init_md_data before writing; a fresh EVP_MD_CTX_new(), a NULL context, a NULL md_data, a NULL method and a too-small app_datasize all answer 0 and touch no memory, while the bound table path still calls MDC2_Init and returns 1 (evp::legacy_mdc2::tests::legacy_mdc2_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-2)",
+      "contract": "`ctx` is NULL or a live `EVP_MD_CTX`; the callback establishes a writable `MDC2_CTX` from the context before writing. A context bound to `MDC2_MD` (or to another method with `ctx_size >= size_of::<Mdc2Ctx>()`) with a non-NULL `md_data` is initialised; every other C-valid shape is refused with 0.",
+      "established_by": [
+        "source: src/evp/legacy_mdc2.rs init_md_data validates ctx, md_data, digest and the block extent before any write; mdc2_init refuses every shape that does not establish a writable MDC2_CTX",
+        "test: evp::legacy_mdc2::tests::legacy_mdc2_init_refuses_context_without_md_data_and_inits_bound_context covers fresh EVP_MD_CTX_new(), NULL ctx, and the bound table path. The pre-fix candidate aborts at src/digest/mdc2.rs:133 with 'null pointer dereference occurred' (SIGABRT).",
+        "authority: two C probes against the pinned 3.6.4 install (fresh and NULL context) each exit 139 (SIGSEGV) in the initialiser write"
+      ],
+      "residual": "A C-invalid pointer remains outside the C contract, as for every exported pointer-taking entry point. The owner-table branch accepts a manually bound context with non-NULL md_data; the public API cannot construct that state.",
+      "rebind": {
+        "from_line": 123,
+        "to_line": 179,
+        "method": "V1 inventory coordinate retained; current line re-derived on the hardened source"
+      }
+    },
+    {
+      "id": "OSSH-FC-002",
+      "file": "src/evp/legacy_sha3.rs",
+      "line": 198,
+      "inventory_line": 198,
+      "current_line": 253,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3_int_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_state": "UNSAFE_OPERATION",
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha3.rs:198 - sha3_int_init validates ctx, md_data, digest, the owner table set and md_size through init_keccak before reading or writing; a fresh EVP_MD_CTX_new(), a NULL context, a NULL md_data/digest, a method with a too-small app_datasize and a non-positive md_size all answer 0, while the bound SHA3-256 path still produces the authority digest (evp::legacy_sha3::tests::legacy_sha3_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-2)",
+      "contract": "`ctx` is NULL or a live `EVP_MD_CTX`; the callback establishes a writable `KeccakCtx` and a positive bit length from the context before writing. A context bound to one of the four SHA-3 table objects (or to another method with `ctx_size >= size_of::<KeccakCtx>()`) with a non-NULL `md_data` and a positive `md_size` is initialised; every other C-valid shape is refused with 0.",
+      "established_by": [
+        "source: src/evp/legacy_sha3.rs init_keccak validates ctx, md_data, digest, the owner set and md_size before any write; sha3_int_init refuses every shape that does not establish a writable KeccakCtx",
+        "test: evp::legacy_sha3::tests::legacy_sha3_init_refuses_context_without_md_data_and_inits_bound_context covers fresh EVP_MD_CTX_new(), NULL ctx, and the bound SHA3-256(\"abc\") path. The pre-fix candidate aborts at src/evp/legacy_sha3.rs:203 with 'null pointer dereference occurred' (SIGABRT).",
+        "authority: two C probes against the pinned 3.6.4 install (fresh and NULL context) each exit 139 (SIGSEGV)"
+      ],
+      "residual": "A C-invalid pointer remains outside the C contract. A caller may install this exported callback on its own method; the ctx_size branch admits that only when the block is large enough for KeccakCtx.",
+      "rebind": {
+        "from_line": 198,
+        "to_line": 253,
+        "method": "V1 inventory coordinate retained; current line re-derived on the hardened source"
+      }
+    },
+    {
+      "id": "OSSH-FC-003",
+      "file": "src/evp/legacy_sha3.rs",
+      "line": 237,
+      "inventory_line": 237,
+      "current_line": 309,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "shake_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_state": "UNSAFE_OPERATION",
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha3.rs:237 - shake_init applies the same init_keccak validation as sha3_int_init over the two SHAKE table objects; a fresh EVP_MD_CTX_new(), a NULL context, a NULL md_data/digest, a too-small app_datasize and a non-positive md_size all answer 0, while the bound SHAKE128 path still initialises (evp::legacy_sha3::tests::legacy_shake_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-2)",
+      "contract": "`ctx` is NULL or a live `EVP_MD_CTX`; the callback establishes a writable `KeccakCtx` and a positive bit length from the context before writing. A context bound to one of the two SHAKE table objects (or to another method with `ctx_size >= size_of::<KeccakCtx>()`) with a non-NULL `md_data` and a positive `md_size` is initialised; every other C-valid shape is refused with 0.",
+      "established_by": [
+        "source: src/evp/legacy_sha3.rs init_keccak is shared with sha3_int_init and applies the same checks; shake_init passes the SHAKE owner set",
+        "test: evp::legacy_sha3::tests::legacy_shake_init_refuses_context_without_md_data_and_inits_bound_context covers fresh EVP_MD_CTX_new(), NULL ctx, and the bound SHAKE128 path. The pre-fix candidate aborts at src/evp/legacy_sha3.rs:240 with 'null pointer dereference occurred' (SIGABRT).",
+        "authority: two C probes against the pinned 3.6.4 install (fresh and NULL context) each exit 139 (SIGSEGV)"
+      ],
+      "residual": "A C-invalid pointer remains outside the C contract; the ctx_size branch admits a caller method only when the block is large enough for KeccakCtx.",
+      "rebind": {
+        "from_line": 237,
+        "to_line": 309,
+        "method": "V1 inventory coordinate retained; current line re-derived on the hardened source"
+      }
+    },
+    {
+      "id": "OSSH-FC-004",
+      "file": "src/provider/encode_key2text.rs",
+      "line": 179,
+      "inventory_line": 179,
+      "current_line": 184,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "key2text_newctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_state": "ELIMINATED",
+      "disposition": "SAFETY_DISCHARGED: src/provider/encode_key2text.rs:179 - key2text_newctx dereferences no pointer and allocates nothing: it returns the opaque provider context by value. The vestigial unsafe marker was removed, so no unsafe operation remains (authority encode_key2text.c:625-628).",
+      "contract": "No caller precondition beyond the provider dispatch ABI: `provctx` is the opaque handle the core received from this provider's OSSL_provider_init and is returned unchanged.",
+      "established_by": [
+        "authority: providers/implementations/encode_decode/encode_key2text.c:625-628 is `return provctx;` and the function is static; it is reachable only through the OSSL_DISPATCH table",
+        "source: src/provider/encode_key2text.rs now declares a safe extern \"C\" fn; the dispatch table still stores it as *mut c_void"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-FC-005",
+      "file": "src/provider/encode_key2text.rs",
+      "line": 185,
+      "inventory_line": 185,
+      "current_line": 194,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "key2text_freectx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_state": "ELIMINATED",
+      "disposition": "SAFETY_DISCHARGED: src/provider/encode_key2text.rs:185 - key2text_freectx is empty: it neither dereferences nor releases `vctx`, which is the provider context key2text_newctx returned. The vestigial unsafe marker was removed, so no unsafe operation remains (authority encode_key2text.c:630-632).",
+      "contract": "No caller precondition beyond the provider dispatch ABI: `vctx` is the value `key2text_newctx` returned and is not touched.",
+      "established_by": [
+        "authority: providers/implementations/encode_decode/encode_key2text.c:630-632 has an empty body with `ossl_unused void *vctx`",
+        "source: src/provider/encode_key2text.rs now declares a safe extern \"C\" fn; the dispatch table still stores it as *mut c_void"
+      ],
+      "residual": null
+    },
+    {
+      "id": "OSSH-FC-006",
+      "file": "src/sm3/legacy_sm3.rs",
+      "line": 125,
+      "inventory_line": 125,
+      "current_line": 181,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sm3_int_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_state": "UNSAFE_OPERATION",
+      "disposition": "SAFETY_DISCHARGED: src/sm3/legacy_sm3.rs:125 - sm3_int_init validates ctx, md_data, digest and the block extent through init_md_data before writing; a fresh EVP_MD_CTX_new(), a NULL context, a NULL md_data, a NULL method and a too-small app_datasize all answer 0 and touch no memory, while the bound table path still produces SM3(\"abc\") (sm3::legacy_sm3::tests::legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-2)",
+      "contract": "`ctx` is NULL or a live `EVP_MD_CTX`; the callback establishes a writable `Sm3Ctx` from the context before writing. A context bound to `SM3_MD` (or to another method with `ctx_size >= size_of::<Sm3Ctx>()`) with a non-NULL `md_data` is initialised; every other C-valid shape is refused with 0.",
+      "established_by": [
+        "source: src/sm3/legacy_sm3.rs init_md_data validates ctx, md_data, digest and the block extent before any write; sm3_int_init refuses every shape that does not establish a writable Sm3Ctx",
+        "test: sm3::legacy_sm3::tests::legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context covers fresh EVP_MD_CTX_new(), NULL ctx, and the bound SM3(\"abc\") path. The pre-fix candidate aborts in ptr::write_bytes' non-null precondition (SIGABRT).",
+        "authority: two C probes against the pinned 3.6.4 install (fresh and NULL context) each exit 139 (SIGSEGV)"
+      ],
+      "residual": "A C-invalid pointer remains outside the C contract. The owner-table branch accepts a manually bound context with non-NULL md_data; the public API cannot construct that state.",
+      "rebind": {
+        "from_line": 125,
+        "to_line": 181,
+        "method": "V1 inventory coordinate retained; current line re-derived on the hardened source"
+      }
+    }
+  ],
+  "additional_operations": [
+    "The sibling legacy initialisers in other files (sha256/384/512/512_224/512_256 and md5_sha1) retain the authority's unconditional md_data shape; they are not the six V1 obligations at this inventory identity and remain a separate queued class."
+  ],
+  "non_claims": [
+    "This is a site-scoped discharge; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide, and no consumer family graduates.",
+    "The four legacy initialiser callbacks diverge from the authority's crash on the refused shapes; that is a recorded §17 divergence, not compatibility.",
+    "The measured V1 OpenSSH binaries do not contain this source fix; no L4/L7 re-run is offered for the source edit.",
+    "Independent review of this discharge is NOT_RUN."
+  ]
+}

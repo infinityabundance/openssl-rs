@@ -49,6 +49,52 @@ unsafe fn md_data(ctx: *mut EvpMdCtx) -> *mut c_void {
     unsafe { (*ctx).md_data }
 }
 
+/// The authority's `sm3_int_init` writes through `EVP_MD_CTX_get0_md_data(ctx)` without testing
+/// it. That is sound only when the EVP layer supplied the block; the exported
+/// `EVP_MD_meth_get_init` also hands this callback to any C caller, and `EVP_MD_CTX_new()`
+/// zero-fills the context, so `md_data` is NULL. The crate refuses that shape with the C
+/// initialise failure value `0` instead of reproducing the authority's NULL write
+/// (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-INIT-MD-DATA-1`).
+///
+/// A context establishes a writable block in exactly two ways:
+///
+/// * `digest` is this very table object (`owner`) — the transcribed legacy-table shape; or
+/// * `digest` is another live method whose `ctx_size` is at least `size` — the block
+///   `evp_md_init_legacy` allocated for that method.
+///
+/// A NULL context, a NULL `md_data`, a NULL method and a too-small `app_datasize` all refuse.
+///
+/// # Safety
+/// `ctx` must be NULL or point to a live `EvpMdCtx`; `owner` must be a live `EvpMd`, the table
+/// object that installs this callback.
+unsafe fn init_md_data(
+    ctx: *mut EvpMdCtx,
+    owner: *const EvpMd,
+    size: usize,
+) -> Option<*mut c_void> {
+    if ctx.is_null() {
+        return None;
+    }
+    // SAFETY: `ctx` is NULL or live per the contract.
+    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: as above.
+    let digest = unsafe { (*ctx).digest };
+    if md_data.is_null() || digest.is_null() {
+        return None;
+    }
+    if core::ptr::eq(digest, owner) {
+        return Some(md_data);
+    }
+    // SAFETY: `digest` is a live method: a context's method is only ever installed from a method
+    // the library owns, and a NULL or dangling method is not a C-valid context state.
+    let ctx_size = unsafe { (*digest).ctx_size };
+    if ctx_size >= 0 && ctx_size as usize >= size {
+        Some(md_data)
+    } else {
+        None
+    }
+}
+
 /// A `static` `EVP_MD`. The wrapper claims `Sync` for a value that is only ever read: a heap
 /// `EvpMd` is mutable and synchronised by its reference count, while a compile-time constant one is
 /// neither.
@@ -122,10 +168,30 @@ const fn legacy_md(
 // ---------------------------------------------------------------------------------------------
 
 /// `sm3_int_init` — `legacy_meth.h:25-28`, with `fn` = `ossl_sm3`.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback checks the context's method
+/// and block before writing: a fresh `EVP_MD_CTX_new()` (`md_data == NULL`), a NULL context, a
+/// context with no method and a method whose `app_datasize` is too small all answer `0`, the C
+/// initialise failure value, instead of performing the authority's NULL write. The normal table
+/// shape — a writable `SM3_CTX` behind a context bound to this method — still initialises and
+/// returns `1`. The refusal is recorded as `docs/SECURITY_DIVERGENCE_POLICY.md`
+/// `D-LEGACY-MD-INIT-MD-DATA-1`.
 unsafe extern "C" fn sm3_int_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract; `md_data` reads a field of a live context and `ossl_sm3_init`
-    // writes the block it points at.
-    unsafe { ossl_sm3_init(md_data(ctx).cast::<Sm3Ctx>()) }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and `SM3_MD` is a live static
+    // method.
+    let Some(block) = (unsafe {
+        init_md_data(
+            ctx,
+            core::ptr::addr_of!(SM3_MD.0),
+            core::mem::size_of::<Sm3Ctx>(),
+        )
+    }) else {
+        return 0;
+    };
+    // SAFETY: `init_md_data` established a writable `SM3_CTX`.
+    unsafe { ossl_sm3_init(block.cast::<Sm3Ctx>()) }
 }
 
 /// `sm3_int_update` — `legacy_meth.h:29-32`.
@@ -172,6 +238,7 @@ pub extern "C" fn EVP_sm3() -> *const EvpMd {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
     use super::*;
 
     /// The object against the authority's own fields, read from `legacy_sm3.c:17-25`.
@@ -204,5 +271,72 @@ mod tests {
     fn the_entry_point_answers_its_own_object() {
         assert!(!EVP_sm3().is_null());
         assert_eq!(EVP_sm3(), core::ptr::addr_of!(SM3_MD.0));
+    }
+
+    /// An `EVP_MD_CTX` bound to `md` and a writable digest block, with no provider state.
+    fn bound_context(md: *const EvpMd, block: *mut c_void) -> EvpMdCtx {
+        EvpMdCtx {
+            reqdigest: md,
+            digest: md,
+            engine: core::ptr::null_mut(),
+            flags: 0,
+            md_data: block,
+            pctx: core::ptr::null_mut(),
+            update: None,
+            algctx: core::ptr::null_mut(),
+            fetched_digest: core::ptr::null_mut(),
+        }
+    }
+
+    /// `EVP_MD_meth_get_init(EVP_sm3())` handed to a C caller, then called with a fresh
+    /// `EVP_MD_CTX_new()` (`md_data == NULL`) and with a NULL context. The authority's
+    /// `sm3_int_init` writes through `EVP_MD_CTX_get0_md_data(ctx)`, so both are a NULL write; the
+    /// crate refuses both with `0`. The table's own path still produces SM3("abc").
+    #[test]
+    fn legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_get_final, EVP_MD_meth_get_init,
+            EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: `EVP_sm3()` answers a live static method.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_sm3()) }.expect("sm3_md has an init");
+        // SAFETY: as above.
+        let update = unsafe { EVP_MD_meth_get_update(EVP_sm3()) }.expect("sm3_md has an update");
+        // SAFETY: as above.
+        let final_ = unsafe { EVP_MD_meth_get_final(EVP_sm3()) }.expect("sm3_md has a final");
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is a live context and the callback accepts any live context.
+        assert_eq!(unsafe { init(fresh) }, 0, "init accepted a NULL md_data");
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
+
+        // SAFETY: a NULL context is the input under test; the callback's contract permits it.
+        assert_eq!(unsafe { init(core::ptr::null_mut()) }, 0);
+
+        let mut store = core::mem::MaybeUninit::<Sm3Ctx>::uninit();
+        let mut ctx = bound_context(EVP_sm3(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sm3_md`, and `store` is a writable `SM3_CTX`.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 32];
+        // SAFETY: `output` is writable for the SM3 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0x66, 0xc7, 0xf0, 0xf4, 0x62, 0xee, 0xed, 0xd9, 0xd1, 0xf2, 0xd4, 0x6b, 0xdc, 0x10,
+                0xe4, 0xe2, 0x41, 0x67, 0xc4, 0x87, 0x5c, 0xf2, 0xf7, 0xa2, 0x29, 0x7d, 0xa0, 0x2b,
+                0x8f, 0x4b, 0xa8, 0xe0,
+            ],
+            "SM3(\"abc\") changed"
+        );
     }
 }
