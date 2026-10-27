@@ -1,0 +1,405 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/atlas-refresh/openssh-closure-v1j/v1",
+  "subphase": "safe-c33/repair-legacy-md-init-md-data-v1j",
+  "generated_utc": "2026-10-27T21:26:03Z",
+  "source_identity": {
+    "candidate": "S''",
+    "candidate_state": "uncommitted working tree over bcafae7dc (do not commit or push)",
+    "base_commit": "bcafae7dceea9bb61cf853bf3e28544a37f3ea42",
+    "src_content_sha256": "add0d599816339e1e3427aa2ccee8de6639bd3c43b634b57275b3d1b10c41339",
+    "previous_candidate": "S' 876900e47 / 8d746bc74a0f5eea",
+    "build_relevant_change": "src/evp/legacy_sha.rs only"
+  },
+  "artifacts": {
+    "libcrypto.so.3": {
+      "sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+      "size": 16860960
+    },
+    "libssl.so.3": {
+      "sha256": "82051ef8ba6c9891d70a95b43d6b82c4c9be0a4865504984f5024c6a302d9b4e",
+      "size": 16574032
+    },
+    "legacy.so": {
+      "sha256": "cc2044da6e4ddf2d1751fd95f9f0af238e74751a9b2aafe4a7c8a1a30bbfbd97",
+      "size": 16536944
+    },
+    "openssl": {
+      "sha256": "67718264fc65a6d2f87968660d7a0537265db04ce4580bb17af01d962a32deed",
+      "size": 12372360
+    }
+  },
+  "inventory": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1j-candidate-freeze.json",
+    "sha256": "c72426e3cfddc2719cac80876bc70369fca7875ebdd680c4082457695e80571f",
+    "compiler_sites": 61387,
+    "production_blockers": 320
+  },
+  "closure_results": {
+    "ssh": {
+      "verdict": "REFUSED",
+      "safe_compatible": false,
+      "reason": "closure refused: STALE_HASH (1 reachable file(s) do not match the V1 source hash at bcafae7dc: src/evp/legacy_sha.rs); MISSING_BOUNDARY_RECEIPT (19 reachable file(s) carry production obligations but no boundary-sweep receipt owns them); UNKNOWN_OBLIGATION (29 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED); UNKNOWN_MECHANISM (17 reachable file(s) with production obligations map to no registered mechanism)",
+      "reachable_files": 312,
+      "reachable_production_obligations": 146,
+      "DISCHARGED": 62,
+      "BLOCKED": 55,
+      "UNKNOWN": 29,
+      "by_mechanism": {
+        "<unmapped>": 19,
+        "ASN1_OCSP": 1,
+        "EVP_PKEY_PROVIDER": 59,
+        "RAND_CMS_STORE_KEYFMT": 38,
+        "RUNTIME_CONCURRENCY": 4,
+        "SSL_SESSION": 16,
+        "X509_VERIFY_POLICY": 9
+      },
+      "v1_production_operations_total": 320,
+      "v1_uncontracted_operations_total": 540,
+      "precision_totals": {
+        "indirect_sites": 51914,
+        "resolved_sites": 51663,
+        "unresolved_sites": 251,
+        "reachable_unresolved_sites": 11,
+        "reachable_target_bounded_unresolved_sites": 9,
+        "reachable_contract_bounded_sites": 2,
+        "unclassified_reachable_sites": 0,
+        "resolved_by_reachable_caller": 1
+      },
+      "element_7": {
+        "established": false,
+        "status": "FAIL",
+        "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+        "reachable_unresolved_sites": 11,
+        "target_bounded_unresolved_sites": 9,
+        "contract_bounded_sites": 2,
+        "contract_bounded_by_class": {
+          "ABI_CONTRACT_PROVIDER": 2
+        },
+        "unclassified_reachable_sites": 0,
+        "target_sets_remain_unbounded": true,
+        "why": "9 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+      },
+      "per_call_site_witnesses": [
+        {
+          "dso": "libcrypto.so.3",
+          "function": "_RNvNtCsb1dSv1ncIeD_10openssl_rs12encoder_pkey17encoder_import_cb",
+          "call_site": "0x2859b7",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "slot": "OsslEncoder.import_object (offset 0x70)"
+        },
+        {
+          "dso": "libcrypto.so.3",
+          "function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8provider4init13provider_init",
+          "call_site": "0x327651",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "slot": "OsslProvider.init_function (offset 0x40)"
+        }
+      ],
+      "refusals": [
+        {
+          "code": "STALE_HASH",
+          "detail": "1 reachable file(s) do not match the V1 source hash at bcafae7dc: src/evp/legacy_sha.rs",
+          "listed_count": 0
+        },
+        {
+          "code": "MISSING_BOUNDARY_RECEIPT",
+          "detail": "19 reachable file(s) carry production obligations but no boundary-sweep receipt owns them",
+          "listed_count": 19
+        },
+        {
+          "code": "UNKNOWN_OBLIGATION",
+          "detail": "29 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED",
+          "listed_count": 29
+        },
+        {
+          "code": "UNKNOWN_MECHANISM",
+          "detail": "17 reachable file(s) with production obligations map to no registered mechanism",
+          "listed_count": 17
+        }
+      ],
+      "closure_receipt": {
+        "path": "court/tmp/openssh-closure/closure-ssh-v1j.json",
+        "sha256": "75b753513219d8bdffcbab215b6ffbba719e225a2d5bddfff784efe1f18b7122"
+      },
+      "inventory_binding": {
+        "resolved_path": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+        "resolved_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+        "inventory_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+        "matches_inventory": true,
+        "under_admitted_install": true,
+        "requested_by_dt_needed": "libcrypto.so.3"
+      }
+    },
+    "sshd": {
+      "verdict": "REFUSED",
+      "safe_compatible": false,
+      "reason": "closure refused: STALE_HASH (1 reachable file(s) do not match the V1 source hash at bcafae7dc: src/evp/legacy_sha.rs); MISSING_BOUNDARY_RECEIPT (19 reachable file(s) carry production obligations but no boundary-sweep receipt owns them); UNKNOWN_OBLIGATION (29 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED); UNKNOWN_MECHANISM (17 reachable file(s) with production obligations map to no registered mechanism)",
+      "reachable_files": 302,
+      "reachable_production_obligations": 146,
+      "DISCHARGED": 62,
+      "BLOCKED": 55,
+      "UNKNOWN": 29,
+      "by_mechanism": {
+        "<unmapped>": 19,
+        "ASN1_OCSP": 1,
+        "EVP_PKEY_PROVIDER": 59,
+        "RAND_CMS_STORE_KEYFMT": 38,
+        "RUNTIME_CONCURRENCY": 4,
+        "SSL_SESSION": 16,
+        "X509_VERIFY_POLICY": 9
+      },
+      "v1_production_operations_total": 320,
+      "v1_uncontracted_operations_total": 540,
+      "precision_totals": {
+        "indirect_sites": 51914,
+        "resolved_sites": 51663,
+        "unresolved_sites": 251,
+        "reachable_unresolved_sites": 11,
+        "reachable_target_bounded_unresolved_sites": 9,
+        "reachable_contract_bounded_sites": 2,
+        "unclassified_reachable_sites": 0,
+        "resolved_by_reachable_caller": 1
+      },
+      "element_7": {
+        "established": false,
+        "status": "FAIL",
+        "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+        "reachable_unresolved_sites": 11,
+        "target_bounded_unresolved_sites": 9,
+        "contract_bounded_sites": 2,
+        "contract_bounded_by_class": {
+          "ABI_CONTRACT_PROVIDER": 2
+        },
+        "unclassified_reachable_sites": 0,
+        "target_sets_remain_unbounded": true,
+        "why": "9 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+      },
+      "per_call_site_witnesses": [
+        {
+          "dso": "libcrypto.so.3",
+          "function": "_RNvNtCsb1dSv1ncIeD_10openssl_rs12encoder_pkey17encoder_import_cb",
+          "call_site": "0x2859b7",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "slot": "OsslEncoder.import_object (offset 0x70)"
+        },
+        {
+          "dso": "libcrypto.so.3",
+          "function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8provider4init13provider_init",
+          "call_site": "0x327651",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "slot": "OsslProvider.init_function (offset 0x40)"
+        }
+      ],
+      "refusals": [
+        {
+          "code": "STALE_HASH",
+          "detail": "1 reachable file(s) do not match the V1 source hash at bcafae7dc: src/evp/legacy_sha.rs",
+          "listed_count": 0
+        },
+        {
+          "code": "MISSING_BOUNDARY_RECEIPT",
+          "detail": "19 reachable file(s) carry production obligations but no boundary-sweep receipt owns them",
+          "listed_count": 19
+        },
+        {
+          "code": "UNKNOWN_OBLIGATION",
+          "detail": "29 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED",
+          "listed_count": 29
+        },
+        {
+          "code": "UNKNOWN_MECHANISM",
+          "detail": "17 reachable file(s) with production obligations map to no registered mechanism",
+          "listed_count": 17
+        }
+      ],
+      "closure_receipt": {
+        "path": "court/tmp/openssh-closure/closure-sshd-v1j.json",
+        "sha256": "3ee2a34f3094894a04d949a78a6e8cec51b81bd82255cac035e14eb36aaf1572"
+      },
+      "inventory_binding": {
+        "resolved_path": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+        "resolved_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+        "inventory_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+        "matches_inventory": true,
+        "under_admitted_install": true,
+        "requested_by_dt_needed": "libcrypto.so.3"
+      }
+    }
+  },
+  "closure_receipts": {
+    "ssh_path": "court/tmp/openssh-closure/closure-ssh-v1j.json",
+    "ssh_sha256": "75b753513219d8bdffcbab215b6ffbba719e225a2d5bddfff784efe1f18b7122",
+    "sshd_path": "court/tmp/openssh-closure/closure-sshd-v1j.json",
+    "sshd_sha256": "3ee2a34f3094894a04d949a78a6e8cec51b81bd82255cac035e14eb36aaf1572"
+  },
+  "element_7": {
+    "ssh": {
+      "v1i": "PASS (contract-bounded)",
+      "v1j": "FAIL"
+    },
+    "sshd": {
+      "v1i": "PASS (contract-bounded)",
+      "v1j": "FAIL"
+    },
+    "scope_note": "consumer-specific: the two contract-bounded sites remain callable from any other importer; OSSL_PROVIDER_do_all remains an exported entry point"
+  },
+  "legacy_sha_repair": {
+    "receipt": {
+      "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1j-sites.json",
+      "sha256": "a7fa47163cae0c3d1073dface4142611425cb5871122e24b88cf5ddfa00edbe4",
+      "sites": 18,
+      "discharged": 5,
+      "blocked": 13
+    },
+    "v1i_obligations": {
+      "count": 18,
+      "BLOCKED": 18,
+      "DISCHARGED": 0
+    },
+    "v1j_obligations": {
+      "count": 13,
+      "BLOCKED": 13,
+      "DISCHARGED": 0
+    },
+    "answer_to_the_18": "The eighteen did not move to DISCHARGED as a group. Five initialiser sites are now contracted and guarded and therefore leave the uncontracted-operation census (production blockers 325 -> 320); they are recorded SAFETY_DISCHARGED in openssh-v1j-sites.json. The thirteen update/final/ctrl sites remain in the census and remain BLOCKED because their bodies still dereference md_data without a check. No obligation newly became DISCHARGED in the closure.",
+    "negative_controls": {
+      "probe": "court/tmp/freeze-v1j/logs/negctl-v1j.out: 18/18 refused, RESULT PASS",
+      "scratch_guard_removal": "court/tmp/freeze-v1j/logs/negctl-scratch.out: sha384 cases SIGSEGV, RESULT FAIL",
+      "unit_tests": "15 passed / 0 failed for the legacy_sha filter (5 new tests)"
+    }
+  },
+  "deltas_vs_v1i": {
+    "baseline": "atlas-refresh/openssh-closure-v1i.json",
+    "adjudication": {
+      "ssh": {
+        "v1i": {
+          "reachable_files": 319,
+          "reachable_production_obligations": 169,
+          "DISCHARGED": 74,
+          "BLOCKED": 66,
+          "UNKNOWN": 29
+        },
+        "v1j": {
+          "reachable_files": 312,
+          "reachable_production_obligations": 146,
+          "DISCHARGED": 62,
+          "BLOCKED": 55,
+          "UNKNOWN": 29
+        }
+      },
+      "sshd": {
+        "v1i": {
+          "reachable_files": 309,
+          "reachable_production_obligations": 169,
+          "DISCHARGED": 74,
+          "BLOCKED": 66,
+          "UNKNOWN": 29
+        },
+        "v1j": {
+          "reachable_files": 302,
+          "reachable_production_obligations": 146,
+          "DISCHARGED": 62,
+          "BLOCKED": 55,
+          "UNKNOWN": 29
+        }
+      }
+    },
+    "reachable_set_changed_by_rebuild": {
+      "ssh": {
+        "removed": [
+          "src/apps/req.rs",
+          "src/digest/blake2.rs",
+          "src/digest/mdc2.rs",
+          "src/evp/bio_enc.rs",
+          "src/evp/e_rc4_hmac_md5.rs",
+          "src/evp/legacy_blake2.rs",
+          "src/evp/legacy_mdc2.rs",
+          "src/provider/dsa_sig.rs",
+          "src/provider/legacyprov.rs",
+          "src/provider/rsa_kem.rs",
+          "src/provider/securitycheck.rs",
+          "src/provider/seed_src.rs",
+          "src/x509/v3_conf.rs"
+        ],
+        "added": [
+          "src/modes/siv128.rs",
+          "src/params/build.rs",
+          "src/provider/der_dsa_sig.rs",
+          "src/runtime/bio/bss_dgram.rs",
+          "src/ts/ts_req_utils.rs",
+          "src/ts/ts_rsp_utils.rs"
+        ]
+      },
+      "sshd": {
+        "removed": [
+          "src/apps/req.rs",
+          "src/digest/blake2.rs",
+          "src/digest/mdc2.rs",
+          "src/evp/bio_enc.rs",
+          "src/evp/e_rc4_hmac_md5.rs",
+          "src/evp/legacy_blake2.rs",
+          "src/evp/legacy_mdc2.rs",
+          "src/provider/dsa_sig.rs",
+          "src/provider/legacyprov.rs",
+          "src/provider/rsa_kem.rs",
+          "src/provider/securitycheck.rs",
+          "src/provider/seed_src.rs",
+          "src/x509/v3_conf.rs"
+        ],
+        "added": [
+          "src/modes/siv128.rs",
+          "src/params/build.rs",
+          "src/provider/der_dsa_sig.rs",
+          "src/runtime/bio/bss_dgram.rs",
+          "src/ts/ts_req_utils.rs",
+          "src/ts/ts_rsp_utils.rs"
+        ]
+      }
+    },
+    "reachable_set_instability_note": "The closure graph is derived from the rebuilt DSOs and is not stable across the S' -> S'' rebuild: the ssh upper bound lost 13 files (including provider/legacyprov.rs, legacy_blake2.rs and legacy_mdc2.rs) and gained 6. The 12 legacyprov DISCHARGED sites therefore leave the v1j reachable set; that is a reachability change in this binary, not a reopened safety obligation. Counts are not a like-for-like delta.",
+    "refusals": {
+      "ssh": {
+        "v1i": [
+          "MISSING_BOUNDARY_RECEIPT",
+          "UNKNOWN_OBLIGATION",
+          "UNKNOWN_MECHANISM"
+        ],
+        "v1j": [
+          "STALE_HASH",
+          "MISSING_BOUNDARY_RECEIPT",
+          "UNKNOWN_OBLIGATION",
+          "UNKNOWN_MECHANISM"
+        ]
+      },
+      "sshd": {
+        "v1i": [
+          "MISSING_BOUNDARY_RECEIPT",
+          "UNKNOWN_OBLIGATION",
+          "UNKNOWN_MECHANISM"
+        ],
+        "v1j": [
+          "STALE_HASH",
+          "MISSING_BOUNDARY_RECEIPT",
+          "UNKNOWN_OBLIGATION",
+          "UNKNOWN_MECHANISM"
+        ]
+      }
+    }
+  },
+  "gates": {
+    "cargo_fmt": "PASS (exit 0)",
+    "cargo_clippy": "PASS (cargo clippy --all-targets -- -D warnings, exit 0)",
+    "rust_suite": "PASS: 2213 passed, 0 failed, 52 ignored (2265 total; previous floor 2260/52, +5 tests, none removed or newly ignored)",
+    "negative_control_probe": "PASS (18/18 initialiser/shape cases refused 0)",
+    "negative_control_scratch": "PASS (removing the sha384_init guard makes the probe report SIGSEGV)",
+    "gate_log": "court/tmp/freeze-v1j/logs/gates-run.txt"
+  },
+  "non_claims": [
+    "Both consumers still REFUSE: SAFE_COMPATIBLE remains false.",
+    "EVP_PKEY_PROVIDER is not mechanism-wide SAFETY_DISCHARGED; 13 legacy_sha callbacks stay BLOCKED.",
+    "Element 7 is FAIL at S'': 9 reachable unresolved sites are target-bounded (v1i had 0), alongside 2 contract-bounded sites.",
+    "The S'' inventory is uncommitted, so the closure records STALE_HASH for src/evp/legacy_sha.rs against bcafae7dc.",
+    "The closure counts changed partly because the rebuilt reachable set changed; they are not a controlled like-for-like measurement.",
+    "No independent review, Miri, ASan, Loom, dudect or Wycheproof/ACVP was run at this identity."
+  ]
+}

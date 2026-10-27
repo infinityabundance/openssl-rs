@@ -1,0 +1,2601 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/atlas-refresh/openssh-v1i-sites/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-v1i",
+  "subphase": "safe-c33/discharge-openssh-reachable-obligations-v1i",
+  "date": "2026-10-27",
+  "baseline": {
+    "closure": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-closure-v1h.json",
+    "closure_sha256": "f25e730f23f254ce07140cab676b3dfc0b7ac3af6bc178b9b7db9b0ce5ed1fcf",
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1h-candidate-freeze.json",
+    "inventory_sha256": "891be0a93293aeba6bbe7cd0e5ed9a55ffabd33766ef3703c839e6de96dc6b41",
+    "closure_tool": "forensics/tools/consumer_closure.py",
+    "closure_tool_sha256": "59aea07c1ec2269a7ab21e973f64cf38c0eef632a6f7a47d64108c56c81e9e48",
+    "census": "169 obligations per binary: 0 DISCHARGED, 108 BLOCKED, 61 UNKNOWN"
+  },
+  "source_identity": {
+    "s_prime_commit": "876900e47b25c01899a2aca97004a77ab60d597f",
+    "s_prime_tree": "a50494348d671320b2ef6c99e1210e6a3d7471f4",
+    "s_prime_src_content_sha256": "8d746bc74a0f5eeacdf2a1be8d84a14c62820e09336b59711358ba68195fb24d",
+    "evidence_base_head": "7f5b436ed",
+    "src_unchanged_between_s_prime_and_evidence_base": true,
+    "src_unchanged_witness": "git diff 876900e47 7f5b436ed -- src Cargo.toml Cargo.lock build.rs is empty",
+    "file_blob_sha256": {
+      "src/provider/digest.rs": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "src/evp/legacy_sha.rs": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "src/cmp/cmp_ctx.rs": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "src/cmp/cmp_asn.rs": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "src/provider/legacyprov.rs": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b"
+    }
+  },
+  "candidate_identity": {
+    "libcrypto_sha256": "cb45a6ec8323a333c69d8b24fc3e62bc8441dba7ba631d47d132d8d375fd7e44",
+    "legacy_so_sha256": "d95e5c3d268dbd0d74cbae75d1a3890d2990b878c42b2bc074ff6d780dd9a7b7",
+    "ssh_sha256": "e5778959e8ca0298010149cae7a708bee14c2738a370dee8f8b156348a25c529",
+    "sshd_sha256": "8d956b97f090c66649fa6ca3bdadf4206923f3abfc2bd0fdb1a33d48e6b36b20"
+  },
+  "scope": "the 92 reachable production obligations in the five files with the largest share of the v1h unresolved set: provider/digest.rs 30, evp/legacy_sha.rs 18, cmp/cmp_ctx.rs 17, cmp/cmp_asn.rs 15, provider/legacyprov.rs 12",
+  "method": "one entry per unsafe operation at its exact v1h line, with the required precondition, the caller or ABI that establishes it, and the implementation's guarantee. A site is DISCHARGED only when all three hold; evp/legacy_sha.rs is retained BLOCKED because a C-valid fresh EVP_MD_CTX reaches a NULL md_data dereference.",
+  "file_summary": [
+    {
+      "file": "src/provider/digest.rs",
+      "obligations": 30,
+      "discharged": 30,
+      "blocked": 0
+    },
+    {
+      "file": "src/evp/legacy_sha.rs",
+      "obligations": 18,
+      "discharged": 0,
+      "blocked": 18
+    },
+    {
+      "file": "src/cmp/cmp_ctx.rs",
+      "obligations": 17,
+      "discharged": 17,
+      "blocked": 0
+    },
+    {
+      "file": "src/cmp/cmp_asn.rs",
+      "obligations": 15,
+      "discharged": 15,
+      "blocked": 0
+    },
+    {
+      "file": "src/provider/legacyprov.rs",
+      "obligations": 12,
+      "discharged": 12,
+      "blocked": 0
+    }
+  ],
+  "boundaries": [
+    {
+      "id": "OSSH-V1I-001",
+      "file": "src/provider/digest.rs",
+      "line": 647,
+      "inventory_line": 647,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::dupctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is NULL or the live `ShaCtx` that this row's NEWCTX/DUPCTX returned and the core has not yet released. On success the function returns a freshly allocated, exclusively owned copy of exactly `size_of::<ShaCtx>()` bytes, which the caller owns and later passes to FREECTX/DUPCTX; on failure, including `ctx == NULL`, it returns NULL and allocates nothing.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_DUPCTX (include/openssl/core_dispatch.h); the core supplies a live SHA-1 context from this row.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 and legacy MDC2 DUPCTX with NULL and observes NULL (guard-removal would dereference NULL)"
+      ],
+      "implementation_guarantees": "On success: one allocation of size_of::<T>(), exclusively owned by the caller; on failure: NULL and no allocation.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:647 \u2014 sha1::dupctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-002",
+      "file": "src/provider/digest.rs",
+      "line": 658,
+      "inventory_line": 658,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::copyctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<ShaCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<ShaCtx>()` bytes and reads or writes nothing outside those regions.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_COPYCTX (include/openssl/core_dispatch.h); the core supplies a destination and source of size_of::<ShaCtx>().",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy (and provider::legacyprov::mdc2::tests::copyctx_tolerates_a_self_copy) passes",
+        "negative control: replacing `ptr::copy` with `ptr::copy_nonoverlapping` makes the same-poininter call an aliasing violation"
+      ],
+      "implementation_guarantees": "Exactly size_of::<T>() bytes are copied; same-region input is defined and no byte changes.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:658 \u2014 sha1::copyctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-003",
+      "file": "src/provider/digest.rs",
+      "line": 670,
+      "inventory_line": 670,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::internal_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `ShaCtx` this row's NEWCTX/DUPCTX returned; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located entries satisfy their declared type and `data_size`. The function initialises `ctx` in place, reads `params` only through the declared descriptors, and returns 0 or 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_INIT (include/openssl/core_dispatch.h); the core supplies a live SHA-1 context and the caller's parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Only the provider context is written; the return value is 0 on refusal and 1 on success.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:670 \u2014 sha1::internal_init; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-004",
+      "file": "src/provider/digest.rs",
+      "line": 682,
+      "inventory_line": 682,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::internal_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `ShaCtx`; `out` is writable for `outsz` bytes; `outl` is a live, writable `usize`. When `outsz` is at least the digest length the function writes exactly that many bytes to `out` and stores the length in `*outl`; otherwise it returns 0 without writing `out`. It never writes past `outsz`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FINAL (include/openssl/core_dispatch.h); the core supplies a context, output buffer of outsz bytes and writable outl.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most outsz bytes are written to out; *outl is written exactly once.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:682 \u2014 sha1::internal_final; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-005",
+      "file": "src/provider/digest.rs",
+      "line": 700,
+      "inventory_line": 700,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `ShaCtx`; `in_` is readable for `inl` bytes (it is not read when `inl == 0`). The function consumes exactly `inl` input bytes and mutates only `ctx`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_UPDATE (include/openssl/core_dispatch.h); the core supplies a live SHA-1 context and readable input of inl bytes.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most inl input bytes are read; only the provider context is written.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:700 \u2014 sha1::update; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-006",
+      "file": "src/provider/digest.rs",
+      "line": 705,
+      "inventory_line": 705,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1::get_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array; each entry the function locates has `data` writable for its `data_size`. The function writes only the standard digest descriptors it locates and returns 1; a NULL array is a no-op answering 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_GET_PARAMS (include/openssl/core_dispatch.h); the core supplies a key-terminated parameter array or NULL.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 GET_PARAMS with NULL and observes 1"
+      ],
+      "implementation_guarantees": "Only located standard digest descriptors are written; NULL is accepted.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:705 \u2014 sha1::get_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-007",
+      "file": "src/provider/digest.rs",
+      "line": 959,
+      "inventory_line": 959,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "nullmd::dupctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is NULL or the live `NullMdCtx` that this row's NEWCTX/DUPCTX returned and the core has not yet released. On success the function returns a freshly allocated, exclusively owned copy of exactly `size_of::<NullMdCtx>()` bytes, which the caller owns and later passes to FREECTX/DUPCTX; on failure, including `ctx == NULL`, it returns NULL and allocates nothing.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_DUPCTX (include/openssl/core_dispatch.h); the core supplies a live null-digest context from this row.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 and legacy MDC2 DUPCTX with NULL and observes NULL (guard-removal would dereference NULL)"
+      ],
+      "implementation_guarantees": "On success: one allocation of size_of::<T>(), exclusively owned by the caller; on failure: NULL and no allocation.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:959 \u2014 nullmd::dupctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-008",
+      "file": "src/provider/digest.rs",
+      "line": 970,
+      "inventory_line": 970,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "nullmd::copyctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<NullMdCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<NullMdCtx>()` bytes and reads or writes nothing outside those regions.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_COPYCTX (include/openssl/core_dispatch.h); the core supplies a destination and source of size_of::<NullMdCtx>().",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy (and provider::legacyprov::mdc2::tests::copyctx_tolerates_a_self_copy) passes",
+        "negative control: replacing `ptr::copy` with `ptr::copy_nonoverlapping` makes the same-poininter call an aliasing violation"
+      ],
+      "implementation_guarantees": "Exactly size_of::<T>() bytes are copied; same-region input is defined and no byte changes.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:970 \u2014 nullmd::copyctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-009",
+      "file": "src/provider/digest.rs",
+      "line": 1019,
+      "inventory_line": 1019,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "nullmd::get_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array; each entry the function locates has `data` writable for its `data_size`. The function writes only the standard digest descriptors it locates and returns 1; a NULL array is a no-op answering 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_GET_PARAMS (include/openssl/core_dispatch.h); the core supplies a key-terminated parameter array or NULL.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 GET_PARAMS with NULL and observes 1"
+      ],
+      "implementation_guarantees": "Only located standard digest descriptors are written; NULL is accepted.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1019 \u2014 nullmd::get_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-010",
+      "file": "src/provider/digest.rs",
+      "line": 1154,
+      "inventory_line": 1154,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::dupctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is NULL or the live `Md5Sha1Ctx` that this row's NEWCTX/DUPCTX returned and the core has not yet released. On success the function returns a freshly allocated, exclusively owned copy of exactly `size_of::<Md5Sha1Ctx>()` bytes, which the caller owns and later passes to FREECTX/DUPCTX; on failure, including `ctx == NULL`, it returns NULL and allocates nothing.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_DUPCTX (include/openssl/core_dispatch.h); the core supplies a live MD5-SHA1 context from this row.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 and legacy MDC2 DUPCTX with NULL and observes NULL (guard-removal would dereference NULL)"
+      ],
+      "implementation_guarantees": "On success: one allocation of size_of::<T>(), exclusively owned by the caller; on failure: NULL and no allocation.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1154 \u2014 md5_sha1::dupctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-011",
+      "file": "src/provider/digest.rs",
+      "line": 1165,
+      "inventory_line": 1165,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::copyctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<Md5Sha1Ctx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<Md5Sha1Ctx>()` bytes and reads or writes nothing outside those regions.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_COPYCTX (include/openssl/core_dispatch.h); the core supplies a destination and source of size_of::<Md5Sha1Ctx>().",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy (and provider::legacyprov::mdc2::tests::copyctx_tolerates_a_self_copy) passes",
+        "negative control: replacing `ptr::copy` with `ptr::copy_nonoverlapping` makes the same-poininter call an aliasing violation"
+      ],
+      "implementation_guarantees": "Exactly size_of::<T>() bytes are copied; same-region input is defined and no byte changes.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1165 \u2014 md5_sha1::copyctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-012",
+      "file": "src/provider/digest.rs",
+      "line": 1177,
+      "inventory_line": 1177,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::internal_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `Md5Sha1Ctx` this row's NEWCTX/DUPCTX returned; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located entries satisfy their declared type and `data_size`. The function initialises `ctx` in place, reads `params` only through the declared descriptors, and returns 0 or 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_INIT (include/openssl/core_dispatch.h); the core supplies a live MD5-SHA1 context and the caller's parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Only the provider context is written; the return value is 0 on refusal and 1 on success.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1177 \u2014 md5_sha1::internal_init; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-013",
+      "file": "src/provider/digest.rs",
+      "line": 1189,
+      "inventory_line": 1189,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::internal_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `Md5Sha1Ctx`; `out` is writable for `outsz` bytes; `outl` is a live, writable `usize`. When `outsz` is at least the digest length the function writes exactly that many bytes to `out` and stores the length in `*outl`; otherwise it returns 0 without writing `out`. It never writes past `outsz`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FINAL (include/openssl/core_dispatch.h); the core supplies a context, output buffer of outsz bytes and writable outl.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most outsz bytes are written to out; *outl is written exactly once.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1189 \u2014 md5_sha1::internal_final; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-014",
+      "file": "src/provider/digest.rs",
+      "line": 1207,
+      "inventory_line": 1207,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `Md5Sha1Ctx`; `in_` is readable for `inl` bytes (it is not read when `inl == 0`). The function consumes exactly `inl` input bytes and mutates only `ctx`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_UPDATE (include/openssl/core_dispatch.h); the core supplies a live MD5-SHA1 context and readable input of inl bytes.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most inl input bytes are read; only the provider context is written.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1207 \u2014 md5_sha1::update; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-015",
+      "file": "src/provider/digest.rs",
+      "line": 1214,
+      "inventory_line": 1214,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "md5_sha1::get_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array; each entry the function locates has `data` writable for its `data_size`. The function writes only the standard digest descriptors it locates and returns 1; a NULL array is a no-op answering 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_GET_PARAMS (include/openssl/core_dispatch.h); the core supplies a key-terminated parameter array or NULL.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 GET_PARAMS with NULL and observes 1"
+      ],
+      "implementation_guarantees": "Only located standard digest descriptors are written; NULL is accepted.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1214 \u2014 md5_sha1::get_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-016",
+      "file": "src/provider/digest.rs",
+      "line": 1337,
+      "inventory_line": 1337,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::dupctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is NULL or the live `KeccakCtx` that this row's NEWCTX/DUPCTX returned and the core has not yet released. On success the function returns a freshly allocated, exclusively owned copy of exactly `size_of::<KeccakCtx>()` bytes, which the caller owns and later passes to FREECTX/DUPCTX; on failure, including `ctx == NULL`, it returns NULL and allocates nothing.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_DUPCTX (include/openssl/core_dispatch.h); the core supplies a live Keccak context from this row.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 and legacy MDC2 DUPCTX with NULL and observes NULL (guard-removal would dereference NULL)"
+      ],
+      "implementation_guarantees": "On success: one allocation of size_of::<T>(), exclusively owned by the caller; on failure: NULL and no allocation.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1337 \u2014 sha3::dupctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-017",
+      "file": "src/provider/digest.rs",
+      "line": 1348,
+      "inventory_line": 1348,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::copyctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<KeccakCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<KeccakCtx>()` bytes and reads or writes nothing outside those regions.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_COPYCTX (include/openssl/core_dispatch.h); the core supplies a destination and source of size_of::<KeccakCtx>().",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy (and provider::legacyprov::mdc2::tests::copyctx_tolerates_a_self_copy) passes",
+        "negative control: replacing `ptr::copy` with `ptr::copy_nonoverlapping` makes the same-poininter call an aliasing violation"
+      ],
+      "implementation_guarantees": "Exactly size_of::<T>() bytes are copied; same-region input is defined and no byte changes.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1348 \u2014 sha3::copyctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-018",
+      "file": "src/provider/digest.rs",
+      "line": 1360,
+      "inventory_line": 1360,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `KeccakCtx` this row's NEWCTX/DUPCTX returned; `_params` is unused. The function resets only that context's state and returns 1, or 0 when the provider is shutting down.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_INIT (include/openssl/core_dispatch.h); the core supplies a live Keccak context and an ignored parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Only the context state is reset; the return is 0 or 1.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1360 \u2014 sha3::init; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-019",
+      "file": "src/provider/digest.rs",
+      "line": 1371,
+      "inventory_line": 1371,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `KeccakCtx`; `in_` is readable for `inl` bytes (it is not read when `inl == 0`). The function consumes exactly `inl` input bytes and mutates only `ctx`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_UPDATE (include/openssl/core_dispatch.h); the core supplies a live Keccak context and readable input of inl bytes.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most inl input bytes are read; only the provider context is written.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1371 \u2014 sha3::update; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-020",
+      "file": "src/provider/digest.rs",
+      "line": 1377,
+      "inventory_line": 1377,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::keccak_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `KeccakCtx`; `out` is writable for `outlen` bytes; `outl` is a live writable `usize`. The function writes at most the context's `md_size` bytes to `out`, always stores the length in `*outl`, and returns 0 if `md_size` is `usize::MAX`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FINAL (include/openssl/core_dispatch.h); the core supplies a context, output buffer of outlen bytes and writable outl.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most md_size bytes are written; *outl is always written.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1377 \u2014 sha3::keccak_final; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-021",
+      "file": "src/provider/digest.rs",
+      "line": 1403,
+      "inventory_line": 1403,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::shake_squeeze",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `KeccakCtx`; `out` is writable for `outlen` bytes; `outl` is a live writable `usize`. The function writes exactly `outlen` bytes when `outlen > 0`, stores `outlen` in `*outl`, and returns 1 or 0.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_SQUEEZE (include/openssl/core_dispatch.h); the core supplies a context, output buffer of outlen bytes and writable outl.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Exactly outlen bytes are written when outlen > 0; *outl is written.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1403 \u2014 sha3::shake_squeeze; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-022",
+      "file": "src/provider/digest.rs",
+      "line": 1481,
+      "inventory_line": 1481,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha3::shake_get_ctx_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `KeccakCtx`; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located `size_t` entries are writable. The function writes each located alias independently and returns 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_GET_CTX_PARAMS (include/openssl/core_dispatch.h); the core supplies a live Keccak context and the caller's parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "test: provider::digest::sha3::tests::shake_get_ctx_params_sets_both_aliases passes; deleting the second alias write makes it fail"
+      ],
+      "implementation_guarantees": "Both located aliases are written; no entry outside the array is touched.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1481 \u2014 sha3::shake_get_ctx_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-023",
+      "file": "src/provider/digest.rs",
+      "line": 1885,
+      "inventory_line": 1885,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2b/blake2s::dupctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is NULL or the live `MdData` that this row's NEWCTX/DUPCTX returned and the core has not yet released. On success the function returns a freshly allocated, exclusively owned copy of exactly `size_of::<MdData>()` bytes, which the caller owns and later passes to FREECTX/DUPCTX; on failure, including `ctx == NULL`, it returns NULL and allocates nothing.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_DUPCTX (include/openssl/core_dispatch.h); the core supplies a live BLAKE2 context from this row.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 and legacy MDC2 DUPCTX with NULL and observes NULL (guard-removal would dereference NULL)"
+      ],
+      "implementation_guarantees": "On success: one allocation of size_of::<T>(), exclusively owned by the caller; on failure: NULL and no allocation.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1885 \u2014 blake2b/blake2s::dupctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-024",
+      "file": "src/provider/digest.rs",
+      "line": 1898,
+      "inventory_line": 1898,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2b/blake2s::copyctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<MdData>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<MdData>()` bytes and reads or writes nothing outside those regions.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_COPYCTX (include/openssl/core_dispatch.h); the core supplies a destination and source of size_of::<MdData>().",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy (and provider::legacyprov::mdc2::tests::copyctx_tolerates_a_self_copy) passes",
+        "negative control: replacing `ptr::copy` with `ptr::copy_nonoverlapping` makes the same-poininter call an aliasing violation"
+      ],
+      "implementation_guarantees": "Exactly size_of::<T>() bytes are copied; same-region input is defined and no byte changes.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1898 \u2014 blake2b/blake2s::copyctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-025",
+      "file": "src/provider/digest.rs",
+      "line": 1912,
+      "inventory_line": 1912,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2b/blake2s::set_ctx_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `MdData`; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located entries are readable as their declared type. The function reads only the declared keys, refuses an out-of-range value with 0, and mutates only `ctx`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_SET_CTX_PARAMS (include/openssl/core_dispatch.h); the core supplies a live BLAKE2 context and the caller's parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Only declared context fields are written; out-of-range input is refused.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1912 \u2014 blake2b/blake2s::set_ctx_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-026",
+      "file": "src/provider/digest.rs",
+      "line": 1948,
+      "inventory_line": 1948,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2b/blake2s::get_ctx_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `MdData`; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located entries are writable as their declared type. The function writes only the declared size field and returns 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_GET_CTX_PARAMS (include/openssl/core_dispatch.h); the core supplies a live BLAKE2 context and the caller's parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Only declared context fields are written to the caller's entries.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1948 \u2014 blake2b/blake2s::get_ctx_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-027",
+      "file": "src/provider/digest.rs",
+      "line": 1975,
+      "inventory_line": 1975,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2b/blake2s::internal_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `MdData` this row's NEWCTX/DUPCTX returned; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located entries satisfy their declared type and `data_size`. The function initialises `ctx` in place, reads `params` only through the declared descriptors, and returns 0 or 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_INIT (include/openssl/core_dispatch.h); the core supplies a live BLAKE2 context and the caller's parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Only the provider context is written; the return value is 0 on refusal and 1 on success.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1975 \u2014 blake2b/blake2s::internal_init; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-028",
+      "file": "src/provider/digest.rs",
+      "line": 2000,
+      "inventory_line": 2000,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2b/blake2s::update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `MdData`; `in_` is readable for `inl` bytes (it is not read when `inl == 0`). The function consumes exactly `inl` input bytes and mutates only `ctx`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_UPDATE (include/openssl/core_dispatch.h); the core supplies a live BLAKE2 context and readable input of inl bytes.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most inl input bytes are read; only the provider context is written.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:2000 \u2014 blake2b/blake2s::update; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-029",
+      "file": "src/provider/digest.rs",
+      "line": 2013,
+      "inventory_line": 2013,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2b/blake2s::internal_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `MdData`; `out` is writable for `outsz` bytes; `outl` is a live, writable `usize`. When `outsz` is at least the digest length the function writes exactly that many bytes to `out` and stores the length in `*outl`; otherwise it returns 0 without writing `out`. It never writes past `outsz`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FINAL (include/openssl/core_dispatch.h); the core supplies a context, output buffer of outsz bytes and writable outl.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most outsz bytes are written to out; *outl is written exactly once.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:2013 \u2014 blake2b/blake2s::internal_final; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-030",
+      "file": "src/provider/digest.rs",
+      "line": 2039,
+      "inventory_line": 2039,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "blake2b/blake2s::get_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "2affef415e400c531de72d2c37e47ba9d17c90fb968871f8acf1f133009cfc72",
+      "category": "provider-callback",
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array; each entry the function locates has `data` writable for its `data_size`. The function writes only the standard digest descriptors it locates and returns 1; a NULL array is a no-op answering 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_GET_PARAMS (include/openssl/core_dispatch.h); the core supplies a key-terminated parameter array or NULL.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 GET_PARAMS with NULL and observes 1"
+      ],
+      "implementation_guarantees": "Only located standard digest descriptors are written; NULL is accepted.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:2039 \u2014 blake2b/blake2s::get_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-031",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 262,
+      "inventory_line": 262,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `ShaCtx`; `data` must be readable for `count` bytes. The body calls `SHA1_Update` on `md_data(ctx)` and checks neither the context nor the block, and the ctrl body checks only `ctx == NULL`.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:262 \u2014 sha1_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-032",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 269,
+      "inventory_line": 269,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `ShaCtx`; `md` must be writable for the digest length. The body calls `SHA1_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:269 \u2014 sha1_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-033",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 277,
+      "inventory_line": 277,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_int_ctrl",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` is NULL or a live `EvpMdCtx`; when it is non-NULL its `md_data` must point to a live, initialised `ShaCtx`, and `p2` must be a valid pointer for the control command. The body guards only `ctx == NULL` and otherwise forwards `md_data(ctx)` to `ossl_sha1_ctrl` without validating the block.",
+      "established_by": [
+        "refusal: only the `ctx == NULL` arm is guarded; a non-NULL context whose md_data is NULL or the wrong type is forwarded unchecked",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c shows the unhardened sibling dereferencing NULL"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the non-NULL-context md_data extent is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:277 \u2014 sha1_int_ctrl does not establish the writable md_data its non-NULL arm requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-034",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 324,
+      "inventory_line": 324,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha224_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha256Ctx`; `data` must be readable for `count` bytes. The body calls `SHA256_Update` on `md_data(ctx)` and checks neither the context nor the block, and the ctrl body checks only `ctx == NULL`.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:324 \u2014 sha224_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-035",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 330,
+      "inventory_line": 330,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha224_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha256Ctx`; `md` must be writable for the digest length. The body calls `SHA256_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:330 \u2014 sha224_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-036",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 336,
+      "inventory_line": 336,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` writable as a `Sha256Ctx`. The body calls `SHA256_Init` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:336 \u2014 sha256_init does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-037",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 342,
+      "inventory_line": 342,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha256Ctx`; `data` must be readable for `count` bytes. The body calls `SHA256_Update` on `md_data(ctx)` and checks neither the context nor the block, and the ctrl body checks only `ctx == NULL`.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:342 \u2014 sha256_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-038",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 348,
+      "inventory_line": 348,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha256Ctx`; `md` must be writable for the digest length. The body calls `SHA256_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:348 \u2014 sha256_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-039",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 354,
+      "inventory_line": 354,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` writable as a `Sha512Ctx`. The body calls `SHA384_Init` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:354 \u2014 sha384_init does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-040",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 360,
+      "inventory_line": 360,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `data` must be readable for `count` bytes. The body calls `SHA512_Update` on `md_data(ctx)` and checks neither the context nor the block, and the ctrl body checks only `ctx == NULL`.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:360 \u2014 sha384_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-041",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 366,
+      "inventory_line": 366,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `md` must be writable for the digest length. The body calls `SHA512_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:366 \u2014 sha384_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-042",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 372,
+      "inventory_line": 372,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` writable as a `Sha512Ctx`. The body calls `SHA512_Init` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:372 \u2014 sha512_init does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-043",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 378,
+      "inventory_line": 378,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `data` must be readable for `count` bytes. The body calls `SHA512_Update` on `md_data(ctx)` and checks neither the context nor the block, and the ctrl body checks only `ctx == NULL`.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:378 \u2014 sha512_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-044",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 384,
+      "inventory_line": 384,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `md` must be writable for the digest length. The body calls `SHA512_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:384 \u2014 sha512_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-045",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 393,
+      "inventory_line": 393,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_224_int_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` writable as a `Sha512Ctx`. The body calls `sha512_224_init` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:393 \u2014 sha512_224_int_init does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-046",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 399,
+      "inventory_line": 399,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_224_int_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `md` must be writable for the digest length. The body calls `SHA512_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:399 \u2014 sha512_224_int_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-047",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 405,
+      "inventory_line": 405,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_256_int_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` writable as a `Sha512Ctx`. The body calls `sha512_256_init` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:405 \u2014 sha512_256_int_init does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-048",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 411,
+      "inventory_line": 411,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_256_int_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "0a65c533cf1a5a9220eefaff01847562005a3052641a1ee4e2c00a7371dae887",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `md` must be writable for the digest length. The body calls `SHA512_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL or extent check on ctx or md_data",
+        "authority: the file documents D289/D290 (the legacy method's ctx_size is 0 and the digest path replaces the method before any callback reads md_data); the only caller is the exported accessor",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c runs sha256_init(NULL) in a child and observes SIGSEGV, while the hardened sha1_init(NULL) answers 0",
+        "record: atlas-refresh/openssh-final-blockers.json residual says the sibling legacy initialisers retain the authority's unconditional shape and remain queued"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:411 \u2014 sha512_256_int_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and a context bound to this legacy table has `ctx_size == 0`, so neither the code nor an external ABI contract can establish the required writable block for every C-valid call. The exported `EVP_MD_meth_get_*` accessors hand this function pointer to any C caller, and the probe shows the unhardened sibling `sha256_init(NULL)` dying with SIGSEGV. Section 17 requires the callback to refuse rather than reproduce the authority's NULL write; hardening it like `sha1_init`/`sha224_init` is the queued repair.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-049",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 350,
+      "inventory_line": 350,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_name_dup_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type, borrowed for the duration of the call. On success the function returns a newly allocated deep copy that the caller exclusively owns; on failure it returns NULL. It neither consumes nor modifies `p`.",
+      "established_by": [
+        "caller: ctx_set1_dup! in src/cmp/cmp_ctx.rs passes `val` to this thunk; the public setter's # Safety contract is `val` NULL or live, and the returned duplicate is stored as the context member",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls OSSL_CMP_CTX_set1_expected_sender twice and then OSSL_CMP_CTX_free; an aliasing dup would leave a dangling member and double-free"
+      ],
+      "implementation_guarantees": "A distinct, fully owned deep copy is returned or NULL; the input is unchanged.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:350 \u2014 x509_name_dup_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-050",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 354,
+      "inventory_line": 354,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_name_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:354 \u2014 x509_name_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-051",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 358,
+      "inventory_line": 358,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "asn1_integer_dup_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type, borrowed for the duration of the call. On success the function returns a newly allocated deep copy that the caller exclusively owns; on failure it returns NULL. It neither consumes nor modifies `p`.",
+      "established_by": [
+        "caller: ctx_set1_dup! in src/cmp/cmp_ctx.rs passes `val` to this thunk; the public setter's # Safety contract is `val` NULL or live, and the returned duplicate is stored as the context member",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls OSSL_CMP_CTX_set1_expected_sender twice and then OSSL_CMP_CTX_free; an aliasing dup would leave a dangling member and double-free"
+      ],
+      "implementation_guarantees": "A distinct, fully owned deep copy is returned or NULL; the input is unchanged.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:358 \u2014 asn1_integer_dup_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-052",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 362,
+      "inventory_line": 362,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "asn1_integer_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:362 \u2014 asn1_integer_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-053",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 366,
+      "inventory_line": 366,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_req_dup_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type, borrowed for the duration of the call. On success the function returns a newly allocated deep copy that the caller exclusively owns; on failure it returns NULL. It neither consumes nor modifies `p`.",
+      "established_by": [
+        "caller: ctx_set1_dup! in src/cmp/cmp_ctx.rs passes `val` to this thunk; the public setter's # Safety contract is `val` NULL or live, and the returned duplicate is stored as the context member",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls OSSL_CMP_CTX_set1_expected_sender twice and then OSSL_CMP_CTX_free; an aliasing dup would leave a dangling member and double-free"
+      ],
+      "implementation_guarantees": "A distinct, fully owned deep copy is returned or NULL; the input is unchanged.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:366 \u2014 x509_req_dup_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-054",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 370,
+      "inventory_line": 370,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_req_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:370 \u2014 x509_req_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-055",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 376,
+      "inventory_line": 376,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:376 \u2014 x509_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-056",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 380,
+      "inventory_line": 380,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "evp_pkey_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:380 \u2014 evp_pkey_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-057",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 384,
+      "inventory_line": 384,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "evp_md_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:384 \u2014 evp_md_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-058",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 388,
+      "inventory_line": 388,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "octet_string_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:388 \u2014 octet_string_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-059",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 392,
+      "inventory_line": 392,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "general_name_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:392 \u2014 general_name_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-060",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 396,
+      "inventory_line": 396,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_extension_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:396 \u2014 x509_extension_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-061",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 400,
+      "inventory_line": 400,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "utf8_string_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:400 \u2014 utf8_string_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-062",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 404,
+      "inventory_line": 404,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_store_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:404 \u2014 x509_store_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-063",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 408,
+      "inventory_line": 408,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "itav_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:408 \u2014 itav_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-064",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 412,
+      "inventory_line": 412,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "policy_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-thunk",
+      "contract": "`p` is NULL or a live object of the thunk's declared C type whose ownership is transferred to this call and is not released by any other path. The function releases it exactly once through that type's free; NULL is a no-op.",
+      "established_by": [
+        "caller: ctx_set1_dup! passes the owned incumbent member to this thunk; destroy_body and OSSL_CMP_CTX_free pass members the context exclusively owns",
+        "C ABI: itav_free_void is the OPENSSL_sk_pop_free freefunc over a stack that owns each element",
+        "negative control: cmp::cmp_ctx::zero_state_sweep_ossl_cmp_ctx executes every destroy body on an all-zero context and passes; an unconditional dereference in any thunk would crash"
+      ],
+      "implementation_guarantees": "The object is released exactly once through its own C type; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:412 \u2014 policy_free_void; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-065",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 427,
+      "inventory_line": 427,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "cmp_ctx_set_md",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "0b59b0cbb5ab3e5864e65e0db1a87e0a7df8bcf054336a5e0ccc7254dec3d376",
+      "category": "cmp-helper",
+      "contract": "`ctx` is a live `OSSL_CMP_CTX`; `pmd` is a live writable slot holding NULL or an `EVP_MD` owned by `ctx`; `nid` names a digest resolvable in `ctx->libctx` under `ctx->propq`. On success `*pmd` is a newly fetched owned `EVP_MD`, the incumbent, if any, has been released, and 1 is returned; on failure `*pmd` is unchanged and 0 is returned.",
+      "established_by": [
+        "caller: src/cmp/cmp_ctx.rs:578,587 pass a fresh context's NULL fields; :1588,1593 pass the setter's owned incumbent through ptr::addr_of_mut!",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c constructs an OSSL_CMP_CTX and replaces expected_sender twice, exercising fetch, incumbent release and replacement"
+      ],
+      "implementation_guarantees": "On success *pmd owns a new EVP_MD and the incumbent was released; on failure *pmd is untouched.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:427 \u2014 cmp_ctx_set_md; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-066",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1691,
+      "inventory_line": 1691,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "itav_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1691 \u2014 itav_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-067",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1697,
+      "inventory_line": 1697,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "itav_free",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "`p` is NULL or a live item of the declared type allocated by the paired `*_new` or by the item layer, exclusively owned by this call. The function releases it exactly once through the matching item descriptor; NULL is a no-op.",
+      "established_by": [
+        "caller: the matching *_new returns the item and the owning CMP message/context releases it through this function exactly once",
+        "type invariant: the item descriptor is the same static one the paired allocator used"
+      ],
+      "implementation_guarantees": "Exactly one release through the matching descriptor; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1697 \u2014 itav_free; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-068",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1703,
+      "inventory_line": 1703,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "rootcakeyupdate_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1703 \u2014 rootcakeyupdate_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-069",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1709,
+      "inventory_line": 1709,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "rootcakeyupdate_free",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "`p` is NULL or a live item of the declared type allocated by the paired `*_new` or by the item layer, exclusively owned by this call. The function releases it exactly once through the matching item descriptor; NULL is a no-op.",
+      "established_by": [
+        "caller: the matching *_new returns the item and the owning CMP message/context releases it through this function exactly once",
+        "type invariant: the item descriptor is the same static one the paired allocator used"
+      ],
+      "implementation_guarantees": "Exactly one release through the matching descriptor; NULL is a no-op.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1709 \u2014 rootcakeyupdate_free; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-070",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1715,
+      "inventory_line": 1715,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "certreqtemplate_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1715 \u2014 certreqtemplate_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-071",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1721,
+      "inventory_line": 1721,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "crlstatus_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1721 \u2014 crlstatus_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-072",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1742,
+      "inventory_line": 1742,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_CERTREPMESSAGE_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1742 \u2014 OSSL_CMP_CERTREPMESSAGE_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-073",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1748,
+      "inventory_line": 1748,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_REVREPCONTENT_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1748 \u2014 OSSL_CMP_REVREPCONTENT_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-074",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1754,
+      "inventory_line": 1754,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_ERRORMSGCONTENT_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1754 \u2014 OSSL_CMP_ERRORMSGCONTENT_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-075",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1760,
+      "inventory_line": 1760,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_CERTIFIEDKEYPAIR_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1760 \u2014 OSSL_CMP_CERTIFIEDKEYPAIR_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-076",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1766,
+      "inventory_line": 1766,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_REVDETAILS_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1766 \u2014 OSSL_CMP_REVDETAILS_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-077",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1781,
+      "inventory_line": 1781,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_CERTSTATUS_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1781 \u2014 OSSL_CMP_CERTSTATUS_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-078",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1796,
+      "inventory_line": 1796,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_CERTRESPONSE_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1796 \u2014 OSSL_CMP_CERTRESPONSE_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-079",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1811,
+      "inventory_line": 1811,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_POLLREQ_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1811 \u2014 OSSL_CMP_POLLREQ_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-080",
+      "file": "src/cmp/cmp_asn.rs",
+      "line": 1826,
+      "inventory_line": 1826,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "OSSL_CMP_POLLREP_new",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "source_blob_sha256": "4883b656b64c37bed3e97e57101e8150b9ff7622457f6187f04936f23a5f6504",
+      "category": "asn1-allocator",
+      "contract": "No argument precondition. The paired `cmp_*_it()` accessor names a live immutable static item descriptor, and the function returns a fresh, exclusively owned, fully initialised item of that type or NULL on allocation failure. Ownership transfers to the caller, which must release it with the matching `*_free`.",
+      "established_by": [
+        "type invariant: accessor! in src/cmp/cmp_asn.rs returns a *const Asn1Item naming a static item descriptor; ASN1_item_new is the item layer's allocator for exactly that descriptor",
+        "caller: src/cmp/cmp_msg.rs and OSSL_CMP_ITAV_create check the NULL return and either own the result or release it through the matching item free",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c creates two OSSL_CMP_ITAV values, observes distinct pointers and frees each once; a shared/static return would double-free"
+      ],
+      "implementation_guarantees": "A fresh, exclusively owned, fully initialised item or NULL; nothing shared.",
+      "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1826 \u2014 OSSL_CMP_POLLREP_new; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-081",
+      "file": "src/provider/legacyprov.rs",
+      "line": 323,
+      "inventory_line": 323,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "legacy_digest_impl::dupctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`ctx` is NULL or the live `the row's OwnedCtx type` that this row's NEWCTX/DUPCTX returned and the core has not yet released. On success the function returns a freshly allocated, exclusively owned copy of exactly `size_of::<the row's OwnedCtx type>()` bytes, which the caller owns and later passes to FREECTX/DUPCTX; on failure, including `ctx == NULL`, it returns NULL and allocates nothing.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_DUPCTX (include/openssl/core_dispatch.h); the core supplies a live context this row's NEWCTX returned.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 and legacy MDC2 DUPCTX with NULL and observes NULL (guard-removal would dereference NULL)"
+      ],
+      "implementation_guarantees": "On success: one allocation of size_of::<T>(), exclusively owned by the caller; on failure: NULL and no allocation.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:323 \u2014 legacy_digest_impl::dupctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-082",
+      "file": "src/provider/legacyprov.rs",
+      "line": 336,
+      "inventory_line": 336,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "legacy_digest_impl::copyctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<the row's OwnedCtx type>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<the row's OwnedCtx type>()` bytes and reads or writes nothing outside those regions.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_COPYCTX (include/openssl/core_dispatch.h); the core supplies a destination and source of the context's size.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy (and provider::legacyprov::mdc2::tests::copyctx_tolerates_a_self_copy) passes",
+        "negative control: replacing `ptr::copy` with `ptr::copy_nonoverlapping` makes the same-poininter call an aliasing violation"
+      ],
+      "implementation_guarantees": "Exactly size_of::<T>() bytes are copied; same-region input is defined and no byte changes.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:336 \u2014 legacy_digest_impl::copyctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-083",
+      "file": "src/provider/legacyprov.rs",
+      "line": 349,
+      "inventory_line": 349,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "legacy_digest_impl::internal_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `the row's OwnedCtx type` this row's NEWCTX/DUPCTX returned; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located entries satisfy their declared type and `data_size`. The function initialises `ctx` in place, reads `params` only through the declared descriptors, and returns 0 or 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_INIT (include/openssl/core_dispatch.h); the core supplies a live context and an unused parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Only the provider context is written; the return value is 0 on refusal and 1 on success.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:349 \u2014 legacy_digest_impl::internal_init; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-084",
+      "file": "src/provider/legacyprov.rs",
+      "line": 360,
+      "inventory_line": 360,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "legacy_digest_impl::internal_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `the row's OwnedCtx type`; `out` is writable for `outsz` bytes; `outl` is a live, writable `usize`. When `outsz` is at least the digest length the function writes exactly that many bytes to `out` and stores the length in `*outl`; otherwise it returns 0 without writing `out`. It never writes past `outsz`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FINAL (include/openssl/core_dispatch.h); the core supplies a context, output buffer of outsz bytes and writable outl.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most outsz bytes are written to out; *outl is written exactly once.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:360 \u2014 legacy_digest_impl::internal_final; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-085",
+      "file": "src/provider/legacyprov.rs",
+      "line": 378,
+      "inventory_line": 378,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "legacy_digest_impl::update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `the row's OwnedCtx type`; `in_` is readable for `inl` bytes (it is not read when `inl == 0`). The function consumes exactly `inl` input bytes and mutates only `ctx`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_UPDATE (include/openssl/core_dispatch.h); the core supplies a live context and readable input of inl bytes.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most inl input bytes are read; only the provider context is written.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:378 \u2014 legacy_digest_impl::update; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-086",
+      "file": "src/provider/legacyprov.rs",
+      "line": 387,
+      "inventory_line": 387,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "legacy_digest_impl::get_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array; each entry the function locates has `data` writable for its `data_size`. The function writes only the standard digest descriptors it locates and returns 1; a NULL array is a no-op answering 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_GET_PARAMS (include/openssl/core_dispatch.h); the core supplies a key-terminated parameter array or NULL.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 GET_PARAMS with NULL and observes 1"
+      ],
+      "implementation_guarantees": "Only located standard digest descriptors are written; NULL is accepted.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:387 \u2014 legacy_digest_impl::get_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-087",
+      "file": "src/provider/legacyprov.rs",
+      "line": 531,
+      "inventory_line": 531,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "mdc2::dupctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`ctx` is NULL or the live `Mdc2Ctx` that this row's NEWCTX/DUPCTX returned and the core has not yet released. On success the function returns a freshly allocated, exclusively owned copy of exactly `size_of::<Mdc2Ctx>()` bytes, which the caller owns and later passes to FREECTX/DUPCTX; on failure, including `ctx == NULL`, it returns NULL and allocates nothing.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_DUPCTX (include/openssl/core_dispatch.h); the core supplies a live MDC2 context from this row.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 and legacy MDC2 DUPCTX with NULL and observes NULL (guard-removal would dereference NULL)"
+      ],
+      "implementation_guarantees": "On success: one allocation of size_of::<T>(), exclusively owned by the caller; on failure: NULL and no allocation.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:531 \u2014 mdc2::dupctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-088",
+      "file": "src/provider/legacyprov.rs",
+      "line": 544,
+      "inventory_line": 544,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "mdc2::copyctx",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<Mdc2Ctx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<Mdc2Ctx>()` bytes and reads or writes nothing outside those regions.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_COPYCTX (include/openssl/core_dispatch.h); the core supplies a destination and source of size_of::<Mdc2Ctx>().",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "test: provider::digest::sha1::tests::copyctx_tolerates_a_self_copy (and provider::legacyprov::mdc2::tests::copyctx_tolerates_a_self_copy) passes",
+        "negative control: replacing `ptr::copy` with `ptr::copy_nonoverlapping` makes the same-poininter call an aliasing violation"
+      ],
+      "implementation_guarantees": "Exactly size_of::<T>() bytes are copied; same-region input is defined and no byte changes.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:544 \u2014 mdc2::copyctx; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-089",
+      "file": "src/provider/legacyprov.rs",
+      "line": 556,
+      "inventory_line": 556,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "mdc2::internal_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `Mdc2Ctx` this row's NEWCTX/DUPCTX returned; `params` is NULL or a key-terminated `OSSL_PARAM` array whose located entries satisfy their declared type and `data_size`. The function initialises `ctx` in place, reads `params` only through the declared descriptors, and returns 0 or 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_INIT (include/openssl/core_dispatch.h); the core supplies a live MDC2 context and an unused parameter array.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "Only the provider context is written; the return value is 0 on refusal and 1 on success.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:556 \u2014 mdc2::internal_init; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-090",
+      "file": "src/provider/legacyprov.rs",
+      "line": 564,
+      "inventory_line": 564,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "mdc2::internal_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `Mdc2Ctx`; `out` is writable for `outsz` bytes; `outl` is a live, writable `usize`. When `outsz` is at least the digest length the function writes exactly that many bytes to `out` and stores the length in `*outl`; otherwise it returns 0 without writing `out`. It never writes past `outsz`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_FINAL (include/openssl/core_dispatch.h); the core supplies a context, output buffer of outsz bytes and writable outl.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most outsz bytes are written to out; *outl is written exactly once.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:564 \u2014 mdc2::internal_final; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-091",
+      "file": "src/provider/legacyprov.rs",
+      "line": 582,
+      "inventory_line": 582,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "mdc2::update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`ctx` is the live `Mdc2Ctx`; `in_` is readable for `inl` bytes (it is not read when `inl == 0`). The function consumes exactly `inl` input bytes and mutates only `ctx`.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_UPDATE (include/openssl/core_dispatch.h); the core supplies a live MDC2 context and readable input of inl bytes.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one."
+      ],
+      "implementation_guarantees": "At most inl input bytes are read; only the provider context is written.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:582 \u2014 mdc2::update; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1I-092",
+      "file": "src/provider/legacyprov.rs",
+      "line": 587,
+      "inventory_line": 587,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "mdc2::get_params",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "source_blob_sha256": "c07393df86e3610ddf0f590100f77de8c8982f425c97fe1f2242ddc26d6b501b",
+      "category": "provider-callback",
+      "contract": "`params` is NULL or a key-terminated `OSSL_PARAM` array; each entry the function locates has `data` writable for its `data_size`. The function writes only the standard digest descriptors it locates and returns 1; a NULL array is a no-op answering 1.",
+      "established_by": [
+        "C ABI: OSSL_FUNC_DIGEST_GET_PARAMS (include/openssl/core_dispatch.h); the core supplies a key-terminated parameter array or NULL.",
+        "caller: src/evp/digest.rs and the provider dispatch in src/provider/digest.rs obtain the algctx from NEWCTX/DUPCTX and never manufacture one.",
+        "probe: forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c calls the default SHA1 GET_PARAMS with NULL and observes 1"
+      ],
+      "implementation_guarantees": "Only located standard digest descriptors are written; NULL is accepted.",
+      "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:587 \u2014 mdc2::get_params; contract and callers recorded in this receipt",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    }
+  ],
+  "negative_controls": [
+    {
+      "id": "V1I-NC-1",
+      "claim": "the provider DUPCTX/FREECTX/GET_PARAMS preconditions are guarded",
+      "control": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c reaches the default SHA1 and legacy MDC2 dispatch through OSSL_PROVIDER_get0_dispatch and calls DUPCTX(NULL) -> NULL, FREECTX(NULL) -> no-op, GET_PARAMS(NULL) -> 1",
+      "observed": "negctl default/SHA1: rejected as required; negctl legacy/MDC2: rejected as required",
+      "would_fail_if": "the `ctx.is_null()` arm in dupctx or the NULL handling in ossl_digest_default_get_params were removed; the probe would dereference NULL"
+    },
+    {
+      "id": "V1I-NC-2",
+      "claim": "the two cmp_ctx dup/free thunk families transfer ownership exactly once",
+      "control": "OSSL_CMP_ITAV_create twice (distinct pointers, each freed once) and OSSL_CMP_CTX_set1_expected_sender twice followed by OSSL_CMP_CTX_free",
+      "observed": "negctl cmp/itav: two distinct owned items, each released once; negctl cmp/ctx: dup+replace+destruct released exactly once",
+      "would_fail_if": "a dup thunk aliased its input (double free on replace/free) or a free thunk released the wrong type"
+    },
+    {
+      "id": "V1I-NC-3",
+      "claim": "the legacy_sha update/final/ctrl sites cannot be discharged",
+      "control": "fork a child that calls EVP_MD_meth_get_init(EVP_sha256())(NULL); the hardened sha1_init(NULL) is the paired positive",
+      "observed": "negctl legacy_sha/sha1_init: NULL refused with 0; negctl legacy_sha/sha256_init: NULL dereference observed (SIGSEGV)",
+      "would_fail_if": "sha256_init validated md_data like sha1_init; then the property named by the refusal would no longer exist and the site would be dischargeable"
+    },
+    {
+      "id": "V1I-NC-4",
+      "claim": "COPYCTX accepts a same-region call and GET_CTX_PARAMS writes both aliases",
+      "control": "cargo test --lib -- provider::digest::sha1::tests::copyctx_tolerates_a_self_copy; provider::legacyprov::mdc2::tests::copyctx_tolerates_a_self_copy; provider::digest::sha3::tests::shake_get_ctx_params_sets_both_aliases",
+      "observed": "2 passed; 1 passed; 0 failed (see receipt gates)",
+      "would_fail_if": "copyctx assumed disjoint regions or the second alias write were deleted"
+    }
+  ],
+  "does_not_prove": [
+    "It does not make EVP_PKEY_PROVIDER or RAND_CMS_STORE_KEYFMT mechanism-wide SAFETY_DISCHARGED.",
+    "It does not discharge the other 77 obligations in the v1h 169 (the five files are 92 of them).",
+    "It does not prove every external caller of an exported dispatch slot honours the OSSL ABI; only the in-crate core and the probe's calls do.",
+    "It does not establish constant-time behaviour, secret cleansing, or cryptographic correctness of the digest/cipher paths it touches.",
+    "It is not SAFE_COMPATIBLE and not an independent review; the probe and receipt share one author.",
+    "It does not cover Miri/ASan/Loom/mutation evidence, which was not run at this identity.",
+    "The source blobs are S' (876900e47); the evidence commit is later and adds no source change."
+  ],
+  "non_claims": [
+    "DISCHARGED here is site-scoped and contract-bounded; it is not a consumer graduation.",
+    "The legacy_sha obligations remain BLOCKED, not UNKNOWN and not discharged.",
+    "The probe runs against the S' candidate binary (libcrypto cb45a6ec), not the authority."
+  ],
+  "negative_controls_source": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-negctl.c",
+    "sha256": "77b8193418f11621f0170de4c6c39755814ea9193e1e66768d6004f23669d8cd"
+  }
+}
