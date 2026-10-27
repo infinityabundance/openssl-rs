@@ -1,0 +1,420 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/atlas-refresh/element7-regression-v1j/v1",
+ "kind": "element-7-regression-explanation",
+ "subphase": "safe-c33/explain-element7-v1h-to-v1j",
+ "generated_utc": "2026-10-27T22:27:40Z",
+ "question": "Why did element 7 regress from PASS to FAIL with 9 target-bounded unresolved reachable sites, when the only src change between v1h and v1j is src/evp/legacy_sha.rs?",
+ "recorded_counts_unchanged": {
+  "note": "This receipt explains the recorded v1j result. It does not re-classify it. The closure output remains 9 target-bounded unresolved reachable sites and element 7 remains FAIL for both consumers.",
+  "v1j_ssh": {
+   "reachable_files": 312,
+   "reachable_production_obligations": 146,
+   "DISCHARGED": 62,
+   "BLOCKED": 55,
+   "UNKNOWN": 29,
+   "indirect_sites": 51914,
+   "resolved_sites": 51663,
+   "unresolved_sites": 251,
+   "reachable_unresolved_sites": 11,
+   "reachable_target_bounded_unresolved_sites": 9,
+   "reachable_contract_bounded_sites": 2,
+   "element_7": "FAIL"
+  },
+  "v1j_sshd": {
+   "reachable_files": 302,
+   "reachable_production_obligations": 146,
+   "reachable_unresolved_sites": 11,
+   "reachable_target_bounded_unresolved_sites": 9,
+   "reachable_contract_bounded_sites": 2,
+   "element_7": "FAIL"
+  }
+ },
+ "identities": {
+  "v1h_S_prime": {
+   "source_head": "876900e47b25c01899a2aca97004a77ab60d597f",
+   "src_content_sha256": "8d746bc74a0f5eeacdf2a1be8d84a14c62820e09336b59711358ba68195fb24d",
+   "libcrypto_sha256": "cb45a6ec8323a333c69d8b24fc3e62bc8441dba7ba631d47d132d8d375fd7e44",
+   "libssl_sha256": "527ec167ebb9db04f64bb93b697e0add26bb1a8dce416afb1eab512e98efc4d1",
+   "ssh_sha256": "e5778959e8ca0298010149cae7a708bee14c2738a370dee8f8b156348a25c529",
+   "sshd_sha256": "8d956b97f090c66649fa6ca3bdadf4206923f3abfc2bd0fdb1a33d48e6b36b20",
+   "reachable_files": {"ssh": 319, "sshd": 309},
+   "reachable_production_obligations": 169,
+   "element_7": "PASS (contract-bounded)",
+   "target_bounded_unresolved_sites": 0,
+   "citation": "atlas-refresh/openssh-closure-v1h.json#/element_7"
+  },
+  "v1j_S_double_prime": {
+   "source_head": "5163f564f0016ce45f4326dd90c5de63c91ca119",
+   "src_content_sha256": "add0d599816339e1e3427aa2ccee8de6639bd3c43b634b57275b3d1b10c41339",
+   "libcrypto_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+   "libssl_sha256": "82051ef8ba6c9891d70a95b43d6b82c4c9be0a4865504984f5024c6a302d9b4e",
+   "ssh_sha256": "f2ca91f4e3926702b97e687788281b15428c0a6eb6e0f2b4ed1bb9435130f6d4",
+   "sshd_sha256": "ed0c7aa884225eb4eac740450e6d27dd7e572db9bbc22949a2b309762cb0d185",
+   "reachable_files": {"ssh": 312, "sshd": 302},
+   "reachable_production_obligations": 146,
+   "element_7": "FAIL",
+   "citation": "atlas-refresh/openssh-closure-v1j.json"
+  },
+  "build_relevant_source_change": "src/evp/legacy_sha.rs only (five initialisers now call init_md_data; contracts and tests added)"
+ },
+ "tool": {
+  "path": "forensics/tools/consumer_closure.py",
+  "sha256_before_and_after": "59aea07c1ec2269a7ab21e973f64cf38c0eef632a6f7a47d64108c56c81e9e48",
+  "modified": false,
+  "method": "the tool was imported unmodified as a module and its in-memory callables were wrapped by an external driver (court/e7/e7_driver.py); the file hash is unchanged and matches the freeze receipts"
+ },
+ "sites": [
+  {
+   "id": "V1J-E7-01",
+   "call_site": "0x2d60a6",
+   "containing_function_start": "0x2d5ff0",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store11alg_cleanup.llvm.14669998244030490434",
+   "containing_function_demangled": "openssl_rs::property::store::alg_cleanup",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%rbp)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20) is the class destructor stored by ossl_method_store_add (src/property/store.rs:692); the class is in this crate",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/0",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  },
+  {
+   "id": "V1J-E7-02",
+   "call_site": "0x2d6210",
+   "containing_function_start": "0x2d6200",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store15impl_free_thunk",
+   "containing_function_demangled": "openssl_rs::property::store::impl_free_thunk",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%rbx)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/1",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  },
+  {
+   "id": "V1J-E7-03",
+   "call_site": "0x2d62d0",
+   "containing_function_start": "0x2d62c0",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store21impl_cache_free_thunk",
+   "containing_function_demangled": "openssl_rs::property::store::impl_cache_free_thunk",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%rbx)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/2",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  },
+  {
+   "id": "V1J-E7-04",
+   "call_site": "0x2d6729",
+   "containing_function_start": "0x2d6300",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store21ossl_method_store_add",
+   "containing_function_demangled": "openssl_rs::property::store::ossl_method_store_add",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%rbx)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20), the caller-supplied class destructor",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/3",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  },
+  {
+   "id": "V1J-E7-05",
+   "call_site": "0x2d69cf",
+   "containing_function_start": "0x2d6980",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store22impl_cache_flush_cache",
+   "containing_function_demangled": "openssl_rs::property::store::impl_cache_flush_cache",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%rax)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20), the caller-supplied class destructor",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/4",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  },
+  {
+   "id": "V1J-E7-06",
+   "call_site": "0x2d6bf6",
+   "containing_function_start": "0x2d6b20",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store23alg_cleanup_by_provider.llvm.14669998244030490434",
+   "containing_function_demangled": "openssl_rs::property::store::alg_cleanup_by_provider",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%r12)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20) is the class destructor stored by ossl_method_store_add (src/property/store.rs:692); the class is in this crate",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/5",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  },
+  {
+   "id": "V1J-E7-07",
+   "call_site": "0x2d7981",
+   "containing_function_start": "0x2d7740",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "containing_function_demangled": "openssl_rs::property::store::ossl_method_store_cache_set",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%rax)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/6",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  },
+  {
+   "id": "V1J-E7-08",
+   "call_site": "0x2d7acf",
+   "containing_function_start": "0x2d7740",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "containing_function_demangled": "openssl_rs::property::store::ossl_method_store_cache_set",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%r13)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/7",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  },
+  {
+   "id": "V1J-E7-09",
+   "call_site": "0x2d7a3e",
+   "containing_function_start": "0x2d7740",
+   "containing_function": "_RNvNtNtCsb1dSv1ncIeD_10openssl_rs8property5store27ossl_method_store_cache_set",
+   "containing_function_demangled": "openssl_rs::property::store::ossl_method_store_cache_set",
+   "symbol_binding": "t",
+   "exported": false,
+   "instruction": "call   *0x20(%rax)",
+   "slot": "Method.free (offset 0x20)",
+   "class_at_entry": "field",
+   "reason_recorded": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor",
+   "citation": "openssh-closure-v1j.json#/closures/ssh/precision/witness_rule/witness_missing/8",
+   "classification": "RESOLVABLE_IN_PRINCIPLE"
+  }
+ ],
+ "per_site_rederivation": {
+  "applies_to": "all nine sites; the slot, the writers and the reachable callers are identical for all of them, which is why one spec covers all nine",
+  "slot_resolution": "the object is the method-store entry; offset 0x20 is Method.free (src/property/store.rs:692). All nine sites load it and call through it; none of them read a function argument (instrumented run: arg_deps = [] for all nine).",
+  "stores_into_the_slot": {
+   "method": "objdump of the exact v1j image (court/tmp/openssh-closure/work-v1j/libcrypto.so.3.e87a85bd6e673054.dis), searching every store to a 0x20 displacement",
+   "instructions": [
+    "ossl_method_store_add 0x2d6384: mov %rax,0x20(%r15)  [value loaded at 0x2d6371 from 0x40(%rsp), the sixth argument 'destruct']",
+    "ossl_method_store_cache_set 0x2d77e3: mov %rax,0x20(%rbx)",
+    "ossl_method_store_cache_set 0x2d7939: mov %rax,0x20(%r13)",
+    "ossl_method_store_cache_set 0x2d7a1b: mov %rax,0x20(%rsp)",
+    "ossl_method_store_cache_set 0x2d7a77: mov %rax,0x20(%rbx)",
+    "ossl_method_store_cache_set 0x2d7aeb: mov %rcx,0x20(%rbx)"
+   ],
+   "conclusion": "the only writers of Method.free in the image are the two method-store writers, and both are in the pre-closure reachable set (ossl_method_store_add 0x2d6300, ossl_method_store_cache_set 0x2d7740)"
+  },
+  "writer_call_sites_and_argument_values": [
+   {"caller": "evp::fetch::put_evp_method_in_store", "call_site": "0x195155", "writer": "ossl_method_store_add", "destructor_argument": "0x40(%r12) - the EvpMethodData.destruct_method field, not a call-site constant", "in_image_value": "sourced from inner_evp_generic_fetch (0x194b30) free_method argument; verified materialisations: lea ... # 406290 <EVP_CIPHER_free> at 0x190005, lea ... # 47cd20 <EVP_MD_free> at 0x1a7044"},
+   {"caller": "store::store_meth::put_loader_in_store", "call_site": "0x2a10e3", "writer": "ossl_method_store_add", "destructor_argument": "load from 0x897cd8", "in_image_value": "R_X86_64_GLOB_DAT OSSL_STORE_LOADER_free -> 0x27fa00"},
+   {"caller": "decoder_meth::put_decoder_in_store", "call_site": "0x4fe429", "writer": "ossl_method_store_add", "destructor_argument": "load from 0x8937d8", "in_image_value": "R_X86_64_GLOB_DAT OSSL_DECODER_free -> 0x4f0f60"},
+   {"caller": "encoder_meth::put_encoder_in_store", "call_site": "0x4ff7c9", "writer": "ossl_method_store_add", "destructor_argument": "load from 0x896950", "in_image_value": "R_X86_64_GLOB_DAT OSSL_ENCODER_free -> 0x4f1450"},
+   {"caller": "evp::fetch::inner_evp_generic_fetch", "call_site": "0x194dfb", "writer": "ossl_method_store_cache_set", "destructor_argument": "the same destruct_method value it received", "in_image_value": "same set as above"},
+   {"caller": "store::store_meth (inner fetch)", "call_site": "0x2a0f06", "writer": "ossl_method_store_cache_set", "destructor_argument": "the same loader destructor", "in_image_value": "OSSL_STORE_LOADER_free"},
+   {"caller": "decoder_meth (inner fetch)", "call_site": "0x4fe875", "writer": "ossl_method_store_cache_set", "destructor_argument": "the same decoder destructor", "in_image_value": "OSSL_DECODER_free"},
+   {"caller": "encoder_meth (inner fetch)", "call_site": "0x4ffb85", "writer": "ossl_method_store_cache_set", "destructor_argument": "the same encoder destructor", "in_image_value": "OSSL_ENCODER_free"}
+  ],
+  "finite_in_image_target_set_available": true,
+  "derived_target_set": [
+   "EVP_MD_free", "EVP_CIPHER_free", "EVP_KDF_free", "EVP_KEYMGMT_free",
+   "EVP_SIGNATURE_free", "EVP_ASYM_CIPHER_free", "EVP_MAC_free",
+   "EVP_SKEYMGMT_free", "EVP_RAND_free", "EVP_KEYEXCH_free", "EVP_KEM_free",
+   "OSSL_STORE_LOADER_free", "OSSL_DECODER_free", "OSSL_ENCODER_free"
+  ],
+  "derived_target_set_size": 14,
+  "conclusion": "a finite, in-image, caller-established target set exists for every one of the nine sites. None of the nine is genuinely unbounded.",
+  "residual_obligation": "the loader/decoder/encoder values arrive through R_X86_64_GLOB_DAT slots, so the set is finite for these consumers (no symbol interposition) but is not a link-time bound in general; that is an ABI-contract question, not a target-set question, and it is recorded rather than claimed."
+ },
+ "per_site_classification_counts": {
+  "RESOLVABLE_IN_PRINCIPLE": 9,
+  "GENUINELY_UNBOUNDED": 0
+ },
+ "cause": {
+  "one_line": "one declared fragment name in the EVT-METHOD-FREE target list ('free_decoder') stopped naming any symbol in the rebuilt image, so _fragment_addrs returned None, edge_target_witness silently skipped the whole spec for all nine sites, and they fell through to the provider name-match branch and were recorded as target-bounded unresolved.",
+  "code_path": [
+   "consumer_closure.py:2306-2307 - _fragment_addrs returns None as soon as ONE fragment matches no defined function ('Returns None when a fragment matches no defined function: the declared target set is then incomplete for this image and must not be claimed')",
+   "consumer_closure.py:2345-2346 - edge_target_witness: 'targets = _fragment_addrs(g, spec[\"targets\"]); if not targets: continue' - the spec is skipped with no diagnostic",
+   "consumer_closure.py:2905-2924 - the site reaches the in-image-slot branch, finds no edge witness, and continues",
+   "consumer_closure.py:2940-2972 - _match(name, A1_FUNCTIONS) is true for all seven containing functions (they are listed in A1_FUNCTIONS), contract_witness(ABI_CONTRACT_PROVIDER) fails because the slot is not a documented provider interface, and the site becomes 'provider-contract-witness-missing' with class A1_witness_missing"
+  ],
+  "triggering_data": {
+   "fragment": "free_decoder",
+   "v1h_image": "_RNvNtCsb1dSv1ncIeD_10openssl_rs12decoder_meth12free_decoder exists at 0x4fdc10 as a 6-byte thunk: jmp *0x394bd2(%rip) # 8927e8 <OSSL_DECODER_free>",
+   "v1j_image": "no defined symbol matches 'free_decoder' (nm --defined-only | grep -c free_decoder = 0); only _RNvNtCsb1dSv1ncIeD_10openssl_rs12decoder_meth16destruct_decoder survives, at 0x4fe210",
+   "why_the_two_collapsed": "src/decoder_meth.rs:1145 free_decoder(method) and src/decoder_meth.rs:1127 destruct_decoder(method, _data) have identical bodies (both tail-call OSSL_DECODER_free and ignore the second argument); in v1j only one of the two is emitted",
+   "the_stored_value_moved_with_it": "v1h put_decoder_in_store 0x4fdd45: 'lea -0x13c(%rip),%rcx # 4fdc10 <decoder_meth::free_decoder>; mov %rcx,(%rsp)' then call ossl_method_store_add. v1j put_decoder_in_store 0x4fe405: 'mov 0x3953cc(%rip),%rcx # 8937d8' (GLOB_DAT OSSL_DECODER_free) then call ossl_method_store_add. Same source, different emitted value."
+  },
+  "test_a_were_they_reachable_in_v1h_and_bounded": {
+   "answer": "they were bounded, not unbound, in v1h",
+   "evidence": [
+    "v1h T_in_image_slot_resolved = 23, v1j = 14; the difference is exactly the nine sites",
+    "v1h witness_missing = [] and residual_sites = exactly the 2 ABI contract sites; if the nine had been unresolved in v1h they would appear there",
+    "both images leave the nine unresolved after PrecisionResolver.run(): unresolved_by_class field = 120 (v1h) vs 125 (v1j, +5 = the five new indirect sites), so the change is entirely inside apply_evidence_classes",
+    "all nine containing functions are in v1j's pre-closure reachable set (instrumented run: containing_function_in_pre_reachable = true, pre_reachable size 1909)"
+   ],
+   "not_recoverable": "whether the nine containing functions were themselves reachable in v1h cannot be recovered from the receipts (the closure stores counts, not the function list); it does not affect the verdict, because a resolved site does not count toward element 7 either way"
+  },
+  "test_b_is_the_bound_keyed_on_something_layout_dependent": {
+   "answer": "not on an address, but on the emitted symbol-name set, which is just as build-specific",
+   "evidence": [
+    "the hex addresses inside EDGE_TARGET_SLOTS[*]['writer'] are documentation only: spec['writer'] is never parsed, it is only copied into receipts (consumer_closure.py:2627, 2921)",
+    "the decision uses _fragment_addrs (substring match over nm names) and the pre-closure reachable address set; both are recomputed per image, so moving addresses is harmless",
+    "what moved is the symbol table: free_decoder present in cb45a6ec and absent in e87a85bd, and the value passed at the decoder store site changed from 0x4fdc10 to 0x4f0f60",
+    "the same class of churn appears in unrelated modules of the same rebuild: ts_req_utils.rs and ts_rsp_utils.rs go from 0 to 1 function label each, x509/v3_conf.rs from 9 to 8"
+   ]
+  },
+  "test_c_is_the_exported_containing_function_refusal_the_cause": {
+   "answer": "no",
+   "evidence": [
+    "that refusal is at consumer_closure.py:2434 inside reachable_caller_targets, which first requires the site to read a function argument (consumer_closure.py:2429-2433); all nine sites have arg_deps = [] (they read an object field), so the rule is never reached for them",
+    "all seven containing functions are local 't' symbols, not entries of dynamic_defs, so even if the rule were reached the export branch would not fire",
+    "the recorded reason for all nine is provider-contract-witness-missing, produced at consumer_closure.py:2971, not the reachable-caller refusal"
+   ]
+  }
+ },
+ "controls": {
+  "control_1_non_invasive_reproduction": {
+   "purpose": "show the instrumented driver does not perturb the result",
+   "command": "E7_MODE=diag E7_OUT=/work/court/e7/out python3 court/e7/e7_driver.py",
+   "observed": "reachable files=312 obligations=146 DISCHARGED=62 BLOCKED=55 UNKNOWN=29; precision indirect=51914 resolved=51663 unresolved=251 reachable_unresolved=11 target_bounded=9 contract_bounded=2 unclassified=0; element-7=FAIL; edge_records=8 (the ninth site, 0x2d62d0, failed the driver's own name filter, not the resolver's)",
+   "matches_receipt": true
+  },
+  "control_2_counterfactual_spec_without_the_absent_fragment": {
+   "purpose": "show that the bound itself is intact and that the missing fragment is the whole difference",
+   "method": "same image, same tool, same consumer; in memory only, 'free_decoder' removed from the EVT-METHOD-FREE target list",
+   "command": "E7_MODE=fix E7_OUT=/work/court/e7/out python3 court/e7/e7_driver.py  (24m36s)",
+   "observed": "reachable files=312 obligations=146 DISCHARGED=62 BLOCKED=55 UNKNOWN=29; precision indirect=51914 resolved=51672 unresolved=242 reachable_unresolved=2 target_bounded=0 contract_bounded=2 unclassified=0; element-7=PASS (contract-bounded)",
+   "delta": "resolved +9, unresolved -9, reachable_unresolved -9, target_bounded -9; reachable files and obligation counts unchanged",
+   "this_is_not_the_fix": "the resulting 13-element set omits OSSL_DECODER_free (0x4f0f60), which this image provably stores at that slot, so this counterfactual is a diagnostic, not a sound repair"
+  },
+  "control_3_target_values_are_in_image": {
+   "purpose": "confirm the finite set is in-image, not consumer-supplied",
+   "observed": "the three named slot loads resolve by readelf to R_X86_64_GLOB_DAT at 0x8937d8 -> OSSL_DECODER_free 0x4f0f60, 0x896950 -> OSSL_ENCODER_free 0x4f1450, 0x897cd8 -> OSSL_STORE_LOADER_free 0x27fa00; the EVP values are lea-materialised in-image constants (0x406290 EVP_CIPHER_free, 0x47cd20 EVP_MD_free, ...)",
+   "consumer_imports": "ssh imports are identical in both builds (396 undefined symbols, zero difference), so the roots did not change with the relink"
+  }
+ },
+ "reachable_set_diff": {
+  "ssh": {
+   "v1h": 319,
+   "v1j": 312,
+   "removed": [
+    "src/apps/req.rs",
+    "src/digest/blake2.rs",
+    "src/digest/mdc2.rs",
+    "src/evp/bio_enc.rs",
+    "src/evp/e_rc4_hmac_md5.rs",
+    "src/evp/legacy_blake2.rs",
+    "src/evp/legacy_mdc2.rs",
+    "src/provider/dsa_sig.rs",
+    "src/provider/legacyprov.rs",
+    "src/provider/rsa_kem.rs",
+    "src/provider/securitycheck.rs",
+    "src/provider/seed_src.rs",
+    "src/x509/v3_conf.rs"
+   ],
+   "added": [
+    "src/modes/siv128.rs",
+    "src/params/build.rs",
+    "src/provider/der_dsa_sig.rs",
+    "src/runtime/bio/bss_dgram.rs",
+    "src/ts/ts_req_utils.rs",
+    "src/ts/ts_rsp_utils.rs"
+   ]
+  },
+  "sshd": {
+   "removed_same_13": true,
+   "added_same_6": true,
+   "v1h": 309,
+   "v1j": 302
+  },
+  "classification": [
+   {"file": "src/apps/req.rs", "direction": "removed", "function_labels_v1h": 4, "function_labels_v1j": 4, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/digest/blake2.rs", "direction": "removed", "function_labels_v1h": 39, "function_labels_v1j": 39, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/digest/mdc2.rs", "direction": "removed", "function_labels_v1h": 3, "function_labels_v1j": 3, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/evp/bio_enc.rs", "direction": "removed", "function_labels_v1h": 20, "function_labels_v1j": 20, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/evp/e_rc4_hmac_md5.rs", "direction": "removed", "function_labels_v1h": 0, "function_labels_v1j": 0, "class": "UNEXPLAINED_BY_SOURCE_DIFF", "note": "no function label in either image; attribution comes from alias names inside other functions"},
+   {"file": "src/evp/legacy_blake2.rs", "direction": "removed", "function_labels_v1h": 6, "function_labels_v1j": 6, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/evp/legacy_mdc2.rs", "direction": "removed", "function_labels_v1h": 3, "function_labels_v1j": 3, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/provider/dsa_sig.rs", "direction": "removed", "function_labels_v1h": 65, "function_labels_v1j": 65, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/provider/legacyprov.rs", "direction": "removed", "function_labels_v1h": 46, "function_labels_v1j": 46, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/provider/rsa_kem.rs", "direction": "removed", "function_labels_v1h": 16, "function_labels_v1j": 16, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/provider/securitycheck.rs", "direction": "removed", "function_labels_v1h": 1, "function_labels_v1j": 1, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/provider/seed_src.rs", "direction": "removed", "function_labels_v1h": 33, "function_labels_v1j": 33, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/x509/v3_conf.rs", "direction": "removed", "function_labels_v1h": 9, "function_labels_v1j": 8, "class": "UNEXPLAINED_BY_SOURCE_DIFF", "note": "one emitted function symbol disappeared; still not attributable to src/evp/legacy_sha.rs"},
+   {"file": "src/modes/siv128.rs", "direction": "added", "function_labels_v1h": 9, "function_labels_v1j": 9, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/params/build.rs", "direction": "added", "function_labels_v1h": 5, "function_labels_v1j": 5, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/provider/der_dsa_sig.rs", "direction": "added", "function_labels_v1h": 1, "function_labels_v1j": 1, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/runtime/bio/bss_dgram.rs", "direction": "added", "function_labels_v1h": 9, "function_labels_v1j": 9, "class": "UNEXPLAINED_BY_SOURCE_DIFF"},
+   {"file": "src/ts/ts_req_utils.rs", "direction": "added", "function_labels_v1h": 0, "function_labels_v1j": 1, "class": "UNEXPLAINED_BY_SOURCE_DIFF", "note": "an emitted function symbol appeared in the rebuild"},
+   {"file": "src/ts/ts_rsp_utils.rs", "direction": "added", "function_labels_v1h": 0, "function_labels_v1j": 1, "class": "UNEXPLAINED_BY_SOURCE_DIFF", "note": "an emitted function symbol appeared in the rebuild"}
+  ],
+  "counts": {"removed": 13, "added": 6, "explained_by_source_diff": 0, "unexplained": 19},
+  "monotone_under_the_local_change": false,
+  "control_that_shows_the_churn_is_independent_of_element_7": {
+   "observation": "control 2 restores the nine sites' bound on the same v1j image and still reports reachable files=312, obligations=146, DISCHARGED=62, BLOCKED=55, UNKNOWN=29 - identical to the unmodified v1j run and different from v1h's 319/169",
+   "conclusion": "the 19-file reachable-set change is not a consequence of the lost element-7 bound; it is a property of the rebuilt image (symbol emission / de-duplication) as read by the resolver"
+  },
+  "why_this_matters": "the reachable file set is derived from emitted symbol names via map_reachable_files (consumer_closure.py:3156-3176). A rebuild that inlines or de-duplicates a function changes which file a reachable address is attributed to, and can remove a file from the set with no change to any call edge in the source. The counts 319/309/169 and 312/302/146 are therefore not a like-for-like measurement of the same call graph."
+ },
+ "verdict": {
+  "class": "B",
+  "label": "VERIFIER_DEFECT",
+  "split": {
+   "resolvable_in_principle": 9,
+   "genuinely_unbounded": 0,
+   "explained_reachable_set_changes": 0,
+   "unexplained_reachable_set_changes": 19
+  },
+  "statement": "None of the nine sites is an export-reachable callback with an unbounded target set. The field they call is written only by the two in-image method-store writers, and the values written are a finite in-image set of fourteen destructors. The FAIL is produced by the resolver's target list being a list of emitted symbol names: the one name that mattered ('free_decoder') was a compiler-inlined wrapper that this rebuild stopped emitting, so the whole spec was discarded. The v1h PASS was correct for the v1h image (that image really did store the wrapper at 0x4fdc10), which is exactly the problem: the evidence was bound to an emitted symbol, not to the semantic target.",
+  "what_is_not_claimed": [
+   "This does not make element 7 pass. The recorded verdict remains FAIL, and the recorded counts are unchanged.",
+   "The counterfactual in control 2 is unsound as a repair: its 13-element set omits OSSL_DECODER_free, which this image stores.",
+   "The v1h PASS is not reusable as evidence for any other image."
+  ],
+  "safe_compatible_distance": "further than the deltas suggested. Beyond the four standing refusals (STALE_HASH, MISSING_BOUNDARY_RECEIPT, UNKNOWN_OBLIGATION, UNKNOWN_MECHANISM), two of the three numbers the campaign has been trending (reachable files and obligations) are shown here to move under a one-file rebuild with no source-level call-graph change, so a comparison of 169 -> 146 is not a measurement of progress."
+ },
+ "fix_required": {
+  "primary": "Derive a slot's target set from the values actually stored into it by reachable code, not from a hand-maintained list of emitted symbol names. Concretely: resolve the sixth argument of ossl_method_store_add and the corresponding argument of ossl_method_store_cache_set at every reachable call site through the GOT relocation or materialisation that produced it; normalise thunk-equivalence (a one-line wrapper and its callee are the same semantic target); and treat 'this declared name is absent from the image' as evidence of a smaller set, never as a reason to discard the whole spec. _fragment_addrs must return the resolvable subset plus the absent fragments, not None.",
+  "secondary": "Add a reachability-stability control at BATCH level: rebuild the same frozen candidate and require the reachable file/function sets to be identical, or refuse the closure. A conservative upper bound must not shrink when a one-file change adds calls; the current 13-file loss on a 4-line semantic change cannot be explained by the source, and the evidence closure is not trustworthy until it can be.",
+  "property_that_must_hold": "for any element-7 PASS, the target set recorded at each reachable unresolved site must be a function of the frozen source candidate and its semantic call graph, not of which symbols this particular link happened to emit.",
+  "gates_that_remain_NOT_RUN": [
+   "rebuild-determinism of e87a85bd (rebuild S-double-prime twice and compare symbol tables) - NOT_RUN",
+   "independent review of this explanation by a non-author - NOT_RUN",
+   "Miri/ASan/Loom at this identity - NOT_RUN (not applicable to a verifier-only change, recorded for completeness)"
+  ]
+ },
+ "commands_verbatim": [
+  "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:$PATH && export TMPDIR=/work/court/tmp && E7_MODE=diag E7_OUT=/work/court/e7/out python3 court/e7/e7_driver.py'",
+  "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:$PATH && export TMPDIR=/work/court/tmp && time E7_MODE=fix E7_OUT=/work/court/e7/out python3 court/e7/e7_driver.py'",
+  "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && python3 court/e7/derive.py court/tmp/openssh-closure/work-v1j/libcrypto.so.3.e87a85bd6e673054.dis'",
+  "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && python3 court/e7/targets.py artifacts/phase2/install/lib/libcrypto.so.3'",
+  "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && readelf -rW artifacts/phase2/install/lib/libcrypto.so.3 | awk \"\\$1==\\\"00000000008937d8\\\" || \\$1==\\\"0000000000896950\\\" || \\$1==\\\"0000000000897cd8\\\"\"'",
+  "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && nm -D --undefined-only court/tmp/openssh-closure/client-v1h/openssh-9.9p1/ssh | awk \"{print \\$2}\" | sort -u > /tmp/imp-v1h.txt; nm -D --undefined-only court/tmp/openssh-closure/client-v1j/openssh-9.9p1/ssh | awk \"{print \\$2}\" | sort -u > /tmp/imp-v1j.txt; comm -3 /tmp/imp-v1h.txt /tmp/imp-v1j.txt | wc -l'",
+  "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && python3 court/e7/add_head.py court/tmp/openssh-closure/work-v1j/libcrypto.so.3.e87a85bd6e673054.dis'",
+  "cd /mnt/1tb_kingston/openssl-rs && bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && python3 court/e7/ctx.py court/tmp/openssh-closure/work-v1h/libcrypto.so.3.cb45a6ec8323a333.dis 4fdd45 20 12'"
+ ],
+ "artifacts_of_this_investigation": {
+  "driver": "court/e7/e7_driver.py (scratch, gitignored; imports the resolver unmodified)",
+  "analysis": ["court/e7/derive.py", "court/e7/windows.py", "court/e7/targets.py", "court/e7/add_head.py", "court/e7/evp_chain.py", "court/e7/alias.py", "court/e7/ctx.py"],
+  "outputs": ["court/e7/out/e7-diag.json", "court/e7/out/closure-ssh-diag.json", "court/e7/out/e7-fix.json", "court/e7/out/closure-ssh-fix.json"]
+ },
+ "non_claims": [
+  "This is not an independent review; the author of the explanation is the author of the instrumentation.",
+  "It does not change any recorded classification or count in openssh-closure-v1j.json; element 7 remains FAIL for both consumers.",
+  "It does not prove the reachable-set instability is only symbol emission; that the 19-file change is unexplained is established, the precise mechanism inside LLVM/lld is not.",
+  "It does not establish that the 14-value target set is complete for all reachable code; the store enumeration covers every store to a 0x20 displacement in the image, but only the two writers are claimed as writers, and the EVP half is verified by sampling (EVP_CIPHER_free, EVP_MD_free) plus the resolver's own target list.",
+  "The loader/decoder/encoder values arrive through GLOB_DAT slots; the set is finite for these consumers but is not a link-time bound in general.",
+  "No rebuild-determinism check, no Miri/ASan/Loom run, and no independent adjudication was performed at this identity."
+ ]
+}
