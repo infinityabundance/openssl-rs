@@ -119,6 +119,52 @@ unsafe fn md_data(ctx: *mut EvpMdCtx) -> *mut c_void {
     unsafe { (*ctx).md_data }
 }
 
+/// The authority's SHA-3/SHAKE initialisers write through `EVP_MD_CTX_get0_md_data(ctx)` and read
+/// `ctx->digest->md_size` without testing either. That is sound only when the EVP layer supplied
+/// the context; the exported `EVP_MD_meth_get_init` also hands these callbacks to any C caller,
+/// and `EVP_MD_CTX_new()` zero-fills the context, so both pointers are NULL. The crate refuses
+/// that shape with the C initialise failure value `0` instead of reproducing the authority's NULL
+/// dereference (`docs/SECURITY_DIVERGENCE_POLICY.md`, `D-LEGACY-MD-INIT-MD-DATA-1`).
+///
+/// `owners` is the set of table objects this callback is installed on. A context bound to one of
+/// them has the legacy `ctx_size == 0` and is accepted directly; otherwise its method must be a
+/// live method whose `ctx_size` is at least `size_of::<KeccakCtx>()` (the block
+/// `evp_md_init_legacy` allocated for that method). A NULL context, a NULL `md_data`, a NULL
+/// method, a too-small `app_datasize` and a non-positive `md_size` all refuse.
+///
+/// # Safety
+/// `ctx` must be NULL or point to a live `EvpMdCtx`; every pointer in `owners` must be a live
+/// `EvpMd` table object that installs this callback.
+unsafe fn init_keccak(
+    ctx: *mut EvpMdCtx,
+    owners: &[*const EvpMd],
+) -> Option<(*mut KeccakCtx, c_int)> {
+    if ctx.is_null() {
+        return None;
+    }
+    // SAFETY: `ctx` is NULL or live per the contract.
+    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: as above.
+    let digest = unsafe { (*ctx).digest };
+    if md_data.is_null() || digest.is_null() {
+        return None;
+    }
+    if !owners.iter().any(|owner| core::ptr::eq(digest, *owner)) {
+        // SAFETY: `digest` is a live method: a context's method is only ever installed from a
+        // method the library owns, and a NULL or dangling method is not a C-valid context state.
+        let ctx_size = unsafe { (*digest).ctx_size };
+        if ctx_size < 0 || (ctx_size as usize) < core::mem::size_of::<KeccakCtx>() {
+            return None;
+        }
+    }
+    // SAFETY: `digest` is live per the checks above.
+    let md_size = unsafe { (*digest).md_size };
+    if md_size <= 0 {
+        return None;
+    }
+    Some((md_data.cast::<KeccakCtx>(), md_size))
+}
+
 /// A `static` `EVP_MD`. The wrapper claims `Sync` for a value that is only ever read: a heap
 /// `EvpMd` is mutable and synchronised by its reference count, while a compile-time constant one is
 /// neither.
@@ -195,14 +241,36 @@ const fn legacy_md(
 
 /// `sha3_int_init` — `legacy_sha.c:30-33`. The bit length is `ctx->digest->md_size * 8`, so the
 /// rate `ossl_sha3_init` selects follows the object rather than a literal.
+///
+/// # Safety
+///
+/// `ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback checks the context's method
+/// and block before reading or writing: a fresh `EVP_MD_CTX_new()` (`md_data` and `digest` NULL),
+/// a NULL context, a context with no method and a method whose `app_datasize` is too small all
+/// answer `0`, the C initialise failure value, instead of performing the authority's NULL write.
+/// The normal table shape — a writable `KeccakCtx` behind a context bound to one of the four
+/// SHA-3 objects — still initialises and returns `1`.
 unsafe extern "C" fn sha3_int_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: the caller's contract; `(*ctx).digest` is the live method the context holds, and
-    // `md_data(ctx)` is its block. `md_size` is always one of the four small positive lengths here,
-    // so the wrapping multiply is the authority's `* 8` and never actually wraps.
-    unsafe {
-        let bitlen = (*(*ctx).digest).md_size.wrapping_mul(8) as usize;
-        ossl_sha3_init(md_data(ctx).cast::<KeccakCtx>(), SHA3_PAD, bitlen)
-    }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and the owner list is composed of
+    // live static methods.
+    let Some((kctx, md_size)) = (unsafe {
+        init_keccak(
+            ctx,
+            &[
+                core::ptr::addr_of!(SHA3_224_MD.0),
+                core::ptr::addr_of!(SHA3_256_MD.0),
+                core::ptr::addr_of!(SHA3_384_MD.0),
+                core::ptr::addr_of!(SHA3_512_MD.0),
+            ],
+        )
+    }) else {
+        return 0;
+    };
+    // The authority's `md_size * 8`; `md_size` is one of the four positive lengths here, so the
+    // wrapping multiply is the authority's expression and never actually wraps.
+    let bitlen = md_size.wrapping_mul(8) as usize;
+    // SAFETY: `init_keccak` established a writable `KeccakCtx` and a positive bit length.
+    unsafe { ossl_sha3_init(kctx, SHA3_PAD, bitlen) }
 }
 
 /// `sha3_int_update` — `legacy_sha.c:34-37`.
@@ -234,12 +302,27 @@ unsafe extern "C" fn sha3_int_final(ctx: *mut EvpMdCtx, md: *mut c_uchar) -> c_i
 
 /// `shake_init` — `legacy_sha.c:44-47`. The same body as `sha3_int_init` with the SHAKE pad byte;
 /// the two SHAKE objects reuse [`sha3_int_update`] and [`sha3_int_final`] for the other two thirds.
+///
+/// # Safety
+///
+/// As [`sha3_int_init`], over the two SHAKE table objects.
 unsafe extern "C" fn shake_init(ctx: *mut EvpMdCtx) -> c_int {
-    // SAFETY: as `sha3_int_init`.
-    unsafe {
-        let bitlen = (*(*ctx).digest).md_size.wrapping_mul(8) as usize;
-        ossl_sha3_init(md_data(ctx).cast::<KeccakCtx>(), SHAKE_PAD, bitlen)
-    }
+    // SAFETY: `ctx` is NULL or live per the callback's contract, and the owner list is composed of
+    // live static methods.
+    let Some((kctx, md_size)) = (unsafe {
+        init_keccak(
+            ctx,
+            &[
+                core::ptr::addr_of!(SHAKE128_MD.0),
+                core::ptr::addr_of!(SHAKE256_MD.0),
+            ],
+        )
+    }) else {
+        return 0;
+    };
+    let bitlen = md_size.wrapping_mul(8) as usize;
+    // SAFETY: `init_keccak` established a writable `KeccakCtx` and a positive bit length.
+    unsafe { ossl_sha3_init(kctx, SHAKE_PAD, bitlen) }
 }
 
 /// `shake_ctrl` — `legacy_sha.c:73-88`. `EVP_MD_CTRL_XOF_LEN` writes the requested output length
@@ -407,6 +490,7 @@ pub extern "C" fn EVP_shake256() -> *const EvpMd {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
     use super::*;
 
     /// The six objects against the authority's own fields, read from the `EVP_MD_SHA3`/
@@ -529,5 +613,102 @@ mod tests {
         }
         assert_eq!(EVP_sha3_256(), core::ptr::addr_of!(SHA3_256_MD.0));
         assert_eq!(EVP_shake128(), core::ptr::addr_of!(SHAKE128_MD.0));
+    }
+
+    /// An `EVP_MD_CTX` bound to `md` and a writable digest block, with no provider state.
+    fn bound_context(md: *const EvpMd, block: *mut c_void) -> EvpMdCtx {
+        EvpMdCtx {
+            reqdigest: md,
+            digest: md,
+            engine: core::ptr::null_mut(),
+            flags: 0,
+            md_data: block,
+            pctx: core::ptr::null_mut(),
+            update: None,
+            algctx: core::ptr::null_mut(),
+            fetched_digest: core::ptr::null_mut(),
+        }
+    }
+
+    /// `EVP_MD_meth_get_init(EVP_sha3_256())` handed to a C caller, then called with a fresh
+    /// `EVP_MD_CTX_new()` (`md_data` and `digest` NULL) and with a NULL context. The authority's
+    /// `sha3_int_init` reads `ctx->digest->md_size` and writes `md_data`, so both are a NULL
+    /// dereference; the crate refuses both with `0`. The table's own path still produces
+    /// SHA3-256("abc").
+    #[test]
+    fn legacy_sha3_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{
+            EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_get_final, EVP_MD_meth_get_init,
+            EVP_MD_meth_get_update,
+        };
+
+        // SAFETY: `EVP_sha3_256()` answers a live static method.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_sha3_256()) }.expect("sha3_md has an init");
+        // SAFETY: as above.
+        let update =
+            unsafe { EVP_MD_meth_get_update(EVP_sha3_256()) }.expect("sha3_md has an update");
+        // SAFETY: as above.
+        let final_ = unsafe { EVP_MD_meth_get_final(EVP_sha3_256()) }.expect("sha3_md has a final");
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is a live context and the callback accepts any live context.
+        let refused_fresh = unsafe { init(fresh) };
+        assert_eq!(refused_fresh, 0, "init accepted a NULL md_data/digest");
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
+
+        // SAFETY: a NULL context is the input under test; the callback's contract permits it.
+        assert_eq!(unsafe { init(core::ptr::null_mut()) }, 0);
+
+        let mut store = core::mem::MaybeUninit::<KeccakCtx>::uninit();
+        let mut ctx = bound_context(EVP_sha3_256(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `sha3_md`, and `store` is a writable context.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
+
+        let message = b"abc";
+        // SAFETY: `ctx` was just initialised and `message` is readable for its length.
+        let updated = unsafe { update(&mut ctx, message.as_ptr().cast(), message.len()) };
+        assert_eq!(updated, 1);
+        let mut output = [0u8; 32];
+        // SAFETY: `output` is writable for the SHA3-256 digest length.
+        assert_eq!(unsafe { final_(&mut ctx, output.as_mut_ptr()) }, 1);
+        assert_eq!(
+            output,
+            [
+                0x3a, 0x98, 0x5d, 0xa7, 0x4f, 0xe2, 0x25, 0xb2, 0x04, 0x5c, 0x17, 0x2d, 0x6b, 0xd3,
+                0x90, 0xbd, 0x85, 0x5f, 0x08, 0x6e, 0x3e, 0x9d, 0x52, 0x5b, 0x46, 0xbf, 0xe2, 0x45,
+                0x11, 0x43, 0x15, 0x32,
+            ],
+            "SHA3-256(\"abc\") changed"
+        );
+    }
+
+    /// As [`legacy_sha3_init_refuses_context_without_md_data_and_inits_bound_context`], over the
+    /// `shake_init` entry point the two SHAKE objects share.
+    #[test]
+    fn legacy_shake_init_refuses_context_without_md_data_and_inits_bound_context() {
+        use crate::evp::digest::{EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_meth_get_init};
+
+        // SAFETY: `EVP_shake128()` answers a live static method.
+        let init = unsafe { EVP_MD_meth_get_init(EVP_shake128()) }.expect("shake_md has an init");
+
+        let fresh = EVP_MD_CTX_new();
+        assert!(!fresh.is_null(), "EVP_MD_CTX_new answered NULL");
+        // SAFETY: `fresh` is a live context and the callback accepts any live context.
+        let refused_fresh = unsafe { init(fresh) };
+        assert_eq!(refused_fresh, 0, "init accepted a NULL md_data/digest");
+        // SAFETY: `fresh` came from `EVP_MD_CTX_new` and is released exactly once here.
+        unsafe { EVP_MD_CTX_free(fresh) };
+
+        // SAFETY: a NULL context is the input under test; the callback's contract permits it.
+        assert_eq!(unsafe { init(core::ptr::null_mut()) }, 0);
+
+        let mut store = core::mem::MaybeUninit::<KeccakCtx>::uninit();
+        let mut ctx = bound_context(EVP_shake128(), store.as_mut_ptr().cast());
+        // SAFETY: `ctx` is live, bound to `shake_md`, and `store` is a writable context.
+        let initialised = unsafe { init(&mut ctx) };
+        assert_eq!(initialised, 1, "init refused a writable md_data");
     }
 }

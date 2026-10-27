@@ -176,13 +176,22 @@ const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int =
 /// The authority returns `provctx` itself and allocates nothing, so `freectx` has nothing to free.
 /// The encoder's `encode` therefore receives the provider context as `vctx`, which is what
 /// `ossl_bio_new_from_core_bio(vctx, cout)` reads.
-unsafe extern "C" fn key2text_newctx(provctx: *mut c_void) -> *mut c_void {
+///
+/// This function dereferences no pointer and allocates nothing: `provctx` is the opaque handle the
+/// core received from this provider's `OSSL_provider_init`, and returning it unchanged is a value
+/// copy. There is no caller precondition beyond the provider dispatch ABI, so the function is
+/// **safe** and no unsafe operation remains.
+extern "C" fn key2text_newctx(provctx: *mut c_void) -> *mut c_void {
     provctx
 }
 
 /// `static void key2text_freectx(void *vctx)` — `encode_key2text.c:630-632`. Empty, as the
 /// authority's is.
-unsafe extern "C" fn key2text_freectx(_vctx: *mut c_void) {}
+///
+/// `vctx` is the value `key2text_newctx` returned (the provider context) and is not dereferenced
+/// or released here, so there is no caller precondition beyond the provider dispatch ABI. The
+/// function is **safe** and no unsafe operation remains.
+extern "C" fn key2text_freectx(_vctx: *mut c_void) {}
 
 /// The five per-key-type printers share one signature. It is spelled inline rather than as a
 /// `type` alias because it is not an authority `OSSL_FUNC_*` type: `dispatch_court.py` reads a

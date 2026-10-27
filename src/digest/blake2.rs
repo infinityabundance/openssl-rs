@@ -310,15 +310,29 @@ pub mod blake2b {
 
     /// `blake2b_compress` — `blake2b_prov.c:153-254`.
     ///
+    /// The state is passed as its three live fields rather than as `&mut Ctx`.  The compressor
+    /// reads the staged block through `blocks`, which on the `update`/`final_` staging paths
+    /// points into the very `Ctx::buf` the context owns.  Passing `&mut Ctx` alongside that
+    /// pointer retags the whole context as `Unique` at function entry and invalidates the
+    /// `SharedReadOnly` tag of `blocks` — a Stacked Borrows violation (Tree Borrows happens to
+    /// tolerate the read, so the two models disagree).  Disjoint field borrows make the
+    /// conflicting whole-context reference inexpressible instead of relaxing the model.
+    ///
     /// # Safety
     /// `blocks` must be readable for `len` bytes, and every block start the loop compresses
     /// must have a whole `BLOCKBYTES` readable: the compressor always loads sixteen words from
     /// the current block, including the final short one. Callers satisfy that by passing whole
     /// blocks or the `BLOCKBYTES` staging buffer.
-    unsafe fn compress(s: &mut Ctx, blocks: *const u8, mut len: usize) {
+    unsafe fn compress(
+        h: &mut [u64; 8],
+        t: &mut [u64; 2],
+        f: &[u64; 2],
+        blocks: *const u8,
+        mut len: usize,
+    ) {
         let increment = if len < BLOCKBYTES { len } else { BLOCKBYTES };
         let mut v = [0u64; 16];
-        v[..8].copy_from_slice(&s.h);
+        v[..8].copy_from_slice(h);
         let mut blocks = blocks;
         loop {
             let mut m = [0u64; 16];
@@ -328,16 +342,16 @@ pub mod blake2b {
                 // (a full block, or the final short one) allows for the callers below.
                 *word = unsafe { load64(blocks.add(i * 8)) };
             }
-            s.t[0] = s.t[0].wrapping_add(increment as u64);
-            s.t[1] = s.t[1].wrapping_add(u64::from(s.t[0] < increment as u64));
+            t[0] = t[0].wrapping_add(increment as u64);
+            t[1] = t[1].wrapping_add(u64::from(t[0] < increment as u64));
             v[8] = IV[0];
             v[9] = IV[1];
             v[10] = IV[2];
             v[11] = IV[3];
-            v[12] = s.t[0] ^ IV[4];
-            v[13] = s.t[1] ^ IV[5];
-            v[14] = s.f[0] ^ IV[6];
-            v[15] = s.f[1] ^ IV[7];
+            v[12] = t[0] ^ IV[4];
+            v[13] = t[1] ^ IV[5];
+            v[14] = f[0] ^ IV[6];
+            v[15] = f[1] ^ IV[7];
             for r in 0..12 {
                 g(&mut v, &m, r, 0, 0, 4, 8, 12);
                 g(&mut v, &m, r, 1, 1, 5, 9, 13);
@@ -349,9 +363,9 @@ pub mod blake2b {
                 g(&mut v, &m, r, 7, 3, 4, 9, 14);
             }
             for i in 0..8 {
-                v[i] ^= v[i + 8] ^ s.h[i];
+                v[i] ^= v[i + 8] ^ h[i];
             }
-            s.h.copy_from_slice(&v[..8]);
+            h.copy_from_slice(&v[..8]);
             // SAFETY: `increment <= len`, so advancing stays inside the caller's region.
             blocks = unsafe { blocks.add(increment) };
             len -= increment;
@@ -377,7 +391,9 @@ pub mod blake2b {
                 // SAFETY: `in_` is readable for `fill` bytes and `fill` fills the staged buffer.
                 unsafe {
                     ptr::copy_nonoverlapping(in_, s.buf.as_mut_ptr().add(s.buflen), fill);
-                    compress(s, s.buf.as_ptr(), BLOCKBYTES);
+                    // Disjoint field borrows: `buf` is read through `blocks`, never through the
+                    // `&mut Ctx` that used to cover it (see `compress`'s note).
+                    compress(&mut s.h, &mut s.t, &s.f, s.buf.as_ptr(), BLOCKBYTES);
                 }
                 s.buflen = 0;
                 // SAFETY: `fill <= datalen`.
@@ -391,7 +407,7 @@ pub mod blake2b {
                 }
                 datalen -= stashlen;
                 // SAFETY: `in_` is readable for `datalen` bytes.
-                unsafe { compress(s, in_, datalen) };
+                unsafe { compress(&mut s.h, &mut s.t, &s.f, in_, datalen) };
                 // SAFETY: as above.
                 in_ = unsafe { in_.add(datalen) };
                 datalen = stashlen;
@@ -419,7 +435,9 @@ pub mod blake2b {
         // SAFETY: `buflen <= BLOCKBYTES`, so the range is inside `buf`.
         unsafe {
             ptr::write_bytes(s.buf.as_mut_ptr().add(s.buflen), 0, BLOCKBYTES - s.buflen);
-            compress(s, s.buf.as_ptr(), s.buflen);
+            // Disjoint field borrows: `buf` is read through `blocks`, never through the
+            // `&mut Ctx` that used to cover it (see `compress`'s note).
+            compress(&mut s.h, &mut s.t, &s.f, s.buf.as_ptr(), s.buflen);
         }
         let iter = outlen.div_ceil(8);
         let mut outbuffer = [0u8; OUTBYTES];
@@ -652,19 +670,30 @@ pub mod blake2s {
 
     /// `blake2s_compress` — `blake2s_prov.c:146-245`.
     ///
+    /// The state is passed as its three live fields rather than as `&mut Ctx`, for the same
+    /// Stacked Borrows reason as the 64-bit sibling: on the staging paths `blocks` points into
+    /// `Ctx::buf`, and a `&mut Ctx` argument would retag the whole context `Unique` at function
+    /// entry and invalidate the pointer's `SharedReadOnly` tag.
+    ///
     /// # Safety
     /// `blocks` must be readable for `len` bytes, and every block start the loop compresses
     /// must have a whole `BLOCKBYTES` readable: the compressor always loads sixteen words from
     /// the current block, including the final short one. Callers satisfy that by passing whole
     /// blocks or the `BLOCKBYTES` staging buffer.
-    unsafe fn compress(s: &mut Ctx, blocks: *const u8, mut len: usize) {
+    unsafe fn compress(
+        h: &mut [u32; 8],
+        t: &mut [u32; 2],
+        f: &[u32; 2],
+        blocks: *const u8,
+        mut len: usize,
+    ) {
         let increment = if len < BLOCKBYTES {
             len as u32
         } else {
             BLOCKBYTES as u32
         };
         let mut v = [0u32; 16];
-        v[..8].copy_from_slice(&s.h);
+        v[..8].copy_from_slice(h);
         let mut blocks = blocks;
         loop {
             let mut m = [0u32; 16];
@@ -673,16 +702,16 @@ pub mod blake2s {
                 // the final padded block.
                 *word = unsafe { load32(blocks.add(i * 4)) };
             }
-            s.t[0] = s.t[0].wrapping_add(increment);
-            s.t[1] = s.t[1].wrapping_add(u32::from(s.t[0] < increment));
+            t[0] = t[0].wrapping_add(increment);
+            t[1] = t[1].wrapping_add(u32::from(t[0] < increment));
             v[8] = IV[0];
             v[9] = IV[1];
             v[10] = IV[2];
             v[11] = IV[3];
-            v[12] = s.t[0] ^ IV[4];
-            v[13] = s.t[1] ^ IV[5];
-            v[14] = s.f[0] ^ IV[6];
-            v[15] = s.f[1] ^ IV[7];
+            v[12] = t[0] ^ IV[4];
+            v[13] = t[1] ^ IV[5];
+            v[14] = f[0] ^ IV[6];
+            v[15] = f[1] ^ IV[7];
             for r in 0..10 {
                 g(&mut v, &m, r, 0, 0, 4, 8, 12);
                 g(&mut v, &m, r, 1, 1, 5, 9, 13);
@@ -694,9 +723,9 @@ pub mod blake2s {
                 g(&mut v, &m, r, 7, 3, 4, 9, 14);
             }
             for i in 0..8 {
-                v[i] ^= v[i + 8] ^ s.h[i];
+                v[i] ^= v[i + 8] ^ h[i];
             }
-            s.h.copy_from_slice(&v[..8]);
+            h.copy_from_slice(&v[..8]);
             // SAFETY: `increment <= len`, so advancing stays inside the caller's region.
             blocks = unsafe { blocks.add(increment as usize) };
             len -= increment as usize;
@@ -721,7 +750,9 @@ pub mod blake2s {
                 // SAFETY: `in_` is readable for `fill` bytes and `fill` fills the staged buffer.
                 unsafe {
                     ptr::copy_nonoverlapping(in_, s.buf.as_mut_ptr().add(s.buflen), fill);
-                    compress(s, s.buf.as_ptr(), BLOCKBYTES);
+                    // Disjoint field borrows: `buf` is read through `blocks`, never through the
+                    // `&mut Ctx` that used to cover it (see `compress`'s note).
+                    compress(&mut s.h, &mut s.t, &s.f, s.buf.as_ptr(), BLOCKBYTES);
                 }
                 s.buflen = 0;
                 // SAFETY: `fill <= datalen`.
@@ -735,7 +766,7 @@ pub mod blake2s {
                 }
                 datalen -= stashlen;
                 // SAFETY: `in_` is readable for `datalen` bytes.
-                unsafe { compress(s, in_, datalen) };
+                unsafe { compress(&mut s.h, &mut s.t, &s.f, in_, datalen) };
                 // SAFETY: as above.
                 in_ = unsafe { in_.add(datalen) };
                 datalen = stashlen;
@@ -762,7 +793,9 @@ pub mod blake2s {
         // SAFETY: `buflen <= BLOCKBYTES`, so the range is inside `buf`.
         unsafe {
             ptr::write_bytes(s.buf.as_mut_ptr().add(s.buflen), 0, BLOCKBYTES - s.buflen);
-            compress(s, s.buf.as_ptr(), s.buflen);
+            // Disjoint field borrows: `buf` is read through `blocks`, never through the
+            // `&mut Ctx` that used to cover it (see `compress`'s note).
+            compress(&mut s.h, &mut s.t, &s.f, s.buf.as_ptr(), s.buflen);
         }
         let iter = outlen.div_ceil(4);
         let mut outbuffer = [0u8; OUTBYTES];
