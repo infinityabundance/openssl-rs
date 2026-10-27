@@ -1,0 +1,533 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/atlas-refresh/openssh-v1j-sites/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "openssh-v1j",
+  "subphase": "safe-c33/repair-legacy-md-init-md-data-v1j",
+  "date": "2026-10-27T21:26:03Z",
+  "baseline": {
+    "closure": "atlas-refresh/openssh-closure-v1i.json",
+    "closure_sha256": "25ac9dd5312db0c69a5b2c7574f529ade65faba57d35688c6edffa2c48a96614",
+    "inventory": "atlas-refresh/v1j-candidate-freeze.json",
+    "inventory_sha256": "c72426e3cfddc2719cac80876bc70369fca7875ebdd680c4082457695e80571f",
+    "closure_tool": "forensics/tools/consumer_closure.py",
+    "closure_tool_sha256": "59aea07c1ec2269a7ab21e973f64cf38c0eef632a6f7a47d64108c56c81e9e48",
+    "v1i_counts_per_binary": "169 obligations: 74 DISCHARGED, 66 BLOCKED, 29 UNKNOWN",
+    "v1j_counts_per_binary": "146 obligations: 62 DISCHARGED, 55 BLOCKED, 29 UNKNOWN"
+  },
+  "source_identity": {
+    "candidate": "S''",
+    "candidate_state": "uncommitted working tree over bcafae7dc (do not commit)",
+    "base_commit": "bcafae7dceea9bb61cf853bf3e28544a37f3ea42",
+    "src_content_sha256": "add0d599816339e1e3427aa2ccee8de6639bd3c43b634b57275b3d1b10c41339",
+    "file_blob_sha256": {
+      "src/evp/legacy_sha.rs": "a25d3a49b527893657bbbfe788e24c783fd06cf74de3908497aed31105fdcb80"
+    },
+    "source_diff": "only src/evp/legacy_sha.rs: five initialisers now call init_md_data"
+  },
+  "candidate_identity": {
+    "libcrypto_sha256": "e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a",
+    "libssl_sha256": "82051ef8ba6c9891d70a95b43d6b82c4c9be0a4865504984f5024c6a302d9b4e",
+    "legacy_so_sha256": "cc2044da6e4ddf2d1751fd95f9f0af238e74751a9b2aafe4a7c8a1a30bbfbd97",
+    "openssl_sha256": "67718264fc65a6d2f87968660d7a0537265db04ce4580bb17af01d962a32deed",
+    "ssh_sha256": "f2ca91f4e3926702b97e687788281b15428c0a6eb6e0f2b4ed1bb9435130f6d4",
+    "sshd_sha256": "ed0c7aa884225eb4eac740450e6d27dd7e572db9bbc22949a2b309762cb0d185"
+  },
+  "scope": "all 18 reachable production unsafe-fn sites in src/evp/legacy_sha.rs at their S'' coordinates: five initialisers repaired and discharged, thirteen update/final/ctrl callbacks retained BLOCKED",
+  "method": "the defect was confirmed by the v1i probe (fresh EVP_MD_CTX, md_data NULL, SIGSEGV in the unguarded sha256_init child). Each initialiser now calls init_md_data and answers 0 when no writable block exists; valid inputs are unchanged. The five sites are contracted and therefore leave the uncontracted-operation census (production blockers 325 -> 320).",
+  "file_summary": [
+    {
+      "file": "src/evp/legacy_sha.rs",
+      "sites": 18,
+      "contracted_and_guarded": 5,
+      "retained_blocked": 13
+    }
+  ],
+  "boundaries": [
+    {
+      "id": "OSSH-V1J-001",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 262,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `ShaCtx`; `data` must be readable for `count` bytes. The body calls `SHA1_Update` on `md_data(ctx)` and checks neither the context nor the block.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:262 \u2014 sha1_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-002",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 269,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `ShaCtx`; `md` must be writable for the digest length. The body calls `SHA1_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:269 \u2014 sha1_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-003",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 277,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha1_int_ctrl",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be NULL or point to a live `EVP_MD_CTX`; a non-NULL context must carry a non-NULL `md_data` readable and writable as a `ShaCtx`. The body passes NULL for a NULL context (the authority's guard) and otherwise forwards `md_data(ctx)` to `ossl_sha1_ctrl` unchecked.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:277 \u2014 sha1_int_ctrl does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-004",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 324,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha224_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha256Ctx`; `data` must be readable for `count` bytes. The body calls `SHA256_Update` on `md_data(ctx)` and checks neither the context nor the block.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:324 \u2014 sha224_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-005",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 330,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha224_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha256Ctx`; `md` must be writable for the digest length. The body calls `SHA256_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:330 \u2014 sha224_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-006",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 343,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback calls `init_md_data(ctx, owner, size_of::<Sha256Ctx>())`, which refuses (returns None, and the callback answers `0`, the C initialise failure value) when `ctx` is NULL, `md_data` is NULL, `digest` is NULL, or `digest` is neither the owning table object nor a live method whose `ctx_size` is at least `size_of::<Sha256Ctx>()`. On success it initialises only the caller's `Sha256Ctx` block and returns `1`; no allocation is performed and no context is manufactured.",
+      "established_by": [
+        "code: the callback calls init_md_data and returns 0 on its None arm",
+        "test: evp::legacy_sha::tests::legacy_sha256_init_refuses_context_without_md_data_and_inits_bound_context passes (NULL context, fresh EVP_MD_CTX_new with NULL md_data, and the bound SHA(\"abc\") digest all checked)",
+        "probe: court/v1j/negctl calls EVP_MD_meth_get_init(EVP_sha256())(NULL) and (fresh EVP_MD_CTX_new()) in child processes; both answer 0, no SIGSEGV"
+      ],
+      "implementation_guarantees": "Refusal is 0 with no write; success is 1 with only the caller's `Sha256Ctx` block written.",
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:343 \u2014 sha256_init validates ctx, md_data, digest and block size through init_md_data",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-007",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 360,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha256Ctx`; `data` must be readable for `count` bytes. The body calls `SHA256_Update` on `md_data(ctx)` and checks neither the context nor the block.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:360 \u2014 sha256_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-008",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 366,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha256_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha256Ctx`; `md` must be writable for the digest length. The body calls `SHA256_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:366 \u2014 sha256_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-009",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 379,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback calls `init_md_data(ctx, owner, size_of::<Sha512Ctx>())`, which refuses (returns None, and the callback answers `0`, the C initialise failure value) when `ctx` is NULL, `md_data` is NULL, `digest` is NULL, or `digest` is neither the owning table object nor a live method whose `ctx_size` is at least `size_of::<Sha512Ctx>()`. On success it initialises only the caller's `Sha512Ctx` block and returns `1`; no allocation is performed and no context is manufactured.",
+      "established_by": [
+        "code: the callback calls init_md_data and returns 0 on its None arm",
+        "test: evp::legacy_sha::tests::legacy_sha384_init_refuses_context_without_md_data_and_inits_bound_context passes (NULL context, fresh EVP_MD_CTX_new with NULL md_data, and the bound SHA(\"abc\") digest all checked)",
+        "probe: court/v1j/negctl calls EVP_MD_meth_get_init(EVP_sha384())(NULL) and (fresh EVP_MD_CTX_new()) in child processes; both answer 0, no SIGSEGV"
+      ],
+      "implementation_guarantees": "Refusal is 0 with no write; success is 1 with only the caller's `Sha512Ctx` block written.",
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:379 \u2014 sha384_init validates ctx, md_data, digest and block size through init_md_data",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-010",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 396,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `data` must be readable for `count` bytes. The body calls `SHA512_Update` on `md_data(ctx)` and checks neither the context nor the block.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:396 \u2014 sha384_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-011",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 402,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha384_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `md` must be writable for the digest length. The body calls `SHA512_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:402 \u2014 sha384_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-012",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 415,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback calls `init_md_data(ctx, owner, size_of::<Sha512Ctx>())`, which refuses (returns None, and the callback answers `0`, the C initialise failure value) when `ctx` is NULL, `md_data` is NULL, `digest` is NULL, or `digest` is neither the owning table object nor a live method whose `ctx_size` is at least `size_of::<Sha512Ctx>()`. On success it initialises only the caller's `Sha512Ctx` block and returns `1`; no allocation is performed and no context is manufactured.",
+      "established_by": [
+        "code: the callback calls init_md_data and returns 0 on its None arm",
+        "test: evp::legacy_sha::tests::legacy_sha512_init_refuses_context_without_md_data_and_inits_bound_context passes (NULL context, fresh EVP_MD_CTX_new with NULL md_data, and the bound SHA(\"abc\") digest all checked)",
+        "probe: court/v1j/negctl calls EVP_MD_meth_get_init(EVP_sha512())(NULL) and (fresh EVP_MD_CTX_new()) in child processes; both answer 0, no SIGSEGV"
+      ],
+      "implementation_guarantees": "Refusal is 0 with no write; success is 1 with only the caller's `Sha512Ctx` block written.",
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:415 \u2014 sha512_init validates ctx, md_data, digest and block size through init_md_data",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-013",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 432,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_update",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `data` must be readable for `count` bytes. The body calls `SHA512_Update` on `md_data(ctx)` and checks neither the context nor the block.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:432 \u2014 sha512_update does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-014",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 438,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `md` must be writable for the digest length. The body calls `SHA512_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:438 \u2014 sha512_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-015",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 454,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_224_int_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback calls `init_md_data(ctx, owner, size_of::<Sha512Ctx>())`, which refuses (returns None, and the callback answers `0`, the C initialise failure value) when `ctx` is NULL, `md_data` is NULL, `digest` is NULL, or `digest` is neither the owning table object nor a live method whose `ctx_size` is at least `size_of::<Sha512Ctx>()`. On success it initialises only the caller's `Sha512Ctx` block and returns `1`; no allocation is performed and no context is manufactured.",
+      "established_by": [
+        "code: the callback calls init_md_data and returns 0 on its None arm",
+        "test: evp::legacy_sha::tests::legacy_sha512_224_init_refuses_context_without_md_data_and_inits_bound_context passes (NULL context, fresh EVP_MD_CTX_new with NULL md_data, and the bound SHA(\"abc\") digest all checked)",
+        "probe: court/v1j/negctl calls EVP_MD_meth_get_init(EVP_sha512_224())(NULL) and (fresh EVP_MD_CTX_new()) in child processes; both answer 0, no SIGSEGV"
+      ],
+      "implementation_guarantees": "Refusal is 0 with no write; success is 1 with only the caller's `Sha512Ctx` block written.",
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:454 \u2014 sha512_224_int_init validates ctx, md_data, digest and block size through init_md_data",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-016",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 471,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_224_int_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `md` must be writable for the digest length. The body calls `SHA512_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:471 \u2014 sha512_224_int_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-017",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 484,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_256_int_init",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be NULL or point to a live `EVP_MD_CTX`. The callback calls `init_md_data(ctx, owner, size_of::<Sha512Ctx>())`, which refuses (returns None, and the callback answers `0`, the C initialise failure value) when `ctx` is NULL, `md_data` is NULL, `digest` is NULL, or `digest` is neither the owning table object nor a live method whose `ctx_size` is at least `size_of::<Sha512Ctx>()`. On success it initialises only the caller's `Sha512Ctx` block and returns `1`; no allocation is performed and no context is manufactured.",
+      "established_by": [
+        "code: the callback calls init_md_data and returns 0 on its None arm",
+        "test: evp::legacy_sha::tests::legacy_sha512_256_init_refuses_context_without_md_data_and_inits_bound_context passes (NULL context, fresh EVP_MD_CTX_new with NULL md_data, and the bound SHA(\"abc\") digest all checked)",
+        "probe: court/v1j/negctl calls EVP_MD_meth_get_init(EVP_sha512_256())(NULL) and (fresh EVP_MD_CTX_new()) in child processes; both answer 0, no SIGSEGV"
+      ],
+      "implementation_guarantees": "Refusal is 0 with no write; success is 1 with only the caller's `Sha512Ctx` block written.",
+      "disposition": "SAFETY_DISCHARGED: src/evp/legacy_sha.rs:484 \u2014 sha512_256_int_init validates ctx, md_data, digest and block size through init_md_data",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "PASS",
+        "safe_rust_interface": "PASS"
+      },
+      "blocking_criterion": null,
+      "missing_property": null,
+      "residual": null
+    },
+    {
+      "id": "OSSH-V1J-018",
+      "file": "src/evp/legacy_sha.rs",
+      "line": 501,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "sha512_256_int_final",
+      "mechanism": "EVP_PKEY_PROVIDER",
+      "category": "legacy-md-callback",
+      "contract": "`ctx` must be non-NULL and point to a live `EVP_MD_CTX` with a non-NULL `md_data` readable and writable as a `Sha512Ctx`; `md` must be writable for the digest length. The body calls `SHA512_Final` on `md_data(ctx)` and checks neither pointer.",
+      "established_by": [
+        "refusal: the body performs no NULL check on ctx or md_data",
+        "authority: the file documents D289/D290 for the digest path; the exported accessor still hands this pointer to any C caller",
+        "probe scope: court/v1j/negctl covers the initialisers only; these thirteen callbacks were not exercised"
+      ],
+      "implementation_guarantees": "No guarantee is claimed while the precondition is unestablished.",
+      "disposition": "BLOCKED: src/evp/legacy_sha.rs:501 \u2014 sha512_256_int_final does not establish the writable md_data its body requires",
+      "criteria": {
+        "contract": "PASS",
+        "caller_or_abi_establishment": "FAIL",
+        "safe_rust_interface": "FAIL"
+      },
+      "blocking_criterion": "UNVALIDATED_MD_DATA",
+      "missing_property": "The body still dereferences `md_data` without checking it. A fresh, C-valid `EVP_MD_CTX_new()` has `md_data == NULL`, and the exported `EVP_MD_meth_get_update`/`get_final`/`get_ctrl` accessors hand these function pointers to any C caller. The v1j probe covers the initialisers only; these thirteen callbacks remain a known section-17 divergence and are retained BLOCKED.",
+      "residual": null
+    }
+  ],
+  "negative_controls": [
+    {
+      "id": "V1J-NC-1",
+      "claim": "every legacy initialiser refuses both block-less input shapes",
+      "control": "court/v1j/negctl forks a child per (initialiser, shape) for all seven EVP_sha* objects and both NULL ctx and fresh EVP_MD_CTX_new",
+      "observed": "18/18 cases printed 'refused with 0'; RESULT PASS; exit 0 (see court/tmp/freeze-v1j/logs/negctl-v1j.out)",
+      "would_fail_if": "one guard returned early without 0, or the child crashed"
+    },
+    {
+      "id": "V1J-NC-2",
+      "claim": "the probe detects a removed guard",
+      "control": "scratch copy of S'' (not the working tree) with the sha384_init guard replaced by the unguarded SHA384_Init(md_data(ctx)); same probe, scratch libcrypto",
+      "observed": "FAIL legacy_sha/sha384(NULL ctx) and sha384(fresh md_data=NULL): child died with signal 11; RESULT FAIL (court/tmp/freeze-v1j/logs/negctl-scratch.out)",
+      "would_fail_if": "the probe passed against the unguarded scratch build"
+    },
+    {
+      "id": "V1J-NC-3",
+      "claim": "valid table inputs still digest correctly",
+      "control": "five unit tests drive each repaired table entry with 'abc' and compare the known digest",
+      "observed": "15 passed / 0 failed for the legacy_sha filter; SHA-1/224/256/384/512/512-224/512-256 vectors match",
+      "would_fail_if": "a guard accepted a context without a block or changed the digest"
+    }
+  ],
+  "does_not_prove": [
+    "It does not discharge the thirteen remaining update/final/ctrl callbacks; they still dereference md_data without a check and are BLOCKED.",
+    "It does not make EVP_PKEY_PROVIDER mechanism-wide SAFETY_DISCHARGED.",
+    "It does not make either consumer SAFE_COMPATIBLE; the closure still REFUSES.",
+    "It does not establish constant-time behaviour, secret cleansing, or cryptographic correctness beyond the known 'abc' vectors.",
+    "The closure graph is not stable across the S' -> S'' rebuild: 13 files left and 6 entered the ssh reachable set, so the v1i/v1j counts are not a like-for-like delta.",
+    "The census/closure identity is uncommitted; the closure records STALE_HASH for src/evp/legacy_sha.rs against bcafae7dc."
+  ],
+  "non_claims": [
+    "SAFETY_DISCHARGED here is site-scoped and contract-bounded.",
+    "The probe and receipt share one author; this is not independent review.",
+    "No Miri/ASan/Loom/mutation evidence was run at this identity."
+  ]
+}

@@ -749,6 +749,39 @@
       "hidden_obligations": 0,
       "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-close-sites.json",
       "note": "Site-scoped only; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide. Four callbacks refuse the authority's crashing shapes under \u00a717 D-LEGACY-MD-INIT-MD-DATA-1; the two key2text provider callbacks had only a vestigial unsafe marker, now removed."
+    },
+    {
+      "receipt": "openssh-v1j",
+      "scope": "the five legacy digest initialisers in src/evp/legacy_sha.rs, site-enumerated at exact S'' coordinates; the thirteen update/final/ctrl callbacks are retained BLOCKED",
+      "base_head": "bcafae7dceea9bb61cf853bf3e28544a37f3ea42",
+      "source_state": "S'' (uncommitted working tree over bcafae7dc; the subphase instruction is do not commit)",
+      "state": "SAFETY_DISCHARGED (scoped to the named boundaries)",
+      "discharged_boundaries": [
+        "OSSH-V1J-006",
+        "OSSH-V1J-009",
+        "OSSH-V1J-012",
+        "OSSH-V1J-015",
+        "OSSH-V1J-017"
+      ],
+      "retained_boundaries": [
+        "OSSH-V1J-001",
+        "OSSH-V1J-002",
+        "OSSH-V1J-003",
+        "OSSH-V1J-004",
+        "OSSH-V1J-005",
+        "OSSH-V1J-007",
+        "OSSH-V1J-008",
+        "OSSH-V1J-010",
+        "OSSH-V1J-011",
+        "OSSH-V1J-013",
+        "OSSH-V1J-014",
+        "OSSH-V1J-016",
+        "OSSH-V1J-018"
+      ],
+      "retained_state": "BLOCKED",
+      "hidden_obligations": 0,
+      "artifact": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1j-sites.json",
+      "note": "A C-valid fresh EVP_MD_CTX (md_data NULL) previously reached a NULL dereference in sha256/384/512/512_224/512_256_init. Each now calls init_md_data, refuses with 0, and leaves no context behind. The thirteen update/final/ctrl bodies still dereference md_data and are NOT discharged; EVP_PKEY_PROVIDER remains OWNERSHIP_RECONSTRUCTED mechanism-wide and neither consumer is SAFE_COMPATIBLE."
     }
   ],
   "defects_closed": [
@@ -994,6 +1027,15 @@
       "fix": "Implement ssl_get_security_level_bits (level clamp and the authority's minbits table) and the full SSL_SECOP_VERSION arm, including DTLS ordering, the context-only VERSION answer, and the level-0 SSL_SECOP_TMP_DH refusal. The other callback arms remain permissive as recorded.",
       "class": "compatibility defect with a candidate-only handshake failure; repaired to documented authority behaviour, not classified as a section 17 divergence.",
       "evidence": "atlas-refresh/s61-charybdis.json"
+    },
+    {
+      "id": "V1J-1",
+      "subphase": "v1j",
+      "file": "src/evp/legacy_sha.rs",
+      "defect": "The legacy digest initialisers sha256_init, sha384_init, sha512_init, sha512_224_int_init and sha512_256_int_init wrote through EVP_MD_CTX_get0_md_data without testing it. A C-valid fresh EVP_MD_CTX_new() has md_data == NULL, so the exported EVP_MD_meth_get_init callback dereferenced NULL; the v1i probe reproduced SIGSEGV in a child process.",
+      "fix": "All five initialisers now call init_md_data(ctx, owner, size_of::<T>()), the helper sha1_init/sha224_init already used, and answer 0 (the C initialise failure value) when the context has no writable block. Valid table inputs are unchanged and still produce the known digests; no allocation was added.",
+      "class": "UB in the C authority not reproduced (AGENTS.md section 17); reachable at the exported legacy-method ABI",
+      "evidence": "atlas-refresh/openssh-v1j-sites.json"
     }
   ],
   "gates": {
@@ -1915,6 +1957,11 @@
       "subphase": "S61",
       "outcome": "charybdis candidate-only handshake failure reproduced and repaired. The default security callback answered 1 for SSL_SECOP_VERSION, so the security level's TLS1.2 floor was not enforced; with SSL_OP_NO_TLSv1 the version walk selected SSLv3 and commit_client_hello rejected every ClientHello with SSL_R_UNSUPPORTED_PROTOCOL. ssl_get_security_level_bits and the full SSL_SECOP_VERSION arm (plus the level-0 TMP_DH refusal) were implemented. Three regression tests fail before and pass after; ABI courts 11/11; charybdis re-measured at e907c2d8/bdb4265f: candidate 206 L7, authority 205, below_baseline 0. FIXED (compatibility), not SAFETY_DISCHARGED; other SSL_SECOP_* arms remain permissive.",
       "evidence": "atlas-refresh/s61-charybdis.json"
+    },
+    {
+      "subphase": "v1j",
+      "outcome": "Defect repair + re-freeze. Five legacy digest initialisers now refuse md_data-NULL contexts; production uncontracted blockers 325 -> 320; 13 update/final/ctrl callbacks remain BLOCKED. S'' rebuilt once (libcrypto e87a85bd, 0 export changes), ssh/sshd relinked, both L7 workloads pass with negatives, probe 18/18 pass, scratch guard-removal control reproduces SIGSEGV. Closure v1j: 146 obligations, 62 DISCHARGED / 55 BLOCKED / 29 UNKNOWN, both REFUSED; element 7 FAIL (9 target-bounded reachable unresolved sites) and STALE_HASH because S'' is uncommitted.",
+      "evidence": "atlas-refresh/openssh-closure-v1j.json"
     }
   ],
   "uninitialised_storage_census": {
