@@ -120,8 +120,9 @@ record the **build product** rather than a committed input:
 Those two are normalised, and the tool **prints exactly which of them it
 normalised** so the exception is visible rather than silent. Everything else —
 every count, every symbol name, every phase state, every obligation — is compared
-exactly. The `internal_symbols.c_style` subset (the 507 plain C identifiers a
-consumer's own symbols could collide with) *is* compared exactly; only the
+exactly. The `internal_symbols.c_style` subset (the 508 plain C identifiers a
+consumer's own symbols could collide with, recorded as `internal_symbols.c_style`
+in `forensics/atlas/implemented-surface.json`) *is* compared exactly; only the
 compiler-emitted population is not, which is why it is recorded as a count and not
 as names.
 
