@@ -28,6 +28,7 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -70,9 +71,7 @@ ATTRIBUTE_KINDS = {
 CONTRACT_LINT = "clippy::undocumented_unsafe_blocks"
 SAFETY_DOC_LINT = "clippy::missing_safety_doc"
 
-BLOCK_LOOKBACK = 4
-FN_LOOKBACK = 14
-ITEM_LOOKBACK = 24
+
 
 
 # ---------------------------------------------------------------------------
@@ -390,16 +389,142 @@ RE_UNSAFE_TRAIT = uc.RE_UNSAFE_TRAIT
 RE_UNSAFE_EXTERN_BLOCK = uc.RE_UNSAFE_EXTERN_BLOCK
 
 
-def _has_safety(lines: list[str], line_idx: int, lookback: int) -> bool:
-    lo = max(0, line_idx - lookback)
-    window = "\n".join(lines[lo : line_idx + 1])
-    return "SAFETY:" in window or "# Safety" in window
+def _comment_safety_offsets(raw: str, stripped: str) -> list[int]:
+    """Offsets of SAFETY/# Safety tokens that are comment text, not code."""
+    out: list[int] = []
+    for token in ("SAFETY:", "# Safety"):
+        start = 0
+        while True:
+            pos = raw.find(token, start)
+            if pos < 0:
+                break
+            start = pos + 1
+            if stripped[pos : pos + len(token)].strip():
+                continue
+            out.append(pos)
+    return out
 
 
-def _has_safety_inside(lines: list[str], line_idx: int, lookahead: int = 3) -> bool:
-    hi = min(len(lines), line_idx + lookahead + 1)
-    window = "\n".join(lines[line_idx:hi])
-    return "SAFETY:" in window or "# Safety" in window
+def _leading_region(stripped: str, pos: int) -> int:
+    """Offset where the contiguous comment/attribute region above ``pos`` starts.
+
+    The scan runs over the comment-stripped source, so comments are whitespace
+    and only real code tokens bound the region.  Attribute spans are skipped by
+    balanced-bracket matching, so a multi-line ``#[cfg(all(...))]`` does not
+    cut the prelude in half.  The scan cannot cross the closing brace of a
+    preceding item: that brace is a code token.
+    """
+    i = pos
+    while True:
+        while i > 0 and stripped[i - 1].isspace():
+            i -= 1
+        if i == 0 or stripped[i - 1] != "]":
+            return i
+        depth = 0
+        j = i - 1
+        attr_start = None
+        while j >= 0:
+            ch = stripped[j]
+            if ch == "]":
+                depth += 1
+            elif ch == "[":
+                depth -= 1
+                if depth == 0:
+                    k = j - 1
+                    if k >= 0 and stripped[k] == "!":
+                        k -= 1
+                    if k >= 0 and stripped[k] == "#":
+                        attr_start = k
+                    break
+            j -= 1
+        if attr_start is None:
+            return i
+        i = attr_start
+
+
+def _inside_other_item(model, offset: int, target_start: int) -> bool:
+    """True when ``offset`` is in a body that does not also contain the target."""
+    for fn in model.fns:
+        if fn.body is None or not (fn.body[0] <= offset <= fn.body[1]):
+            continue
+        if fn.body[0] <= target_start <= fn.body[1]:
+            continue
+        return True
+    for impl in model.impls:
+        if impl.end is None or not (impl.start <= offset <= impl.end):
+            continue
+        if impl.start <= target_start <= impl.end:
+            continue
+        return True
+    return False
+
+
+def _attached_leading_safety(
+    raw: str,
+    stripped: str,
+    starts: list[int],
+    line_idx: int,
+    model,
+    target_start: int,
+) -> str:
+    """SAFETY text in the item's structural leading comment/attribute region."""
+    hi = starts[line_idx]
+    lo = _leading_region(stripped, hi)
+    attached = [
+        pos
+        for pos in _comment_safety_offsets(raw, stripped)
+        if lo <= pos < hi and not _inside_other_item(model, pos, target_start)
+    ]
+    return raw[lo:hi] if attached else ""
+
+
+def _block_attached_safety(
+    raw: str,
+    stripped: str,
+    lines: list[str],
+    stripped_lines: list[str],
+    starts: list[int],
+    line_idx: int,
+    model,
+    block_spans: list[dict],
+) -> str:
+    """SAFETY text attached to the ``unsafe`` block at ``line_idx``.
+
+    Attached means the block's own contiguous leading prelude, a comment inside
+    this block's braces, or a comment above the opening line of a macro/call
+    whose argument holds the block.  The last case is delimiter-bounded: a
+    ``;``, ``{`` or ``}`` between the comment and the block ends the search, so
+    the comment cannot belong to another statement or item.
+    """
+    text = _attached_leading_safety(
+        raw, stripped, starts, line_idx, model, starts[line_idx]
+    )
+    if text:
+        return text
+    for i in range(line_idx - 1, max(-1, line_idx - 7), -1):
+        code = stripped_lines[i]
+        if ";" in code or "{" in code or "}" in code:
+            break
+        lo = starts[i]
+        hi = starts[i + 1] if i + 1 < len(starts) else len(raw)
+        if any(lo <= pos < hi for pos in _comment_safety_offsets(raw, stripped)):
+            return lines[i]
+    block = next((b for b in block_spans if b["line"] == line_idx + 1), None)
+    if block is None or block["open"] is None or block["close"] is None:
+        return ""
+    for pos in _comment_safety_offsets(raw, stripped):
+        if not (block["open"] <= pos <= block["close"]):
+            continue
+        nested = any(
+            other is not block
+            and other["open"] is not None
+            and other["close"] is not None
+            and block["open"] <= other["open"] <= pos <= other["close"] <= block["close"]
+            for other in block_spans
+        )
+        if not nested:
+            return raw[pos : pos + 80]
+    return ""
 
 
 RE_TRAIT = re.compile(r"\btrait\s+(?:r#)?([A-Za-z_][A-Za-z0-9_]*)")
@@ -516,9 +641,25 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
         raw = (root / rel).read_text(encoding="utf-8", errors="replace")
         lines = raw.split("\n")
         stripped = atlas.strip_comments_and_literals(raw)
+        stripped_lines = stripped.split("\n")
         view = uc._restore_abi_literals(raw, stripped)
         model = ua.FileModel(rel, raw, stripped, view)
         starts = atlas._line_starts(raw)
+        block_spans = []
+        for match in RE_UNSAFE_BLOCK.finditer(view):
+            open_idx = ua._find_body_open(stripped, match.start())
+            close_idx = (
+                ua._match_brace(stripped, open_idx)
+                if open_idx is not None
+                else None
+            )
+            block_spans.append(
+                {
+                    "line": atlas._offset_to_line(starts, match.start()) + 1,
+                    "open": open_idx,
+                    "close": close_idx,
+                }
+            )
         site_partition = {
             (s["line"], s["kind"]): s["partition"] for s in scan["sites"] if s["file"] == rel
         }
@@ -545,8 +686,17 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
                 reason = ""
                 if kind == "UNSAFE_BLOCK":
                     clippy_hit = lineno in undocumented.get(rel, set())
-                    lexical = _has_safety(lines, idx, BLOCK_LOOKBACK) or _has_safety_inside(
-                        lines, idx
+                    lexical = bool(
+                        _block_attached_safety(
+                            raw,
+                            stripped,
+                            lines,
+                            stripped_lines,
+                            starts,
+                            idx,
+                            model,
+                            block_spans,
+                        )
                     )
                     if clippy_hit and lexical:
                         stats["lint_false_positive"] += 1
@@ -570,25 +720,32 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
                 elif kind == "UNSAFE_FN_DEF":
                     decl = view[starts[idx] : starts[idx] + 240]
                     fname = uc._fn_name(decl)
-                    prelude = _contiguous_prelude(lines, idx)
-                    if "SAFETY:" in prelude or "# Safety" in prelude:
-                        contracted = True
-                    elif _has_safety(lines, idx, FN_LOOKBACK):
+                    fn_info = model.declared_fn(starts[idx], lineno)
+                    target_start = fn_info.decl if fn_info is not None else starts[idx]
+                    prelude = _attached_leading_safety(
+                        raw, stripped, starts, idx, model, target_start
+                    )
+                    if prelude:
                         contracted = True
                     else:
                         # An unsafe fn may inherit a contract from (a) an
                         # enclosing unsafe impl/trait, or (b) the trait method
-                        # it implements.
+                        # it implements.  A comment in a sibling item's body is
+                        # never inherited.
                         offset = starts[idx]
                         impl = model.enclosing_impl(offset)
                         inherited = False
                         basis = ""
                         if impl is not None:
-                            pre = _contiguous_prelude(
-                                lines,
+                            pre = _attached_leading_safety(
+                                raw,
+                                stripped,
+                                starts,
                                 atlas._offset_to_line(starts, impl.start),
+                                model,
+                                impl.start,
                             )
-                            if "SAFETY:" in pre or "# Safety" in pre:
+                            if pre:
                                 inherited = True
                                 basis = "enclosing unsafe item contract"
                             else:
@@ -606,7 +763,6 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
                         else:
                             contracted = False
                             body_safety = False
-                            fn_info = model.declared_fn(offset, lineno)
                             if fn_info is not None and fn_info.body is not None:
                                 body = raw[fn_info.body[0] : fn_info.body[1] + 1]
                                 body_safety = "SAFETY:" in body or "# Safety" in body
@@ -616,10 +772,10 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
                                 else "no # Safety / SAFETY: contract on the unsafe fn"
                             )
                 else:
-                    prelude = _contiguous_prelude(
-                        lines, idx, ITEM_LOOKBACK
+                    prelude = _attached_leading_safety(
+                        raw, stripped, starts, idx, model, starts[idx]
                     )
-                    contracted = "SAFETY:" in prelude or "# Safety" in prelude
+                    contracted = bool(prelude)
                     if not contracted and kind == "UNSAFE_EXTERN_BLOCK":
                         # The block declares foreign functions; their own docs may
                         # state the contract even when the block has no header.
@@ -661,14 +817,22 @@ def contract_check(root: Path, paths: list[str], scan: dict, compiler: dict) -> 
 
     return {
         "method": {
-            "unsafe_blocks": "clippy::undocumented_unsafe_blocks (AST) plus a "
-            f"{BLOCK_LOOKBACK}-line SAFETY lookback; files containing a clippy allow "
-            "are checked lexically for every block",
-            "unsafe_fn": f"contiguous doc/attribute prelude or {FN_LOOKBACK}-line "
-            "SAFETY lookback; an unsafe fn in an unsafe impl inherits the impl "
-            "contract only when the impl prelude states one",
-            "unsafe_impl_trait_extern": f"{ITEM_LOOKBACK}-line contiguous prelude must "
-            "state SAFETY: or # Safety",
+            "unsafe_blocks": "clippy::undocumented_unsafe_blocks (AST) plus "
+            "structural comment attachment (contiguous comment prelude, a "
+            "comment inside the same block, or a delimiter-bounded comment "
+            "above a macro/call argument; a neighbouring item's SAFETY does "
+            "not transfer); files containing a clippy allow are checked "
+            "lexically for every block",
+            "unsafe_fn": "structural comment attachment: SAFETY: or # Safety in "
+            "the fn's contiguous leading doc/attribute prelude, or inherited "
+            "from an unsafe impl/trait contract; a comment in a sibling item's "
+            "body is never attached, and an attachment that cannot be decided "
+            "is UNCONTRACTED (never silently contracted)",
+            "unsafe_impl_trait_extern": "structural contiguous comment/attribute "
+            "prelude must state SAFETY: or # Safety",
+            "attachment_rule": "brace-aware: the leading region is bounded by "
+            "the previous real code token and skips balanced attribute spans; "
+            "every SAFETY token must not lie inside a different item's body",
             "scope": "every src/**/*.rs operation, production and test-only",
         },
         "allow_suppressed_files": sorted(allow_files),
@@ -963,6 +1127,158 @@ def _readelf_dynamic(path: Path) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Self-test
+# ---------------------------------------------------------------------------
+
+
+def self_test() -> int:
+    """Regression cases for structural contract attachment.
+
+    The historical predicate accepted any SAFETY token within a fixed line
+    distance, so a comment in the previous item's body contracted a later
+    unsafe fn.  These cases pin the structural rule.
+    """
+    root = Path(__file__).resolve().parents[5]
+    fails: list[str] = []
+    rows: list[tuple[str, str, str]] = []
+
+    def check(name: str, got: str, want: str) -> None:
+        rows.append((name, got, want))
+        if got != want:
+            fails.append(f"{name}: got {got}, want {want}")
+
+    def contract_state(
+        base: Path, rel: str, line: int, kind: str = "UNSAFE_FN_DEF"
+    ) -> str:
+        scan = uc.scan(base, [rel])
+        result = contract_check(
+            base, [rel], scan, {"undocumented_unsafe_blocks": {}}
+        )
+        hit = any(
+            b["line"] == line and b["kind"] == kind
+            for b in result["blockers"]
+        )
+        return "UNCONTRACTED" if hit else "CONTRACTED"
+
+    def site_line(
+        base: Path, rel: str, name: str | None = None,
+        kind: str = "UNSAFE_FN_DEF",
+    ) -> int:
+        raw = (base / rel).read_text(encoding="utf-8", errors="replace")
+        stripped = atlas.strip_comments_and_literals(raw)
+        view = uc._restore_abi_literals(raw, stripped)
+        starts = atlas._line_starts(raw)
+        regex = {"UNSAFE_FN_DEF": RE_UNSAFE_FN, "UNSAFE_BLOCK": RE_UNSAFE_BLOCK}[kind]
+        for match in regex.finditer(view):
+            if kind == "UNSAFE_FN_DEF" and name is not None:
+                if uc._fn_name(match.group(0)) != name:
+                    continue
+            return atlas._offset_to_line(starts, match.start()) + 1
+        raise AssertionError(f"{rel}: no {kind} named {name}")
+
+    # (a) a production unsafe fn whose window held the previous fn's SAFETY.
+    rel = "src/engine/eng_fat.rs"
+    line = site_line(root, rel, "push_cstr_or_null")
+    check(
+        f"(a) {rel}:{line} push_cstr_or_null",
+        contract_state(root, rel, line),
+        "UNCONTRACTED",
+    )
+
+    # (b) the same shape behind bio_out's stdout comment.
+    rel = "src/apps/ciphers.rs"
+    line = site_line(root, rel, "dummy_psk")
+    check(
+        f"(b) {rel}:{line} dummy_psk",
+        contract_state(root, rel, line),
+        "UNCONTRACTED",
+    )
+
+    # (c) a genuine attached '# Safety' contract must still count.
+    rel = "src/engine/eng_fat.rs"
+    line = site_line(root, rel, "ENGINE_set_default_string")
+    check(
+        f"(c) {rel}:{line} ENGINE_set_default_string",
+        contract_state(root, rel, line),
+        "CONTRACTED",
+    )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        # (d) SAFETY one line above the target, but inside the previous fn's body.
+        rel = "regression_d.rs"
+        (base / rel).write_text(
+            "fn previous() {\n"
+            "    let _x = 0;\n"
+            "    unsafe { }\n"
+            "    // SAFETY: this comment documents the previous function's block\n"
+            "} unsafe fn target() { }\n",
+            encoding="utf-8",
+        )
+        line = site_line(base, rel, "target")
+        check(
+            f"(d) synthetic neighbour comment at line {line - 1}",
+            contract_state(base, rel, line),
+            "UNCONTRACTED",
+        )
+
+        # (e) SAFETY inside the same unsafe block must count.  The allow and
+        # cfg(test) module force the lexical path that the attachment rule feeds.
+        rel = "regression_e.rs"
+        (base / rel).write_text(
+            "// allow(clippy::undocumented_unsafe_blocks)\n"
+            "#[cfg(test)]\n"
+            "mod tests {\n"
+            "    fn fence() {\n"
+            "        // SAFETY: same block note\n"
+            "        unsafe { }\n"
+            "    }\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        line = site_line(base, rel, kind="UNSAFE_BLOCK")
+        check(
+            f"(e) synthetic same-block comment at line {line - 1}",
+            contract_state(base, rel, line, "UNSAFE_BLOCK"),
+            "CONTRACTED",
+        )
+
+        # (f) a SAFETY comment above a macro call whose argument holds the
+        # block is a genuine attachment; no statement delimiter intervenes.
+        rel = "regression_f.rs"
+        (base / rel).write_text(
+            "// allow(clippy::undocumented_unsafe_blocks)\n"
+            "#[cfg(test)]\n"
+            "mod tests {\n"
+            "    fn macro_arg() {\n"
+            "        // SAFETY: the macro argument block is live\n"
+            "        assert_eq!(\n"
+            "            unsafe { 1 },\n"
+            "            1\n"
+            "        );\n"
+            "    }\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        line = site_line(base, rel, kind="UNSAFE_BLOCK")
+        check(
+            f"(f) synthetic macro-argument comment at line {line - 2}",
+            contract_state(base, rel, line, "UNSAFE_BLOCK"),
+            "CONTRACTED",
+        )
+
+    for name, got, want in rows:
+        print(f"[v1-census self-test] {'PASS' if got == want else 'FAIL'} "
+              f"{name}: {got} (want {want})")
+    if fails:
+        for fail in fails:
+            print(f"[v1-census self-test] {fail}")
+        return 1
+    print(f"[v1-census self-test] all {len(rows)} cases passed")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -970,13 +1286,19 @@ def _readelf_dynamic(path: Path) -> dict:
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=str(Path(__file__).resolve().parents[5]))
-    ap.add_argument("--compiler-json", required=True)
+    ap.add_argument("--compiler-json")
+    ap.add_argument("--self-test", action="store_true",
+                    help="run the structural contract-attachment regression cases")
     ap.add_argument("--gate-log")
     ap.add_argument("--gate-exit", type=int)
     ap.add_argument("--delta-vs",
                     help="previous candidate-freeze JSON to classify against")
     ap.add_argument("--out", default=str(HERE / OUT_NAME))
     args = ap.parse_args(argv)
+    if args.self_test:
+        return self_test()
+    if not args.compiler_json:
+        ap.error("--compiler-json is required unless --self-test is used")
 
     root = Path(args.root).resolve()
     paths = src_paths(root)
