@@ -1,0 +1,52 @@
+{
+  "receipt": "publish-0.0.40",
+  "date": "2026-10-27",
+  "crate": "openssl-rs",
+  "version": "0.0.40",
+  "registry": "crates-io",
+  "status": "PUBLISHED",
+  "source_identity": {
+    "commit_subject": "Release 0.0.40 (PR #77)",
+    "note": "Published from a clean working tree on main. Contains the openssh closure campaign and its repairs: the BLAKE2 Stacked-Borrows fix, six legacy digest initialisers that refuse where the authority segfaults, the alignment soundness guard on owner constructors, the master-secret cleansing owner, the PKCS/7 repr(C) field-order fix, four ABI-contract-bounded edge classes, and the resolver switch-bound correction.",
+    "working_tree": "clean at publish time"
+  },
+  "artefacts": {
+    "libcrypto.so.3": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+    "libssl.so.3": "1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b",
+    "legacy.so": "eb297736c89b8d37065d822692c656ef95b3215f8113b2f44316e2c48133dff4",
+    "openssl": "acac3dfd07a240892eab61d445b6a59d99dde61e7efd75921de1d466c109d24f"
+  },
+  "packaging": {
+    "files": 1010,
+    "compressed_bytes": 8948785,
+    "limit_bytes": 10000000,
+    "note": "Published with --no-verify. No full library suite was run for this exact tree; the last full run is 2208 passed / 0 failed / 52 ignored at b004a99d5."
+  },
+  "registry_verification": {
+    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.40",
+    "checksum": "7fe05a8bddfead54c324ea5f680365a638ed2b34ec2e8f703f7469fa0c7eec8f",
+    "checksum_prefix": "7fe05a8b",
+    "crate_size": 8948785,
+    "published_at": "2026-10-27T07:09:08Z"
+  },
+  "provider_verification": {
+    "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",
+    "ldd": "resolves the install's own libcrypto",
+    "load": "OSSL_PROVIDER_load(NULL,\"legacy\") non-NULL with OPENSSL_MODULES set",
+    "legacy_algorithm": "MD4(abc) = a448017aaf21d8525fc10ae87aa6729d",
+    "retained": "compiled-in MODULESDIR is still the null sentinel"
+  },
+  "evidence_shipped": {
+    "abi_courts": "11/11",
+    "library_tests": "2208 passed, 0 failed, 52 ignored at b004a99d5 - a floor for this tree, not a measurement of it",
+    "adversarial_probes": "49/49 in isolated processes",
+    "downstream": "307 recipes, 307/307 recipe-backed families carried forward at the previous identity; SAFE_COMPATIBLE remains 0/33"
+  },
+  "non_claims": [
+    "Publishing is not a safety or compatibility result.",
+    "No full suite was run for this exact 0.0.40 tree.",
+    "The openssh graduation was REJECTED twice by independent adjudication on identity binding, and is not claimed.",
+    "BOUNDARY instruments ran with firing canaries but SEAL requirements and independent review are not satisfied for a graduation.",
+    "SAFE_COMPATIBLE remains 0/33."
+  ]
+}
