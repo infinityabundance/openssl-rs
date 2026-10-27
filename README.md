@@ -64,21 +64,26 @@ Client, server, library, signing, interception, VPN, mail, DNS, IMAP, IRC,
 XMPP, FTP, MQTT, Kafka, TPM, SNMP and digest/KDF faces are all represented. Each
 row records a build against this crate's headers and libraries, linked with
 `-Wl,--no-as-needed` so the subject libraries are provably loaded, and exercised
-by a deterministic local workload with a negative control. All 207 `L7-functional`
-rows are **carried forward** from the superseded identity
-`dc17cfdd…`/`75cc3979…`; they are not fresh measurements at the identity above.
-The atlas records `evidence_reuse.mode = "committed-rows-carried-forward"` with
-`candidate_identity_match = false`: 307 of 307 recipe-backed families are
-carried forward, and every carried row names that superseded identity. The
-full no-reuse run at `dc17cfdd`/`75cc3979` measured 207 candidate / 209 authority
-`L7-functional` over 223 loaded families; the earlier S52 (196 of 200 at
-`cd71d401`/`efd460de`) and S59 (198 of 216 at `c8a99c59`/`5992c29d`)
-re-measurements remain history. The three families lost in S42 (`dma`, `libssh`,
-`sslscan`) were recovered in S44, so the Safe-33 cohort is 33/33; the 100
-recipe-backed families below L7 are measurement blockers symmetric under both
-subjects, `fdm` was repaired from ENVIRONMENT in S53, three fixtures were lifted
-in S60, `charybdis` was repaired in S61, and 693 families have no admitted
-recipe.
+by a deterministic local workload with a negative control. The reconciled atlas
+(`forensics/downstream/runtime-functional-atlas.json`, `body.counts.by_subject`
+and `body.evidence_reuse`) records **candidate 207 / authority 209**
+`L7-functional` out of **307 recipe-backed** families, with **223 candidate
+loaded** (224 authority), **7 candidate failed** (5 authority), **755 not
+attempted** and **693 with no recipe**. All 307 recipe-backed rows are
+**carried forward** from the superseded identity
+`dc17cfdd…`/`75cc3979…` (`evidence_reuse.mode =
+"committed-rows-carried-forward"`, `families_reused = 307`,
+`candidate_identity_match = false`); none is a fresh measurement at the identity
+above, and every carried row names that superseded identity. The last full
+no-reuse run (S52, 196 of 200 at `cd71d401`/`efd460de`) and the S59
+re-measurement (198 of 216 at `c8a99c59`/`5992c29d`) remain history. The three
+families lost in S42 (`dma`, `libssh`, `sslscan`) were recovered in S44, so the
+Safe-33 cohort is 33/33. On the candidate side **100** of the 307 recipe-backed
+families are below L7 (307 − 207), against **98** on the authority side; the
+difference is the measured authority-only asymmetry `ewftools` and
+`xilinx-bootgen`. `fdm` was repaired from ENVIRONMENT in S53, three fixtures
+were lifted in S60, `charybdis` was repaired in S61, and **693** families have
+no admitted recipe.
 
 ### Memory safety is partial — precisely what that means
 
@@ -109,6 +114,26 @@ and verification, then ML-DSA, then the remaining provider and algorithm cores.
 [`STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md) ·
 [`SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md) ·
 [`PARITY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PARITY_MODEL.md)
+
+## Where the memory-safety campaign actually stands (2026-10-27)
+
+Receipts only. This is not a graduation and does not claim `SAFE_COMPATIBLE`,
+constant-time behaviour, or that the BOUNDARY/SEAL gates passed.
+
+- **V1 census** (`atlas-refresh/v1-candidate-freeze.json`): **381** uncontracted unsafe constructs in **152** files, **198** of them production.
+- **V2 batch** (`atlas-refresh/v2-batch-floor.json`, `v2a-clippy-gate.json`): library suite **2151 passed / 0 failed / 45 ignored** in both serial and 4-thread modes; **42/42** adversarial probes at that time; **11/11** ABI courts; `cargo clippy --all-targets -- -D warnings` clean.
+- **V3 instruments** (`atlas-refresh/v3-boundary-instruments.json`): Miri **9/9** under both Stacked and Tree Borrows, with **2** tests blocked by `pthread_once`; TSan **5/5**; Loom **4/4**; Kani **2** bounded invariants; MSan **2** focused paths, classed `RAN_BOUNDED_NOT_ADMISSIBLE` (uninstrumented libc) and not counted as a pass.
+- **V3b real defect** (`atlas-refresh/v3b-error-leak.json`): ASan found an **84-byte** thread-exit `ERR_STATE` leak; the repair has a pre-fix negative control (destructor disabled fails and leaks; restored passes and is clean).
+- **V4 closure** (`atlas-refresh/v4b-closure-precision.json`, `witness-rule.json`, `edge-targets.json`): the engine refuses `STALE_HASH`; the openssh closure reaches **2** production obligations, **both DISCHARGED**, and after the edge-target re-audit has **3** reachable unresolved sites — **2** contract-bounded and **1** target-bounded (`OSSL_PROVIDER_do_all`, application-supplied). The verdict is still `REFUSED` on `STALE_HASH`, not `ACCEPTED`.
+- **Adjudications**: five consecutive openssh `SAFE_COMPATIBLE` adjudications were **REJECTED**, all on identity binding (`AGENTS.md` §22); the most recent is `atlas-refresh/graduation-openssh.json` (2026-10-27, `status: REJECTED`, superseding the 2026-10-26 rejection). `AGENTS.md` §22 now forbids that class of failure.
+
+**Outstanding debts**
+
+- `CAMPAIGN-STATUS.json` lag (partly fixed in this reconciliation).
+- The court host checkout is bind-mounted read-write at `/work` (`AGENTS.md` §6).
+- `docker/openssl-rs-court.sh` is committed mode `100644`, with no executable bit.
+- S56/S57 races are not established; no faithful Loom model exists (`atlas-refresh/v3-boundary-instruments.json`, `s56_s57_loom`).
+- Uncontracted production operations remain crate-wide: the V1 census records **198** (`v1-candidate-freeze.json`); the V1e rebind recomputes **67** (`v1e-candidate-freeze.json`), and no fresh full census has been regenerated.
 
 ## Where the conservation strata stand
 
