@@ -108,6 +108,16 @@ python3 forensics/tools/atlas_receipt.py --verify
 # hash every atlas file, regenerate, hash again, require byte equality
 ```
 
+The byte-for-byte claim above is scoped to **derived evidence**, not to compiled
+binaries. A clean rebuild of the bit-identical 0.0.41 source did not reproduce the
+0.0.40 `.so`/CLI bytes, while every dynamic export stayed identical (libcrypto
+5906, libssl 608, 0 added, 0 removed). The internal compiler-emitted symbol count
+moved 18953 → 18884. The cause is **UNKNOWN** and is *not* attributed to any
+mechanism; see `atlas-refresh/publish-0.0.41.json` `rebuild_differential`. Until
+it is explained, "no unexplained symbol drift" in the CI invariant list (§6) must
+be read as *no dynamic-export drift*; a binary reproduction claim would need a
+dedicated path-remapping and codegen-partitioning investigation first.
+
 ## 3. What a run record contains
 
 Every evidence run records:

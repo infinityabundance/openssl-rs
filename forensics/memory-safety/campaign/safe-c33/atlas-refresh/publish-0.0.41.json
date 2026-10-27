@@ -1,0 +1,78 @@
+{
+ "receipt": "publish-0.0.41",
+ "date": "2026-10-27",
+ "crate": "openssl-rs",
+ "version": "0.0.41",
+ "registry": "crates-io",
+ "status": "PUBLISHED",
+ "source_identity": {
+  "commit_subject": "Release 0.0.41 (PR #80)",
+  "note": "Docs-only 0.0.41: git diff 60400c2a2~1..60400c2a2 touches only the Cargo.toml and Cargo.lock version fields; src/, build.rs and the build tooling are bit-identical to published 0.0.40. The release exists because crates.io renders README.md, and the 0.0.40 page still described the S59 corpus (277 recipes, 198 L7) and an S58 test floor (2,148/45), both superseded by runtime-functional-atlas.json and publish-0.0.40.json. The published payload contains source and documentation only (0 packaged files under artifacts/), so no binary ships in the crate.",
+  "working_tree": "clean at 60400c2a2 at publish time. A rebuild of the identical source was performed first and its outputs were then reverted with git checkout, because the crate ships no artifacts and the committed 0.0.40 artefacts are the ones the 11 ABI courts and 49 probes were measured against."
+ },
+ "artefacts": {
+  "libcrypto.so.3": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+  "libssl.so.3": "1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b",
+  "legacy.so": "eb297736c89b8d37065d822692c656ef95b3215f8113b2f44316e2c48133dff4",
+  "openssl": "acac3dfd07a240892eab61d445b6a59d99dde61e7efd75921de1d466c109d24f",
+  "note": "unchanged from 0.0.40: these are the committed, already-measured artefacts. The crate ships no binaries, so these hashes describe the repository install, not the published payload."
+ },
+ "packaging": {
+  "files": 1010,
+  "compressed_bytes": 8951096,
+  "limit_bytes": 10000000,
+  "note": "cargo publish --no-verify packaged 1010 files, 40.9 MiB uncompressed / 8,951,096 bytes compressed. The registry-reported crate_size equals this exactly, so the published payload is the package that was measured before upload. README.md is included and carries the reconciled 307 recipes / 207 / 209 figures."
+ },
+ "registry_verification": {
+  "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.41",
+  "checksum": "0d32b7093225aa91db1afb609e93fadd2dd9b91443fbf0d241c242d6132dfd92",
+  "checksum_prefix": "0d32b709",
+  "crate_size": 8951096,
+  "published_at": "UNKNOWN: the version endpoint returned published_at null at 2026-10-27T11:40:55Z; crates.io reported 'Published openssl-rs v0.0.41 at registry crates-io' and the version document is readable",
+  "yanked": false,
+  "num_versions": 41,
+  "note": "the earlier 403 was a missing User-Agent on the client, not absent network. Queried with -A openssl-rs-release/0.0.41."
+ },
+ "provider_verification": {
+  "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",
+  "ldd": "resolves the install's own libcrypto (artifacts/phase2/install/lib/libcrypto.so.3)",
+  "load": "OSSL_PROVIDER_load(NULL,\"legacy\") non-NULL with OPENSSL_MODULES set",
+  "legacy_algorithm": "MD4(abc) = a448017aaf21d8525fc10ae87aa6729d",
+  "retained": "compiled-in MODULESDIR is the \"N/A\" sentinel (src/runtime/init.rs)",
+  "run_at": "this release: re-verified against the rebuilt artefacts before they were reverted; carried for the committed artefacts from publish-0.0.40.json"
+ },
+ "evidence_shipped": {
+  "abi_courts": "11/11 passed on the rebuild (phase2_courts.py all_pass=True); export sets identical to 0.0.40",
+  "library_tests": "NOT_RUN for this tree by instruction; 2208 passed / 0 failed / 52 ignored at b004a99d5 remains a floor, not a measurement of this tree",
+  "adversarial_probes": "NOT_RUN for this tree; 49/49 in isolated processes remains the last probe result",
+  "downstream": "no new downstream evidence in a docs-only release; 307 recipes, 207 candidate / 209 authority L7-functional carried forward; SAFE_COMPATIBLE remains 0/33"
+ },
+ "non_claims": [
+  "Publishing is not a safety or a compatibility result.",
+  "Docs-only release: src/ is bit-identical to 0.0.40 and no binary is packaged.",
+  "No full library suite, probe set or SEAL measurement was run for this tree; the user deferred full verification.",
+  "The rebuild of the identical source did not reproduce the 0.0.40 artefact bytes; the cause is UNKNOWN and the dynamic ABI was proven identical rather than assumed.",
+  "BOUNDARY/SEAL gates remain NOT_RUN. SAFE_COMPATIBLE remains 0/33.",
+  "The five openssh graduation adjudications remain REJECTED on identity binding and are not claimed."
+ ],
+ "rebuild_differential": {
+  "what": "a clean rebuild of the bit-identical source at 60400c2a2 via forensics/tools/build_phase2.sh, identical prefix and toolchain pin 1.98.1",
+  "artefact_hashes_rebuilt": {
+   "libcrypto.so.3": "cb45a6ec8323a333c69d8b24fc3e62bc8441dba7ba631d47d132d8d375fd7e44",
+   "libssl.so.3": "527ec167ebb9db04f64bb93b697e0add26bb1a8dce416afb1eab512e98efc4d1",
+   "legacy.so": "d95e5c3d268dbd0d74cbae75d1a3890d2990b878c42b2bc074ff6d780dd9a7b7",
+   "openssl": "67f19328bfc8aeb0010c244ae3bac7e645adce367659bbd5697e213fce4b3744"
+  },
+  "artefact_sizes_rebuilt_bytes": {
+   "libcrypto.so.3": 16845728,
+   "libssl.so.3": 16558800,
+   "legacy.so": 16521704,
+   "openssl": 12361048
+  },
+  "abi_result": "NO ABI CHANGE. Dynamic export sets compared with `nm -D --defined-only` and names normalised by stripping @version: libcrypto 5906 exports both sides, 0 removed, 0 added; libssl 608 exports both sides, 0 removed, 0 added.",
+  "internal_result": "forensics/atlas/implemented-surface.json regenerated with internal_symbols.compiler_emitted_count 18953 -> 18884 and crate-archive sha256 bcd823cd... -> 82b3a90e.... No dynamic export moved.",
+  "cause": "UNKNOWN. Not attributed. Candidate mechanisms are the build.rs-injected OPENSSL_RS_MODULESDIR/OPENSSLDIR/ENGINESDIR path values and LLVM codegen-unit/internal-symbol partitioning, but none was demonstrated. Recorded as an open reproducibility finding rather than explained away.",
+  "why_it_did_not_block_publish": "the crate payload is source and documentation only (0 files under artifacts/ in the package), and the committed artefacts were retained, so publication changes neither the shipped bytes relative to 0.0.40 nor the measured install.",
+  "docs_impact": "docs/REPRODUCIBILITY.md makes a byte-for-byte claim about derived atlas files, not about compiled binaries. Its CI invariant 'no unexplained symbol drift' is now literally violated by an internal-symbol count change, so the invariant needs either a narrower definition (dynamic exports) or a follow-up investigation."
+ }
+}
