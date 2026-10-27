@@ -1,0 +1,333 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/openssh-seal-prep/v1",
+  "kind": "seal-preparation-receipt",
+  "receipt": "openssh-seal-prep",
+  "subphase": "safe-c33: fix the BLAKE2 Stacked Borrows UB, encode the two contract-bounded edge classes, and run the SEAL-stage gate at the rebuilt phase-2 identity",
+  "date": "2026-10-26",
+  "source_identity": {
+    "branch": "integrate/safe-c33 (checked out as main at the same commit)",
+    "repository_head": "2ff3019472b31d76dbf521ebec055d8d6b5f49a0",
+    "working_tree": "dirty: src/digest/blake2.rs (task A), forensics/tools/consumer_closure.py (task B), rebuilt artifacts/phase2/install, forensics/downstream build-link/runtime atlases, the v1e rebind inventory and this receipt; nothing committed or pushed",
+    "candidate_install": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "c2d7368777e8bef776ea5106913855f881ed923d126b567cb52a7a17e05af326",
+    "libssl_so_3_sha256": "1ffdf7cadb2ec202e424c405b2e0ea5a5c4130ed70015cfe0581ab297ada10f0",
+    "legacy_so_sha256": "075911b7653bd66c1afcd4ed9ec5eb7133f9b18398227a8543580b96b48f1190",
+    "openssl_exe_sha256": "8fe18e53e541ce495c96c5c7b92c203cdcd4f3457b2a10890a455c261be28c9b",
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1e-candidate-freeze.json (SEAL rebind; census/partition/contracts carried from v1d, full v1 census regeneration NOT_RUN)"
+  },
+  "task_a_blake2_aliasing": {
+    "instrument": "nightly-2026-10-01, miri 0.1.0, MIRIFLAGS='-Zmiri-disable-isolation', --test-threads=1",
+    "reproduced_failure": {
+      "test": "evp::legacy_blake2::tests::legacy_blake2b_init_refuses_context_without_md_data_and_inits_bound_context",
+      "model": "Stacked Borrows (default)",
+      "result": "FAIL: Undefined Behavior at src/digest/blake2.rs:67 (load64), reached from src/evp/legacy_blake2.rs:262 via blake2b::final_ -> blake2b::compress"
+    },
+    "provenance_problem": [
+      "In blake2b::final_ the `blocks` argument is `s.buf.as_ptr()`. That creates a SharedReadOnly tag covering the `buf` field (offsets 0x60..0xe0 of the context allocation).",
+      "The same call also passes `s` as `&mut Ctx`. On function entry Miri retags that reference Unique over the whole context (offsets 0x0..0xf0), which pops the SharedReadOnly tag created for `blocks` off the borrow stack.",
+      "compress then reads the block through the now-invalidated pointer in load64. Under Stacked Borrows a Unique retag invalidates a sibling SharedReadOnly tag for an overlapping range even when the Unique reference is only read; Tree Borrows permits that read and therefore accepted the same test.",
+      "This is a real aliasing defect in the source, not a model artifact: the compressor held a mutable reference to the whole object while reading part of that same object through a separately derived raw pointer."
+    ],
+    "fix": [
+      "compress now takes the live state fields separately: h: &mut [u64; 8], t: &mut [u64; 2], f: &[u64; 2], blocks: *const u8, len: usize (BLAKE2b) and the u32 widths for BLAKE2s.",
+      "final_/update pass disjoint field borrows: `&mut s.h, &mut s.t, &s.f, s.buf.as_ptr()`. No reference covers Ctx::buf, so the whole-context Unique retag that invalidated the read pointer cannot be formed.",
+      "The same restructuring was applied to the BLAKE2s sibling (compress, update, final_). The algorithm, vectors and the initialiser refusal test are unchanged; no unsafe operation was added, removed or weakened.",
+      "file: src/digest/blake2.rs (both `mod blake2b` and `mod blake2s`); the test in src/evp/legacy_blake2.rs is byte-for-byte unchanged."
+    ],
+    "results_after_fix": {
+      "named_test_stacked_borrows": "PASS: 1 passed; 0 failed; 0 ignored; 2264 filtered out",
+      "named_test_tree_borrows": "PASS: 1 passed; 0 failed; 0 ignored; 2264 filtered out (same command with -Zmiri-tree-borrows)",
+      "blake2_filter_stacked_borrows": "PASS: 6 passed; 0 failed (digest::blake2 and evp::legacy_blake2 tests)",
+      "blake2_filter_tree_borrows": "PASS: 6 passed; 0 failed (same filter with -Zmiri-tree-borrows)",
+      "miri_tcb_suite_stacked_borrows": "PASS: 9 passed; 0 failed; 0 ignored (MIRIFLAGS='-Zmiri-strict-provenance')",
+      "miri_tcb_suite_tree_borrows": "PASS: 9 passed; 0 failed; 0 ignored (same with -Zmiri-tree-borrows)",
+      "models_agree": "both models now accept the mechanism; the previous Stacked/Tree disagreement is removed by the source fix, not by changing a Miri flag"
+    }
+  },
+  "task_b_abi_contracts": {
+    "tool": "forensics/tools/consumer_closure.py",
+    "encoding": "two contract-bounded classes, ABI_CONTRACT_PROVIDER and ABI_CONTRACT_ALLOCATOR; both stay `unresolved: true` with resolved=false, keep an unbounded target set, and are counted in precision.totals.reachable_contract_bounded_sites, never in resolved_sites or reachable_target_bounded_unresolved_sites",
+    "distinguishable_from_resolved": "every contract site carries resolution_kind='contract-bounded (target set unbounded)' and resolved=false; a statically resolved site has resolved=true and an in-image target set. There is no fabricated in-image target set for either contract class.",
+    "classes": {
+      "ABI_CONTRACT_PROVIDER": {
+        "mechanism": "config-driven external provider module (26 audited sites; 25 reachable in each rebuilt binary)",
+        "contract": "OSSL_provider_init",
+        "citation": [
+          "include/openssl/core.h:40-44 -- struct ossl_dispatch_st { int function_id; void (*function)(void); }; an array is always terminated by function_id == 0 (OSSL_DISPATCH_END)",
+          "include/openssl/core.h:186-195 -- typedef int OSSL_provider_init_fn(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx); |out| is the provider's returned base-function table and |provctx| is passed to its other context constructors",
+          "include/openssl/core_dispatch.h:30-68 -- function identities start at 1, 0 terminates the table, and each OSSL_FUNC_* extractor names the signature the core calls",
+          "include/openssl/provider.h:78-85 -- OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *, const char *name, OSSL_provider_init_fn *init_fn); the same entry-point type is what an externally loaded module implements"
+        ],
+        "provider_obligation": "the provider returns its own dispatch table and owns the correctness and lifetime of every object it allocates (provider context, algorithm contexts, key objects, and the memory behind the OSSL_FUNC_* callbacks); the core calls those callbacks only through the returned table",
+        "covers": "the interface by which an out-of-image provider is entered, the shape of the dispatch table it returns, and the provider's own allocation correctness",
+        "does_not_cover": [
+          "which module (if any) the effective configuration names; the target set is unbounded",
+          "the memory safety or correctness of the external provider, which is the provider's own obligation after the ABI boundary",
+          "reachability from these two workloads, or that a configuration file exists at run time",
+          "application code not loaded as a provider; it is not a node in this closure",
+          "in-image target completeness for the built-in provider path"
+        ]
+      },
+      "ABI_CONTRACT_ALLOCATOR": {
+        "mechanism": "allocator override seam (3 reachable sites: FREE_FN in SlotStr drop glue, MALLOC_FN in err::append_current, FREE_FN in PendingReleaseGuard::drop)",
+        "contract": "CRYPTO_set_mem_functions",
+        "citation": [
+          "include/openssl/crypto.h:367-375 -- typedefs CRYPTO_malloc_fn / CRYPTO_realloc_fn / CRYPTO_free_fn and int CRYPTO_set_mem_functions(CRYPTO_malloc_fn, CRYPTO_realloc_fn, CRYPTO_free_fn)",
+          "man3/CRYPTO_set_mem_functions (OpenSSL 3.6.4) -- the replacement functions must have the same semantics as the standard C library malloc(), realloc() and free(); realloc may be NULL, in which case allocation/copy/free implements it; the functions must be installed before any other OpenSSL function is called; once installed, their correctness and thread safety are the application's responsibility"
+        ],
+        "covers": "the public seam through which an application replaces the allocator triple, and the semantics the replacement must implement (matching malloc/free, and realloc or a NULL realloc with copy semantics)",
+        "does_not_cover": [
+          "that any particular triple is installed; the target set is unbounded",
+          "the correctness or thread safety of a replacement allocator, which is the application's obligation once installed",
+          "the NULL globals observed in this configuration: that is a runtime fact, not a link-time bound",
+          "direct calls to a replacement function outside the CRYPTO_* seam, or application allocations that never enter libcrypto"
+        ]
+      }
+    },
+    "negative_control": {
+      "command": "python3 forensics/tools/consumer_closure.py --self-test",
+      "result": "self-test ok",
+      "checks": [
+        "an unrecognised indirect edge at an application-named function stays unresolved",
+        "it receives no contract class",
+        "evaluate_predicate_element_7 reports established=false for it",
+        "it is counted as one target-bounded unresolved site and zero contract-bounded sites, so the broad unresolved set is preserved",
+        "a genuinely contract-bounded site makes element 7 pass while target_sets_remain_unbounded stays true (the encoding does not turn it into a resolved edge)"
+      ]
+    }
+  },
+  "task_c_seal_gate": {
+    "venue": "docker/openssl-rs-court.sh (minimal court) for build/courts/full suite/probes; docker/openssl-rs-asan.sh for the sanitizer builds (the documented no-RLIMIT_DATA derivation); docker/openssl-rs-court.sh with OPENSSL_RS_COURT_IMAGE=openssl-rs-court-expand:1 and OPENSSL_RS_COURT_NAME=openssl-rs-court-expand for the downstream L7 measurement",
+    "fmt_clippy": {
+      "fmt": "PASS: cargo fmt --all -- --check (rc 0)",
+      "clippy": "PASS: cargo clippy --all-targets -- -D warnings (rc 0)"
+    },
+    "phase2_rebuild": {
+      "command": "CARGO_BUILD_JOBS=4 bash forensics/tools/build_phase2.sh (CARGO_TARGET_DIR unset; script hardwires /work/target)",
+      "exit_code": 0,
+      "log": "court/tmp/seal-build.log",
+      "artefacts": {
+        "libcrypto.so.3": "c2d7368777e8bef776ea5106913855f881ed923d126b567cb52a7a17e05af326",
+        "libssl.so.3": "1ffdf7cadb2ec202e424c405b2e0ea5a5c4130ed70015cfe0581ab297ada10f0",
+        "legacy.so": "075911b7653bd66c1afcd4ed9ec5eb7133f9b18398227a8543580b96b48f1190",
+        "openssl": "8fe18e53e541ce495c96c5c7b92c203cdcd4f3457b2a10890a455c261be28c9b"
+      },
+      "courts_json_sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e"
+    },
+    "abi_courts": {
+      "command": "python3 forensics/tools/phase2_courts.py",
+      "ran": 11,
+      "passed": 11,
+      "summary_lines": [
+        "ABI-SYMBOL pass",
+        "ABI-VERSION pass",
+        "ABI-DYNAMIC pass",
+        "ABI-LAYOUT pass",
+        "ABI-LINK pass",
+        "ABI-LOAD pass",
+        "ABI-CONSTANTS pass",
+        "ABI-MATRIX pass",
+        "ABI-SUBSTITUTION pass",
+        "ABI-INSTALL-LAYOUT pass",
+        "libcrypto-contamination pass",
+        "-> artifacts/phase2/COURTS.json all_pass=True"
+      ],
+      "scope": "structural distribution-shell courts only; passing is not semantic parity"
+    },
+    "full_library_suite": {
+      "serial": {
+        "command": "cargo test --lib -- --test-threads=1",
+        "summary": "test result: ok. 2204 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 324.14s",
+        "log": "court/tmp/seal-test-serial.log"
+      },
+      "four_threads": {
+        "command": "cargo test --lib -- --test-threads=4",
+        "summary": "test result: ok. 2204 passed; 0 failed; 52 ignored; 0 measured; 0 filtered out; finished in 134.82s",
+        "log": "court/tmp/seal-test-4.log"
+      }
+    },
+    "complete_probe_set": {
+      "command": "bash scripts/adv-probe.sh (OPENSSL_RS_ADV_PROBE=1, one process per probe, --ignored --exact --test-threads=1)",
+      "summary": "adv-probe: all 49 probes passed",
+      "log": "court/tmp/seal-adv-probe.log"
+    },
+    "asan": {
+      "toolchain": "nightly-2026-10-01, -Zsanitizer=address -Zbuild-std, clang linker, C adapters through /work/court/p25/asan/bin/asan-cc",
+      "options": "ASAN_OPTIONS=allocator_may_return_null=1:detect_leaks=0:symbolize=1 (closes the option gap recorded by the previous pass)",
+      "target_dir": "/work/court/target-asan-seal",
+      "focused_summary": [
+        "digest::blake2: 2 passed, 0 failed",
+        "evp::legacy_blake2: 4 passed, 0 failed",
+        "provider::legacyprov: 1 passed, 0 failed",
+        "provider::core_dispatch: 6 passed, 0 failed",
+        "provider::digest: 7 passed, 0 failed",
+        "provider::encode_key2ms: 1 passed, 0 failed",
+        "provider::decode_der2key: 5 passed, 0 failed",
+        "rsa::ameth: 0 tests matched",
+        "runtime::bio::owned: 26 passed, 0 failed"
+      ],
+      "sanitizer_reports": "0 AddressSanitizer errors. The usize::MAX allocation-refusal test prints 'AddressSanitizer failed to allocate 0xffffffffffffffff bytes' and continues to PASS because allocator_may_return_null=1 is set; that is the documented refusal path, not a report.",
+      "logs": "court/tmp/seal-asan-blake2.log and court/tmp/seal-asan-{1..8}.log"
+    },
+    "tsan": {
+      "toolchain": "nightly-2026-10-01, -Zsanitizer=thread -Zbuild-std, clang linker, C adapters through /work/court/p25/tsan/bin/tsan-cc",
+      "options": "TSAN_OPTIONS=halt_on_error=1:allocator_may_return_null=1:exit_code=66",
+      "schedule": "--test-threads=4 (the parallel gate the previous pass recorded NOT_RUN)",
+      "target_dir": "/work/court/target-tsan-seal",
+      "results": [
+        "context::: 21 passed, 0 failed, 0 races",
+        "runtime::: 403 passed, 0 failed, 5 ignored, 0 races",
+        "digest::: 71 passed, 0 failed, 0 races",
+        "evp::: 264 passed, 0 failed, 0 races"
+      ],
+      "report": "0 ThreadSanitizer data-race reports",
+      "logs": "court/tmp/seal-tsan-{1..4}.log"
+    },
+    "l7_rebuild_and_remeasure": {
+      "container": "openssl-rs-court-expand:1 / openssl-rs-court-expand",
+      "build_link_command": "python3 forensics/tools/downstream_build_link.py --measure --only openssh,openssh-server --reuse-committed --reuse-previous-candidate",
+      "build_link_summary_lines": [
+        "[p1000 34] openssh auth=L4-linked cand=L4-linked",
+        "[p1000 92] openssh-server auth=L4-linked cand=L4-linked",
+        "[downstream-build-link] elapsed=51s with_recipe=307 no_recipe=693",
+        "authority configured=274 built=253 linked=245 failed=62",
+        "candidate configured=274 built=253 linked=245 failed=62",
+        "candidate_linkage_proven=245 candidate_specific_patch_count=0"
+      ],
+      "runtime_command": "python3 forensics/tools/downstream_runtime.py --measure --only openssh,openssh-server --reuse-committed --reuse-previous-candidate",
+      "runtime_summary_lines": [
+        "[p1000 34] openssh authority L7-functional",
+        "[p1000 34] openssh candidate L7-functional",
+        "[p1000 92] openssh-server authority L7-functional",
+        "[p1000 92] openssh-server candidate L7-functional",
+        "[downstream-runtime] elapsed=53s with_recipe=307 no_recipe=693",
+        "authority loaded=224 runtime=211 functional=209 failed=5 not_attempted=755",
+        "candidate loaded=223 runtime=209 functional=207 failed=7 not_attempted=755",
+        "candidate_reaches_baseline=305 reaches_linked_baseline=243 below_baseline=2 baseline_not_linked=62 candidate_failures={'acquire-failure': 693, 'link-failure': 62, 'load-failure': 3, 'functional-failure': 2, 'runtime-failure': 2}"
+      ],
+      "candidate_identity_in_atlas": {
+        "install_prefix": "artifacts/phase2/install",
+        "libcrypto_so_3_sha256": "c2d7368777e8bef776ea5106913855f881ed923d126b567cb52a7a17e05af326",
+        "libssl_so_3_sha256": "1ffdf7cadb2ec202e424c405b2e0ea5a5c4130ed70015cfe0581ab297ada10f0"
+      },
+      "evidence_reuse": "candidate_identity_match=false because the 305 non-`--only` families are carried from the superseded committed atlas; the openssh and openssh-server rows were freshly measured against the rebuilt install and are the rows reported here",
+      "openssh_rows": [
+        {"family": "openssh", "subject": "authority", "level": "L7-functional", "outcome": "reached", "transcript_sha256": "b208be585457966cf3e325c339da3d11b873d773781da6f334abcb1da08e85cb", "workload": "ssh-keygen Ed25519 sign/verify (libcrypto)", "load_proof": true, "linkage_proven": true},
+        {"family": "openssh", "subject": "candidate", "level": "L7-functional", "outcome": "reached", "transcript_sha256": "c2f0327793279373c2dbd8e3caf82f5f7a48017c6b8b5c153cd6973d79f0d5e1", "workload": "ssh-keygen Ed25519 sign/verify (libcrypto)", "load_proof": true, "linkage_proven": true},
+        {"family": "openssh-server", "subject": "authority", "level": "L7-functional", "outcome": "reached", "transcript_sha256": "e0281c503e80ef4dd665767258014e01be8be83500ba5fa82a1f1d962a41f2f1", "workload": "sshd -D, verified exec, host-key mismatch rejected", "load_proof": true, "linkage_proven": true},
+        {"family": "openssh-server", "subject": "candidate", "level": "L7-functional", "outcome": "reached", "transcript_sha256": "4ddd6b9f8558b3d211e4af3fcae142024b9175bc2134c31e80d5349e8ea3d9ba", "workload": "sshd -D, verified exec, host-key mismatch rejected", "load_proof": true, "linkage_proven": true}
+      ],
+      "rebuilt_consumer_artifacts": {
+        "ssh": {"path": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh", "sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57", "build_record": "court/tmp/seal-openssh-build-record.json"},
+        "sshd": {"path": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd", "sha256": "dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002", "build_record": "court/tmp/seal-openssh-server-build-record.json"},
+        "note": "both binaries are byte-identical to the previously recorded closure artefacts, so the closure analyses the same bytes; the difference is that the build records now bind them to the rebuilt libcrypto c2d736..."
+      }
+    },
+    "not_run": [
+      "full v1_census regeneration (source census/contracts carried from v1d into v1e; the only source change is the borrow-only blake2 compress restructuring, which adds no unsafe operation)",
+      "Loom, Kani and mutation controls at this identity",
+      "the ASan/TSan instrument canaries (asan_canary, tsan_canary) were not re-run in this pass; the prior pass's canaries are recorded in openssh-edge-bounds.json",
+      "full-library ASan run (only the affected-path filters were run)",
+      "independent review (element 10)",
+      "any release-candidate seal or publish step"
+    ]
+  },
+  "closure_rerun": {
+    "tool": "forensics/tools/consumer_closure.py (with the ABI_CONTRACT_* encoding)",
+    "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1e-candidate-freeze.json",
+    "install": "artifacts/phase2/install (libcrypto c2d736..., libssl 1ffdf7...)",
+    "ssh": {
+      "receipt": "court/tmp/seal-closure/closure-ssh.json",
+      "artifact": "court/phase24-build-link/openssh/candidate/src/openssh-9.9p1/ssh (c8723f34...)",
+      "reachable_files": 352,
+      "reachable_production_obligations": 6,
+      "DISCHARGED": 0,
+      "BLOCKED": 0,
+      "UNKNOWN": 6,
+      "verdict": "REFUSED",
+      "refusals": [
+        "MISSING_BOUNDARY_RECEIPT: 4 reachable file(s)",
+        "UNKNOWN_OBLIGATION: 6 reachable production obligation(s)"
+      ],
+      "precision": {
+        "indirect_sites": 51944,
+        "resolved_sites": 51643,
+        "unresolved_sites": 301,
+        "reachable_unresolved_sites": 33,
+        "reachable_target_bounded_unresolved_sites": 5,
+        "reachable_contract_bounded_sites": 28,
+        "unclassified_reachable_sites": 0,
+        "contract_bounded_by_class": {"ABI_CONTRACT_PROVIDER": 25, "ABI_CONTRACT_ALLOCATOR": 3}
+      }
+    },
+    "sshd": {
+      "receipt": "court/tmp/seal-closure/closure-sshd.json",
+      "artifact": "court/phase24-build-link/openssh-server/candidate/src/openssh-9.9p1/sshd (dccccf07...)",
+      "reachable_files": 343,
+      "reachable_production_obligations": 6,
+      "DISCHARGED": 0,
+      "BLOCKED": 0,
+      "UNKNOWN": 6,
+      "verdict": "REFUSED",
+      "refusals": [
+        "MISSING_BOUNDARY_RECEIPT: 4 reachable file(s)",
+        "UNKNOWN_OBLIGATION: 6 reachable production obligation(s)"
+      ],
+      "precision": {
+        "indirect_sites": 51944,
+        "resolved_sites": 51643,
+        "unresolved_sites": 301,
+        "reachable_unresolved_sites": 33,
+        "reachable_target_bounded_unresolved_sites": 5,
+        "reachable_contract_bounded_sites": 28,
+        "unclassified_reachable_sites": 0,
+        "contract_bounded_by_class": {"ABI_CONTRACT_PROVIDER": 25, "ABI_CONTRACT_ALLOCATOR": 3}
+      }
+    },
+    "predicate_element_7": {
+      "established": false,
+      "status": "FAIL",
+      "reachable_unresolved_sites": 33,
+      "target_bounded_unresolved_sites": 5,
+      "contract_bounded_sites": 28,
+      "unclassified_reachable_sites": 0,
+      "basis": "AGENTS.md section 7 criterion 2 admits an external-ABI-contract precondition; the 28 contract-bounded sites are therefore no longer the failing reason. The element still fails because 5 reachable unresolved sites are not contract-bounded.",
+      "target_bounded_sites": [
+        {"address": "0x3a11d0", "symbol": "openssl_rs::ec::smpl2::ossl_ec_GF2m_simple_is_on_curve", "reason": "stack-slot-open", "class": "materialised", "text": "call *(%rsp)"},
+        {"address": "0x470220", "symbol": "CRYPTO_nistcts128_decrypt_block", "reason": "reg-value-partial[int]", "class": "materialised", "text": "call *%r9"},
+        {"address": "0x470220", "symbol": "CRYPTO_nistcts128_decrypt_block", "reason": "reg-value-partial[int]", "class": "materialised", "text": "call *%r14"},
+        {"address": "0x34eb30", "symbol": "EVP_PKEY_type_names_do_all", "reason": "reg-value-partial[int]", "class": "materialised", "text": "call *%r14"},
+        {"address": "0x54cec0", "symbol": "openssl_rs::provider::cipher::ossl_aes_gcm_siv_dinit", "reason": "base-slot-partial", "class": "field", "text": "call *(%rax)"}
+      ],
+      "what_would_close_it": "resolve or contract-bound these five sites: the EC GF2m method dispatch, the CTS block-function dispatch, EVP_PKEY_type_names_do_all's ASN.1-method callback, and the AES-GCM-SIV dinit field dispatch. They are not provider-loading or allocator-override edges, so the two ABI contracts added here do not cover them."
+    },
+    "ten_element_predicate": [
+      {"element": "1. exact candidate identity match", "status": "PARTIAL", "evidence": "v1e records the rebuilt install (libcrypto c2d736, libssl 1ffdf7, legacy 075911, openssl 8fe18e) and the closure's artifact identity matches that install. The source tree is dirty (blake2, consumer_closure) and nothing is committed, so the source identity is not sealed."},
+      {"element": "2. exact consumer binary identity", "status": "PARTIAL", "evidence": "the rebuilt ssh (c8723f34) and sshd (dccccf07) are byte-identical to the closure artefacts and their digests are in the new build records; the L7 runtime rows were measured at the rebuilt install but the runtime row itself still does not embed the consumer binary digest."},
+      {"element": "3. fresh L7 parity for the named workload", "status": "PASS", "evidence": "openssh and openssh-server are L7-functional for both subjects in the fresh 2026-10-26 measurement; the four transcript hashes are recorded above."},
+      {"element": "4. loader and ABI proofs", "status": "PASS", "evidence": "11/11 phase-2 ABI courts pass; load_proof.proven=true and linkage_proven=true for both families under the candidate prefix in the fresh runtime rows."},
+      {"element": "5. dependency closure complete", "status": "FAIL", "evidence": "both closures REFUSED: 4 reachable files without boundary receipts (src/evp/legacy_mdc2.rs, src/evp/legacy_sha3.rs, src/provider/encode_key2text.rs, src/sm3/legacy_sm3.rs) and 6 UNKNOWN obligations in each binary."},
+      {"element": "6. every applicable safety obligation discharged", "status": "FAIL", "evidence": "0 DISCHARGED of 6 in each binary; all 6 are UNKNOWN because no boundary-sweep receipt owns the reachable file."},
+      {"element": "7. no unresolved dynamic dispatch or callback edge", "status": "FAIL", "evidence": "33 reachable unresolved sites: 28 contract-bounded (25 provider + 3 allocator) and 5 target-bounded (named above); 0 unclassified. The contract encoding removes the 28 from the failing reason but does not resolve their target sets, and the 5 target-bounded sites remain."},
+      {"element": "8. relevant BOUNDARY instruments run with controls", "status": "PARTIAL", "evidence": "Miri (Stacked and Tree Borrows), focused ASan with allocator_may_return_null=1, and TSan at --test-threads=4 ran at this identity. The sanitizer canaries and Loom/mutation were NOT_RUN this pass."},
+      {"element": "9. applicable SEAL requirements", "status": "PARTIAL", "evidence": "phase-2 rebuild, 11 ABI courts, full library suite serial and parallel, 49/49 probes, focused ASan, TSan, and the fresh openssh L7 measurement ran. Full forensic regeneration (v1 census) and a release-candidate seal were NOT_RUN."},
+      {"element": "10. independent review accepted", "status": "NOT_RUN", "evidence": "this receipt is an author's measurement; no independent reviewer has adjudicated it."}
+    ]
+  },
+  "regressions_and_findings": [
+    "The Stacked-Borrows UB was real and is fixed at the source; both models now agree on the BLAKE2 tests.",
+    "The rebuilt libcrypto admits five reachable target-bounded indirect sites that the previous install's graph did not report. They are named above; element 7 now fails on exactly those five rather than on the 29 provider/allocator sites.",
+    "The refreshed inventory (v1e) exposes six UNKNOWN production obligations in four digest/encoder files that the previous inventory did not present as reachable blockers. They are a closure finding at this identity, not a new source edit.",
+    "The rebuilt ssh/sshd binaries are byte-identical to the previous closure artefacts; rebuilding did not change them, but the build records now bind them to the new libcrypto.",
+    "The `--reuse-previous-candidate` measurement carries 305 non-openssh rows from the superseded atlas and records candidate_identity_match=false; only the openssh/openssh-server rows are fresh."
+  ],
+  "non_claims": [
+    "This is not a SAFE_COMPATIBLE promotion and not a mechanism-wide SAFETY_DISCHARGED claim.",
+    "Predicate element 7 is not established; it fails on the five named target-bounded sites.",
+    "A contract-bounded class does not resolve the target set and is not a static in-image bound.",
+    "ASan/TSan absence of a report is not a proof of memory safety; coverage is the named filters and the recorded schedule.",
+    "The phase-2 ABI courts establish the structural distribution shell only; they are not semantic parity.",
+    "The v1e inventory's census/contracts are carried from v1d; a full v1 census regeneration was not run.",
+    "This receipt was produced by the conversion agent; independent review (element 10) is NOT_RUN."
+  ]
+}
