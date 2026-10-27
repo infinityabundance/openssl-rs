@@ -161,14 +161,14 @@
     {
       "id": "OSSH-FC-006",
       "file": "src/sm3/legacy_sm3.rs",
-      "line": 125,
+      "line": 181,
       "inventory_line": 125,
       "current_line": 181,
       "kind": "UNSAFE_FN_DEF",
       "operation": "sm3_int_init",
       "mechanism": "EVP_PKEY_PROVIDER",
       "source_state": "UNSAFE_OPERATION",
-      "disposition": "SAFETY_DISCHARGED: src/sm3/legacy_sm3.rs:125 - sm3_int_init validates ctx, md_data, digest and the block extent through init_md_data before writing; a fresh EVP_MD_CTX_new(), a NULL context, a NULL md_data, a NULL method and a too-small app_datasize all answer 0 and touch no memory, while the bound table path still produces SM3(\"abc\") (sm3::legacy_sm3::tests::legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-2)",
+      "disposition": "SAFETY_DISCHARGED: src/sm3/legacy_sm3.rs:181-198 (live anchor; V1 inventory coordinate src/sm3/legacy_sm3.rs:125) - sm3_int_init validates ctx, md_data, digest and the block extent through init_md_data before writing; a fresh EVP_MD_CTX_new(), a NULL context, a NULL md_data, a NULL method and a too-small app_datasize all answer 0 and touch no memory, while the bound table path still produces SM3(\"abc\") (sm3::legacy_sm3::tests::legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context; §17 D-LEGACY-MD-INIT-MD-DATA-2)",
       "contract": "`ctx` is NULL or a live `EVP_MD_CTX`; the callback establishes a writable `Sm3Ctx` from the context before writing. A context bound to `SM3_MD` (or to another method with `ctx_size >= size_of::<Sm3Ctx>()`) with a non-NULL `md_data` is initialised; every other C-valid shape is refused with 0.",
       "established_by": [
         "source: src/sm3/legacy_sm3.rs init_md_data validates ctx, md_data, digest and the block extent before any write; sm3_int_init refuses every shape that does not establish a writable Sm3Ctx",
@@ -179,7 +179,8 @@
       "rebind": {
         "from_line": 125,
         "to_line": 181,
-        "method": "V1 inventory coordinate retained; current line re-derived on the hardened source"
+        "method": "site anchor corrected to the live coordinate: line 125 at HEAD is a field initializer inside legacy_md; the unsafe fn is at 181 and the disposition names [181,198]",
+        "inventory_coordinate": 125
       }
     }
   ],

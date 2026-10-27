@@ -25,6 +25,20 @@
     "libcrypto_sha256": "482fca3da906a8d7ac99bd88c6d6633226b6d47c3a20d9a2d60ba3eb2b2640b2",
     "source": "crypto/evp/legacy_meth.h:10-36, crypto/evp/legacy_mdc2.c, crypto/evp/legacy_sha.c, crypto/sm3/legacy_sm3.c, providers/implementations/encode_decode/encode_key2text.c:625-632"
   },
+  "corrigenda": {
+    "date": "2026-10-27",
+    "stale_site_anchor": {
+      "boundary": "OSSH-FC-006",
+      "before": "src/sm3/legacy_sm3.rs:125, declared range [125,125]",
+      "after": "src/sm3/legacy_sm3.rs:181-198 (live anchor), V1 inventory coordinate 125",
+      "reason": "at HEAD 54263d4ae line 125 is a field initializer inside legacy_md; sm3_int_init is at line 181, so the old range covered no unsafe operation"
+    },
+    "contract_class_witness": {
+      "affected": "precision.abi_contract_bounded.provider (25 sites) and predicate_element_7",
+      "finding": "a function-name match is not a witness. 0x18f440 ossl_method_construct_this calls the in-image OsslMethodConstructMethod.construct (construct_evp_method), which OSSL_provider_init does not fill. The per-call-site witness rule (AGENTS.md section 22) re-audits every site; this receipt's measured values are retained as the record of that run, not as a current classification",
+      "superseding_receipt": "atlas-refresh/witness-rule.json"
+    }
+  },
   "task_a_obligations": {
     "inventory": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1e-candidate-freeze.json",
     "inventory_blockers_in_scope": 6,
@@ -73,7 +87,7 @@
       },
       {
         "id": "OSSH-FC-006",
-        "inventory_site": "src/sm3/legacy_sm3.rs:125 sm3_int_init",
+        "inventory_site": "src/sm3/legacy_sm3.rs:181 sm3_int_init (V1 inventory coordinate 125)",
         "pre_fix_crash": "cargo test --lib legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context: panicked at library/core/src/ptr/mod.rs:702:9 'ptr::write_bytes requires that the destination pointer is aligned and non-null'; process aborted (SIGABRT).",
         "fix": "sm3_int_init validates ctx, md_data, digest and the block extent through init_md_data before writing; refused shapes return 0.",
         "test": "sm3::legacy_sm3::tests::legacy_sm3_init_refuses_context_without_md_data_and_inits_bound_context",
@@ -239,7 +253,7 @@
       },
       "receipt_sha256": "97339d817a528a7b191319264828cab0419083f09ee060d82a3f56dd8d657371"
     },
-    "obligation_count_note": "The inventory still contains the six blocker entries in the four files; the closure's reachable set is the intersection with the current graph. After the switch-bound correction only src/sm3/legacy_sm3.rs:125 remains reachable; the other five are not reachable in this workload. The site receipt covers all six so a future workload that reaches them still has the disposition.",
+    "obligation_count_note": "The inventory still contains the six blocker entries in the four files; the closure's reachable set is the intersection with the current graph. After the switch-bound correction only the sm3_int_init obligation remains reachable (V1 inventory line 125, live source line 181; the site receipt now names the live range 181-198); the other five are not reachable in this workload. The site receipt covers all six so a future workload that reaches them still has the disposition.",
     "predicate_element_7": {
       "established": true,
       "status": "PASS (contract-bounded)",

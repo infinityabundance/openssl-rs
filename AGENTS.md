@@ -593,3 +593,67 @@ Before untrusted external pilots, fix the court container's documented writable
 host bind mount and prepare the maintainer-specific source/binary identity,
 replay/rollback and security-response evidence bundle. The precise court and
 bundle contracts are in the playbook §§24–32.
+
+---
+
+## 22. Candidate freeze and evidence identity (additive, 2026-10-27)
+
+Five consecutive `SAFE_COMPATIBLE` adjudications were rejected, and the cause
+was never analysis. It was identity. A subphase edited source after the
+measurement it then argued about, so the analysed DSO was not the rebuilt one,
+the executed consumer binary was not the analysed one, and receipts drifted off
+the operations they described. The fixes survived every rejection; the claim
+did not. This section makes that failure mode unavailable.
+
+### Two identities, never conflated
+
+- **`S` — the frozen source candidate.** The commit containing every
+  build-relevant input: `src/`, `Cargo.toml`, `Cargo.lock`, `build.rs`, the
+  build scripts, the verification tools, the recipes and the test definitions.
+- **`E` — the evidence commit.** A commit containing only receipts, atlases and
+  ledger updates **about** `S`.
+
+Adding evidence does not change the candidate. Moving `HEAD` by committing `E`
+must never appear to invalidate `S` or its binaries. Every receipt in `E` names
+the same `S`, the same artefact hashes and the same downstream executable
+hashes.
+
+**Invalidation rule.** Any change to a build-relevant input, or to a tool that
+derives evidence, invalidates the freeze and requires a new candidate `S'`.
+A change confined to receipts, atlases, status documents or ledger entries does
+not. If it is not obvious which side of that line a change falls on, treat it
+as build-relevant.
+
+### The freeze procedure
+
+1. Complete every source and tool correction first. Do not freeze a candidate
+   whose known defects are still being repaired.
+2. Commit `S` and record its commit hash plus the hash of every build-relevant
+   tree.
+3. Rebuild **once** from `S` and record the artefact hashes.
+4. In the same freeze, generate everything that depends on those artefacts:
+   the safety inventory, the closure, the receipts, and the downstream
+   measurements — **binding the digest of the executable that actually ran**
+   into the runtime row, not only the library hashes.
+5. Commit the evidence as `E`, naming `S` and the artefact hashes throughout.
+6. Adjudicate read-only against the freeze. No repairs, no regenerated source,
+   no silent substitution during adjudication.
+
+### Per-call-site witnesses
+
+A classification is not evidence. When a resolver assigns an indirect call to
+an external ABI contract, it must carry a **per-call-site witness** connecting
+that specific function-pointer slot to that specific contract — where the slot
+is written, by which reachable code, and which documented interface fills it.
+Two indirect calls are not the same edge because they are both indirect.
+
+A generic contract class that can absorb an unrelated internal callback is a
+defect in the verifier, not a convenience. When one is discovered, the fix is
+to require the witness, not to widen the class.
+
+### Evidence finality
+
+The bottleneck is verification **finality**, not verification volume. One
+candidate, one coherent evidence set, one independent decision. A rejected
+claim whose refusal names a property is progress; a claim re-attempted without
+changing the procedure is not.
