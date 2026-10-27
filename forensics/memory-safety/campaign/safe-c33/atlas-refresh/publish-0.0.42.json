@@ -1,80 +1,78 @@
 {
-  "receipt": "publish-0.0.42",
-  "date": "2026-10-27",
-  "crate": "openssl-rs",
-  "version": "0.0.42",
-  "registry": "crates-io",
-  "status": "PREPARED_NOT_PUBLISHED",
-  "source_identity": {
-    "commit_subject": "evidence(campaign): element 7's PASS was an artefact of the linker's choice",
-    "note": "Source identity: commit e92a0720e9bc888f5bf39d6e952e621bafd06398e on branch stage/p25/rcb-v1f. 0.0.42 is a source release, not a docs-only release. HEAD e92a0720e already contains the legacy SHA-256/384/512/512-224/512-256 md_data refusal hardening committed at 5163f564f (src/evp/legacy_sha.rs): five initialisers that previously dereferenced a NULL md_data reachable through the exported EVP_MD_meth_get_init accessor now call init_md_data, refuse with 0, and write nothing. Published 0.0.41 was cut from pre-fix source (60400c2a2) and its crate does not contain this fix. The only source/build-relevant change made for 0.0.42 is the Cargo.toml/Cargo.lock version bump; src/ is e92a0720e. The tree also carries the S'' freeze (freeze-S-double-prime.json), the v1j closure (openssh-closure-v1j.json), and the element-7 regression analysis (element7-regression-v1j.json).",
-    "working_tree": "dirty by design at receipt time: Cargo.toml and the openssl-rs Cargo.lock entry are 0.0.42, artifacts/phase2 was rebuilt from this tree, and this receipt plus the CAMPAIGN-STATUS/README reconciliation are uncommitted. No commit, push or publish was made by this subphase."
+ "receipt": "publish-0.0.42",
+ "date": "2026-10-27",
+ "crate": "openssl-rs",
+ "version": "0.0.42",
+ "registry": "crates-io",
+ "status": "PUBLISHED",
+ "source_identity": {
+  "commit_subject": "Release 0.0.42 (PR #82)",
+  "note": "Source identity: commit e92a0720e9bc888f5bf39d6e952e621bafd06398e on branch stage/p25/rcb-v1f. 0.0.42 is a source release, not a docs-only release. HEAD e92a0720e already contains the legacy SHA-256/384/512/512-224/512-256 md_data refusal hardening committed at 5163f564f (src/evp/legacy_sha.rs): five initialisers that previously dereferenced a NULL md_data reachable through the exported EVP_MD_meth_get_init accessor now call init_md_data, refuse with 0, and write nothing. Published 0.0.41 was cut from pre-fix source (60400c2a2) and its crate does not contain this fix. The only source/build-relevant change made for 0.0.42 is the Cargo.toml/Cargo.lock version bump; src/ is e92a0720e. The tree also carries the S'' freeze (freeze-S-double-prime.json), the v1j closure (openssh-closure-v1j.json), and the element-7 regression analysis (element7-regression-v1j.json).",
+  "working_tree": "clean at 7d209fb51 (merge of PR #82) at publish time"
+ },
+ "artefacts": {
+  "libcrypto.so.3": "247803f1b57bc109366aeb0831ec27d5680091201920b9f13f5cd61736f52577",
+  "libssl.so.3": "3ca46e32588837f7303c0ecbaf12a0376f05253559d0e364d3f76521d6c55853",
+  "legacy.so": "c0d83fa6948bf75d6e68cac2e8e04875f119fa5ddf5dbd636ed199035b451b4a",
+  "openssl": "1f91710e43a1535569354a65710d4f82264745c3633c5ea53fe8a31e1dbec393",
+  "note": "observed from artifacts/phase2/install after one rebuild from this tree. Sizes: libcrypto.so.3 16,839,664 bytes; libssl.so.3 16,548,640 bytes; legacy.so 16,515,648 bytes; openssl 12,370,800 bytes. Each top-level artifacts/phase2 copy was compared with its install copy and agrees byte-for-byte (identical sha256 for all four). The crate ships no binaries, so these hashes describe the repository install, not the published payload."
+ },
+ "packaging": {
+  "files": 1010,
+  "compressed_bytes": 8955173,
+  "limit_bytes": 10000000,
+  "note": "cargo publish --no-verify packaged 1010 files, 40.9 MiB uncompressed. The registry reports crate_size 8,955,173 bytes; the pre-publish local package measured 8,954,401, and the difference is the final documentation state included at merge time. The package contains source and documentation only: 0 files under artifacts/, so no binary ships in the crate."
+ },
+ "registry_verification": {
+  "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.42",
+  "checksum": "b9a542cf900c5073fc6a4d5d92f5749a84adc47a968b85c903b26d724e2ede5f",
+  "checksum_prefix": "b9a542cf",
+  "crate_size": 8955173,
+  "published_at": "UNKNOWN: the version endpoint returned null at query time; crates.io reported 'Published openssl-rs v0.0.42 at registry crates-io'",
+  "yanked": false,
+  "num_versions": 42,
+  "note": "queried with -A openssl-rs-release/0.0.42; the earlier 403 was a missing User-Agent"
+ },
+ "provider_verification": {
+  "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",
+  "ldd": "resolves the install's own libcrypto (artifacts/phase2/install/lib/libcrypto.so.3)",
+  "load": "OSSL_PROVIDER_load(NULL,\"legacy\") non-NULL with OPENSSL_MODULES set; verified by a direct C probe linked against the install",
+  "legacy_algorithm": "MD4(abc) = a448017aaf21d8525fc10ae87aa6729d",
+  "retained": "compiled-in MODULESDIR is the \"N/A\" sentinel (src/runtime/init.rs)",
+  "run_at": "this release, against the rebuilt 0.0.42 install. The probe is a court scratch file and is not packaged."
+ },
+ "evidence_shipped": {
+  "abi_courts": "11/11 passed on the 0.0.42 rebuild; export sets unchanged (libcrypto 5906, libssl 608, 0 added, 0 removed)",
+  "library_tests": "2213 passed / 0 failed / 52 ignored at the post-fix source (--test-threads=4); a floor, not a run at the 0.0.42 artefact identity. No serial run.",
+  "adversarial_probes": "NOT_RUN for this tree; 49/49 in isolated processes remains the last probe result",
+  "downstream": "no fresh downstream measurement; 307 recipes, 207 candidate / 209 authority L7-functional carried forward; SAFE_COMPATIBLE 0/33"
+ },
+ "non_claims": [
+  "Publishing is not a safety or a compatibility result.",
+  "This release ships a real fix: every legacy SHA initialiser refuses a NULL md_data that a fresh C-valid EVP_MD_CTX legitimately has, with a canary that reproduces SIGSEGV when a guard is removed.",
+  "The openssh closure is REFUSED at 146 reachable obligations (62 discharged, 55 blocked, 29 unknown). Element 7 is NOT ESTABLISHED: the earlier PASS was an artefact of which symbol the linker kept.",
+  "Reachability is non-monotone under a one-file diff (19 of 19 changes unexplained), so historical closure counts are not like-for-like.",
+  "No full suite, probe set, SEAL instrument or independent adjudication was run at this identity.",
+  "SAFE_COMPATIBLE remains 0/33."
+ ],
+ "rebuild_differential": {
+  "what": "one rebuild of the 0.0.42 tree via forensics/tools/build_phase2.sh with CARGO_TARGET_DIR unset (the recipe's hardwired /work/target), after removing the four stray artifacts/phase2 top-level outputs. The build exited 0 with the completion marker 'phase 2 shell built.' The comparison baseline is the S'' install: libcrypto.so.3 e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a and libssl.so.3 82051ef8ba6c9891d70a95b43d6b82c4c9be0a4865504984f5024c6a302d9b4e.",
+  "artefact_hashes_rebuilt": {
+   "libcrypto.so.3": "247803f1b57bc109366aeb0831ec27d5680091201920b9f13f5cd61736f52577",
+   "libssl.so.3": "3ca46e32588837f7303c0ecbaf12a0376f05253559d0e364d3f76521d6c55853",
+   "legacy.so": "c0d83fa6948bf75d6e68cac2e8e04875f119fa5ddf5dbd636ed199035b451b4a",
+   "openssl": "1f91710e43a1535569354a65710d4f82264745c3633c5ea53fe8a31e1dbec393"
   },
-  "artefacts": {
-    "libcrypto.so.3": "247803f1b57bc109366aeb0831ec27d5680091201920b9f13f5cd61736f52577",
-    "libssl.so.3": "3ca46e32588837f7303c0ecbaf12a0376f05253559d0e364d3f76521d6c55853",
-    "legacy.so": "c0d83fa6948bf75d6e68cac2e8e04875f119fa5ddf5dbd636ed199035b451b4a",
-    "openssl": "1f91710e43a1535569354a65710d4f82264745c3633c5ea53fe8a31e1dbec393",
-    "note": "observed from artifacts/phase2/install after one rebuild from this tree. Sizes: libcrypto.so.3 16,839,664 bytes; libssl.so.3 16,548,640 bytes; legacy.so 16,515,648 bytes; openssl 12,370,800 bytes. Each top-level artifacts/phase2 copy was compared with its install copy and agrees byte-for-byte (identical sha256 for all four). The crate ships no binaries, so these hashes describe the repository install, not the published payload."
+  "artefact_sizes_rebuilt_bytes": {
+   "libcrypto.so.3": 16839664,
+   "libssl.so.3": 16548640,
+   "legacy.so": 16515648,
+   "openssl": 12370800
   },
-  "packaging": {
-    "files": 1010,
-    "compressed_bytes": 8954401,
-    "limit_bytes": 10000000,
-    "note": "cargo package --no-verify packaged 1010 files, 40.9 MiB uncompressed / 8,954,401 bytes compressed, below the 10,000,000-byte limit; local .crate sha256 6d8c04303d794901e0a5281a43930545204c5b79bc3a94dfe9be80ba543c8bad. The package contains source and documentation only: cargo package --list has 0 files under artifacts/. The .crate size is a local measurement; the registry-reported crate_size will be UNKNOWN until the orchestrator publishes."
-  },
-  "registry_verification": {
-    "endpoint": "https://crates.io/api/v1/crates/openssl-rs/0.0.42",
-    "checksum": "UNKNOWN: 0.0.42 is not published",
-    "checksum_prefix": "UNKNOWN",
-    "crate_size": "UNKNOWN: local package is 8954401 bytes; no registry document exists",
-    "published_at": "UNKNOWN: status is PREPARED_NOT_PUBLISHED",
-    "yanked": "UNKNOWN",
-    "num_versions": "UNKNOWN",
-    "note": "The orchestrator publishes next. Do not treat this receipt as a registry result; 0.0.41 remains the latest published release."
-  },
-  "provider_verification": {
-    "runpath": "$ORIGIN/.. on install/lib/ossl-modules/legacy.so",
-    "ldd": "resolves the install's own libcrypto (artifacts/phase2/install/lib/libcrypto.so.3)",
-    "load": "OSSL_PROVIDER_load(NULL,\"legacy\") non-NULL with OPENSSL_MODULES set; verified by a direct C probe linked against the install",
-    "legacy_algorithm": "MD4(abc) = a448017aaf21d8525fc10ae87aa6729d",
-    "retained": "compiled-in MODULESDIR is the \"N/A\" sentinel (src/runtime/init.rs)",
-    "run_at": "this release, against the rebuilt 0.0.42 install. The probe is a court scratch file and is not packaged."
-  },
-  "evidence_shipped": {
-    "abi_courts": "11/11 passed on the 0.0.42 rebuild (artifacts/phase2/COURTS.json all_pass=True): ABI-SYMBOL, ABI-VERSION, ABI-DYNAMIC, ABI-LAYOUT, ABI-LINK, ABI-LOAD, ABI-CONSTANTS, ABI-MATRIX, ABI-SUBSTITUTION, ABI-INSTALL-LAYOUT, libcrypto-contamination.",
-    "library_tests": "NOT_RUN at the 0.0.42 artefact identity. The last full suite after the legacy_sha fix is 2213 passed / 0 failed / 52 ignored / 2265 total (cargo test --lib -- --test-threads=4), recorded in freeze-S-double-prime.json gates.rust_suite and openssh-closure-v1j.json gates.rust_suite. It is a floor, not a measurement of this artefact identity; no serial 2213 run is recorded.",
-    "adversarial_probes": "NOT_RUN at this identity; 49/49 in isolated processes remains the last complete probe result (openssh-seal-prep.json; publish-0.0.40.json). The v1j legacy-SHA refusal probe (18/18 shapes refused with 0) and its guard-removal SIGSEGV control are recorded in openssh-v1j-sites.json.",
-    "downstream": "No new downstream measurement. The openssh closure at S'' is REFUSED: 146 reachable production obligations per binary, 62 DISCHARGED / 55 BLOCKED / 29 UNKNOWN (openssh-closure-v1j.json). SAFE_COMPATIBLE remains 0/33; element 7 remains FAIL."
-  },
-  "non_claims": [
-    "This release ships the legacy-SHA hardening: five md_data initialisers now refuse a C-valid NULL md_data instead of writing through it. The thirteen update/final/ctrl callbacks still dereference md_data and remain BLOCKED.",
-    "The openssh closure is still REFUSED (STALE_HASH, MISSING_BOUNDARY_RECEIPT, UNKNOWN_OBLIGATION, UNKNOWN_MECHANISM) and SAFE_COMPATIBLE remains 0/33.",
-    "SEAL instruments are NOT_RUN at this identity; the BOUNDARY gate is NOT_RUN. Publishing is not a safety or compatibility result.",
-    "No full library suite, probe set or independent review was run at the 0.0.42 artefact identity. The 2213/0/52/2265 figure is a floor from the post-fix S'' tree.",
-    "Element 7 remains FAIL at S'': nine reachable unresolved sites are RESOLVABLE_IN_PRINCIPLE and zero are genuinely unbounded, but the recorded verdict is unchanged. The v1h PASS was an artefact of which symbol the linker kept and is not reusable.",
-    "Reachability is non-monotone: the v1h -> v1j one-file rebuild changed the reachable set by 13 removals and 6 additions, and 19 of 19 changes are unexplained by the source diff. The 169 -> 146 obligation counts are not a like-for-like progress measurement.",
-    "The five openssh SAFE_COMPATIBLE adjudications remain REJECTED on identity binding (graduation-openssh.json, AGENTS.md section 22).",
-    "The crate contains source and documentation only; no binary, artefact or forensic court output is packaged."
-  ],
-  "rebuild_differential": {
-    "what": "one rebuild of the 0.0.42 tree via forensics/tools/build_phase2.sh with CARGO_TARGET_DIR unset (the recipe's hardwired /work/target), after removing the four stray artifacts/phase2 top-level outputs. The build exited 0 with the completion marker 'phase 2 shell built.' The comparison baseline is the S'' install: libcrypto.so.3 e87a85bd6e67305434805472d37b9c5273642463ddef9192105df571c3eb016a and libssl.so.3 82051ef8ba6c9891d70a95b43d6b82c4c9be0a4865504984f5024c6a302d9b4e.",
-    "artefact_hashes_rebuilt": {
-      "libcrypto.so.3": "247803f1b57bc109366aeb0831ec27d5680091201920b9f13f5cd61736f52577",
-      "libssl.so.3": "3ca46e32588837f7303c0ecbaf12a0376f05253559d0e364d3f76521d6c55853",
-      "legacy.so": "c0d83fa6948bf75d6e68cac2e8e04875f119fa5ddf5dbd636ed199035b451b4a",
-      "openssl": "1f91710e43a1535569354a65710d4f82264745c3633c5ea53fe8a31e1dbec393"
-    },
-    "artefact_sizes_rebuilt_bytes": {
-      "libcrypto.so.3": 16839664,
-      "libssl.so.3": 16548640,
-      "legacy.so": 16515648,
-      "openssl": 12370800
-    },
-    "abi_result": "NO DYNAMIC ABI CHANGE. nm -D --defined-only with names normalised by stripping @version: libcrypto 5906 exports on both sides, 0 added, 0 removed; libssl 608 exports on both sides, 0 added, 0 removed. The comparison is against the S'' export sets saved at e87a85bd / 82051ef8.",
-    "internal_result": "forensics/atlas/implemented-surface.json was regenerated as a build product; internal symbol partitioning is build-specific and no internal count is claimed as stable. No dynamic export moved.",
-    "cause": "The artefact bytes differ from S'' because Cargo.toml/Cargo.lock carry 0.0.42 and the build is not claimed byte-reproducible. No behavioural change is inferred from byte identity, and none is claimed.",
-    "why_it_did_not_block_publish": "the dynamic export set is identical, and the crate payload is source and documentation only (0 files under artifacts/), so the version bump changes no shipped ABI.",
-    "docs_impact": "The dynamic export sets are identical, so no ABI court, consumer or symbol fingerprint is invalidated by this version bump. The element-7 analysis records that the reachable-set derivation is not stable under a one-file rebuild."
-  }
+  "abi_result": "NO DYNAMIC ABI CHANGE. nm -D --defined-only with names normalised by stripping @version: libcrypto 5906 exports on both sides, 0 added, 0 removed; libssl 608 exports on both sides, 0 added, 0 removed. The comparison is against the S'' export sets saved at e87a85bd / 82051ef8.",
+  "internal_result": "forensics/atlas/implemented-surface.json was regenerated as a build product; internal symbol partitioning is build-specific and no internal count is claimed as stable. No dynamic export moved.",
+  "cause": "The artefact bytes differ from S'' because Cargo.toml/Cargo.lock carry 0.0.42 and the build is not claimed byte-reproducible. No behavioural change is inferred from byte identity, and none is claimed.",
+  "why_it_did_not_block_publish": "the dynamic export set is identical, and the crate payload is source and documentation only (0 files under artifacts/), so the version bump changes no shipped ABI.",
+  "docs_impact": "The dynamic export sets are identical, so no ABI court, consumer or symbol fingerprint is invalidated by this version bump. The element-7 analysis records that the reachable-set derivation is not stable under a one-file rebuild."
+ }
 }
