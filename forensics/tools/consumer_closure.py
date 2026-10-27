@@ -305,14 +305,23 @@ class DsoGraph:
         return funcs
 
     def _all_symbols(self) -> dict:
-        """Every defined symbol address -> name (functions and data)."""
+        """Every defined symbol address -> name (functions and data).
+
+        ``names_at`` keeps *every* name at an address.  Identical-code folding
+        gives several exported names one address (for example
+        ``EVP_SIGNATURE_up_ref`` and ``EVP_KDF_up_ref``), so a fragment lookup
+        that inspected only this dict's single name would miss an in-image
+        alias and wrongly refuse a complete target set.
+        """
         out = {}
+        self.names_at = collections.defaultdict(set)
         for line in run(["nm", "--defined-only", str(self.path)]).stdout.splitlines():
             parsed = parse_nm_line(line)
             if parsed is None:
                 continue
             addr, _typ, name = parsed
             out.setdefault(addr, name)
+            self.names_at[addr].add(name)
         return out
 
     def _symbol_sizes(self) -> dict:
@@ -1946,13 +1955,346 @@ INTERNAL_SLOT_NOTES = (
     ("inner_evp_generic_fetch", None,
      "the class destructor argument free_method held in this frame; supplied by "
      "the EVP class wrapper, not by a provider"),
+    # The compiler's AlgorithmData layout in this candidate puts reserve_store
+    # at 0, fn_ at 8 and unreserve_store at 0x10 (not the source declaration
+    # order; the struct is not repr(C)).
     ("algorithm_do_this", 0x00,
-     "AlgorithmData.fn_ (offset 0), an in-image walk callback"),
+     "AlgorithmData.reserve_store (offset 0), an in-image walk callback"),
     ("algorithm_do_this", 0x08,
-     "AlgorithmData.reserve_store (offset 0x08), an in-image walk callback"),
+     "AlgorithmData.fn_ (offset 0x08), an in-image walk callback"),
     ("algorithm_do_this", 0x10,
-     "AlgorithmData.post/unreserve_store (offset 0x10), an in-image walk callback"),
+     "AlgorithmData.unreserve_store (offset 0x10), an in-image walk callback"),
+    ("ossl_provider_doall_activated", None,
+     "the cb argument; OSSL_PROVIDER_do_all (exported) forwards an "
+     "application-supplied callback, so no in-image target bound exists"),
 )
+
+
+# --------------------------------------------------------------------------- #
+# In-image slot targets (target resolution, not a contract class)
+# --------------------------------------------------------------------------- #
+#
+# The sites below are not provider-ABI edges.  Each reads a function-pointer
+# slot whose writer is in this exact image, and the writer is reachable:
+#   * an in-image initialiser (construct_evp_method, get_tmp_evp_method_store,
+#     the walk callbacks) stored before the walk; or
+#   * an in-image class callback stored by ossl_method_store_add / cache_set,
+#     every one of whose reachable callers passes a link-time constant; or
+#   * a static ProvCipherHw initialiser read from .data.rel.ro.
+# A target set is claimed only when every named target resolves to a function
+# start in this image and, for a function writer, the writer is reachable in
+# the pre-closure.  This is *not* an ABI contract: it does not enter
+# ABI_CONTRACT_CLASSES and cannot satisfy element 7's contract branch.
+
+EVP_CLASS_FROM_TARGETS = (
+    "evp_md_from_algorithm",
+    "evp_cipher_from_algorithm",
+    "evp_kdf_from_algorithm",
+    "keymgmt_from_algorithm",       # also matches skeymgmt_from_algorithm
+    "evp_signature_from_algorithm",
+    "evp_asym_cipher_from_algorithm",
+    "evp_mac_from_algorithm",
+    "evp_rand_from_algorithm",
+    "evp_keyexch_from_algorithm",
+    "evp_kem_from_algorithm",
+)
+
+EVP_CLASS_UP_REF_TARGETS = (
+    "EVP_MD_up_ref",
+    "EVP_CIPHER_up_ref",
+    "EVP_KDF_up_ref",
+    "EVP_KEYMGMT_up_ref",
+    "EVP_SIGNATURE_up_ref",
+    "EVP_ASYM_CIPHER_up_ref",
+    "EVP_MAC_up_ref",
+    "EVP_SKEYMGMT_up_ref",
+    "EVP_RAND_up_ref",
+    "EVP_KEYEXCH_up_ref",
+    "EVP_KEM_up_ref",
+)
+
+EVP_CLASS_FREE_TARGETS = (
+    "EVP_MD_free",
+    "EVP_CIPHER_free",
+    "EVP_KDF_free",
+    "EVP_KEYMGMT_free",
+    "EVP_SIGNATURE_free",
+    "EVP_ASYM_CIPHER_free",
+    "EVP_MAC_free",
+    "EVP_SKEYMGMT_free",
+    "EVP_RAND_free",
+    "EVP_KEYEXCH_free",
+    "EVP_KEM_free",
+)
+
+# The method store also holds loaders, decoders and encoders; their add/cache
+# callers pass these in-image callbacks to the same METHOD.free/up_ref slots.
+METHOD_FREE_TARGETS = EVP_CLASS_FREE_TARGETS + (
+    "OSSL_STORE_LOADER_free",
+    "free_decoder",
+    "OSSL_ENCODER_free",
+)
+METHOD_UP_REF_TARGETS = EVP_CLASS_UP_REF_TARGETS + (
+    "OSSL_STORE_LOADER_up_ref",
+    "OSSL_DECODER_up_ref",       # ICF: OSSL_ENCODER_up_ref is the same address
+)
+
+CIPHER_HW_INIT_TARGETS = (
+    "cipher_hw_aes_initkey",
+    "cipher_hw_sm4_initkey",
+    "cipher_hw_aria_initkey",
+    "cipher_hw_camellia_initkey",
+    "cipher_hw_tdes_ede2_initkey",
+    "cipher_hw_tdes_ede3_initkey",
+    "cipher_hw_aes_xts_generic_initkey",
+    "cipher_hw_sm4_xts_generic_initkey",
+    "cipher_hw_aes_ocb_generic_initkey",
+    "chacha20_initkey",
+    "chacha20_poly1305_initkey",
+    "aesni_cbc_hmac_sha1_init_key",
+    "aesni_cbc_hmac_sha256_init_key",
+)
+
+EDGE_TARGET_WITNESS_SCHEMA = (
+    "openssl-rs/consumer-closure/in-image-slot-target/v1")
+
+EDGE_TARGET_SLOTS = (
+    {
+        "id": "EVT-MCM-CONSTRUCT",
+        "function": ("ossl_method_construct_this",),
+        "slot_offset": 0x28,
+        "slot": "OsslMethodConstructMethod.construct (offset 0x28)",
+        "targets": ("construct_evp_method",),
+        "writer_symbols": ("inner_evp_generic_fetch",),
+        "writer": ("0x51b27b lea construct_evp_method; 0x51b282 mov %rax,0x88(%rsp) "
+                   "fills the frame's OsslMethodConstructMethod.construct slot "
+                   "(src/evp/fetch.rs:1014, reached from inner_evp_generic_fetch)"),
+        "source": "src/evp/fetch.rs:1014",
+    },
+    {
+        "id": "EVT-MCM-GET-TMP",
+        "function": ("ossl_method_construct_reserve_store",),
+        "slot_offset": 0x00,
+        "slot": "OsslMethodConstructMethod.get_tmp_store (offset 0x00)",
+        "targets": ("get_tmp_evp_method_store",),
+        "writer_symbols": ("inner_evp_generic_fetch",),
+        "writer": ("0x51b23c lea get_tmp_evp_method_store; 0x51b243 mov %rax,0x60(%rsp) "
+                   "fills the get_tmp_store slot (src/evp/fetch.rs:1009)"),
+        "source": "src/evp/fetch.rs:1009",
+    },
+    {
+        "id": "EVT-ALG-RESERVE",
+        "function": ("algorithm_do_this",),
+        "slot_offset": 0x00,
+        "slot": "AlgorithmData.reserve_store (offset 0x00)",
+        "targets": ("ossl_method_construct_reserve_store",),
+        "writer_symbols": ("ossl_algorithm_do_all",),
+        "writer": ("ossl_algorithm_do_all stores its reserve_store argument at "
+                   "0x51de31; the only reachable supplier is inner_evp_generic_fetch "
+                   "lea 0x23b4f0 at 0x51b32f (src/evp/method_store.rs:440)"),
+        "source": "src/evp/method_store.rs:440",
+    },
+    {
+        "id": "EVT-ALG-FN",
+        "function": ("algorithm_do_this",),
+        "slot_offset": 0x08,
+        "slot": "AlgorithmData.fn_ (offset 0x08)",
+        "targets": ("ossl_method_construct_this",),
+        "writer_symbols": ("ossl_algorithm_do_all",),
+        "writer": ("ossl_algorithm_do_all stores its fn argument at 0x51de35; "
+                   "inner_evp_generic_fetch materialises it with lea 0x23b2c0 at "
+                   "0x51b336 (src/evp/method_store.rs:440)"),
+        "source": "src/evp/method_store.rs:440",
+    },
+    {
+        "id": "EVT-ALG-UNRESERVE",
+        "function": ("algorithm_do_this",),
+        "slot_offset": 0x10,
+        "slot": "AlgorithmData.unreserve_store (offset 0x10)",
+        "targets": ("ossl_method_construct_unreserve_store",),
+        "writer_symbols": ("ossl_algorithm_do_all",),
+        "writer": ("ossl_algorithm_do_all stores its unreserve argument at "
+                   "0x51de3f; inner_evp_generic_fetch materialises it with lea "
+                   "0x23b540 at 0x51b31d (src/evp/method_store.rs:440)"),
+        "source": "src/evp/method_store.rs:440",
+    },
+    {
+        "id": "EVT-EVPM-FROM",
+        "function": ("construct_evp_method",),
+        "slot_offset": 0x30,
+        "slot": "EvpMethodData.method_from_algorithm (offset 0x30)",
+        "targets": EVP_CLASS_FROM_TARGETS,
+        "writer_symbols": ("inner_evp_generic_fetch",),
+        "writer": ("0x51b2b6 mov %rax,0x30(%rbp) stores the new_method argument; "
+                   "every in-image caller materialises it with lea (e.g. 0x17a60b "
+                   "evp_md_from_algorithm, 0x1ac675 evp_kem_from_algorithm); "
+                   "src/evp/fetch.rs:1024"),
+        "source": "src/evp/fetch.rs:1024",
+    },
+    {
+        "id": "EVT-EVPM-DESTRUCT",
+        "function": ("destruct_evp_method",),
+        "slot_offset": 0x40,
+        "slot": "EvpMethodData.destruct_method (offset 0x40)",
+        "targets": EVP_CLASS_FREE_TARGETS,
+        "writer_symbols": ("inner_evp_generic_fetch",),
+        "writer": ("0x51b2be mov %rsi,0x40(%rbp) stores the free_method argument "
+                   "(0x4d8(%rsp)); every in-image caller passes an in-image class "
+                   "destructor (src/evp/fetch.rs:1026)"),
+        "source": "src/evp/fetch.rs:1026",
+    },
+    {
+        "id": "EVT-INNER-FREE-METHOD",
+        "function": ("inner_evp_generic_fetch",),
+        "slot_offset": None,
+        "slot": "the free_method register/stack argument",
+        "targets": EVP_CLASS_FREE_TARGETS,
+        "writer_symbols": ("inner_evp_generic_fetch",),
+        "writer": ("0x51b480 call *0x4d8(%rsp); every in-image direct caller pushes "
+                   "an in-image class destructor at the call site (e.g. "
+                   "0x17a4b9 push EVP_CIPHER_free, 0x1ac6a7 push EVP_KEM_free)"),
+        "source": "src/evp/fetch.rs:1064",
+    },
+    {
+        "id": "EVT-METHOD-FREE",
+        "function": ("alg_cleanup", "impl_free_thunk", "impl_cache_free_thunk",
+                     "ossl_method_store_add", "impl_cache_flush_cache",
+                     "alg_cleanup_by_provider", "ossl_method_store_fetch",
+                     "ossl_method_store_cache_set"),
+        "slot_offset": 0x20,
+        "slot": "Method.free (offset 0x20)",
+        "targets": METHOD_FREE_TARGETS,
+        "writer_symbols": ("ossl_method_store_add", "ossl_method_store_cache_set"),
+        "writer": ("ossl_method_store_add stores method_destruct at 0x327d64 "
+                   "(mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at "
+                   "0x329319.  Reachable callers pass in-image constants: the EVP "
+                   "class free functions, OSSL_STORE_LOADER_free, free_decoder and "
+                   "OSSL_ENCODER_free (src/property/store.rs:692)"),
+        "source": "src/property/store.rs:692",
+    },
+    {
+        "id": "EVT-METHOD-UP-REF",
+        "function": ("alg_cleanup", "impl_free_thunk", "impl_cache_free_thunk",
+                     "ossl_method_store_add", "impl_cache_flush_cache",
+                     "alg_cleanup_by_provider", "ossl_method_store_fetch",
+                     "ossl_method_store_cache_get", "ossl_method_store_cache_set"),
+        "slot_offset": 0x18,
+        "slot": "Method.up_ref (offset 0x18)",
+        "targets": METHOD_UP_REF_TARGETS,
+        "writer_symbols": ("ossl_method_store_add", "ossl_method_store_cache_set"),
+        "writer": ("ossl_method_store_add stores method_up_ref at 0x327d60 "
+                   "(mov %rbp,0x18(%r15)); ossl_method_store_cache_set stores it at "
+                   "0x329315.  Reachable callers pass in-image constants: the EVP "
+                   "class up_ref functions, OSSL_STORE_LOADER_up_ref and "
+                   "OSSL_DECODER_up_ref (src/property/store.rs:691)"),
+        "source": "src/property/store.rs:691",
+    },
+    {
+        "id": "EVT-METHOD-UP-REF-REG",
+        "function": ("ossl_method_store_cache_set",),
+        "slot_offset": None,
+        "slot": "the up_ref register value in ossl_method_store_cache_set",
+        "targets": METHOD_UP_REF_TARGETS,
+        "writer_symbols": ("ossl_method_store_add", "ossl_method_store_cache_set"),
+        "writer": ("0x329310 mov 0x40(%rsp),%rcx; 0x329315 mov %rcx,0x18(%r13); "
+                   "0x329320 call *%rcx, so this register site is the same "
+                   "method_up_ref argument as Method.up_ref"),
+        "source": "src/property/store.rs:691",
+    },
+    {
+        "id": "EVT-CIPHER-HW-INIT",
+        "function": ("cipher_generic_init_internal",),
+        "slot_offset": 0x00,
+        "slot": "ProvCipherHw.init (offset 0x00)",
+        "targets": CIPHER_HW_INIT_TARGETS,
+        "writer_kind": "static-initialiser",
+        "table_symbols": ("_HW", "HW_"),
+        "writer": ("the loader writes each ProvCipherHw.init from the table's "
+                   ".data.rel.ro initialiser (AES_XTS_HW 0x8076d0, "
+                   "CHACHA20_HW 0x807850, CIPHER_HW_AES_HMAC_SHA1 0x80f560, ...); "
+                   "each target below is the first qword of an in-image table"),
+        "source": "src/provider/cipher.rs:3457-3463,5104,5695,6319,15403, ...",
+    },
+)
+
+
+def _fragment_addrs(g: "DsoGraph", fragments) -> set | None:
+    """All in-image function starts whose any name contains each fragment.
+
+    Returns None when a fragment matches no defined function: the declared
+    target set is then incomplete for this image and must not be claimed.
+    """
+    if isinstance(fragments, str):
+        fragments = (fragments,)
+    names_at = getattr(g, "names_at", None)
+    out = set()
+    for frag in fragments:
+        hit = set()
+        if names_at:
+            for a, names in names_at.items():
+                if a in g.start_set and any(frag in (n or "") for n in names):
+                    hit.add(a)
+        else:
+            hit = {a for a, n in g.all_syms.items()
+                   if frag in (n or "") and a in g.start_set}
+        if not hit:
+            return None
+        out |= hit
+    return out
+
+
+def _static_initialiser_covers(g: "DsoGraph", targets: set, fragments) -> bool:
+    """True when every target is the first qword of an in-image data table."""
+    names_at = getattr(g, "names_at", {})
+    found = set()
+    for a, names in names_at.items():
+        if not any(f in (n or "") for f in fragments for n in names):
+            continue
+        sec = g.section_of(a)
+        if sec in (None, ".text", ".plt", ".bss"):
+            continue
+        v = g.static_slot(a)
+        if not v:
+            continue
+        found |= {x for x in v if isinstance(x, int) and x in g.start_set}
+    return bool(targets) and targets <= found
+
+
+def edge_target_witness(g: "DsoGraph", site: dict, name: str,
+                        reachable: set | None):
+    """The in-image slot's target set and record, or None.
+
+    A function writer must be reachable in the pre-closure; a writer on no
+    reachable path cannot have produced the slot value (negative control).
+    """
+    offsets = set(site.get("field_offsets") or ())
+    for spec in EDGE_TARGET_SLOTS:
+        if not any(f in (name or "") for f in spec["function"]):
+            continue
+        if spec["slot_offset"] is None:
+            if offsets:
+                continue
+        elif spec["slot_offset"] not in offsets:
+            continue
+        targets = _fragment_addrs(g, spec["targets"])
+        if not targets:
+            continue
+        if spec.get("writer_kind") == "static-initialiser":
+            if not _static_initialiser_covers(g, targets, spec["table_symbols"]):
+                continue
+        else:
+            if reachable is None:
+                continue
+            complete = True
+            for frag in spec["writer_symbols"]:
+                writers = _fragment_addrs(g, (frag,))
+                if not writers or not (writers & reachable):
+                    complete = False
+                    break
+            if not complete:
+                continue
+        return targets, spec
+    return None
 
 
 def _image_defines(g: "DsoGraph", fragments) -> bool:
@@ -2219,7 +2561,8 @@ def _resolve(g: "DsoGraph", site: dict, targets: set, klass: str, reason: str) -
     site["reason"] = reason
 
 
-def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
+def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
+                           reachable: set | None = None) -> dict:
     """Apply the R2/R3/A1/A2 evidence classes to one candidate DSO.
 
     Only unresolved sites are considered.  A class is applied only when its
@@ -2227,6 +2570,11 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
     its resolver reason.  O1 (the allocator seam) is already marked
     ABI_CONTRACT_ALLOCATOR by the resolver and is never resolved here: the
     contract bounds its obligation, not its target set.
+
+    ``reachable`` is the pre-closure function set for this DSO.  In-image slot
+    target resolution requires the slot's function writer to be in it; with no
+    reachability evidence (``None``) the rule does not fire, which is the
+    negative control.
     """
     stats = collections.Counter()
     residual = residual_class_targets(g)
@@ -2302,6 +2650,27 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
             else:
                 site["reason"] = "static-table-incomplete:" + table
                 stats["R3_unresolved"] += 1
+            continue
+        # In-image slot targets: the slot's writer is known in this image, so
+        # the target set is resolved rather than contract-bounded.  This is a
+        # target claim, not an ABI contract, and it never sets an
+        # ABI_CONTRACT_* class.
+        edge = edge_target_witness(g, site, name, reachable)
+        if edge is not None:
+            targets, spec = edge
+            site["targets"] |= targets
+            site["unresolved"] = False
+            site["class"] = "in-image-slot"
+            site["reason"] = "in-image-slot:" + spec["slot"]
+            site["edge_target_witness"] = {
+                "schema": EDGE_TARGET_WITNESS_SCHEMA,
+                "id": spec["id"],
+                "slot": spec["slot"],
+                "targets": [hex(t) for t in sorted(targets)],
+                "writer": spec["writer"],
+                "source": spec["source"],
+            }
+            stats["T_in_image_slot_resolved"] += 1
             continue
         if _match(name, A1_FUNCTIONS):
             witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
@@ -3044,7 +3413,6 @@ def build_receipt(args) -> dict:
             g, imports={addr for dso, addr in import_nodes if dso == g.name})
         g.precision.run()
         g.precision.publish()
-        evidence_stats[g.name] = apply_evidence_classes(g, workload_imports)
 
     root_nodes = set(import_nodes)
     for imp in imported:
@@ -3054,6 +3422,19 @@ def build_receipt(args) -> dict:
     for g in graphs.values():
         for addr in g.init_roots():
             root_nodes.add((g.name, addr))
+
+    # Pre-closure: reachability under the evidence that exists before in-image
+    # slot targets are applied.  A slot writer is admissible only when it is
+    # reachable here; a writer on no reachable path cannot have written the
+    # slot (the rule's negative control).
+    pre_closure = build_graph(graphs, root_nodes, export_index, import_nodes)
+    pre_reachable = collections.defaultdict(set)
+    for dso_name, addr in pre_closure["direct_reachable"]:
+        pre_reachable[dso_name].add(addr)
+
+    for g in graphs.values():
+        evidence_stats[g.name] = apply_evidence_classes(
+            g, workload_imports, pre_reachable.get(g.name, set()))
 
     closure = build_graph(graphs, root_nodes, export_index, import_nodes)
     direct_reach = closure["direct_reachable"]
@@ -4015,6 +4396,65 @@ def self_test() -> int:
     check("A1 name without a witness keeps element 7 failing",
           e7["established"], False)
 
+    # ---- in-image slot targets: a target claim, not an ABI contract -------- #
+    def _edge_graph():
+        eg = _EG()
+        eg.start_set = set(eg.start_set) | {0x70, 0x80}
+        eg.funcs[0x60] = "...method_store26ossl_method_construct_this"
+        eg.funcs[0x70] = "...evp5fetch23inner_evp_generic_fetch"
+        eg.funcs[0x80] = "...evp5fetch20construct_evp_method"
+        eg.all_syms = dict(eg.all_syms)
+        eg.all_syms.update({
+            0x60: "...method_store26ossl_method_construct_this",
+            0x70: "...evp5fetch23inner_evp_generic_fetch",
+            0x80: "...evp5fetch20construct_evp_method",
+        })
+        s = _site(0x60)
+        s["field_offsets"] = {0x28}
+        eg.sites = {(0x60, 0x61, "call"): s}
+        return eg, s
+
+    eg, s = _edge_graph()
+    apply_evidence_classes(eg, set(), {0x70})
+    check("in-image slot with a reachable writer resolves", s["unresolved"], False)
+    check("in-image slot resolves to the exact target", s["targets"], {0x80})
+    check("in-image slot is not contract-bounded",
+          s["class"] in ABI_CONTRACT_CLASSES, False)
+    check("in-image slot records the writer and its source",
+          (s.get("edge_target_witness") or {}).get("id"), "EVT-MCM-CONSTRUCT")
+
+    # Negative control: the same slot with an unreachable writer stays open.
+    eg, s = _edge_graph()
+    apply_evidence_classes(eg, set(), {0x10})
+    check("in-image slot with an unreachable writer stays unresolved",
+          s["unresolved"], True)
+    check("unreachable writer is not absorbed by a contract class",
+          s["class"] in ABI_CONTRACT_CLASSES, False)
+
+    # Negative control: a writer absent from the image stays unresolved.
+    eg, s = _edge_graph()
+    del eg.all_syms[0x70]
+    apply_evidence_classes(eg, set(), {0x70, 0x80})
+    check("in-image slot with an absent writer stays unresolved",
+          s["unresolved"], True)
+
+    # Negative control for the static-initialiser branch: a declared target
+    # must be the first qword of an in-image data table.
+    class _SIG:
+        start_set = {0x1000, 0x2000}
+        names_at = {0x9000: {"AES_XTS_HW"}, 0x9008: {"runtime_function"}}
+
+        def section_of(self, a):
+            return ".data.rel.ro" if a == 0x9000 else ".text"
+
+        def static_slot(self, a):
+            return {0x9000: {0x1000}}.get(a)
+
+    check("static initialiser covers its first qword",
+          _static_initialiser_covers(_SIG(), {0x1000}, ("_HW",)), True)
+    check("static initialiser refuses a non-table target",
+          _static_initialiser_covers(_SIG(), {0x2000}, ("_HW",)), False)
+
     # Negative control: an allocator seam with no global/setter in the image is
     # not evidence for CRYPTO_set_mem_functions.
     eg = _EG()
@@ -4093,8 +4533,9 @@ def self_test() -> int:
     print(f"[consumer-closure] self-test ok: parsing, adjudication truth table, "
           f"module/file mapping, export-site index, mechanism routing, precision "
           f"narrowing, unclassified-site negative control, R1/R2/R3/A2/O1 "
-          f"evidence-class controls, and the per-call-site witness rule "
-          f"(AGENTS.md section 22)")
+          f"evidence-class controls, the per-call-site witness rule "
+          f"(AGENTS.md section 22), and the in-image slot target rule "
+          f"(reachable-writer and static-initialiser negative controls)")
     return 0
 
 
