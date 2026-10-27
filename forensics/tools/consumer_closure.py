@@ -1839,6 +1839,216 @@ def contract_for(cls: str) -> dict | None:
     return ABI_CONTRACTS.get(cls)
 
 
+# --------------------------------------------------------------------------- #
+# per-call-site witnesses (AGENTS.md section 22)
+# --------------------------------------------------------------------------- #
+#
+# A contract-bounded class is evidence about *one function-pointer slot*, not
+# about a function name.  The resolver may therefore apply ABI_CONTRACT_PROVIDER
+# or ABI_CONTRACT_ALLOCATOR only when a witness connects the site's own slot to
+# the contract: where the slot is written, by which reachable code, and which
+# documented interface fills it.  A site that matches a class's shape but has no
+# witness keeps its resolver class and stays unresolved; it is never absorbed by
+# the class.  Two indirect calls are not the same edge because both are indirect.
+
+WITNESS_SCHEMA = "openssl-rs/consumer-closure/per-call-site-witness/v1"
+
+ALLOCATOR_SEAMS = ("MALLOC_FN", "REALLOC_FN", "FREE_FN")
+ALLOCATOR_SETTER = "CRYPTO_set_mem_functions"
+
+# The provider slots for which the image and the documented provider ABI agree
+# on (a) the exact object/offset the indirect call reads and (b) the in-image
+# code that writes it.  A function name alone is not a witness.
+PROVIDER_SLOTS = (
+    {
+        "function": "provider_init",
+        "slot_offset": 0x40,
+        "slot": "OsslProvider.init_function (offset 0x40)",
+        "writer": (
+            "provider_new stores the caller-supplied init_function "
+            "(src/provider/mod.rs:1892, called from OSSL_PROVIDER_add_builtin); "
+            "provider_init binds a loaded module's OSSL_provider_init into the "
+            "same slot (src/provider/init.rs:307)"),
+        "writer_symbols": ("provider_new", "provider_init"),
+        "interface": (
+            "OSSL_provider_init_fn -- include/openssl/core.h:186-195; "
+            "OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *, const char *, "
+            "OSSL_provider_init_fn *) -- include/openssl/provider.h:78-85; "
+            "a loadable module exports the same entry point as "
+            "OSSL_provider_init"),
+        "basis": (
+            "the site's recorded field offset is exactly init_function, and "
+            "the writing functions are defined in this image"),
+    },
+    {
+        "function": "encoder_import_cb",
+        "slot_offset": 0x70,
+        "slot": "OsslEncoder.import_object (offset 0x70)",
+        "writer": (
+            "encoder_from_algorithm copies the provider's OSSL_DISPATCH entry "
+            "into import_object (src/encoder_meth.rs:446), reached from the "
+            "in-image fetch at src/encoder_meth.rs:754; the callback is invoked "
+            "at src/encoder_pkey.rs:318"),
+        "writer_symbols": ("OSSL_ENCODER_fetch", "OSSL_ENCODER_CTX_new_for_pkey"),
+        "interface": (
+            "the provider's returned OSSL_DISPATCH table -- OSSL_provider_init "
+            "(include/openssl/core.h:186-195) and "
+            "OSSL_FUNC_ENCODER_IMPORT_OBJECT "
+            "(include/openssl/core_dispatch.h)"),
+        "basis": (
+            "the site's recorded field offset is exactly import_object, and the "
+            "in-image dispatch scan that fills it is reachable"),
+    },
+)
+
+# Why the common in-image slots are *not* provider-ABI slots.  Keyed by a
+# function-name fragment and, where it disambiguates, the offset.
+INTERNAL_SLOT_NOTES = (
+    ("ossl_method_construct_this", 0x28,
+     "OsslMethodConstructMethod.construct (offset 0x28) is written by "
+     "inner_evp_generic_fetch at src/evp/fetch.rs:1008-1014 with the in-image "
+     "construct_evp_method; that is an internal Rust interface, not "
+     "OSSL_provider_init"),
+    ("ossl_method_construct_reserve_store", 0x00,
+     "OsslMethodConstructMethod.get_tmp_store (offset 0) is written by "
+     "inner_evp_generic_fetch (src/evp/fetch.rs:1009) with an in-image callback"),
+    ("cipher_generic_init_internal", 0x00,
+     "ProvCipherHw.init (offset 0) is selected from in-image static hardware "
+     "tables (src/provider/cipher.rs, e.g. AES_XTS_HW); a third-party provider "
+     "cannot supply this internal struct through OSSL_provider_init"),
+    ("alg_cleanup", 0x20,
+     "Method.free (offset 0x20) is the class destructor stored by "
+     "ossl_method_store_add (src/property/store.rs:692); the class is in this crate"),
+    ("impl_free_thunk", 0x20,
+     "Method.free (offset 0x20), the in-image class destructor"),
+    ("impl_cache_free_thunk", 0x20,
+     "Method.free (offset 0x20), the in-image class destructor"),
+    ("ossl_method_store_add", 0x20,
+     "Method.free (offset 0x20), the caller-supplied class destructor"),
+    ("impl_cache_flush_cache", 0x20,
+     "Method.free (offset 0x20), the caller-supplied class destructor"),
+    ("alg_cleanup_by_provider", 0x20,
+     "Method.free (offset 0x20), the caller-supplied class destructor"),
+    ("ossl_method_store_fetch", 0x18,
+     "Method.up_ref (offset 0x18), the in-image class reference callback"),
+    ("ossl_method_store_fetch", 0x20,
+     "Method.free (offset 0x20), the in-image class destructor"),
+    ("ossl_method_store_cache_get", 0x18,
+     "Method.up_ref (offset 0x18), the in-image class reference callback"),
+    ("ossl_method_store_cache_set", 0x20,
+     "Method.free (offset 0x20), the in-image class destructor"),
+    ("construct_evp_method", 0x30,
+     "EvpMethodData.method_from_algorithm (offset 0x30) is the caller-supplied "
+     "class constructor, an in-image Rust callback"),
+    ("destruct_evp_method", 0x40,
+     "EvpMethodData.destruct_method (offset 0x40) is the caller-supplied class "
+     "destructor, an in-image Rust callback"),
+    ("inner_evp_generic_fetch", None,
+     "the class destructor argument free_method held in this frame; supplied by "
+     "the EVP class wrapper, not by a provider"),
+    ("algorithm_do_this", 0x00,
+     "AlgorithmData.fn_ (offset 0), an in-image walk callback"),
+    ("algorithm_do_this", 0x08,
+     "AlgorithmData.reserve_store (offset 0x08), an in-image walk callback"),
+    ("algorithm_do_this", 0x10,
+     "AlgorithmData.post/unreserve_store (offset 0x10), an in-image walk callback"),
+)
+
+
+def _image_defines(g: "DsoGraph", fragments) -> bool:
+    """True when at least one named writer is defined in this exact image."""
+    if isinstance(fragments, str):
+        fragments = (fragments,)
+    names = set(g.all_syms.values()) if hasattr(g, "all_syms") else set()
+    return any(fragment in (n or "") for fragment in fragments for n in names)
+
+
+def _witness(cls: str, name: str, site: dict, *, slot: str, writer: str,
+             interface: str, basis: str, contract_bounded: bool = True) -> dict:
+    return {
+        "schema": WITNESS_SCHEMA,
+        "class": cls,
+        "contract_bounded": contract_bounded,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "slot": slot,
+        "writer": writer,
+        "interface": interface,
+        "basis": basis,
+    }
+
+
+def _internal_slot_note(name: str, offsets, seam=None) -> str:
+    for fragment, offset, note in INTERNAL_SLOT_NOTES:
+        if fragment not in (name or ""):
+            continue
+        if offset is None or offset in (offsets or ()):
+            return note
+    if seam:
+        return (f"the resolver recorded the allocator seam {seam}, but this image "
+                "does not expose the hook global and CRYPTO_set_mem_functions")
+    if offsets:
+        return ("an in-image object field at offset "
+                f"{', '.join(hex(o) for o in sorted(offsets))}; this image carries "
+                "no documented provider interface that writes it")
+    return ("an in-image value in this frame; this image carries no documented "
+            "provider interface that writes it")
+
+
+def allocator_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | None:
+    """Witness for the CRYPTO_set_mem_functions seam at this exact site."""
+    seam = site.get("seam")
+    if not seam or seam not in ALLOCATOR_SEAMS or not is_o1_function(name):
+        return None
+    if not _image_defines(g, seam):
+        return None
+    if not _image_defines(g, ALLOCATOR_SETTER):
+        return None
+    return _witness(
+        ABI_CONTRACT_ALLOCATOR, name, site,
+        slot=f"{seam} (the crate's allocator-hook global; offset 0)",
+        writer=("CRYPTO_set_mem_functions stores the application's replacement "
+                "triple into these globals; the in-image default is selected "
+                "when the global is NULL"),
+        interface=("CRYPTO_set_mem_functions -- include/openssl/crypto.h:367-375 "
+                   "and man3/CRYPTO_set_mem_functions"),
+        basis=("this site reads exactly this seam global, and both the global "
+               "and the public setter are defined in this image"),
+    )
+
+
+def provider_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | None:
+    """Witness for an OSSL_provider_init dispatch slot at this exact site."""
+    offsets = site.get("field_offsets") or set()
+    for spec in PROVIDER_SLOTS:
+        if spec["function"] not in (name or ""):
+            continue
+        if spec["slot_offset"] not in offsets:
+            # The site does not read the documented slot; a name match is not a
+            # witness.
+            continue
+        if not _image_defines(g, spec["writer_symbols"]):
+            continue
+        return _witness(
+            ABI_CONTRACT_PROVIDER, name, site,
+            slot=spec["slot"], writer=spec["writer"],
+            interface=spec["interface"], basis=spec["basis"],
+        )
+    return None
+
+
+ABI_CONTRACT_WITNESS = {
+    ABI_CONTRACT_PROVIDER: provider_contract_witness,
+    ABI_CONTRACT_ALLOCATOR: allocator_contract_witness,
+}
+
+
+def contract_witness(cls: str, g: "DsoGraph", site: dict, name: str) -> dict | None:
+    """The class's witness for this exact site, or None.  No witness, no class."""
+    fn = ABI_CONTRACT_WITNESS.get(cls)
+    return fn(g, site, name) if fn else None
+
+
 def evaluate_predicate_element_7(reachable_residual_sites, unclassified_sites) -> dict:
     """Element 7 under AGENTS.md section 7 criterion 2.
 
@@ -2023,20 +2233,57 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
     rust = rust_runtime_targets(g)
     for (_fstart, _addr, _kind), site in g.sites.items():
         name = g.funcs.get(site["func"], "")
-        # O1 is the audited allocator-seam residual.  It is deliberately left
-        # unresolved even where a static fallback exists: the hook set is a
-        # runtime fact about this configuration, not a link-time bound.  The
-        # public CRYPTO_set_mem_functions contract is what bounds the obligation.
-        if site.get("seam") and is_o1_function(name):
-            site["class"] = ABI_CONTRACT_ALLOCATOR
+        # A pre-classified site is accepted only with its own witness.  A class
+        # name, a private field or a comment is not evidence (AGENTS.md section
+        # 22); a site that arrives without one is demoted, never inherited.
+        if site["class"] in ABI_CONTRACT_CLASSES:
+            witness = site.get("witness") or {}
+            if (witness.get("schema") == WITNESS_SCHEMA
+                    and witness.get("contract_bounded") is True
+                    and witness.get("class") == site["class"]):
+                stats["contract_witness_validated"] += 1
+                continue
+            site["contract_class_candidate"] = site["class"]
+            site["witness"] = _witness(
+                site["class"], name, site,
+                slot="unknown", writer="unknown", interface="unknown",
+                basis=("a contract class was carried without a per-call-site "
+                       "witness; refused"),
+                contract_bounded=False)
+            site["class"] = "unclassified"
             site["unresolved"] = True
-            site["reason"] = "allocator-override-seam:" + site["seam"]
-            stats["O1_contract_bounded"] += 1
+            site["reason"] = "contract-class-without-witness:" + str(site["reason"])
+            stats["contract_class_demoted"] += 1
             continue
         if not site["unresolved"]:
             continue
-        if site["class"] in ABI_CONTRACT_CLASSES:
-            stats["O1_contract_bounded"] += 1
+        # O1: the allocator seam.  The seam is a witness only when this exact
+        # site reads a named hook global and the image defines both the global
+        # and the public setter.  It is deliberately left unresolved even where a
+        # static fallback exists: the hook set is a runtime fact about this
+        # configuration, not a link-time bound.
+        if site.get("seam") and is_o1_function(name):
+            witness = contract_witness(ABI_CONTRACT_ALLOCATOR, g, site, name)
+            if witness is not None:
+                site["class"] = ABI_CONTRACT_ALLOCATOR
+                site["unresolved"] = True
+                site["reason"] = ("allocator-override-seam:" + site["seam"]
+                                  + " (per-call-site witness)")
+                site["witness"] = witness
+                stats["O1_contract_bounded"] += 1
+            else:
+                site["contract_class_candidate"] = ABI_CONTRACT_ALLOCATOR
+                site["witness"] = _witness(
+                    ABI_CONTRACT_ALLOCATOR, name, site,
+                    slot=site.get("seam") or "unknown allocator seam",
+                    writer=("no CRYPTO_set_mem_functions writer established in "
+                            "this image"),
+                    interface="CRYPTO_set_mem_functions",
+                    basis="allocator class requested without a witness",
+                    contract_bounded=False)
+                site["reason"] = ("allocator-seam-without-witness:"
+                                  + str(site.get("seam") or ""))
+                stats["O1_witness_missing"] += 1
             continue
         if is_rust_runtime(name):
             if rust:
@@ -2057,15 +2304,33 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
                 stats["R3_unresolved"] += 1
             continue
         if _match(name, A1_FUNCTIONS):
-            site["targets"] |= residual
-            site["class"] = ABI_CONTRACT_PROVIDER
-            site["reason"] = (
-                "provider/method-store ABI contract (OSSL_provider_init): the "
-                "built-in provider is in-image, but config-driven external "
-                "provider loading is reachable (SSL_CTX_new_ex -> "
-                "OPENSSL_init_ssl -> LOAD_CONFIG); the target set is unbounded "
-                "and only the ABI obligation is bounded")
-            stats["A1_contract_bounded"] += 1
+            witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
+            if witness is not None:
+                site["targets"] |= residual
+                site["class"] = ABI_CONTRACT_PROVIDER
+                site["reason"] = ("provider ABI contract witness: "
+                                  + witness["slot"])
+                site["witness"] = witness
+                stats["A1_contract_bounded"] += 1
+            else:
+                # The name matched a provider-shape function, but this site's
+                # slot is not written by the documented provider interface.  It
+                # stays unresolved and target-bounded; it is not absorbed by the
+                # class and no count is preserved by widening it.
+                offsets = site.get("field_offsets") or set()
+                slot = ("object field "
+                        + ", ".join(hex(o) for o in sorted(offsets))
+                        if offsets else "register/stack value")
+                note = _internal_slot_note(name, offsets, site.get("seam"))
+                site["contract_class_candidate"] = ABI_CONTRACT_PROVIDER
+                site["witness"] = _witness(
+                    ABI_CONTRACT_PROVIDER, name, site,
+                    slot=slot, writer=note,
+                    interface="not a documented provider interface",
+                    basis="A1 name match without a per-call-site provider witness",
+                    contract_bounded=False)
+                site["reason"] = "provider-contract-witness-missing:" + note
+                stats["A1_witness_missing"] += 1
             continue
         if _match(name, A2_FUNCTIONS):
             if workload_imports & A2_REGISTRATION_SETTERS:
@@ -3275,12 +3540,52 @@ def build_receipt(args) -> dict:
             "unresolved_by_class": dict(collections.Counter(
                 s["class"] for g in graphs.values() for s in g.sites.values()
                 if s["unresolved"])),
+            "witness_rule": {
+                "requirement": (
+                    "AGENTS.md section 22: a contract-bounded class is applied "
+                    "only with a per-call-site witness naming the slot, its "
+                    "reachable writer and the documented interface that fills "
+                    "it; a site lacking one stays unresolved"),
+                "schema": WITNESS_SCHEMA,
+                "witness_backed": [
+                    {"dso": name, "function": g.funcs.get(s["func"], "?"),
+                     "call_site": hex(s["addr"]), "class": s["class"],
+                     "slot": s["witness"]["slot"]}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    if s.get("class") in ABI_CONTRACT_CLASSES
+                    and (s.get("witness") or {}).get("contract_bounded") is True],
+                "witness_missing": [
+                    {"dso": name, "function": g.funcs.get(s["func"], "?"),
+                     "call_site": hex(s["addr"]),
+                     "candidate_class": s.get("contract_class_candidate"),
+                     "slot": (s.get("witness") or {}).get("slot"),
+                     "writer": (s.get("witness") or {}).get("writer"),
+                     "reason": s["reason"]}
+                    for name, g in graphs.items() for s in g.sites.values()
+                    if s.get("contract_class_candidate") and s["unresolved"]
+                    and s.get("class") not in ABI_CONTRACT_CLASSES],
+                "counts": {
+                    "contract_bounded": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s["unresolved"] and s["class"] in ABI_CONTRACT_CLASSES),
+                    "witness_backed": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("class") in ABI_CONTRACT_CLASSES
+                        and (s.get("witness") or {}).get("contract_bounded") is True),
+                    "candidate_without_witness": sum(
+                        1 for g in graphs.values() for s in g.sites.values()
+                        if s.get("contract_class_candidate") and s["unresolved"]
+                        and s.get("class") not in ABI_CONTRACT_CLASSES),
+                },
+            },
             "abi_contract_bounded": {
                 "allocator": {
                     "class": ABI_CONTRACT_ALLOCATOR,
                     "resolution_kind": "contract-bounded (target set unbounded)",
                     "sites": [{"dso": name, "function": hex(s["func"]),
+                               "function_name": g.funcs.get(s["func"], "?"),
                                "site": hex(s["addr"]), "reason": s["reason"],
+                               "witness": s.get("witness"),
                                "resolved": False}
                               for name, g in graphs.items() for s in g.sites.values()
                               if s["unresolved"] and s["class"] == ABI_CONTRACT_ALLOCATOR],
@@ -3294,15 +3599,17 @@ def build_receipt(args) -> dict:
                     "class": ABI_CONTRACT_PROVIDER,
                     "resolution_kind": "contract-bounded (target set unbounded)",
                     "sites": [{"dso": name, "function": hex(s["func"]),
-                               "site": hex(s["addr"]), "resolved": False}
+                               "function_name": g.funcs.get(s["func"], "?"),
+                               "site": hex(s["addr"]), "reason": s["reason"],
+                               "witness": s.get("witness"),
+                               "resolved": False}
                               for name, g in graphs.items() for s in g.sites.values()
                               if s["unresolved"] and s["class"] == ABI_CONTRACT_PROVIDER],
                     "bound": "public OSSL_provider_init provider ABI",
                     "contract": ABI_CONTRACTS[ABI_CONTRACT_PROVIDER],
                     "why_open": (
-                        "SSL_CTX_new_ex calls OPENSSL_init_ssl, which unconditionally "
-                        "adds OPENSSL_INIT_LOAD_CONFIG, and a configuration file can "
-                        "name an external provider module; the target set is unbounded"),
+                        "a provider module selected by configuration can return its "
+                        "own dispatch table; the target set is unbounded"),
                 },
                 "distinct_from_resolved": (
                     "a statically resolved edge has resolved=true and an in-image "
@@ -3318,8 +3625,10 @@ def build_receipt(args) -> dict:
                 if evaluate_predicate_element_7(
                     closure["reachable_residual_sites"],
                     closure["unclassified_sites"])["established"] else
-                ("at least one reachable site is not contract-bounded or has no "
-                 "evidence class and admits the global address-taken union")),
+                ("at least one reachable unresolved site is target-bounded: its slot "
+                 "has no per-call-site witness for a documented ABI contract (for "
+                 "example an internal Rust callback), or the site has no evidence "
+                 "class and admits the global address-taken union")),
         },
         "obligations": obligations,
         "closure_scope": {
@@ -3608,6 +3917,15 @@ def self_test() -> int:
                  0x20: "app_owned_function",
                  0x30: "_RNvNt...CsgxBkk5gSRhY_4core3fmt...impl",
                  0x40: "_RNvNt...PEM_ASN1_write_bio_internal"}
+        all_syms = {
+            0x9000: "...runtime3mem9MALLOC_FN",
+            0x9008: "...runtime3mem7FREE_FN",
+            0x9010: "...runtime3mem10REALLOC_FN",
+            0x9018: "CRYPTO_set_mem_functions",
+            0x9020: "...provider12provider_new",
+            0x9028: "...provider4init13provider_init",
+            0x9030: "OSSL_ENCODER_fetch",
+        }
         taken_code = {0x30}
         taken_data = set()
         slot_funcs = {0x900: {0x30}}
@@ -3662,6 +3980,53 @@ def self_test() -> int:
     check("O1 contract cites the printf triple",
           "CRYPTO_set_mem_functions" in ABI_CONTRACTS[ABI_CONTRACT_ALLOCATOR]["contract"],
           True)
+
+    # ---- per-call-site witness rule (AGENTS.md section 22) ---------------- #
+    # Positive control: provider_init reads init_function, whose documented
+    # writer is in this image.
+    eg = _EG()
+    prov = _site(0x50)
+    prov["field_offsets"] = {0x40}
+    eg.funcs[0x50] = "...provider4init13provider_init"
+    eg.sites = {(0x50, 0x51, "call"): prov}
+    apply_evidence_classes(eg, set())
+    check("provider_init with the documented slot is contract-bounded",
+          prov["class"], ABI_CONTRACT_PROVIDER)
+    check("provider_init witness names the exact slot",
+          (prov.get("witness") or {}).get("slot"),
+          "OsslProvider.init_function (offset 0x40)")
+    check("provider_init witness is contract_bounded",
+          (prov.get("witness") or {}).get("contract_bounded"), True)
+
+    # Negative control: an A1-shaped name whose slot is an internal callback is
+    # NOT absorbed by the class; it stays unresolved and target-bounded.
+    eg = _EG()
+    mis = _site(0x60)
+    mis["field_offsets"] = {0x28}
+    eg.funcs[0x60] = "...method_store26ossl_method_construct_this"
+    eg.sites = {(0x60, 0x61, "call"): mis}
+    apply_evidence_classes(eg, set())
+    check("A1 name with a non-provider slot stays unresolved", mis["unresolved"], True)
+    check("A1 name with a non-provider slot is not contract-bounded",
+          mis["class"] in ABI_CONTRACT_CLASSES, False)
+    check("A1 name with a non-provider slot records the missing witness",
+          (mis.get("witness") or {}).get("contract_bounded"), False)
+    e7 = evaluate_predicate_element_7([("control.so", 0x60, mis)], [])
+    check("A1 name without a witness keeps element 7 failing",
+          e7["established"], False)
+
+    # Negative control: an allocator seam with no global/setter in the image is
+    # not evidence for CRYPTO_set_mem_functions.
+    eg = _EG()
+    eg.all_syms = {}
+    o1_missing = _site(0x41, seam="FREE_FN")
+    eg.funcs[0x41] = "...errNtB5_7SlotStr...drop_glue"
+    eg.sites = {(0x41, 0x42, "call"): o1_missing}
+    apply_evidence_classes(eg, set())
+    check("allocator seam without image evidence is not contract-bounded",
+          o1_missing["class"] in ABI_CONTRACT_CLASSES, False)
+    check("allocator seam without image evidence stays unresolved",
+          o1_missing["unresolved"], True)
 
     # Negative control: an indirect edge the resolver and every evidence class
     # cannot recognise is NOT given a contract class and still admits the broad
@@ -3727,8 +4092,9 @@ def self_test() -> int:
         return 1
     print(f"[consumer-closure] self-test ok: parsing, adjudication truth table, "
           f"module/file mapping, export-site index, mechanism routing, precision "
-          f"narrowing, unclassified-site negative control, and R1/R2/R3/A2/O1 "
-          f"evidence-class controls")
+          f"narrowing, unclassified-site negative control, R1/R2/R3/A2/O1 "
+          f"evidence-class controls, and the per-call-site witness rule "
+          f"(AGENTS.md section 22)")
     return 0
 
 

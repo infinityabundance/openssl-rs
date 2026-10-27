@@ -1,0 +1,1205 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/per-call-site-witness/v1",
+  "kind": "contract-edge-reaudit",
+  "receipt": "witness-rule",
+  "subphase": "safe-c33: correct the mislabelled provider edge and the stale discharge anchor, and enforce the per-call-site witness rule",
+  "date": "2026-10-27",
+  "generated_utc": "2026-10-27T08:48:55Z",
+  "source_identity": {
+    "repository_head": "54263d4ae0aaee0945200b0a85de026d75a4589c",
+    "branch": "integrate/safe-c33",
+    "inventory": "atlas-refresh/v1e-candidate-freeze.json (source head 2ff301947; the closure still refuses its identity, recorded below)",
+    "install_prefix": "artifacts/phase2/install",
+    "artefacts": {
+      "libcrypto.so.3": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+      "libssl.so.3": "1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b",
+      "legacy.so": "eb297736c89b8d37065d822692c656ef95b3215f8113b2f44316e2c48133dff4"
+    },
+    "resolver": {
+      "path": "forensics/tools/consumer_closure.py",
+      "self_test": "PASS (witness positive and negative controls included)",
+      "sha256_at_run": "dd7bca3345c3eb6399c02c40926161400635833065f523675421aed449a86b22",
+      "sha256_current": "0bfa25a8bc503941e937d5eed544aaf4a6c0a70a8d7cb5c61f960d443d21136c",
+      "post_run_edit": "the only edit after the run changes the settled-message wording; the witness predicates, classification and counts are unchanged"
+    },
+    "consumer_builds": {
+      "note": "ssh and sshd were rebuilt in the court container against artifacts/phase2/install (libcrypto 26ba36ff); the exact artefact digests are closure.ssh.artifact_sha256 and closure.sshd.artifact_sha256"
+    }
+  },
+  "corrections": {
+    "mislabelled_contract_edge": {
+      "site_before": "0x18f440 ossl_method_construct_this in the adjudicator's image",
+      "site_here": "ossl_method_construct_this call at 0x23b2e0 in libcrypto 26ba36ff",
+      "before": "ABI_CONTRACT_PROVIDER by A1 function-name match, with the OSSL_provider_init reason",
+      "after": "not contract-bounded: the call reads OsslMethodConstructMethod.construct (offset 0x28), written by inner_evp_generic_fetch at src/evp/fetch.rs:1008-1014 with the in-image construct_evp_method. That is an internal Rust callback, not OSSL_provider_init. It stays unresolved and target-bounded",
+      "general_rule": "ABI_CONTRACT_PROVIDER and ABI_CONTRACT_ALLOCATOR require a per-call-site witness: the exact slot, the reachable code that writes it, and the documented interface that fills it. A name match is not a witness and is not absorbed by the class"
+    },
+    "stale_discharge_anchor": {
+      "boundary": "OSSH-FC-006",
+      "before": "src/sm3/legacy_sm3.rs:125, declared range [125,125]",
+      "after": "src/sm3/legacy_sm3.rs:181-198 (live anchor; the V1 inventory coordinate 125 is retained in the same disposition as provenance)",
+      "reason": "at HEAD line 125 is a field initializer inside legacy_md; sm3_int_init is at line 181",
+      "closure_effect": "the anchor now covers the live fn [181,198] and still names the V1 inventory coordinate 125 as provenance. At this rebuilt candidate sm3_int_init is not in the closure reachable set; the two reachable obligations are the key2text pair, both DISCHARGED. The correction makes the sm3 discharge valid at both coordinates if that file is reached, rather than claiming a discharge the live range did not cover"
+    }
+  },
+  "witness_rule": {
+    "requirement": "AGENTS.md section 22: a contract class must carry a per-call-site witness connecting that specific function-pointer slot to that specific contract",
+    "enforcement": [
+      "provider_contract_witness(): the site's own field_offsets must contain the documented slot offset, the enclosing function must be the documented caller, and the writer symbols must be defined in the exact image",
+      "allocator_contract_witness(): the site's recorded seam must be MALLOC_FN/REALLOC_FN/FREE_FN, and both the hook global and CRYPTO_set_mem_functions must be defined in the exact image",
+      "apply_evidence_classes(): a site that matches an A1 name or an allocator seam but returns no witness keeps its resolver class, stays unresolved, and records contract_class_candidate plus a witness with contract_bounded=false",
+      "a site that arrives already carrying an ABI contract class without a valid witness is demoted to unclassified",
+      "contract_witness() is the only path that can set ABI_CONTRACT_PROVIDER or ABI_CONTRACT_ALLOCATOR"
+    ],
+    "negative_control": {
+      "test": "python3 forensics/tools/consumer_closure.py --self-test",
+      "cases": [
+        "A1 name (ossl_method_construct_this) at offset 0x28: stays unresolved, not contract-bounded, element 7 fails",
+        "provider_init at offset 0x40: contract-bounded with the exact slot witness",
+        "allocator seam with no hook global or setter in the image: not contract-bounded, stays unresolved"
+      ],
+      "result": "PASS"
+    }
+  },
+  "re_audit": {
+    "before_rule": "A1_FUNCTIONS function-name match plus the O1 seam name",
+    "measurements": {
+      "static_resolver_audit": {
+        "input": "the pre-fix resolver on libcrypto 26ba36ff with no consumer imports; the measured rows are embedded below",
+        "sites": 28,
+        "by_class": {
+          "ABI_CONTRACT_ALLOCATOR": 3,
+          "ABI_CONTRACT_PROVIDER": 25
+        },
+        "kept_witness_backed": 5
+      },
+      "openssh_closure_audit": {
+        "input": "closure-ssh-witness.json precision.witness_rule",
+        "a1_candidates": 26,
+        "witness_backed": 2,
+        "without_witness": 24,
+        "allocator_candidates": 0,
+        "note": "the allocator-seam reads are resolved (not residual) in this consumer import configuration; the static resolver audit still classifies three, and all three keep a witness"
+      }
+    },
+    "after_totals": {
+      "sites": 29,
+      "by_class_before": {
+        "ABI_CONTRACT_ALLOCATOR": 3,
+        "ABI_CONTRACT_PROVIDER": 26
+      },
+      "kept_witness_backed": 5,
+      "kept_by_class": {
+        "ABI_CONTRACT_ALLOCATOR": 3,
+        "ABI_CONTRACT_PROVIDER": 2
+      },
+      "lost_to_unresolved": 24,
+      "lost_by_candidate_class": {
+        "ABI_CONTRACT_PROVIDER": 24
+      }
+    },
+    "kept": [
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8provider4init13provider_init",
+        "call_site": "0x2b9771",
+        "class": "ABI_CONTRACT_PROVIDER",
+        "slot": "OsslProvider.init_function (offset 0x40)",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ],
+        "note": null
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs7runtime3err7SlotStrEBH_",
+        "call_site": "0x3186e5",
+        "class": "ABI_CONTRACT_ALLOCATOR",
+        "slot": "FREE_FN (the crate's allocator-hook global; offset 0)",
+        "reachable_in": [],
+        "note": "classified by the static resolver audit; resolved (not a residual site) in the openssh closure import configuration"
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs7runtime3err14append_current",
+        "call_site": "0x323e11",
+        "class": "ABI_CONTRACT_ALLOCATOR",
+        "slot": "MALLOC_FN (the crate's allocator-hook global; offset 0)",
+        "reachable_in": [],
+        "note": "classified by the static resolver audit; resolved (not a residual site) in the openssh closure import configuration"
+      },
+      {
+        "function": "CsgxBkk5gSRhY_4core3ops4drop4Drop4drop",
+        "call_site": "0x34139e",
+        "class": "ABI_CONTRACT_ALLOCATOR",
+        "slot": "FREE_FN (the crate's allocator-hook global; offset 0)",
+        "reachable_in": [],
+        "note": "classified by the static resolver audit; resolved (not a residual site) in the openssh closure import configuration"
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs12encoder_pkey17encoder_import_cb",
+        "call_site": "0x407fc7",
+        "class": "ABI_CONTRACT_PROVIDER",
+        "slot": "OsslEncoder.import_object (offset 0x70)",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ],
+        "note": null
+      }
+    ],
+    "lost": [
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp12method_store26ossl_method_construct_this",
+        "call_site": "0x23b2e0",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x28",
+        "why_not_contract_bounded": "OsslMethodConstructMethod.construct (offset 0x28) is written by inner_evp_generic_fetch at src/evp/fetch.rs:1008-1014 with the in-image construct_evp_method; that is an internal Rust interface, not OSSL_provider_init",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp12method_store35ossl_method_construct_reserve_store",
+        "call_site": "0x23b50d",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x0",
+        "why_not_contract_bounded": "OsslMethodConstructMethod.get_tmp_store (offset 0) is written by inner_evp_generic_fetch (src/evp/fetch.rs:1009) with an in-image callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8provider6cipher28cipher_generic_init_internal",
+        "call_site": "0x2ee75b",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x0",
+        "why_not_contract_bounded": "ProvCipherHw.init (offset 0) is selected from in-image static hardware tables (src/provider/cipher.rs, e.g. AES_XTS_HW); a third-party provider cannot supply this internal struct through OSSL_provider_init",
+        "reachable_in": []
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store11alg_cleanup",
+        "call_site": "0x327a86",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20) is the class destructor stored by ossl_method_store_add (src/property/store.rs:692); the class is in this crate",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store15impl_free_thunk",
+        "call_site": "0x327bf0",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store21impl_cache_free_thunk",
+        "call_site": "0x327cb0",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store21ossl_method_store_add",
+        "call_site": "0x328109",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20), the caller-supplied class destructor",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store22impl_cache_flush_cache",
+        "call_site": "0x3283af",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20), the caller-supplied class destructor",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store23alg_cleanup_by_provider",
+        "call_site": "0x3285d6",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20) is the class destructor stored by ossl_method_store_add (src/property/store.rs:692); the class is in this crate",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store23ossl_method_store_fetch",
+        "call_site": "0x328b0f",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x18",
+        "why_not_contract_bounded": "Method.up_ref (offset 0x18), the in-image class reference callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store23ossl_method_store_fetch",
+        "call_site": "0x328bcd",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x18",
+        "why_not_contract_bounded": "Method.up_ref (offset 0x18), the in-image class reference callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_get",
+        "call_site": "0x3290c1",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x18",
+        "why_not_contract_bounded": "Method.up_ref (offset 0x18), the in-image class reference callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+        "call_site": "0x329320",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "register/stack value",
+        "why_not_contract_bounded": "an in-image value in this frame; this image carries no documented provider interface that writes it",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+        "call_site": "0x329361",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+        "call_site": "0x32941e",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+        "call_site": "0x3294af",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x20",
+        "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp5fetch19destruct_evp_method",
+        "call_site": "0x51b0b0",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x40",
+        "why_not_contract_bounded": "EvpMethodData.destruct_method (offset 0x40) is the caller-supplied class destructor, an in-image Rust callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp5fetch20construct_evp_method",
+        "call_site": "0x51b0fe",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x30",
+        "why_not_contract_bounded": "EvpMethodData.method_from_algorithm (offset 0x30) is the caller-supplied class constructor, an in-image Rust callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp5fetch23inner_evp_generic_fetch",
+        "call_site": "0x51b480",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "register/stack value",
+        "why_not_contract_bounded": "the class destructor argument free_method held in this frame; supplied by the EVP class wrapper, not by a provider",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+        "call_site": "0x51dcbb",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x0",
+        "why_not_contract_bounded": "AlgorithmData.fn_ (offset 0), an in-image walk callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+        "call_site": "0x51dcf1",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x10",
+        "why_not_contract_bounded": "AlgorithmData.post/unreserve_store (offset 0x10), an in-image walk callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+        "call_site": "0x51dd5d",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x8",
+        "why_not_contract_bounded": "AlgorithmData.reserve_store (offset 0x08), an in-image walk callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+        "call_site": "0x51ddb4",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "object field 0x10",
+        "why_not_contract_bounded": "AlgorithmData.post/unreserve_store (offset 0x10), an in-image walk callback",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8provider8activate29ossl_provider_doall_activated",
+        "call_site": "0x46b9c5",
+        "candidate_class": "ABI_CONTRACT_PROVIDER",
+        "slot": "register/stack value",
+        "why_not_contract_bounded": "an in-image value in this frame; this image carries no documented provider interface that writes it",
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      }
+    ],
+    "sites": [
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp12method_store26ossl_method_construct_this",
+        "function_address": "0x23b2c0",
+        "call_site": "0x23b2e0",
+        "text": "call   *0x28(%rax)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x28",
+          "why_not_contract_bounded": "OsslMethodConstructMethod.construct (offset 0x28) is written by inner_evp_generic_fetch at src/evp/fetch.rs:1008-1014 with the in-image construct_evp_method; that is an internal Rust interface, not OSSL_provider_init",
+          "reason": "provider-contract-witness-missing:OsslMethodConstructMethod.construct (offset 0x28) is written by inner_evp_generic_fetch at src/evp/fetch.rs:1008-1014 with the in-image construct_evp_method; that is an internal Rust interface, not OSSL_provider_init"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp12method_store35ossl_method_construct_reserve_store",
+        "function_address": "0x23b4f0",
+        "call_site": "0x23b50d",
+        "text": "call   *(%rax)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x0",
+          "why_not_contract_bounded": "OsslMethodConstructMethod.get_tmp_store (offset 0) is written by inner_evp_generic_fetch (src/evp/fetch.rs:1009) with an in-image callback",
+          "reason": "provider-contract-witness-missing:OsslMethodConstructMethod.get_tmp_store (offset 0) is written by inner_evp_generic_fetch (src/evp/fetch.rs:1009) with an in-image callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8provider4init13provider_init",
+        "function_address": "0x2b9720",
+        "call_site": "0x2b9771",
+        "text": "call   *%rax",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "WITNESS_BACKED",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "slot": "OsslProvider.init_function (offset 0x40)",
+          "witness": {
+            "dso": "libcrypto.so.3",
+            "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider4init13provider_init",
+            "call_site": "0x2b9771",
+            "class": "ABI_CONTRACT_PROVIDER",
+            "slot": "OsslProvider.init_function (offset 0x40)"
+          }
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8provider6cipher28cipher_generic_init_internal",
+        "function_address": "0x2ee670",
+        "call_site": "0x2ee75b",
+        "text": "call   *(%rax)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x0",
+          "why_not_contract_bounded": "ProvCipherHw.init (offset 0) is selected from in-image static hardware tables (src/provider/cipher.rs, e.g. AES_XTS_HW); a third-party provider cannot supply this internal struct through OSSL_provider_init",
+          "reason": "provider-contract-witness-missing:ProvCipherHw.init (offset 0) is selected from in-image static hardware tables (src/provider/cipher.rs, e.g. AES_XTS_HW); a third-party provider cannot supply this internal struct through OSSL_provider_init"
+        },
+        "reachable_in": []
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs7runtime3err7SlotStrEBH_",
+        "function_address": "0x318600",
+        "call_site": "0x3186e5",
+        "text": "call   *%rax",
+        "before": {
+          "class": "ABI_CONTRACT_ALLOCATOR",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "WITNESS_BACKED",
+          "class": "ABI_CONTRACT_ALLOCATOR",
+          "slot": "FREE_FN (the crate's allocator-hook global; offset 0)",
+          "witness": {
+            "schema": "openssl-rs/consumer-closure/per-call-site-witness/v1",
+            "class": "ABI_CONTRACT_ALLOCATOR",
+            "contract_bounded": true,
+            "function": "_RINvNtCsgxBkk5gSRhY_4core3ptr9drop_glueNtNtNtCs3jSoIiEAfCP_10openssl_rs7runtime3err7SlotStrEBH_.llvm.8408150877678858650",
+            "call_site": "0x3186e5",
+            "slot": "FREE_FN (the crate's allocator-hook global; offset 0)",
+            "writer": "CRYPTO_set_mem_functions stores the application's replacement triple into these globals; the in-image default is selected when the global is NULL",
+            "interface": "CRYPTO_set_mem_functions -- include/openssl/crypto.h:367-375 and man3/CRYPTO_set_mem_functions",
+            "basis": "this site reads exactly this seam global, and both the global and the public setter are defined in this image"
+          },
+          "note": "classified by the static resolver audit; resolved (not a residual site) in the openssh closure import configuration"
+        },
+        "reachable_in": []
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs7runtime3err14append_current",
+        "function_address": "0x323ac0",
+        "call_site": "0x323e11",
+        "text": "call   *%rax",
+        "before": {
+          "class": "ABI_CONTRACT_ALLOCATOR",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "WITNESS_BACKED",
+          "class": "ABI_CONTRACT_ALLOCATOR",
+          "slot": "MALLOC_FN (the crate's allocator-hook global; offset 0)",
+          "witness": {
+            "schema": "openssl-rs/consumer-closure/per-call-site-witness/v1",
+            "class": "ABI_CONTRACT_ALLOCATOR",
+            "contract_bounded": true,
+            "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs7runtime3err14append_current.llvm.8408150877678858650",
+            "call_site": "0x323e11",
+            "slot": "MALLOC_FN (the crate's allocator-hook global; offset 0)",
+            "writer": "CRYPTO_set_mem_functions stores the application's replacement triple into these globals; the in-image default is selected when the global is NULL",
+            "interface": "CRYPTO_set_mem_functions -- include/openssl/crypto.h:367-375 and man3/CRYPTO_set_mem_functions",
+            "basis": "this site reads exactly this seam global, and both the global and the public setter are defined in this image"
+          },
+          "note": "classified by the static resolver audit; resolved (not a residual site) in the openssh closure import configuration"
+        },
+        "reachable_in": []
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store11alg_cleanup",
+        "function_address": "0x3279d0",
+        "call_site": "0x327a86",
+        "text": "call   *0x20(%rbp)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20) is the class destructor stored by ossl_method_store_add (src/property/store.rs:692); the class is in this crate",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20) is the class destructor stored by ossl_method_store_add (src/property/store.rs:692); the class is in this crate"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store15impl_free_thunk",
+        "function_address": "0x327be0",
+        "call_site": "0x327bf0",
+        "text": "call   *0x20(%rbx)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store21impl_cache_free_thunk",
+        "function_address": "0x327ca0",
+        "call_site": "0x327cb0",
+        "text": "call   *0x20(%rbx)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store21ossl_method_store_add",
+        "function_address": "0x327ce0",
+        "call_site": "0x328109",
+        "text": "call   *0x20(%rbx)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20), the caller-supplied class destructor",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20), the caller-supplied class destructor"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store22impl_cache_flush_cache",
+        "function_address": "0x328360",
+        "call_site": "0x3283af",
+        "text": "call   *0x20(%rax)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20), the caller-supplied class destructor",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20), the caller-supplied class destructor"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store23alg_cleanup_by_provider",
+        "function_address": "0x328500",
+        "call_site": "0x3285d6",
+        "text": "call   *0x20(%r12)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20) is the class destructor stored by ossl_method_store_add (src/property/store.rs:692); the class is in this crate",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20) is the class destructor stored by ossl_method_store_add (src/property/store.rs:692); the class is in this crate"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store23ossl_method_store_fetch",
+        "function_address": "0x3286e0",
+        "call_site": "0x328b0f",
+        "text": "call   *0x18(%r12)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x18",
+          "why_not_contract_bounded": "Method.up_ref (offset 0x18), the in-image class reference callback",
+          "reason": "provider-contract-witness-missing:Method.up_ref (offset 0x18), the in-image class reference callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store23ossl_method_store_fetch",
+        "function_address": "0x3286e0",
+        "call_site": "0x328bcd",
+        "text": "call   *0x18(%r12)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x18",
+          "why_not_contract_bounded": "Method.up_ref (offset 0x18), the in-image class reference callback",
+          "reason": "provider-contract-witness-missing:Method.up_ref (offset 0x18), the in-image class reference callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_get",
+        "function_address": "0x328f80",
+        "call_site": "0x3290c1",
+        "text": "call   *0x18(%rax)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x18",
+          "why_not_contract_bounded": "Method.up_ref (offset 0x18), the in-image class reference callback",
+          "reason": "provider-contract-witness-missing:Method.up_ref (offset 0x18), the in-image class reference callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+        "function_address": "0x329120",
+        "call_site": "0x329320",
+        "text": "call   *%rcx",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "register/stack value",
+          "why_not_contract_bounded": "an in-image value in this frame; this image carries no documented provider interface that writes it",
+          "reason": "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+        "function_address": "0x329120",
+        "call_site": "0x329361",
+        "text": "call   *0x20(%rax)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+        "function_address": "0x329120",
+        "call_site": "0x32941e",
+        "text": "call   *0x20(%rax)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+        "function_address": "0x329120",
+        "call_site": "0x3294af",
+        "text": "call   *0x20(%r13)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x20",
+          "why_not_contract_bounded": "Method.free (offset 0x20), the in-image class destructor",
+          "reason": "provider-contract-witness-missing:Method.free (offset 0x20), the in-image class destructor"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "CsgxBkk5gSRhY_4core3ops4drop4Drop4drop",
+        "function_address": "0x341220",
+        "call_site": "0x34139e",
+        "text": "call   *%rax",
+        "before": {
+          "class": "ABI_CONTRACT_ALLOCATOR",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "WITNESS_BACKED",
+          "class": "ABI_CONTRACT_ALLOCATOR",
+          "slot": "FREE_FN (the crate's allocator-hook global; offset 0)",
+          "witness": {
+            "schema": "openssl-rs/consumer-closure/per-call-site-witness/v1",
+            "class": "ABI_CONTRACT_ALLOCATOR",
+            "contract_bounded": true,
+            "function": "_RNvXs6_NtNtCs3jSoIiEAfCP_10openssl_rs7runtime3errNtB5_19PendingReleaseGuardNtNtNtCsgxBkk5gSRhY_4core3ops4drop4Drop4drop",
+            "call_site": "0x34139e",
+            "slot": "FREE_FN (the crate's allocator-hook global; offset 0)",
+            "writer": "CRYPTO_set_mem_functions stores the application's replacement triple into these globals; the in-image default is selected when the global is NULL",
+            "interface": "CRYPTO_set_mem_functions -- include/openssl/crypto.h:367-375 and man3/CRYPTO_set_mem_functions",
+            "basis": "this site reads exactly this seam global, and both the global and the public setter are defined in this image"
+          },
+          "note": "classified by the static resolver audit; resolved (not a residual site) in the openssh closure import configuration"
+        },
+        "reachable_in": []
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs12encoder_pkey17encoder_import_cb",
+        "function_address": "0x407f90",
+        "call_site": "0x407fc7",
+        "text": "call   *%rcx",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "WITNESS_BACKED",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "slot": "OsslEncoder.import_object (offset 0x70)",
+          "witness": {
+            "dso": "libcrypto.so.3",
+            "function": "_RNvNtCs3jSoIiEAfCP_10openssl_rs12encoder_pkey17encoder_import_cb",
+            "call_site": "0x407fc7",
+            "class": "ABI_CONTRACT_PROVIDER",
+            "slot": "OsslEncoder.import_object (offset 0x70)"
+          }
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp5fetch19destruct_evp_method",
+        "function_address": "0x51b0b0",
+        "call_site": "0x51b0b0",
+        "text": "jmp    *0x40(%rsi)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x40",
+          "why_not_contract_bounded": "EvpMethodData.destruct_method (offset 0x40) is the caller-supplied class destructor, an in-image Rust callback",
+          "reason": "provider-contract-witness-missing:EvpMethodData.destruct_method (offset 0x40) is the caller-supplied class destructor, an in-image Rust callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp5fetch20construct_evp_method",
+        "function_address": "0x51b0c0",
+        "call_site": "0x51b0fe",
+        "text": "call   *0x30(%rbx)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x30",
+          "why_not_contract_bounded": "EvpMethodData.method_from_algorithm (offset 0x30) is the caller-supplied class constructor, an in-image Rust callback",
+          "reason": "provider-contract-witness-missing:EvpMethodData.method_from_algorithm (offset 0x30) is the caller-supplied class constructor, an in-image Rust callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp5fetch23inner_evp_generic_fetch",
+        "function_address": "0x51b150",
+        "call_site": "0x51b480",
+        "text": "call   *0x4d8(%rsp)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "register/stack value",
+          "why_not_contract_bounded": "the class destructor argument free_method held in this frame; supplied by the EVP class wrapper, not by a provider",
+          "reason": "provider-contract-witness-missing:the class destructor argument free_method held in this frame; supplied by the EVP class wrapper, not by a provider"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+        "function_address": "0x51dc20",
+        "call_site": "0x51dcbb",
+        "text": "call   *(%rbx)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x0",
+          "why_not_contract_bounded": "AlgorithmData.fn_ (offset 0), an in-image walk callback",
+          "reason": "provider-contract-witness-missing:AlgorithmData.fn_ (offset 0), an in-image walk callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+        "function_address": "0x51dc20",
+        "call_site": "0x51dcf1",
+        "text": "call   *0x10(%rbx)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x10",
+          "why_not_contract_bounded": "AlgorithmData.post/unreserve_store (offset 0x10), an in-image walk callback",
+          "reason": "provider-contract-witness-missing:AlgorithmData.post/unreserve_store (offset 0x10), an in-image walk callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+        "function_address": "0x51dc20",
+        "call_site": "0x51dd5d",
+        "text": "call   *0x8(%rbx)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x8",
+          "why_not_contract_bounded": "AlgorithmData.reserve_store (offset 0x08), an in-image walk callback",
+          "reason": "provider-contract-witness-missing:AlgorithmData.reserve_store (offset 0x08), an in-image walk callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+        "function_address": "0x51dc20",
+        "call_site": "0x51ddb4",
+        "text": "call   *0x10(%rbx)",
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match / O1 seam name"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "object field 0x10",
+          "why_not_contract_bounded": "AlgorithmData.post/unreserve_store (offset 0x10), an in-image walk callback",
+          "reason": "provider-contract-witness-missing:AlgorithmData.post/unreserve_store (offset 0x10), an in-image walk callback"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      },
+      {
+        "dso": "libcrypto.so.3",
+        "function": "Cs3jSoIiEAfCP_10openssl_rs8provider8activate29ossl_provider_doall_activated",
+        "call_site": "0x46b9c5",
+        "text": null,
+        "before": {
+          "class": "ABI_CONTRACT_PROVIDER",
+          "rule": "A1 function-name match (closure import configuration)"
+        },
+        "after": {
+          "classification": "UNRESOLVED",
+          "class": "target-bounded (no contract class)",
+          "candidate_class": "ABI_CONTRACT_PROVIDER",
+          "slot": "register/stack value",
+          "why_not_contract_bounded": "an in-image value in this frame; this image carries no documented provider interface that writes it",
+          "reason": "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it"
+        },
+        "reachable_in": [
+          "ssh",
+          "sshd"
+        ]
+      }
+    ]
+  },
+  "closure": {
+    "ssh": {
+      "artifact": "court/tmp/openssh-closure/client/openssh-9.9p1/ssh",
+      "artifact_sha256": "4d67a7f0ede3fca2f551bed9b6373b07b82edc6758faee20fadf735972a2f603",
+      "candidate_libcrypto_sha256": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+      "verdict": "REFUSED",
+      "refusals": [
+        "STALE_HASH"
+      ],
+      "reachable_files": 315,
+      "obligations": 2,
+      "DISCHARGED": 2,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "indirect_sites": 51988,
+      "unresolved_sites": 266,
+      "reachable_unresolved_sites": 25,
+      "reachable_contract_bounded_sites": 2,
+      "reachable_target_bounded_unresolved_sites": 23,
+      "unclassified_reachable_sites": 0,
+      "witness_backed_sites": 2,
+      "candidate_sites_without_witness": 24,
+      "element_7": {
+        "status": "FAIL",
+        "established": false
+      },
+      "evidence_classes": {
+        "libcrypto.so.3": {
+          "R2_resolved": 318,
+          "unmatched": 240,
+          "A2_resolved": 13,
+          "R3_resolved": 6,
+          "A1_witness_missing": 24,
+          "A1_contract_bounded": 2
+        }
+      },
+      "obligation_rows": [
+        {
+          "id": "V1:src/provider/encode_key2text.rs:179:UNSAFE_FN_DEF",
+          "status": "DISCHARGED"
+        },
+        {
+          "id": "V1:src/provider/encode_key2text.rs:185:UNSAFE_FN_DEF",
+          "status": "DISCHARGED"
+        }
+      ],
+      "reachable_obligation_note": "the closure's reachable production obligations at this candidate are the key2text pair; sm3_int_init is covered by the corrected OSSH-FC-006 disposition but is not in this candidate's reachable set"
+    },
+    "sshd": {
+      "artifact": "court/tmp/openssh-closure/server/openssh-9.9p1/sshd",
+      "artifact_sha256": "95ae6380e17004774f4ce7314728b5419081099c0ea43b21590771104abd1ce2",
+      "candidate_libcrypto_sha256": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+      "verdict": "REFUSED",
+      "refusals": [
+        "STALE_HASH"
+      ],
+      "reachable_files": 305,
+      "obligations": 2,
+      "DISCHARGED": 2,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "indirect_sites": 51988,
+      "unresolved_sites": 266,
+      "reachable_unresolved_sites": 25,
+      "reachable_contract_bounded_sites": 2,
+      "reachable_target_bounded_unresolved_sites": 23,
+      "unclassified_reachable_sites": 0,
+      "witness_backed_sites": 2,
+      "candidate_sites_without_witness": 24,
+      "element_7": {
+        "status": "FAIL",
+        "established": false
+      },
+      "evidence_classes": {
+        "libcrypto.so.3": {
+          "R2_resolved": 318,
+          "unmatched": 240,
+          "A2_resolved": 13,
+          "R3_resolved": 6,
+          "A1_witness_missing": 24,
+          "A1_contract_bounded": 2
+        }
+      },
+      "obligation_rows": [
+        {
+          "id": "V1:src/provider/encode_key2text.rs:179:UNSAFE_FN_DEF",
+          "status": "DISCHARGED"
+        },
+        {
+          "id": "V1:src/provider/encode_key2text.rs:185:UNSAFE_FN_DEF",
+          "status": "DISCHARGED"
+        }
+      ],
+      "reachable_obligation_note": "the closure's reachable production obligations at this candidate are the key2text pair; sm3_int_init is covered by the corrected OSSH-FC-006 disposition but is not in this candidate's reachable set"
+    }
+  },
+  "non_claims": [
+    "This receipt does not promote openssh or openssh-server; both closures still refuse on the stale inventory identity (STALE_HASH) and SAFE_COMPATIBLE remains false.",
+    "A target-bounded unresolved site is not evidence of safety; element 7 fails at this candidate because the A1 sites it previously absorbed are now honestly target-bounded.",
+    "The allocator class is contract-bounded only at the site reads that carry the seam witness; the correctness of an installed allocator remains the application's obligation."
+  ]
+}
