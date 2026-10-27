@@ -2,10 +2,10 @@
   "schema": "openssl-rs/safe-c33/campaign-status/v1",
   "kind": "safe-c33-campaign-status",
   "generated_date": "2026-10-27",
-  "branch": "main",
-  "source_head": "c7b7054bc",
+  "branch": "integrate/safe-c33",
+  "source_head": "33a9315e9",
   "source_head_subject": "Merge pull request #76 from infinityabundance/integrate/safe-c33",
-  "source_head_note": "S62 release preparation on top of 73f786410. The source tree now includes S16-S61: the earlier mechanism and downstream work, the S39-S41 boundary conversions, the S44-S46 downstream/distribution work, the S48/S55 releases, the S49-S53 ownership and corpus wave, S54 documentation reconciliation, and the S56-S61 conversion/measurement batch. S56 rebuilt X.509 extension-cache ownership in src/x509/v3_purp.rs around CacheBuild/CacheValue and one publication point (v3_purp unsafe blocks 276 -> 207), preserved the CVE-2026-35189 lazy-CRLDP repair, and closed a previously leaked cache teardown. S57 gave the internal session cache one structural reference owner (SessionRef) and replaced the zeroed-session lookup probe with SessionKey; it records reference lifetime as established but data-race freedom as NOT established. S58 made the peer/shared signature-algorithm lists single-owner (OwnedSigalgs/SigalgsSlot), made the (ptr,len) fields private, and ran the last full library suite: 2148 passed / 0 failed / 45 ignored. S59 re-measured every loaded family with no reuse and preserved 198/198 L7 with zero candidate-only drops. S60 admitted 30 further corpus families: 307 recipes, 221 loaded, 205 L7, 693 no recipe, and exposed a candidate-only charybdis TLS handshake failure. S61 reproduced and repaired that failure in the default security callback's SSL_SECOP_VERSION floor: candidate functional 206, authority 205, below_baseline 0. S62 bumps the tree to 0.0.38, rebuilds the Phase-2 install from this exact source, rebinds the runtime atlas while carrying every measured row (including charybdis) forward, and updates the documentation. The published release is now 0.0.38 (checksum fc5cbc4e, artefact libcrypto b56ac6bf / libssl e0c9ba33); 0.0.37 remains the previous release. The pinned census remains c09eef8b; S56-S58 and S61 edited existing PARTIAL files without adding a src/*.rs file, so the 877-file delta is unchanged and no full census regeneration is claimed. S67 (2026-10-25) prepares 0.0.39 on top of 6860a3049: a crate version bump, a Phase-2 rebuild from that exact source (libcrypto eb0d7c03 / libssl 069c2cb1, legacy.so 57dc86fd, openssl 412324e6), 11/11 ABI courts, the legacy-provider RUNPATH/load/MD4 proof, an atlas identity rebind carrying every measured row forward, and documentation regeneration. 0.0.39 is NOT published; 0.0.38 (checksum fc5cbc4e, libcrypto b56ac6bf / libssl e0c9ba33) remains the published release and does not contain the V3-C4 work. s-release-0.0.40 (2026-10-27) prepares 0.0.40 from c7b7054bc: the tree carries the openssh closure campaign and its repairs (the swapped repr(C) field fix in the PKCS/7 stream callback, the BLAKE2 Stacked-Borrows repair, six legacy digest initialisers that now refuse instead of crashing, the alignment soundness guard on owner constructors, the master-secret cleansing owner, the resolver switch-bound correctness fix, and four ABI-contract-bounded edge classes), a crate version bump, a Phase-2 rebuild from that exact source (libcrypto 26ba36ff / libssl 1e7a9e8f, legacy.so eb297736, openssl acac3dfd), 11/11 ABI courts, the legacy-provider RUNPATH/load/MD4 proof, an atlas identity rebind carrying every measured row forward, and documentation regeneration. 0.0.40 is NOT published; 0.0.39 (checksum 48888f37, libcrypto eb0d7c03 / libssl 069c2cb1) remains the published release and does not contain the openssh closure campaign repairs.",
+  "source_head_note": "S62 release preparation on top of 73f786410. The source tree now includes S16-S61: the earlier mechanism and downstream work, the S39-S41 boundary conversions, the S44-S46 downstream/distribution work, the S48/S55 releases, the S49-S53 ownership and corpus wave, S54 documentation reconciliation, and the S56-S61 conversion/measurement batch. S56 rebuilt X.509 extension-cache ownership in src/x509/v3_purp.rs around CacheBuild/CacheValue and one publication point (v3_purp unsafe blocks 276 -> 207), preserved the CVE-2026-35189 lazy-CRLDP repair, and closed a previously leaked cache teardown. S57 gave the internal session cache one structural reference owner (SessionRef) and replaced the zeroed-session lookup probe with SessionKey; it records reference lifetime as established but data-race freedom as NOT established. S58 made the peer/shared signature-algorithm lists single-owner (OwnedSigalgs/SigalgsSlot), made the (ptr,len) fields private, and ran the last full library suite: 2148 passed / 0 failed / 45 ignored. S59 re-measured every loaded family with no reuse and preserved 198/198 L7 with zero candidate-only drops. S60 admitted 30 further corpus families: 307 recipes, 221 loaded, 205 L7, 693 no recipe, and exposed a candidate-only charybdis TLS handshake failure. S61 reproduced and repaired that failure in the default security callback's SSL_SECOP_VERSION floor: candidate functional 206, authority 205, below_baseline 0. S62 bumps the tree to 0.0.38, rebuilds the Phase-2 install from this exact source, rebinds the runtime atlas while carrying every measured row (including charybdis) forward, and updates the documentation. The published release is now 0.0.38 (checksum fc5cbc4e, artefact libcrypto b56ac6bf / libssl e0c9ba33); 0.0.37 remains the previous release. The pinned census remains c09eef8b; S56-S58 and S61 edited existing PARTIAL files without adding a src/*.rs file, so the 877-file delta is unchanged and no full census regeneration is claimed. S67 (2026-10-25) prepares 0.0.39 on top of 6860a3049: a crate version bump, a Phase-2 rebuild from that exact source (libcrypto eb0d7c03 / libssl 069c2cb1, legacy.so 57dc86fd, openssl 412324e6), 11/11 ABI courts, the legacy-provider RUNPATH/load/MD4 proof, an atlas identity rebind carrying every measured row forward, and documentation regeneration. 0.0.39 is NOT published; 0.0.38 (checksum fc5cbc4e, libcrypto b56ac6bf / libssl e0c9ba33) remains the published release and does not contain the V3-C4 work. s-release-0.0.40 (2026-10-27) prepares 0.0.40 from c7b7054bc: the tree carries the openssh closure campaign and its repairs (the swapped repr(C) field fix in the PKCS/7 stream callback, the BLAKE2 Stacked-Borrows repair, six legacy digest initialisers that now refuse instead of crashing, the alignment soundness guard on owner constructors, the master-secret cleansing owner, the resolver switch-bound correctness fix, and four ABI-contract-bounded edge classes), a crate version bump, a Phase-2 rebuild from that exact source (libcrypto 26ba36ff / libssl 1e7a9e8f, legacy.so eb297736, openssl acac3dfd), 11/11 ABI courts, the legacy-provider RUNPATH/load/MD4 proof, an atlas identity rebind carrying every measured row forward, and documentation regeneration. 0.0.40 is NOT published; 0.0.39 (checksum 48888f37, libcrypto eb0d7c03 / libssl 069c2cb1) remains the published release and does not contain the openssh closure campaign repairs. 2026-10-27 addendum: measurement receipts were produced at 558c1378b; HEAD 33a9315e9 adds only the edge-target resolver change and its receipt. The earlier sentences in this note that say 0.0.40 is NOT published are superseded by atlas-refresh/publish-0.0.40.json: 0.0.40 is PUBLISHED (2026-10-27T07:09:08Z, checksum 7fe05a8b..., libcrypto 26ba36ff / libssl 1e7a9e8f).",
   "binding_note": "This status reconciles the campaign summary with the individual receipts. It makes no new discharge or compatibility claim. Mechanism-level and scoped-boundary discharges are recorded separately and are never summed into a consumer graduation.",
   "census": {
     "pinned_candidate": "c09eef8b94ce068c92557d9940decf50e8413c8c",
@@ -896,20 +896,20 @@
       "source": "S56, S57, S58 and S61 each reported cargo fmt --all -- --check clean; S59-S60 are measurements and S62 changed only the crate version before rebuilding. S49-S51 also reported clean."
     },
     "clippy": {
-      "result": "clean for --lib",
-      "command": "cargo clippy --lib -- -D warnings",
-      "source": "S56, S57, S58 and S61 each reported cargo clippy --lib -- -D warnings clean. cargo clippy --all-targets has not been re-run since S21 (c911ca629); S58 confirmed its 10 diagnostics are byte-identical pre-existing lines in files it did not touch, and S56 recorded the same set."
+      "result": "PASS",
+      "command": "cargo clippy --all-targets -- -D warnings",
+      "source": "atlas-refresh/openssh-seal-prep.json task_c_seal_gate.fmt_clippy records PASS: cargo clippy --all-targets -- -D warnings (rc 0); atlas-refresh/openssh-final-close.json gates.clippy records the same PASS."
     },
     "library_tests": {
-      "passed": 2148,
+      "passed": 2208,
       "failed": 0,
-      "ignored": 45,
-      "total": 2193,
-      "source": "S58 BATCH: cargo test --lib -- --test-threads=4 (147.17s) on the S58 working tree (90107ceda plus the five-file sigalg change, committed as 7bdc53d83 and merged at aeeb5a83a). This is the committed full-suite baseline in atlas-refresh/test-baseline.json. The later CMS checkpoint records 2168 passed / 0 failed / 52 ignored (parallel and serial) in atlas-refresh/c4-cms-checkpoint.json; S67 did not re-run or promote it.",
-      "parallel": "2148 passed; 0 failed; 45 ignored",
-      "serial": "NOT_RUN in S58; the S21 serial run remains the last serial full-run record",
-      "ignored_note": "The 45 ignored tests are probes run separately by design; no test was newly ignored and none was removed.",
-      "source_tree_note": "FLOOR FOR THE CURRENT 0.0.40 TREE: S58 is the committed baseline, and S59-S61 later changed no src/ in S59/S60 but S61 did change src/ssl/ssl_lib.rs and src/ssl/statem/statem_lib.rs (test-only) and statem_srvr.rs (test-only). S62 and S67 changed only the crate version and rebuilt. The later V3-C4 batch changed src/ in its error-leak and CMS arms and records a 2168/0/52 full run in atlas-refresh/c4-cms-checkpoint.json, which S67 did not re-run or promote. No full library run exists for the 0.0.39 tree, so 2148 remains the committed baseline floor; atlas-refresh/test-baseline.json records the S58 run. The openssh closure campaign and its repairs changed src/ after the 0.0.39 rebuild, so no full library run exists for the 0.0.40 tree either."
+      "ignored": 52,
+      "total": 2260,
+      "source": "2208/0/52 at b004a99d5 as recorded in atlas-refresh/publish-0.0.40.json and atlas-refresh/openssh-final-close.json; a FLOOR, not a run of the exact current tree. The identity of that run is UNKNOWN between those two receipts; do not claim it is this tree.",
+      "parallel": "2208 passed; 0 failed; 52 ignored (cargo test --lib -- --test-threads=4, atlas-refresh/openssh-final-close.json gates.full_library)",
+      "serial": "no 2208 serial run is recorded in the cited receipts; atlas-refresh/openssh-seal-prep.json records 2204 passed / 0 failed / 52 ignored for --test-threads=1 at the seal-prep identity, which is not this tree",
+      "ignored_note": "The 52 ignored tests are probes run separately by design; no test was newly ignored and none was removed.",
+      "source_tree_note": "FLOOR FOR THE CURRENT TREE: 2208/0/52 is recorded at b004a99d5 in atlas-refresh/publish-0.0.40.json (which also states no full suite was run for the exact 0.0.40 tree) and in atlas-refresh/openssh-final-close.json; the run identity between those receipts is UNKNOWN. atlas-refresh/openssh-seal-prep.json records 2204/0/52 serial and 4-thread at its own identity. Do not claim either run measured the current 33a9315e9 tree."
     },
     "phase2_abi_courts": {
       "courts_total": 11,
@@ -927,7 +927,7 @@
     "seal_gate": {
       "state": "NOT_RUN",
       "scope": "S16-S61 cluster",
-      "source": "41/41 adversarial probes remain the last probe result (S24), and full forensic regeneration, held-out compatibility and the complete SEAL evidence set were not executed for S25-S61. S59-S61 ran downstream measurements only."
+      "source": "49/49 adversarial probes passed in isolated processes (atlas-refresh/openssh-seal-prep.json complete_probe_set; atlas-refresh/publish-0.0.40.json evidence_shipped.adversarial_probes), and full forensic regeneration, held-out compatibility and the complete SEAL evidence set were not executed for S25-S61. S59-S61 ran downstream measurements only."
     },
     "per_file_audit_gate": {
       "partial_audited": 761,
@@ -939,10 +939,10 @@
       "rust_source_changed": true,
       "cargo_fmt": "S56/S57/S58/S61 FAST: cargo fmt clean; S59/S60/S62 changed no Rust source and ran no fmt",
       "cargo_check": "S56/S57/S58/S61 FAST: cargo check --lib clean; S59/S60/S62 changed no Rust source",
-      "adversarial_probes": "41/41 recorded in S24; NOT_RUN in S39-S61",
+      "adversarial_probes": "49/49 in isolated processes (one process per probe), recorded in atlas-refresh/openssh-seal-prep.json complete_probe_set and atlas-refresh/publish-0.0.40.json evidence_shipped; the earlier 41/41 result is superseded.",
       "full_library_suite": "S58 is the committed full-suite baseline: 2148 passed / 0 failed / 45 ignored (7bdc53d83, merged aeeb5a83a). It predates S61's src/ edits and the V3-C4 batch and is a floor for the 0.0.40 tree. The later CMS checkpoint records 2168/0/52 in atlas-refresh/c4-cms-checkpoint.json; S67 did not re-run or promote it, so no full run exists for the 0.0.40 tree. The openssh closure campaign and its repairs changed src/ after the 0.0.39 rebuild, so no full run exists for 0.0.40.",
       "docs": "s-release-0.0.40: CAMPAIGN-STATUS.json identity/release fields updated; render_docs.py --write; render_docs.py --check clean after regeneration; render_status.py executed. S67 performed the previous documentation pass.",
-      "release_readiness": "0.0.40 is NOT published. The working tree is 0.0.40 (Cargo.toml and the openssl-rs Cargo.lock entry), rebuilt from c7b7054bc with libcrypto 26ba36ff / libssl 1e7a9e8f / legacy.so eb297736 / openssl acac3dfd; 11/11 ABI courts pass, legacy.so carries RUNPATH $ORIGIN/.. and resolves the install libcrypto, and the legacy provider loads under OPENSSL_MODULES with MD4(abc)=a448017aaf21d8525fc10ae87aa6729d. The published release is 0.0.39 (crates.io 2026-10-25T13:30:45Z, checksum 48888f37c705dae453c19574021b3b7fde76a50ccd5fcdd96d0dadbb1a51159d, 8898646 bytes, 1010 files) from the merge commit of PR #69 with libcrypto eb0d7c03 / libssl 069c2cb1; it does NOT contain the openssh closure campaign or its repairs. 0.0.38 is the release before it. Publishing added no assurance: BOUNDARY and SEAL remain NOT_RUN and SAFE_COMPATIBLE remains 0/33.",
+      "release_readiness": "0.0.40 is PUBLISHED (2026-10-27T07:09:08Z, crates.io checksum 7fe05a8bddfead54c324ea5f680365a638ed2b34ec2e8f703f7469fa0c7eec8f (7fe05a8b...), 8,948,785 bytes, 1,010 files; artefacts libcrypto 26ba36ff... / libssl 1e7a9e8f...), as recorded in atlas-refresh/publish-0.0.40.json. The working tree is 0.0.40 (Cargo.toml and the openssl-rs Cargo.lock entry), rebuilt from c7b7054bc with libcrypto 26ba36ff / libssl 1e7a9e8f / legacy.so eb297736 / openssl acac3dfd; 11/11 ABI courts pass (atlas-refresh/publish-0.0.40.json evidence_shipped.abi_courts), legacy.so carries RUNPATH $ORIGIN/.. and resolves the install libcrypto, and the legacy provider loads under OPENSSL_MODULES with MD4(abc)=a448017aaf21d8525fc10ae87aa6729d. Publishing added no assurance: BOUNDARY and SEAL remain NOT_RUN and SAFE_COMPATIBLE remains 0/33; publish-0.0.40.json states no full library suite was run for the exact 0.0.40 tree.",
       "not_run": [
         "BOUNDARY gate for the S16-S61 cluster (independent caller/dependency-closure audit, Miri/ASan/Loom/mutation controls, authority differential)",
         "SEAL gate (full forensic regeneration, held-out compatibility, complete probe/court evidence set)",
@@ -1000,527 +1000,533 @@
     ],
     "p1000_corpus": {
       "families": 1000,
-      "with_recipe": 277,
-      "candidate_l7_functional": 198,
-      "authority_l7_functional": 198,
-      "candidate_loaded": 216,
-      "candidate_runtime": 199,
-      "candidate_below_baseline": 0,
-      "candidate_failed": 5,
-      "not_attempted": 761,
-      "no_recipe": 723,
+      "with_recipe": 307,
+      "candidate_l7_functional": 207,
+      "authority_l7_functional": 209,
+      "candidate_loaded": 223,
+      "candidate_runtime": 209,
+      "candidate_below_baseline": 2,
+      "candidate_failed": 7,
+      "not_attempted": 755,
+      "no_recipe": 693,
       "build_link": {
-        "configured": 261,
-        "built": 244,
-        "linked": 239,
-        "authority_built": 244,
-        "authority_linked": 239,
-        "candidate_linkage_proven": 239,
+        "configured": 274,
+        "built": 253,
+        "linked": 245,
+        "failed": 62,
+        "not_attempted": 693,
+        "authority_built": 253,
+        "authority_linked": 245,
+        "candidate_linkage_proven": 245,
         "candidate_specific_patch_count": 0
       },
       "candidate_levels": {
-        "L7-functional": 198,
-        "L6-runtime": 1,
-        "L5-loaded": 17,
-        "L4-linked": 23,
-        "L3-built": 5,
-        "L2-configured": 17,
-        "L1-admitted-source": 16,
-        "L0-catalogued": 723
+        "L7-functional": 207,
+        "L6-runtime": 2,
+        "L5-loaded": 14,
+        "L4-linked": 22,
+        "L3-built": 8,
+        "L2-configured": 21,
+        "L1-admitted-source": 33,
+        "L0-catalogued": 693
       },
       "below_l7": [
         {
           "family": "apk-tools",
           "level": "L1-admitted-source",
-          "classification": "HARNESS",
-          "blocker": "Make.rules build fails"
-        },
-        {
-          "family": "bibtexconv",
-          "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "bip",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "bruteforce-wallet",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "canl-c",
           "level": "L1-admitted-source",
-          "classification": "HARNESS",
-          "blocker": "gen_err_codes.pl fails"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "canl-c-examples",
           "level": "L1-admitted-source",
-          "classification": "HARNESS",
-          "blocker": "the parent canl-c failure is the same"
-        },
-        {
-          "family": "carbon-c-relay",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "charybdis",
-          "level": "L5-loaded",
-          "classification": "FIXTURE",
-          "blocker": "the setpriv euid-drop workload did not listen or greet over TLS under either subject"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "ckermit",
           "level": "L1-admitted-source",
-          "classification": "SOURCE-UNREACHABLE",
-          "blocker": "flat tarball layout yields no single source root"
-        },
-        {
-          "family": "conserver-client",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "conserver-server",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "coturn",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic TURN-over-TLS/DTLS allocation workload"
-        },
-        {
-          "family": "cyrus-sasl-ntlm",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "davix",
-          "level": "L2-configured",
-          "classification": "HARNESS",
-          "blocker": "version.cmake regeneration outside git; embedded curl build fails"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "dmg2img",
           "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "dnsdist",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "dnsperf",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "dsniff",
           "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
         },
         {
-          "family": "encfs",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
+          "family": "galera-3",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "galera-4",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "globus-gsi-cert-utils",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "gridsite-clients",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "i2pd",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "imx-code-signing-tool",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "ipmitool",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "jabberd2",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "kore",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "lcmaps-plugins-verify-proxy",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "libcrypt-ssleay-perl",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "libdkim1d",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "megatools",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "ophcrack",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "partimage",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "pdns",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "pdns-recursor",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "perl-crypt-ssleay",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "python3-m2crypto",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "rspamd",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "stubby",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "tcpflow",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "tpm2-tools",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "xar",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "xrdp",
+          "level": "L1-admitted-source",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "bibtexconv",
+          "level": "L2-configured",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "davix",
+          "level": "L2-configured",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "epic4",
+          "level": "L2-configured",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "eurephia",
           "level": "L2-configured",
-          "classification": "HARNESS",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "fastd",
-          "level": "L6-runtime",
-          "classification": "ENVIRONMENT",
-          "blocker": "no /dev/net/tun and no CAP_NET_ADMIN; TUNSETIFF is refused"
-        },
-        {
-          "family": "fdm",
-          "level": "L5-loaded",
-          "classification": "ENVIRONMENT",
-          "blocker": "libtool/autoconf prerequisites supplied through the pinned aux seam and libtdb detection removed; the family now builds at L4 and loads at L5, but no admitted deterministic local workload exists for a functional run"
         },
         {
           "family": "ftp-ssl",
           "level": "L2-configured",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "ftpd-ssl",
           "level": "L2-configured",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "gftp-text",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no staged gftprc and FTPS fixture (AUTH TLS + PBSZ/PROT + verified data channel)"
-        },
-        {
-          "family": "gsocket",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "gss-ntlmssp",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no GSSAPI initiator/acceptor harness for the NTLMSSP mechanism"
-        },
-        {
-          "family": "gvpe",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "hopm",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "ike-scan",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "imapfilter",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
         },
         {
           "family": "imapproxy",
           "level": "L2-configured",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "imx-code-signing-tool",
-          "level": "L1-admitted-source",
-          "classification": "HARNESS",
-          "blocker": "rel_bin expects an OpenSSL source tree"
         },
         {
           "family": "ipmiutil",
           "level": "L2-configured",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
-          "family": "ixwebsocket-libs",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "kore",
-          "level": "L1-admitted-source",
-          "classification": "HARNESS",
-          "blocker": "-Werror build fails before the listener"
-        },
-        {
-          "family": "krb5",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "PKINIT needs a local KDC and an X.509 principal exchange"
-        },
-        {
-          "family": "krb5-k5tls",
-          "level": "L3-built",
-          "classification": "FIXTURE",
-          "blocker": "plugin not produced by the default make targets"
-        },
-        {
-          "family": "lastpass-cli",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "libcrypt-ssleay-perl",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
+          "family": "kannel",
+          "level": "L2-configured",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "libcxxtools10",
           "level": "L2-configured",
-          "classification": "HARNESS",
-          "blocker": "cxxtools 3.0.0 does not compile with GCC 12 under either include prefix"
-        },
-        {
-          "family": "libddsc0debian",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "libdigidoc-tools",
           "level": "L2-configured",
-          "classification": "HARNESS",
-          "blocker": "the same libdigidoc compile failure"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "libdigidoc2",
           "level": "L2-configured",
-          "classification": "HARNESS",
-          "blocker": "libdigidoc compile failure"
-        },
-        {
-          "family": "libdkim1d",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "libeac3",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
-        },
-        {
-          "family": "libengine-pkcs11-openssl",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "libewf",
-          "level": "L3-built",
-          "classification": "FIXTURE",
-          "blocker": "autotools regeneration during make; the tools row builds when configure is touched last"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "libfreefare0",
           "level": "L2-configured",
-          "classification": "HARNESS",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "libfsapfs-utils",
-          "level": "L3-built",
-          "classification": "FIXTURE",
-          "blocker": "the tool does not itself link OpenSSL"
-        },
-        {
-          "family": "libfsapfs1",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "libgit2",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no HTTPS fetch + certificate-callback harness and local smart-HTTP repository"
-        },
-        {
-          "family": "libmongocrypt",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no explicit-encryption/KMS harness"
-        },
-        {
-          "family": "libshout",
-          "level": "L5-loaded",
-          "classification": "FIXTURE",
-          "blocker": "the Icecast SOURCE stream did not complete over TLS under either subject"
-        },
-        {
-          "family": "lua-cqueues",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
-        },
-        {
-          "family": "medusa",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "the legacy provider load is fixed in S45, but the version probe still fails the banner regex because the extracted directory name contains '-b'; symmetric HARNESS"
-        },
-        {
-          "family": "megatools",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "mokutil",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
-        },
-        {
-          "family": "mosh",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "nmh",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "nsca-ng-client",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
-        },
-        {
-          "family": "nsca-ng-server",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue"
         },
         {
           "family": "nzbget",
           "level": "L2-configured",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "openfortivpn",
           "level": "L2-configured",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "openiked",
+          "level": "L2-configured",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "perdition",
           "level": "L2-configured",
-          "classification": "ENVIRONMENT",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "perl-crypt-ssleay",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
-        },
-        {
-          "family": "perl-net-dns-sec",
-          "level": "L5-loaded",
-          "classification": "FIXTURE",
-          "blocker": "the XS module loads; the sign/verify script produced no marker output under either subject"
-        },
-        {
-          "family": "pev",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
-        },
-        {
-          "family": "poco",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no Poco NetSSL C++ harness"
-        },
-        {
-          "family": "python3-m2crypto",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
-        },
-        {
-          "family": "python3-scrypt",
-          "level": "L4-linked",
-          "classification": "HARNESS",
-          "blocker": "the L7 workload harness did not compile: collect2: error: ld returned 1 exit status"
         },
         {
           "family": "sbsigntool",
           "level": "L2-configured",
-          "classification": "ENVIRONMENT",
-          "blocker": "recipe repaired in S53, but the build still stops at L2 for an upstream/venue reason identical for both subjects"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "sqlcipher",
           "level": "L2-configured",
-          "classification": "HARNESS",
-          "blocker": "generated sqlite3.c needs a complete Tcl library; shell link fails"
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
-          "family": "stubby",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
-        },
-        {
-          "family": "tcpflow",
-          "level": "L1-admitted-source",
-          "classification": "SOURCE-UNREACHABLE",
-          "blocker": "the 24.6 build/link run reached L1-admitted-source, below L4-linked, so there is no loaded program to run"
-        },
-        {
-          "family": "unbound-anchor",
-          "level": "L3-built",
-          "classification": "FIXTURE",
-          "blocker": "artifact declares no OpenSSL DT_NEEDED"
-        },
-        {
-          "family": "xar",
-          "level": "L1-admitted-source",
-          "classification": "ENVIRONMENT",
-          "blocker": "recipe repaired in S53, but the build still stops at L1 for an upstream/venue reason identical for both subjects"
-        },
-        {
-          "family": "xilinx-bootgen",
-          "level": "L4-linked",
-          "classification": "FIXTURE",
-          "blocker": "no admitted deterministic local workload; the signed-image path segfaults under both subjects"
-        },
-        {
-          "family": "yadifa",
-          "level": "L5-loaded",
-          "classification": "HARNESS",
-          "blocker": "no admitted deterministic local workload exists for this program in this venue; only L5-loaded is measured"
-        },
-        {
-          "family": "yafc",
-          "level": "L3-built",
-          "classification": "FIXTURE",
-          "blocker": "artifact pattern does not match the installed binary"
+          "family": "weex",
+          "level": "L2-configured",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
         },
         {
           "family": "yapet",
           "level": "L2-configured",
-          "classification": "HARNESS",
+          "classification": "link-failure",
           "blocker": "the 24.6 build/link run reached L2-configured, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "atheme-services",
+          "level": "L3-built",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L3-built, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "bind9",
+          "level": "L3-built",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L3-built, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "krb5-k5tls",
+          "level": "L3-built",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L3-built, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "libewf",
+          "level": "L3-built",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L3-built, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "libfsapfs-utils",
+          "level": "L3-built",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L3-built, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "unbound-anchor",
+          "level": "L3-built",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L3-built, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "vboot-utils",
+          "level": "L3-built",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L3-built, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "yafc",
+          "level": "L3-built",
+          "classification": "link-failure",
+          "blocker": "the 24.6 build/link run reached L3-built, below L4-linked, so there is no loaded program to run"
+        },
+        {
+          "family": "conserver-client",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "conserver-server",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "coturn",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "cyrus-sasl-ntlm",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "ewftools",
+          "level": "L4-linked",
+          "classification": "load-failure",
+          "blocker": "the rebuilt pristine tree holds no program at ewftools/.libs/ewfverify"
+        },
+        {
+          "family": "gss-ntlmssp",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "ixwebsocket-libs",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "krb5",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "krb5-pkinit",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "libddsc0debian",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "libeac3",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "libengine-pkcs11-openssl",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "libfsapfs1",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "libgit2",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "libmongocrypt",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "lua-cqueues",
+          "level": "L4-linked",
+          "classification": "UNKNOWN",
+          "blocker": "no admitted deterministic local workload exists for this program in this venue; only the build/link level is measured"
+        },
+        {
+          "family": "medusa",
+          "level": "L4-linked",
+          "classification": "load-failure",
+          "blocker": "the program did not start and report its version"
         }
       ],
       "partclone": "L7 in S36 after the workload was changed to partclone's documented -O/--overwrite target path; its S35 L5 row was a consumer-side S_ISBLK-on-uninitialised-stat flake proven independent of the candidate library",
       "perl_net_ssleay": "L7 in S35/S36 after the resumption workload switched from SSL_get_session to SSL_get1_session; the marker was not weakened",
-      "source": "forensics/downstream/runtime-functional-atlas.json body.counts.by_subject and body.runs; forensics/downstream/build-link-atlas.json body.counts.by_subject; atlas-refresh/s52-reverify-196.json; atlas-refresh/s53-corpus-batch.json",
+      "source": "forensics/downstream/runtime-functional-atlas.json body.counts.by_subject, body.counts (with_recipe/no_recipe) and body.runs (per-family level, failure_class, reason); forensics/downstream/build-link-atlas.json body.counts.by_subject. Runtime atlas sha256 42be6e38fe004fdb0740949fa7baf73d603f7538e4fbd598e7c4336874de3dab; build-link atlas sha256 d2f93a4244ac02712cceac8c65efe67af7e28924e01d18fb2d26ce4b14cdb81c. below_l7 is the non-L0 rows below L7 sorted by level then family and capped at 79 entries (the previous list scale); classification is the atlas failure_class (UNKNOWN where the atlas records null) and blocker is the atlas reason.",
       "evidence_reuse": {
-        "mode": "committed-rows",
-        "families_reused": 275,
-        "measured_families": 277,
-        "candidate_identity_match": true,
-        "note": "S53 ran downstream_runtime.py --measure over the 277-recipe catalogue. The atlas records evidence_reuse.mode='committed-rows' with 275 of 277 recipe-backed families at the same candidate identity (candidate_identity_match=true); the S53 batch newly measured the 35 admitted families and repaired fdm. S52 remains the last full no-reuse measurement (200 loaded, 196 L7 at cd71d401/efd460de), not a carry-forward from the S48 identity ed415801/967424dd, the S42 identity 268420cb/a380ecd6 or the superseded 64dec4c7/b258b12f rows.",
+        "mode": "committed-rows-carried-forward",
+        "carried_forward": 307,
+        "candidate_identity_match": false,
         "superseded_identity": {
-          "libcrypto_so_3_sha256": "ed4158014ebc2d4fbf3733ae0aedb28419c6a340e067d69930b3c6283e25cd15",
-          "libssl_so_3_sha256": "967424dd8afb497441f5cc65c50a1fa1db96bccd01c0d34dbf7427397d2d0674"
-        },
-        "current_identity": {
-          "libcrypto_so_3_sha256": "cd71d4019cbc96a37766abb69ebad242fae454b3f1e53e239deac474eb5d9b5d",
-          "libssl_so_3_sha256": "efd460debbf2f8ea9bdded5cd3c185009def7873fa5ee26b804ac618f7b40f2d"
+          "libcrypto_so_3_sha256": {
+            "committed": "be578c866e20f78e4f2241ced9e9c1b0d7283d2e3aa3d3d99e26c0635beb16d3",
+            "current": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0"
+          },
+          "libssl_so_3_sha256": {
+            "committed": "c6eddcfe2ce43007019c5ab208ea7d58092ab893994227b9fcf36b35f49d6e94",
+            "current": "1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b"
+          }
         }
+      },
+      "derived_from": {
+        "runtime_atlas_sha256": "42be6e38fe004fdb0740949fa7baf73d603f7538e4fbd598e7c4336874de3dab",
+        "build_link_atlas_sha256": "d2f93a4244ac02712cceac8c65efe67af7e28924e01d18fb2d26ce4b14cdb81c"
       }
     }
   },
