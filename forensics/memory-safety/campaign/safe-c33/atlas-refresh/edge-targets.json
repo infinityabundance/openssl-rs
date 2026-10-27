@@ -1,0 +1,1976 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/edge-targets/v1",
+  "kind": "target-resolution-reaudit",
+  "receipt": "edge-targets",
+  "subphase": "resolve the 24 demoted target-bounded indirect sites as in-image targets (writer instruction + exact/bounded target set), keep the genuinely application-supplied callback unresolved, and re-run the openssh closure",
+  "date": "2026-10-27",
+  "generated_utc": "2026-10-27T11:18:07Z",
+  "source_identity": {
+    "repository_head": "558c1378b7b1a2b62f33780d66dbd03d36bc3931",
+    "branch": "integrate/safe-c33",
+    "working_tree": "generated with only forensics/tools/consumer_closure.py modified in the working tree; src/ and docker/ untouched, so the measured candidate is bit-identical to HEAD. The resolver change and this receipt were subsequently committed together as an evidence+tool subphase on stage/p25/edge-targets; no build-relevant input under src/ changed before or after the measurement.",
+    "candidate_libcrypto_sha256": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+    "candidate_libssl_sha256": "1e7a9e8f93495dbacdf5dad2f65e355f89248d6ab155704112be444c1abb0a9b",
+    "install_prefix": "artifacts/phase2/install",
+    "inventory": "atlas-refresh/v1e-candidate-freeze.json (source head 2ff301947); the closure still refuses STALE_HASH because that inventory records libcrypto c2d73687, not 26ba36ff",
+    "resolver": {
+      "path": "forensics/tools/consumer_closure.py",
+      "sha256": "7aad862dc277666bb0795949dad45cfa37c57342e887feff35837eae7735bd00",
+      "self_test": "PASS (positive, unreachable-writer, absent-writer and static-initialiser controls)"
+    }
+  },
+  "rule": {
+    "name": "in-image slot target resolution (target claim, not an ABI contract)",
+    "applies_when": [
+      "the site's function fragment and field offset match an EDGE_TARGET_SLOTS entry (or the site is the entry's register/stack edge);",
+      "every named target symbol resolves to a function start in this exact image;",
+      "for a function writer, every writer symbol is defined and reachable in the pre-closure;",
+      "for a static initialiser, every target is the first qword of an in-image data table (names matching _HW/HW_)."
+    ],
+    "not_applied_when": [
+      "no reachability evidence was supplied (reachable is None);",
+      "a declared target or writer is absent from this image;",
+      "the writer is defined but not reachable in the pre-closure;",
+      "the slot is filled from an externally supplied callback."
+    ],
+    "effect": "site['unresolved'] becomes false with class 'in-image-slot'; the site adds exactly the resolved target addresses, not the residual field-store union, so the closure's upper bound is narrowed only where the writer and every target are established.",
+    "witness_isolation": "this rule never sets ABI_CONTRACT_PROVIDER or ABI_CONTRACT_ALLOCATOR, is not in ABI_CONTRACT_CLASSES, and does not touch provider_contract_witness or allocator_contract_witness."
+  },
+  "corrections": {
+    "algorithm_data_offsets": {
+      "before": "INTERNAL_SLOT_NOTES said offset 0x00 was fn_, 0x08 reserve_store, 0x10 post/unreserve_store",
+      "after": "this build's non-repr(C) AlgorithmData lays out reserve_store at 0x00, fn_ at 0x08 and unreserve_store at 0x10; the disassembly of ossl_algorithm_do_all stores r8/reserve at 0x51de31, r9/fn at 0x51de35 and the stack unreserve argument at 0x51de3f, and algorithm_do_this calls *(%rbx), *0x8(%rbx), *0x10(%rbx) in that order",
+      "why": "a wrong note would have labelled the targets fn_/reserve backwards; the five walk sites are resolved against the measured layout, not the source declaration order"
+    }
+  },
+  "sites": [
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp12method_store26ossl_method_construct_this",
+      "call_site": "0x23b2e0",
+      "text": "call   *0x28(%rax)",
+      "slot": "OsslMethodConstructMethod.construct (offset 0x28)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-MCM-CONSTRUCT",
+      "source": "src/evp/fetch.rs:1014",
+      "writer": "0x51b27b lea construct_evp_method; 0x51b282 mov %rax,0x88(%rsp) fills the frame's OsslMethodConstructMethod.construct slot (src/evp/fetch.rs:1014, reached from inner_evp_generic_fetch)",
+      "targets": [
+        {
+          "address": "0x51b0c0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp5fetch20construct_evp_method"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp12method_store35ossl_method_construct_reserve_store",
+      "call_site": "0x23b50d",
+      "text": "call   *(%rax)",
+      "slot": "OsslMethodConstructMethod.get_tmp_store (offset 0x00)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-MCM-GET-TMP",
+      "source": "src/evp/fetch.rs:1009",
+      "writer": "0x51b23c lea get_tmp_evp_method_store; 0x51b243 mov %rax,0x60(%rsp) fills the get_tmp_store slot (src/evp/fetch.rs:1009)",
+      "targets": [
+        {
+          "address": "0x51b7a0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp5fetch24get_tmp_evp_method_store"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher28cipher_generic_init_internal",
+      "call_site": "0x2ee75b",
+      "text": "call   *(%rax)",
+      "slot": "ProvCipherHw.init (offset 0x00)",
+      "reachable_in_openssh_closure": false,
+      "status": "resolved",
+      "resolver_id": "EVT-CIPHER-HW-INIT",
+      "source": "src/provider/cipher.rs:3457-3463,5104,5695,6319,15403, ...",
+      "writer": "the loader writes each ProvCipherHw.init from the table's .data.rel.ro initialiser (AES_XTS_HW 0x8076d0, CHACHA20_HW 0x807850, CIPHER_HW_AES_HMAC_SHA1 0x80f560, ...); each target below is the first qword of an in-image table",
+      "targets": [
+        {
+          "address": "0x2e4670",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher16chacha20_initkey"
+          ]
+        },
+        {
+          "address": "0x2e9130",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher21cipher_hw_aes_initkey"
+          ]
+        },
+        {
+          "address": "0x2e93a0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher21cipher_hw_sm4_initkey"
+          ]
+        },
+        {
+          "address": "0x2e9e00",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher22cipher_hw_aria_initkey"
+          ]
+        },
+        {
+          "address": "0x2ec440",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher25chacha20_poly1305_initkey"
+          ]
+        },
+        {
+          "address": "0x2ed0d0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher26cipher_hw_camellia_initkey"
+          ]
+        },
+        {
+          "address": "0x2ed6f0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher27cipher_hw_tdes_ede2_initkey"
+          ]
+        },
+        {
+          "address": "0x2ed7b0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher27cipher_hw_tdes_ede3_initkey"
+          ]
+        },
+        {
+          "address": "0x2edd90",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher28aesni_cbc_hmac_sha1_init_key"
+          ]
+        },
+        {
+          "address": "0x2f0650",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher30aesni_cbc_hmac_sha256_init_key"
+          ]
+        },
+        {
+          "address": "0x2f2490",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher33cipher_hw_aes_ocb_generic_initkey"
+          ]
+        },
+        {
+          "address": "0x2f2780",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher33cipher_hw_aes_xts_generic_initkey"
+          ]
+        },
+        {
+          "address": "0x2f2b00",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher33cipher_hw_sm4_xts_generic_initkey"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store11alg_cleanup",
+      "call_site": "0x327a86",
+      "text": "call   *0x20(%rbp)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store15impl_free_thunk",
+      "call_site": "0x327bf0",
+      "text": "call   *0x20(%rbx)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store21impl_cache_free_thunk",
+      "call_site": "0x327cb0",
+      "text": "call   *0x20(%rbx)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store21ossl_method_store_add",
+      "call_site": "0x328109",
+      "text": "call   *0x20(%rbx)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store22impl_cache_flush_cache",
+      "call_site": "0x3283af",
+      "text": "call   *0x20(%rax)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store23alg_cleanup_by_provider",
+      "call_site": "0x3285d6",
+      "text": "call   *0x20(%r12)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store23ossl_method_store_fetch",
+      "call_site": "0x328b0f",
+      "text": "call   *0x18(%r12)",
+      "slot": "Method.up_ref (offset 0x18)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-UP-REF",
+      "source": "src/property/store.rs:691",
+      "writer": "ossl_method_store_add stores method_up_ref at 0x327d60 (mov %rbp,0x18(%r15)); ossl_method_store_cache_set stores it at 0x329315.  Reachable callers pass in-image constants: the EVP class up_ref functions, OSSL_STORE_LOADER_up_ref and OSSL_DECODER_up_ref (src/property/store.rs:691)",
+      "targets": [
+        {
+          "address": "0x1ac8e0",
+          "names": [
+            "EVP_KEM_up_ref",
+            "EVP_KEYEXCH_up_ref"
+          ]
+        },
+        {
+          "address": "0x1f2210",
+          "names": [
+            "EVP_ASYM_CIPHER_up_ref"
+          ]
+        },
+        {
+          "address": "0x28a990",
+          "names": [
+            "EVP_RAND_up_ref"
+          ]
+        },
+        {
+          "address": "0x2c1dd0",
+          "names": [
+            "EVP_KEYMGMT_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt18evp_keymgmt_up_ref.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x353c00",
+          "names": [
+            "EVP_KDF_up_ref",
+            "EVP_SIGNATURE_up_ref",
+            "EVP_SKEYMGMT_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf14evp_kdf_up_ref.llvm.9110605104811625755",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt19evp_skeymgmt_up_ref.llvm.9110605104811625755",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature20evp_signature_up_ref.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355b70",
+          "names": [
+            "EVP_MD_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest13evp_md_up_ref.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38ee10",
+          "names": [
+            "EVP_CIPHER_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher17evp_cipher_up_ref.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f6f0",
+          "names": [
+            "EVP_MAC_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac14evp_mac_up_ref.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401940",
+          "names": [
+            "OSSL_STORE_LOADER_up_ref"
+          ]
+        },
+        {
+          "address": "0x43dcd0",
+          "names": [
+            "OSSL_DECODER_up_ref",
+            "OSSL_ENCODER_up_ref"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store23ossl_method_store_fetch",
+      "call_site": "0x328bcd",
+      "text": "call   *0x18(%r12)",
+      "slot": "Method.up_ref (offset 0x18)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-UP-REF",
+      "source": "src/property/store.rs:691",
+      "writer": "ossl_method_store_add stores method_up_ref at 0x327d60 (mov %rbp,0x18(%r15)); ossl_method_store_cache_set stores it at 0x329315.  Reachable callers pass in-image constants: the EVP class up_ref functions, OSSL_STORE_LOADER_up_ref and OSSL_DECODER_up_ref (src/property/store.rs:691)",
+      "targets": [
+        {
+          "address": "0x1ac8e0",
+          "names": [
+            "EVP_KEM_up_ref",
+            "EVP_KEYEXCH_up_ref"
+          ]
+        },
+        {
+          "address": "0x1f2210",
+          "names": [
+            "EVP_ASYM_CIPHER_up_ref"
+          ]
+        },
+        {
+          "address": "0x28a990",
+          "names": [
+            "EVP_RAND_up_ref"
+          ]
+        },
+        {
+          "address": "0x2c1dd0",
+          "names": [
+            "EVP_KEYMGMT_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt18evp_keymgmt_up_ref.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x353c00",
+          "names": [
+            "EVP_KDF_up_ref",
+            "EVP_SIGNATURE_up_ref",
+            "EVP_SKEYMGMT_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf14evp_kdf_up_ref.llvm.9110605104811625755",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt19evp_skeymgmt_up_ref.llvm.9110605104811625755",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature20evp_signature_up_ref.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355b70",
+          "names": [
+            "EVP_MD_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest13evp_md_up_ref.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38ee10",
+          "names": [
+            "EVP_CIPHER_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher17evp_cipher_up_ref.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f6f0",
+          "names": [
+            "EVP_MAC_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac14evp_mac_up_ref.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401940",
+          "names": [
+            "OSSL_STORE_LOADER_up_ref"
+          ]
+        },
+        {
+          "address": "0x43dcd0",
+          "names": [
+            "OSSL_DECODER_up_ref",
+            "OSSL_ENCODER_up_ref"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_get",
+      "call_site": "0x3290c1",
+      "text": "call   *0x18(%rax)",
+      "slot": "Method.up_ref (offset 0x18)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-UP-REF",
+      "source": "src/property/store.rs:691",
+      "writer": "ossl_method_store_add stores method_up_ref at 0x327d60 (mov %rbp,0x18(%r15)); ossl_method_store_cache_set stores it at 0x329315.  Reachable callers pass in-image constants: the EVP class up_ref functions, OSSL_STORE_LOADER_up_ref and OSSL_DECODER_up_ref (src/property/store.rs:691)",
+      "targets": [
+        {
+          "address": "0x1ac8e0",
+          "names": [
+            "EVP_KEM_up_ref",
+            "EVP_KEYEXCH_up_ref"
+          ]
+        },
+        {
+          "address": "0x1f2210",
+          "names": [
+            "EVP_ASYM_CIPHER_up_ref"
+          ]
+        },
+        {
+          "address": "0x28a990",
+          "names": [
+            "EVP_RAND_up_ref"
+          ]
+        },
+        {
+          "address": "0x2c1dd0",
+          "names": [
+            "EVP_KEYMGMT_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt18evp_keymgmt_up_ref.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x353c00",
+          "names": [
+            "EVP_KDF_up_ref",
+            "EVP_SIGNATURE_up_ref",
+            "EVP_SKEYMGMT_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf14evp_kdf_up_ref.llvm.9110605104811625755",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt19evp_skeymgmt_up_ref.llvm.9110605104811625755",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature20evp_signature_up_ref.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355b70",
+          "names": [
+            "EVP_MD_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest13evp_md_up_ref.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38ee10",
+          "names": [
+            "EVP_CIPHER_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher17evp_cipher_up_ref.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f6f0",
+          "names": [
+            "EVP_MAC_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac14evp_mac_up_ref.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401940",
+          "names": [
+            "OSSL_STORE_LOADER_up_ref"
+          ]
+        },
+        {
+          "address": "0x43dcd0",
+          "names": [
+            "OSSL_DECODER_up_ref",
+            "OSSL_ENCODER_up_ref"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+      "call_site": "0x329320",
+      "text": "call   *%rcx",
+      "slot": "the up_ref register value in ossl_method_store_cache_set",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-UP-REF-REG",
+      "source": "src/property/store.rs:691",
+      "writer": "0x329310 mov 0x40(%rsp),%rcx; 0x329315 mov %rcx,0x18(%r13); 0x329320 call *%rcx, so this register site is the same method_up_ref argument as Method.up_ref",
+      "targets": [
+        {
+          "address": "0x1ac8e0",
+          "names": [
+            "EVP_KEM_up_ref",
+            "EVP_KEYEXCH_up_ref"
+          ]
+        },
+        {
+          "address": "0x1f2210",
+          "names": [
+            "EVP_ASYM_CIPHER_up_ref"
+          ]
+        },
+        {
+          "address": "0x28a990",
+          "names": [
+            "EVP_RAND_up_ref"
+          ]
+        },
+        {
+          "address": "0x2c1dd0",
+          "names": [
+            "EVP_KEYMGMT_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt18evp_keymgmt_up_ref.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x353c00",
+          "names": [
+            "EVP_KDF_up_ref",
+            "EVP_SIGNATURE_up_ref",
+            "EVP_SKEYMGMT_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf14evp_kdf_up_ref.llvm.9110605104811625755",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt19evp_skeymgmt_up_ref.llvm.9110605104811625755",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature20evp_signature_up_ref.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355b70",
+          "names": [
+            "EVP_MD_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest13evp_md_up_ref.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38ee10",
+          "names": [
+            "EVP_CIPHER_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher17evp_cipher_up_ref.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f6f0",
+          "names": [
+            "EVP_MAC_up_ref",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac14evp_mac_up_ref.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401940",
+          "names": [
+            "OSSL_STORE_LOADER_up_ref"
+          ]
+        },
+        {
+          "address": "0x43dcd0",
+          "names": [
+            "OSSL_DECODER_up_ref",
+            "OSSL_ENCODER_up_ref"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+      "call_site": "0x329361",
+      "text": "call   *0x20(%rax)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+      "call_site": "0x32941e",
+      "text": "call   *0x20(%rax)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8property5store27ossl_method_store_cache_set",
+      "call_site": "0x3294af",
+      "text": "call   *0x20(%r13)",
+      "slot": "Method.free (offset 0x20)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-METHOD-FREE",
+      "source": "src/property/store.rs:692",
+      "writer": "ossl_method_store_add stores method_destruct at 0x327d64 (mov %rax,0x20(%r15)); ossl_method_store_cache_set stores it at 0x329319.  Reachable callers pass in-image constants: the EVP class free functions, OSSL_STORE_LOADER_free, free_decoder and OSSL_ENCODER_free (src/property/store.rs:692)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x401770",
+          "names": [
+            "OSSL_STORE_LOADER_free"
+          ]
+        },
+        {
+          "address": "0x43df40",
+          "names": [
+            "OSSL_ENCODER_free"
+          ]
+        },
+        {
+          "address": "0x44a060",
+          "names": [
+            "_RNvNtCs3jSoIiEAfCP_10openssl_rs12decoder_meth12free_decoder"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp5fetch19destruct_evp_method",
+      "call_site": "0x51b0b0",
+      "text": "jmp    *0x40(%rsi)",
+      "slot": "EvpMethodData.destruct_method (offset 0x40)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-EVPM-DESTRUCT",
+      "source": "src/evp/fetch.rs:1026",
+      "writer": "0x51b2be mov %rsi,0x40(%rbp) stores the free_method argument (0x4d8(%rsp)); every in-image caller passes an in-image class destructor (src/evp/fetch.rs:1026)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp5fetch20construct_evp_method",
+      "call_site": "0x51b0fe",
+      "text": "call   *0x30(%rbx)",
+      "slot": "EvpMethodData.method_from_algorithm (offset 0x30)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-EVPM-FROM",
+      "source": "src/evp/fetch.rs:1024",
+      "writer": "0x51b2b6 mov %rax,0x30(%rbp) stores the new_method argument; every in-image caller materialises it with lea (e.g. 0x17a60b evp_md_from_algorithm, 0x1ac675 evp_kem_from_algorithm); src/evp/fetch.rs:1024",
+      "targets": [
+        {
+          "address": "0x1c5450",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kem22evp_kem_from_algorithm"
+          ]
+        },
+        {
+          "address": "0x1c8610",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8exchange26evp_keyexch_from_algorithm"
+          ]
+        },
+        {
+          "address": "0x206820",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp10asymcipher30evp_asym_cipher_from_algorithm"
+          ]
+        },
+        {
+          "address": "0x2ac150",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp4rand23evp_rand_from_algorithm"
+          ]
+        },
+        {
+          "address": "0x2d4b70",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt22keymgmt_from_algorithm.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3681c0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf22evp_kdf_from_algorithm.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x36a900",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest21evp_md_from_algorithm.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x36bca0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt23skeymgmt_from_algorithm.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x36d200",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature28evp_signature_from_algorithm.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3a50f0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac22evp_mac_from_algorithm.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x3a5a30",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher25evp_cipher_from_algorithm.llvm.11833346178172156334"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp5fetch23inner_evp_generic_fetch",
+      "call_site": "0x51b480",
+      "text": "call   *0x4d8(%rsp)",
+      "slot": "the free_method register/stack argument",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-INNER-FREE-METHOD",
+      "source": "src/evp/fetch.rs:1064",
+      "writer": "0x51b480 call *0x4d8(%rsp); every in-image direct caller pushes an in-image class destructor at the call site (e.g. 0x17a4b9 push EVP_CIPHER_free, 0x1ac6a7 push EVP_KEM_free)",
+      "targets": [
+        {
+          "address": "0x1ac6e0",
+          "names": [
+            "EVP_KEM_free"
+          ]
+        },
+        {
+          "address": "0x1ac9d0",
+          "names": [
+            "EVP_KEYEXCH_free"
+          ]
+        },
+        {
+          "address": "0x1f2040",
+          "names": [
+            "EVP_ASYM_CIPHER_free"
+          ]
+        },
+        {
+          "address": "0x28a230",
+          "names": [
+            "EVP_RAND_free"
+          ]
+        },
+        {
+          "address": "0x2c1b70",
+          "names": [
+            "EVP_KEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp7keymgmt16evp_keymgmt_free.llvm.4773954127625482869"
+          ]
+        },
+        {
+          "address": "0x3539d0",
+          "names": [
+            "EVP_KDF_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3kdf12evp_kdf_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x355540",
+          "names": [
+            "EVP_MD_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest11evp_md_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x357230",
+          "names": [
+            "EVP_SIGNATURE_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9signature18evp_signature_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x3574d0",
+          "names": [
+            "EVP_SKEYMGMT_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp8skeymgmt17evp_skeymgmt_free.llvm.9110605104811625755"
+          ]
+        },
+        {
+          "address": "0x38e690",
+          "names": [
+            "EVP_CIPHER_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6cipher15evp_cipher_free.llvm.11833346178172156334"
+          ]
+        },
+        {
+          "address": "0x38f430",
+          "names": [
+            "EVP_MAC_free",
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp3mac12evp_mac_free.llvm.11833346178172156334"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+      "call_site": "0x51dcbb",
+      "text": "call   *(%rbx)",
+      "slot": "AlgorithmData.reserve_store (offset 0x00)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-ALG-RESERVE",
+      "source": "src/evp/method_store.rs:440",
+      "writer": "ossl_algorithm_do_all stores its reserve_store argument at 0x51de31; the only reachable supplier is inner_evp_generic_fetch lea 0x23b4f0 at 0x51b32f (src/evp/method_store.rs:440)",
+      "targets": [
+        {
+          "address": "0x23b4f0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp12method_store35ossl_method_construct_reserve_store.llvm.16307397328588741432"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+      "call_site": "0x51dcf1",
+      "text": "call   *0x10(%rbx)",
+      "slot": "AlgorithmData.unreserve_store (offset 0x10)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-ALG-UNRESERVE",
+      "source": "src/evp/method_store.rs:440",
+      "writer": "ossl_algorithm_do_all stores its unreserve argument at 0x51de3f; inner_evp_generic_fetch materialises it with lea 0x23b540 at 0x51b31d (src/evp/method_store.rs:440)",
+      "targets": [
+        {
+          "address": "0x23b540",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp12method_store37ossl_method_construct_unreserve_store.llvm.16307397328588741432"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+      "call_site": "0x51dd5d",
+      "text": "call   *0x8(%rbx)",
+      "slot": "AlgorithmData.fn_ (offset 0x08)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-ALG-FN",
+      "source": "src/evp/method_store.rs:440",
+      "writer": "ossl_algorithm_do_all stores its fn argument at 0x51de35; inner_evp_generic_fetch materialises it with lea 0x23b2c0 at 0x51b336 (src/evp/method_store.rs:440)",
+      "targets": [
+        {
+          "address": "0x23b2c0",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp12method_store26ossl_method_construct_this.llvm.16307397328588741432"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this",
+      "call_site": "0x51ddb4",
+      "text": "call   *0x10(%rbx)",
+      "slot": "AlgorithmData.unreserve_store (offset 0x10)",
+      "reachable_in_openssh_closure": true,
+      "status": "resolved",
+      "resolver_id": "EVT-ALG-UNRESERVE",
+      "source": "src/evp/method_store.rs:440",
+      "writer": "ossl_algorithm_do_all stores its unreserve argument at 0x51de3f; inner_evp_generic_fetch materialises it with lea 0x23b540 at 0x51b31d (src/evp/method_store.rs:440)",
+      "targets": [
+        {
+          "address": "0x23b540",
+          "names": [
+            "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp12method_store37ossl_method_construct_unreserve_store.llvm.16307397328588741432"
+          ]
+        }
+      ]
+    },
+    {
+      "function": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider8activate29ossl_provider_doall_activated",
+      "call_site": "0x46b9c5",
+      "text": "call   *%rbp",
+      "slot": "register/stack value",
+      "reachable_in_openssh_closure": true,
+      "status": "unresolved",
+      "reason": "the indirect call reads the cb argument; OSSL_PROVIDER_do_all (exported, include/openssl/provider.h:64-88) forwards an application-supplied callback, so the target set is not bounded by this image; left unresolved, not contract-classed"
+    }
+  ],
+  "site_summary": {
+    "sites": 24,
+    "resolved": 23,
+    "unresolved": 1,
+    "resolved_reachable_in_openssh_closure": 22,
+    "resolved_not_reachable": [
+      "0x2ee75b _RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider6cipher28cipher_generic_init_internal"
+    ],
+    "unresolved_reachable": [
+      "0x46b9c5 _RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider8activate29ossl_provider_doall_activated"
+    ]
+  },
+  "negative_controls": {
+    "command": "python3 forensics/tools/consumer_closure.py --self-test (run in docker/openssl-rs-court.sh)",
+    "result": "PASS",
+    "cases": [
+      "in-image slot with a reachable writer resolves to the exact target",
+      "the same slot with an unreachable writer stays unresolved and is not absorbed by a contract class",
+      "the same slot with a writer absent from the image stays unresolved",
+      "a static-initialiser target that is not the first qword of an in-image table is refused",
+      "the earlier A1/provider negative controls still hold (name match without a per-call-site witness stays unresolved)"
+    ]
+  },
+  "closure": {
+    "ssh": {
+      "artifact": "court/tmp/openssh-closure/client/openssh-9.9p1/ssh",
+      "artifact_sha256": "4d67a7f0ede3fca2f551bed9b6373b07b82edc6758faee20fadf735972a2f603",
+      "candidate_libcrypto_sha256": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+      "verdict": "REFUSED",
+      "refusals": [
+        "STALE_HASH"
+      ],
+      "reachable_files": 315,
+      "counts": {
+        "reachable_files": 315,
+        "reachable_production_obligations": 2,
+        "DISCHARGED": 2,
+        "BLOCKED": 0,
+        "UNKNOWN": 0,
+        "by_mechanism": {
+          "EVP_PKEY_PROVIDER": 2
+        },
+        "v1_production_operations_total": 67,
+        "v1_uncontracted_operations_total": 221
+      },
+      "precision": {
+        "indirect_sites": 51988,
+        "resolved_sites": 51745,
+        "unresolved_sites": 243,
+        "reachable_unresolved_sites": 3,
+        "reachable_target_bounded_unresolved_sites": 1,
+        "reachable_contract_bounded_sites": 2,
+        "unclassified_reachable_sites": 0
+      },
+      "evidence_classes": {
+        "R2_resolved": 318,
+        "unmatched": 240,
+        "A2_resolved": 13,
+        "R3_resolved": 6,
+        "T_in_image_slot_resolved": 23,
+        "A1_contract_bounded": 2,
+        "A1_witness_missing": 1
+      },
+      "element_7": {
+        "established": false,
+        "status": "FAIL",
+        "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+        "reachable_unresolved_sites": 3,
+        "target_bounded_unresolved_sites": 1,
+        "contract_bounded_sites": 2,
+        "contract_bounded_by_class": {
+          "ABI_CONTRACT_PROVIDER": 2
+        },
+        "unclassified_reachable_sites": 0,
+        "target_sets_remain_unbounded": true,
+        "why": "1 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+      },
+      "reachable_residual_sites": [
+        {
+          "function": "0x407f90",
+          "text": "call   *%rcx",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "reason": "provider ABI contract witness: OsslEncoder.import_object (offset 0x70)"
+        },
+        {
+          "function": "0x2b9720",
+          "text": "call   *%rax",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "reason": "provider ABI contract witness: OsslProvider.init_function (offset 0x40)"
+        },
+        {
+          "function": "0x46b750",
+          "text": "call   *%rbp",
+          "class": "materialised",
+          "reason": "provider-contract-witness-missing:the cb argument; OSSL_PROVIDER_do_all (exported) forwards an application-supplied callback, so no in-image target bound exists"
+        }
+      ]
+    },
+    "sshd": {
+      "artifact": "court/tmp/openssh-closure/server/openssh-9.9p1/sshd",
+      "artifact_sha256": "95ae6380e17004774f4ce7314728b5419081099c0ea43b21590771104abd1ce2",
+      "candidate_libcrypto_sha256": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+      "verdict": "REFUSED",
+      "refusals": [
+        "STALE_HASH"
+      ],
+      "reachable_files": 305,
+      "counts": {
+        "reachable_files": 305,
+        "reachable_production_obligations": 2,
+        "DISCHARGED": 2,
+        "BLOCKED": 0,
+        "UNKNOWN": 0,
+        "by_mechanism": {
+          "EVP_PKEY_PROVIDER": 2
+        },
+        "v1_production_operations_total": 67,
+        "v1_uncontracted_operations_total": 221
+      },
+      "precision": {
+        "indirect_sites": 51988,
+        "resolved_sites": 51745,
+        "unresolved_sites": 243,
+        "reachable_unresolved_sites": 3,
+        "reachable_target_bounded_unresolved_sites": 1,
+        "reachable_contract_bounded_sites": 2,
+        "unclassified_reachable_sites": 0
+      },
+      "evidence_classes": {
+        "R2_resolved": 318,
+        "unmatched": 240,
+        "A2_resolved": 13,
+        "R3_resolved": 6,
+        "T_in_image_slot_resolved": 23,
+        "A1_contract_bounded": 2,
+        "A1_witness_missing": 1
+      },
+      "element_7": {
+        "established": false,
+        "status": "FAIL",
+        "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+        "reachable_unresolved_sites": 3,
+        "target_bounded_unresolved_sites": 1,
+        "contract_bounded_sites": 2,
+        "contract_bounded_by_class": {
+          "ABI_CONTRACT_PROVIDER": 2
+        },
+        "unclassified_reachable_sites": 0,
+        "target_sets_remain_unbounded": true,
+        "why": "1 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+      },
+      "reachable_residual_sites": [
+        {
+          "function": "0x407f90",
+          "text": "call   *%rcx",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "reason": "provider ABI contract witness: OsslEncoder.import_object (offset 0x70)"
+        },
+        {
+          "function": "0x2b9720",
+          "text": "call   *%rax",
+          "class": "ABI_CONTRACT_PROVIDER",
+          "reason": "provider ABI contract witness: OsslProvider.init_function (offset 0x40)"
+        },
+        {
+          "function": "0x46b750",
+          "text": "call   *%rbp",
+          "class": "materialised",
+          "reason": "provider-contract-witness-missing:the cb argument; OSSL_PROVIDER_do_all (exported) forwards an application-supplied callback, so no in-image target bound exists"
+        }
+      ]
+    }
+  },
+  "result": {
+    "resolved_as_targets": 23,
+    "kept_unresolved": 1,
+    "unresolved_reason": "ossl_provider_doall_activated's cb argument is filled by OSSL_PROVIDER_do_all, an exported API that forwards the application's callback; the value is not bounded by the image, so it is not resolved and not classified under a contract",
+    "reachable_unresolved_sites_before": 25,
+    "reachable_unresolved_sites_after": 3,
+    "reachable_target_bounded_unresolved_before": 23,
+    "reachable_target_bounded_unresolved_after": 1,
+    "element_7_status": "FAIL",
+    "element_7_why": "the remaining reachable target-bounded site is the application-supplied OSSL_PROVIDER_do_all callback; the two provider-witness sites remain contract-bounded"
+  },
+  "non_claims": [
+    "This receipt does not promote openssh or openssh-server: both closures still refuse on STALE_HASH and SAFE_COMPATIBLE remains false.",
+    "Resolving a target set is not a safety or compatibility claim; it narrows the reachability upper bound only for the exact candidate.",
+    "element 7 still fails because one reachable indirect call is genuinely application-supplied; it was not reclassified to make the element pass.",
+    "The 13 ProvCipherHw init targets bound the generic-einit site; the legacy cipher rows call hw.init from their own init function (a different site) and are not included here.",
+    "The candidate is not frozen or committed; this is a working-tree measurement against libcrypto 26ba36ff, and the inventory still names c2d73687."
+  ]
+}
