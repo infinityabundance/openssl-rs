@@ -1018,6 +1018,40 @@ authority and the candidate for this function, and there was never supposed to b
 - **When it changes:** it does not. 3.6.3 and 3.6.4 both fault; the boundary is permanent and the
   claim stays narrowed.
 
+### D-LEGACY-MD-INIT-MD-DATA-2 — the legacy MDC2/SHA-3/SHAKE/SM3 initialisers write through a
+### NULL `md_data` (SHA-3/SHAKE also read `ctx->digest`)
+
+- **Obligation:** `mdc2_init` (`crypto/evp/legacy_mdc2.c:14-20`), `sm3_int_init`
+  (`crypto/sm3/legacy_sm3.c:15`), and `sha3_int_init`/`shake_init` (`crypto/evp/legacy_sha.c:29-47`)
+  are the same `IMPLEMENT_LEGACY_EVP_MD_METH(_LC)` shape over `MDC2_Init`, `ossl_sm3_init` and
+  `ossl_sha3_init`. The SHA-3/SHAKE bodies additionally read `ctx->digest->md_size` *before* the
+  write. The exported `EVP_MD_meth_get_init` hands each callback to any C caller; a fresh
+  `EVP_MD_CTX_new()` is zero-filled, so `md_data` and `digest` are NULL, and a NULL context
+  dereferences NULL as well.
+- **Authority:** **measured**. Eight probes, each run in its own process against
+  `forensics/authorities/prefix/openssl-3.6.4-production` (mdc2, SHA3-256, SHAKE128 and SM3 ×
+  {fresh context, NULL context}). Each printed the method, callback and context shape
+  (`md_data=(nil) digest=(nil)` for the fresh shape) and died with **exit 139** (SIGSEGV) in the
+  initialiser. The fault is the measurement, so there is nothing to compare past it.
+- **Crate:** the MDC2 and SM3 callbacks validate the context through `init_md_data`; the
+  SHA-3/SHAKE callbacks validate it through `init_keccak`, which additionally requires a positive
+  `md_size`. A NULL context, a NULL `md_data`, a NULL method, a too-small `ctx_size` and a
+  non-positive `md_size` all answer `0` — the C initialise failure value — and touch no memory. A
+  context bound to the callback's own table object, or to another method with a sufficient
+  `ctx_size`, still calls the authority's initialiser and returns `1`. No error is raised, because
+  the authority raises nothing on this path; it does not return.
+- **Reason:** `D-MD-NULL-CALLBACK-1`'s and `D-LEGACY-MD-INIT-MD-DATA-1`'s: a write or read through
+  a NULL pointer is not a contract to reproduce (AGENTS.md §3). The getter's documented contract
+  says nothing about the context's `md_data`/`digest`, so the writable-block precondition cannot
+  be discharged by the ABI; the callback must establish it itself.
+- **Claim removed:** calling these exported initialiser pointers with a fresh or NULL context is
+  not claimed compatible — all fault in the authority. On a context that establishes a writable
+  digest block the digest maths and the result are unchanged (`legacy_mdc2_init_…`,
+  `legacy_sha3_init_…`, `legacy_shake_init_…` and `legacy_sm3_init_…`; SHA3-256("abc") =
+  `3a985da7…11431532`, SM3("abc") = `66c7f0f4…8f4ba8e0` from the pinned authority).
+- **When it changes:** it does not. The authority faults on both shapes; the boundary is permanent
+  and the claim stays narrowed.
+
 ### D-LEGACY-BLAKE2-INIT-MD-DATA-1 — the legacy BLAKE2b/BLAKE2s initialisers write through a
 ### NULL `md_data`
 
