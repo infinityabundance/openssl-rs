@@ -1,0 +1,199 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/atlas-refresh/doall-reachability/v1",
+  "kind": "narrow-forensic-reachability-receipt",
+  "subphase": "safe-c33/openssh-element7-doall",
+  "generated_utc": "2026-10-27T12:03:21Z",
+  "question": "Is ossl_provider_doall_activated (libcrypto, containing 0x46b9c5) reachable from the ssh and sshd consumers, and if so is the cb argument necessarily application-supplied?",
+  "scope": "read-only binary/import/reachability analysis; src/ not edited; consumer_closure.py not modified; no classification changed; no commit or push",
+  "source_identity": {
+    "repository_head": "fa6e1b7d585c08b50cc241fd73d0691c6dcc7eff",
+    "branch": "main",
+    "tracked_tree_clean": true,
+    "inventory_path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1e-candidate-freeze.json",
+    "inventory_source_head": "2ff3019472b31d76dbf521ebec055d8d6b5f49a0",
+    "inventory_file_sha256": "73c6316ec26f7586890db0ff17689b262e7001cbab17ed987f3cb46f32f2729e",
+    "closure_tool": "forensics/tools/consumer_closure.py",
+    "closure_tool_sha256": "7aad862dc277666bb0795949dad45cfa37c57342e887feff35837eae7735bd00",
+    "closure_tool_version": 3,
+    "note": "identity is recorded, not certified: the install DSO 26ba36ff does not match the inventory's c2d73687, so the closure's STALE_HASH refusal persists"
+  },
+  "artifacts": {
+    "ssh": {
+      "path": "court/tmp/openssh-closure/client/openssh-9.9p1/ssh",
+      "sha256": "4d67a7f0ede3fca2f551bed9b6373b07b82edc6758faee20fadf735972a2f603",
+      "dt_needed": ["libcrypto.so.3", "libz.so.1", "libc.so.6"],
+      "build_record": "embedded in court/tmp/openssh-closure/closure-ssh-witness.json at artifact_identity/../build_provenance/record",
+      "build_record_artifact_sha256": "4d67a7f0ede3fca2f551bed9b6373b07b82edc6758faee20fadf735972a2f603",
+      "built_utc": "2026-10-27T07:55:00Z",
+      "build_cwd": "court/tmp/openssh-closure/client/openssh-9.9p1"
+    },
+    "sshd": {
+      "path": "court/tmp/openssh-closure/server/openssh-9.9p1/sshd",
+      "sha256": "95ae6380e17004774f4ce7314728b5419081099c0ea43b21590771104abd1ce2",
+      "dt_needed": ["libcrypto.so.3", "libc.so.6"],
+      "build_record": "embedded in court/tmp/openssh-closure/closure-sshd-witness.json at artifact_identity/../build_provenance/record",
+      "build_record_artifact_sha256": "95ae6380e17004774f4ce7314728b5419081099c0ea43b21590771104abd1ce2",
+      "built_utc": "2026-10-27T07:55:00Z",
+      "build_cwd": "court/tmp/openssh-closure/server/openssh-9.9p1"
+    },
+    "candidate_libcrypto": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "resolved_path_in_court": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "26ba36ffff2882845fa51d8f29d8239a51c15422629a31c216af8abafa163be0",
+      "inventory_recorded_sha256": "c2d7368777e8bef776ea5106913855f881ed923d126b567cb52a7a17e05af326",
+      "matches_inventory": false
+    },
+    "stale_ledger_records_observed": {
+      "court/tmp/openssh-closure/openssh-build-record.json": "artifact_sha256 c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57, candidate_libcrypto e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463",
+      "court/tmp/openssh-closure/openssh-server-build-record.json": "artifact_sha256 dccccf077b27c975c29338a52c865ea6ccfa88cb7a5bfe9ed310584f052e5002, candidate_libcrypto e10b0254b725f0dff985777c47a5ff8d2dc390e88c7ae1ce092016364ec5d463",
+      "note": "these on-disk records predate the 07:55 rebuild analysed here; the witness JSONs carry the matching embedded records (4d67a7f0 and 95ae6380)"
+    },
+    "closure_outputs_referenced": {
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-targets.json": "56bb914eca8992253b0f3d9ae2d2a7a9fe7de571588fe7d2aa17635227875767",
+      "court/tmp/openssh-closure/closure-ssh-witness.json": "dc7b23a342c7a71c2da7555405dba6c67d50121a419f2ecd97a7bdf1ac8de775"
+    }
+  },
+  "commands_verbatim": [
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && export PATH=/usr/local/cargo/bin:$PATH && export TMPDIR=/work/court/tmp && sha256sum court/tmp/openssh-closure/client/openssh-9.9p1/ssh court/tmp/openssh-closure/server/openssh-9.9p1/sshd artifacts/phase2/install/lib/libcrypto.so.3'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && nm -D --undefined-only court/tmp/openssh-closure/client/openssh-9.9p1/ssh; nm -D --undefined-only court/tmp/openssh-closure/server/openssh-9.9p1/sshd'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && nm -D --undefined-only <artifact> | awk \"{print \\$NF}\" | sed \"s/@.*//\" | grep -E \"^OSSL_PROVIDER|_provider_|do_all\"'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && objdump -T artifacts/phase2/install/lib/libcrypto.so.3 | grep -E \"OSSL_PROVIDER_do_all|doall\"'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && nm artifacts/phase2/install/lib/libcrypto.so.3 | grep -i -E \"doall|46b750\"'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && objdump -d --no-show-raw-insn artifacts/phase2/install/lib/libcrypto.so.3 | awk \"/^[0-9a-f]+ <.*>:/{fn=\\$0} /call.*46b750/{print fn; print}\"'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && objdump -d --no-show-raw-insn --start-address=0x46b750 --stop-address=0x46ba10 artifacts/phase2/install/lib/libcrypto.so.3'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && objdump -d --no-show-raw-insn --start-address=0x51dea8 --stop-address=0x51def5 artifacts/phase2/install/lib/libcrypto.so.3'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && objdump -d --no-show-raw-insn --start-address=0x441860 --stop-address=0x441943 artifacts/phase2/install/lib/libcrypto.so.3'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && objdump -d --no-show-raw-insn artifacts/phase2/install/lib/libcrypto.so.3 | awk \"/^[0-9a-f]+ <.*>:/{fn=\\$0} /441860/{print fn; print}\"'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && readelf -rW artifacts/phase2/install/lib/libcrypto.so.3 | grep -i -E \"441860|PROVIDER_do_all\"'",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && python3 court/tmp/doall_bfs.py' (direct-call BFS over objdump -d edges rooted at each consumer's imported defined symbols; scratch driver in gitignored court/tmp, consumer_closure.py untouched)",
+    "bash docker/openssl-rs-court.sh exec bash -lc 'cd /work && python3 court/tmp/doall_nc.py' (the same BFS plus the three negative controls)"
+  ],
+  "import_scan": {
+    "method": "nm -D --undefined-only and objdump -T on the exact analysed artifacts; provider filter ^OSSL_PROVIDER|_provider_|do_all",
+    "ssh": {
+      "undefined_symbols_total": 396,
+      "openssl_defined_imports": 178,
+      "provider_related_imported_symbols": [],
+      "imports_OSSL_PROVIDER_do_all": false,
+      "only_OSSL_prefixed_import": "OPENSSL_init_crypto",
+      "control_EVP_DigestInit_ex_detected": true
+    },
+    "sshd": {
+      "undefined_symbols_total": 324,
+      "openssl_defined_imports": 131,
+      "provider_related_imported_symbols": [],
+      "imports_OSSL_PROVIDER_do_all": false,
+      "only_OSSL_prefixed_import": "OPENSSL_init_crypto",
+      "control_EVP_DigestInit_ex_detected": true
+    },
+    "answer": "Neither consumer imports OSSL_PROVIDER_do_all or any OSSL_PROVIDER_* symbol. Both do import EVP entry points whose implementation reaches ossl_provider_doall_activated, but through the fixed in-image callback described below, not through an application callback."
+  },
+  "in_image_callers": {
+    "callee": {
+      "address": "0x46b750",
+      "symbol": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider8activate29ossl_provider_doall_activated",
+      "exported": false,
+      "binding": "local (nm type t); absent from .dynsym",
+      "indirect_call_site": "0x46b9c5",
+      "indirect_call_text": "call   *%rbp",
+      "cb_provenance": "rbp is loaded at 0x46b9a0 from 0x18(%rsp), stored at 0x46b7d9 from r15, and r15 received the incoming rsi at 0x46b761 (mov %rsi,%r15); the argument is the third ABI argument cb, forwarded by the caller"
+    },
+    "callers": [
+      {
+        "caller_address": "0x441860",
+        "caller_symbol": "OSSL_PROVIDER_do_all",
+        "caller_exported": true,
+        "exports_as": "OSSL_PROVIDER_do_all@@OPENSSL_3.0.0 (objdump -T: g DF .text)",
+        "call_site": "0x441867",
+        "callback_argument": "incoming rsi, forwarded unchanged (prologue pushes r14/rbx and subtracts rsp only; rdi/rsi/rdx are untouched before the call)",
+        "callback_source": "application-supplied",
+        "reachable_from_ssh": false,
+        "reachable_from_sshd": false
+      },
+      {
+        "caller_address": "0x51de10",
+        "caller_symbol": "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9algorithm21ossl_algorithm_do_all",
+        "caller_exported": false,
+        "binding": "local (nm type t)",
+        "call_site": "0x51deeb",
+        "callback_argument": "lea -0x2c8(%rip),%rsi at 0x51dee1 materialises 0x51dc20",
+        "callback_value": "0x51dc20 _RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9algorithm17algorithm_do_this.llvm.3711015833801215894",
+        "callback_source": "fixed link-time in-image address",
+        "reachable_from_ssh": true,
+        "reachable_from_sshd": true
+      }
+    ],
+    "caller_count": 2,
+    "other_callers": "none: objdump -d over the whole image reports exactly these two direct call sites of 0x46b750",
+    "address_taken_check": "readelf -rW shows no relocation naming 0x441860 and objdump finds no lea/mov/call to 0x441860 outside the function's own label; OSSL_PROVIDER_do_all is not address-taken in-image"
+  },
+  "reachability": {
+    "method": "direct-call BFS over objdump -d direct call edges in libcrypto.so.3, rooted at the addresses the consumer imports (178 roots for ssh, 131 for sshd). A direct-call path is a genuine reachable path and does not depend on any indirect resolution.",
+    "engine_cross_check": "edge-targets.json records reachable_in_openssh_closure=true for the 0x46b9c5 site; the direct BFS independently reproduces reachability without the resolver",
+    "doall_activated_reachable": {
+      "ssh": true,
+      "sshd": true,
+      "shortest_chain_both": [
+        "EVP_DigestVerifyInit (libcrypto export, imported by ssh and sshd)",
+        "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp6digest14do_sigver_init.llvm.9110605104811625755 (0x368a60)",
+        "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp5fetch23inner_evp_generic_fetch.llvm.3711015833801215894 (0x51b150)",
+        "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs3evp9algorithm21ossl_algorithm_do_all (0x51de10)",
+        "_RNvNtNtCs3jSoIiEAfCP_10openssl_rs8provider8activate29ossl_provider_doall_activated (0x46b750)"
+      ],
+      "note": "other imported EVP entry points reach the same function through other in-image paths; the named chain is the shortest one BFS finds and is sufficient"
+    },
+    "OSSL_PROVIDER_do_all_reachable": {
+      "ssh": false,
+      "sshd": false,
+      "why": "not imported by either consumer, no in-image call/lea/mov reference, no relocation naming 0x441860, and it is not in the BFS reachable set"
+    },
+    "callback_on_reachable_path": "fixed 0x51dc20 algorithm_do_this, not application-supplied"
+  },
+  "negative_controls": [
+    {
+      "id": "A_known_reachable",
+      "subject": "inner_evp_generic_fetch (0x51b150), reachable but not an import root",
+      "expected": true,
+      "observed_ssh": true,
+      "observed_sshd": true,
+      "result": "PASS: the BFS finds a known reachable non-root function"
+    },
+    {
+      "id": "B_known_unreachable",
+      "subject": "OSSL_HTTP_transfer (0x1b7090), OSSL_PROVIDER_add_builtin (0x441090), OSSL_CRMF_MSG_create_popo (0x22a630); exported but unrelated to both consumers",
+      "expected": false,
+      "observed_ssh": [false, false, false],
+      "observed_sshd": [false, false, false],
+      "result": "PASS: the BFS excludes exported functions that no consumer path reaches"
+    },
+    {
+      "id": "C_import_scan_live",
+      "subject": "EVP_DigestInit_ex, genuinely imported by both consumers",
+      "expected": true,
+      "observed_ssh": true,
+      "observed_sshd": true,
+      "result": "PASS: the import scan detects a symbol both consumers really import, so the empty provider-import result is not a broken scan"
+    }
+  ],
+  "verdict": {
+    "code": "A",
+    "label": "UNREACHABLE_FOR_CONSUMER",
+    "decisive_fact": "The containing function is reachable in both consumers, but only through ossl_algorithm_do_all's call at 0x51deeb, which passes the link-time-constant local callback algorithm_do_this (0x51dc20). The only application-supplied caller, exported OSSL_PROVIDER_do_all (call at 0x441867), is not imported by ssh or sshd, has no in-image reference or relocation, and is not in the reachable set. Therefore the unresolved application-callback target set attributed to OSSL_PROVIDER_do_all lies outside both consumers' closures.",
+    "qualification": "Verdict A is claimed for the disputed application-supplied edge, not for the function's reachability in general: ossl_provider_doall_activated is itself reachable on a fixed in-image callback. The engine's unresolved classification is an over-approximation from an unreachable caller, not a reachable application edge.",
+    "consequence": "Element 7 can be established for ssh/sshd on reachability grounds for this edge without widening any contract class. This receipt does not perform that adjudication and does not change the closure's recorded FAIL or its STALE_HASH refusal."
+  },
+  "non_claims": [
+    "Does not modify consumer_closure.py and does not change any classification, evidence class, or element-7 status.",
+    "Does not claim the openssh closure passes; it still refuses on STALE_HASH (install 26ba36ff vs inventory c2d73687) and SAFE_COMPATIBLE remains false.",
+    "Does not claim the two ABI_CONTRACT_PROVIDER sites (OsslEncoder.import_object, OsslProvider.init_function) are discharged; their evidence is outside this receipt.",
+    "Does not claim the exact candidate is a frozen S identity; the install DSO does not match the inventory and the receipt is evidence about the working install, not a freeze.",
+    "Does not claim element 7 passes globally: only that this specific unresolved site's application-callback target set is unreachable from ssh/sshd."
+  ],
+  "does_not_prove": [
+    "Does not prove memory safety or soundness of ossl_provider_doall_activated or algorithm_do_this.",
+    "Does not prove the safety of the two provider-contract-bounded obligations.",
+    "Does not prove the closure's remaining 2 reachable unresolved sites are benign or correct.",
+    "Does not prove the openssh/sshd binaries correspond to the inventory freeze; they do not (STALE_HASH).",
+    "A clean import scan is an absence-of-import result for this exact pair of binaries, not a general statement about OpenSSH or about other builds/versions."
+  ]
+}
