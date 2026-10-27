@@ -644,6 +644,17 @@ def _canon(reg):
     return _SUBREG.get(reg, reg)
 
 
+def _is_compare(mn: str) -> bool:
+    """True for a compare/test mnemonic, including objdump's size suffixes.
+
+    A memory-operand compare is printed with its operand size (`cmpq $0,
+    (%rsp)`); treating only bare `cmp` as a compare let the generic fall-through
+    take the memory operand as a destination and clobber a tracked stack slot.
+    """
+    return (mn.startswith("cmp") or mn.startswith("test")
+            or mn in ("ucomiss", "comiss", "ptest", "bt"))
+
+
 def _split_ops(text):
     ops, depth, cur = [], 0, []
     for ch in text:
@@ -759,6 +770,11 @@ class PrecisionResolver:
         self.field_stores = collections.defaultdict(set)
         self.field_open = set()
         self.switch_cache = {}
+        # Compiler switch tables carry an explicit bound: the `cmp $N, idx` /
+        # unsigned-above branch that guards the table.  `switch_bounds[base]`
+        # records the entry count decoded from that bound; a base absent from
+        # the map has no recognised bound and keeps the conservative scan.
+        self.switch_bounds = {}
         self.calls = []
         self.summary = collections.defaultdict(lambda: [set() for _ in _ARGREGS])
         self.summary_open = collections.defaultdict(set)
@@ -822,23 +838,85 @@ class PrecisionResolver:
         return {v for v in self.field_stores.get(off, ())
                 if isinstance(v, int) and self.g.is_data(v)}
 
-    def switch_targets(self, base):
-        if base in self.switch_cache:
-            return self.switch_cache[base]
+    def switch_targets(self, base, site_addr=None):
+        key = (base, site_addr)
+        if key in self.switch_cache:
+            return self.switch_cache[key]
         sec = self.g.section_of(base)
         targets = set()
         if sec:
             a, _off, size = self.g.sections[sec]
             data = self.g._section_bytes(sec)
             start = base - a
-            end = min(len(data) - 3, start + 65536)
+            count = self.switch_bounds.get(site_addr) if site_addr is not None else None
+            if count is not None:
+                # Exact table length, from the compiler's own bounds check.
+                end = min(len(data) - 3, start + count * 4)
+            else:
+                # No decodable bound: retain the conservative scan rather than
+                # guessing a length.
+                end = min(len(data) - 3, start + 65536)
             for i in range(start, end, 4):
                 v = struct.unpack_from("<i", data, i)[0]
                 tgt = base + v
                 if tgt in self.g.start_set:
                     targets.add(tgt)
-        self.switch_cache[base] = targets
+        self.switch_cache[key] = targets
         return targets
+
+    def _record_switch_bounds(self, insns):
+        """Decode compiler-emitted switch-table lengths for one function.
+
+        A relative jump table is guarded by the compiler's own bound:
+        ``cmp $N, idx`` followed by an unsigned-above branch.  ``N + 1``
+        entries are then live (``N`` for ``jae``).  Reading past that bound
+        admits whatever int32 happens to follow the table in ``.rodata`` as a
+        relative entry, which invents reachability.  The bound is keyed by the
+        indirect jump's own address, because the table base can be loaded well
+        before the bound check and unrelated ``lea``s may sit in between.  A
+        jump without a recognised bound keeps the conservative scan (negative
+        control).
+        """
+        for i, (addr, text) in enumerate(insns):
+            body = text.split("#", 1)[0].strip()
+            if not (body.startswith("jmp") and "*" in body):
+                continue
+            # The index register of the relative table load, e.g.
+            # `movslq (%rcx,%rax,4),%rax` or `movslq 0x0(%rbp,%rcx,4),%rax`.
+            index = None
+            for j in range(i - 1, max(-1, i - 9), -1):
+                ins = insns[j][1].split("#", 1)[0].strip()
+                m = re.match(r"^movs[lq]q?\s+.*\([^,]+,(%[a-z0-9]+),[48]\)", ins)
+                if m:
+                    index = _canon(m.group(1))
+                    break
+            for j in range(i - 1, max(-1, i - 31), -1):
+                t = insns[j][1].split("#", 1)[0].strip()
+                m = re.match(r"^cmp\w*\s+\$0x([0-9a-f]+),(%[a-z0-9]+)", t)
+                if not m:
+                    continue
+                # A bound is evidence only when it compares the table's own
+                # index register; a nearby compare of another value is not.
+                if index is not None and _canon(m.group(2)) != index:
+                    continue
+                bound = int(m.group(1), 16)
+                exclusive = False
+                found = False
+                for k in range(j + 1, i):
+                    branch = insns[k][1].split("#", 1)[0].strip()
+                    if re.match(r"^ja\s", branch):
+                        found = True
+                        break
+                    if re.match(r"^jae\s", branch):
+                        exclusive = True
+                        found = True
+                        break
+                if not found:
+                    # No unsigned-above branch between the compare and the
+                    # indirect jump: this compare does not guard the table.
+                    continue
+                self.switch_bounds.setdefault(addr, bound if exclusive else bound + 1)
+                break
 
     def resolve_set(self, f, vals):
         if vals is None:
@@ -1236,7 +1314,7 @@ class PrecisionResolver:
                     unresolved = True
                     partial.add("other")
             for t in switch:
-                targets |= self.switch_targets(t)
+                targets |= self.switch_targets(t, addr)
             klass = "resolved" if not unresolved else "materialised"
             self.note_site(kind, fstart, addr, text, targets, unresolved,
                            "reg-value" if not unresolved else
@@ -1394,7 +1472,11 @@ class PrecisionResolver:
             return
         if mn in ("nop", "nopw", "nopl") or mn.startswith("data16") or mn.startswith("cs"):
             return
-        if mn in ("cmp", "test", "ucomiss", "comiss", "ptest", "bt"):
+        # Objdump emits a size suffix on memory-operand compares (`cmpq $0,
+        # (%rsp)`); treating only the bare `cmp` mnemonic as a compare let the
+        # generic fall-through below take the compare's last operand as a
+        # destination and clobber the stack slot it was testing.
+        if _is_compare(mn):
             return
         if mn.startswith(("push", "pop")):
             if mn == "push":
@@ -1504,6 +1586,7 @@ class PrecisionResolver:
     def analyze_function(self, fstart, insns):
         if not insns:
             return
+        self._record_switch_bounds(insns)
         addr_index = {a: i for i, (a, _t) in enumerate(insns)}
         leaders = {0}
         for i, (_a, text) in enumerate(insns):
@@ -1632,8 +1715,9 @@ R3_FUNCTIONS = ("11int_ctx_new", "12def_load_bio", "14template_clear",
 # provider module loaded from configuration.  That path is reachable in these
 # workloads: libssl's OPENSSL_init_ssl adds OPENSSL_INIT_LOAD_CONFIG
 # unconditionally and SSL_CTX_new_ex calls it, so a configuration file can name
-# an external module.  A1 is therefore *not* statically bounded and is left
-# unresolved as ABI_OPEN_PROVIDER_CONFIG.
+# an external module.  The *target set* is therefore unbounded, but the
+# obligation is bounded by the public provider ABI contract, so the site is
+# encoded as ABI_CONTRACT_PROVIDER (never as a resolved in-image target set).
 A1_FUNCTIONS = ("algorithm_do_this", "ossl_method_store_cache_set",
                 "ossl_method_store_fetch", "ossl_method_store_cache_get",
                 "ossl_method_store_add", "impl_cache_flush_cache",
@@ -1660,13 +1744,145 @@ A2_REGISTRATION_SETTERS = frozenset({
     "UI_create_method", "X509_LOOKUP_meth_new", "CONF_module_add",
 })
 
+# --------------------------------------------------------------------------- #
+# contract-bounded classes
+# --------------------------------------------------------------------------- #
+#
+# A contract-bounded class is *not* a resolved edge.  The site keeps an unbounded
+# target set and stays in the closure's residual list; what the class establishes
+# is that the site's safety precondition is carried by a public OpenSSL ABI
+# contract, which AGENTS.md section 7 criterion 2 admits as a discharged caller
+# obligation.  The receipt keeps these classes distinct from a statically
+# resolved target set so a reader cannot mistake one for the other.
+ABI_CONTRACT_PROVIDER = "ABI_CONTRACT_PROVIDER"
+ABI_CONTRACT_ALLOCATOR = "ABI_CONTRACT_ALLOCATOR"
+ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR})
+
+ABI_CONTRACTS = {
+    ABI_CONTRACT_PROVIDER: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": "OSSL_provider_init",
+        "citation": [
+            "include/openssl/core.h:40-44 -- struct ossl_dispatch_st { int function_id; "
+            "void (*function)(void); }, and OSSL_DISPATCH_END { 0, NULL }: an array of "
+            "dispatch elements is always terminated by function_id == 0",
+            "include/openssl/core.h:186-195 -- typedef int OSSL_provider_init_fn("
+            "const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, "
+            "const OSSL_DISPATCH **out, void **provctx); |out| is the base-function "
+            "array the provider returns to the core; |provctx| is passed to the "
+            "provider's other context constructors",
+            "include/openssl/core_dispatch.h:30-68 -- function identities start at 1 "
+            "(0 terminates the table) and each OSSL_FUNC_* extractor names the "
+            "signature the core will call",
+            "include/openssl/provider.h:78-85 -- OSSL_PROVIDER_add_builtin("
+            "OSSL_LIB_CTX *, const char *name, OSSL_provider_init_fn *init_fn); the "
+            "same entry-point type is what an externally loaded module implements",
+        ],
+        "provider_obligation": (
+            "a provider module returns its own dispatch table and owns the "
+            "correctness and lifetime of every object it allocates: its provider "
+            "context, algorithm contexts, key objects, and the memory behind the "
+            "OSSL_FUNC_* callbacks it publishes; the core only calls those callbacks "
+            "through the returned table"),
+        "covers": (
+            "the interface by which an out-of-image provider is entered, the shape of "
+            "the dispatch table it returns, and the provider's own allocation "
+            "correctness"),
+        "does_not_cover": [
+            "which module (if any) the effective configuration names; the target set "
+            "is unbounded",
+            "the memory safety or correctness of the external provider, which is the "
+            "provider's own obligation after the ABI boundary",
+            "reachability from these two workloads, or that a configuration file "
+            "exists at run time",
+            "application code not loaded as a provider; it is not a node in this "
+            "closure",
+            "in-image target completeness for the built-in provider path",
+        ],
+    },
+    ABI_CONTRACT_ALLOCATOR: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": "CRYPTO_set_mem_functions",
+        "citation": [
+            "include/openssl/crypto.h:367-375 -- typedef void *(*CRYPTO_malloc_fn)("
+            "size_t num, const char *file, int line); typedef void *(*CRYPTO_realloc_fn)("
+            "void *addr, size_t num, const char *file, int line); typedef void "
+            "(*CRYPTO_free_fn)(void *addr, const char *file, int line); int "
+            "CRYPTO_set_mem_functions(CRYPTO_malloc_fn, CRYPTO_realloc_fn, "
+            "CRYPTO_free_fn)",
+            "man3/CRYPTO_set_mem_functions (OpenSSL 3.6.4) -- the replacement "
+            "allocator functions must have the same semantics as the standard C "
+            "library malloc(), realloc() and free(); realloc may be NULL, in which "
+            "case allocation/copy/free implements it; the functions must be installed "
+            "before any other OpenSSL function is called; once installed, their "
+            "correctness and thread safety are the application's responsibility",
+        ],
+        "covers": (
+            "the public seam through which an application replaces the allocator "
+            "triple, and the semantics the replacement must implement (matching "
+            "malloc/free, and realloc or a NULL realloc with copy semantics)"),
+        "does_not_cover": [
+            "that any particular triple is installed; the target set is unbounded",
+            "the correctness or thread safety of a replacement allocator, which is "
+            "the application's obligation once installed",
+            "the NULL globals observed in this configuration: that is a runtime fact, "
+            "not a link-time bound",
+            "direct calls to a replacement function outside the CRYPTO_* seam, or "
+            "application allocations that never enter libcrypto",
+        ],
+    },
+}
+
+
+def contract_for(cls: str) -> dict | None:
+    """The ABI-contract record for a contract-bounded site class."""
+    return ABI_CONTRACTS.get(cls)
+
+
+def evaluate_predicate_element_7(reachable_residual_sites, unclassified_sites) -> dict:
+    """Element 7 under AGENTS.md section 7 criterion 2.
+
+    An unresolved *target set* is still reported as such.  The element is met
+    only when every remaining reachable unresolved site is contract-bounded and
+    no reachable site is unclassified; an unrecognised indirect edge is
+    target-bounded unresolved and therefore keeps the element failing.
+    """
+    contract_sites = [(d, f, s) for d, f, s in reachable_residual_sites
+                      if s.get("class") in ABI_CONTRACT_CLASSES]
+    target_bounded = [(d, f, s) for d, f, s in reachable_residual_sites
+                      if s.get("class") not in ABI_CONTRACT_CLASSES]
+    by_class = collections.Counter(s["class"] for _d, _f, s in contract_sites)
+    established = not target_bounded and not unclassified_sites
+    if not reachable_residual_sites:
+        why = "no unresolved dynamic dispatch remains"
+    elif established:
+        why = ("every reachable unresolved site is contract-bounded by a public "
+               "OpenSSL ABI contract (section 7 criterion 2); no target-bounded "
+               "unresolved site and no unclassified site remains")
+    else:
+        why = (f"{len(target_bounded)} reachable unresolved site(s) are not "
+               "contract-bounded, and/or an unclassified site is reachable")
+    return {
+        "established": established,
+        "status": ("PASS (contract-bounded)" if established else "FAIL"),
+        "basis": ("AGENTS.md section 7 criterion 2: a required precondition may be "
+                  "established by an external ABI contract"),
+        "reachable_unresolved_sites": len(reachable_residual_sites),
+        "target_bounded_unresolved_sites": len(target_bounded),
+        "contract_bounded_sites": len(contract_sites),
+        "contract_bounded_by_class": dict(sorted(by_class.items())),
+        "unclassified_reachable_sites": len(unclassified_sites),
+        "target_sets_remain_unbounded": bool(contract_sites),
+        "why": why,
+    }
+
 # O1: the allocator-override seam.  The resolver's reachable residual is the
 # three sites the audit names -- the MALLOC_FN selection in
 # runtime::err::append_current and the FREE_FN selection in the SlotStr and
 # PendingReleaseGuard drop glue.  The same seam also appears in inlined
 # CRYPTO_free/CRYPTO_malloc code, where the resolver resolves the static fallback
 # to default_free/default_malloc; those sites are not part of the residual and
-# are recorded separately (see the receipt's allocator_override_seam bound).
+# are recorded separately (see the receipt's allocator contract bound).
 def is_o1_function(name: str) -> bool:
     """The three allocator-seam functions the audit names.
 
@@ -1799,7 +2015,8 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
     Only unresolved sites are considered.  A class is applied only when its
     invariant is checkable against this exact image; otherwise the site keeps
     its resolver reason.  O1 (the allocator seam) is already marked
-    ABI_OPEN_CONFIG_BOUND by the resolver and is never resolved here.
+    ABI_CONTRACT_ALLOCATOR by the resolver and is never resolved here: the
+    contract bounds its obligation, not its target set.
     """
     stats = collections.Counter()
     residual = residual_class_targets(g)
@@ -1808,17 +2025,18 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
         name = g.funcs.get(site["func"], "")
         # O1 is the audited allocator-seam residual.  It is deliberately left
         # unresolved even where a static fallback exists: the hook set is a
-        # runtime fact about this configuration, not a link-time bound.
+        # runtime fact about this configuration, not a link-time bound.  The
+        # public CRYPTO_set_mem_functions contract is what bounds the obligation.
         if site.get("seam") and is_o1_function(name):
-            site["class"] = "ABI_OPEN_CONFIG_BOUND"
+            site["class"] = ABI_CONTRACT_ALLOCATOR
             site["unresolved"] = True
             site["reason"] = "allocator-override-seam:" + site["seam"]
-            stats["O1_abi_open"] += 1
+            stats["O1_contract_bounded"] += 1
             continue
         if not site["unresolved"]:
             continue
-        if site["class"] == "ABI_OPEN_CONFIG_BOUND":
-            stats["O1_abi_open"] += 1
+        if site["class"] in ABI_CONTRACT_CLASSES:
+            stats["O1_contract_bounded"] += 1
             continue
         if is_rust_runtime(name):
             if rust:
@@ -1840,11 +2058,14 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set) -> dict:
             continue
         if _match(name, A1_FUNCTIONS):
             site["targets"] |= residual
-            site["class"] = "ABI_OPEN_PROVIDER_CONFIG"
-            site["reason"] = ("provider/method-store ABI: built-in provider is in-image, "
-                              "but config-driven external provider loading is reachable "
-                              "(SSL_CTX_new_ex -> OPENSSL_init_ssl -> LOAD_CONFIG)")
-            stats["A1_abi_open"] += 1
+            site["class"] = ABI_CONTRACT_PROVIDER
+            site["reason"] = (
+                "provider/method-store ABI contract (OSSL_provider_init): the "
+                "built-in provider is in-image, but config-driven external "
+                "provider loading is reachable (SSL_CTX_new_ex -> "
+                "OPENSSL_init_ssl -> LOAD_CONFIG); the target set is unbounded "
+                "and only the ABI obligation is bounded")
+            stats["A1_contract_bounded"] += 1
             continue
         if _match(name, A2_FUNCTIONS):
             if workload_imports & A2_REGISTRATION_SETTERS:
@@ -2975,6 +3196,12 @@ def build_receipt(args) -> dict:
                     1 for g in graphs.values()
                     for s in getattr(g, "sites", {}).values() if s["unresolved"]),
                 "reachable_unresolved_sites": len(closure["reachable_residual_sites"]),
+                "reachable_target_bounded_unresolved_sites": sum(
+                    1 for _d, _f, s in closure["reachable_residual_sites"]
+                    if s.get("class") not in ABI_CONTRACT_CLASSES),
+                "reachable_contract_bounded_sites": sum(
+                    1 for _d, _f, s in closure["reachable_residual_sites"]
+                    if s.get("class") in ABI_CONTRACT_CLASSES),
                 "unclassified_reachable_sites": len(closure["unclassified_sites"]),
             },
             "classes": {
@@ -3048,48 +3275,51 @@ def build_receipt(args) -> dict:
             "unresolved_by_class": dict(collections.Counter(
                 s["class"] for g in graphs.values() for s in g.sites.values()
                 if s["unresolved"])),
-            "abi_open": {
-                "allocator_override_seam": {
-                    "class": "ABI_OPEN_CONFIG_BOUND",
+            "abi_contract_bounded": {
+                "allocator": {
+                    "class": ABI_CONTRACT_ALLOCATOR,
+                    "resolution_kind": "contract-bounded (target set unbounded)",
                     "sites": [{"dso": name, "function": hex(s["func"]),
-                               "site": hex(s["addr"]), "reason": s["reason"]}
+                               "site": hex(s["addr"]), "reason": s["reason"],
+                               "resolved": False}
                               for name, g in graphs.items() for s in g.sites.values()
-                              if s["unresolved"] and s["class"] == "ABI_OPEN_CONFIG_BOUND"],
+                              if s["unresolved"] and s["class"] == ABI_CONTRACT_ALLOCATOR],
                     "bound": "public CRYPTO_set_mem_functions ABI; any caller-supplied triple",
+                    "contract": ABI_CONTRACTS[ABI_CONTRACT_ALLOCATOR],
                     "runtime_fact_not_static_bound": (
                         "the globals are NULL in this configuration, so the in-image "
                         "default is selected; that is a runtime fact, not a link-time bound"),
-                    "predicate_element_left_failing": 7,
                 },
-                "provider_config": {
-                    "class": "ABI_OPEN_PROVIDER_CONFIG",
+                "provider": {
+                    "class": ABI_CONTRACT_PROVIDER,
+                    "resolution_kind": "contract-bounded (target set unbounded)",
                     "sites": [{"dso": name, "function": hex(s["func"]),
-                               "site": hex(s["addr"])}
+                               "site": hex(s["addr"]), "resolved": False}
                               for name, g in graphs.items() for s in g.sites.values()
-                              if s["unresolved"] and s["class"] == "ABI_OPEN_PROVIDER_CONFIG"],
-                    "bound": "built-in provider implementations in the image",
+                              if s["unresolved"] and s["class"] == ABI_CONTRACT_PROVIDER],
+                    "bound": "public OSSL_provider_init provider ABI",
+                    "contract": ABI_CONTRACTS[ABI_CONTRACT_PROVIDER],
                     "why_open": (
                         "SSL_CTX_new_ex calls OPENSSL_init_ssl, which unconditionally "
                         "adds OPENSSL_INIT_LOAD_CONFIG, and a configuration file can "
-                        "name an external provider module"),
-                    "predicate_element_left_failing": 7,
+                        "name an external provider module; the target set is unbounded"),
                 },
+                "distinct_from_resolved": (
+                    "a statically resolved edge has resolved=true and an in-image "
+                    "target set; every site above has resolved=false and an unbounded "
+                    "target set, and is counted in reachable_unresolved_sites"),
             },
-            "predicate_element_7": {
-                "established": not closure["reachable_residual_sites"],
-                "reachable_unresolved_sites": len(closure["reachable_residual_sites"]),
-                "unclassified_reachable_sites": len(closure["unclassified_sites"]),
-                "why": ("no unresolved dynamic dispatch remains"
-                        if not closure["reachable_residual_sites"] else
-                        "reachable sites remain unresolved in the classes named in "
-                        "precision.abi_open"),
-            },
-            "settled": ("the only reachable unresolved sites are the explicitly "
-                        "ABI-open classes named in precision.abi_open; no unclassified "
-                        "site is reachable"
-                        if not closure["unclassified_sites"] else
-                        "at least one reachable site has no evidence class and admits "
-                        "the global address-taken union"),
+            "predicate_element_7": evaluate_predicate_element_7(
+                closure["reachable_residual_sites"], closure["unclassified_sites"]),
+            "settled": (
+                ("every reachable unresolved site is contract-bounded (section 7 "
+                 "criterion 2); no target-bounded unresolved site and no "
+                 "unclassified site is reachable")
+                if evaluate_predicate_element_7(
+                    closure["reachable_residual_sites"],
+                    closure["unclassified_sites"])["established"] else
+                ("at least one reachable site is not contract-bounded or has no "
+                 "evidence class and admits the global address-taken union")),
         },
         "obligations": obligations,
         "closure_scope": {
@@ -3309,6 +3539,60 @@ def self_test() -> int:
     r3_t, r3_bad = DsoGraph.table_ptrs(_TG(), 0x1000, 3, strict=True)
     check("R3 non-code entry is incomplete", r3_bad, [0x1010])
 
+    # Switch-table precision: the compiler's own bound is evidence.  The
+    # absence of a bound is the negative control and must keep the
+    # conservative scan rather than an invented length.
+    check("compare mnemonic with size suffix",
+          [_is_compare(m) for m in ("cmp", "cmpq", "testb", "cmovne")],
+          [True, True, True, False])
+
+    class _SG:
+        start_set = {0x200, 0x300, 0x400, 0x500, 0x600}
+        sections = {".rodata": (0x1000, 0, 5 * 4)}
+
+        def section_of(self, addr):
+            return ".rodata" if 0x1000 <= addr < 0x1014 else None
+
+        def _section_bytes(self, _name):
+            return b"".join(struct.pack("<i", v - 0x1000)
+                            for v in (0x200, 0x300, 0x400, 0x500, 0x600))
+
+    class _SR:
+        def __init__(self, bounds):
+            self.g = _SG()
+            self.switch_cache = {}
+            self.switch_bounds = bounds
+
+    bounded = _SR({0x20: 3})
+    check("switch bound decodes only the live entries",
+          PrecisionResolver.switch_targets(bounded, 0x1000, 0x20),
+          {0x200, 0x300, 0x400})
+    unbounded = _SR({})
+    check("switch without a bound keeps the conservative scan (negative control)",
+          0x500 in PrecisionResolver.switch_targets(unbounded, 0x1000, 0x20), True)
+
+    insns = [(0x10, "cmp    $0x2,%eax"), (0x13, "ja     0x40"),
+             (0x15, "lea    0x0(%rip),%rcx        # 1000 <tbl>"),
+             (0x1c, "movslq (%rcx,%rax,4),%rax"),
+             (0x20, "jmp    *%rax")]
+    rb = _SR({})
+    PrecisionResolver._record_switch_bounds(rb, insns)
+    check("switch bound recorded from cmp/ja", rb.switch_bounds, {0x20: 3})
+    no_cmp = _SR({})
+    PrecisionResolver._record_switch_bounds(no_cmp, [
+        (0x15, "lea    0x0(%rip),%rcx        # 1000 <tbl>"),
+        (0x20, "jmp    *%rax")])
+    check("switch without cmp keeps no bound (negative control)",
+          no_cmp.switch_bounds, {})
+    wrong_reg = _SR({})
+    PrecisionResolver._record_switch_bounds(wrong_reg, [
+        (0x10, "cmp    $0x2,%ebx"), (0x13, "ja     0x40"),
+        (0x15, "lea    0x0(%rip),%rcx        # 1000 <tbl>"),
+        (0x1c, "movslq (%rcx,%rax,4),%rax"),
+        (0x20, "jmp    *%rax")])
+    check("switch bound ignores a compare of a different register (negative control)",
+          wrong_reg.switch_bounds, {})
+
     check("O1 names the three audited functions",
           [is_o1_function(n) for n in (
               "...err14append_current", "...err7SlotStr...drop_glue",
@@ -3372,8 +3656,36 @@ def self_test() -> int:
     eg.funcs[0x41] = "...errNtB5_7SlotStr...drop_glue"
     eg.sites = {(0x41, 0x42, "call"): o1}
     apply_evidence_classes(eg, set())
-    check("O1 seam stays ABI-open", o1["class"], "ABI_OPEN_CONFIG_BOUND")
+    check("O1 seam is contract-bounded", o1["class"], ABI_CONTRACT_ALLOCATOR)
     check("O1 seam stays unresolved", o1["unresolved"], True)
+    check("O1 seam is not a resolved target set", o1["targets"], set())
+    check("O1 contract cites the printf triple",
+          "CRYPTO_set_mem_functions" in ABI_CONTRACTS[ABI_CONTRACT_ALLOCATOR]["contract"],
+          True)
+
+    # Negative control: an indirect edge the resolver and every evidence class
+    # cannot recognise is NOT given a contract class and still admits the broad
+    # unresolved set, so element 7 cannot be claimed from the contract encoding.
+    eg = _EG()
+    unknown = _site(0x20)
+    unknown["class"] = "field-of-unknown-base"
+    eg.sites = {(0x20, 0x21, "call"): unknown}
+    apply_evidence_classes(eg, set())
+    check("unrecognised edge stays unresolved", unknown["unresolved"], True)
+    check("unrecognised edge has no contract class",
+          unknown["class"] in ABI_CONTRACT_CLASSES, False)
+    e7 = evaluate_predicate_element_7([("control.so", 0x20, unknown)], [])
+    check("unrecognised edge keeps element 7 failing", e7["established"], False)
+    check("unrecognised edge is target-bounded unresolved",
+          e7["target_bounded_unresolved_sites"], 1)
+    check("unrecognised edge produces the broad unresolved set",
+          e7["contract_bounded_sites"], 0)
+
+    # A site that *is* contract-bounded does not make a *resolved* claim.
+    e7 = evaluate_predicate_element_7([("control.so", 0x41, o1)], [])
+    check("contract-bounded element 7 passes", e7["established"], True)
+    check("contract-bounded still records an unbounded target set",
+          e7["target_sets_remain_unbounded"], True)
 
     # module -> file mapping needs a real tree; use the tool's own repo when present
     repo = Path(__file__).resolve().parents[2]
@@ -3473,6 +3785,16 @@ def main(argv=None) -> int:
               f"obligations={c['reachable_production_obligations']} "
               f"DISCHARGED={c['DISCHARGED']} BLOCKED={c['BLOCKED']} "
               f"UNKNOWN={c['UNKNOWN']}")
+        p = receipt["precision"]["totals"]
+        print(f"  precision: indirect={p['indirect_sites']} "
+              f"resolved={p['resolved_sites']} unresolved={p['unresolved_sites']} "
+              f"reachable_unresolved={p['reachable_unresolved_sites']} "
+              f"target_bounded={p['reachable_target_bounded_unresolved_sites']} "
+              f"contract_bounded={p['reachable_contract_bounded_sites']} "
+              f"unclassified={p['unclassified_reachable_sites']}")
+        e7 = receipt["precision"]["predicate_element_7"]
+        print(f"  element-7={e7['status']} "
+              f"contract_bounded_by_class={e7['contract_bounded_by_class']}")
         for r in receipt["refusals"]:
             print(f"  REFUSAL {r['code']}: {r['detail']}")
     return 0 if receipt["verdict"]["state"] == "ACCEPTED" else 1
