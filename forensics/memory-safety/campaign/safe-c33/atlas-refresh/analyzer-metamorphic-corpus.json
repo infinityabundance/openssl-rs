@@ -65,9 +65,10 @@
           "OSSL_DECODER_free",
           "OSSL_ENCODER_free"
         ],
+        "unbounded_admitted_targets": [],
         "unbounded_missing_property": "a reachable writer call site stores a value whose provenance is not image-bounded"
       },
-      "expected_property": "finite caller set -> bounded; unbounded caller set -> unresolved",
+      "expected_property": "finite caller set -> bounded; unbounded caller set -> unresolved; both validate under the mutually redundant accounting rules",
       "id": "e-argument-derived-callback",
       "input": "fixture graph whose writer slot is fed by a parameter",
       "observed_result": "finite=PROVED_TARGET_SET, unbounded=UNRESOLVED",
@@ -77,7 +78,9 @@
     {
       "evidence": {
         "defects": [
-          "...property5store11alg_cleanup::call::1: excluded target 'OSSL_ENCODER_free' has no checkable reason"
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: exclusion 'OSSL_ENCODER_free' has no checkable reason (None)",
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: accounting excluded_targets ['dead_target'] do not match the record's exclusions ['OSSL_ENCODER_free', 'dead_target']",
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: admitted target(s) also excluded: OSSL_ENCODER_free"
         ],
         "unknown_missing_property": "a reachable writer call site stores a value whose provenance is not image-bounded"
       },
@@ -90,26 +93,796 @@
     },
     {
       "evidence": {
-        "exclusions": [
+        "excluded_writers": [
           {
+            "claim": {
+              "kind": "writer-not-in-reachable-set",
+              "module": "metamorphic-fixture.so",
+              "subjects": [
+                "...property5store21ossl_method_store_add.dead"
+              ]
+            },
             "evidence": {
+              "reachable_basis": "pre-closure-direct",
               "reachable_set_member": false,
+              "subject_addresses": {
+                "...property5store21ossl_method_store_add.dead": "0x500"
+              },
               "symbol": "...property5store21ossl_method_store_add.dead",
+              "symbols_checked": [
+                "...property5store21ossl_method_store_add.dead"
+              ],
               "would_store": [
                 "0x600"
               ],
+              "would_store_targets": [
+                "dead_target"
+              ],
               "writer_address": "0x500"
             },
-            "reason": "not-in-reachable-set",
+            "reason": "writer-not-in-reachable-set",
+            "row_kind": "subject",
+            "target": "...property5store21ossl_method_store_add.dead"
+          }
+        ],
+        "exclusions": [
+          {
+            "claim": {
+              "kind": "no-reachable-writer",
+              "module": "metamorphic-fixture.so",
+              "subjects": []
+            },
+            "evidence": {
+              "derived_targets": [
+                "OSSL_DECODER_free",
+                "OSSL_ENCODER_free"
+              ],
+              "reachable_writers": [],
+              "would_store_targets": [
+                "dead_target"
+              ],
+              "writer": "...property5store21ossl_method_store_add.dead",
+              "writer_address": "0x500"
+            },
+            "reason": "no-reachable-writer",
+            "row_kind": "target-drop",
             "target": "dead_target"
           }
         ]
       },
-      "expected_property": "excluded with a defensible reachability witness; removing the witness makes the analyzer refuse",
+      "expected_property": "the target drop is bound to a subject writer row and a defendable would_store_targets mapping; removing the drop makes the analyzer refuse",
       "id": "g-unreachable-target-insertion",
       "input": "fixture graph with a writer outside the reachable set",
-      "observed_result": "witness=True, absent_from_target_set=True, accounted=True, omission_refused=True",
+      "observed_result": "drop=True, subject=True, absent_from_target_set=True, accounted=True, omission_refused=True",
       "transformation": "insert an unreachable writer that stores dead_target",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "oracle": {
+          "modules": [
+            "metamorphic-fixture-renamed.so"
+          ],
+          "schema": "openssl-rs/campaign/safe-c33/reachability-oracle/v1",
+          "upper_nodes": {
+            "metamorphic-fixture-renamed.so": 7
+          }
+        },
+        "records": 1
+      },
+      "expected_property": "the semantic graph is unchanged and both the record and oracle checks stay clean",
+      "id": "h-module-rename",
+      "input": "fixture graph named metamorphic-fixture.so",
+      "observed_result": "semantic_graph_equal=True, clean=True, clean_with_oracle=True",
+      "transformation": "rename the module to metamorphic-fixture-renamed.so; keep every function, edge and oracle fact",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: target_set ['OSSL_DECODER_free'] is not the accounted admitted set ['OSSL_DECODER_free', 'OSSL_ENCODER_free']"
+        ]
+      },
+      "expected_property": "mutually redundant accounting refuses the disagreement",
+      "id": "i-target-set-shrunk",
+      "input": "valid fixture record with two proved targets",
+      "observed_result": "refused: EDGE_RECORD_EXCLUSION_UNSOUND",
+      "transformation": "drop one entry from target_set only; leave the accounting block intact",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: PROVED target(s) without a derivation: OSSL_ENCODER_free"
+        ]
+      },
+      "expected_property": "a claimed target without a derivation is refused",
+      "id": "j-chain-row-removed",
+      "input": "valid fixture record with one derivation per proved target",
+      "observed_result": "refused: EDGE_RECORD_EXCLUSION_UNSOUND",
+      "transformation": "delete the provenance chain row for one claimed target",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: provenance step 'trust-me' for 'OSSL_DECODER_free' is outside the closed vocabulary",
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: provenance step 'trust-me' for 'OSSL_DECODER_free' carries no payload",
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: PROVED target(s) without a derivation: OSSL_DECODER_free"
+        ]
+      },
+      "expected_property": "a step outside the closed vocabulary is refused",
+      "id": "k-chain-step-fabricated",
+      "input": "valid fixture record",
+      "observed_result": "refused: EDGE_RECORD_EXCLUSION_UNSOUND",
+      "transformation": "replace a derivation step with {step: trust-me}",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: provenance step 'linkage' for 'OSSL_DECODER_free' carries no payload",
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: PROVED target(s) without a derivation: OSSL_DECODER_free"
+        ]
+      },
+      "expected_property": "a step that carries no evidence is refused",
+      "id": "l-chain-step-payload-free",
+      "input": "valid fixture record",
+      "observed_result": "refused: EDGE_RECORD_EXCLUSION_UNSOUND",
+      "transformation": "replace a derivation step with {step: linkage} and no payload",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: target_set ['OSSL_DECODER_free', 'OSSL_ENCODER_free'] is not the accounted admitted set ['OSSL_DECODER_free']",
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: excluded target(s) without a reason: OSSL_ENCODER_free",
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: unaccounted_targets is stale: stored [], recomputed ['OSSL_ENCODER_free']"
+        ]
+      },
+      "expected_property": "target_set and admitted_targets must agree",
+      "id": "m-stale-admitted-accounting",
+      "input": "valid fixture record",
+      "observed_result": "refused: EDGE_RECORD_EXCLUSION_UNSOUND",
+      "transformation": "remove one name from accounting.admitted_targets",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: accounting excluded_targets ['dead_target'] do not match the record's exclusions ['OSSL_DECODER_free', 'dead_target']",
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: admitted target(s) also excluded: OSSL_DECODER_free"
+        ]
+      },
+      "expected_property": "an admitted target cannot also be excluded",
+      "id": "n-exclusion-names-admitted-target",
+      "input": "valid fixture record",
+      "observed_result": "refused: EDGE_RECORD_EXCLUSION_UNSOUND",
+      "transformation": "exclude a target that the same record claims as proved",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: excluded_writers entry '...property5store21ossl_method_store_add.dead' (writer-not-in-reachable-set) asserts reachable_set_member=True; a negative reachability claim requires exactly False"
+        ]
+      },
+      "expected_property": "a negative reachability claim requires exactly False",
+      "id": "o-reachable-member-flipped",
+      "input": "valid fixture record with an unreachable writer",
+      "observed_result": "refused: EDGE_RECORD_EXCLUSION_UNSOUND",
+      "transformation": "set the excluded writer subject row's reachable_set_member to True",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_unreachable' (declared-name-absent) asserts present=True; an absent name requires exactly False"
+        ]
+      },
+      "expected_property": "an absent-name claim requires exactly False",
+      "id": "p-declared-absent-present",
+      "input": "valid declared-name-absent record with a structured target list",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_unreachable' (declared-name-absent) asserts present=True; an absent name",
+      "transformation": "set the declared-name-absent evidence present field to True",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: accounting excluded_targets [] do not match the record's exclusions ['dead_target']"
+        ]
+      },
+      "expected_property": "stale exclusion accounting cannot hide a changed list",
+      "id": "q-stale-excluded-accounting",
+      "input": "valid fixture record",
+      "observed_result": "refused: EDGE_RECORD_EXCLUSION_UNSOUND",
+      "transformation": "remove one name from accounting.excluded_targets",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [],
+        "target_set": [
+          "OSSL_DECODER_free",
+          "OSSL_ENCODER_free",
+          "OSSL_DECODER_free"
+        ]
+      },
+      "expected_property": "names are compared as sets, so a duplicate name is not a disagreement",
+      "id": "r-icf-duplicate-target",
+      "input": "valid fixture record",
+      "observed_result": "clean",
+      "transformation": "add a duplicate of an admitted name to target_set, as identical-code folding produces",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "audit": [
+          {
+            "checkable": true,
+            "claim_kind": "writer-not-in-reachable-set",
+            "edge_id": "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1",
+            "expected": "absent",
+            "function": "...property5store11alg_cleanup",
+            "in_final_upper_bound": true,
+            "module": "metamorphic-fixture.so",
+            "oracle_basis": "final-upper-bound",
+            "role": "method-store-slot",
+            "site": "0x11",
+            "subject": "...property5store21ossl_method_store_add.dead",
+            "target": "...property5store21ossl_method_store_add.dead",
+            "violation": true
+          }
+        ],
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: excluded_writers entry '...property5store21ossl_method_store_add.dead' (writer-not-in-reachable-set) asserts reachable_set_member=True; a negative reachability claim requires exactly False"
+        ]
+      },
+      "expected_property": "the record is refused and the audit reports the writer as reachable",
+      "id": "s-oracle-disagreement",
+      "input": "valid fixture record plus a final upper bound that reaches the excluded writer",
+      "observed_result": "defects=1, audit_violations=1",
+      "transformation": "build the records against the oracle; the derivation-time direct set does not reach the writer, the final upper bound does",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "audit": [
+          {
+            "checkable": true,
+            "claim_kind": "writer-not-in-reachable-set",
+            "edge_id": "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1",
+            "expected": "absent",
+            "function": "...property5store11alg_cleanup",
+            "in_final_upper_bound": false,
+            "module": "metamorphic-fixture.so",
+            "oracle_basis": "final-upper-bound",
+            "role": "method-store-slot",
+            "site": "0x11",
+            "subject": "...property5store21ossl_method_store_add.dead",
+            "target": "...property5store21ossl_method_store_add.dead",
+            "violation": false
+          }
+        ],
+        "defects": []
+      },
+      "expected_property": "clean validation, no audit violation, and the evidence names the final upper bound as its basis",
+      "id": "t-oracle-agreement",
+      "input": "valid fixture record plus a final upper bound that does not reach the excluded writer",
+      "observed_result": "defects=[], violations=0, bases={'final-upper-bound'}",
+      "transformation": "build and validate the records against the agreeing oracle",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": []
+      },
+      "expected_property": "caller-scoped claim validates cleanly with no oracle violation",
+      "id": "u-v110-caller-bound-clean",
+      "input": "caller-bound fixture (v1m shape)",
+      "observed_result": "defects=0, violations=0, dropped_reachable=True, caller_absent=True",
+      "transformation": "drop 178-style targets contributed only by one genuinely unreachable caller, while the dropped targets themselves are reachable",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'reachable_target' (target-not-in-reachable-set) must claim about exactly the excluded target 'reachable_target', not ['excluded_caller']",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'reachable_target' (target-not-in-reachable-set) evidence names 'excluded_caller' but the excluded target is 'reachable_target'",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: argument-targets attributes target(s) that are not candidates: target_dropped"
+        ]
+      },
+      "expected_property": "claims about exactly the excluded target are refused",
+      "id": "v-target-evidence-binding",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'reachable_target' (target-not-in-reachable-set) must claim about exactly the ex",
+      "transformation": "exclude a reachable target whose evidence names a different absent symbol",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' claim module 'metamorphic-other-fixture.so' is not the record's module 'metamorphic-caller-fixture.so'",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: excluded_callers entry 'excluded_caller' claim module 'metamorphic-other-fixture.so' is not the record's module 'metamorphic-caller-fixture.so'"
+        ]
+      },
+      "expected_property": "a claim whose module is not the record's module is refused",
+      "id": "w-claim-module-binding",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' claim module 'metamorphic-other-fixture.so' is not the record's",
+      "transformation": "rebind the claim to a different DSO that also reaches the named caller",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'alias_secondary' (target-not-in-reachable-set) claims reachable_set_member=False but the final upper bound holds True for 'alias_secondary'",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: argument-targets attributes target(s) that are not candidates: target_dropped"
+        ]
+      },
+      "expected_property": "every name at a reachable address is reachable, so the alias is refused",
+      "id": "x-icf-alias-escape",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'alias_secondary' (target-not-in-reachable-set) claims reachable_set_member=Fals",
+      "transformation": "exclude an ICF alias recorded at a reachable address",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'excluded_caller' (target-not-in-reachable-set) does not list the symbols its claim covers",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: argument-targets attributes target(s) that are not candidates: target_dropped"
+        ]
+      },
+      "expected_property": "the exemption is gone; the covered symbols are mandatory",
+      "id": "y-forged-caller-count",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'excluded_caller' (target-not-in-reachable-set) does not list the symbols its cl",
+      "transformation": "claim reachable_caller_count=0 with an empty symbols_checked list",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' has no row_kind from ['subject', 'target-drop']"
+        ]
+      },
+      "expected_property": "a self-contradicting writer claim is refused",
+      "id": "z-no-writer-self-contradiction",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' has no row_kind from ['subject', 'target-drop']",
+      "transformation": "exclude a target that the claim's own derived_targets contain",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' (declared-name-absent) drops target 'target_dropped' under an absent declared name although the final upper bound reaches it (or cannot check it)"
+        ]
+      },
+      "expected_property": "a declared-name claim cannot map a reachable target to an absent name",
+      "id": "z2-declared-name-unrelated",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' (declared-name-absent) drops target 'target_dropped' under an a",
+      "transformation": "exclude a reachable target under an unrelated absent declared name",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: candidate_source excludes caller 'fixture_caller_of_store' but the final upper bound reaches it (or cannot check it)"
+        ]
+      },
+      "expected_property": "the candidate-source caller row is audited separately from the auxiliary exclusion list",
+      "id": "aa-semantic-excluded-caller",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: candidate_source excludes caller 'fixture_caller_of_store' but the final upp",
+      "transformation": "mark a semantic call-site row included:false for a reachable caller",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: the claim's reachable-caller mapping does not equal candidate_source's (claim ['reachable_caller'], source ['reachable_caller'])"
+        ]
+      },
+      "expected_property": "the claim's per-caller mapping must equal candidate_source's",
+      "id": "ab-caller-bound-dropped-target",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: the claim's reachable-caller mapping does not equal candidate_source's (claim ['reachable_",
+      "transformation": "the claim omits the reachable caller's contribution while candidate_source records it",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: candidate_targets do not match candidate_source (stored ['target_ok'], recomputed ['target_dropped', 'target_ok'])",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: candidates ['target_dropped', 'target_ok'] are not admitted plus excluded plus unattributed ['target_ok']",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: excluded target(s) without a reason: target_dropped",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: unaccounted_targets is stale: stored [], recomputed ['target_dropped']"
+        ]
+      },
+      "expected_property": "candidate_source still names it, so the deletion is refused",
+      "id": "ac-candidate-and-exclusion-deleted",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: candidate_targets do not match candidate_source (stored ['target_ok'], recomputed ['target",
+      "transformation": "delete an exclusion and its candidate from the accounting block",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "missing_property": "empty target set: the resolver admitted no target and enumerated no candidates"
+      },
+      "expected_property": "an empty target set is never PROVED_TARGET_SET",
+      "id": "ad-vacuous-target-set-demoted",
+      "input": "a site with no admitted target and no ABI contract",
+      "observed_result": "disposition=UNRESOLVED, demotion=empty-target-set",
+      "transformation": "classify the site",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "missing_property": "the containing function has no symbol, so a target set cannot be attributed to a function"
+      },
+      "expected_property": "a definition-less function is never PROVED_TARGET_SET or CONTRACT_BOUNDED",
+      "id": "ae-question-function-demoted",
+      "input": "a site whose containing function has no symbol",
+      "observed_result": "defining='?', disposition=UNRESOLVED",
+      "transformation": "classify the site",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: duplicate edge_id (two records share one identity)"
+        ]
+      },
+      "expected_property": "a duplicate edge identity is refused",
+      "id": "af-duplicate-edge-id",
+      "input": "two records with the same module/function/kind/role/ordinal",
+      "observed_result": "refused: duplicate edge_id",
+      "transformation": "validate the record set",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_unreachable' (declared-name-absent) has no structured evidence.targets list; a free-text derivation is not evidence"
+        ]
+      },
+      "expected_property": "a free-text derivation is not a structured target mapping",
+      "id": "ag-declared-name-free-text",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_unreachable' (declared-name-absent) has no structured evidence.targets l",
+      "transformation": "replace evidence.targets with a free-text target_derivation",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_unreachable' (declared-name-absent) excludes target 'target_unreachable' but the declared mapping names ['target_ok']"
+        ]
+      },
+      "expected_property": "the dropped target must be one of the structured evidence.targets",
+      "id": "at-declared-name-target-not-listed",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_unreachable' (declared-name-absent) excludes target 'target_unreachable'",
+      "transformation": "exclude a candidate target that evidence.targets does not list",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: declared-name-absent evidence.targets are not candidates of the enumeration: invented_name"
+        ]
+      },
+      "expected_property": "every evidence.targets entry must be a candidate",
+      "id": "ah-declared-name-targets-not-candidates",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: declared-name-absent evidence.targets are not candidates of the enumeration: invented_name",
+      "transformation": "list a declared target that candidate_source does not enumerate",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": []
+      },
+      "expected_property": "the structured mapping validates cleanly and has no audit violation",
+      "id": "ai-declared-name-structured-clean",
+      "input": "an absent declared name mapped to an unreachable candidate target",
+      "observed_result": "defects=0, violations=0",
+      "transformation": "use a structured evidence.targets list",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' is in exclusions[] with row_kind 'subject'; a target drop cannot be justified by a caller/writer claim"
+        ]
+      },
+      "expected_property": "a target drop cannot be justified by a caller/writer claim",
+      "id": "aj-target-drop-with-subject-row",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' is in exclusions[] with row_kind 'subject'; a target drop canno",
+      "transformation": "label a target drop in exclusions[] as a caller/writer subject row",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' reason 'writer-not-in-reachable-set' is not a target-drop reason (declared-name-absent, no-reachable-writer, non-image-value, not-contributed-by-reachable-callers, provenance-unbounded, target-not-in-reachable-set)"
+        ]
+      },
+      "expected_property": "the reason vocabulary is split by row kind",
+      "id": "ak-writer-used-as-target-drop",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: exclusion 'target_dropped' reason 'writer-not-in-reachable-set' is not a target-drop reaso",
+      "transformation": "put a writer-not-in-reachable-set row in exclusions[]",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: excluded target 'target_dropped' is contributed by a reachable caller in candidate_source",
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: admitted_targets ['target_ok'] are not the reachable callers' contributed image targets plus the unattributed admissions ['target_dropped', 'target_ok']"
+        ]
+      },
+      "expected_property": "the target is then not droppable and the admitted set is not the reachable image set",
+      "id": "al-forged-contributed-targets",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: excluded target 'target_dropped' is contributed by a reachable caller in candidate_source",
+      "transformation": "both the claim and candidate_source make a reachable caller contribute the dropped target",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: argument-targets candidate source embeds no caller mapping (symbol -> contributed_targets)"
+        ]
+      },
+      "expected_property": "the drop is not recomputable without the mapping",
+      "id": "am-argument-source-mapping-required",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: argument-targets candidate source embeds no caller mapping (symbol -> contributed_targets)",
+      "transformation": "omit the caller mapping from an argument-targets candidate source",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: excluded target 'target_dropped' is not contributed by any excluded caller in candidate_source"
+        ]
+      },
+      "expected_property": "the drop must be justified by an excluded caller that produces it",
+      "id": "an-dropped-target-not-excluded-contribution",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: excluded target 'target_dropped' is not contributed by any excluded caller in candidate_so",
+      "transformation": "exclude a target that no excluded caller contributes",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: candidates ['extra_candidate', 'target_dropped', 'target_ok'] are not admitted plus excluded plus unattributed ['target_dropped', 'target_ok']"
+        ]
+      },
+      "expected_property": "candidates must equal admitted plus excluded",
+      "id": "ao-candidates-equal-admitted-plus-excluded",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: candidates ['extra_candidate', 'target_dropped', 'target_ok'] are not admitted plus exclud",
+      "transformation": "add a candidate that is neither admitted nor excluded",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: excluded_writers entry '...property5store21ossl_method_store_add.dead' (writer-not-in-reachable-set) has no would_store_targets list binding the subject to the site's targets"
+        ]
+      },
+      "expected_property": "a writer subject row without would_store_targets is refused",
+      "id": "ap-writer-would-store-binding",
+      "input": "remove would_store_targets from a writer subject row",
+      "observed_result": "refused: metamorphic-fixture.so::...property5store11alg_cleanup::call::method-store-slot::1: excluded_writers entry '...property5store21ossl_method_store_add.dead' (writ",
+      "transformation": "the writer subject is bound to the site's targets",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: target_reachability 'not-claimed' is not derived from disposition 'PROVED_TARGET_SET' (expected 'claimed')"
+        ]
+      },
+      "expected_property": "target_reachability is derived from the disposition",
+      "id": "aq-target-reachability-derived",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: target_reachability 'not-claimed' is not derived from disposition 'PROVED_TARGET_SET' (exp",
+      "transformation": "mark a PROVED_TARGET_SET record's target_reachability not-claimed",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "resolved": "/tmp/corpus-workdir/edge-records.abababababababab.jsonl"
+      },
+      "expected_property": "the default is under the workdir, never beside --output",
+      "id": "ar-sidecar-default-workdir",
+      "input": "an --output outside the workdir",
+      "observed_result": "/tmp/corpus-workdir/edge-records.abababababababab.jsonl",
+      "transformation": "resolve the default sidecar path",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "tool": {
+          "path": "forensics/tools/consumer_closure.py",
+          "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
+          "sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd",
+          "version": 4
+        }
+      },
+      "expected_property": "the receipt tool block carries a 64-hex sha256 and the record schema",
+      "id": "as-tool-identity-sha256",
+      "input": "the validator identity bound into the receipt",
+      "observed_result": "sha256_len=64, schema=openssl-rs/campaign/safe-c33/edge-record/v1.4",
+      "transformation": "read the tool identity",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "candidate_source": {
+          "argued_by": [
+            "excluded_caller",
+            "reachable_caller"
+          ],
+          "callers": [
+            {
+              "call_sites": [
+                {
+                  "arguments": [
+                    {
+                      "argument_index": 1,
+                      "targets": [
+                        "target_ok"
+                      ],
+                      "witness_instruction": [
+                        {
+                          "text": "lea    0x2c8(%rip),%rsi  # 50 <target_ok>"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "contributed_targets": [
+                "target_ok"
+              ],
+              "reachable": true,
+              "reason": null,
+              "symbol": "reachable_caller"
+            }
+          ],
+          "excluded_callers": [
+            {
+              "call_sites": [
+                {
+                  "arguments": [
+                    {
+                      "argument_index": 1,
+                      "targets": [
+                        "target_dropped"
+                      ],
+                      "witness_instruction": []
+                    }
+                  ]
+                }
+              ],
+              "contributed_targets": [
+                "target_dropped"
+              ],
+              "reachable": false,
+              "reason": "caller-not-in-reachable-set",
+              "symbol": "excluded_caller"
+            }
+          ],
+          "kind": "argument-targets",
+          "targets": [
+            "target_dropped",
+            "target_ok"
+          ],
+          "unattributed_targets": []
+        }
+      },
+      "expected_property": "the dropped target is recomputable from the excluded caller's per-call-site witness and the record validates cleanly",
+      "id": "au-excluded-caller-attribution",
+      "input": "two in-image callers; the excluded caller forwards its own parameter",
+      "observed_result": "dropped=['target_dropped'], witness_targets=['target_dropped'], contributed=['target_dropped']",
+      "transformation": "resolve the excluded caller's contribution through its argument summary (the same expansion that produced the site's flat targets)",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "unattributed_admissions": [
+          {
+            "dso": "metamorphic-attribution-fixture.so",
+            "function": "site_func",
+            "reason": "the candidate target is not attributed to any caller row (neither a reachable caller nor an excluded caller); it is admitted, never dropped",
+            "site": "0x41",
+            "target": "target_dropped"
+          }
+        ]
+      },
+      "expected_property": "target_dropped is admitted, not dropped, and listed in unattributed_admissions; the record validates cleanly",
+      "id": "av-unattributed-target-admitted",
+      "input": "the excluded caller has no recorded call arguments (empty call-site list), so nothing attributes target_dropped",
+      "observed_result": "exclusions=[], admitted=['target_dropped', 'target_ok'], admissions=['target_dropped']",
+      "transformation": "build the record with an empty excluded-caller row",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "missing_property": "caller attribution incomplete: 2 candidate target(s) have no attributable caller",
+        "unattributed_admissions": [
+          {
+            "dso": "metamorphic-attribution-fixture.so",
+            "function": "site_func",
+            "reason": "caller attribution incomplete: 2 candidate target(s) have no attributable caller",
+            "site": "0x41",
+            "target": "target_dropped"
+          },
+          {
+            "dso": "metamorphic-attribution-fixture.so",
+            "function": "site_func",
+            "reason": "caller attribution incomplete: 2 candidate target(s) have no attributable caller",
+            "site": "0x41",
+            "target": "target_ok"
+          }
+        ]
+      },
+      "expected_property": "no bounded set is emitted: the record is UNRESOLVED and names the incomplete attribution",
+      "id": "aw-wholly-unattributable-unresolved",
+      "input": "a bound whose caller rows exist but attribute no candidate",
+      "observed_result": "disposition=UNRESOLVED, missing_property='caller attribution incomplete: 2 candidate target(s) have no attributable caller'",
+      "transformation": "build the edge record",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-caller-fixture.so::site_func::call::argument-callback::1: argument-targets excluded caller 'excluded_caller' contributed_targets are not the union of its per-call-site targets"
+        ]
+      },
+      "expected_property": "the contribution must equal the union of its per-call-site targets",
+      "id": "ax-contribution-without-witness",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-caller-fixture.so::site_func::call::argument-callback::1: argument-targets excluded caller 'excluded_caller' contributed_targets are not the union o",
+      "transformation": "an excluded caller keeps its contributed target but loses the call site that would witness it",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-attribution-fixture.so::site_func::call::argument-callback::1: unattributed_admissions ['target_ok'] are not candidate_source's unattributed_targets ['target_dropped']",
+          "metamorphic-attribution-fixture.so::site_func::call::argument-callback::1: unattributed admission 'target_ok' is attributed to a caller row"
+        ]
+      },
+      "expected_property": "an admission must be genuinely unattributed and listed in both places",
+      "id": "ay-forged-unattributed-admission",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-attribution-fixture.so::site_func::call::argument-callback::1: unattributed_admissions ['target_ok'] are not candidate_source's unattributed_targets",
+      "transformation": "an unattributed admission names a target a reachable caller contributes",
+      "verdict": "PASS"
+    },
+    {
+      "evidence": {
+        "defects": [
+          "metamorphic-attribution-fixture.so::site_func::call::argument-callback::1: a caller-bound record with no attributable candidate claims 'PROVED_TARGET_SET'"
+        ]
+      },
+      "expected_property": "a caller-bound narrowing with no attributable candidate cannot claim a bounded set",
+      "id": "az-zero-attribution-proved",
+      "input": "caller-bound / semantic fixture",
+      "observed_result": "refused: metamorphic-attribution-fixture.so::site_func::call::argument-callback::1: a caller-bound record with no attributable candidate claims 'PROVED_TARGET_SET'",
+      "transformation": "a record with zero attribution is forced to claim PROVED_TARGET_SET",
       "verdict": "PASS"
     }
   ],
@@ -118,7 +891,8 @@
   "non_claims": [
     "A PASS is not a soundness result: the corpus shows that named transformations do not change the named properties, not that no transformation can.",
     "The fixtures are synthetic and do not reproduce the real library's layout, linker behaviour, or runtime dispatch.",
-    "The refusal case establishes that an unaccounted exclusion is detected; it does not establish that every real derivation is complete."
+    "The refusal cases establish that the named disagreements are detected; they do not establish that every real derivation is complete.",
+    "The validator compares a record's own ledgers (target_set, admitted_targets, provenance chain) and the final upper-bound oracle.  The ledgers are mutually redundant within the record, not independent derivations.  It does not re-derive the target set to a fixpoint, so a record that is internally consistent and consistent with the upper bound is not thereby proved complete, and it cannot distinguish an analyzer-produced record from a forged one that is internally consistent.  Admissibility needs the identity chain (tool sha256, artefact sha256, sidecar digest) and a re-run of the pinned validator over the pinned sidecar."
   ],
   "not_covered": [
     "real linker behaviour at scale (section GC, identical-code folding, symbol versioning)",
@@ -131,13 +905,13 @@
   "schema": "openssl-rs/campaign/safe-c33/analyzer-metamorphic-corpus/v1",
   "summary": {
     "failed": [],
-    "passed": 7,
-    "total": 7
+    "passed": 53,
+    "total": 53
   },
   "tool": {
     "covered_tool": "forensics/tools/consumer_closure.py",
-    "covered_tool_sha256": "36f8c8312d07efedd9d769758fb965a296330f933e84b24ef5f48b635cad56a7",
-    "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1",
+    "covered_tool_sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd",
+    "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
     "path": "forensics/tools/analyzer_metamorphic_corpus.py"
   }
 }

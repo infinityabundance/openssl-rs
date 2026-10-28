@@ -1,0 +1,1353 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/edge-validator-hardening/v1",
+ "receipt_kind": "conversion receipt (AGENTS.md section 14)",
+ "subphase": "analyzer edge-record validator hardening, round 3 (row kinds, structured target binding, evidence identity)",
+ "source_identity": {
+  "branch": "stage/p25/analyzer-corpus",
+  "head": "630bf2ee9101240d65943a69702939bd26132b1c",
+  "head_abbrev": "630bf2ee9",
+  "worktree_state": "edited working tree at that HEAD; this subagent does not commit or push",
+  "tools": {
+   "forensics/tools/consumer_closure.py": {
+    "sha256_round1": "a56d171234c965759a7dd707bbc902a456998f395c5bad6aa7d51f68b67bfac2",
+    "sha256_after": "8a7dc16a0a11daded7bb53cf84e24a9ceb45857b59303d3c18dd8eb6c894b383"
+   },
+   "forensics/tools/analyzer_metamorphic_corpus.py": {
+    "sha256_round1": "52619de42d1dddbb82c05c63725c69425916a0769d0b56fb199a4ac1dce178d1",
+    "sha256_after": "4e96e3b75d493f7c4024898466f3cbaf9f0593f6415c504c0800cc8a16c43946"
+   }
+  },
+  "generated_and_doc_artefacts": {
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/analyzer-metamorphic-corpus.json": {
+    "sha256": "945721c5a84fbacfedc93452b144483aa0feaadab48ec525e89d023a1dab1003",
+    "regenerated_by": "python3 forensics/tools/analyzer_metamorphic_corpus.py --out <path>",
+    "covered_tool_sha256": "8a7dc16a0a11daded7bb53cf84e24a9ceb45857b59303d3c18dd8eb6c894b383",
+    "covered_tool_matches_after": true,
+    "edge_record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.3",
+    "summary": {
+     "total": 47,
+     "passed": 47,
+     "failed": []
+    }
+   },
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-record-schema.md": {
+    "sha256": "babc2b0250a6c40a1c815274db8d420401c07f3f6000fe0504f36eecf5355b59",
+    "revision": "v1.3"
+   }
+  }
+ },
+ "round2": {
+  "scope": [
+   "forensics/tools/consumer_closure.py: EXCLUSION_REASONS, _claim, ReachabilityOracle, _edge_disposition, _edge_record, iter_edge_records, build_edge_records",
+   "forensics/tools/consumer_closure.py: _absent_subject_defects, _exclusion_row_defects, _candidate_source_defects, EdgeRecordValidator, validate_edge_records",
+   "forensics/tools/consumer_closure.py: _audit_record, reachability_exclusion_audit, EdgeRecordStream, _sample_view, _edge_records_path, build_receipt, main",
+   "forensics/tools/analyzer_metamorphic_corpus.py: edge_view plus 13 round-2 cases",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-record-schema.md",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/analyzer-metamorphic-corpus.json (regenerated)"
+  ],
+  "findings": [
+   {
+    "id": "H1",
+    "finding": "The validator checked evidence.symbol but never the exclusion target, and the audit read graphs rather than records: excluding a reachable target whose evidence named a different, absent symbol validated.",
+    "fix": "Every exclusion row carries claim {kind, module, subjects}; target-not-in-reachable-set requires subjects == [target] and evidence.symbol == target, and the oracle checks the subject.",
+    "file_line": "forensics/tools/consumer_closure.py:4764",
+    "control": "H1 target/evidence binding",
+    "corpus_control": "v-target-evidence-binding",
+    "observed": "refused while the binding check is enabled; accepted when the two binding checks are replaced with `if False:`"
+   },
+   {
+    "id": "H2",
+    "finding": "The oracle module came from evidence['oracle_module'] or module and was never compared to semantic_identity.artifact_local_witness.module; rewriting it to another DSO validated.",
+    "fix": "claim.module is mandatory and must equal the record module; the oracle lookup uses claim.module only, and an unknown module is a defect/violation, never 'unavailable is fine'.",
+    "file_line": "forensics/tools/consumer_closure.py:4737",
+    "control": "H2 claim module binding",
+    "corpus_control": "w-claim-module-binding",
+    "observed": "refused while the module identity is checked; accepted when the equality test is disabled (the substituted DSO reaches the named caller, so only this check can catch it)"
+   },
+   {
+    "id": "H3",
+    "finding": "ReachabilityOracle kept one name per address (funcs.get or all_syms.get) and ignored names_at, so an identical-code-folding alias at a reachable address escaped the negative check.",
+    "fix": "The reachable symbol set is the union of funcs, all_syms and every names_at entry at every reachable address.",
+    "file_line": "forensics/tools/consumer_closure.py:4034",
+    "control": "H3 ICF alias at a reachable address",
+    "corpus_control": "x-icf-alias-escape",
+    "observed": "refused while the alias union is used; accepted when names_at is not merged"
+   },
+   {
+    "id": "H4",
+    "finding": "reachable_caller_count == 0 exempted symbols_checked, but the count was a free non-recomputable field with no production producer.",
+    "fix": "The exemption is deleted. The count is neither read nor emitted; symbols_checked is mandatory and must equal the claim's subjects.",
+    "file_line": "forensics/tools/consumer_closure.py:4656",
+    "control": "H4 forged caller count no longer exempts symbols_checked",
+    "corpus_control": "y-forged-caller-count",
+    "observed": "a forged count=0 with an empty symbols_checked list is refused; the field does not occur in any produced record (structural check). Accepted when the covered-symbol requirement is disabled"
+   },
+   {
+    "id": "H5",
+    "finding": "A no-reachable-writer claim whose own derived_targets contained the excluded target, and a declared-name-absent claim naming an unrelated absent symbol for a reachable target, both validated.",
+    "fix": "no-reachable-writer requires target not in derived_targets; declared-name-absent requires subjects == [declared_name], and target != declared_name needs target_reachability not-claimed plus a claim.target_derivation.",
+    "file_line": "forensics/tools/consumer_closure.py:4903 (writer), 4885 (declared mapping)",
+    "control": "H5 no-reachable-writer contradicting its own derived_targets; H5 declared-name-absent for an unrelated target",
+    "corpus_control": "z-no-writer-self-contradiction; z2-declared-name-unrelated",
+    "observed": "both refused; either is accepted when its own check is disabled"
+   },
+   {
+    "id": "H6",
+    "finding": "The audit never walked semantic call-site rows with included:false, caller-bound dropped targets, or exclusions[].target.",
+    "fix": "The audit walks records: subject-scoped exclusion rows, auxiliary rows, candidate_source included:false caller rows, and every embedded caller/contributed-target relation. The validator also checks each row's target/claim agreement.",
+    "file_line": "forensics/tools/consumer_closure.py:5385",
+    "control": "H6 semantic included:false caller row is audited; H6 caller-bound dropped target contributed by a reachable caller",
+    "corpus_control": "aa-semantic-excluded-caller; ab-caller-bound-dropped-target",
+    "observed": "both refused; each is accepted only when its own check is disabled"
+   },
+   {
+    "id": "H7",
+    "finding": "acct_admitted was never checked against candidates, caller-bound records used candidate_enumeration resolver-admitted-set (so the completeness block never ran), and an exclusion plus its candidate could both be deleted.",
+    "fix": "Every record embeds candidate_source; candidates are recomputed from it and must equal the stored set, acct_admitted must be a subset, every non-declared-name-absent exclusion must be a candidate, and caller-bound records use candidate_enumeration complete.",
+    "file_line": "forensics/tools/consumer_closure.py:4930 (source), 5209 (recompute)",
+    "control": "H7 exclusion and candidate both deleted",
+    "corpus_control": "ac-candidate-and-exclusion-deleted",
+    "observed": "refused because candidate_source still names the deleted target; accepted when the validator trusts the stored candidates instead of recomputing"
+   },
+   {
+    "id": "H8",
+    "finding": "584 real records were PROVED_TARGET_SET with an empty target_set, and one record had defining_function '?', because the disposition checked only unresolved/class.",
+    "fix": "An empty admitted set and a missing defining symbol force UNRESOLVED, each with a named missing_property and a counted demotion; the validator refuses PROVED/CONTRACT with '?' or empty defining_function.",
+    "file_line": "forensics/tools/consumer_closure.py:4208",
+    "control": "H8 an empty target set is demoted; H8 a definition-less function is demoted; H8 the validator refuses a proved record with no defining symbol",
+    "corpus_control": "ad-vacuous-target-set-demoted; ae-question-function-demoted",
+    "observed": "both demote; each falls back to PROVED_TARGET_SET when its disposition rule is disabled. Real run: 583 empty-set + 21 no-symbol demotions"
+   },
+   {
+    "id": "H9",
+    "finding": "Ordinals were seeded by (function, role) but edge_id omitted the role, so two records shared an identity.",
+    "fix": "edge_id includes module, defining function, operation kind, role and ordinal; a content hash is appended only if two sites still collide; the validator defects on a duplicate edge_id.",
+    "file_line": "forensics/tools/consumer_closure.py:5299",
+    "control": "H9 duplicate edge_id is refused",
+    "corpus_control": "af-duplicate-edge-id",
+    "observed": "refused when duplicate detection is enabled; accepted when the seen-set test is disabled. Real run: 0 duplicates in 52025 records"
+   },
+   {
+    "id": "H10",
+    "finding": "The 178 real refusals were a mis-encoded claim: a caller-bound site excluded 178 dropped targets with reason not-in-reachable-set and asserted target-level unreachability, but those targets are in the final upper bound. The sound narrowing is caller-scoped: one caller (OSSL_PROVIDER_do_all) is genuinely absent.",
+    "fix": "Dropped caller-bound targets use not-contributed-by-reachable-callers with the embedded reachable/excluded caller sets, target_reachability not-claimed, and the oracle checks the callers only. The auxiliary caller row uses caller-not-in-reachable-set.",
+    "file_line": "forensics/tools/consumer_closure.py:4470 (builder), 4787 (validator)",
+    "control": "H10 v1m caller-bound shape validates cleanly",
+    "corpus_control": "u-v110-caller-bound-clean",
+    "observed": "the v1m shape (dropped target reachable, excluded caller absent) validates with no defect and no audit violation; the real run emits 178 not-contributed-by-reachable-callers exclusions and no EDGE_RECORD_EXCLUSION_UNSOUND/REACHABILITY_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "H11",
+    "finding": "At the court's default 4 GiB RLIMIT_DATA the ssh closure died in _edge_record/chain_rows (~1479 s); at 8 GiB it died in json.dumps(receipt) (~1510 s). There was no receipt.",
+    "fix": "build_edge_records streams through a sink; EdgeRecordStream writes a JSONL sidecar and validates/audits in the same pass; the receipt carries counts, defects, the oracle block and a bounded sample only.",
+    "file_line": "forensics/tools/consumer_closure.py:4616 (streaming), 5523 (stream), 5651 (sidecar path)",
+    "control": "real ssh closure at the default 4 GiB",
+    "corpus_control": "not applicable (operational gate)",
+    "observed": "completed in 1487.0 s with peak RSS 4093576 KiB (3.90 GiB) at OPENSSL_RS_COURT_DATA=4194304 KiB; wrote a 5537675-byte receipt and a 1326533220-byte sidecar"
+   },
+   {
+    "id": "H12",
+    "finding": "Disabling the oracle-observation arm left --self-test green and the 20-case corpus 20/20; disabling the accounting arm left the corpus 20/20.",
+    "fix": "Thirteen round-2 controls plus the mutation matrix below; each check has a control that fails iff that check is disabled.",
+    "file_line": "forensics/tools/consumer_closure.py:8154 (control block); forensics/tools/analyzer_metamorphic_corpus.py:731 (cases)",
+    "control": "check-to-control table below",
+    "corpus_control": "13 new cases; each is the only failing case under its mutation",
+    "observed": "12/12 mutations produced exactly one self-test failure and exactly one corpus failure, the intended control"
+   }
+  ],
+  "check_control_table": [
+   {
+    "check": "H1 target/evidence + subject binding",
+    "control": "H1 target/evidence binding",
+    "corpus_case": "v-target-evidence-binding",
+    "mutation_disabled": "subjects == [target] and evidence.symbol == target",
+    "observed_refusal": "self-test: 'H1 target/evidence binding: got False, want True'; corpus failed: [v-target-evidence-binding]"
+   },
+   {
+    "check": "H2 claim module binding",
+    "control": "H2 claim module binding",
+    "corpus_case": "w-claim-module-binding",
+    "mutation_disabled": "claim.module == record module",
+    "observed_refusal": "self-test: 'H2 claim module binding: got False, want True'; corpus failed: [w-claim-module-binding]"
+   },
+   {
+    "check": "H3 every name at a reachable address",
+    "control": "H3 ICF alias at a reachable address",
+    "corpus_case": "x-icf-alias-escape",
+    "mutation_disabled": "names_at union in ReachabilityOracle",
+    "observed_refusal": "self-test: 'H3 ICF alias at a reachable address: got False, want True'; corpus failed: [x-icf-alias-escape]"
+   },
+   {
+    "check": "H4 covered symbols mandatory (no caller-count exemption)",
+    "control": "H4 forged caller count no longer exempts symbols_checked",
+    "corpus_case": "y-forged-caller-count",
+    "mutation_disabled": "symbols_checked / subjects requirement",
+    "observed_refusal": "self-test: 'H4 forged caller count no longer exempts symbols_checked: got False, want True'; corpus failed: [y-forged-caller-count]"
+   },
+   {
+    "check": "H5a writer claim is not self-contradicting",
+    "control": "H5 no-reachable-writer contradicting its own derived_targets",
+    "corpus_case": "z-no-writer-self-contradiction",
+    "mutation_disabled": "target not in derived_targets",
+    "observed_refusal": "self-test: 'H5 no-reachable-writer contradicting its own derived_targets: got False, want True'; corpus failed: [z-no-writer-self-contradiction]"
+   },
+   {
+    "check": "H5b declared-name target mapping",
+    "control": "H5 declared-name-absent for an unrelated target",
+    "corpus_case": "z2-declared-name-unrelated",
+    "mutation_disabled": "target_derivation requirement",
+    "observed_refusal": "self-test: 'H5 declared-name-absent for an unrelated target: got False, want True'; corpus failed: [z2-declared-name-unrelated]"
+   },
+   {
+    "check": "H6a semantic included:false caller row audited",
+    "control": "H6 semantic included:false caller row is audited",
+    "corpus_case": "aa-semantic-excluded-caller",
+    "mutation_disabled": "candidate_source excluded-caller oracle check",
+    "observed_refusal": "self-test: 'H6 semantic included:false caller row is audited: got False, want True'; corpus failed: [aa-semantic-excluded-caller]"
+   },
+   {
+    "check": "H6b dropped target not contributed by a reachable caller",
+    "control": "H6 caller-bound dropped target contributed by a reachable caller",
+    "corpus_case": "ab-caller-bound-dropped-target",
+    "mutation_disabled": "target not in contributed_targets",
+    "observed_refusal": "self-test: 'H6 caller-bound dropped target contributed by a reachable caller: got False, want True'; corpus failed: [ab-caller-bound-dropped-target]"
+   },
+   {
+    "check": "H7 candidates recomputed from candidate_source",
+    "control": "H7 exclusion and candidate both deleted",
+    "corpus_case": "ac-candidate-and-exclusion-deleted",
+    "mutation_disabled": "candidates = candidate_source recomputation",
+    "observed_refusal": "self-test: 'H7 exclusion and candidate both deleted: got False, want True'; corpus failed: [ac-candidate-and-exclusion-deleted]"
+   },
+   {
+    "check": "H8a empty target set is not a proof",
+    "control": "H8 an empty target set is demoted",
+    "corpus_case": "ad-vacuous-target-set-demoted",
+    "mutation_disabled": "empty-target-set disposition rule",
+    "observed_refusal": "self-test: got ('PROVED_TARGET_SET', None), want ('UNRESOLVED', 'empty-target-set'); corpus failed: [ad-vacuous-target-set-demoted]"
+   },
+   {
+    "check": "H8b missing defining symbol is not a proof",
+    "control": "H8 a definition-less function is demoted",
+    "corpus_case": "ae-question-function-demoted",
+    "mutation_disabled": "no-defining-symbol disposition rule",
+    "observed_refusal": "self-test: got ('PROVED_TARGET_SET', None), want ('UNRESOLVED', 'no-defining-symbol'); corpus failed: [ae-question-function-demoted]"
+   },
+   {
+    "check": "H9 unique edge identities",
+    "control": "H9 duplicate edge_id is refused",
+    "corpus_case": "af-duplicate-edge-id",
+    "mutation_disabled": "duplicate edge_id detection",
+    "observed_refusal": "self-test: 'H9 duplicate edge_id is refused: got False, want True'; corpus failed: [af-duplicate-edge-id]"
+   },
+   {
+    "check": "H10 caller-scoped claim is sound (positive control)",
+    "control": "H10 v1m caller-bound shape validates cleanly",
+    "corpus_case": "u-v110-caller-bound-clean",
+    "mutation_disabled": "none (positive control: it must stay clean)",
+    "observed_refusal": "clean with defects=0 and oracle violations=0; the real run's 178-exclusion record validates cleanly"
+   }
+  ],
+  "real_run": {
+   "command": "sh docker/openssl-rs-court.sh exec sh -c 'cd /work && python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-v1m/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1m-candidate-freeze.json --workdir court/tmp/openssh-closure/work-v1m --output /tmp/closure-ssh-hardened-v12.json --summary'",
+   "exit_code": 1,
+   "exit_meaning": "REFUSED for the three pre-existing, non-edge-record reasons only",
+   "wall_seconds": 1487.0,
+   "peak_rss_kib": 4093576,
+   "peak_rss_gib": 3.9,
+   "court_data_limit_kib": 4194304,
+   "refusals": [
+    {
+     "code": "MISSING_BOUNDARY_RECEIPT",
+     "detail": "13 reachable file(s) carry production obligations but no boundary-sweep receipt owns them"
+    },
+    {
+     "code": "UNKNOWN_OBLIGATION",
+     "detail": "18 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED"
+    },
+    {
+     "code": "UNKNOWN_MECHANISM",
+     "detail": "9 reachable file(s) with production obligations map to no registered mechanism"
+    }
+   ],
+   "edge_record_exclusion_unsound_fired": false,
+   "reachability_exclusion_unsound_fired": false,
+   "edge_provenance": {
+    "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.2",
+    "count": 52025,
+    "dispositions": {
+     "CONTRACT_BOUNDED": 2,
+     "PROVED_TARGET_SET": 51176,
+     "UNRESOLVED": 847
+    },
+    "exclusion_reasons": {
+     "no-reachable-writer": 27,
+     "not-contributed-by-reachable-callers": 178
+    },
+    "defects_total": 0,
+    "defects_complete": true,
+    "demotions": {
+     "vacuous_target_sets_demoted": 583,
+     "no_symbol_function_demoted": 21
+    }
+   },
+   "reachability_oracle": {
+    "violations": 0,
+    "audit_total": 411,
+    "audit_truncated": false
+   },
+   "receipt_bytes": 5537675,
+   "receipt_under_16_mib": true,
+   "records_path": "/tmp/closure-ssh-hardened-v12.json.edge-records.jsonl",
+   "records_path_note": "absolute because /tmp is outside the repository; a --output inside the repository yields a repo-relative path",
+   "records_sha256": "8e9c05c60db7fb0d4efdb4ab42b648ffca5529a9013cfa9cd23cb62db5e139df",
+   "records_bytes": 1326533220,
+   "records_sample": {
+    "included": 500,
+    "eligible": 859,
+    "truncated": true,
+    "cap": 500,
+    "provider_record_present": true
+   },
+   "cbc_records": [
+    {
+     "edge_id": "libcrypto.so.3::CRYPTO_cbc128_encrypt::call::unresolved-dispatch::1",
+     "disposition": "UNRESOLVED",
+     "missing_property": "reg-value-partial[int]",
+     "target_set": [],
+     "target_reachability": "claimed",
+     "site": "0x4a4ec1",
+     "source_operation": "call   *%r12",
+     "exclusions": 0,
+     "candidate_source": "resolver-admitted-set",
+     "candidates": 178,
+     "admitted": 178,
+     "unaccounted": []
+    },
+    {
+     "edge_id": "libcrypto.so.3::CRYPTO_cbc128_encrypt::call::unresolved-dispatch::2",
+     "disposition": "UNRESOLVED",
+     "missing_property": "reg-value-partial[int]",
+     "target_set": [],
+     "target_reachability": "claimed",
+     "site": "0x4a502d",
+     "source_operation": "call   *%r12",
+     "exclusions": 0,
+     "candidate_source": "resolver-admitted-set",
+     "candidates": 178,
+     "admitted": 178,
+     "unaccounted": []
+    }
+   ],
+   "cbc_site_disappeared": false,
+   "unchanged_precision": {
+    "indirect": 52025,
+    "resolved": 51780,
+    "unresolved": 245,
+    "reachable_unresolved": 4
+   }
+  },
+  "unsafe_assumptions": {
+   "eliminated": [
+    "a negative reachability claim that does not name its subject",
+    "an oracle module taken from mutable evidence text",
+    "one representative symbol per reachable address",
+    "a non-recomputable caller-count exemption",
+    "a candidate set trusted from the record's own accounting ledger",
+    "proving an empty target set or an unnamed function"
+   ],
+   "relocated": [
+    "the soundness of a negative claim now rests on the final upper bound being a valid over-approximation of exactly this candidate, held by one named oracle (REACHABILITY_ORACLE_SCHEMA) and used by both the validator and the independent record audit",
+    "the population is persisted to a sidecar; the receipt carries a bounded, prioritised sample rather than the population"
+   ],
+   "hidden": 0,
+   "hidden_note": "No unreported obligation was found. The remaining obligations are enumerated in residuals: no re-derivation to a fixpoint, no real-ELF coverage in the corpus, no cross-revision identity, tight peak-memory headroom, and the resolver gaps surfaced by the 604 demotions."
+  }
+ },
+ "round3": {
+  "scope": [
+   "forensics/tools/consumer_closure.py: TARGET_DROP_REASONS, SUBJECT_ROW_REASONS, ROW_KINDS, _row_kind_placement_defect, _row_reason_vocab_defect",
+   "forensics/tools/consumer_closure.py: _edge_record writer and caller-bound rows, target_reachability derivation",
+   "forensics/tools/consumer_closure.py: _exclusion_row_defects, _candidate_source_defects, _argument_binding_defects, _validate_record, _audit_record",
+   "forensics/tools/consumer_closure.py: _tool_identity, _admissibility, _edge_records_path, build_receipt, main",
+   "forensics/tools/analyzer_metamorphic_corpus.py: edge_view plus 14 round-3 cases",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-record-schema.md",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/analyzer-metamorphic-corpus.json (regenerated)",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-validator-hardening.json",
+   ".gitignore (*.edge-records.jsonl)"
+  ],
+  "findings": [
+   {
+    "id": "R1",
+    "finding": "caller-not-in-reachable-set and writer-not-in-reachable-set were accepted inside exclusions[], where they drop a target. Validation checked only that the subject was absent and that a self-described target_reachability said not-claimed, so a record could drop a reachable target and attach an unrelated absent caller/writer.",
+    "fix": "The vocabulary is split by row kind: exclusions[] is target-drop only (TARGET_DROP_REASONS) and excluded_callers/excluded_writers/unbounded_call_sites are subject only (SUBJECT_ROW_REASONS). Every row carries row_kind. A caller/writer-scoped row in exclusions[] is refused. The R1 shape is inexpressible, not merely checked.",
+    "file_line": "forensics/tools/consumer_closure.py:3946 (vocabularies), 4779 (placement), 4802 (reason vocabulary)",
+    "control": "v1.3 exclusion row kind; v1.3 target-drop reason vocabulary",
+    "corpus_control": "aj-target-drop-with-subject-row; ak-writer-used-as-target-drop",
+    "observed": "both refused; each is accepted when its one check is disabled (mutation matrix below)"
+   },
+   {
+    "id": "R2",
+    "finding": "declared-name-absent accepted a free-text target_derivation, so an unrelated reachable target could be mapped to an absent name.",
+    "fix": "target_derivation is removed from the schema. The row must carry a non-empty structured evidence.targets list; target is in that list; every listed target is a candidate; claim.subjects is exactly [declared_name]; the name is absent from the image's defined symbols; present is False; and the dropped target is absent from the final upper bound. The oracle therefore refuses a reachable target mapped to an absent name.",
+    "file_line": "forensics/tools/consumer_closure.py:4968 (declared row checks), 5470 (candidate membership)",
+    "control": "v1.3 declared-name structured targets; v1.3 declared-name target membership; v1.3 declared-name target unreachable; v1.3 declared-name targets are candidates",
+    "corpus_control": "ag-declared-name-free-text; at-declared-name-target-not-listed; z2-declared-name-unrelated; ah-declared-name-targets-not-candidates",
+    "observed": "all four refused; each is accepted when its own check is disabled. The structured mapping positive control (ai-declared-name-structured-clean) validates with no defect and no audit violation"
+   },
+   {
+    "id": "R3",
+    "finding": "not-contributed-by-reachable-callers read the claim's self-asserted contributed_targets; forging the list (omitting the contributing reachable caller) validated.",
+    "fix": "candidate_source for argument-targets embeds callers and excluded_callers as explicit symbol -> contributed_targets mappings. The claim's per-caller mapping must equal the source for the same symbols; the dropped target must be in the excluded contribution union and not in the recomputed reachable union; admitted_targets must equal (reachable contributions) intersect the image symbols; and candidates must equal admitted plus excluded. The claim's own contributed list is no longer read for the drop.",
+    "file_line": "forensics/tools/consumer_closure.py:5030 (source), 5231 (binding), 4538 (builder)",
+    "control": "H6 caller-bound dropped target contributed by a reachable caller (mapping equality); v1.3 caller contributions recomputed; v1.3 dropped target attributed to an excluded caller; v1.3 candidates equal admitted plus excluded",
+    "corpus_control": "ab-caller-bound-dropped-target; al-forged-contributed-targets; an-dropped-target-not-excluded-contribution; ao-candidates-equal-admitted-plus-excluded",
+    "observed": "all refused; each is accepted when its own recomputation arm is disabled. The v1m caller-bound record's excluded caller has no recorded contributed targets, so the real run refuses all 178 drops (see observed_real_record_disagreement)"
+   },
+   {
+    "id": "R4",
+    "finding": "With --output inside the repository the 1.3 GB sidecar landed beside the receipt and was not gitignored.",
+    "fix": "The default sidecar is always <workdir>/edge-records.<artifact_sha[:16]>.jsonl; --edge-records PATH is the only override. *.edge-records.jsonl is added to .gitignore. records_path is repo-relative inside the repository, else absolute.",
+    "file_line": "forensics/tools/consumer_closure.py:5942; .gitignore:32",
+    "control": "v1.3 sidecar default is under the workdir",
+    "corpus_control": "ar-sidecar-default-workdir",
+    "observed": "resolved default is /work/court/tmp/v4-consumer-closure/edge-records.<sha>.jsonl; git check-ignore -v matches /court/ (default) and *.edge-records.jsonl (second line of defence)"
+   },
+   {
+    "id": "R5",
+    "finding": "The receipt tool block had only {path, version}; the validator sha256 and the record-schema version did not appear, and the sidecar digest was not tied to the tool identity.",
+    "fix": "tool is {path, version, sha256, schema}. edge_provenance carries validator_sha256, sidecar_lines, records_bytes, records_path/records_sha256 and an admissibility block {validator_sha256, record_schema, artifact_sha256, records_sha256, sidecar_lines}. A forged record that is internally consistent is explicitly outside record-level validation.",
+    "file_line": "forensics/tools/consumer_closure.py:5934 (identity), 5959 (admissibility), 7458 (receipt)",
+    "control": "v1.3 tool identity carries the validator sha256",
+    "corpus_control": "as-tool-identity-sha256",
+    "observed": "real receipt tool = {path, version: 3, sha256: 8a7dc16a..., schema: .../v1.3}; admissibility binds the same validator digest and the sidecar sha256"
+   },
+   {
+    "id": "R6",
+    "finding": "target_reachability: claimed appeared on UNRESOLVED records in the real run (the two CRYPTO_cbc128_encrypt records).",
+    "fix": "target_reachability is derived: claimed iff disposition is PROVED_TARGET_SET, else not-claimed. The validator requires the derived value; the field is no longer self-described.",
+    "file_line": "forensics/tools/consumer_closure.py:4612 (builder), 5388 (validator)",
+    "control": "v1.3 target_reachability is derived",
+    "corpus_control": "aq-target-reachability-derived",
+    "observed": "the real UNRESOLVED cbc records now carry not-claimed"
+   }
+  ],
+  "check_control_table": [
+   {
+    "check": "exclusion row kind (R1)",
+    "control": "v1.3 exclusion row kind",
+    "corpus_case": "aj-target-drop-with-subject-row"
+   },
+   {
+    "check": "target-drop reason vocabulary (R1)",
+    "control": "v1.3 target-drop reason vocabulary",
+    "corpus_case": "ak-writer-used-as-target-drop"
+   },
+   {
+    "check": "declared-name structured evidence.targets (R2)",
+    "control": "v1.3 declared-name structured targets",
+    "corpus_case": "ag-declared-name-free-text"
+   },
+   {
+    "check": "declared target in evidence.targets (R2)",
+    "control": "v1.3 declared-name target membership",
+    "corpus_case": "at-declared-name-target-not-listed"
+   },
+   {
+    "check": "declared target absent from the bound (R2)",
+    "control": "v1.3 declared-name target unreachable",
+    "corpus_case": "z2-declared-name-unrelated"
+   },
+   {
+    "check": "declared targets are candidates (R2)",
+    "control": "v1.3 declared-name targets are candidates",
+    "corpus_case": "ah-declared-name-targets-not-candidates"
+   },
+   {
+    "check": "argument-target caller mapping required (R3)",
+    "control": "v1.3 argument-target caller mapping required",
+    "corpus_case": "am-argument-source-mapping-required"
+   },
+   {
+    "check": "claim mapping equals candidate_source (R3)",
+    "control": "H6 caller-bound dropped target contributed by a reachable caller",
+    "corpus_case": "ab-caller-bound-dropped-target"
+   },
+   {
+    "check": "target not contributed by a reachable caller (R3)",
+    "control": "v1.3 caller contributions recomputed",
+    "corpus_case": "al-forged-contributed-targets"
+   },
+   {
+    "check": "target contributed by an excluded caller (R3)",
+    "control": "v1.3 dropped target attributed to an excluded caller",
+    "corpus_case": "an-dropped-target-not-excluded-contribution"
+   },
+   {
+    "check": "candidates equal admitted plus excluded (R3)",
+    "control": "v1.3 candidates equal admitted plus excluded",
+    "corpus_case": "ao-candidates-equal-admitted-plus-excluded"
+   },
+   {
+    "check": "writer subject would_store_targets binding",
+    "control": "v1.3 writer would_store_targets binding",
+    "corpus_case": "ap-writer-would-store-binding"
+   },
+   {
+    "check": "target_reachability derived (R6)",
+    "control": "v1.3 target_reachability is derived",
+    "corpus_case": "aq-target-reachability-derived"
+   },
+   {
+    "check": "sidecar default under workdir (R4)",
+    "control": "v1.3 sidecar default is under the workdir",
+    "corpus_case": "ar-sidecar-default-workdir"
+   },
+   {
+    "check": "tool identity sha256 (R5)",
+    "control": "v1.3 tool identity carries the validator sha256",
+    "corpus_case": "as-tool-identity-sha256"
+   }
+  ],
+  "mutation_matrix": [
+   {
+    "check": "v1.3 exclusion row kind",
+    "self_test_failure": "v1.3 exclusion row kind",
+    "corpus_failure": "aj-target-drop-with-subject-row"
+   },
+   {
+    "check": "v1.3 target-drop reason vocabulary",
+    "self_test_failure": "v1.3 target-drop reason vocabulary",
+    "corpus_failure": "ak-writer-used-as-target-drop"
+   },
+   {
+    "check": "v1.3 declared-name structured targets",
+    "self_test_failure": "v1.3 declared-name structured targets",
+    "corpus_failure": "ag-declared-name-free-text"
+   },
+   {
+    "check": "v1.3 declared-name target membership",
+    "self_test_failure": "v1.3 declared-name target membership",
+    "corpus_failure": "at-declared-name-target-not-listed"
+   },
+   {
+    "check": "v1.3 declared-name target unreachable",
+    "self_test_failure": "v1.3 declared-name target unreachable",
+    "corpus_failure": "z2-declared-name-unrelated"
+   },
+   {
+    "check": "v1.3 declared-name targets are candidates",
+    "self_test_failure": "v1.3 declared-name targets are candidates",
+    "corpus_failure": "ah-declared-name-targets-not-candidates"
+   },
+   {
+    "check": "v1.3 argument-target caller mapping required",
+    "self_test_failure": "v1.3 argument-target caller mapping required",
+    "corpus_failure": "am-argument-source-mapping-required"
+   },
+   {
+    "check": "v1.3 reachable-caller mapping equality (R3)",
+    "self_test_failure": "H6 caller-bound dropped target contributed by a reachable caller",
+    "corpus_failure": "ab-caller-bound-dropped-target"
+   },
+   {
+    "check": "v1.3 caller contributions recomputed",
+    "self_test_failure": "v1.3 caller contributions recomputed",
+    "corpus_failure": "al-forged-contributed-targets"
+   },
+   {
+    "check": "v1.3 dropped target attributed to an excluded caller",
+    "self_test_failure": "v1.3 dropped target attributed to an excluded caller",
+    "corpus_failure": "an-dropped-target-not-excluded-contribution"
+   },
+   {
+    "check": "v1.3 candidates equal admitted plus excluded",
+    "self_test_failure": "v1.3 candidates equal admitted plus excluded",
+    "corpus_failure": "ao-candidates-equal-admitted-plus-excluded"
+   },
+   {
+    "check": "v1.3 writer would_store_targets binding",
+    "self_test_failure": "v1.3 writer would_store_targets binding",
+    "corpus_failure": "ap-writer-would-store-binding"
+   },
+   {
+    "check": "v1.3 target_reachability is derived",
+    "self_test_failure": "v1.3 target_reachability is derived",
+    "corpus_failure": "aq-target-reachability-derived"
+   },
+   {
+    "check": "v1.3 sidecar default is under the workdir",
+    "self_test_failure": "v1.3 sidecar default is under the workdir",
+    "corpus_failure": "ar-sidecar-default-workdir"
+   },
+   {
+    "check": "v1.3 tool identity carries the validator sha256",
+    "self_test_failure": "v1.3 tool identity carries the validator sha256",
+    "corpus_failure": "as-tool-identity-sha256"
+   }
+  ],
+  "real_run": {
+   "command": "sh docker/openssl-rs-court.sh exec sh -c 'cd /work && python3 /tmp/run_real.py' (the wrapper runs: python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-v1m/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1m-candidate-freeze.json --workdir court/tmp/openssh-closure/work-v1m --output /tmp/closure-ssh-hardened-v13.json --summary)",
+   "exit_code": 1,
+   "exit_meaning": "REFUSED: EDGE_RECORD_EXCLUSION_UNSOUND (178 real caller-bound drops) plus the three pre-existing non-edge-record refusals",
+   "wall_seconds": 1486.0,
+   "peak_rss_kib": 4093336,
+   "peak_rss_gib": 3.9,
+   "court_data_limit_kib": 4194304,
+   "refusals": [
+    {
+     "code": "EDGE_RECORD_EXCLUSION_UNSOUND",
+     "detail": "the edge provenance record is not checkable: libcrypto.so.3::_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8activate29ossl_provider_doall_activated.llvm.2761666303318477703::call::argument-callback::1: excluded target 'AES_encrypt' is not contributed by any excluded caller in candidate_source; ... 178 total"
+    },
+    {
+     "code": "MISSING_BOUNDARY_RECEIPT",
+     "detail": "13 reachable file(s) carry production obligations but no boundary-sweep receipt owns them"
+    },
+    {
+     "code": "UNKNOWN_OBLIGATION",
+     "detail": "18 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED"
+    },
+    {
+     "code": "UNKNOWN_MECHANISM",
+     "detail": "9 reachable file(s) with production obligations map to no registered mechanism"
+    }
+   ],
+   "edge_record_exclusion_unsound_fired": true,
+   "reachability_exclusion_unsound_fired": false,
+   "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "version": 3,
+    "sha256": "8a7dc16a0a11daded7bb53cf84e24a9ceb45857b59303d3c18dd8eb6c894b383",
+    "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.3"
+   },
+   "artifact_sha256": "74c2414f2ecb90ca4f502baa067acfe94ac2e55b46841a80658bcf5e4b7ce0d0",
+   "edge_provenance": {
+    "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.3",
+    "count": 52025,
+    "dispositions": {
+     "CONTRACT_BOUNDED": 2,
+     "PROVED_TARGET_SET": 51176,
+     "UNRESOLVED": 847
+    },
+    "exclusion_reasons": {
+     "no-reachable-writer": 27,
+     "not-contributed-by-reachable-callers": 178
+    },
+    "defects_total": 178,
+    "defects_complete": true,
+    "validator_sha256": "8a7dc16a0a11daded7bb53cf84e24a9ceb45857b59303d3c18dd8eb6c894b383",
+    "sidecar_lines": 52025,
+    "records_path": "court/tmp/openssh-closure/work-v1m/edge-records.74c2414f2ecb90ca.jsonl",
+    "records_sha256": "32a5121b7036fa3059f56247d7063b659311708e461cdc6d89ada203552c0be8",
+    "records_bytes": 1326515115,
+    "admissibility": {
+     "validator_sha256": "8a7dc16a0a11daded7bb53cf84e24a9ceb45857b59303d3c18dd8eb6c894b383",
+     "record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.3",
+     "artifact_sha256": "74c2414f2ecb90ca4f502baa067acfe94ac2e55b46841a80658bcf5e4b7ce0d0",
+     "records_sha256": "32a5121b7036fa3059f56247d7063b659311708e461cdc6d89ada203552c0be8",
+     "sidecar_lines": 52025
+    },
+    "demotions": {
+     "vacuous_target_sets_demoted": 583,
+     "no_symbol_function_demoted": 21
+    }
+   },
+   "reachability_oracle": {
+    "violations": 0,
+    "audit_total": 411,
+    "audit_truncated": false
+   },
+   "receipt_bytes": 5562645,
+   "receipt_sha256": "cab0050b3f048b1e1194ca5b8502c6b9cbe4befc730f5feee0e12de2e2f02381",
+   "cbc_records": [
+    {
+     "edge_id": "libcrypto.so.3::CRYPTO_cbc128_encrypt::call::unresolved-dispatch::1",
+     "disposition": "UNRESOLVED",
+     "missing_property": "reg-value-partial[int]",
+     "target_set": [],
+     "target_reachability": "not-claimed",
+     "site": "0x4a4ec1",
+     "source_operation": "call   *%r12",
+     "exclusions": 0,
+     "candidate_source": "resolver-admitted-set",
+     "candidates": 178,
+     "admitted": 178,
+     "unaccounted": []
+    },
+    {
+     "edge_id": "libcrypto.so.3::CRYPTO_cbc128_encrypt::call::unresolved-dispatch::2",
+     "disposition": "UNRESOLVED",
+     "missing_property": "reg-value-partial[int]",
+     "target_set": [],
+     "target_reachability": "not-claimed",
+     "site": "0x4a502d",
+     "source_operation": "call   *%r12",
+     "exclusions": 0,
+     "candidate_source": "resolver-admitted-set",
+     "candidates": 178,
+     "admitted": 178,
+     "unaccounted": []
+    }
+   ],
+   "unchanged_precision": {
+    "indirect": 52025,
+    "resolved": 51780,
+    "unresolved": 245,
+    "reachable_unresolved": 4,
+    "target_bounded": 2,
+    "contract_bounded": 2,
+    "unclassified": 0
+   }
+  },
+  "observed_real_record_disagreement": {
+   "record": "libcrypto.so.3::_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8activate29ossl_provider_doall_activated.llvm.2761666303318477703::call::argument-callback::1",
+   "disagreement": "candidate_source.excluded_callers[0] = {symbol: OSSL_PROVIDER_do_all, contributed_targets: []}. The per-caller call record attributes none of the 178 dropped targets to the excluded caller, so the R3 recomputation cannot justify the drop. The v1.2 validator accepted the record because it read the claim's self-asserted contributed_targets.",
+   "action": "Not weakened. The hardened validator refuses the 178 exclusions with EDGE_RECORD_EXCLUSION_UNSOUND. Deriving the excluded caller's contribution through the provenance interpreter is a resolver enhancement, not a validation concession, and is recorded as a residual.",
+   "note": "The full candidate count is 178; the receipt sample truncates the list to 32 and records candidate_targets_count = 178. This matches the v1.2 receipt's count; the v1.3 fix is target_reachability not-claimed on the UNRESOLVED cbc records."
+  },
+  "unsafe_assumptions": {
+   "eliminated": [
+    "a caller/writer-scoped label inside exclusions[] (inexpressible: the list kind and the reason vocabulary are separate)",
+    "a free-text declared-name target derivation (inexpressible: evidence.targets is the only mapping)",
+    "a target drop justified by the claim's self-asserted contributed_targets (recomputed from candidate_source)",
+    "a self-described target_reachability (derived from the disposition)"
+   ],
+   "relocated": [
+    "the soundness of a negative claim now rests on the final upper bound being a valid over-approximation of exactly this candidate, held by one named oracle and used by both the validator and the record audit",
+    "per-excluded-caller attribution now rests on the per-caller call records; a caller whose recorded argument is not directly image-bounded contributes nothing and cannot justify a drop"
+   ],
+   "hidden": 0,
+   "hidden_note": "No unreported obligation was found. The forged-record limit is explicit: record-level validation cannot distinguish an analyzer-produced record from an internally consistent forged one; admissibility requires the identity chain and a re-run of the pinned validator over the pinned sidecar."
+  },
+  "residuals": [
+   "The v1m caller-bound record is now refused: OSSL_PROVIDER_do_all's recorded contribution is empty, so its 178 target drops are not recomputable. This is a real record disagreement, not a validator regression; the record was never admissible under the strengthened rule. A future resolver can derive the excluded caller's argument through the same provenance interpreter, but that is a source change with its own gate.",
+   "No re-derivation to a fixpoint: the validator checks the record's ledgers, candidate_source and the final upper bound, not a second independent resolution of the image.",
+   "No real-ELF coverage in the corpus: the fixtures are synthetic; the real run exercises the linked v1m DSOs, but no second derivation of the same slot is performed.",
+   "No cross-revision identity: the oracle is per-candidate and no record is checked against a second revision.",
+   "Peak RSS 3.90 GiB against the default 4 GiB RLIMIT_DATA leaves little headroom; the graph and precision resolver dominate.",
+   "The sidecar is 1.33 GB for one consumer. Retention and storage policy are not established here.",
+   "The receipt sample is capped at 500 (859 eligible, truncated). The sidecar is the population.",
+   "The 583 empty-target-set and 21 no-defining-symbol demotions surface a real resolver gap.",
+   "A forged record that is internally consistent is outside record-level validation's power; the admissibility block is the required identity chain, not a proof of production."
+  ]
+ },
+ "round4": {
+  "scope": [
+   "forensics/tools/consumer_closure.py: REACHABLE_CALLER_SCHEMA v2, UNATTRIBUTED_ADMISSION_REASON, ATTRIBUTION_INCOMPLETE_PROPERTY",
+   "forensics/tools/consumer_closure.py: _resolve_argument_summary, _caller_attribution_rows, _record_call_sites, reachable_caller_targets",
+   "forensics/tools/consumer_closure.py: apply_evidence_classes (admit unattributed candidates into the site target set), _edge_record caller-bound branch and fallback, EDGE_CHAIN_STEPS (unattributed-admission)",
+   "forensics/tools/consumer_closure.py: _candidate_source_defects (per-call-site witness, unattributed_targets), _argument_binding_defects (unattributed admissions, zero-attribution fallback), _validate_record unaccounted set",
+   "forensics/tools/consumer_closure.py: EdgeRecordStream/_sample_view (unattributed_admissions receipt list), _tool_identity (version 4), EDGE_RECORD_SCHEMA v1.4, build_receipt rules",
+   "forensics/tools/analyzer_metamorphic_corpus.py: edge_view, caller_fixture/declared_record, six round-4 cases and their fixtures",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-record-schema.md (v1.4)",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/analyzer-metamorphic-corpus.json (regenerated)",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-validator-hardening.json"
+  ],
+  "finding": {
+   "id": "R4-1",
+   "record": "libcrypto.so.3::_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8activate29ossl_provider_doall_activated.llvm.2761666303318477703::call::argument-callback::1",
+   "finding": "The record carried candidate_source.excluded_callers[0] = {symbol: OSSL_PROVIDER_do_all, contributed_targets: []} while 178 targets were dropped under not-contributed-by-reachable-callers. The excluded caller forwards its own parameter (recorded as the symbolic value (arg, 1)), so the v1.3 per-caller contribution, which read only literal values, recorded nothing. The site arg_targets is the flat union over all callers, computed by the argument-summary interpreter; per-caller attribution was computed only for reachable callers. This is a derivation gap, not a validator defect.",
+   "v1_3_outcome": "EDGE_RECORD_EXCLUSION_UNSOUND: 178 exclusions refused; defects_total = 178.",
+   "repair": "Attribute every caller row, reachable or excluded, with the same argument-summary expansion that produced arg_targets; record the per-call-site shape and make contributed_targets exactly the union of its own call-site targets. The excluded caller now contributes 178 targets with a 178-target call-site target-list witness (the `arguments[].targets` union; `witness_instruction` is empty for this row), and all 178 drops are recomputable from the record."
+  },
+  "derivation_repair": {
+   "schema": "openssl-rs/consumer-closure/reachable-caller-target-bound/v2",
+   "row_shape": "{symbol, function, reachable, reason, call_sites: [{call_site, arguments: [{argument_index, targets, value, non_image_values, unresolved, witness_instruction}]}], contributed_targets}",
+   "attribution_source": "PrecisionResolver argument summary (summary_vals), the same expansion used to build the site flat arg_targets; no name-based guess",
+   "compatibility": "v1 fields (argument, value, reachable_callers, excluded_callers, bounded_targets, argument_indices) are retained",
+   "candidate_source": "{kind: argument-targets, callers: [reachable rows with call_sites], excluded_callers: [excluded rows with call_sites], argued_by, targets, unattributed_targets}",
+   "incidental_variation_rejected": "Allowing an excluded direct caller with no recorded call arguments to bound the site (instead of refusing) resolved two additional sites (PEM_ASN1_write_bio_internal and one more): not-contributed-by-reachable-callers rose 178 -> 582 and resolved_by_reachable_caller 1 -> 3. That claims a candidate enumeration complete without a call record for that caller. The precondition was restored; no such movement is in the frozen result."
+  },
+  "soundness_argument": [
+   "Admitting a target is always safe for the upper bound: a candidate the enumeration already contains cannot be omitted by including it.",
+   "Excluding a target requires (i) the caller/writer is absent from the final-upper-bound oracle and (ii) the target is demonstrably produced by that subject.",
+   "Per-caller attribution is analyzer-produced from the same argument summary the flat target set came from; the call-site witness makes the contribution recomputable from the record.",
+   "Record-level validation checks the record against itself (contribution == union of its witnesses; admissions == source unattributed set) and against the oracle; it does not re-derive the image.",
+   "A bounding that cannot attribute any candidate is not emitted as a bounded set: the record is UNRESOLVED with the named incomplete-attribution property."
+  ],
+  "conservative_fallback": {
+   "rule": "a candidate that no caller row attributes is admitted into the site target set (monotone) and listed in unattributed_admissions; it is never dropped",
+   "zero_attribution": "UNRESOLVED with missing_property 'caller attribution incomplete: <n> candidate target(s) have no attributable caller'",
+   "receipt_list": "edge_provenance.unattributed_admissions {count, truncated, rule, admissions[]}",
+   "record_list": "unattributed_admissions[{dso, site, function, target, reason}]",
+   "measured_count": 0
+  },
+  "check_control_table": [
+   {
+    "check": "excluded caller attribution uses the argument summary (derivation)",
+    "control": "excluded caller attribution resolves a forwarded parameter",
+    "corpus_case": "au-excluded-caller-attribution"
+   },
+   {
+    "check": "unattributed candidate admitted, never dropped (derivation)",
+    "control": "H11 an unattributed candidate is admitted, not dropped",
+    "corpus_case": "av-unattributed-target-admitted"
+   },
+   {
+    "check": "wholly unattributable bounding is UNRESOLVED (derivation)",
+    "control": "H12 a wholly unattributable bounding is unresolved",
+    "corpus_case": "aw-wholly-unattributable-unresolved"
+   },
+   {
+    "check": "contribution equals its per-call-site witness union",
+    "control": "H13 a contribution without its call-site witness is refused",
+    "corpus_case": "ax-contribution-without-witness"
+   },
+   {
+    "check": "unattributed admissions equal the source set and are genuine",
+    "control": "H14 a forged unattributed admission is refused",
+    "corpus_case": "ay-forged-unattributed-admission"
+   },
+   {
+    "check": "zero-attribution record cannot claim a bounded set",
+    "control": "H15 a zero-attribution record cannot claim PROVED_TARGET_SET",
+    "corpus_case": "az-zero-attribution-proved"
+   },
+   {
+    "check": "admitted set includes unattributed admissions",
+    "control": "H11 an unattributed candidate is admitted, not dropped",
+    "corpus_case": "av-unattributed-target-admitted"
+   },
+   {
+    "check": "dropped target belongs to an excluded caller (existing R3, re-verified)",
+    "control": "v1.3 dropped target attributed to an excluded caller",
+    "corpus_case": "an-dropped-target-not-excluded-contribution"
+   },
+   {
+    "check": "claim mapping equals candidate_source (existing, re-verified)",
+    "control": "H6 caller-bound dropped target contributed by a reachable caller",
+    "corpus_case": "ab-caller-bound-dropped-target"
+   }
+  ],
+  "mutation_matrix": [
+   {
+    "mutation": "derivation-excluded-attribution",
+    "self_test_failure": "excluded caller attribution resolves a forwarded parameter",
+    "corpus_failure": "au-excluded-caller-attribution",
+    "load_bearing": true
+   },
+   {
+    "mutation": "derivation-admit-unattributed",
+    "self_test_failure": "H11 an unattributed candidate is admitted, not dropped",
+    "corpus_failure": "av-unattributed-target-admitted",
+    "load_bearing": true
+   },
+   {
+    "mutation": "derivation-zero-attribution-fallback",
+    "self_test_failure": "H12 a wholly unattributable bounding is unresolved",
+    "corpus_failure": "aw-wholly-unattributable-unresolved",
+    "load_bearing": true
+   },
+   {
+    "mutation": "validator-witness-consistency",
+    "self_test_failure": "H13 a contribution without its call-site witness is refused",
+    "corpus_failure": "ax-contribution-without-witness",
+    "load_bearing": true
+   },
+   {
+    "mutation": "validator-unattributed-admission",
+    "self_test_failure": "H14 a forged unattributed admission is refused",
+    "corpus_failure": "ay-forged-unattributed-admission",
+    "load_bearing": true
+   },
+   {
+    "mutation": "validator-zero-attribution-claim",
+    "self_test_failure": "H15 a zero-attribution record cannot claim PROVED_TARGET_SET",
+    "corpus_failure": "az-zero-attribution-proved",
+    "load_bearing": true
+   },
+   {
+    "mutation": "validator-admitted-includes-unattributed",
+    "self_test_failure": "H11 an unattributed candidate is admitted, not dropped",
+    "corpus_failure": "av-unattributed-target-admitted",
+    "load_bearing": true
+   },
+   {
+    "mutation": "validator-drop-attribution (existing R3)",
+    "self_test_failure": "v1.3 dropped target attributed to an excluded caller",
+    "corpus_failure": "an-dropped-target-not-excluded-contribution",
+    "load_bearing": true
+   },
+   {
+    "mutation": "validator-claim-mapping (existing)",
+    "self_test_failure": "H6 caller-bound dropped target contributed by a reachable caller",
+    "corpus_failure": "ab-caller-bound-dropped-target",
+    "load_bearing": true
+   }
+  ],
+  "real_run": {
+   "command": "court: python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-v1m/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1m-candidate-freeze.json --workdir court/tmp/openssh-closure/work-v1m --output /tmp/closure-ssh-hardened-v14.json --summary",
+   "exit_code": 1,
+   "exit_meaning": "REFUSED by the three pre-existing non-edge-record refusals only; the edge-record refusal no longer fires",
+   "wall_seconds": 1484.0,
+   "peak_rss_kib": 4095648,
+   "peak_rss_gib": 3.91,
+   "court_data_limit_kib": 4194304,
+   "edge_record_exclusion_unsound_fired": false,
+   "reachability_exclusion_unsound_fired": false,
+   "refusals": [
+    {
+     "code": "MISSING_BOUNDARY_RECEIPT",
+     "detail": "13 reachable file(s) carry production obligations but no boundary-sweep receipt owns them"
+    },
+    {
+     "code": "UNKNOWN_OBLIGATION",
+     "detail": "18 reachable production obligation(s) could not be adjudicated DISCHARGED or BLOCKED"
+    },
+    {
+     "code": "UNKNOWN_MECHANISM",
+     "detail": "9 reachable file(s) with production obligations map to no registered mechanism"
+    }
+   ],
+   "counts": {
+    "reachable_files": 313,
+    "reachable_production_obligations": 155,
+    "DISCHARGED": 77,
+    "BLOCKED": 60,
+    "UNKNOWN": 18
+   },
+   "precision_totals": {
+    "indirect_sites": 52025,
+    "resolved_sites": 51780,
+    "unresolved_sites": 245,
+    "reachable_unresolved_sites": 4,
+    "reachable_target_bounded_unresolved_sites": 2,
+    "reachable_contract_bounded_sites": 2,
+    "unclassified_reachable_sites": 0,
+    "resolved_by_reachable_caller": 1
+   },
+   "edge_provenance": {
+    "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
+    "count": 52025,
+    "dispositions": {
+     "CONTRACT_BOUNDED": 2,
+     "PROVED_TARGET_SET": 51176,
+     "UNRESOLVED": 847
+    },
+    "exclusion_reasons": {
+     "no-reachable-writer": 27,
+     "not-contributed-by-reachable-callers": 178
+    },
+    "defects_total": 0,
+    "defects_complete": true,
+    "validator_sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd",
+    "sidecar_lines": 52025,
+    "records_sha256": "180ffe27b5004c3b37d12f0ed556d9f059c575b2ba240949e66a99e1d599b151",
+    "records_bytes": 1326527178
+   },
+   "unattributed_admissions": {
+    "count": 0,
+    "admissions": []
+   },
+   "reachability_oracle": {
+    "basis": "final-upper-bound",
+    "violations": 0,
+    "audit_total": 411,
+    "audit_truncated": false
+   },
+   "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "version": 4,
+    "sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd",
+    "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4"
+   },
+   "artifact_sha256": "74c2414f2ecb90ca4f502baa067acfe94ac2e55b46841a80658bcf5e4b7ce0d0",
+   "receipt_sha256": "8785aab0b4a5d36ef6f42ef003558bf35a2fd855010363c24ca85261a4c44df0",
+   "receipt_bytes": 5601332,
+   "receipt_copy": "court/tmp/openssh-closure/closure-ssh-v14.json (court scratch; gitignored)",
+   "caller_bound_sites": [
+    {
+     "dso": "libcrypto.so.3",
+     "function": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8activate29ossl_provider_doall_activated.llvm.2761666303318477703",
+     "call_site": "0x198bd5",
+     "reachable": [
+      {
+       "symbol": "_RNvNtNtCsaPQA6OxnKMa_10openssl_rs3evp9algorithm21ossl_algorithm_do_all",
+       "contributed": 1,
+       "call_sites": 1
+      }
+     ],
+     "excluded": [
+      {
+       "symbol": "OSSL_PROVIDER_do_all",
+       "contributed": 178,
+       "call_sites": 1,
+       "argument_targets": 178
+      }
+     ],
+     "bounded": 1,
+     "attributed": 179,
+     "unattributed": 0
+    }
+   ],
+   "provider_record": {
+    "edge_id": "libcrypto.so.3::_RNvNtNtCsaPQA6OxnKMa_10openssl_rs8provider8activate29ossl_provider_doall_activated.llvm.2761666303318477703::call::argument-callback::1",
+    "disposition": "PROVED_TARGET_SET",
+    "exclusions": 178,
+    "admissions": 0,
+    "unattributed": 0,
+    "excluded_contribution": 178,
+    "excluded_call_sites": 1
+   },
+   "cbc_records": [
+    {
+     "edge_id": "libcrypto.so.3::CRYPTO_cbc128_encrypt::call::unresolved-dispatch::1",
+     "disposition": "UNRESOLVED",
+     "missing_property": "reg-value-partial[int]",
+     "target_set": [],
+     "candidate_source_kind": "resolver-admitted-set",
+     "candidates": 178,
+     "admitted": 178,
+     "excluded": 0,
+     "site": "0x4a4ec1",
+     "target_reachability": "not-claimed"
+    },
+    {
+     "edge_id": "libcrypto.so.3::CRYPTO_cbc128_encrypt::call::unresolved-dispatch::2",
+     "disposition": "UNRESOLVED",
+     "missing_property": "reg-value-partial[int]",
+     "target_set": [],
+     "candidate_source_kind": "resolver-admitted-set",
+     "candidates": 178,
+     "admitted": 178,
+     "excluded": 0,
+     "site": "0x4a502d",
+     "target_reachability": "not-claimed"
+    }
+   ]
+  },
+  "movement": {
+   "basis": "round-3 v1.3 real run and the v1m receipt, same v1m artefact 74c2414f...",
+   "files": [
+    313,
+    313
+   ],
+   "obligations": [
+    155,
+    155
+   ],
+   "DISCHARGED": [
+    77,
+    77
+   ],
+   "BLOCKED": [
+    60,
+    60
+   ],
+   "UNKNOWN": [
+    18,
+    18
+   ],
+   "precision_indirect_resolved_unresolved_reachable_unresolved_element7": [
+    52025,
+    51780,
+    245,
+    4,
+    [
+     "target_bounded",
+     2
+    ],
+    [
+     "contract_bounded",
+     2
+    ],
+    [
+     "unclassified",
+     0
+    ]
+   ],
+   "edge_dispositions": {
+    "PROVED_TARGET_SET": [
+     51176,
+     51176
+    ],
+    "CONTRACT_BOUNDED": [
+     2,
+     2
+    ],
+    "UNRESOLVED": [
+     847,
+     847
+    ]
+   },
+   "exclusion_reasons": {
+    "no-reachable-writer": [
+     27,
+     27
+    ],
+    "not-contributed-by-reachable-callers": [
+     178,
+     178
+    ]
+   },
+   "moved": false,
+   "explanation": "No closure movement. The derivation repair only makes the 178 existing drops recomputable (178 exclusions, call-site target-list witness of 178 targets: the arguments[].targets union, with witness_instruction empty for this row). Disposition totals and exclusion-reason counts are unchanged; per-record target sets were not diffed. File and obligation counts are unchanged. The conservative fallback admitted 0 targets on this artefact."
+  },
+  "unsafe_assumptions": {
+   "eliminated": [
+    "a caller-bound exclusion whose contribution the record cannot recompute (the excluded caller per-call-site witness is now mandatory)",
+    "an unrecorded contribution from an excluded caller literal-only reading causing a silent empty attribution"
+   ],
+   "relocated": [
+    "attribution completeness now rests on the analyzer argument summary (the same over-approximation that produced the site flat target set), recorded per call site and checked against its own contribution union at record level",
+    "conservative admission is explicit in the receipt (unattributed_admissions) rather than silent"
+   ],
+   "hidden": [],
+   "hidden_count": 0
+  },
+  "residuals": [
+   "Record-level validation does not re-derive the image; a forged record whose call-site witness and contribution union agree is outside its power. Admissibility still needs the pinned identity chain and a re-run of the pinned validator.",
+   "The excluded caller summary is an over-approximation; if it were incomplete, the site flat candidate enumeration would be incomplete. That is the resolver existing upper-bound assumption, unchanged by this round.",
+   "The conservative fallback (unattributed admissions) is exercised by the self-test and corpus, not by this artefact: the measured count is 0 because every dropped target is attributable to an excluded caller.",
+   "No real-ELF site with an unattributed candidate was found in the ssh closure; the fallback production reach remains a synthetic-fixture claim, not a measured one."
+  ],
+  "source_identity": {
+   "branch": "stage/p25/analyzer-corpus",
+   "head": "630bf2ee9101240d65943a69702939bd26132b1c",
+   "head_abbrev": "630bf2ee9",
+   "worktree_state": "edited working tree at that HEAD; this subagent does not commit or push",
+   "tools": {
+    "forensics/tools/consumer_closure.py": {
+     "sha256_round3": "8a7dc16a0a11daded7bb53cf84e24a9ceb45857b59303d3c18dd8eb6c894b383",
+     "sha256_after": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd"
+    },
+    "forensics/tools/analyzer_metamorphic_corpus.py": {
+     "sha256_after": "583107fdf06582fd610ed5d2ef24ab470eecc9b59da5c0ab9c70b461f4d99846"
+    }
+   },
+   "generated_and_doc_artefacts": {
+    "analyzer-metamorphic-corpus.json": {
+     "sha256": "5bc91d91dd4aaeb39262f42e5a73fa70705ef38af146db106e863731a5d5785a",
+     "summary": {
+      "total": 53,
+      "passed": 53,
+      "failed": []
+     },
+     "covered_tool_sha256": "40cc1c64207e2a036b64aa142c9053d6d453369fe148197a457e8cd8072456dd"
+    },
+    "edge-record-schema.md": {
+     "sha256": "d46ae0e8e6675683b3d70aafa71a68fe0ca6ffba3d33f0d115c3bd3ddcb3b431",
+     "revision": "v1.4"
+    }
+   }
+  }
+ },
+ "round1_negative_controls": {
+  "note": "Round-1 controls are preserved as history. Round 2 replaced the blanket not-in-reachable-set reason; the observations below name the round-1 reason and are superseded by round2.check_control_table.",
+  "self_test": [
+   {
+    "id": "self-target-set-shrunk",
+    "mutation": "pop one entry from target_set; accounting untouched",
+    "expected": "defect",
+    "observed": "defect: target_set is not the accounted admitted set"
+   },
+   {
+    "id": "self-chain-row-removed",
+    "mutation": "delete one provenance chain row for a claimed target",
+    "expected": "defect",
+    "observed": "defect: PROVED target(s) without a derivation"
+   },
+   {
+    "id": "self-chain-step-fabricated",
+    "mutation": "replace a chain step with {step: trust-me}",
+    "expected": "defect",
+    "observed": "defect: step outside the closed vocabulary"
+   },
+   {
+    "id": "self-chain-step-payload-free",
+    "mutation": "replace a chain step with {step: resolver} and no payload",
+    "expected": "defect",
+    "observed": "defect: step carries no payload"
+   },
+   {
+    "id": "self-exclusion-names-admitted",
+    "mutation": "append an exclusion naming an admitted target",
+    "expected": "defect",
+    "observed": "defects: admitted target(s) also excluded"
+   },
+   {
+    "id": "self-reachable-member-flipped",
+    "mutation": "set the dead-writer exclusion reachable_set_member to True",
+    "expected": "defect",
+    "observed": "defect: a negative claim requires exactly False"
+   },
+   {
+    "id": "self-stale-admitted",
+    "mutation": "remove one name from accounting.admitted_targets",
+    "expected": "defect",
+    "observed": "defect: target_set is not the accounted admitted set"
+   },
+   {
+    "id": "self-declared-absent-present",
+    "mutation": "set declared-name-absent evidence present to True",
+    "expected": "defect",
+    "observed": "defect: an absent name requires exactly False"
+   },
+   {
+    "id": "self-oracle-writer-reachable",
+    "mutation": "build records against an oracle whose bound contains the excluded method-store writer",
+    "expected": "defect and an audit violation",
+    "observed": "defect: claims False but the bound holds True; audit violation"
+   },
+   {
+    "id": "self-oracle-truthful-positive",
+    "mutation": "oracle whose bound does not reach the writer",
+    "expected": "clean",
+    "observed": "no defect; no audit violation"
+   },
+   {
+    "id": "self-oracle-disagreement",
+    "mutation": "validate a truthful record against a disagreeing oracle",
+    "expected": "defect",
+    "observed": "defect caused by the oracle comparison"
+   }
+  ],
+  "metamorphic_corpus": [
+   {
+    "id": "h-module-rename",
+    "mutation": "rename the module, keep every edge and oracle fact",
+    "expected": "identical semantic graph, clean validation",
+    "observed": "semantic_graph_equal=True, clean=True, clean_with_oracle=True"
+   },
+   {
+    "id": "i-target-set-shrunk",
+    "mutation": "drop one entry from target_set only",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "j-chain-row-removed",
+    "mutation": "delete the provenance chain row for a claimed target",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "k-chain-step-fabricated",
+    "mutation": "replace a derivation step with {step: trust-me}",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "l-chain-step-payload-free",
+    "mutation": "replace a derivation step with {step: linkage} and no payload",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "m-stale-admitted-accounting",
+    "mutation": "remove one name from admitted_targets",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "n-exclusion-names-admitted-target",
+    "mutation": "exclude a target the record claims as proved",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "o-reachable-member-flipped",
+    "mutation": "set reachable_set_member to True",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "p-declared-absent-present",
+    "mutation": "set declared-name-absent present to True",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "q-stale-excluded-accounting",
+    "mutation": "remove one name from accounting.excluded_targets",
+    "expected": "refused",
+    "observed": "refused: EDGE_RECORD_EXCLUSION_UNSOUND"
+   },
+   {
+    "id": "r-icf-duplicate-target",
+    "mutation": "add a duplicate of an admitted name to target_set",
+    "expected": "clean; names are compared as sets",
+    "observed": "clean"
+   },
+   {
+    "id": "s-oracle-disagreement",
+    "mutation": "final upper bound reaches the excluded method-store writer",
+    "expected": "refused and audit violation",
+    "observed": "defects and 1 audit violation"
+   },
+   {
+    "id": "t-oracle-agreement",
+    "mutation": "final upper bound does not reach the excluded writer",
+    "expected": "clean, evidence basis final-upper-bound",
+    "observed": "defects=[], violations=0"
+   }
+  ],
+  "detector_strength": [
+   {
+    "id": "weak-accounting",
+    "disabled_check": "claimed != acct_admitted (round-1 /tmp copy)",
+    "observed": "the round-1 target-set control failed (rc=1)"
+   },
+   {
+    "id": "weak-oracle",
+    "disabled_check": "oracle observation comparison (round-1 /tmp copy)",
+    "observed": "the round-1 oracle-disagreement control failed (rc=1)"
+   }
+  ]
+ },
+ "evidence": {
+  "commands": [
+   {
+    "command": "sh docker/openssl-rs-court.sh exec sh -c 'cd /work && python3 forensics/tools/consumer_closure.py --self-test'",
+    "rc": 0,
+    "output": "[consumer-closure] self-test ok: ... the v1.2 subject-scoped claim controls (H1 target/evidence binding, H2 module binding, H3 ICF aliases, H4 caller-count exemption removal, H5 self-contradicting evidence, H6 audit coverage, H7 candidate deletion, H8 vacuous-set demotion, H9 duplicate identities, H10 v1m caller-scoped positive control)"
+   },
+   {
+    "command": "sh docker/openssl-rs-court.sh exec sh -c 'cd /work && python3 forensics/tools/analyzer_metamorphic_corpus.py --out /tmp/amc-final.json'",
+    "rc": 0,
+    "output": "{\"out\": \"/tmp/amc-final.json\", \"summary\": {\"total\": 53, \"passed\": 53, \"failed\": []}}"
+   },
+   {
+    "command": "sh docker/openssl-rs-court.sh exec sh -c 'cd /work && python3 -m py_compile forensics/tools/consumer_closure.py forensics/tools/analyzer_metamorphic_corpus.py'",
+    "rc": 0,
+    "output": ""
+   },
+   {
+    "command": "sh docker/openssl-rs-court.sh exec sh -c 'cd /work && git ls-files -ci --exclude-standard'",
+    "rc": 0,
+    "output": "29 pre-existing court/* files, all ignored by the /court/ rule; 0 files matching the edge-records sidecar pattern"
+   },
+   {
+    "command": "mutation matrix: 12 /tmp copies, each disabling one check, then --self-test and the corpus",
+    "rc": "1 for every mutated copy; 0 for the unmutated tools",
+    "output": "12/12: exactly one self-test control failed and exactly one corpus case failed, the intended one (see round2.check_control_table)"
+   },
+   {
+    "command": "real ssh closure at OPENSSL_RS_COURT_DATA=4194304 (default 4 GiB), timeout 2700",
+    "rc": 1,
+    "output": "REFUSED for MISSING_BOUNDARY_RECEIPT / UNKNOWN_OBLIGATION / UNKNOWN_MECHANISM only; 52025 records; 0 edge defects; 0 oracle violations; 1487.0 s; peak RSS 4093576 KiB; receipt 5537675 bytes; sidecar 1326533220 bytes"
+   }
+  ],
+  "weakened_copies_location": "court container /tmp only (removed after each run); no weakened copy exists inside the repository",
+  "evidence_identity": "the real-run receipt and sidecar were generated from the same tool identity recorded in source_identity.tools[*].sha256_after and in the corpus covered_tool_sha256; the receipt's records_sha256 equals the sha256sum of the sidecar"
+ },
+ "residuals": [
+  "No re-derivation to a fixpoint: the validator checks the record's ledgers, candidate_source and the final upper bound, not a second independent resolution of the image.",
+  "No real-ELF coverage in the corpus: the fixtures are synthetic; the real run exercises the linked v1m DSOs, but not a second independent derivation.",
+  "No cross-revision identity: the oracle is per-candidate and no record is checked against a second revision.",
+  "Peak RSS 3.90 GiB against the default 4 GiB RLIMIT_DATA leaves little headroom. The record population is streamed, but the graph and precision resolver dominate; a larger consumer or a different allocator could still cross the cap. This is an infrastructure/analyzer-memory task, not a claim that memory is now bounded for every consumer.",
+  "The sidecar is 1.33 GB for one consumer. It holds the full population; retention and storage policy for sidecars is not established here.",
+  "The receipt sample is capped at 500 (859 eligible, truncated). The sidecar is the population; a reader who needs a specific record must read the sidecar.",
+  "The 583 empty-target-set and 21 no-defining-symbol demotions surface a real resolver gap (vacuous sites and unnamed functions). Demoting them is honest, but the gap should be repaired or each site explained; demotion is not a fix.",
+  "records_path is absolute for /tmp outputs because the output is outside the repository; a repo --output yields a repo-relative path."
+ ],
+ "non_claims": [
+  "This receipt does not claim the analyzer is sound. It claims that the H1-H12 defects are now detected, with firing, isolated controls.",
+  "A PASS in the metamorphic corpus is not a soundness proof; the fixtures are synthetic.",
+  "The refusal of a record does not establish that the record's targets are unsafe; it establishes only that the submitted evidence is not checkable by these rules.",
+  "No cryptographic, timing or memory-safety claim is made about any target named by an edge record.",
+  "The 178 caller-scoped exclusions are sound only if the final upper bound is a valid over-approximation of this candidate; that assumption is named, not proved here.",
+  "The detector-strength controls used weakened copies under the court container's /tmp; they are not part of the repository and were not committed.",
+  "safe_compatible is 0/33: no consumer family has a proven dependency closure, and this round's edge-record repair does not establish one."
+ ]
+}

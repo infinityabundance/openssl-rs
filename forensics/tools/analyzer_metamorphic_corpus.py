@@ -9,18 +9,27 @@ paths (`PrecisionResolver` output shape -> `apply_evidence_classes` ->
 What the corpus establishes
 ---------------------------
 Stability: the semantic edge record is unchanged by an identical rebuild and by
-code-layout perturbation, and it survives a symbol rename and a thunk
-substitution.  Sensitivity: an argument-derived callback is bounded by a finite
-caller set and stays unresolved when the caller set is unbounded; an
-unreachable writer is excluded with a reachability witness; an exclusion with no
-reason, or an omission of a known exclusion, makes the analyzer refuse.
+code-layout perturbation, and it survives a symbol rename, a thunk
+substitution, and a module rename.  Sensitivity: an argument-derived callback
+is bounded by a finite caller set and stays unresolved when the caller set is
+unbounded; an unreachable writer is excluded with a reachability witness; an
+exclusion with no reason, or an omission of a known exclusion, makes the
+analyzer refuse.  Mutually redundant accounting: a record whose ``target_set``,
+``admitted_targets`` or provenance chain disagree is refused, a fabricated or
+payload-free derivation step is refused, and a negative reachability claim that
+contradicts the final upper-bound oracle is refused.  Row kinds: a target drop
+labelled as a caller/writer claim, a writer reason used as a target drop, a
+free-text declared-name derivation, a declared target that is reachable or not
+a candidate, and a forged caller contribution are all refused.
 
 What it does not establish
 --------------------------
 This is evidence of stability and sensitivity, not a soundness proof.  The
 fixtures are synthetic: they do not exercise a real linker, LTO, PLT/GOT
 tricks, dlopen-supplied targets, or provider dispatch tables.  Those are listed
-as explicit non-coverage in the emitted receipt.
+as explicit non-coverage in the emitted receipt.  The corpus also does not
+re-derive a target set to a fixpoint; it checks the record's internal ledgers
+and the oracle, not a second resolution of the image.
 
 Run:  python3 forensics/tools/analyzer_metamorphic_corpus.py \
           --out forensics/memory-safety/campaign/safe-c33/atlas-refresh/\
@@ -238,9 +247,13 @@ def classify(**opts):
 ARTIFACT_LOCAL_KEYS = {
     "call_site", "writer_address", "site_address", "function_address",
     "addr", "address", "instruction", "from", "to",
+    # round 4: per-call-site attribution carries addresses beside names; the
+    # names are the identity, the addresses are artifact-local witnesses.
+    "function", "value", "target_addresses", "site",
 }
 EVIDENCE_IDENTITY_KEYS = ("symbol", "declared_name", "present", "writer",
-                          "reachable_set_member")
+                          "reachable_set_member", "targets",
+                          "would_store_targets")
 
 
 def _clean(value):
@@ -254,34 +267,60 @@ def _clean(value):
 
 def edge_view(records):
     """The address-free semantic view used for every comparison."""
+    def row_view(row):
+        evidence = row.get("evidence") or {}
+        claim = {**_clean(row.get("claim") or {}),
+                 # the module is a witness: a rename must not change
+                 # the semantic comparison
+                 **({"module": "<module>"}
+                    if (row.get("claim") or {}).get("module") else {})}
+        return {
+            "target": row.get("target"),
+            "reason": row.get("reason"),
+            "row_kind": row.get("row_kind"),
+            "claim": claim,
+            "evidence": {k: evidence.get(k)
+                         for k in EVIDENCE_IDENTITY_KEYS if k in evidence},
+        }
+
     out = []
     for rec in records:
         ident = rec["semantic_identity"]
-        exclusions = []
-        for ex in rec.get("exclusions") or ():
-            evidence = ex.get("evidence") or {}
-            exclusions.append({
-                "target": ex.get("target"),
-                "reason": ex.get("reason"),
-                "evidence": {k: evidence.get(k)
-                             for k in EVIDENCE_IDENTITY_KEYS if k in evidence},
-            })
         out.append({
-            "edge_id": rec["edge_id"],
+            # The module is a witness, not identity: two revisions (or a rename)
+            # must compare equal on the semantic graph, while the record's
+            # edge_id still includes the module for uniqueness (H9).
+            "edge_id": (rec["edge_id"].split("::", 1)[1]
+                        if "::" in rec["edge_id"] else rec["edge_id"]),
             "defining_function": ident["defining_function"],
             "source_operation": ident["source_operation"],
             "operation_kind": ident["operation_kind"],
             "call_site_role": ident["call_site_role"],
             "disposition": rec["disposition"],
+            "disposition_demotion": rec.get("disposition_demotion"),
             "target_set": rec.get("target_set") or [],
+            "target_reachability": rec.get("target_reachability"),
             "witness_id": rec.get("witness_id"),
             "missing_property": rec.get("missing_property"),
+            "candidate_source": _clean(rec.get("candidate_source") or {}),
+            "unattributed_admissions": sorted(
+                _clean(rec.get("unattributed_admissions") or ()),
+                key=lambda a: str(a.get("target"))),
             "provenance_chain": sorted(
                 ({"target": c["target"], "derivation": _clean(c["derivation"])}
                  for c in ident["provenance_chain"]),
                 key=lambda c: c["target"]),
             "exclusions": sorted(
-                exclusions,
+                (row_view(e) for e in (rec.get("exclusions") or ())),
+                key=lambda e: (str(e["target"]), str(e["reason"]))),
+            "excluded_callers": sorted(
+                (row_view(e) for e in (rec.get("excluded_callers") or ())),
+                key=lambda e: (str(e["target"]), str(e["reason"]))),
+            "excluded_writers": sorted(
+                (row_view(e) for e in (rec.get("excluded_writers") or ())),
+                key=lambda e: (str(e["target"]), str(e["reason"]))),
+            "unbounded_call_sites": sorted(
+                (row_view(e) for e in (rec.get("unbounded_call_sites") or ())),
                 key=lambda e: (str(e["target"]), str(e["reason"]))),
         })
     return sorted(out, key=lambda r: r["edge_id"])
@@ -320,8 +359,28 @@ def _case(case_id, input_desc, transformation, expected, observed, ok,
 
 
 # --------------------------------------------------------------------------- #
-# the seven cases
+# the cases
 # --------------------------------------------------------------------------- #
+def _json_clone(records):
+    return json.loads(json.dumps(records))
+
+
+def _defect_case(case_id, input_desc, transformation, mutator, *, expected):
+    """Mutate one ledger of a valid record set and require a refusal."""
+    _g, records = classify()
+    tampered = _json_clone(records)
+    mutator(semantic_record(tampered))
+    defects = cc.validate_edge_records(tampered)
+    refusal = cc.edge_refusal_for(defects)
+    ok = bool(defects) and refusal is not None \
+        and refusal["code"] == "EDGE_RECORD_EXCLUSION_UNSOUND"
+    return _case(
+        case_id, input_desc, transformation, expected,
+        (f"refused: {refusal['code']}" if ok else
+         f"accepted (defects={defects[:2]})"),
+        ok, {"defects": defects[:6]})
+
+
 def case_identical_rebuild():
     _g1, r1 = classify()
     _g2, r2 = classify()
@@ -388,21 +447,29 @@ def case_argument_callback():
     _gu, ru = classify(param_mode="unbounded")
     vf = semantic_record(rf)
     vu = semantic_record(ru)
+    # Both dispositions must also survive the accounting and derivation rules:
+    # a bounded set must be derivable, and an UNRESOLVED record's partial
+    # admitted set is intentionally not required to be.
     finite_ok = (vf["disposition"] == cc.DISPOSITION_PROVED
-                 and "OSSL_ENCODER_free" in vf["target_set"])
+                 and "OSSL_ENCODER_free" in vf["target_set"]
+                 and not cc.validate_edge_records(rf))
     unbounded_ok = (vu["disposition"] == cc.DISPOSITION_UNRESOLVED
                     and bool(vu["missing_property"])
-                    and "OSSL_ENCODER_free" not in vu["target_set"])
+                    and "OSSL_ENCODER_free" not in vu["target_set"]
+                    and not cc.validate_edge_records(ru))
     return _case(
         "e-argument-derived-callback",
         "fixture graph whose writer slot is fed by a parameter",
         "finite caller set (one reachable caller passes an in-image callback) "
         "vs. an unbounded dynamic-export caller",
-        "finite caller set -> bounded; unbounded caller set -> unresolved",
+        "finite caller set -> bounded; unbounded caller set -> unresolved; "
+        "both validate under the mutually redundant accounting rules",
         (f"finite={vf['disposition']}, unbounded={vu['disposition']}"),
         finite_ok and unbounded_ok,
         {"finite_target_set": vf["target_set"],
-         "unbounded_missing_property": vu["missing_property"]})
+         "unbounded_missing_property": vu["missing_property"],
+         "unbounded_admitted_targets":
+             semantic_record(ru)["exclusion_accounting"]["admitted_targets"]})
 
 
 def case_unknown_target_injection():
@@ -437,10 +504,17 @@ def case_unreachable_target():
     view = semantic_record(records)
     witness = [e for e in view.get("exclusions") or ()
                if e["target"] == "dead_target"]
+    writer_subject = [e for e in view.get("excluded_writers") or ()
+                      if e["reason"] == "writer-not-in-reachable-set"]
     has_witness = bool(witness) and all(
-        e["reason"] == "not-in-reachable-set"
-        and e["evidence"].get("reachable_set_member") is False
+        e["reason"] == "no-reachable-writer"
+        and e["row_kind"] == "target-drop"
+        and e["evidence"].get("reachable_writers") == []
         for e in witness)
+    has_subject = bool(writer_subject) and all(
+        e["row_kind"] == "subject"
+        and e["evidence"].get("would_store_targets") == ["dead_target"]
+        for e in writer_subject)
     absent = "dead_target" not in (view.get("target_set") or [])
     clean = not cc.validate_edge_records(records)
 
@@ -453,12 +527,1067 @@ def case_unreachable_target():
         "g-unreachable-target-insertion",
         "fixture graph with a writer outside the reachable set",
         "insert an unreachable writer that stores dead_target",
-        "excluded with a defensible reachability witness; removing the "
-        "witness makes the analyzer refuse",
-        (f"witness={has_witness}, absent_from_target_set={absent}, "
-         f"accounted={clean}, omission_refused={sensitivity}"),
-        has_witness and absent and clean and sensitivity,
-        {"exclusions": witness})
+        "the target drop is bound to a subject writer row and a defendable "
+        "would_store_targets mapping; removing the drop makes the analyzer "
+        "refuse",
+        (f"drop={has_witness}, subject={has_subject}, "
+         f"absent_from_target_set={absent}, accounted={clean}, "
+         f"omission_refused={sensitivity}"),
+        has_witness and has_subject and absent and clean and sensitivity,
+        {"exclusions": witness, "excluded_writers": writer_subject})
+
+
+def case_module_rename():
+    _g1, r1 = classify()
+    g2 = make_fixture()
+    g2.name = "metamorphic-fixture-renamed.so"
+    cc.apply_evidence_classes(g2, set(), g2.reach)
+    r2 = cc.build_edge_records({g2.name: g2})
+    oracle = cc.ReachabilityOracle({g2.name: g2}, {(g2.name, a) for a in g2.reach})
+    r3 = cc.build_edge_records({g2.name: g2}, oracle)
+    same = edge_view(r1) == edge_view(r2)
+    clean = not cc.validate_edge_records(r2)
+    clean_oracle = not cc.validate_edge_records(r3, oracle)
+    return _case(
+        "h-module-rename",
+        "fixture graph named metamorphic-fixture.so",
+        "rename the module to metamorphic-fixture-renamed.so; keep every "
+        "function, edge and oracle fact",
+        "the semantic graph is unchanged and both the record and oracle checks "
+        "stay clean",
+        (f"semantic_graph_equal={same}, clean={clean}, "
+         f"clean_with_oracle={clean_oracle}"),
+        same and clean and clean_oracle,
+        {"records": len(r2), "oracle": oracle.describe()})
+
+
+def case_target_set_shrunk():
+    def drop_one(rec):
+        rec["target_set"].pop()
+
+    return _defect_case(
+        "i-target-set-shrunk",
+        "valid fixture record with two proved targets",
+        "drop one entry from target_set only; leave the accounting block intact",
+        drop_one,
+        expected="mutually redundant accounting refuses the disagreement")
+
+
+def case_chain_row_removed():
+    def drop_chain(rec):
+        rec["semantic_identity"]["provenance_chain"].pop()
+
+    return _defect_case(
+        "j-chain-row-removed",
+        "valid fixture record with one derivation per proved target",
+        "delete the provenance chain row for one claimed target",
+        drop_chain,
+        expected="a claimed target without a derivation is refused")
+
+
+def case_chain_step_fabricated():
+    def fabricate(rec):
+        rec["semantic_identity"]["provenance_chain"][0]["derivation"][0] = {
+            "step": "trust-me"}
+
+    return _defect_case(
+        "k-chain-step-fabricated",
+        "valid fixture record",
+        "replace a derivation step with {step: trust-me}",
+        fabricate,
+        expected="a step outside the closed vocabulary is refused")
+
+
+def case_chain_step_payload_free():
+    def strip(rec):
+        rec["semantic_identity"]["provenance_chain"][0]["derivation"][0] = {
+            "step": "linkage"}
+
+    return _defect_case(
+        "l-chain-step-payload-free",
+        "valid fixture record",
+        "replace a derivation step with {step: linkage} and no payload",
+        strip,
+        expected="a step that carries no evidence is refused")
+
+
+def case_stale_admitted_accounting():
+    def stale(rec):
+        rec["exclusion_accounting"]["admitted_targets"].pop()
+
+    return _defect_case(
+        "m-stale-admitted-accounting",
+        "valid fixture record",
+        "remove one name from accounting.admitted_targets",
+        stale,
+        expected="target_set and admitted_targets must agree")
+
+
+def case_exclusion_names_admitted_target():
+    def exclude_admitted(rec):
+        name = rec["target_set"][0]
+        rec["exclusions"].append({
+            "target": name,
+            "reason": "target-not-in-reachable-set",
+            "row_kind": "target-drop",
+            "claim": {"kind": "target-not-in-reachable-set",
+                      "module": rec["semantic_identity"]
+                                ["artifact_local_witness"]["module"],
+                      "subjects": [name]},
+            "evidence": {"reachable_set_member": False, "symbol": name,
+                         "reachable_basis": "pre-closure-direct",
+                         "symbols_checked": [name]}})
+
+    return _defect_case(
+        "n-exclusion-names-admitted-target",
+        "valid fixture record",
+        "exclude a target that the same record claims as proved",
+        exclude_admitted,
+        expected="an admitted target cannot also be excluded")
+
+
+def case_reachable_member_flipped():
+    def flip(rec):
+        for row in rec.get("excluded_writers") or ():
+            if row.get("reason") == "writer-not-in-reachable-set":
+                row["evidence"]["reachable_set_member"] = True
+
+    return _defect_case(
+        "o-reachable-member-flipped",
+        "valid fixture record with an unreachable writer",
+        "set the excluded writer subject row's reachable_set_member to True",
+        flip,
+        expected="a negative reachability claim requires exactly False")
+
+
+def case_declared_absent_present():
+    def present(rec):
+        rec["exclusions"][0]["evidence"]["present"] = True
+
+    g, oracle, rec = declared_record()
+    present(rec)
+    defects = cc.validate_edge_records([rec], oracle)
+    return _case(
+        "p-declared-absent-present",
+        "valid declared-name-absent record with a structured target list",
+        "set the declared-name-absent evidence present field to True",
+        "an absent-name claim requires exactly False",
+        ("refused: " + defects[0][:160]) if defects else "accepted",
+        bool(defects), {"defects": defects[:4]})
+
+
+def case_stale_excluded_accounting():
+    def stale(rec):
+        rec["exclusion_accounting"]["excluded_targets"].pop()
+
+    return _defect_case(
+        "q-stale-excluded-accounting",
+        "valid fixture record",
+        "remove one name from accounting.excluded_targets",
+        stale,
+        expected="stale exclusion accounting cannot hide a changed list")
+
+
+def case_icf_duplicate_target():
+    _g, records = classify()
+    tampered = _json_clone(records)
+    rec = semantic_record(tampered)
+    rec["target_set"].append(rec["target_set"][0])
+    defects = cc.validate_edge_records(tampered)
+    return _case(
+        "r-icf-duplicate-target",
+        "valid fixture record",
+        "add a duplicate of an admitted name to target_set, as identical-code "
+        "folding produces",
+        "names are compared as sets, so a duplicate name is not a disagreement",
+        "clean" if not defects else f"refused: {defects[:2]}",
+        not defects,
+        {"target_set": rec["target_set"], "defects": defects[:4]})
+
+
+def case_oracle_disagreement():
+    g = make_fixture()
+    cc.apply_evidence_classes(g, set(), g.reach)
+    oracle = cc.ReachabilityOracle({g.name: g}, {(g.name, 0x500)})
+    records = cc.build_edge_records({g.name: g}, oracle)
+    defects = cc.validate_edge_records(records, oracle)
+    audit = cc.reachability_exclusion_audit({g.name: g}, oracle)
+    violations = [r for r in audit if r["in_final_upper_bound"]]
+    writer_evidence = [
+        e["evidence"] for e in semantic_record(records).get("excluded_writers") or ()
+        if e.get("reason") == "writer-not-in-reachable-set"]
+    ok = bool(defects) and bool(violations) and all(
+        ev.get("reachable_basis") == "final-upper-bound"
+        and ev.get("reachable_set_member") is True
+        for ev in writer_evidence)
+    return _case(
+        "s-oracle-disagreement",
+        "valid fixture record plus a final upper bound that reaches the "
+        "excluded writer",
+        "build the records against the oracle; the derivation-time direct set "
+        "does not reach the writer, the final upper bound does",
+        "the record is refused and the audit reports the writer as reachable",
+        (f"defects={len(defects)}, audit_violations={len(violations)}"),
+        ok,
+        {"defects": defects[:6], "audit": audit})
+
+
+def case_oracle_agreement():
+    g = make_fixture()
+    cc.apply_evidence_classes(g, set(), g.reach)
+    oracle = cc.ReachabilityOracle({g.name: g}, {(g.name, a) for a in g.reach})
+    records = cc.build_edge_records({g.name: g}, oracle)
+    defects = cc.validate_edge_records(records, oracle)
+    audit = cc.reachability_exclusion_audit({g.name: g}, oracle)
+    violations = [r for r in audit if r["in_final_upper_bound"]]
+    bases = {e["evidence"].get("reachable_basis")
+             for e in semantic_record(records).get("excluded_writers") or ()
+             if e.get("reason") == "writer-not-in-reachable-set"}
+    ok = not defects and not violations and bases == {"final-upper-bound"}
+    return _case(
+        "t-oracle-agreement",
+        "valid fixture record plus a final upper bound that does not reach the "
+        "excluded writer",
+        "build and validate the records against the agreeing oracle",
+        "clean validation, no audit violation, and the evidence names the "
+        "final upper bound as its basis",
+        (f"defects={defects[:2]}, violations={len(violations)}, bases={bases}"),
+        ok,
+        {"defects": defects[:4], "audit": audit})
+
+
+# --------------------------------------------------------------------------- #
+# v1.2 hole controls (reviewer H1-H10)
+# --------------------------------------------------------------------------- #
+# Every check below has a control that changes verdict if and only if that
+# check is disabled; the mutation table lives in edge-validator-hardening.json.
+CALLER_MODULE = "metamorphic-caller-fixture.so"
+CALLER_FUNCTIONS = {
+    0x700: "site_func",
+    0x1000: "target_ok",
+    0x1100: "target_dropped",
+    0x1200: "excluded_caller",
+    0x1300: "reachable_caller",
+    0x1400: "target_unreachable",
+    0x2000: "alias_primary",
+    0x3000: "reachable_target",
+}
+CALLER_REACH = (0x700, 0x1000, 0x1100, 0x1300, 0x3000)
+
+
+class CallerFixture:
+    name = CALLER_MODULE
+    funcs = dict(CALLER_FUNCTIONS)
+    start_set = set(CALLER_FUNCTIONS)
+    all_syms = dict(CALLER_FUNCTIONS)
+    names_at = {a: {n} for a, n in CALLER_FUNCTIONS.items()}
+
+
+def caller_fixture(alias=False):
+    g = CallerFixture()
+    g.names_at = {a: set(n) for a, n in CALLER_FUNCTIONS.items()}
+    if alias:
+        g.names_at[0x3000] = {"reachable_target", "alias_secondary"}
+    g.sites = {(0x700, 0x701, "call"): {
+        "kind": "call", "func": 0x700, "addr": 0x701,
+        "text": "call *%rax", "targets": {0x1000}, "unresolved": False,
+        "reason": "reachable-caller target bounding",
+        "class": "reachable-caller-target", "field_offsets": set(),
+        "arg_deps": {0}, "arg_targets": {0x1100},
+        "reachable_caller_bound": {
+            "reachable_callers": [{
+                "function": "0x1300", "symbol": "reachable_caller",
+                "reachable": True, "reason": None,
+                "call_sites": [{"call_site": "0x1301", "arguments": [{
+                    "argument": 0, "argument_index": 0,
+                    "value": ["0x1000"], "targets": ["0x1000"],
+                    "non_image_values": [], "unresolved": False,
+                    "witness_instruction": [
+                        {"addr": "0x12ff", "text": "lea"}]}]}],
+                "contributed_targets": ["0x1000"]}],
+            "excluded_callers": [{
+                "function": "0x1200", "symbol": "excluded_caller",
+                "reachable": False,
+                "in_reachable_set": False, "reason": "x",
+                "in_image_references": [],
+                "call_sites": [{"call_site": "0x1201", "arguments": [{
+                    "argument": 0, "argument_index": 0,
+                    "value": [], "targets": ["0x1100"],
+                    "non_image_values": [], "unresolved": True,
+                    "witness_instruction": [
+                        {"addr": "0x11ff", "text": "mov"}]}]}],
+                "contributed_targets": ["0x1100"]}],
+            "bounded_targets": ["0x1000"]}}}
+    return g
+
+
+def caller_oracle(g, extra=()):
+    return cc.ReachabilityOracle(
+        {g.name: g},
+        {(g.name, a) for a in CALLER_REACH} | {(g.name, a) for a in extra})
+
+
+def caller_record(alias=False, oracle=None):
+    g = caller_fixture(alias=alias)
+    if oracle is None:
+        oracle = caller_oracle(g)
+    rec = cc._edge_record(g, g.sites[(0x700, 0x701, "call")], 1, oracle)
+    return g, oracle, rec
+
+
+def declared_record(target="target_unreachable", listed=None,
+                    name="unrelated_absent_name", include_targets=True,
+                    oracle=None):
+    """A record whose only exclusion is `declared-name-absent`.
+
+    The target must be a candidate that the final upper bound does not reach;
+    the declared name must be absent from the image.  `target_unreachable` is an
+    image symbol that the fixture's oracle does not reach.
+    """
+    g, oracle, rec = caller_record(oracle=oracle)
+    listed = [target] if listed is None else listed
+    evidence = {"declared_name": name, "present": False}
+    if include_targets:
+        evidence["targets"] = list(listed)
+    rec["exclusions"] = [{
+        "target": target,
+        "reason": "declared-name-absent",
+        "row_kind": "target-drop",
+        "claim": {"kind": "declared-name-absent", "module": CALLER_MODULE,
+                  "subjects": [name]},
+        "evidence": evidence,
+    }]
+    rec["candidate_source"]["targets"] = sorted({"target_ok", target})
+    rec["candidate_source"]["excluded_callers"][0][
+        "contributed_targets"] = []
+    rec["candidate_source"]["excluded_callers"][0]["call_sites"] = []
+    rec["exclusion_accounting"].update({
+        "candidate_targets": rec["candidate_source"]["targets"],
+        "admitted_targets": ["target_ok"],
+        "excluded_targets": [target],
+        "unaccounted_targets": [],
+    })
+    return g, oracle, rec
+
+
+# --------------------------------------------------------------------------- #
+# round 4: per-call-site attribution for every caller, and the conservative
+# admission of a candidate that no caller row attributes
+# --------------------------------------------------------------------------- #
+ATTRIBUTION_FUNCTIONS = {
+    0x10: "root",
+    0x20: "reachable_caller",
+    0x30: "excluded_caller",
+    0x40: "site_func",
+    0x50: "target_ok",
+    0x60: "target_dropped",
+}
+ATTRIBUTION_MODULE = "metamorphic-attribution-fixture.so"
+
+
+class _AttributionPrecision:
+    """The argument-summary state the production attribution rule reads."""
+
+    import_addrs = set()
+
+    def __init__(self, calls, insns, summary=None):
+        self.calls = calls
+        self.insns_by_func = insns
+        self.summary = summary or {}
+
+    def summary_vals(self, f, k):
+        return set(self.summary.get(f, {}).get(k, ()))
+
+
+class _AttributionGraph:
+    name = ATTRIBUTION_MODULE
+    funcs = dict(ATTRIBUTION_FUNCTIONS)
+    start_set = set(ATTRIBUTION_FUNCTIONS)
+    all_syms = dict(ATTRIBUTION_FUNCTIONS)
+    names_at = {a: {n} for a, n in ATTRIBUTION_FUNCTIONS.items()}
+    dynamic_defs = {}
+    relocs = []
+    taken_code = set()
+    taken_data = set()
+    slot_funcs = {}
+    slot_data = {}
+    slot_syms = {}
+    field_stores = {}
+    unknown_call_arg_targets = set()
+    import_addrs = set()
+    evidence_classes = {}
+    residual_sites = []
+    resolved_targets = set()
+    precision_counts = {}
+
+    @property
+    def slot_func_targets(self):
+        return set()
+
+    def section_of(self, _a):
+        return ".text"
+
+    def static_slot(self, _a):
+        return None
+
+    def seam_symbol(self, _a):
+        return None
+
+    def cstring_at(self, _a):
+        return None
+
+    def is_data(self, _a):
+        return False
+
+
+def _attribution_graph(excluded_has_call_site=True):
+    """A site whose callback parameter is passed by two in-image callers.
+
+    The reachable caller passes a literal; the excluded caller forwards its own
+    parameter, which its argument summary resolves to ``target_dropped``.  With
+    ``excluded_has_call_site=False`` the excluded caller is still a direct
+    caller but has no recorded call arguments, so it has an empty call-site
+    list and contributes nothing.
+    """
+    g = _AttributionGraph()
+    insns = {
+        0x20: [(0x24, "lea    0x2c8(%rip),%rsi  # 50 <target_ok>"),
+               (0x25, "call   0x40 <site_func>")],
+        0x30: [(0x35, "call   0x40 <site_func>")],
+    }
+    calls = [
+        (0x20, 0x40, [cc.PValue(), cc.PValue.one(0x50)], 0x25),
+    ]
+    if excluded_has_call_site:
+        calls.append((0x30, 0x40, [cc.PValue(), cc.PValue.one(("arg", 1))],
+                      0x35))
+    g.direct = {0x20: {0x40}} if excluded_has_call_site \
+        else {0x30: {0x40}}
+    g.precision = _AttributionPrecision(
+        calls, insns, {0x30: {1: {0x60}}})
+    g.sites = {(0x40, 0x41, "call"): {
+        "kind": "call", "func": 0x40, "addr": 0x41,
+        "text": "call *%rbp", "targets": {0x50, 0x60},
+        "unresolved": True, "reason": "reg-value-partial[arg]",
+        "class": "materialised", "field_offsets": set(), "seam": None,
+        "arg_deps": {1}, "arg_targets": {0x50, 0x60}}}
+    return g
+
+
+def _attribution_oracle(g):
+    return cc.ReachabilityOracle(
+        {g.name: g},
+        {(g.name, a) for a in (0x10, 0x20, 0x40, 0x50, 0x60)})
+
+
+def attribution_record(excluded_has_call_site=True):
+    g = _attribution_graph(excluded_has_call_site)
+    cc.apply_evidence_classes(g, set(), {0x10, 0x20, 0x40})
+    oracle = _attribution_oracle(g)
+    rec = cc._edge_record(g, g.sites[(0x40, 0x41, "call")], 1, oracle)
+    return g, oracle, rec
+
+
+def zero_attribution_record():
+    """A bound whose rows exist but attribute nothing."""
+    g = _attribution_graph(False)
+    g.sites = {(0x40, 0x41, "call"): {
+        "kind": "call", "func": 0x40, "addr": 0x41,
+        "text": "call *%rbp", "targets": set(), "unresolved": False,
+        "reason": "reachable-caller target bounding",
+        "class": "reachable-caller-target", "field_offsets": set(),
+        "arg_deps": {1}, "arg_targets": {0x50, 0x60},
+        "reachable_caller_bound": {
+            "schema": cc.REACHABLE_CALLER_SCHEMA,
+            "reachable_callers": [{
+                "function": "0x20", "symbol": "reachable_caller",
+                "reachable": True, "reason": None, "call_sites": [],
+                "contributed_targets": []}],
+            "excluded_callers": [{
+                "function": "0x30", "symbol": "excluded_caller",
+                "reachable": False, "in_reachable_set": False,
+                "reason": "x", "in_image_references": [],
+                "call_sites": [], "contributed_targets": []}],
+            "bounded_targets": []}}}
+    oracle = _attribution_oracle(g)
+    rec = cc._edge_record(g, g.sites[(0x40, 0x41, "call")], 1, oracle)
+    return g, oracle, rec
+
+
+def admit_attribution_record():
+    """The required empty-call-site fixture, built at the record level.
+
+    The excluded caller row exists but has an empty call-site list and an empty
+    contribution, so nothing attributes ``target_dropped``.  It must be
+    admitted, never dropped.
+    """
+    g = _attribution_graph(False)
+    g.sites = {(0x40, 0x41, "call"): {
+        "kind": "call", "func": 0x40, "addr": 0x41,
+        "text": "call *%rbp", "targets": {0x50}, "unresolved": False,
+        "reason": "reachable-caller target bounding",
+        "class": "reachable-caller-target", "field_offsets": set(),
+        "arg_deps": {1}, "arg_targets": {0x50, 0x60},
+        "reachable_caller_bound": {
+            "schema": cc.REACHABLE_CALLER_SCHEMA,
+            "reachable_callers": [{
+                "function": "0x20", "symbol": "reachable_caller",
+                "reachable": True, "reason": None,
+                "call_sites": [{"call_site": "0x25", "arguments": [{
+                    "argument_index": 1, "targets": ["0x50"],
+                    "value": ["0x50"], "non_image_values": [],
+                    "unresolved": False, "witness_instruction": []}]}],
+                "contributed_targets": ["0x50"]}],
+            "excluded_callers": [{
+                "function": "0x30", "symbol": "excluded_caller",
+                "reachable": False, "in_reachable_set": False,
+                "reason": "x", "in_image_references": [],
+                "call_sites": [], "contributed_targets": []}],
+            "bounded_targets": ["0x50"], "unattributed_targets": ["0x60"]}}}
+    oracle = _attribution_oracle(g)
+    rec = cc._edge_record(g, g.sites[(0x40, 0x41, "call")], 1, oracle)
+    return g, oracle, rec
+
+
+def case_caller_attribution_from_summary():
+    g, oracle, rec = attribution_record()
+    excluded = rec["candidate_source"]["excluded_callers"][0]
+    witness = excluded["call_sites"][0]["arguments"][0]
+    dropped = [e["target"] for e in rec["exclusions"]
+               if e["reason"] == "not-contributed-by-reachable-callers"]
+    ok = (not cc.validate_edge_records([rec], oracle)
+          and dropped == ["target_dropped"]
+          and witness.get("argument_index") == 1
+          and witness.get("targets") == ["target_dropped"]
+          and excluded["contributed_targets"] == ["target_dropped"])
+    return _case(
+        "au-excluded-caller-attribution",
+        "two in-image callers; the excluded caller forwards its own parameter",
+        "resolve the excluded caller's contribution through its argument "
+        "summary (the same expansion that produced the site's flat targets)",
+        "the dropped target is recomputable from the excluded caller's "
+        "per-call-site witness and the record validates cleanly",
+        (f"dropped={dropped}, witness_targets={witness.get('targets')}, "
+         f"contributed={excluded['contributed_targets']}"),
+        ok, {"candidate_source": _clean(rec["candidate_source"])})
+
+
+def case_unattributed_candidate_admitted():
+    g, oracle, rec = admit_attribution_record()
+    admitted = rec["exclusion_accounting"]["admitted_targets"]
+    admissions = rec.get("unattributed_admissions") or []
+    ok = (not cc.validate_edge_records([rec], oracle)
+          and not rec["exclusions"]
+          and admitted == ["target_dropped", "target_ok"]
+          and [a["target"] for a in admissions] == ["target_dropped"])
+    return _case(
+        "av-unattributed-target-admitted",
+        "the excluded caller has no recorded call arguments (empty call-site "
+        "list), so nothing attributes target_dropped",
+        "build the record with an empty excluded-caller row",
+        "target_dropped is admitted, not dropped, and listed in "
+        "unattributed_admissions; the record validates cleanly",
+        (f"exclusions={rec['exclusions']}, admitted={admitted}, "
+         f"admissions={[a['target'] for a in admissions]}"),
+        ok, {"unattributed_admissions": admissions})
+
+
+def case_zero_attribution_unresolved():
+    g, oracle, rec = zero_attribution_record()
+    ok = (rec["disposition"] == cc.DISPOSITION_UNRESOLVED
+          and rec["target_set"] == []
+          and (rec.get("missing_property") or "").startswith(
+              "caller attribution incomplete:")
+          and not rec["exclusions"]
+          and not cc.validate_edge_records([rec], oracle))
+    return _case(
+        "aw-wholly-unattributable-unresolved",
+        "a bound whose caller rows exist but attribute no candidate",
+        "build the edge record",
+        "no bounded set is emitted: the record is UNRESOLVED and names the "
+        "incomplete attribution",
+        (f"disposition={rec['disposition']}, "
+         f"missing_property={rec.get('missing_property')!r}"),
+        ok, {"missing_property": rec.get("missing_property"),
+             "unattributed_admissions": rec.get("unattributed_admissions")})
+
+
+def case_attribution_witness_mismatch():
+    _g, oracle, rec = caller_record()
+    rec["candidate_source"]["excluded_callers"][0]["call_sites"] = []
+    return _verdict_case(
+        "ax-contribution-without-witness",
+        "an excluded caller keeps its contributed target but loses the call "
+        "site that would witness it",
+        "the contribution must equal the union of its per-call-site targets",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_unattributed_admission_forged():
+    _g, oracle, rec = admit_attribution_record()
+    if rec.get("unattributed_admissions"):
+        rec["unattributed_admissions"][0]["target"] = "target_ok"
+    return _verdict_case(
+        "ay-forged-unattributed-admission",
+        "an unattributed admission names a target a reachable caller "
+        "contributes",
+        "an admission must be genuinely unattributed and listed in both places",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_zero_attribution_proved_refused():
+    _g, oracle, rec = zero_attribution_record()
+    candidates = sorted(rec["candidate_source"]["targets"])
+    rec["disposition"] = cc.DISPOSITION_PROVED
+    rec["target_set"] = candidates
+    rec["target_set_claim"] = True
+    rec["target_reachability"] = "claimed"
+    rec["missing_property"] = None
+    rec["exclusion_accounting"]["admitted_targets"] = candidates
+    rec["semantic_identity"]["provenance_chain"] = [
+        {"target": t,
+         "derivation": [{"step": "unattributed-admission",
+                         "reason": "forged"}]}
+        for t in candidates]
+    return _verdict_case(
+        "az-zero-attribution-proved",
+        "a record with zero attribution is forced to claim PROVED_TARGET_SET",
+        "a caller-bound narrowing with no attributable candidate cannot claim "
+        "a bounded set",
+        cc.validate_edge_records([rec], oracle))
+
+
+def _target_claim(target, subject, checked=None):
+    return {
+        "target": target,
+        "reason": "target-not-in-reachable-set",
+        "row_kind": "target-drop",
+        "claim": {"kind": "target-not-in-reachable-set",
+                  "module": CALLER_MODULE, "subjects": [subject]},
+        "evidence": {"reachable_set_member": False, "symbol": subject,
+                     "reachable_basis": "final-upper-bound",
+                     "symbols_checked": ([subject] if checked is None
+                                          else checked)}}
+
+
+def _verdict_case(case_id, transformation, expected, defects):
+    ok = bool(defects)
+    return _case(
+        case_id, "caller-bound / semantic fixture", transformation, expected,
+        ("refused: " + defects[0][:160]) if ok else "accepted",
+        ok, {"defects": defects[:4]})
+
+
+def case_h10_caller_bound_positive():
+    g, oracle, rec = caller_record()
+    defects = cc.validate_edge_records([rec], oracle)
+    audit = cc.reachability_exclusion_audit({g.name: g}, oracle, [rec])
+    dropped_reachable = oracle.is_reachable(g.name, "target_dropped")[0]
+    caller_absent = oracle.is_reachable(g.name, "excluded_caller")[0] is False
+    ok = (not defects and not [r for r in audit if r["violation"]]
+          and dropped_reachable and caller_absent)
+    return _case(
+        "u-v110-caller-bound-clean",
+        "caller-bound fixture (v1m shape)",
+        "drop 178-style targets contributed only by one genuinely unreachable "
+        "caller, while the dropped targets themselves are reachable",
+        "caller-scoped claim validates cleanly with no oracle violation",
+        (f"defects={len(defects)}, violations="
+         f"{len([r for r in audit if r['violation']])}, "
+         f"dropped_reachable={dropped_reachable}, "
+         f"caller_absent={caller_absent}"),
+        ok, {"defects": defects[:4]})
+
+
+def case_h1_target_evidence_binding():
+    _g, oracle, rec = caller_record()
+    rec["exclusions"] = [_target_claim("reachable_target", "excluded_caller")]
+    rec["candidate_source"]["targets"] = ["reachable_target", "target_ok"]
+    rec["exclusion_accounting"].update({
+        "candidate_targets": ["reachable_target", "target_ok"],
+        "excluded_targets": ["reachable_target"]})
+    return _verdict_case(
+        "v-target-evidence-binding",
+        "exclude a reachable target whose evidence names a different absent "
+        "symbol",
+        "claims about exactly the excluded target are refused",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_h2_claim_module_binding():
+    g, _oracle, rec = caller_record()
+    other = CallerFixture()
+    other.name = "metamorphic-other-fixture.so"
+    other.funcs = {0x1300: "reachable_caller", 0x9000: "other_func"}
+    other.all_syms = dict(other.funcs)
+    other.names_at = {a: {n} for a, n in other.funcs.items()}
+    oracle = cc.ReachabilityOracle(
+        {g.name: g, other.name: other},
+        {(g.name, a) for a in CALLER_REACH} | {(other.name, 0x1300)})
+    for row in rec["exclusions"] + (rec.get("excluded_callers") or []):
+        row["claim"]["module"] = other.name
+    return _verdict_case(
+        "w-claim-module-binding",
+        "rebind the claim to a different DSO that also reaches the named caller",
+        "a claim whose module is not the record's module is refused",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_h3_icf_alias():
+    _g, oracle, rec = caller_record(alias=True)
+    rec["exclusions"] = [_target_claim("alias_secondary", "alias_secondary")]
+    rec["candidate_source"]["targets"] = ["alias_secondary", "target_ok"]
+    rec["exclusion_accounting"].update({
+        "candidate_targets": ["alias_secondary", "target_ok"],
+        "excluded_targets": ["alias_secondary"]})
+    return _verdict_case(
+        "x-icf-alias-escape",
+        "exclude an ICF alias recorded at a reachable address",
+        "every name at a reachable address is reachable, so the alias is "
+        "refused",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_h4_forged_caller_count():
+    _g, oracle, rec = caller_record()
+    rec["exclusions"] = [_target_claim("excluded_caller", "excluded_caller",
+                                       checked=[])]
+    rec["exclusions"][0]["evidence"]["reachable_caller_count"] = 0
+    rec["candidate_source"]["targets"] = ["excluded_caller", "target_ok"]
+    rec["exclusion_accounting"].update({
+        "candidate_targets": ["excluded_caller", "target_ok"],
+        "excluded_targets": ["excluded_caller"]})
+    return _verdict_case(
+        "y-forged-caller-count",
+        "claim reachable_caller_count=0 with an empty symbols_checked list",
+        "the exemption is gone; the covered symbols are mandatory",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_h5_no_writer_self_contradiction():
+    _g, oracle, rec = caller_record()
+    rec["exclusions"] = [{
+        "target": "target_dropped", "reason": "no-reachable-writer",
+        "claim": {"kind": "no-reachable-writer", "module": CALLER_MODULE,
+                  "subjects": []},
+        "evidence": {"writer": "w",
+                     "derived_targets": ["target_dropped", "target_ok"],
+                     "reachable_writers": []}}]
+    return _verdict_case(
+        "z-no-writer-self-contradiction",
+        "exclude a target that the claim's own derived_targets contain",
+        "a self-contradicting writer claim is refused",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_h5_declared_name_unrelated():
+    _g, oracle, rec = declared_record(target="target_dropped",
+                                      listed=["target_dropped"])
+    return _verdict_case(
+        "z2-declared-name-unrelated",
+        "exclude a reachable target under an unrelated absent declared name",
+        "a declared-name claim cannot map a reachable target to an absent name",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_declared_name_free_text():
+    _g, oracle, rec = declared_record(include_targets=False)
+    rec["exclusions"][0]["claim"]["target_derivation"] = (
+        "a free-text claim is not a mapping")
+    return _verdict_case(
+        "ag-declared-name-free-text",
+        "replace evidence.targets with a free-text target_derivation",
+        "a free-text derivation is not a structured target mapping",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_declared_name_target_membership():
+    _g, oracle, rec = declared_record(listed=["target_ok"])
+    return _verdict_case(
+        "at-declared-name-target-not-listed",
+        "exclude a candidate target that evidence.targets does not list",
+        "the dropped target must be one of the structured evidence.targets",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_declared_name_targets_not_candidates():
+    _g, oracle, rec = declared_record(
+        listed=["target_unreachable", "invented_name"])
+    return _verdict_case(
+        "ah-declared-name-targets-not-candidates",
+        "list a declared target that candidate_source does not enumerate",
+        "every evidence.targets entry must be a candidate",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_declared_name_structured_clean():
+    _g, oracle, rec = declared_record()
+    defects = cc.validate_edge_records([rec], oracle)
+    audit = cc.reachability_exclusion_audit({_g.name: _g}, oracle, [rec])
+    ok = (not defects and not [r for r in audit if r["violation"]])
+    return _case(
+        "ai-declared-name-structured-clean",
+        "an absent declared name mapped to an unreachable candidate target",
+        "use a structured evidence.targets list",
+        "the structured mapping validates cleanly and has no audit violation",
+        (f"defects={len(defects)}, violations="
+         f"{len([r for r in audit if r['violation']])}"),
+        ok, {"defects": defects[:4]})
+
+
+def case_target_drop_with_subject_row():
+    _g, oracle, rec = caller_record()
+    rec["exclusions"][0]["row_kind"] = "subject"
+    return _verdict_case(
+        "aj-target-drop-with-subject-row",
+        "label a target drop in exclusions[] as a caller/writer subject row",
+        "a target drop cannot be justified by a caller/writer claim",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_writer_used_as_target_drop():
+    _g, oracle, rec = caller_record()
+    rec["exclusions"].append({
+        "target": "target_dropped",
+        "reason": "writer-not-in-reachable-set",
+        "row_kind": "target-drop",
+        "claim": {"kind": "writer-not-in-reachable-set",
+                  "module": CALLER_MODULE,
+                  "subjects": ["excluded_caller"]},
+        "evidence": {"reachable_set_member": False,
+                     "reachable_basis": "final-upper-bound",
+                     "symbol": "excluded_caller",
+                     "symbols_checked": ["excluded_caller"],
+                     "would_store_targets": ["target_dropped"]}})
+    return _verdict_case(
+        "ak-writer-used-as-target-drop",
+        "put a writer-not-in-reachable-set row in exclusions[]",
+        "the reason vocabulary is split by row kind",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_forged_contributed_targets():
+    _g, oracle, rec = caller_record()
+    rec["candidate_source"]["callers"][0]["contributed_targets"] = [
+        "target_ok", "target_dropped"]
+    rec["candidate_source"]["callers"][0]["call_sites"][0][
+        "arguments"][0]["targets"] = ["target_ok", "target_dropped"]
+    for row in rec["exclusions"]:
+        if row["reason"] == "not-contributed-by-reachable-callers":
+            row["claim"]["reachable_callers"][0]["contributed_targets"] = [
+                "target_ok", "target_dropped"]
+    return _verdict_case(
+        "al-forged-contributed-targets",
+        "both the claim and candidate_source make a reachable caller "
+        "contribute the dropped target",
+        "the target is then not droppable and the admitted set is not the "
+        "reachable image set",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_argument_source_mapping_required():
+    _g, oracle, rec = caller_record()
+    del rec["candidate_source"]["callers"]
+    return _verdict_case(
+        "am-argument-source-mapping-required",
+        "omit the caller mapping from an argument-targets candidate source",
+        "the drop is not recomputable without the mapping",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_dropped_target_not_excluded_contribution():
+    _g, oracle, rec = caller_record()
+    rec["candidate_source"]["excluded_callers"][0][
+        "contributed_targets"] = ["target_ok"]
+    rec["candidate_source"]["excluded_callers"][0][
+        "call_sites"][0]["arguments"][0]["targets"] = ["target_ok"]
+    return _verdict_case(
+        "an-dropped-target-not-excluded-contribution",
+        "exclude a target that no excluded caller contributes",
+        "the drop must be justified by an excluded caller that produces it",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_candidates_equal_admitted_plus_excluded():
+    _g, oracle, rec = caller_record()
+    rec["exclusion_accounting"]["candidate_enumeration"] = "not-applicable"
+    rec["candidate_source"]["targets"].append("extra_candidate")
+    rec["exclusion_accounting"]["candidate_targets"].append(
+        "extra_candidate")
+    return _verdict_case(
+        "ao-candidates-equal-admitted-plus-excluded",
+        "add a candidate that is neither admitted nor excluded",
+        "candidates must equal admitted plus excluded",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_writer_would_store_binding():
+    _g, oracle, rec = caller_record()
+    # Use the semantic fixture for the writer-subject row.
+    _sg, srecords = classify()
+    rec = semantic_record(json.loads(json.dumps(srecords)))
+    for row in rec.get("excluded_writers") or ():
+        if row.get("reason") == "writer-not-in-reachable-set":
+            row["evidence"].pop("would_store_targets", None)
+    defects = cc.validate_edge_records([rec])
+    return _case(
+        "ap-writer-would-store-binding",
+        "remove would_store_targets from a writer subject row",
+        "the writer subject is bound to the site's targets",
+        "a writer subject row without would_store_targets is refused",
+        ("refused: " + defects[0][:160]) if defects else "accepted",
+        bool(defects), {"defects": defects[:4]})
+
+
+def case_target_reachability_derived():
+    _g, oracle, rec = caller_record()
+    rec["target_reachability"] = "not-claimed"
+    return _verdict_case(
+        "aq-target-reachability-derived",
+        "mark a PROVED_TARGET_SET record's target_reachability not-claimed",
+        "target_reachability is derived from the disposition",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_sidecar_default_workdir():
+    class _A:
+        output = "/tmp/receipt.json"
+        edge_records = None
+
+    workdir = Path("/tmp/corpus-workdir")
+    resolved = cc._edge_records_path(_A(), Path("/tmp"), "ab" * 32, workdir)
+    ok = (resolved.parent == workdir
+          and resolved.name.startswith("edge-records."))
+    return _case(
+        "ar-sidecar-default-workdir",
+        "an --output outside the workdir",
+        "resolve the default sidecar path",
+        "the default is under the workdir, never beside --output",
+        str(resolved), ok, {"resolved": str(resolved)})
+
+
+def case_tool_identity_sha256():
+    identity = cc._tool_identity()
+    ok = (len(identity.get("sha256") or "") == 64
+          and identity.get("schema") == cc.EDGE_RECORD_SCHEMA)
+    return _case(
+        "as-tool-identity-sha256",
+        "the validator identity bound into the receipt",
+        "read the tool identity",
+        "the receipt tool block carries a 64-hex sha256 and the record schema",
+        (f"sha256_len={len(identity.get('sha256') or '')}, "
+         f"schema={identity.get('schema')}"),
+        ok, {"tool": identity})
+
+
+def _semantic_oracle_records():
+    g = make_fixture()
+    cc.apply_evidence_classes(g, set(), g.reach)
+    oracle = cc.ReachabilityOracle({g.name: g}, {(g.name, a) for a in g.reach})
+    records = cc.build_edge_records({g.name: g}, oracle)
+    return g, oracle, records
+
+
+def case_h6_semantic_excluded_caller():
+    g, oracle, records = _semantic_oracle_records()
+    tampered = _json_clone(records)
+    rec = semantic_record(tampered)
+    rec["candidate_source"]["rows"].append({
+        "caller": g.funcs[0x300], "call_site": "0x999", "included": False,
+        "reason": "caller-not-in-reachable-set", "targets": []})
+    return _verdict_case(
+        "aa-semantic-excluded-caller",
+        "mark a semantic call-site row included:false for a reachable caller",
+        "the candidate-source caller row is audited separately from the "
+        "auxiliary exclusion list",
+        cc.validate_edge_records(tampered, oracle))
+
+
+def case_h6_caller_bound_dropped_target():
+    _g, oracle, rec = caller_record()
+    for row in rec["exclusions"]:
+        if row["reason"] == "not-contributed-by-reachable-callers":
+            row["claim"]["reachable_callers"][0]["contributed_targets"] = []
+    return _verdict_case(
+        "ab-caller-bound-dropped-target",
+        "the claim omits the reachable caller's contribution while "
+        "candidate_source records it",
+        "the claim's per-caller mapping must equal candidate_source's",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_h7_candidate_deleted():
+    _g, oracle, rec = caller_record()
+    rec["exclusions"] = []
+    rec["exclusion_accounting"].update({
+        "excluded_targets": [], "candidate_targets": ["target_ok"]})
+    return _verdict_case(
+        "ac-candidate-and-exclusion-deleted",
+        "delete an exclusion and its candidate from the accounting block",
+        "candidate_source still names it, so the deletion is refused",
+        cc.validate_edge_records([rec], oracle))
+
+
+def case_h8_vacuous_target_set():
+    class _V:
+        name = "vacuous.so"
+        funcs = {0x10: "empty_func", 0x20: "unused"}
+        sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": set(), "unresolved": False,
+            "reason": None, "class": "field", "field_offsets": set(),
+            "seam": None, "arg_deps": set()}}
+
+    rec = cc.build_edge_records({"vacuous.so": _V()})[0]
+    ok = (rec["disposition"] == cc.DISPOSITION_UNRESOLVED
+          and rec.get("disposition_demotion") == "empty-target-set"
+          and bool(rec.get("missing_property")))
+    return _case(
+        "ad-vacuous-target-set-demoted",
+        "a site with no admitted target and no ABI contract",
+        "classify the site",
+        "an empty target set is never PROVED_TARGET_SET",
+        f"disposition={rec['disposition']}, "
+        f"demotion={rec.get('disposition_demotion')}",
+        ok, {"missing_property": rec.get("missing_property")})
+
+
+def case_h8_question_function():
+    class _N:
+        name = "nosym.so"
+        funcs = {}
+        sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": {0x99}, "unresolved": False,
+            "reason": None, "class": "field", "field_offsets": set(),
+            "seam": None, "arg_deps": set()}}
+
+    rec = cc.build_edge_records({"nosym.so": _N()})[0]
+    ok = (rec["disposition"] == cc.DISPOSITION_UNRESOLVED
+          and rec.get("disposition_demotion") == "no-defining-symbol")
+    return _case(
+        "ae-question-function-demoted",
+        "a site whose containing function has no symbol",
+        "classify the site",
+        "a definition-less function is never PROVED_TARGET_SET or "
+        "CONTRACT_BOUNDED",
+        f"defining={rec['semantic_identity']['defining_function']!r}, "
+        f"disposition={rec['disposition']}",
+        ok, {"missing_property": rec.get("missing_property")})
+
+
+def case_h9_duplicate_edge_id():
+    _g, oracle, rec = caller_record()
+    defects = cc.validate_edge_records([_json_clone(rec), _json_clone(rec)],
+                                       oracle)
+    ok = any("duplicate edge_id" in d for d in defects)
+    return _case(
+        "af-duplicate-edge-id",
+        "two records with the same module/function/kind/role/ordinal",
+        "validate the record set",
+        "a duplicate edge identity is refused",
+        ("refused: duplicate edge_id" if ok else "accepted"),
+        ok, {"defects": defects[:4]})
 
 
 CASES = (
@@ -469,6 +1598,53 @@ CASES = (
     case_argument_callback,
     case_unknown_target_injection,
     case_unreachable_target,
+    case_module_rename,
+    case_target_set_shrunk,
+    case_chain_row_removed,
+    case_chain_step_fabricated,
+    case_chain_step_payload_free,
+    case_stale_admitted_accounting,
+    case_exclusion_names_admitted_target,
+    case_reachable_member_flipped,
+    case_declared_absent_present,
+    case_stale_excluded_accounting,
+    case_icf_duplicate_target,
+    case_oracle_disagreement,
+    case_oracle_agreement,
+    case_h10_caller_bound_positive,
+    case_h1_target_evidence_binding,
+    case_h2_claim_module_binding,
+    case_h3_icf_alias,
+    case_h4_forged_caller_count,
+    case_h5_no_writer_self_contradiction,
+    case_h5_declared_name_unrelated,
+    case_h6_semantic_excluded_caller,
+    case_h6_caller_bound_dropped_target,
+    case_h7_candidate_deleted,
+    case_h8_vacuous_target_set,
+    case_h8_question_function,
+    case_h9_duplicate_edge_id,
+    case_declared_name_free_text,
+    case_declared_name_target_membership,
+    case_declared_name_targets_not_candidates,
+    case_declared_name_structured_clean,
+    case_target_drop_with_subject_row,
+    case_writer_used_as_target_drop,
+    case_forged_contributed_targets,
+    case_argument_source_mapping_required,
+    case_dropped_target_not_excluded_contribution,
+    case_candidates_equal_admitted_plus_excluded,
+    case_writer_would_store_binding,
+    case_target_reachability_derived,
+    case_sidecar_default_workdir,
+    case_tool_identity_sha256,
+    # round 4: per-call-site attribution for every caller + conservative fallback
+    case_caller_attribution_from_summary,
+    case_unattributed_candidate_admitted,
+    case_zero_attribution_unresolved,
+    case_attribution_witness_mismatch,
+    case_unattributed_admission_forged,
+    case_zero_attribution_proved_refused,
 )
 
 NOT_COVERED = [
@@ -520,9 +1696,19 @@ def main(argv=None):
             "transformation can.",
             "The fixtures are synthetic and do not reproduce the real "
             "library's layout, linker behaviour, or runtime dispatch.",
-            "The refusal case establishes that an unaccounted exclusion is "
-            "detected; it does not establish that every real derivation is "
+            "The refusal cases establish that the named disagreements are "
+            "detected; they do not establish that every real derivation is "
             "complete.",
+            "The validator compares a record's own ledgers (target_set, "
+            "admitted_targets, provenance chain) and the final upper-bound "
+            "oracle.  The ledgers are mutually redundant within the record, "
+            "not independent derivations.  It does not re-derive the target "
+            "set to a fixpoint, so a record that is internally consistent and "
+            "consistent with the upper bound is not thereby proved complete, "
+            "and it cannot distinguish an analyzer-produced record from a "
+            "forged one that is internally consistent.  Admissibility needs "
+            "the identity chain (tool sha256, artefact sha256, sidecar digest) "
+            "and a re-run of the pinned validator over the pinned sidecar.",
         ],
     }
     out = Path(args.out)
