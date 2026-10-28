@@ -25,14 +25,16 @@
     "out_of_scope": [
       "src/engine/eng_list.rs:90 engine_list_cleanup remains UNKNOWN: it is a distinct callback and is not one of the nine unregister_all paths."
     ],
-    "method": "Site-specific discharge argument, not a qualifier removal. Each callback is examined against its actual precondition; the EngineTableSlot repair is the reason the v1l missing property is gone, and the lock discipline is the reason the remaining obligation is discharged."
+    "method": "Site-specific discharge argument, not a qualifier removal. Each callback is examined against its actual precondition; the EngineTableSlot repair is the reason the v1l missing property is gone, and the lock discipline is the reason the remaining obligation is discharged. Revision 2026-10-28: the marker-retention rationale was corrected -- an unsafe body is not a caller obligation and does not require an `unsafe fn` declaration; see `revision`."
   },
   "counts": {
     "sites": 9,
     "discharged": 9,
     "left_blocked": 0,
     "vestigial": 0,
-    "not_vestigial": 9
+    "not_vestigial": 9,
+    "marker_not_justified": 9,
+    "caller_facing_precondition_none": 9
   },
   "site_entries": [
     {
@@ -45,7 +47,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (PKEY_ASN1_METH_TABLE) via pkey_asn1_meth_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_pkey_asn1_meths() {",
         "// SAFETY: the table slot is this module's static.",
@@ -57,12 +59,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     },
     {
       "id": "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
@@ -74,7 +83,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (CIPHER_TABLE) via cipher_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_ciphers() {",
         "// SAFETY: the table slot is this module's static.",
@@ -86,12 +95,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     },
     {
       "id": "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
@@ -103,7 +119,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (DH_TABLE) via dh_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_dh() {",
         "// SAFETY: the table slot is this module's static.",
@@ -115,12 +131,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     },
     {
       "id": "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
@@ -132,7 +155,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (DIGEST_TABLE) via digest_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_digests() {",
         "// SAFETY: the table slot is this module's static.",
@@ -144,12 +167,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     },
     {
       "id": "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
@@ -161,7 +191,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (DSA_TABLE) via dsa_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_dsa() {",
         "// SAFETY: the table slot is this module's static.",
@@ -173,12 +203,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     },
     {
       "id": "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
@@ -190,7 +227,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (EC_TABLE) via ec_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_ec() {",
         "// SAFETY: the table slot is this module's static.",
@@ -202,12 +239,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     },
     {
       "id": "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
@@ -219,7 +263,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (PKEY_METH_TABLE) via pkey_meth_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_pkey_meths() {",
         "// SAFETY: the table slot is this module's static.",
@@ -231,12 +275,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     },
     {
       "id": "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
@@ -248,7 +299,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (RAND_TABLE) via rand_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_rand() {",
         "// SAFETY: the table slot is this module's static.",
@@ -260,12 +311,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     },
     {
       "id": "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
@@ -277,7 +335,7 @@
       "signature": "unsafe extern \"C\" fn()",
       "unsafe_marker_retained": true,
       "vestigial": false,
-      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "why_not_vestigial": "Retained unchanged, but the earlier justification is withdrawn: the body's unsafe call is not what the marker encodes. The callback has no caller-facing precondition -- it takes no arguments, touches only this module's own &'static EngineTableSlot (RSA_TABLE) via rsa_table_slot(), and every machine-level requirement (engine write lock, slot ownership, single release) is an internal invariant of engine_table_cleanup and of the registration path, not a guarantee the caller supplies. Its stored type is EngineCleanupCb (`unsafe extern \"C\" fn()`, eng_lib.rs:542). The declaration is therefore a type-convention marker, not a contract; recorded as marker_not_justified for a separate typed change.",
       "body_evidence": [
         "unsafe extern \"C\" fn engine_unregister_all_rsa() {",
         "// SAFETY: the table slot is this module's static.",
@@ -289,12 +347,19 @@
         "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
         "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
         "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
-        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed.",
+        "scope_note": "p1-p5 are invariants established inside engine_table_cleanup and the registration path. They are not preconditions the callback's caller can violate at the Rust boundary, and violating the lock discipline degrades to a leak, not UB (see p2)."
       },
       "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
       "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
       "disposition": "DISCHARGED",
-      "remaining_obligation": null
+      "remaining_obligation": null,
+      "caller_facing_precondition": "none (explicit): a zero-argument callback that reads only the module-static slot; no guarantee the caller must establish is required for soundness.",
+      "precondition_encoding": "not encoded because there is nothing to encode; it is not merely under-documented. The p1-p5 entries are internal invariants of engine_table_cleanup and the registration path, not caller obligations.",
+      "marker_not_justified": true,
+      "marker_disposition": "marker_not_justified",
+      "marker_retained_reason": "EngineCleanupCb is declared `unsafe extern \"C\" fn()` (eng_lib.rs:542) and engine_cleanup_cb_free calls through it in an unsafe block (eng_lib.rs:689). A safe `extern \"C\" fn()` coerces to that pointer type (measured: `let _o: Option<Cb> = Some(c_safe);` compiles), so the marker is a declaration convention, not a type requirement. Removal is out of scope for this subphase.",
+      "correction": "CORRECTION (2026-10-28): the previous `why_not_vestigial` said the marker was required because the body performs an unsafe operation (calling `engine_table_cleanup`). That reasoning is invalid: a safe function may contain unsafe operations inside explicit `unsafe` blocks, and an unsafe body creates no caller obligation. Whether a declaration must be `unsafe fn` depends on the caller-facing precondition and the assigned function-pointer type. Callers guarantee nothing here and the pointer type accepts a safe fn by coercion, so the marker is not justified; it is retained only so this subphase does not mix a documentation correction with a source change."
     }
   ],
   "negative_controls": [
@@ -325,5 +390,29 @@
     "The current callbacks are unreachable because engine_cleanup_int is withheld; the discharge covers the sites as written, not a future engine_cleanup_int landing.",
     "No TSan/Miri run was made at this level; the concurrency control is functional only.",
     "This is not a SAFE_COMPATIBLE graduation and not a SEAL."
-  ]
+  ],
+  "revised_utc": "2026-10-28T08:54:34Z",
+  "revision": {
+    "kind": "rationale_correction_no_source_change",
+    "revised_utc": "2026-10-28T08:54:34Z",
+    "previous_reasoning_status": "withdrawn_as_invalid",
+    "summary": "The retained `unsafe extern \"C\" fn` markers on the nine ENGINE cleanup callbacks were justified by the claim that their bodies call the unsafe fn `engine_table_cleanup`. That is not a valid argument for an `unsafe fn` declaration: a safe function may perform unsafe operations inside explicit `unsafe` blocks. Whether a declaration must be `unsafe fn` depends on (a) what its callers must guarantee and (b) the function-pointer type it is assigned to. For all nine, (a) is empty -- zero arguments, module-static slot, no caller-established precondition for soundness -- and (b) is satisfiable by safe-to-unsafe fn-pointer coercion. The markers are therefore marked `marker_not_justified`; they are retained unchanged in this subphase so a separate batch can make the typed change with its own evidence.",
+    "changed_fields": [
+      "why_not_vestigial",
+      "caller_facing_precondition",
+      "precondition_encoding",
+      "marker_not_justified",
+      "marker_disposition",
+      "marker_retained_reason",
+      "correction",
+      "preconditions.scope_note"
+    ],
+    "evidence": [
+      "src/engine/eng_lib.rs:542 -- `pub type EngineCleanupCb = unsafe extern \"C\" fn();`",
+      "src/engine/eng_lib.rs:684-693 -- `engine_cleanup_cb_free` calls `(*item).cb` as `unsafe { cb() }` at :689",
+      "src/engine/eng_table.rs:273-295 -- `engine_table_register(..., cleanup: Option<EngineCleanupCb>, ...)`",
+      "rustc --edition 2021 coercion probe: `extern \"C\" fn c_safe() {}` assigned to `unsafe extern \"C\" fn()` and to `Option<unsafe extern \"C\" fn()>`; both compile (COERCION_CONFIRMED)"
+    ],
+    "marker_removal": "not_performed_this_subphase"
+  }
 }
