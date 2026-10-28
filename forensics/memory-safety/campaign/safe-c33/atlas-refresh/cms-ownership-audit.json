@@ -1,0 +1,157 @@
+{
+  "schema": "safe-c33/atlas-refresh/cms-ownership-audit/v1",
+  "kind": "cms-ownership-audit",
+  "subphase": "safe-c33/freeze-post-merge-v1m-part-a-bounded-cms-ownership",
+  "generated_utc": "2026-10-28T08:54:34Z",
+  "source_identity": {
+    "head": "a8bef2bec7230b42e3ec94648d8338a92bf19324",
+    "tree": "eb5a918782959f240edd4d6b66b4507b42f42437",
+    "note": "Audit of the checked-out source. The working tree additionally contains the test-only addition described in `fault_injection` (src/runtime/stack.rs and src/cms/cms_lib.rs). That addition is build-relevant under AGENTS §22, so it needs a new frozen candidate S' before any claim is promoted; no receipt here promotes one. No release/DSO rebuild was performed: the gates compiled only the check and lib-test targets."
+  },
+  "scope": {
+    "in_scope": [
+      "src/cms/cms_lib.rs:1180-1211 ossl_cms_get1_certs_ex (certificate arm)",
+      "src/cms/cms_lib.rs:1238-1271 ossl_cms_get1_crls_ex (CRL arm)",
+      "src/x509/x509_cmp.rs:1096-1158 X509_add_cert, including the X509_ADD_FLAG_UP_REF arm",
+      "src/runtime/stack.rs:395-410 OPENSSL_sk_new_reserve, :589-599 OPENSSL_sk_push, :644-677 OPENSSL_sk_insert, :168-208 sk_reserve"
+    ],
+    "out_of_scope": [
+      "docker/ and Cargo.toml/Cargo.lock (untouched)",
+      "Any production guard added solely to make an unreachable branch failure-atomic; deliberate non-action recorded under `remediation`.",
+      "Conversion of the nine ENGINE callback markers (Part B is a documentation correction only; see engine-callback-discharge.json `revision`)."
+    ],
+    "method": "Line-level reading of the converted source, a capacity-invariant proof over our Vec-backed stack, and two test-only fault-injection controls (up-ref restored vs up-ref orphaned). One heavy command at a time in the court container; no host build."
+  },
+  "sites": [
+    {
+      "id": "CMS-GET1-CERTS-UP-REF",
+      "file": "src/cms/cms_lib.rs",
+      "lines": "1201-1208",
+      "mechanism": "X509_add_cert(destination, cert, X509_ADD_FLAG_UP_REF) inside the get1_certs loop",
+      "evidence": [
+        "src/cms/cms_lib.rs:1203 -- `if (*cch).type_ == 0 && X509_add_cert(*certs, (*cch).d.cast(), 0x1) == 0`; 0x1 is X509_ADD_FLAG_UP_REF (src/x509/x509_vfy.rs:218).",
+        "src/x509/x509_cmp.rs:1130-1135 -- the UP_REF is taken before insertion; if X509_up_ref returns 0 the function returns 0 having taken no reference.",
+        "src/x509/x509_cmp.rs:1137-1147 -- OPENSSL_sk_insert is the insertion step.",
+        "src/x509/x509_cmp.rs:1147-1156 -- when the insert fails and UP_REF was set, X509_free at :1151 releases exactly the reference taken at :1132, then X509_CMP_222 is raised and 0 is returned.",
+        "src/cms/cms_lib.rs:1204-1206 -- the caller's failure arm pop_free's the destination stack and nulls the out-slot."
+      ],
+      "analysis": "X509_add_cert has exactly two observable outcomes for this caller: 1, with the extra reference owned by the destination stack; or 0, with the extra reference already released and no element inserted. Therefore the destination stack on the failure arm contains only certificates whose extra reference it owns (the ones already inserted), and OPENSSL_sk_pop_free releases exactly those references. The failing certificate is not in the stack, so the outer cleanup must not and does not release it.",
+      "verdict": "consistent",
+      "refcount_evidence": {
+        "control": "cms::cms_lib::tests::a_failed_cert_insertion_releases_the_up_ref",
+        "before": 2,
+        "after": 2,
+        "note": "X509_new gives the test reference (1); CMS_add1_cert up-refs to 2. Injected insert failure: X509_add_cert up-refs to 3, the insert fails, X509_free at x509_cmp.rs:1151 returns it to 2, and ossl_cms_get1_certs_ex returns 0 with `*certs == NULL`. The intended restoration property holds."
+      },
+      "residual": "None for ownership. Cosmetic only: the call site spells the flag as the literal 0x1 rather than the named constant; changing it is unrelated to ownership and was not done."
+    },
+    {
+      "id": "CMS-GET1-CRLS-UP-REF-PUSH",
+      "file": "src/cms/cms_lib.rs",
+      "lines": "1259-1268",
+      "mechanism": "X509_CRL_up_ref(d) followed by OPENSSL_sk_push(crls, d), short-circuited with ||",
+      "evidence": [
+        "src/cms/cms_lib.rs:1262 -- `(X509_CRL_up_ref((*rch).d.cast()) == 0 || OPENSSL_sk_push(*crls, (*rch).d) == 0)`",
+        "src/cms/cms_lib.rs:1263-1267 -- the failure arm pop_free's the destination stack, nulls the out-slot, and returns 0. It does not undo a successful up-ref.",
+        "src/x509/x_crl.rs:1301-1314 -- X509_CRL_up_ref uses the shared refcount protocol and answers 1 on success."
+      ],
+      "analysis": "If X509_CRL_up_ref succeeds and OPENSSL_sk_push then fails without inserting, the reference taken by the up-ref has no owner: the element is not in the destination stack, so pop_free cannot release it. This is a failure-atomicity gap in the source shape. Whether it is reachable is decided only by the capacity invariant below.",
+      "verdict": "unreachable_under_capacity_not_a_production_leak",
+      "failure_atomicity_if_reachable": {
+        "classification": "latent_gap_not_production_reachable",
+        "control": "cms::cms_lib::tests::a_failed_crl_push_orphans_one_reference_control",
+        "before": 2,
+        "after": 3,
+        "detail": "Injected push failure after a successful up-ref: 2 -> 3. Exactly one reference is orphaned; the intended property (after == before) does not hold. The control asserts the observed leak (after == before + 1), then releases the orphan by hand so the control itself is leak-free. The injected failure is NOT a claim of production reachability."
+      },
+      "residual": "The code has no rollback arm for this shape. It is retained because the capacity invariant makes the push infallible at this site; adding a guard is a deliberate change with its own tests, not a drive-by edit (see `remediation`)."
+    }
+  ],
+  "capacity_invariant": {
+    "claim": "If OPENSSL_sk_new_reserve(None, n) returns non-NULL, then the next n OPENSSL_sk_push calls on that stack neither allocate nor fail for capacity: every one returns its new count.",
+    "exact_preconditions": [
+      "The stack is the one just returned by that OPENSSL_sk_new_reserve call, before any other mutation (no pop/shift/delete/set/insert from another path).",
+      "The only insertions are OPENSSL_sk_push, which always calls OPENSSL_sk_insert with where_ = len (stack.rs:589-599); the append arm at stack.rs:667-671 is therefore taken and no element is shifted.",
+      "n >= 0. OPENSSL_sk_num of a live CMS choice stack is >= 0; a NULL slot answers -1 (stack.rs:515-525), for which `for i in 0..n` is an empty range and no push happens.",
+      "The number of pushes is at most n: each get1 loop runs exactly n = OPENSSL_sk_num(source) iterations and pushes at most once per iteration (the certificate loop pushes through X509_add_cert at most once; the CRL loop pushes at most once).",
+      "No comparator is installed (cmp = None), so no ordering/duplicate path can reject or reorder an insertion."
+    ],
+    "proof": [
+      "OPENSSL_sk_new_reserve(None, n) (stack.rs:395-410) starts from an empty Vec (num_alloc = 0). For n <= 0 it returns that stack; otherwise it calls sk_reserve(s, n, exact = true).",
+      "sk_reserve (stack.rs:168-208) rejects only n > MAX_NODES - len; with len = 0 that is n > INT_MAX, and reserve success implies the allocation succeeded. It sets target num_alloc = max(n, MIN_NODES) and, on the num_alloc == 0 arm, calls Vec::try_reserve(target) (stack.rs:180-186). An Ok answer guarantees Vec capacity >= len + target = target >= n; num_alloc is set to target.",
+      "Each push computes target = len + 1 with len <= n - 1, hence target <= n <= st.num_alloc. In sk_reserve's non-exact arm, `if num_alloc <= st.num_alloc { return true; }` (stack.rs:189-190) returns before compute_growth and before any try_reserve. So the growth path and allocation are not taken.",
+      "Vec capacity is never below st.num_alloc (try_reserve succeeded for at least num_alloc slots and the Vec is not shrunk), so `s.items.insert(len, data)` (stack.rs:672) writes into spare capacity and cannot reallocate.",
+      "The only earlier refusal in OPENSSL_sk_insert is the MAX_NODES guard (stack.rs:656-659), which requires len == INT_MAX. A successful reserve of n slots implies n <= INT_MAX; for len == INT_MAX during the loop we would need n > INT_MAX. On a realisable machine the reserve would fail first, so the helper returns 0 before the loop. The guard cannot fire under a successful reserve.",
+      "Therefore each push returns the new count; no push can take the `return 0` arm while at most n have been made."
+    ],
+    "scope_limits": "The proof is bound to this target's MIN_NODES = 4 / MAX_NODES = INT_MAX and to the current Vec-backed representation and its num_alloc bookkeeping. A representation change or a new mutation of the destination stack between reserve and push invalidates it and must re-establish it. The proof says nothing about a stack whose reserve returned NULL (the helper returns 0 before the loop).",
+    "outcome": "holds; the CRL push-failure branch is unreachable at the measured capacity, so the missing rollback arm is not a production leak"
+  },
+  "fault_injection": {
+    "hook": "src/runtime/stack.rs `#[cfg(test)] pub(crate) mod test_hooks` (thread-local Cell, one-shot) consulted at stack.rs:660-663, before sk_reserve. It is not compiled in a non-test build. It models the only fallible step after the capacity and MAX_NODES checks: sk_reserve answering false, which a real try_reserve failure does silently (stack.rs:181-183, 203-205).",
+    "not_a_reachability_claim": "Forcing the insert to fail establishes what the code does if it failed. It does not claim the push can fail at the reserved capacity; the capacity invariant above says it cannot.",
+    "controls": [
+      {
+        "name": "runtime::stack::tests::the_test_only_insert_fault_refuses_once_without_mutating",
+        "purpose": "negative control for the injector itself: a pushed element must be refused, the stack must stay empty, and the fault must be consumed by exactly one call.",
+        "result": "push returned 0; OPENSSL_sk_num stayed 0; the following push returned 1. PASS"
+      },
+      {
+        "name": "runtime::stack::tests::a_reserved_stack_absorbs_its_reservation_without_growth",
+        "purpose": "direct check of the invariant for n in {1,2,4,5,9,33}: num_alloc == max(n, MIN_NODES), capacity >= n, n pushes return 1..n, and num_alloc/capacity are unchanged afterwards (no growth, no reallocation).",
+        "result": "PASS for every n"
+      },
+      {
+        "name": "cms::cms_lib::tests::both_get1_helpers_fill_their_reserved_stacks_at_capacity",
+        "purpose": "in-situ check at capacity 5 (> MIN_NODES): both helpers return 1 and the destination count is 5; the references are released by the destination stack's pop_free (refcount 2 -> 1 for each choice).",
+        "result": "PASS"
+      },
+      {
+        "name": "cms::cms_lib::tests::a_failed_cert_insertion_releases_the_up_ref",
+        "purpose": "X509_add_cert's UP_REF rollback under an injected insert failure.",
+        "result": "before 2, after 2; helper returned 0 and set the out-slot to NULL. PASS"
+      },
+      {
+        "name": "cms::cms_lib::tests::a_failed_crl_push_orphans_one_reference_control",
+        "purpose": "the CRL up-ref/push shape under an injected push failure.",
+        "result": "before 2, after 3; one reference orphaned. The intended restoration property FAILS; recorded as a latent failure-atomicity gap, not papered over."
+      }
+    ]
+  },
+  "production_reachable_defect": false,
+  "production_reachability_reasoning": "The only way the CRL branch executes is OPENSSL_sk_push returning 0 after a successful up-ref. Under the submitted preconditions the push cannot fail, so the missing rollback arm is not reachable. The certificate arm is consistent even when its insert fails, so its branch is failure-atomic. No other reachable leak or double release was found in these two helpers.",
+  "remediation": {
+    "applied": "none (no production guard added)",
+    "why": "No production-reachable defect was found, and restructuring working code to guard an unreachable branch is out of scope for this bounded subphase. The CRL gap is recorded, with its control, so the decision is explicit rather than silent.",
+    "next_batch_option": "If a rollback arm is added (release the up-ref when push fails), it must be behaviour-preserving for every non-failing input and must update the CRL control to assert after == before."
+  },
+  "part_b_cross_reference": {
+    "file": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/engine-callback-discharge.json",
+    "change": "All nine marker rationales were corrected; `marker_not_justified` is set on each. No Rust source for the ENGINE callbacks changed."
+  },
+  "gates": {
+    "cargo_fmt_all_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "cargo_test_lib_test_threads_4": {
+      "result": "2221 passed; 0 failed; 52 ignored; 0 filtered out",
+      "total": 2273,
+      "floor": "2268 total / 52 ignored",
+      "delta": "+5 tests (3 in cms::cms_lib::tests, 2 in runtime::stack::tests); 0 removed; 0 newly ignored"
+    },
+    "library_rebuild": "not performed (release/DSO not rebuilt; only check and lib-test targets were compiled)"
+  },
+  "does_not_prove": [
+    "That the upstream OpenSSL 3.6.4 comment/guarantee (push cannot fail on a reserved stack) is accurate; the capacity proof here is derived from our own implementation and stands independently of it.",
+    "That the injected failure is production-reachable; it is a failure-atomicity probe only.",
+    "Constant-time or secret-handling properties of the CMS paths.",
+    "Anything about concurrent sharing of a CMS_ContentInfo; these helpers assume the caller's single-owner contract.",
+    "Allocator-seam behaviour (the Vec-backed stack's allocation accounting is a recorded compatibility residual, stack.rs module header) or error-queue parity with the authority on the failure arms.",
+    "Miri/ASan aliasing and leak coverage; the refcount observations read the crate's AtomicI32 field directly.",
+    "That a future representation change keeps the capacity invariant; it is bound to this candidate's implementation."
+  ],
+  "unknowns": [
+    "Upstream source text for the 3.6.4 claim was not fetched or re-read in this subphase (task statement relied on for the quotation; not used as evidence).",
+    "No sanitizer or Miri run was scheduled for these controls; they are FAST/BATCH-level evidence only.",
+    "The certificate arm's `0x1` flag literal was verified against src/x509/x509_vfy.rs:218 but not replaced with the named constant."
+  ]
+}
