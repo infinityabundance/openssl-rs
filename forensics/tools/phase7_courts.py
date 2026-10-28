@@ -66,10 +66,12 @@ from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
     InputRef,
+    content_hash,
     envelope,
     rel,
     resolve_authority,
     run,
+    sha256_file,
     write_json,
 )
 
@@ -79,6 +81,65 @@ PROBE_DIR = REPO_ROOT / "courts" / "phase7"
 PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 STAGED = REPO_ROOT / "artifacts" / "phase7" / "probes"
 RUN_TIMEOUT_S = "60"
+
+# The build-relevant candidate inputs this artefact is measured against (AGENTS.md section 22).
+# Before this list existed, `inputs` named only the probes and the authority symbol table, so a
+# candidate change could not invalidate the recorded verdicts: the file kept saying `pass` while
+# measuring a different `libcrypto.so.3`. Every entry below is content-addressed by
+# `atlas_common.InputRef`, so regenerating after any candidate change produces a different
+# `inputs` list even when every verdict stays the same.
+SOURCE_TREE_PATHS = ("src", "Cargo.toml", "Cargo.lock", "build.rs")
+
+
+def _source_tree_digest() -> dict:
+    """`sha256` over sorted `(relpath, size, sha256)` of the candidate's build-relevant tree."""
+    entries: list[list] = []
+    for relpath in SOURCE_TREE_PATHS:
+        p = REPO_ROOT / relpath
+        if p.is_file() and not p.is_symlink():
+            entries.append([relpath, p.stat().st_size, sha256_file(p)])
+        elif p.is_dir():
+            for f in sorted(p.rglob("*")):
+                if f.is_file() and not f.is_symlink():
+                    entries.append([f.relative_to(REPO_ROOT).as_posix(),
+                                    f.stat().st_size, sha256_file(f)])
+    entries.sort()
+    return {"count": len(entries),
+            "sha256": content_hash(entries) if entries else "absent"}
+
+
+def _source_commit() -> str:
+    """`git rev-parse HEAD`, or `unknown` when the venue has no git checkout."""
+    res = run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT)
+    return res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else "unknown"
+
+
+def _candidate_identity() -> list[InputRef]:
+    """The candidate DSO, source commit and source-tree content hash, as court inputs."""
+    libcrypto = PHASE2 / "libcrypto.so.3"
+    tree = _source_tree_digest()
+    return [
+        InputRef(
+            name="candidate-libcrypto-so-3",
+            path=libcrypto,
+            note=("the DSO every probe links through -L artifacts/phase2 -lcrypto"),
+        ) if libcrypto.is_file() else InputRef(
+            name="candidate-libcrypto-so-3",
+            sha256="absent",
+            note="artifacts/phase2/libcrypto.so.3 is absent",
+        ),
+        InputRef(
+            name="candidate-source-commit",
+            sha256=_source_commit(),
+            note="git rev-parse HEAD (provenance; the tree digest is the live binding)",
+        ),
+        InputRef(
+            name="candidate-source-tree",
+            sha256=tree["sha256"],
+            note=("sha256 over sorted (relpath, size, sha256) of "
+                  f"{', '.join(SOURCE_TREE_PATHS)}; files={tree['count']}"),
+        ),
+    ]
 
 # (court id, probe filename, the one-line subject)
 #
@@ -320,6 +381,7 @@ def main(argv: list[str]) -> int:
     inputs = [
         InputRef(name="authority-symbols", path=REPO_ROOT / "forensics" / "atlas"
                  / auth.id / "symbols-libcrypto.json"),
+        *_candidate_identity(),
     ]
     for _name, filename, _subject in COURTS:
         inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))

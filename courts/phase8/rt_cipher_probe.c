@@ -1573,9 +1573,15 @@ static void rt_modes_blocks(void)
  *   * the returned length, which is `inlen + 8` for a wrap and `inlen - 8` for an unwrap;
  *   * the refusal arms: a length that is not a multiple of eight, an out-of-range length,
  *     a mismatched IV, and a corrupted AIV or padding. On every refusal the authority
- *     returns 0 and **cleanses** the destination over the length it would have written,
- *     so the destination is pre-filled with a sentinel and printed whole: the zeroed
- *     region and the untouched sentinel are both evidence.
+ *     returns 0 and **cleanses `inlen` octets** (`crypto/modes/wrap128.c:291,303,317,327`),
+ *     while its own documented output minimum is `inlen - 8` (`padded_len`). The extra
+ *     eight octets are past anything the call could have written -- the CVE-2026-63072
+ *     over-write mechanism -- and the candidate deliberately cleanses only the written
+ *     extent (`src/modes/wrap.rs:277-286`). The destination is pre-filled with a sentinel
+ *     and printed whole, so the zeroed region and the untouched sentinel are both
+ *     evidence; the nine `*.badaiv.out`/`*.badicv.out` lines therefore differ from the
+ *     authority by exactly those eight octets and are recorded in the runner's
+ *     `ACCEPTED_DIVERGENCES`.
  *   * the RFC 5649 single-block special case, where a padded plaintext of exactly eight
  *     octets takes the ECB path rather than the wrap loop.
  */
