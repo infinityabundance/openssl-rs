@@ -14,19 +14,17 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
-use core::ptr;
-use core::sync::atomic::AtomicPtr;
-
 use crate::engine::eng_lib::{Engine, EnginePkeyMethsPtr};
 use crate::engine::eng_list::{ENGINE_get_first, ENGINE_get_next};
 use crate::engine::eng_table::{
     engine_table_cleanup, engine_table_register, engine_table_unregister, ossl_engine_table_select,
+    EngineTableSlot,
 };
 use crate::evp::pkey_ctx::{EVP_PKEY_meth_free, EvpPkeyMethod};
 use crate::runtime::err::err_sites::TB_PKMETH_79;
 use crate::runtime::err::raise_site;
-use crate::runtime::lhash::OpenSslLhash;
+use core::ffi::{c_char, c_int, c_void};
+use core::ptr;
 
 /// `OPENSSL_FILE` for this unit, for the `ossl_engine_table_select` coordinate.
 const FILE: *const c_char = c"crypto/engine/tb_pkmeth.c".as_ptr();
@@ -34,11 +32,11 @@ const FILE: *const c_char = c"crypto/engine/tb_pkmeth.c".as_ptr();
 const LINE_SELECT: c_int = 69;
 
 /// `static ENGINE_TABLE *pkey_meth_table = NULL` (`:16`).
-static PKEY_METH_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
+static PKEY_METH_TABLE: EngineTableSlot = EngineTableSlot::new();
 
-/// The `ENGINE_TABLE **` the table helpers take.
-pub(crate) fn pkey_meth_table_slot() -> *mut *mut OpenSslLhash {
-    core::ptr::addr_of!(PKEY_METH_TABLE) as *mut *mut OpenSslLhash
+/// The typed `ENGINE_TABLE *` slot the table helpers take.
+pub(crate) fn pkey_meth_table_slot() -> &'static EngineTableSlot {
+    &PKEY_METH_TABLE
 }
 
 /// `void ENGINE_unregister_pkey_meths(ENGINE *e)` — `crypto/engine/tb_pkmeth.c:18-21`.
