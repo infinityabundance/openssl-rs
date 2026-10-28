@@ -929,7 +929,7 @@
      }
     ],
     "eliminated": [
-     "src/runtime/ex_data.rs: the unsafe markers on dummy_new/dummy_free/dummy_dup (3 definitions) \u2014 they read no argument"
+     "src/runtime/ex_data.rs: the unsafe markers on dummy_new/dummy_free/dummy_dup (3 definitions) — they read no argument"
     ],
     "relocated": [
      "engine_pile_hash/engine_pile_cmp now carry the lhash callback contract and name the module's single production insert site"
@@ -937,7 +937,7 @@
     "hidden": 0,
     "pending_discharge": [
      "no independent BOUNDARY review exists, so the mechanism is not SAFETY_DISCHARGED",
-     "the lhash stores `*mut c_void`; the element-type invariant is maintained by module encapsulation, not by the type system \u2014 a retained (not hidden) obligation of this mechanism"
+     "the lhash stores `*mut c_void`; the element-type invariant is maintained by module encapsulation, not by the type system — a retained (not hidden) obligation of this mechanism"
     ]
    }
   },
@@ -1057,7 +1057,7 @@
      }
     ],
     "eliminated": [
-     "src/asn1/a_mbstr.rs: the `unsafe extern \"C\" fn` callback family and its `*mut *mut c_uchar` cursor (4 definitions) \u2014 replaced by an `FnMut` traversal and safe slice-bounded writers",
+     "src/asn1/a_mbstr.rs: the `unsafe extern \"C\" fn` callback family and its `*mut *mut c_uchar` cursor (4 definitions) — replaced by an `FnMut` traversal and safe slice-bounded writers",
      "src/ocsp/v3_ocsp.rs:312: s2i_ocsp_nocheck's unsafe marker (no argument is read)"
     ],
     "relocated": [
@@ -1066,7 +1066,7 @@
     ],
     "hidden": 0,
     "pending_discharge": [
-     "no independent BOUNDARY review of these contracts exists, so the mechanism is not SAFETY_DISCHARGED (AGENTS.md \u00a77, \u00a721)",
+     "no independent BOUNDARY review of these contracts exists, so the mechanism is not SAFETY_DISCHARGED (AGENTS.md §7, §21)",
      "external C callers of the exported X509V3_EXT_* entry points could in principle pass a mismatched object; that is the OpenSSL ABI contract, not an in-crate caller obligation"
     ]
    }
@@ -1231,6 +1231,177 @@
    "kind": "UNSAFE_FN_DEF",
    "mechanism": "C_ABI_CONTRACT",
    "basis": "`ui_close` is a UI_METHOD close callback installed on the wrapper method. No UI ownership mechanism exists; the obligation is the method-table callback contract."
+  },
+  {
+   "file": "src/apps/ciphers.rs",
+   "line": 93,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "dummy_psk",
+   "basis": "`dummy_psk` is the callback installed by the ciphers app's `SSL_CTX_set_psk_client_callback` (`src/apps/ciphers.rs:271-275`). Its body reads no argument and returns 0, so the caller contract is the PSK client callback ABI and imposes no pointer requirement. C_ABI_CONTRACT's declared authority prefix `apps/` covers app-side C callbacks; no ownership mechanism owns it.",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/eng_dyn.rs",
+   "line": 401,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "dynamic_data_ctx_free_func",
+   "basis": "CRYPTO_EX_INDEX_ENGINE free hook registered by this module (`src/engine/eng_dyn.rs:479-488`), authority prefix `crypto/engine`. The site is an `unsafe extern \"C\"` callback definition, which is C_ABI_CONTRACT's declared surface. B20-DYN-1 retains the DynamicDataCtx ownership boundary CONTRACTED; this classification does not discharge it.",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/eng_fat.rs",
+   "line": 197,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "push_cstr_or_null",
+   "basis": "Internal `unsafe fn` adapter whose only precondition is a NUL-terminated C string supplied by `ENGINE_set_default_string`'s documented # Safety. C_ABI_CONTRACT names internal `unsafe fn` adapters whose caller contract is a raw C/ABI contract; authority prefix `crypto/engine`.",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/eng_list.rs",
+   "line": 90,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_list_cleanup",
+   "basis": "`int (*)(void)` cleanup-stack callback registered in-repo by `engine_list_add` (`src/engine/eng_list.rs:160-161`); no pointer argument. C_ABI_CONTRACT callback edge, authority prefix `crypto/engine`.",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_asnmth.rs",
+   "line": 74,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_pkey_asn1_meths",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `engine_table_register(..., Some(engine_unregister_all_pkey_asn1_meths), ...)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`); B16-ASN1-1 remains CONTRACTED.",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_cipher.rs",
+   "line": 56,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_ciphers",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `engine_table_register(..., Some(engine_unregister_all_ciphers), ...)` (`src/engine/tb_cipher.rs:79-88`); no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_dh.rs",
+   "line": 54,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_dh",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_dh)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_digest.rs",
+   "line": 68,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_digests",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_digests)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_dsa.rs",
+   "line": 54,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_dsa",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_dsa)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_eckey.rs",
+   "line": 54,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_ec",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_ec)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_pkmeth.rs",
+   "line": 55,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_pkey_meths",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_pkey_meths)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_rand.rs",
+   "line": 54,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_rand",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_rand)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/engine/tb_rsa.rs",
+   "line": 55,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "engine_unregister_all_rsa",
+   "basis": "`ENGINE_TABLE` unregister-all cleanup callback registered in-repo with `Some(engine_unregister_all_rsa)`; no caller pointer. C_ABI_CONTRACT callback edge (`crypto/engine`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/runtime/conf/lib.rs",
+   "line": 698,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "default_is_number",
+   "basis": "CONF method predicate callback selected at `src/runtime/conf/lib.rs:738`; `_conf` is unused and the body reads only the `c_char` value. C_ABI_CONTRACT (`crypto/conf`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/runtime/conf/lib.rs",
+   "line": 703,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "default_to_int",
+   "basis": "CONF method conversion callback selected at `src/runtime/conf/lib.rs:739`; `_conf` is unused and the body reads only the `c_char` value. C_ABI_CONTRACT (`crypto/conf`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/runtime/confmod/asn1.rs",
+   "line": 255,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "oid_module_finish",
+   "basis": "CONF_IMODULE finish callback registered by `ASN1_add_oid_module`; `_md` is unused and the body is empty. C_ABI_CONTRACT (`crypto/conf`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/runtime/confmod/mod.rs",
+   "line": 397,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "module_free_thunk",
+   "basis": "`OPENSSL_sk_pop_free` freefunc thunk over the module registry's `ConfModule` entries (`src/runtime/confmod/mod.rs:1369`). C_ABI_CONTRACT callback edge (`crypto/conf`); the enclosing release policy is B6-CONF-5, CONTRACTED.",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/ui/ui_util.rs",
+   "line": 197,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "ui_free_method_data",
+   "basis": "`CRYPTO_EX_free` callback for `CRYPTO_EX_INDEX_UI_METHOD`; C_ABI_CONTRACT (`crypto/ui`). OSSH-DIS-109/110/111 cover the neighbouring ex-data sites, not this one.",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
+  },
+  {
+   "file": "src/ui/ui_util.rs",
+   "line": 217,
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "C_ABI_CONTRACT",
+   "operation": "ui_method_data_index_init",
+   "basis": "`DEFINE_RUN_ONCE_STATIC` body calling `CRYPTO_get_ex_new_index` with three static fn pointers; no pointer dereference. C_ABI_CONTRACT (`crypto/ui`).",
+   "basis_identity": "v1k-candidate-freeze 8a54aba5 / libcrypto 247803f1"
   }
  ],
  "worklist": [
