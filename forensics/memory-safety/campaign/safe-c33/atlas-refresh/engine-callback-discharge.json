@@ -1,0 +1,329 @@
+{
+  "schema": "safe-c33/atlas-refresh/engine-callback-discharge/v1",
+  "kind": "engine-callback-discharge",
+  "subphase": "safe-c33/freeze-post-merge-v1m",
+  "generated_utc": "2026-10-28T08:23:38Z",
+  "frozen_identity": {
+    "S": "7b546f64cdce09d4d544cc77b3571f83c3df4821",
+    "tree": "78fb4d0ca6571d20735904ce1d8590a94a5474b2",
+    "src_content_sha256": "adc1c867559458fb83dc9ff043128ecc0a9395b4e72a172f29f4cadebf4faf4b",
+    "libcrypto_sha256": "b3cd799dd3370131cb5c2e785b820baa38e530385fa541b40c2c7db776b99f14",
+    "libssl_sha256": "5cfd5568536703a03d295d668b630ef0403a30b6b3562d128c8bb47ab20dc296"
+  },
+  "scope": {
+    "in_scope": [
+      "src/engine/tb_asnmth.rs:72 engine_unregister_all_pkey_asn1_meths",
+      "src/engine/tb_cipher.rs:55 engine_unregister_all_ciphers",
+      "src/engine/tb_dh.rs:51 engine_unregister_all_dh",
+      "src/engine/tb_digest.rs:66 engine_unregister_all_digests",
+      "src/engine/tb_dsa.rs:51 engine_unregister_all_dsa",
+      "src/engine/tb_eckey.rs:51 engine_unregister_all_ec",
+      "src/engine/tb_pkmeth.rs:53 engine_unregister_all_pkey_meths",
+      "src/engine/tb_rand.rs:51 engine_unregister_all_rand",
+      "src/engine/tb_rsa.rs:52 engine_unregister_all_rsa"
+    ],
+    "out_of_scope": [
+      "src/engine/eng_list.rs:90 engine_list_cleanup remains UNKNOWN: it is a distinct callback and is not one of the nine unregister_all paths."
+    ],
+    "method": "Site-specific discharge argument, not a qualifier removal. Each callback is examined against its actual precondition; the EngineTableSlot repair is the reason the v1l missing property is gone, and the lock discipline is the reason the remaining obligation is discharged."
+  },
+  "counts": {
+    "sites": 9,
+    "discharged": 9,
+    "left_blocked": 0,
+    "vestigial": 0,
+    "not_vestigial": 9
+  },
+  "site_entries": [
+    {
+      "id": "V1:src/engine/tb_asnmth.rs:72:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_asnmth.rs",
+      "line": 72,
+      "callback": "engine_unregister_all_pkey_asn1_meths",
+      "slot_static": "PKEY_ASN1_METH_TABLE",
+      "slot_accessor": "pkey_asn1_meth_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_pkey_asn1_meths() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(pkey_asn1_meth_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_asnmth.rs:99",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (PKEY_ASN1_METH_TABLE), reached only through pkey_asn1_meth_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    },
+    {
+      "id": "V1:src/engine/tb_cipher.rs:55:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_cipher.rs",
+      "line": 55,
+      "callback": "engine_unregister_all_ciphers",
+      "slot_static": "CIPHER_TABLE",
+      "slot_accessor": "cipher_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_ciphers() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(cipher_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_cipher.rs:81",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (CIPHER_TABLE), reached only through cipher_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    },
+    {
+      "id": "V1:src/engine/tb_dh.rs:51:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_dh.rs",
+      "line": 51,
+      "callback": "engine_unregister_all_dh",
+      "slot_static": "DH_TABLE",
+      "slot_accessor": "dh_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_dh() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(dh_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_dh.rs:70",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (DH_TABLE), reached only through dh_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    },
+    {
+      "id": "V1:src/engine/tb_digest.rs:66:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_digest.rs",
+      "line": 66,
+      "callback": "engine_unregister_all_digests",
+      "slot_static": "DIGEST_TABLE",
+      "slot_accessor": "digest_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_digests() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(digest_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_digest.rs:93",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (DIGEST_TABLE), reached only through digest_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    },
+    {
+      "id": "V1:src/engine/tb_dsa.rs:51:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_dsa.rs",
+      "line": 51,
+      "callback": "engine_unregister_all_dsa",
+      "slot_static": "DSA_TABLE",
+      "slot_accessor": "dsa_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_dsa() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(dsa_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_dsa.rs:70",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (DSA_TABLE), reached only through dsa_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    },
+    {
+      "id": "V1:src/engine/tb_eckey.rs:51:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_eckey.rs",
+      "line": 51,
+      "callback": "engine_unregister_all_ec",
+      "slot_static": "EC_TABLE",
+      "slot_accessor": "ec_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_ec() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(ec_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_eckey.rs:70",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (EC_TABLE), reached only through ec_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    },
+    {
+      "id": "V1:src/engine/tb_pkmeth.rs:53:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_pkmeth.rs",
+      "line": 53,
+      "callback": "engine_unregister_all_pkey_meths",
+      "slot_static": "PKEY_METH_TABLE",
+      "slot_accessor": "pkey_meth_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_pkey_meths() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(pkey_meth_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_pkmeth.rs:79",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (PKEY_METH_TABLE), reached only through pkey_meth_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    },
+    {
+      "id": "V1:src/engine/tb_rand.rs:51:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_rand.rs",
+      "line": 51,
+      "callback": "engine_unregister_all_rand",
+      "slot_static": "RAND_TABLE",
+      "slot_accessor": "rand_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_rand() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(rand_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_rand.rs:70",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (RAND_TABLE), reached only through rand_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    },
+    {
+      "id": "V1:src/engine/tb_rsa.rs:52:UNSAFE_FN_DEF",
+      "file": "src/engine/tb_rsa.rs",
+      "line": 52,
+      "callback": "engine_unregister_all_rsa",
+      "slot_static": "RSA_TABLE",
+      "slot_accessor": "rsa_table_slot",
+      "signature": "unsafe extern \"C\" fn()",
+      "unsafe_marker_retained": true,
+      "vestigial": false,
+      "why_not_vestigial": "The body performs an unsafe operation: it calls the unsafe fn engine_table_cleanup. The unsafe extern \"C\" marker is therefore not a vestige and is retained; removing it to shrink a count is not justified by this discharge and would be a separate change.",
+      "body_evidence": [
+        "unsafe extern \"C\" fn engine_unregister_all_rsa() {",
+        "// SAFETY: the table slot is this module's static.",
+        "unsafe { engine_table_cleanup(rsa_table_slot()) };"
+      ],
+      "registration_site": "src/engine/tb_rsa.rs:71",
+      "preconditions": {
+        "p1_slot_liveness": "The slot is the module own &'static EngineTableSlot (RSA_TABLE), reached only through rsa_table_slot(). No caller-supplied ENGINE_TABLE ** exists; the raw double-pointer static and its casts are eliminated.",
+        "p2_lock_not_held": "engine_table_cleanup acquires the global engine write lock. The callback must not already hold it. The only invocation path is engine_cleanup_cb_free -> cb(), which takes no engine lock; engine_cleanup_int is withheld (eng_lib.rs:696-700), so no call executes at this identity. If the precondition is violated, CRYPTO_THREAD_write_lock returns 0 for a recursive write (thread.rs:429-455) and cleanup returns without touching the slot: a leak at worst, not UB.",
+        "p3_lock_initialised": "A callback reaches the cleanup stack only through engine_cleanup_add_first after engine_table_register acquired the same write lock (eng_table.rs:282-303). With a NULL uninitialised lock that acquisition answers 0 and no callback is registered. A registered callback therefore implies global_engine_lock is initialised.",
+        "p4_no_concurrent_mutation": "cleanup takes the table out with slot.swap(NULL) under the write lock (eng_table.rs:518-535); register/unregister/select also take the write lock (eng_table.rs:282, 465, 564). The slot is an AtomicPtr with AcqRel/Release orderings (eng_table.rs:80-114), so a concurrent select cannot observe freed storage.",
+        "p5_pile_ownership": "Only int_table_check writes the slot (eng_table.rs:244-257) and only cleanup and the register-failure arm swap it out. The non-NULL lhash is walked once by int_cleanup_cb_doall, each pile adopted by OwnedCtx<EnginePile> (eng_table.rs:493-510), then the lhash is freed."
+      },
+      "v1l_missing_property_removed": "v1l UNKNOWN: 'engine_table_cleanup(slot) takes a *mut *mut OpenSslLhash raw-pointer view of the module AtomicPtr static and writes through it without the atomic API'. That raw view no longer exists: the slot methods are the only access.",
+      "caller_path": "ENGINE_register_* -> engine_table_register(Some(engine_unregister_all_*)) -> engine_cleanup_add_first -> CLEANUP_STACK -> engine_cleanup_cb_free(item) -> cb() (eng_lib.rs:632-652, 684-694). engine_cleanup_int is intentionally withheld (eng_lib.rs:696-700).",
+      "disposition": "DISCHARGED",
+      "remaining_obligation": null
+    }
+  ],
+  "negative_controls": [
+    {
+      "name": "engine::eng_table::tests::concurrent_select_and_cleanup_serialise_on_the_engine_lock",
+      "result": "PASS alone (--test-threads=1)",
+      "fails_if": "the slot is read outside the engine lock. Its own documentation records that the pre-repair unlocked fast path reports a race under TSan.",
+      "instrument_status": "TSan NOT_RUN at this level; PASS is the functional control only."
+    },
+    {
+      "name": "engine::eng_table::tests::register_select_and_cleanup_round_trip_through_the_slot",
+      "result": "PASS alone (--test-threads=1)",
+      "fails_if": "registration does not create the table, select does not return the engine, or cleanup does not empty the slot. ENGINE_new initialises the lock."
+    },
+    {
+      "name": "engine::eng_table::tests::cleanup_nulls_the_slot_and_a_second_cleanup_is_a_no_op",
+      "result": "FAIL in isolation (exit 101, slot not emptied); PASS only in the full suite",
+      "diagnosis": "The test never calls run_engine_lock_init and does not create an engine. engine_table_cleanup's write_lock(NULL) answers 0 and no-ops, so the slot is not emptied. This is a test-isolation defect (unstated lock-init precondition), not a production memory-safety defect; it is also direct evidence that the lock precondition is enforced rather than assumed.",
+      "classification": "UNKNOWN_TEST_DEFECT"
+    }
+  ],
+  "negative_control_log": {
+    "path": "court/tmp/freeze-v1m/logs/engine-negative-controls.txt",
+    "sha256": "d9f422fa760a6c943cfb97fc3ef33bdaf102227fa0e18e3bb24eada46137d143"
+  },
+  "does_not_prove": [
+    "No state.json or boundary-sweep receipt was changed, so consumer_closure.py still reports these nine sites UNKNOWN and the tb_* files UNKNOWN_MECHANISM. The adjudication is recorded, not registered in the instrument.",
+    "The current callbacks are unreachable because engine_cleanup_int is withheld; the discharge covers the sites as written, not a future engine_cleanup_int landing.",
+    "No TSan/Miri run was made at this level; the concurrency control is functional only.",
+    "This is not a SAFE_COMPATIBLE graduation and not a SEAL."
+  ]
+}
