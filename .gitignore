@@ -25,6 +25,15 @@
 # Court scratch material produced inside the container.
 /court/
 
+# Edge-provenance sidecars are large generated populations. The default path is
+# under court/ (already ignored); this is the second line of defence so a
+# sidecar can never be swept in by `git add -A` from an explicit --edge-records
+# path or a mistaken --output-adjacent write. Both the tool's default
+# `edge-records.<artifact_sha[:16]>.jsonl` and an `*.edge-records.jsonl` suffix
+# are excluded.
+*.edge-records.jsonl
+edge-records.*.jsonl
+
 # Phase 2 distribution shell: the bulky artifacts are generated and reproducible
 # from forensics/tools/build_phase2.sh (the version scripts, pkg-config metadata,
 # shell manifest and court results ARE committed as evidence).

@@ -2169,8 +2169,24 @@ EDGE_TARGET_WITNESS_SCHEMA = (
 # Reachable-caller target bounding is a *narrowing of an unbounded target set*,
 # not an ABI contract.  It is deliberately absent from ABI_CONTRACT_CLASSES and
 # never attaches a WITNESS_SCHEMA record: the site becomes target-resolved.
+# v2 (round 4) records the per-call-site attribution of *every* caller row,
+# reachable or excluded, with the same argument interpreter that produced the
+# site's flat `arg_targets`.  The v1 fields are retained for compatibility.
 REACHABLE_CALLER_SCHEMA = (
-    "openssl-rs/consumer-closure/reachable-caller-target-bound/v1")
+    "openssl-rs/consumer-closure/reachable-caller-target-bound/v2")
+
+# Round-4 soundness direction.  Admitting a target is always safe for the upper
+# bound; excluding one requires (i) the caller/writer is absent from the
+# final-upper-bound oracle and (ii) the target is demonstrably produced by that
+# subject.  Per-caller attribution is analyzer-produced from the same argument
+# summary the flat site target set came from; record-level validation checks a
+# record against itself and the oracle, not against a re-derivation.
+UNATTRIBUTED_ADMISSION_REASON = (
+    "the candidate target is not attributed to any caller row (neither a "
+    "reachable caller nor an excluded caller); it is admitted, never dropped")
+ATTRIBUTION_INCOMPLETE_PROPERTY = (
+    "caller attribution incomplete: {n} candidate target(s) have no "
+    "attributable caller")
 
 EDGE_TARGET_SLOTS = (
     {
@@ -3233,6 +3249,81 @@ def _reloc_names(g: "DsoGraph", symbol: str) -> bool:
     return False
 
 
+def _resolve_argument_summary(precision, caller: int, value):
+    """Resolve one caller-recorded argument through its argument summary.
+
+    This is the same summary expansion ``PrecisionResolver.resolve_set``
+    performs when it builds ``arg_targets``: a literal is itself, and a
+    forwarded parameter is replaced by the values that caller may pass.  The
+    site's flat ``arg_targets`` was produced by that expansion, so per-caller
+    attribution that uses it is recomputable rather than guessed.
+
+    Returns ``(resolved_values, open)``; ``open`` is true when the argument was
+    not recorded (a top or absent value), which is a reason to attribute
+    nothing, never a reason to invent a target.
+    """
+    if value is None or value.is_top():
+        return set(), True
+    out = set()
+    for b in value.s:
+        if isinstance(b, tuple) and b and b[0] == "arg":
+            out |= set(precision.summary_vals(caller, b[1]))
+        else:
+            out.add(b)
+    return out, False
+
+
+def _caller_attribution_rows(g, precision, caller: int, recs: dict, deps) -> tuple:
+    """Per-call-site contribution rows for one caller, reachable or excluded.
+
+    Every argument row carries the same shape used for reachable callers and
+    the address targets it was resolved to.  ``contributed_targets`` is exactly
+    the union of the per-call-site image targets, so the witness and the
+    contribution list in the record are mutually checkable (v1.4).
+    """
+    rows, contributed = [], set()
+    insns = getattr(precision, "insns_by_func", {}).get(caller, ())
+    for call_addr in sorted(recs):
+        args = recs[call_addr]
+        idx = next((j for j, (a, _t) in enumerate(insns)
+                    if a == call_addr), None)
+        witness = (PrecisionResolver._arg_witness(insns, idx)
+                   if idx is not None else {})
+        arg_rows = []
+        for k in deps:
+            if k >= len(args):
+                arg_rows.append({
+                    "argument_index": k, "targets": [], "value": [],
+                    "non_image_values": [], "unresolved": True,
+                    "witness_instruction": []})
+                continue
+            value = args[k]
+            resolved, open_ = _resolve_argument_summary(precision, caller, value)
+            image = sorted(v for v in resolved
+                           if isinstance(v, int) and v != 0
+                           and v in g.start_set)
+            non_image = sorted(str(v) for v in resolved
+                               if not (isinstance(v, int) and v != 0
+                                       and v in g.start_set))
+            literal = sorted(hex(v) for v in
+                             (() if value is None or value.is_top()
+                              else value.s)
+                             if isinstance(v, int))
+            w = witness.get(_ARGREGS[k]) if k < len(_ARGREGS) else None
+            arg_rows.append({
+                "argument_index": k,
+                "targets": [hex(v) for v in image],
+                "value": literal,
+                "non_image_values": non_image,
+                "unresolved": bool(open_),
+                "witness_instruction": (
+                    [{"addr": hex(w[0]), "text": w[1]}] if w else []),
+            })
+            contributed |= set(image)
+        rows.append({"call_site": hex(call_addr), "arguments": arg_rows})
+    return rows, contributed
+
+
 def _caller_exclusion(g: "DsoGraph", caller: int, import_addrs: set) -> dict:
     """Structured reason a caller is not part of the family's reachable set."""
     funcs = getattr(g, "funcs", {}) or {}
@@ -3276,9 +3367,17 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
     every caller of that function is known from in-image call records, and
     every caller in the family's reachable set passes a finite set of in-image
     function starts for that argument.  Callers outside the reachable set are
-    recorded, not admitted.  Any non-image argument from a reachable caller, a
-    caller whose reachability cannot be established, or a non-argument target
-    keeps the site unresolved.
+    recorded (with their own per-call-site attribution), not admitted.  Any
+    non-image argument from a reachable caller, a caller whose reachability
+    cannot be established, or a non-argument target keeps the site unresolved.
+
+    Soundness direction (round 4): admitting a target is always safe for the
+    upper bound; excluding one requires (i) the caller/writer is absent from the
+    final-upper-bound oracle and (ii) the target is demonstrably produced by
+    that subject.  The attribution is analyzer-produced from the same argument
+    summary the site's flat ``arg_targets`` came from; record-level validation
+    checks the record against itself and the oracle, not against a
+    re-derivation.
 
     Returns (record, None) or (None, refusal_reason).
     """
@@ -3304,6 +3403,12 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
             records[caller][call_addr] = args
     direct = getattr(g, "direct", {}) or {}
     direct_callers = {c for c, targets in direct.items() if fstart in targets}
+    # The rule's precondition is that every caller is known from in-image call
+    # records.  A direct caller without one -- reachable or excluded -- makes the
+    # flat candidate enumeration incomplete, so the site is not bounded.  The
+    # round-4 fallback handles an excluded caller whose *recorded* argument is
+    # unknown (its call-site row contributes nothing); it does not license a
+    # bound when the caller's call record is missing altogether.
     for caller in sorted(direct_callers):
         if not records.get(caller):
             return None, f"caller {hex(caller)} has no recorded call arguments"
@@ -3330,11 +3435,26 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
     import_addrs = (getattr(precision, "import_addrs", set()) or set()) \
         | (getattr(g, "import_addrs", set()) or set())
     bounded = set()
+    excluded_union = set()
     reachable_rows, excluded_rows = [], []
     for caller in sorted(callers):
         recs = records.get(caller) or {}
         if caller not in reachable:
-            excluded_rows.append(_caller_exclusion(g, caller, import_addrs))
+            row = _caller_exclusion(g, caller, import_addrs)
+            row["reachable"] = False
+            # Round 4: an excluded caller's contribution is recorded with the
+            # *same* per-call-site shape and the same argument-summary
+            # interpreter used for reachable callers.  A caller that forwards
+            # its own parameter therefore contributes exactly the values its
+            # summary admits -- which is where the site's flat `arg_targets`
+            # came from.  A caller with no recorded call arguments contributes
+            # nothing and its row is empty; nothing is inferred from its name.
+            call_rows, contributed = _caller_attribution_rows(
+                g, precision, caller, recs, deps)
+            row["call_sites"] = call_rows
+            row["contributed_targets"] = [hex(t) for t in sorted(contributed)]
+            excluded_union |= contributed
+            excluded_rows.append(row)
             continue
         if not recs:
             return None, (f"reachable caller {hex(caller)} has no recorded call "
@@ -3370,9 +3490,15 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
                                   + ", ".join(bad[:4]))
                 caller_targets |= set(vals)
                 w = witness.get(_ARGREGS[k]) if k < len(_ARGREGS) else None
+                # `argument`/`value` are the v1 fields (kept for compatibility);
+                # `argument_index`/`targets` are the v2 per-call-site shape.
                 arg_rows.append({
                     "argument": k,
+                    "argument_index": k,
                     "value": [hex(v) for v in sorted(vals)],
+                    "targets": [hex(v) for v in sorted(vals)],
+                    "non_image_values": [],
+                    "unresolved": False,
                     "witness_instruction": (
                         [{"addr": hex(w[0]), "text": w[1]}] if w else []),
                 })
@@ -3381,6 +3507,8 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
         reachable_rows.append({
             "function": hex(caller),
             "symbol": getattr(g, "funcs", {}).get(caller, "?"),
+            "reachable": True,
+            "reason": None,
             "call_sites": call_rows,
             "contributed_targets": [hex(t) for t in sorted(caller_targets)],
         })
@@ -3394,6 +3522,12 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
     if not excluded_rows:
         return None, ("no caller is excluded; the site is not narrowed from a "
                       "wider caller set")
+    # Candidates are the site's flat argument-target union.  A candidate that
+    # no caller row attributes is *not* droppable: it is admitted conservatively
+    # by the record builder (round 4).  Computing it here keeps the derivation
+    # and the record's `unattributed_targets` identical by construction.
+    attributed = bounded | excluded_union
+    unattributed = sorted(arg_targets - attributed)
     return {
         "schema": REACHABLE_CALLER_SCHEMA,
         "rule": "reachable-caller target bounding",
@@ -3404,6 +3538,8 @@ def reachable_caller_targets(g: "DsoGraph", site: dict, name: str,
         "reachable_callers": reachable_rows,
         "excluded_callers": excluded_rows,
         "bounded_targets": [hex(t) for t in sorted(bounded)],
+        "attributed_targets": [hex(t) for t in sorted(attributed)],
+        "unattributed_targets": [hex(t) for t in unattributed],
     }, None
 
 
@@ -3812,7 +3948,14 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
         bound, refusal = reachable_caller_targets(g, site, name, reachable)
         if bound is not None:
             targets = {int(t, 16) for t in bound["bounded_targets"]}
-            site["targets"] = set(targets)
+            # Round 4: a candidate the complete caller mapping cannot attribute
+            # is admitted into the site's target set.  Admitting is monotone and
+            # safe for the upper bound; the closure and the record therefore
+            # agree, and the oracle covers what the record claims.  Excluding
+            # such a target would need a subject that demonstrably produces it.
+            unattributed = {int(t, 16)
+                            for t in (bound.get("unattributed_targets") or ())}
+            site["targets"] = set(targets) | unattributed
             site["unresolved"] = False
             site["class"] = "reachable-caller-target"
             site["reason"] = ("reachable-caller target bounding: callers "
@@ -3882,33 +4025,272 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
 # Every indirect site the resolver classifies emits a record that separates what
 # the analysis proved from what it approximated.  The identity is semantic (the
 # source operation, defining function, call-site role and a per-target provenance
-# chain); a machine address is recorded only as an artifact-local witness.  A
-# target is only ever dropped with a reason that the record itself carries
-# evidence for; `validate_edge_records` refuses an unaccounted exclusion, and
-# `build_receipt` turns that refusal into a refusal of the whole closure.
+# chain); a machine address is recorded only as an artifact-local witness.
+#
+# v1.2 makes every exclusion claim *self-witnessing*:
+#
+#   * the reason names the subject of the claim (the target, the callers, the
+#     writer, or the reachable caller set), and a `claim` object binds that
+#     subject to a closed claim kind and to the record's own module.  A blanket
+#     "not in the reachable set" no longer says what is supposed to be absent;
+#   * the candidate set is recomputed from `candidate_source`, a separate
+#     enumeration of how candidates were derived, rather than trusted from the
+#     accounting ledger;
+#   * the reachability oracle is the union of *every* name at every reachable
+#     address, so an identical-code-folding alias cannot escape a negative
+#     check, and an unknown module fails closed;
+#   * an empty admitted set is never claimed as proved, and a record whose
+#     defining function has no symbol is never proved or contract-bounded;
+#   * the population is streamed to a JSONL sidecar and validated on the fly, so
+#     the receipt is bounded in memory and size (v1.1 OOMed the ssh closure).
 
-EDGE_RECORD_SCHEMA = "openssl-rs/campaign/safe-c33/edge-record/v1"
+EDGE_RECORD_SCHEMA = "openssl-rs/campaign/safe-c33/edge-record/v1.4"
 DISPOSITION_PROVED = "PROVED_TARGET_SET"
 DISPOSITION_CONTRACT = "CONTRACT_BOUNDED"
 DISPOSITION_UNRESOLVED = "UNRESOLVED"
 DISPOSITIONS = (DISPOSITION_PROVED, DISPOSITION_CONTRACT,
                 DISPOSITION_UNRESOLVED)
-EXCLUSION_REASONS = frozenset({
-    "not-in-reachable-set",
-    "no-reachable-writer",
-    "provenance-unbounded",
-    "declared-name-absent",
-    "non-image-value",
+# v1.3 splits the vocabulary by *row kind*.  A target drop and a subject-scoped
+# reachability claim are different claims and can no longer share a list: an
+# `exclusions[]` row is always a target drop, and an auxiliary caller/writer row
+# is always a subject claim.  This makes the v1.2 hole -- a caller/writer-scoped
+# label hiding a reachable dropped target inside `exclusions[]` -- inexpressible
+# rather than merely checked against.
+TARGET_DROP_REASONS = frozenset({
+    "target-not-in-reachable-set",            # subject: the excluded target
+    "not-contributed-by-reachable-callers",   # bound per caller in candidate_source
+    "declared-name-absent",                   # bound by evidence.targets
+    "no-reachable-writer",                    # bound to the writer subject rows
+    "provenance-unbounded",                   # subject: the value
+    "non-image-value",                        # subject: the value
 })
+SUBJECT_ROW_REASONS = frozenset({
+    "caller-not-in-reachable-set",            # subject: the named callers
+    "writer-not-in-reachable-set",            # subject: the method-store writer
+    "provenance-unbounded",                   # subject: the value
+})
+EXCLUSION_REASONS = TARGET_DROP_REASONS | SUBJECT_ROW_REASONS
+ROW_KINDS = frozenset({"target-drop", "subject"})
+ROW_KIND_VOCABULARY = {
+    "target-drop": TARGET_DROP_REASONS,
+    "subject": SUBJECT_ROW_REASONS,
+}
+# Reasons whose claim is a negative reachability statement about named subjects.
+REACHABILITY_CLAIM_KINDS = frozenset({
+    "target-not-in-reachable-set",
+    "caller-not-in-reachable-set",
+    "writer-not-in-reachable-set",
+})
+# `target_reachability` is derived from the disposition, never self-described:
+# a target set is claimed exactly when the disposition is PROVED_TARGET_SET.
+TARGET_REACHABILITY_VALUES = frozenset({"claimed", "not-claimed"})
+CANDIDATE_SOURCE_KINDS = frozenset({
+    "store-writer-call-sites", "argument-targets", "resolver-admitted-set",
+})
+# Closed vocabulary of derivation steps.  A derivation is evidence only when it
+# is built from these steps; a step name the checker does not know is a claim it
+# cannot interpret, and a step with no payload is a name without evidence.
+EDGE_CHAIN_STEPS = frozenset({
+    "store-writer", "call-site", "relocation", "argument",
+    "code-materialised", "field", "field-slot", "thunk",
+    "linkage", "abi-contract", "resolver", "unbounded",
+    # Round 4: the target is a candidate that no caller row attributes, so it
+    # is admitted conservatively instead of being dropped.  This is a widening
+    # of the upper bound, never a proof that the target is reachable.
+    "unattributed-admission",
+})
+# A step that says the value could not be bounded.  A target claimed as proved
+# must never rest on one: "unbounded" records the absence of a derivation.
+# `unattributed-admission` is deliberately *not* here: it names a candidate the
+# enumeration already contains and that is admitted for the upper bound, so the
+# claimed set is still the complete candidate set.
+EDGE_UNPROVED_STEPS = frozenset({"unbounded"})
 # Each reason names the evidence that makes it checkable.  A free-text reason is
 # not a reason: the validator requires these fields to be present and non-null.
 EXCLUSION_EVIDENCE_KEYS = {
-    "not-in-reachable-set": ("reachable_set_member", "symbol"),
-    "no-reachable-writer": ("writer", "derived_targets"),
-    "provenance-unbounded": ("failure",),
+    "target-not-in-reachable-set": ("reachable_set_member", "reachable_basis"),
+    "caller-not-in-reachable-set": ("reachable_set_member", "reachable_basis"),
+    "writer-not-in-reachable-set": ("reachable_set_member", "reachable_basis"),
+    "not-contributed-by-reachable-callers": ("reachable_basis",),
+    # `targets` is checked separately, not merely for presence: it is the
+    # structured mapping that replaces the free-text `target_derivation`.
     "declared-name-absent": ("declared_name", "present"),
-    "non-image-value": ("value",),
+    "no-reachable-writer": ("writer", "derived_targets", "reachable_writers"),
+    "provenance-unbounded": ("failure",),
+    "non-image-value": ("value", "in_image"),
 }
+# What each exclusion reason claims, in one checkable sentence.  The validator
+# refuses a claim whose evidence does not establish the sentence; a reason whose
+# meaning is only in prose has no validator.
+EXCLUSION_SEMANTICS = {
+    "target-not-in-reachable-set": (
+        "the excluded target itself is absent from the final upper-bound "
+        "reachable set"),
+    "caller-not-in-reachable-set": (
+        "every named caller is absent from the final upper-bound reachable set; "
+        "no claim is made about the target it would have contributed"),
+    "writer-not-in-reachable-set": (
+        "the named method-store writer is absent from the final upper-bound "
+        "reachable set; no claim is made about the target it would have stored"),
+    "not-contributed-by-reachable-callers": (
+        "the excluded target is contributed by an excluded caller and by no "
+        "reachable caller, recomputed from candidate_source; every excluded "
+        "caller is absent from the bound and every reachable caller is in it; "
+        "no claim is made that the target itself is unreachable"),
+    "declared-name-absent": (
+        "the declared symbol name is not defined by this image, and it is the "
+        "structured source of exactly the listed, candidate, unreachable target"),
+    "no-reachable-writer": (
+        "no reachable writer produces the excluded target"),
+    "provenance-unbounded": (
+        "the value's provenance could not be bounded to this image"),
+    "non-image-value": (
+        "the value is not an address defined in this image"),
+}
+# The only admissible basis for a negative reachability claim is a sound
+# over-approximation (the final upper bound).  The derivation-time oracle is the
+# pre-closure direct set, which is an under-approximation: it is retained as the
+# derivation input, never as evidence that something is unreachable.
+REACHABILITY_ORACLE_SCHEMA = (
+    "openssl-rs/campaign/safe-c33/reachability-oracle/v1")
+REACHABILITY_BASES = frozenset({"final-upper-bound", "pre-closure-direct"})
+EDGE_RECORD_SAMPLE_DEFAULT = 500
+EDGE_DEFECT_RENDER_LIMIT = 200
+EDGE_AUDIT_RENDER_LIMIT = 2000
+
+
+def _is_named_function(name) -> bool:
+    """A semantic identity needs a real defining function, not a placeholder."""
+    return isinstance(name, str) and name not in ("", "?")
+
+
+class ReachabilityOracle:
+    """The final upper-bound reachable set, per module, as the only admissible
+    evidence for a negative reachability claim.  A negative claim needs a sound
+    over-approximation; the pre-closure direct set is an under-approximation and
+    is therefore not acceptable as its own witness.
+
+    A reachable *address* contributes **every** name the image records for it
+    (`funcs`, `all_syms` and `names_at`).  Keeping one name per address lets an
+    identical-code-folding alias at a reachable address escape a negative
+    check, so the set is the union, not a representative.
+    """
+
+    schema = REACHABILITY_ORACLE_SCHEMA
+
+    def __init__(self, graphs: dict, upper_reach):
+        self._upper_nodes = {}
+        self._upper_symbols = {}
+        self._image_symbols = {}
+        for module, g in (graphs or {}).items():
+            nodes = frozenset((d, a) for d, a in (upper_reach or ())
+                              if d == module)
+            symbols = set()
+            for _d, addr in nodes:
+                names = set()
+                for table_name in ("funcs", "all_syms"):
+                    sym = (getattr(g, table_name, {}) or {}).get(addr)
+                    if sym:
+                        names.add(sym)
+                names.update((getattr(g, "names_at", {}) or {}).get(addr) or ())
+                for sym in names:
+                    if sym:
+                        symbols.add(str(sym).split("@")[0])
+            image = set()
+            for sym in (getattr(g, "all_syms", {}) or {}).values():
+                if sym:
+                    image.add(str(sym).split("@")[0])
+            for names in (getattr(g, "names_at", {}) or {}).values():
+                for sym in names:
+                    if sym:
+                        image.add(str(sym).split("@")[0])
+            self._upper_nodes[module] = nodes
+            self._upper_symbols[module] = frozenset(symbols)
+            self._image_symbols[module] = frozenset(image)
+
+    def knows(self, module) -> bool:
+        return module in self._upper_nodes
+
+    def upper_nodes(self, module):
+        """The (module, address) nodes of the final upper bound, or None."""
+        return self._upper_nodes.get(module)
+
+    def reachable_symbols(self, module):
+        """Every normalised name at every reached address, or None."""
+        return self._upper_symbols.get(module)
+
+    def image_symbols_for(self, module):
+        """Every normalised symbol name the module defines, or None."""
+        return self._image_symbols.get(module)
+
+    def is_reachable(self, module, symbol, address=None):
+        """(reachable, basis, checkable) for one enumerated subject.
+
+        ``checkable`` is False for a module the oracle does not cover: an
+        unknown module is not evidence that a subject is absent.
+        """
+        nodes = self._upper_nodes.get(module)
+        reach = self._upper_symbols.get(module)
+        if nodes is None or reach is None:
+            return None, "unavailable", False
+        if address is not None and (module, address) in nodes:
+            return True, "final-upper-bound", True
+        if isinstance(symbol, str) and symbol and symbol != "?" \
+                and symbol in reach:
+            return True, "final-upper-bound", True
+        return False, "final-upper-bound", True
+
+    def describe(self) -> dict:
+        return {
+            "schema": self.schema,
+            "modules": sorted(self._upper_nodes),
+            "upper_nodes": {m: len(self._upper_nodes[m])
+                            for m in sorted(self._upper_nodes)},
+        }
+
+
+def _oracle_observe(oracle, module, symbol, address=None):
+    """(observed, basis, checkable) for one negative reachability claim."""
+    if oracle is None:
+        return None, "pre-closure-direct", False
+    reachable, basis, checkable = oracle.is_reachable(module, symbol, address)
+    if not checkable:
+        return None, "pre-closure-direct", False
+    return reachable, basis, True
+
+
+def _reach_evidence(oracle, module, symbol, *, extra=None,
+                    symbols_checked=None, addresses=None) -> dict:
+    """Evidence for a negative reachability claim, honestly observed.
+
+    The module is fixed by the row's ``claim`` object, never by free text in
+    this evidence block; ``subject_addresses`` is an artifact-local fallback
+    for a subject that has no name.
+    """
+    evidence = {"reachable_set_member": False, "symbol": symbol,
+                "reachable_basis": "pre-closure-direct"}
+    if extra:
+        evidence.update(extra)
+    address = (addresses or {}).get(symbol)
+    observed, basis, _checkable = _oracle_observe(oracle, module, symbol,
+                                                  address)
+    if observed is not None:
+        evidence["reachable_set_member"] = observed
+    evidence["reachable_basis"] = basis
+    if symbols_checked is not None:
+        evidence["symbols_checked"] = list(symbols_checked)
+    if addresses:
+        evidence["subject_addresses"] = {
+            key: (hex(value) if isinstance(value, int) else value)
+            for key, value in addresses.items() if value is not None}
+    return evidence
+
+
+def _claim(kind: str, module: str, subjects, **extra) -> dict:
+    """A claim names its kind, the record module and its subjects."""
+    claim = {"kind": kind, "module": module, "subjects": list(subjects)}
+    claim.update(extra)
+    return claim
 
 
 def _edge_symbol(g, value) -> str:
@@ -3920,6 +4302,15 @@ def _edge_symbol(g, value) -> str:
                or (getattr(g, "all_syms", {}) or {}).get(value))
         return str(sym).split("@")[0] if sym else f"<{value:#x}>"
     return str(value)
+
+
+def _addr_name(g, value) -> str:
+    """A semantic name for an address given as an int or a hex string."""
+    try:
+        addr = value if isinstance(value, int) else int(value, 16)
+    except (TypeError, ValueError):
+        return str(value)
+    return _edge_symbol(g, addr)
 
 
 def _edge_atom_step(g, atom: dict) -> dict:
@@ -3975,25 +4366,84 @@ def _edge_role(site: dict) -> str:
     return "value-flow"
 
 
-def _edge_disposition(site: dict) -> str:
-    if site.get("class") in ABI_CONTRACT_CLASSES:
-        return DISPOSITION_CONTRACT
+def _record_call_sites(g, rows) -> list:
+    """Project bound-level call sites into the record's name-bearing shape.
+
+    The addresses stay as artifact-local witnesses; ``targets`` is the semantic
+    name set that ``contributed_targets`` must equal, so a record cannot carry a
+    contribution its own call-site witness does not show.
+    """
+    out = []
+    for cs in rows or ():
+        args = []
+        for arg in cs.get("arguments") or ():
+            addresses = [hx for hx in (arg.get("targets") or ())]
+            args.append({
+                "argument_index": arg.get("argument_index",
+                                           arg.get("argument")),
+                "targets": sorted({_addr_name(g, hx) for hx in addresses}),
+                "target_addresses": sorted(addresses),
+                "witness_instruction": arg.get("witness_instruction") or [],
+            })
+        out.append({"call_site": cs.get("call_site"), "arguments": args})
+    return out
+
+
+def _edge_disposition(site: dict, name=None):
+    """(disposition, demotion, missing_property).
+
+    A target set is only "proved" when the resolver admitted at least one target
+    and the defining function has a symbol.  v1.1 silently proved an empty set
+    for 584 real records; an empty set is a resolver gap, not a proof, and is
+    demoted here (the demotion is counted in the receipt so the gap stays
+    visible).  A record with no defining symbol cannot be attributed to a
+    function and is never proved or contract-bounded.
+    """
+    contract = site.get("class") in ABI_CONTRACT_CLASSES
+    named = _is_named_function(name)
+    if contract:
+        if not named:
+            return (DISPOSITION_UNRESOLVED, "no-defining-symbol",
+                    "the containing function has no symbol, so the ABI "
+                    "contract cannot be attributed to a function")
+        return DISPOSITION_CONTRACT, None, None
     if site.get("unresolved"):
-        return DISPOSITION_UNRESOLVED
-    return DISPOSITION_PROVED
+        return DISPOSITION_UNRESOLVED, None, None
+    if not named:
+        # The no-symbol rule takes precedence: the record cannot be attributed
+        # to a function at all, so that is the missing property to name.
+        return (DISPOSITION_UNRESOLVED, "no-defining-symbol",
+                "the containing function has no symbol, so a target set "
+                "cannot be attributed to a function")
+    if not (site.get("targets") or ()):
+        return (DISPOSITION_UNRESOLVED, "empty-target-set",
+                site.get("reason") or
+                "empty target set: the resolver admitted no target and "
+                "enumerated no candidates")
+    return DISPOSITION_PROVED, None, None
 
 
-def _edge_record(g, site: dict, ordinal: int) -> dict:
+def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dict:
+    module = getattr(g, "name", None) or "?"
     fstart = site.get("func", 0)
-    name = (getattr(g, "funcs", {}) or {}).get(fstart, "?")
-    disposition = _edge_disposition(site)
+    site_addr = site.get("addr", 0)
+    funcs = getattr(g, "funcs", {}) or {}
+    name = funcs.get(fstart, "?")
     role = _edge_role(site)
+    disposition, demotion, demotion_property = _edge_disposition(site, name)
     admitted = sorted(_edge_symbol(g, t) for t in (site.get("targets") or ()))
     candidates = set(admitted)
     enumeration = "resolver-admitted-set"
+    candidate_source = {"kind": "resolver-admitted-set",
+                        "class": site.get("class"),
+                        "reason": site.get("reason")}
     exclusions = []
     extra = {}
     chains = collections.defaultdict(list)
+    # Set only by the round-4 zero-attribution fallback: the record cannot emit
+    # a bounded set, so it becomes UNRESOLVED and names the incomplete property.
+    fallback_missing = None
+    unattributed = []
 
     semantics = site.get("semantic_store_target")
     edge_witness = site.get("edge_target_witness")
@@ -4002,108 +4452,199 @@ def _edge_record(g, site: dict, ordinal: int) -> dict:
         # Only a resolved derivation enumerates its candidates.  An unresolved
         # row may contain a partial target set from rows that did not fail; it
         # is not a candidate set and must not be reported as if it were.
-        enumeration = ("complete" if semantics.get("resolved")
-                       else "not-applicable")
+        resolved = bool(semantics.get("resolved"))
+        enumeration = "complete" if resolved else "not-applicable"
         candidates = set()
+        source_rows = []
+        collapsed = set()
+        declared = []
         stored_values = semantics.get("stored_values") or {}
         for row in semantics.get("call_sites") or ():
+            caller = row.get("caller")
+            call_site = row.get("call_site")
             base = [
                 {"step": "store-writer", "writer": row.get("writer"),
                  "argument_index": row.get("argument_index")},
-                {"step": "call-site", "caller": row.get("caller"),
-                 "call_site": row.get("call_site")},
+                {"step": "call-site", "caller": caller,
+                 "call_site": call_site},
             ]
             sub = []
             _edge_chain_steps(g, row.get("chain") or (), sub)
             if row.get("included") is False:
                 extra.setdefault("excluded_callers", []).append({
-                    "caller": row.get("caller"),
-                    "call_site": row.get("call_site"),
-                    "reason": "not-in-reachable-set",
-                    "evidence": {"reachable_set_member": False,
-                                 "symbol": row.get("caller")},
+                    "target": caller or "?",
+                    "reason": "caller-not-in-reachable-set",
+                    "row_kind": "subject",
+                    "claim": _claim("caller-not-in-reachable-set", module,
+                                    [caller or "?"]),
+                    "evidence": _reach_evidence(
+                        oracle, module, caller,
+                        symbols_checked=[caller] if caller else []),
+                    "call_site": call_site,
                 })
+                source_rows.append({
+                    "caller": caller, "call_site": call_site,
+                    "included": False,
+                    "reason": "caller-not-in-reachable-set", "targets": []})
                 continue
             if row.get("failure"):
                 extra.setdefault("unbounded_call_sites", []).append({
-                    "caller": row.get("caller"),
-                    "call_site": row.get("call_site"),
+                    "target": call_site or caller or "?",
                     "reason": "provenance-unbounded",
+                    "row_kind": "subject",
+                    "claim": _claim("provenance-unbounded", module, []),
                     "evidence": {"failure": row.get("failure")},
+                    "caller": caller,
                 })
+                source_rows.append({
+                    "caller": caller, "call_site": call_site,
+                    "included": False,
+                    "reason": "provenance-unbounded", "targets": []})
                 continue
+            names = set()
             for hx in row.get("targets") or ():
-                nm = _edge_symbol(g, int(stored_values.get(hx, hx), 16))
-                if semantics.get("resolved"):
+                nm = _addr_name(g, stored_values.get(hx, hx))
+                names.add(nm)
+                if resolved:
                     candidates.add(nm)
                     chains[nm].extend(base + sub)
+            source_rows.append({
+                "caller": caller, "call_site": call_site,
+                "included": True,
+                "targets": sorted(names) if resolved else []})
         for collapse in semantics.get("thunk_collapses") or ():
-            nm = _edge_symbol(g, int(collapse["semantic"], 16))
+            nm = _addr_name(g, collapse.get("semantic"))
             chains[nm].append({
                 "step": "thunk",
-                "from_symbol": _edge_symbol(g, int(collapse["stored"], 16)),
+                "from_symbol": _addr_name(g, collapse.get("stored")),
                 "to_symbol": nm,
             })
+            if resolved:
+                candidates.add(nm)
+                collapsed.add(nm)
+        writer_rows = []
         for w in semantics.get("excluded_writers") or ():
             would = w.get("would_store_targets") or []
             if not w.get("would_store_failure") and not would:
                 continue
-            reason = ("declared-name-absent" if w.get("reason") ==
-                      "absent from the image" else "not-in-reachable-set")
-            for hx in would:
-                nm = _edge_symbol(g, int(hx, 16))
-                if semantics.get("resolved"):
-                    candidates.add(nm)
-                exclusions.append({
-                    "target": nm,
-                    "reason": reason,
-                    "evidence": ({
-                        "declared_name": w.get("fragment"),
-                        "present": False,
-                        "fragment": w.get("fragment"),
-                    } if reason == "declared-name-absent" else {
-                        "reachable_set_member": False,
-                        "symbol": w.get("symbol"),
-                        "writer_address": w.get("address"),
-                        "would_store": list(would),
-                    }),
+            declared_name = w.get("fragment")
+            writer_symbol = w.get("symbol") or "?"
+            writer_address = w.get("address")
+            writer_absent = (w.get("reason") == "absent from the image"
+                             and isinstance(declared_name, str)
+                             and bool(declared_name))
+            would_names = [_addr_name(g, hx) for hx in would]
+            # The excluded writer's would-store values are candidates: they are
+            # exactly what the exclusion accounts for, even when the overall
+            # derivation is unresolved.
+            candidates.update(would_names)
+            writer_rows.append({
+                "symbol": writer_symbol, "address": writer_address,
+                "included": False,
+                "reason": ("declared-name-absent" if writer_absent else
+                           "writer-not-in-reachable-set"),
+                "targets": sorted(set(would_names))})
+            if writer_absent:
+                # The declared writer is absent from the image.  The structured
+                # mapping is the list of targets it would store; a free-text
+                # derivation is never evidence (v1.2 R2).
+                for nm in would_names:
+                    exclusions.append({
+                        "target": nm,
+                        "reason": "declared-name-absent",
+                        "row_kind": "target-drop",
+                        "claim": _claim("declared-name-absent", module,
+                                        [declared_name]),
+                        "evidence": {"declared_name": declared_name,
+                                     "present": False,
+                                     "targets": sorted(set(would_names)),
+                                     "fragment": declared_name},
+                    })
+            else:
+                # The writer is present but outside this family's reachable set.
+                # The target drop and the writer subject are different claims and
+                # now live in different lists: `exclusions[]` is always a target
+                # drop, and the writer is a `writer-not-in-reachable-set` subject
+                # row bound to the site's targets by `would_store_targets`.
+                for nm in would_names:
+                    exclusions.append({
+                        "target": nm,
+                        "reason": "no-reachable-writer",
+                        "row_kind": "target-drop",
+                        "claim": _claim("no-reachable-writer", module, []),
+                        "evidence": {
+                            "writer": writer_symbol,
+                            "derived_targets": sorted(set(admitted)),
+                            "reachable_writers": [],
+                            "would_store_targets": sorted(set(would_names)),
+                            "writer_address": writer_address,
+                        },
+                    })
+                extra.setdefault("excluded_writers", []).append({
+                    "target": writer_symbol,
+                    "reason": "writer-not-in-reachable-set",
+                    "row_kind": "subject",
+                    "claim": _claim("writer-not-in-reachable-set", module,
+                                    [writer_symbol]),
+                    "evidence": _reach_evidence(
+                        oracle, module, writer_symbol,
+                        extra={"writer_address": writer_address,
+                               "would_store_targets": sorted(set(would_names)),
+                               "would_store": list(would)},
+                        symbols_checked=[writer_symbol],
+                        addresses={writer_symbol: writer_address}),
                 })
             if w.get("would_store_failure"):
                 extra.setdefault("excluded_writers", []).append({
-                    "symbol": w.get("symbol"),
-                    "writer_address": w.get("address"),
+                    "target": writer_symbol,
                     "reason": "provenance-unbounded",
+                    "row_kind": "subject",
+                    "claim": _claim("provenance-unbounded", module, []),
                     "evidence": {"failure": w["would_store_failure"]},
+                    "writer_address": writer_address,
                 })
         cross = semantics.get("declared_cross_check") or {}
-        if semantics.get("resolved"):
-            for frag in cross.get("declared_but_absent") or ():
-                exclusions.append({
-                    "target": frag,
-                    "reason": "declared-name-absent",
-                    "evidence": {"declared_name": frag, "present": False},
-                })
+        if resolved:
+            # `declared_but_absent` is a cross-check observation, not a target
+            # drop: there is no target to bind to the absent name.  It stays in
+            # the precision ledger (`declared_cross_check`) and is not emitted as
+            # an exclusion, because a target drop must name a candidate target.
             deref = set(admitted)
             for frag, info in (cross.get("declared_targets") or {}).items():
                 if not info.get("present"):
                     continue
+                names = set()
                 for hx in info.get("addresses") or ():
-                    nm = _edge_symbol(g, int(hx, 16))
+                    nm = _addr_name(g, hx)
+                    names.add(nm)
                     candidates.add(nm)
                     if nm not in deref:
                         exclusions.append({
                             "target": nm,
                             "reason": "no-reachable-writer",
+                            "row_kind": "target-drop",
+                            "claim": _claim("no-reachable-writer", module, []),
                             "evidence": {
                                 "writer": "the reachable method-store writers",
                                 "derived_targets": sorted(deref),
+                                "reachable_writers": [],
                                 "declared_name": frag,
                                 "address": hx},
                         })
+                declared.append({"name": frag,
+                                 "targets": sorted(names)})
         else:
             extra["semantic_refusal"] = semantics.get("refusal")
         extra["source_of_truth"] = "stored-value provenance"
         extra["slot"] = semantics.get("slot")
+        candidate_source = {
+            "kind": "store-writer-call-sites",
+            "resolved": resolved,
+            "rows": source_rows,
+            "writers": writer_rows,
+            "collapsed": sorted(collapsed),
+            "declared": declared,
+        }
     elif edge_witness is not None:
         enumeration = "complete"
         extra["witness_id"] = edge_witness.get("id")
@@ -4114,9 +4655,16 @@ def _edge_record(g, site: dict, ordinal: int) -> dict:
                  "slot": edge_witness.get("slot")},
             ]
     elif caller_bound is not None:
+        # Caller-scoped narrowing.  A dropped target is very often reachable in
+        # its own right (the v1m provider case dropped 178 reachable targets);
+        # the sound claim is about the *callers*, never the target.  The record
+        # embeds the reachable and excluded caller sets so the drop is
+        # recomputable from the record alone.
+        enumeration = "complete"
         candidates |= {_edge_symbol(g, t)
                        for t in (site.get("arg_targets") or ())}
-        excluded_callers = caller_bound.get("excluded_callers") or []
+        reachable_rows = []
+        reachable_contrib = set()
         for row in caller_bound.get("reachable_callers") or ():
             steps = [{"step": "argument", "caller": row.get("symbol")}]
             for cs in row.get("call_sites") or ():
@@ -4124,30 +4672,127 @@ def _edge_record(g, site: dict, ordinal: int) -> dict:
                     for wi in arg.get("witness_instruction") or ():
                         steps.append({"step": "code-materialised",
                                       "instruction": wi.get("text")})
+            names = set()
             for hx in row.get("contributed_targets") or ():
-                chains[_edge_symbol(g, int(hx, 16))].extend(steps)
-        for dropped in sorted(candidates - set(admitted)):
-            exclusions.append({
-                "target": dropped,
-                "reason": "not-in-reachable-set",
-                "evidence": {
-                    "reachable_set_member": False,
-                    "symbol": dropped,
-                    "excluded_callers": [
-                        {"symbol": c.get("symbol"),
-                         "function": c.get("function"),
-                         "reference": c.get("reason")}
-                        for c in excluded_callers],
-                },
+                nm = _addr_name(g, hx)
+                names.add(nm)
+                chains[nm].extend(steps)
+            reachable_contrib |= names
+            reachable_rows.append({
+                "symbol": row.get("symbol") or "?",
+                "address": row.get("function"),
+                "reachable": True,
+                "reason": None,
+                "call_sites": _record_call_sites(g, row.get("call_sites")),
+                "contributed_targets": sorted(names),
             })
+        excluded_callers = caller_bound.get("excluded_callers") or []
+        excluded_rows = []
+        excluded_addresses = {}
+        excluded_contrib = set()
         for c in excluded_callers:
-            extra.setdefault("excluded_callers", []).append({
-                "caller": c.get("symbol"),
-                "reason": "not-in-reachable-set",
-                "evidence": {"reachable_set_member": False,
-                             "symbol": c.get("symbol"),
-                             "in_image_references": c.get("in_image_references")},
+            symbol = c.get("symbol") or "?"
+            excluded_addresses[symbol] = c.get("function")
+            names = sorted({_addr_name(g, hx)
+                            for hx in (c.get("contributed_targets") or ())})
+            excluded_contrib |= set(names)
+            excluded_rows.append({
+                "symbol": symbol,
+                "address": c.get("function"),
+                "reachable": False,
+                "reason": "caller-not-in-reachable-set",
+                "call_sites": _record_call_sites(g, c.get("call_sites")),
+                "contributed_targets": names,
             })
+        excluded_symbols = sorted({r["symbol"] for r in excluded_rows})
+        # The candidates above are the site's flat argument-target union.  Every
+        # caller row is embedded with its own per-call-site witness, so the
+        # exclusion set is recomputable from the record.  A caller row may only
+        # widen the candidate set here (normally a no-op); a candidate that no
+        # row attributes is *admitted*, never dropped -- the conservative
+        # direction of round 4.
+        candidates |= reachable_contrib | excluded_contrib
+        attributed = (reachable_contrib | excluded_contrib) & candidates
+        attribution_fallback = bool(candidates) and not attributed
+        if attribution_fallback:
+            # No caller row attributes any candidate.  The narrowing has no
+            # support, so no bounded set may be emitted: the record is
+            # UNRESOLVED and names the incomplete attribution.
+            disposition = DISPOSITION_UNRESOLVED
+            demotion = None
+            fallback_missing = ATTRIBUTION_INCOMPLETE_PROPERTY.format(
+                n=len(candidates))
+            admitted = []
+            unattributed = sorted(candidates)
+        else:
+            unattributed = sorted(candidates - reachable_contrib
+                                  - excluded_contrib)
+            admitted_set = set(admitted)
+            for nm in unattributed:
+                admitted_set.add(nm)
+                chains[nm].append({
+                    "step": "unattributed-admission",
+                    "reason": UNATTRIBUTED_ADMISSION_REASON})
+            admitted = sorted(admitted_set)
+        if unattributed:
+            for nm in unattributed:
+                extra.setdefault("unattributed_admissions", []).append({
+                    "dso": module,
+                    "site": hex(site_addr),
+                    "function": name,
+                    "target": nm,
+                    "reason": (fallback_missing
+                               or UNATTRIBUTED_ADMISSION_REASON),
+                })
+        claim_callers = [{"symbol": r["symbol"],
+                          "address": r["address"],
+                          "contributed_targets": r["contributed_targets"]}
+                         for r in reachable_rows]
+        if not attribution_fallback:
+            for dropped in sorted(candidates - set(admitted)):
+                # Only an excluded caller's contribution can be dropped: a
+                # target attributed to a reachable caller is admitted by the
+                # derivation, and an unattributed one is admitted above.
+                exclusions.append({
+                    "target": dropped,
+                    "reason": "not-contributed-by-reachable-callers",
+                    "row_kind": "target-drop",
+                    "claim": _claim(
+                        "not-contributed-by-reachable-callers", module, [],
+                        reachable_callers=claim_callers,
+                        excluded_callers=excluded_symbols),
+                    "evidence": {
+                        "reachable_basis": ("final-upper-bound"
+                                            if oracle is not None
+                                            else "pre-closure-direct"),
+                        "subject_addresses": excluded_addresses,
+                    },
+                })
+        for c in excluded_callers:
+            symbol = c.get("symbol") or "?"
+            extra.setdefault("excluded_callers", []).append({
+                "target": symbol,
+                "reason": "caller-not-in-reachable-set",
+                "row_kind": "subject",
+                "claim": _claim("caller-not-in-reachable-set", module,
+                                [symbol]),
+                "evidence": _reach_evidence(
+                    oracle, module, symbol,
+                    extra={"in_image_attribution": c.get("contributed_targets"),
+                           "in_image_references":
+                           c.get("in_image_references")},
+                    symbols_checked=[symbol],
+                    addresses={symbol: c.get("function")}),
+            })
+        candidate_source = {
+            "kind": "argument-targets",
+            "callers": reachable_rows,
+            "excluded_callers": excluded_rows,
+            "argued_by": sorted({r["symbol"] for r in reachable_rows}
+                                | set(excluded_symbols)),
+            "targets": sorted(candidates),
+            "unattributed_targets": sorted(unattributed),
+        }
     elif site.get("class") in ABI_CONTRACT_CLASSES:
         w = site.get("witness") or {}
         extra["witness_id"] = (f"{site.get('class')}:{w.get('slot') or 'unknown'}")
@@ -4166,17 +4811,39 @@ def _edge_record(g, site: dict, ordinal: int) -> dict:
     admitted_set = set(admitted)
     excluded_set = {e["target"] for e in exclusions if e.get("target")}
     accounted = admitted_set | excluded_set
-    unaccounted = sorted(candidates - accounted) if enumeration == "complete" else []
+    unattributed_set = set(unattributed)
+    unaccounted = (sorted(candidates - accounted - unattributed_set)
+                   if enumeration == "complete" else [])
+
+    # Derived, never self-described: a record claims a target set exactly when
+    # its disposition is PROVED_TARGET_SET.  v1.2 let an UNRESOLVED record say
+    # "claimed", which made the field an assertion rather than a consequence.
+    target_reachability = ("claimed" if disposition == DISPOSITION_PROVED
+                           else "not-claimed")
 
     missing = None
     if disposition == DISPOSITION_UNRESOLVED:
-        missing = ((semantics or {}).get("refusal")
+        missing = (fallback_missing
+                   or demotion_property
+                   or (semantics or {}).get("refusal")
                    or site.get("reason")
                    or "the resolver recorded no target set and no reason")
 
+    base_id = (f"{module}::{name}::{site.get('kind')}::{role}::{ordinal}")
+    edge_id = base_id
+    if seen_ids is not None:
+        if edge_id in seen_ids:
+            digest = hashlib.sha256(json.dumps(
+                {"text": site.get("text"),
+                 "site_address": hex(site_addr),
+                 "chain": [c["target"] for c in chain_rows]},
+                sort_keys=True).encode()).hexdigest()[:16]
+            edge_id = f"{base_id}::{digest}"
+        seen_ids.add(edge_id)
+
     return {
         "schema": EDGE_RECORD_SCHEMA,
-        "edge_id": f"{name}::{site.get('kind')}::{ordinal}",
+        "edge_id": edge_id,
         "semantic_identity": {
             "source_operation": site.get("text"),
             "operation_kind": site.get("kind"),
@@ -4184,19 +4851,22 @@ def _edge_record(g, site: dict, ordinal: int) -> dict:
             "call_site_role": role,
             "provenance_chain": chain_rows,
             "artifact_local_witness": {
-                "module": getattr(g, "name", "?"),
+                "module": module,
                 "function_address": hex(fstart),
-                "site_address": hex(site.get("addr", 0)),
+                "site_address": hex(site_addr),
                 "identity_note": ("addresses are artifact-local witnesses; "
                                   "they are not the identity of the edge"),
             },
         },
         "disposition": disposition,
+        "disposition_demotion": demotion,
         "target_set": admitted if disposition == DISPOSITION_PROVED else [],
         "target_set_claim": disposition == DISPOSITION_PROVED,
+        "target_reachability": target_reachability,
         "witness_id": extra.get("witness_id"),
         "missing_property": missing,
         "exclusions": exclusions,
+        "candidate_source": candidate_source,
         **{k: v for k, v in extra.items() if k not in ("witness_id",)},
         "exclusion_accounting": {
             "candidate_enumeration": enumeration,
@@ -4208,73 +4878,1105 @@ def _edge_record(g, site: dict, ordinal: int) -> dict:
     }
 
 
-def build_edge_records(graphs: dict) -> list:
-    """One provenance record for every indirect site in every closed DSO."""
-    records = []
+def iter_edge_records(graphs: dict, oracle=None):
+    """Yield one provenance record for every indirect site, in module order."""
     for dso_name in sorted(graphs):
         g = graphs[dso_name]
         ordinals = collections.Counter()
+        seen_ids = set()
         keys = sorted(getattr(g, "sites", {}) or {},
                       key=lambda k: (k[0], k[1], str(k[2])))
         for key in keys:
             site = g.sites[key]
             seed = (site.get("func"), _edge_role(site))
             ordinals[seed] += 1
-            records.append(_edge_record(g, site, ordinals[seed]))
-    return records
+            yield _edge_record(g, site, ordinals[seed], oracle, seen_ids)
 
 
-def validate_edge_records(records: list) -> list:
-    """Every exclusion must be checkable; an unaccounted target is a defect."""
+def build_edge_records(graphs: dict, oracle=None, sink=None):
+    """One provenance record per indirect site.
+
+    With ``sink`` the population is produced, handed to the sink and released;
+    only a compact summary is returned, so a 52k-record closure does not have to
+    hold the population in memory.  Without ``sink`` the list is returned (the
+    test and corpus callers).
+
+    When ``oracle`` is supplied, every negative reachability claim carries the
+    observation made against the final upper bound rather than the
+    derivation-time (pre-closure, under-approximating) reachable set.
+    """
+    if sink is None:
+        return list(iter_edge_records(graphs, oracle))
+    count = 0
+    for record in iter_edge_records(graphs, oracle):
+        sink(record)
+        count += 1
+    return {"schema": EDGE_RECORD_SCHEMA, "count": count}
+
+
+def _is_symbol_name(value) -> bool:
+    return isinstance(value, str) and bool(
+        re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", value))
+
+
+def _subject_addresses(evidence) -> dict:
+    """Normalise a row's optional artifact-local subject addresses."""
+    raw = evidence.get("subject_addresses") if isinstance(evidence, dict) else None
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for key, value in raw.items():
+        try:
+            out[key] = value if isinstance(value, int) else int(value, 16)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _absent_subject_defects(rid, where, reason, subjects, evidence,
+                            module, oracle):
+    """Shared checks for a claim that named subjects are absent from the bound."""
+    defects = []
+    member = evidence.get("reachable_set_member")
+    if member is not False:
+        defects.append(
+            f"{rid}: {where} ({reason}) asserts reachable_set_member="
+            f"{member!r}; a negative reachability claim requires exactly False")
+    basis = evidence.get("reachable_basis")
+    if basis not in REACHABILITY_BASES:
+        defects.append(f"{rid}: {where} ({reason}) has reachability basis "
+                       f"{basis!r}")
+    checked = evidence.get("symbols_checked")
+    if (not isinstance(checked, list) or not checked
+            or not all(isinstance(s, str) and s for s in checked)
+            or (bool(subjects) and set(checked) != set(subjects))):
+        # v1.1 accepted an empty list when a free `reachable_caller_count` was
+        # zero.  The count was not recomputable and had no production producer;
+        # the exemption is gone, so the covered symbols are mandatory and must
+        # be exactly the subjects.
+        defects.append(f"{rid}: {where} ({reason}) does not list the symbols "
+                       "its claim covers")
+    symbol = evidence.get("symbol")
+    if not isinstance(symbol, str) or not symbol:
+        defects.append(f"{rid}: {where} ({reason}) names no symbol")
+    if oracle is not None and module:
+        if basis != "final-upper-bound":
+            defects.append(
+                f"{rid}: {where} ({reason}) claims basis {basis!r}; an "
+                "oracle-backed negative claim requires final-upper-bound")
+        addresses = _subject_addresses(evidence)
+        for subject in subjects:
+            if not _is_symbol_name(subject) and subject not in addresses:
+                defects.append(
+                    f"{rid}: {where} ({reason}) subject {subject!r} is not a "
+                    "symbol and carries no address")
+                continue
+            observed, _basis, checkable = oracle.is_reachable(
+                module, subject, addresses.get(subject))
+            if not checkable:
+                defects.append(f"{rid}: {where} ({reason}) is not checkable: "
+                               f"the oracle does not cover module {module!r}")
+                break
+            if observed is not member:
+                defects.append(
+                    f"{rid}: {where} ({reason}) claims reachable_set_member="
+                    f"{member!r} but the final upper bound holds {observed} "
+                    f"for {subject!r}")
+    return defects
+
+
+def _row_kind_placement_defect(rid, where, row, expected_kind):
+    """A row belongs to exactly one list kind; the kind is part of the claim."""
+    kind = row.get("row_kind")
+    if kind not in ROW_KINDS:
+        return (f"{rid}: {where} has no row_kind from {sorted(ROW_KINDS)}")
+    if kind != expected_kind:
+        if expected_kind == "target-drop":
+            return (f"{rid}: {where} is in exclusions[] with row_kind {kind!r}; "
+                    "a target drop cannot be justified by a caller/writer claim")
+        return (f"{rid}: {where} is an auxiliary subject row with row_kind "
+                f"{kind!r}; a target drop cannot be recorded as a subject claim")
+    return None
+
+
+def _row_reason_vocab_defect(rid, where, reason, expected_kind):
+    """The reason must belong to the vocabulary of the row's list kind."""
+    vocabulary = ROW_KIND_VOCABULARY[expected_kind]
+    if reason not in vocabulary:
+        return (f"{rid}: {where} reason {reason!r} is not a "
+                f"{expected_kind} reason ({', '.join(sorted(vocabulary))})")
+    return None
+
+
+def _exclusion_row_defects(rid, where, row, module, oracle, rec,
+                           expected_kind):
+    """Per-reason checks for one exclusion or auxiliary claim row.
+
+    A reason is accepted only when the row's ``claim`` names the right subject
+    and its evidence establishes the sentence in ``EXCLUSION_SEMANTICS``.
+    Presence of a field is not the claim: booleans are compared with ``is``, and
+    a supplied oracle must corroborate every negative.
+    """
+    if not isinstance(row, dict):
+        return [f"{rid}: {where} is not an object"]
+    defects = []
+    target = row.get("target")
+    if not isinstance(target, str) or not target:
+        defects.append(f"{rid}: {where} names no target")
+        target = None
+    reason = row.get("reason")
+    if reason not in EXCLUSION_REASONS:
+        defects.append(f"{rid}: {where} has no checkable reason ({reason!r})")
+        return defects
+    kind_defect = _row_kind_placement_defect(rid, where, row, expected_kind)
+    if kind_defect:
+        return defects + [kind_defect]
+    vocab_defect = _row_reason_vocab_defect(rid, where, reason, expected_kind)
+    if vocab_defect:
+        return defects + [vocab_defect]
+    claim = row.get("claim")
+    if not isinstance(claim, dict):
+        return defects + [f"{rid}: {where} ({reason}) has no claim object"]
+    if claim.get("kind") != reason:
+        defects.append(
+            f"{rid}: {where} claim kind {claim.get('kind')!r} is not the "
+            f"reason {reason!r}")
+    cmodule = claim.get("module")
+    if not isinstance(cmodule, str) or not cmodule:
+        defects.append(f"{rid}: {where} claim names no module")
+    elif module and cmodule != module:
+        defects.append(
+            f"{rid}: {where} claim module {cmodule!r} is not the record's "
+            f"module {module!r}")
+    subjects = claim.get("subjects")
+    if not isinstance(subjects, list) or not all(
+            isinstance(s, str) and s for s in subjects):
+        defects.append(f"{rid}: {where} claim subjects are not a list of names")
+        subjects = []
+    evidence = row.get("evidence")
+    if not isinstance(evidence, dict) or not evidence:
+        return defects + [f"{rid}: {where} ({reason}) has no evidence"]
+    missing = [k for k in EXCLUSION_EVIDENCE_KEYS[reason]
+               if evidence.get(k) is None]
+    if missing:
+        defects.append(f"{rid}: {where} ({reason}) lacks evidence fields "
+                       + ", ".join(missing))
+    if oracle is not None and isinstance(cmodule, str) and cmodule \
+            and not oracle.knows(cmodule):
+        defects.append(f"{rid}: {where} ({reason}) is not checkable: the "
+                       f"oracle does not cover module {cmodule!r}")
+        oracle = None
+
+    if reason == "target-not-in-reachable-set":
+        # The claim is about the excluded target itself (H1).  v1.1 validated
+        # only the evidence's free `symbol`, so an exclusion of a reachable
+        # target whose evidence named a different, absent symbol validated.
+        if target and subjects != [target]:
+            defects.append(
+                f"{rid}: {where} ({reason}) must claim about exactly the "
+                f"excluded target {target!r}, not {subjects}")
+        symbol = evidence.get("symbol")
+        if target and symbol != target:
+            defects.append(
+                f"{rid}: {where} ({reason}) evidence names {symbol!r} but the "
+                f"excluded target is {target!r}")
+        defects.extend(_absent_subject_defects(
+            rid, where, reason, subjects or ([target] if target else []),
+            evidence, cmodule or module, oracle))
+    elif reason == "caller-not-in-reachable-set":
+        if not subjects:
+            defects.append(f"{rid}: {where} ({reason}) names no caller")
+        defects.extend(_absent_subject_defects(
+            rid, where, reason, subjects, evidence, cmodule or module, oracle))
+    elif reason == "writer-not-in-reachable-set":
+        if len(subjects) != 1:
+            defects.append(f"{rid}: {where} ({reason}) must name exactly one "
+                           f"writer, got {subjects}")
+        would = evidence.get("would_store_targets")
+        if not isinstance(would, list) or not all(
+                isinstance(t, str) and t for t in would):
+            defects.append(f"{rid}: {where} ({reason}) has no "
+                           "would_store_targets list binding the subject to "
+                           "the site's targets")
+        defects.extend(_absent_subject_defects(
+            rid, where, reason, subjects, evidence, cmodule or module, oracle))
+    elif reason == "not-contributed-by-reachable-callers":
+        # The per-caller mapping is not read here: it is recomputed from
+        # candidate_source by _argument_binding_defects.  This branch checks the
+        # claim's shape and the oracle membership of the named callers.
+        rows = claim.get("reachable_callers")
+        if not isinstance(rows, list) or not rows:
+            defects.append(f"{rid}: {where} ({reason}) embeds no reachable "
+                           "caller set")
+            rows = []
+        for entry in rows:
+            if not isinstance(entry, dict):
+                defects.append(f"{rid}: {where} ({reason}) caller row is not "
+                               "an object")
+                continue
+            symbol = entry.get("symbol")
+            if not isinstance(symbol, str) or not symbol:
+                defects.append(f"{rid}: {where} ({reason}) caller row names no "
+                               "caller")
+            targets = entry.get("contributed_targets")
+            if not isinstance(targets, list) or not all(
+                    isinstance(t, str) and t for t in targets):
+                defects.append(f"{rid}: {where} ({reason}) caller {symbol!r} "
+                               "has no contributed target list")
+        excluded = claim.get("excluded_callers")
+        if not isinstance(excluded, list) or not excluded or not all(
+                isinstance(s, str) and s for s in excluded):
+            defects.append(f"{rid}: {where} ({reason}) embeds no excluded "
+                           "caller list")
+            excluded = []
+        basis = evidence.get("reachable_basis")
+        if basis not in REACHABILITY_BASES:
+            defects.append(f"{rid}: {where} ({reason}) has reachability basis "
+                           f"{basis!r}")
+        if oracle is not None and cmodule:
+            if basis != "final-upper-bound":
+                defects.append(
+                    f"{rid}: {where} ({reason}) claims basis {basis!r}; an "
+                    "oracle-backed claim requires final-upper-bound")
+            for entry in rows:
+                symbol = entry.get("symbol") if isinstance(entry, dict) else None
+                if not isinstance(symbol, str) or not symbol:
+                    continue
+                address = entry.get("address")
+                try:
+                    address = int(address, 16) if isinstance(address, str) else address
+                except ValueError:
+                    address = None
+                observed, _basis, checkable = oracle.is_reachable(
+                    cmodule, symbol, address)
+                if not checkable or observed is not True:
+                    defects.append(
+                        f"{rid}: {where} ({reason}) embeds a caller {symbol!r} "
+                        "that is not established as reachable in the final "
+                        "upper bound")
+            addresses = _subject_addresses(evidence)
+            for symbol in excluded:
+                observed, _basis, checkable = oracle.is_reachable(
+                    cmodule, symbol, addresses.get(symbol))
+                if not checkable or observed is not False:
+                    defects.append(
+                        f"{rid}: {where} ({reason}) embeds an excluded caller "
+                        f"{symbol!r} that the final upper bound reaches or "
+                        "cannot check")
+    elif reason == "declared-name-absent":
+        name = evidence.get("declared_name")
+        if not isinstance(name, str) or not name:
+            defects.append(f"{rid}: {where} ({reason}) names no declared symbol")
+        elif subjects != [name]:
+            defects.append(
+                f"{rid}: {where} ({reason}) must claim about exactly the "
+                f"declared name {name!r}, not {subjects}")
+        if evidence.get("present") is not False:
+            defects.append(
+                f"{rid}: {where} ({reason}) asserts present="
+                f"{evidence.get('present')!r}; an absent name requires exactly "
+                "False")
+        listed = evidence.get("targets")
+        if not isinstance(listed, list) or not listed or not all(
+                isinstance(t, str) and t for t in listed):
+            # v1.2 accepted a free-text `target_derivation`; a string is never
+            # a structured mapping from a declared name to a dropped target.
+            defects.append(
+                f"{rid}: {where} ({reason}) has no structured evidence.targets "
+                "list; a free-text derivation is not evidence")
+            listed = []
+        if target and listed and target not in listed:
+            defects.append(
+                f"{rid}: {where} ({reason}) excludes target {target!r} but the "
+                f"declared mapping names {listed}")
+        if oracle is not None and cmodule and isinstance(name, str) and name:
+            image = oracle.image_symbols_for(cmodule)
+            if image is not None and name in image:
+                defects.append(f"{rid}: {where} ({reason}) claims {name!r} is "
+                               "absent but the image defines it")
+        if oracle is not None and cmodule and target:
+            observed, _basis, checkable = oracle.is_reachable(cmodule, target)
+            if not checkable or observed is not False:
+                defects.append(
+                    f"{rid}: {where} ({reason}) drops target {target!r} under an "
+                    "absent declared name although the final upper bound "
+                    "reaches it (or cannot check it)")
+    elif reason == "no-reachable-writer":
+        writer = evidence.get("writer")
+        if not isinstance(writer, str) or not writer:
+            defects.append(f"{rid}: {where} ({reason}) names no writer")
+        derived = evidence.get("derived_targets")
+        if not isinstance(derived, list):
+            defects.append(f"{rid}: {where} ({reason}) records no derived "
+                           "target list")
+        elif target and target in derived:
+            defects.append(
+                f"{rid}: {where} ({reason}) excludes {target!r} although its "
+                "own derived_targets contain it")
+        reachable = evidence.get("reachable_writers")
+        if not isinstance(reachable, list) or reachable:
+            defects.append(f"{rid}: {where} ({reason}) must record "
+                           "reachable_writers == [], the claim it makes")
+    elif reason == "provenance-unbounded":
+        failure = evidence.get("failure")
+        if not isinstance(failure, str) or not failure:
+            defects.append(f"{rid}: {where} ({reason}) records no failure")
+    elif reason == "non-image-value":
+        if evidence.get("in_image") is not False:
+            defects.append(
+                f"{rid}: {where} ({reason}) asserts in_image="
+                f"{evidence.get('in_image')!r}; a non-image claim requires "
+                "exactly False")
+        value = evidence.get("value")
+        if oracle is not None and cmodule and _is_symbol_name(value):
+            image = oracle.image_symbols_for(cmodule)
+            if image is not None and value in image:
+                defects.append(f"{rid}: {where} ({reason}) claims {value!r} is "
+                               "not an image symbol but the image defines it")
+    return defects
+
+
+def _candidate_source_defects(rid, rec, oracle, module):
+    """Recompute candidates from ``candidate_source``; return (set|None, defects).
+
+    ``None`` means "the candidates are exactly the admitted resolver set" (the
+    ``resolver-admitted-set`` kind).  A separate enumeration is mandatory:
+    v1.1 trusted the accounting ledger, so deleting an exclusion and its
+    candidate left no trace.
+    """
+    source = rec.get("candidate_source")
+    if not isinstance(source, dict):
+        return None, [f"{rid}: candidate_source is missing; the candidate set "
+                      "is not separately determined"]
+    kind = source.get("kind")
+    if kind not in CANDIDATE_SOURCE_KINDS:
+        return None, [f"{rid}: candidate_source kind {kind!r} is not checkable"]
+    defects = []
+    if kind == "store-writer-call-sites":
+        rows = source.get("rows")
+        if not isinstance(rows, list):
+            defects.append(f"{rid}: candidate_source rows are not a list")
+            rows = []
+        resolved = source.get("resolved") is True
+        names = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                defects.append(f"{rid}: candidate_source row is not an object")
+                continue
+            caller = row.get("caller")
+            if not isinstance(caller, str) or not caller:
+                defects.append(f"{rid}: candidate_source row names no caller")
+            included = row.get("included")
+            if not isinstance(included, bool):
+                defects.append(f"{rid}: candidate_source row for {caller!r} "
+                               "does not say whether it is included")
+            targets = row.get("targets")
+            if not isinstance(targets, list) or not all(
+                    isinstance(t, str) and t for t in targets):
+                defects.append(f"{rid}: candidate_source row for {caller!r} "
+                               "has no target list")
+                targets = []
+            if included is True:
+                names.update(targets)
+            else:
+                reason = row.get("reason")
+                if reason == "caller-not-in-reachable-set":
+                    # H6: an excluded semantic call-site row is itself a claim,
+                    # separate from any auxiliary list.  The caller -- never
+                    # the target -- must be absent from the bound.
+                    if oracle is not None and module and caller:
+                        if not oracle.knows(module):
+                            pass  # record-level unknown-module defect
+                        else:
+                            observed, _b, checkable = oracle.is_reachable(
+                                module, caller, None)
+                            if not checkable or observed is not False:
+                                defects.append(
+                                    f"{rid}: candidate_source excludes caller "
+                                    f"{caller!r} but the final upper bound "
+                                    "reaches it (or cannot check it)")
+                elif reason != "provenance-unbounded":
+                    defects.append(
+                        f"{rid}: candidate_source row for {caller!r} is "
+                        f"excluded with reason {reason!r}, which is not a "
+                        "caller or provenance claim")
+        if not resolved and source.get("resolved") is not False:
+            defects.append(f"{rid}: candidate_source does not say whether the "
+                           "store-writer enumeration resolved")
+        collapsed = source.get("collapsed") or []
+        if not isinstance(collapsed, list) or not all(
+                isinstance(t, str) and t for t in collapsed):
+            defects.append(f"{rid}: candidate_source collapsed list is invalid")
+        else:
+            names.update(collapsed)
+        writers = source.get("writers") or []
+        if not isinstance(writers, list):
+            defects.append(f"{rid}: candidate_source writers list is invalid")
+            writers = []
+        for entry in writers:
+            if not isinstance(entry, dict):
+                defects.append(f"{rid}: candidate_source writer entry is not an "
+                               "object")
+                continue
+            reason = entry.get("reason")
+            if reason not in ("declared-name-absent",
+                              "writer-not-in-reachable-set"):
+                defects.append(f"{rid}: candidate_source writer entry has "
+                               f"reason {reason!r}, which is not a writer "
+                               "claim")
+            targets = entry.get("targets")
+            if not isinstance(targets, list) or not all(
+                    isinstance(t, str) and t for t in targets):
+                defects.append(f"{rid}: candidate_source writer entry has no "
+                               "target list")
+                continue
+            names.update(targets)
+        declared = source.get("declared") or []
+        if not isinstance(declared, list):
+            defects.append(f"{rid}: candidate_source declared list is invalid")
+            declared = []
+        for entry in declared:
+            if not isinstance(entry, dict):
+                defects.append(f"{rid}: candidate_source declared entry is not "
+                               "an object")
+                continue
+            targets = entry.get("targets")
+            if not isinstance(targets, list) or not all(
+                    isinstance(t, str) and t for t in targets):
+                defects.append(f"{rid}: candidate_source declared entry "
+                               "has no target list")
+                continue
+            names.update(targets)
+        return names, defects, {}
+    if kind == "argument-targets":
+        targets = source.get("targets")
+        if not isinstance(targets, list) or not targets or not all(
+                isinstance(t, str) and t for t in targets):
+            return (None, defects + [f"{rid}: argument-targets candidate source "
+                                     "has no target list"], {})
+        candidates = set(targets)
+        detail = {"kind": "argument-targets", "valid": False,
+                  "callers": {}, "excluded": {},
+                  "union_callers": set(), "union_excluded": set(),
+                  "callsite_union": {}, "unattributed": set(),
+                  "targets": candidates}
+        callers = source.get("callers")
+        excluded = source.get("excluded_callers")
+        callers_ok = isinstance(callers, list) and bool(callers)
+        excluded_ok = isinstance(excluded, list) and bool(excluded)
+        if not callers_ok:
+            # v1.2 let the claim's self-asserted `contributed_targets` stand in
+            # for the caller mapping.  Without an embedded mapping the drop is
+            # not recomputable, so no dependent check may run (and a fabricated
+            # claim list cannot supply one).
+            defects.append(f"{rid}: argument-targets candidate source embeds "
+                           "no caller mapping (symbol -> contributed_targets)")
+        if not excluded_ok:
+            defects.append(f"{rid}: argument-targets candidate source embeds "
+                           "no excluded-caller mapping "
+                           "(symbol -> contributed_targets)")
+        if not (callers_ok and excluded_ok):
+            return candidates, defects, detail
+        for label, rows in (("caller", callers),
+                            ("excluded caller", excluded)):
+            for entry in rows:
+                if not isinstance(entry, dict):
+                    defects.append(f"{rid}: argument-targets {label} entry is "
+                                   "not an object")
+                    continue
+                symbol = entry.get("symbol")
+                if not isinstance(symbol, str) or not symbol:
+                    defects.append(f"{rid}: argument-targets {label} entry "
+                                   "names no symbol")
+                    continue
+                contributed = entry.get("contributed_targets")
+                if not isinstance(contributed, list) or not all(
+                        isinstance(t, str) and t for t in contributed):
+                    defects.append(f"{rid}: argument-targets {label} "
+                                   f"{symbol!r} has no contributed_targets "
+                                   "list")
+                    contributed = []
+                mapping = detail["callers"] if label == "caller" \
+                    else detail["excluded"]
+                mapping[symbol] = set(contributed)
+                # Round 4: every caller row carries the per-call-site witness
+                # that produced its contribution.  `contributed_targets` must
+                # equal the union of the argument targets the row itself
+                # shows, so a contribution cannot be asserted without a
+                # witness (an empty call-site list can therefore contribute
+                # nothing).  This checks the record against itself; it is not a
+                # re-derivation from the image.
+                call_sites = entry.get("call_sites")
+                site_union = set()
+                if not isinstance(call_sites, list):
+                    defects.append(f"{rid}: argument-targets {label} "
+                                   f"{symbol!r} has no per-call-site witness "
+                                   "list")
+                else:
+                    for cs in call_sites:
+                        if not isinstance(cs, dict):
+                            defects.append(f"{rid}: argument-targets {label} "
+                                           f"{symbol!r} call-site is not an "
+                                           "object")
+                            continue
+                        args = cs.get("arguments")
+                        if not isinstance(args, list):
+                            defects.append(f"{rid}: argument-targets {label} "
+                                           f"{symbol!r} call-site has no "
+                                           "argument list")
+                            continue
+                        for arg in args:
+                            if not isinstance(arg, dict):
+                                defects.append(f"{rid}: argument-targets {label} "
+                                               f"{symbol!r} argument is not an "
+                                               "object")
+                                continue
+                            index = arg.get("argument_index")
+                            if not isinstance(index, int):
+                                defects.append(f"{rid}: argument-targets {label} "
+                                               f"{symbol!r} argument has no "
+                                               "argument_index")
+                            arg_targets = arg.get("targets")
+                            if not isinstance(arg_targets, list) or not all(
+                                    isinstance(t, str) and t
+                                    for t in arg_targets):
+                                defects.append(f"{rid}: argument-targets {label} "
+                                               f"{symbol!r} argument "
+                                               f"{index!r} has no target "
+                                               "list")
+                                continue
+                            site_union |= set(arg_targets)
+                detail["callsite_union"][symbol] = site_union
+                if site_union != set(contributed):
+                    defects.append(
+                        f"{rid}: argument-targets {label} {symbol!r} "
+                        "contributed_targets are not the union of its "
+                        "per-call-site targets")
+        detail["union_callers"] = set().union(
+            *detail["callers"].values()) if detail["callers"] else set()
+        detail["union_excluded"] = set().union(
+            *detail["excluded"].values()) if detail["excluded"] else set()
+        argued_by = source.get("argued_by")
+        if not isinstance(argued_by, list) or not argued_by or not all(
+                isinstance(s, str) and s for s in argued_by):
+            defects.append(f"{rid}: argument-targets candidate source names no "
+                           "callers")
+        attributed = detail["union_callers"] | detail["union_excluded"]
+        invented = sorted(attributed - candidates)
+        if invented:
+            defects.append(f"{rid}: argument-targets attributes target(s) that "
+                           "are not candidates: " + ", ".join(invented[:8]))
+        # Round 4: candidate targets that no caller row attributes are admitted
+        # conservatively.  The record names them in both candidate_source and
+        # `unattributed_admissions`; the validator requires the two to agree and
+        # requires every name to be a genuine, non-attributed candidate.
+        un = source.get("unattributed_targets")
+        if un is None:
+            un = []
+        if not isinstance(un, list) or not all(
+                isinstance(t, str) and t for t in un):
+            defects.append(f"{rid}: argument-targets unattributed_targets is "
+                           "not a target-name list")
+            un = []
+        detail["unattributed"] = set(un)
+        outside = sorted(detail["unattributed"] - candidates)
+        if outside:
+            defects.append(f"{rid}: argument-targets names unattributed "
+                           "target(s) that are not candidates: "
+                           + ", ".join(outside[:8]))
+        detail["valid"] = not any("embeds no" in d for d in defects)
+        if oracle is not None and module and oracle.knows(module):
+            for symbol in detail["callers"]:
+                observed, _b, checkable = oracle.is_reachable(module, symbol)
+                if not checkable or observed is not True:
+                    defects.append(
+                        f"{rid}: argument-targets reachable caller {symbol!r} "
+                        "is not in the final upper bound")
+            for symbol in detail["excluded"]:
+                observed, _b, checkable = oracle.is_reachable(module, symbol)
+                if not checkable or observed is not False:
+                    defects.append(
+                        f"{rid}: argument-targets excluded caller {symbol!r} "
+                        "is reached by the final upper bound or cannot be "
+                        "checked")
+        return candidates, defects, detail
+    # resolver-admitted-set: the candidates are exactly the admitted set; an
+    # exclusion cannot hide here because admitted targets can never also be
+    # excluded.
+    if source.get("class") is None and source.get("reason") is None:
+        defects.append(f"{rid}: resolver-admitted-set candidate source names "
+                       "neither a class nor a reason")
+    return None, defects, {}
+
+
+def _argument_binding_defects(rid, rec, oracle, module, detail, acct_admitted,
+                             excluded, candidates):
+    """Recompute every caller-bound target drop from ``candidate_source``.
+
+    v1.2 read the claim's self-asserted ``contributed_targets``.  A record could
+    therefore omit the one reachable caller that contributes the dropped target
+    and still validate.  The mapping, the two contribution sets, the admitted
+    set and the candidate set are now recomputed from candidate_source; the
+    claim's mapping must equal the source's for the same symbols.
+
+    Round 4 adds the conservative direction: a candidate that no caller row
+    attributes is admitted, never dropped.  The record lists those admissions
+    in ``unattributed_admissions`` and ``candidate_source.unattributed_targets``,
+    and the two must agree.  A site whose *entire* candidate set is
+    unattributable must be UNRESOLVED with the named missing property; it may
+    not claim a bounded set.
+    """
+    defects = []
+    callers = detail["callers"]
+    excluded_map = detail["excluded"]
+    union_callers = detail["union_callers"]
+    union_excluded = detail["union_excluded"]
+    unattributed = set(detail.get("unattributed") or ())
+    disposition = rec.get("disposition")
+    ident = rec.get("semantic_identity") or {}
+    witness = ident.get("artifact_local_witness") or {}
+    attribution = union_callers | union_excluded
+    rows = [e for e in (rec.get("exclusions") or ()) if isinstance(e, dict)
+            and e.get("reason") == "not-contributed-by-reachable-callers"]
+    for row in rows:
+        claim = row.get("claim") or {}
+        claim_callers = claim.get("reachable_callers")
+        mapping = {}
+        if isinstance(claim_callers, list):
+            for entry in claim_callers:
+                if not isinstance(entry, dict):
+                    continue
+                symbol = entry.get("symbol")
+                targets = entry.get("contributed_targets")
+                if isinstance(symbol, str) and isinstance(targets, list):
+                    mapping[symbol] = {t for t in targets if isinstance(t, str)}
+        if mapping != callers:
+            defects.append(
+                f"{rid}: the claim's reachable-caller mapping does not equal "
+                f"candidate_source's (claim {sorted(mapping)}, source "
+                f"{sorted(callers)})")
+        claim_excluded = claim.get("excluded_callers")
+        if (not isinstance(claim_excluded, list)
+                or set(claim_excluded) != set(excluded_map)):
+            defects.append(
+                f"{rid}: the claim's excluded-caller set does not equal "
+                "candidate_source's")
+    for row in rows:
+        target = row.get("target")
+        if not isinstance(target, str) or not target:
+            continue
+        if target not in union_excluded:
+            defects.append(
+                f"{rid}: excluded target {target!r} is not contributed by any "
+                "excluded caller in candidate_source")
+        if target in union_callers:
+            defects.append(
+                f"{rid}: excluded target {target!r} is contributed by a "
+                "reachable caller in candidate_source")
+
+    # ---- round-4 unattributed admissions -------------------------------- #
+    admissions = rec.get("unattributed_admissions")
+    if admissions is None:
+        admissions = []
+    if not isinstance(admissions, list):
+        defects.append(f"{rid}: unattributed_admissions is not a list")
+        admissions = []
+    admitted_unattributed = set()
+    for entry in admissions:
+        if not isinstance(entry, dict):
+            defects.append(f"{rid}: unattributed admission is not an object")
+            continue
+        target = entry.get("target")
+        if not isinstance(target, str) or not target:
+            defects.append(f"{rid}: unattributed admission names no target")
+            continue
+        admitted_unattributed.add(target)
+        if entry.get("dso") != module:
+            defects.append(f"{rid}: unattributed admission for {target!r} "
+                           "names another module")
+        if entry.get("site") != witness.get("site_address"):
+            defects.append(f"{rid}: unattributed admission for {target!r} "
+                           "names another site")
+        if entry.get("function") != ident.get("defining_function"):
+            defects.append(f"{rid}: unattributed admission for {target!r} "
+                           "names another function")
+        if not entry.get("reason"):
+            defects.append(f"{rid}: unattributed admission for {target!r} "
+                           "carries no reason")
+    if admitted_unattributed != unattributed:
+        defects.append(
+            f"{rid}: unattributed_admissions {sorted(admitted_unattributed)} "
+            "are not candidate_source's unattributed_targets "
+            f"{sorted(unattributed)}")
+    for target in sorted(admitted_unattributed):
+        if target not in candidates:
+            defects.append(f"{rid}: unattributed admission {target!r} is not "
+                           "a candidate")
+        if target in attribution:
+            defects.append(f"{rid}: unattributed admission {target!r} is "
+                           "attributed to a caller row")
+        if target in excluded:
+            defects.append(f"{rid}: unattributed admission {target!r} is "
+                           "also excluded; an unattributable target is "
+                           "admitted, never dropped")
+        if disposition != DISPOSITION_UNRESOLVED \
+                and target not in acct_admitted:
+            defects.append(f"{rid}: unattributed admission {target!r} is not "
+                           "admitted")
+
+    # A caller-bound narrowing with *no* attributable candidate has no support
+    # for a bounded set: it must be UNRESOLVED and name the incomplete
+    # attribution, and it may not admit anything.
+    has_attribution = bool(attribution & candidates)
+    if candidates and not has_attribution:
+        if disposition != DISPOSITION_UNRESOLVED:
+            defects.append(
+                f"{rid}: a caller-bound record with no attributable candidate "
+                f"claims {disposition!r}")
+        else:
+            missing = rec.get("missing_property") or ""
+            if not missing.startswith("caller attribution incomplete:"):
+                defects.append(
+                    f"{rid}: the attribution-incomplete fallback does not "
+                    "name its missing property")
+            if acct_admitted:
+                defects.append(
+                    f"{rid}: the attribution-incomplete fallback admits "
+                    f"targets {sorted(acct_admitted)}")
+            if unattributed != candidates:
+                defects.append(
+                    f"{rid}: the attribution-incomplete fallback does not "
+                    "name every candidate as unattributed")
+
+    if has_attribution:
+        if oracle is not None and isinstance(module, str) and module \
+                and oracle.knows(module):
+            image = oracle.image_symbols_for(module)
+            expected = (union_callers & image) if image is not None \
+                else union_callers
+            expected = expected | unattributed
+            if acct_admitted != expected:
+                defects.append(
+                    f"{rid}: admitted_targets {sorted(acct_admitted)} are not "
+                    "the reachable callers' contributed image targets plus "
+                    "the unattributed admissions "
+                    f"{sorted(expected)}")
+        elif not acct_admitted <= (union_callers | unattributed):
+            defects.append(
+                f"{rid}: admitted_targets are not contributed by the "
+                "reachable callers or admitted as unattributed in "
+                "candidate_source")
+    if candidates is not None and candidates != (acct_admitted | excluded
+                                                 | unattributed):
+        defects.append(
+            f"{rid}: candidates {sorted(candidates)} are not admitted plus "
+            "excluded plus unattributed "
+            f"{sorted(acct_admitted | excluded | unattributed)}")
+    return defects
+
+
+def _derivation_defects(rid, chains):
+    """Validate every provenance row; return (defects, derived, unproved)."""
+    defects, derived, unproved = [], set(), set()
+    if not isinstance(chains, list):
+        return [f"{rid}: semantic identity has no provenance chain list"], derived, unproved
+    for row in chains:
+        if not isinstance(row, dict):
+            defects.append(f"{rid}: provenance chain row is not an object")
+            continue
+        target = row.get("target")
+        if not isinstance(target, str) or not target:
+            defects.append(f"{rid}: provenance chain row has no target name")
+            continue
+        derivation = row.get("derivation")
+        ok = True
+        if not isinstance(derivation, list) or not derivation:
+            defects.append(f"{rid}: provenance derivation for {target!r} is empty")
+            ok = False
+        else:
+            for step in derivation:
+                if not isinstance(step, dict):
+                    defects.append(f"{rid}: provenance step for {target!r} is not "
+                                   "an object")
+                    ok = False
+                    continue
+                name = step.get("step")
+                if name not in EDGE_CHAIN_STEPS:
+                    defects.append(f"{rid}: provenance step {name!r} for "
+                                   f"{target!r} is outside the closed vocabulary")
+                    ok = False
+                if not any(k != "step" and v is not None
+                           for k, v in step.items()):
+                    defects.append(f"{rid}: provenance step {name!r} for "
+                                   f"{target!r} carries no payload")
+                    ok = False
+        if ok:
+            derived.add(target)
+            if any(isinstance(s, dict) and s.get("step") in EDGE_UNPROVED_STEPS
+                   for s in derivation):
+                unproved.add(target)
+    return defects, derived, unproved
+
+
+def _validate_record(rec: dict, oracle=None) -> list:
+    """Every claim must be checkable; the record's ledgers are mutually
+    redundant and cross-checked against the graph-derived oracle."""
+    defects = []
+    rid = rec.get("edge_id", "?")
+    disposition = rec.get("disposition")
+    ident = rec.get("semantic_identity") or {}
+    witness = ident.get("artifact_local_witness") or {}
+    module = witness.get("module")
+    for field in ("source_operation", "defining_function", "call_site_role"):
+        if not ident.get(field):
+            defects.append(f"{rid}: semantic identity lacks {field}")
+    if not isinstance(module, str) or not module:
+        defects.append(f"{rid}: semantic identity names no module")
+    elif oracle is not None and not oracle.knows(module):
+        # Unknown module fails closed: "the oracle does not cover it" is a
+        # defect, never a pass.
+        defects.append(f"{rid}: the oracle does not cover the record's module "
+                       f"{module!r}; the claim is not checkable")
+    if disposition not in DISPOSITIONS:
+        defects.append(f"{rid}: unknown disposition {disposition!r}")
+        return defects
+    defining = ident.get("defining_function")
+    if disposition in (DISPOSITION_PROVED, DISPOSITION_CONTRACT) \
+            and not _is_named_function(defining):
+        defects.append(
+            f"{rid}: {disposition} has no defining function symbol "
+            f"({defining!r}); a target set cannot be attributed")
+    if disposition == DISPOSITION_PROVED and not rec.get("target_set"):
+        defects.append(f"{rid}: PROVED_TARGET_SET with an empty target set")
+    if disposition == DISPOSITION_CONTRACT and not rec.get("witness_id"):
+        defects.append(f"{rid}: CONTRACT_BOUNDED without a witness id")
+    if disposition == DISPOSITION_UNRESOLVED and not rec.get("missing_property"):
+        defects.append(f"{rid}: UNRESOLVED without a missing property")
+
+    target_reachability = rec.get("target_reachability", "claimed")
+    if target_reachability not in TARGET_REACHABILITY_VALUES:
+        defects.append(f"{rid}: target_reachability {target_reachability!r} is "
+                       "outside the closed vocabulary")
+    expected_reachability = ("claimed" if disposition == DISPOSITION_PROVED
+                             else "not-claimed")
+    if target_reachability != expected_reachability:
+        defects.append(
+            f"{rid}: target_reachability {target_reachability!r} is not derived "
+            f"from disposition {disposition!r} (expected "
+            f"{expected_reachability!r})")
+
+    exclusions = [e for e in (rec.get("exclusions") or ())
+                  if isinstance(e, dict)]
+    for ex in exclusions:
+        defects.extend(_exclusion_row_defects(
+            rid, f"exclusion {ex.get('target')!r}", ex, module, oracle, rec,
+            "target-drop"))
+    # These are exclusion claims outside the ``exclusions`` list; they get the
+    # same row shape and the same checks, otherwise a dropped target could hide
+    # in an auxiliary list.
+    aux_rows = []
+    for key in ("excluded_callers", "excluded_writers",
+                "unbounded_call_sites"):
+        rows = rec.get(key)
+        if rows is None:
+            continue
+        if not isinstance(rows, list):
+            defects.append(f"{rid}: {key} is not a list")
+            continue
+        for row in rows:
+            label = (row.get("target") if isinstance(row, dict) else "?")
+            defects.extend(_exclusion_row_defects(
+                rid, f"{key} entry {label!r}", row, module, oracle, rec,
+                "subject"))
+            if isinstance(row, dict):
+                aux_rows.append(row)
+
+    chain_defects, derived, unproved = _derivation_defects(
+        rid, ident.get("provenance_chain"))
+    defects.extend(chain_defects)
+
+    accounting = rec.get("exclusion_accounting")
+    if not isinstance(accounting, dict):
+        defects.append(f"{rid}: exclusion accounting is missing")
+        return defects
+    claimed = set(rec.get("target_set") or ())
+    acct_admitted = set(accounting.get("admitted_targets") or ())
+    excluded = {e.get("target") for e in exclusions
+                if isinstance(e.get("target"), str) and e.get("target")}
+    stored_excluded = set(accounting.get("excluded_targets") or ())
+    if stored_excluded != excluded:
+        defects.append(
+            f"{rid}: accounting excluded_targets {sorted(stored_excluded)} "
+            f"do not match the record's exclusions {sorted(excluded)}")
+
+    candidates_recomputed, source_defects, source_detail = \
+        _candidate_source_defects(rid, rec, oracle, module)
+    defects.extend(source_defects)
+    stored_candidates = set(accounting.get("candidate_targets") or ())
+    if candidates_recomputed is None:
+        candidates = stored_candidates
+        if candidates != acct_admitted:
+            defects.append(
+                f"{rid}: a resolver-admitted-set enumeration must equal the "
+                f"admitted set {sorted(acct_admitted)}, not "
+                f"{sorted(candidates)}")
+        if excluded:
+            defects.append(
+                f"{rid}: an exclusion cannot rest on the resolver-admitted-set "
+                "enumeration, which has no separate source")
+    else:
+        candidates = candidates_recomputed
+        if stored_candidates != candidates:
+            defects.append(
+                f"{rid}: candidate_targets do not match candidate_source "
+                f"(stored {sorted(stored_candidates)}, recomputed "
+                f"{sorted(candidates)})")
+    if not acct_admitted <= candidates:
+        defects.append(
+            f"{rid}: admitted target(s) are not candidates of the "
+            "enumeration: " + ", ".join(sorted(acct_admitted - candidates)[:8]))
+    # `declared-name-absent` no longer exempts a target from the candidate set:
+    # the target must be enumerated by candidate_source and bound by the row's
+    # structured evidence.targets.  A free-text `target_derivation` never was a
+    # candidate source.
+    invented = sorted(excluded - candidates)
+    if invented:
+        defects.append(
+            f"{rid}: exclusion target(s) are not candidates of the "
+            "enumeration: " + ", ".join(invented[:8]))
+    for row in exclusions:
+        if row.get("reason") == "declared-name-absent":
+            evidence = row.get("evidence") or {}
+            listed = evidence.get("targets")
+            if isinstance(listed, list):
+                outside = sorted({t for t in listed if isinstance(t, str)
+                                  and t not in candidates})
+                if outside:
+                    defects.append(
+                        f"{rid}: declared-name-absent evidence.targets are "
+                        "not candidates of the enumeration: "
+                        + ", ".join(outside[:8]))
+    for row in aux_rows:
+        if row.get("reason") == "writer-not-in-reachable-set":
+            would = (row.get("evidence") or {}).get("would_store_targets")
+            if isinstance(would, list):
+                outside = sorted({t for t in would if isinstance(t, str)
+                                  and t not in candidates})
+                if outside:
+                    defects.append(
+                        f"{rid}: writer-not-in-reachable-set "
+                        "would_store_targets are not candidates of the "
+                        "enumeration: " + ", ".join(outside[:8]))
+    if source_detail.get("kind") == "argument-targets" \
+            and source_detail.get("valid"):
+        defects.extend(_argument_binding_defects(
+            rid, rec, oracle, module, source_detail, acct_admitted, excluded,
+            candidates))
+
+    if disposition == DISPOSITION_PROVED:
+        if claimed != acct_admitted:
+            defects.append(
+                f"{rid}: target_set {sorted(claimed)} is not the accounted "
+                f"admitted set {sorted(acct_admitted)}")
+        both = sorted(claimed & excluded)
+        if both:
+            defects.append(f"{rid}: admitted target(s) also excluded: "
+                           + ", ".join(both[:8]))
+        missing = sorted(claimed - derived)
+        if missing:
+            defects.append(f"{rid}: PROVED target(s) without a derivation: "
+                           + ", ".join(missing[:8]))
+        unproved_claimed = sorted(claimed & unproved)
+        if unproved_claimed:
+            defects.append(
+                f"{rid}: claimed proved without an image-bounded derivation: "
+                + ", ".join(unproved_claimed[:8]))
+    elif disposition == DISPOSITION_CONTRACT:
+        if claimed:
+            defects.append(f"{rid}: CONTRACT_BOUNDED claims a target set")
+        missing = sorted(acct_admitted - derived)
+        if missing:
+            defects.append(f"{rid}: contract-bounded target(s) without a "
+                           "derivation: " + ", ".join(missing[:8]))
+        both = sorted(acct_admitted & excluded)
+        if both:
+            defects.append(f"{rid}: admitted target(s) also excluded: "
+                           + ", ".join(both[:8]))
+        unproved_admitted = sorted(acct_admitted & unproved)
+        if unproved_admitted:
+            defects.append(f"{rid}: contract-bounded target(s) rest on an "
+                           "unbounded step: "
+                           + ", ".join(unproved_admitted[:8]))
+    else:
+        if claimed:
+            defects.append(f"{rid}: UNRESOLVED claims a target set")
+        if rec.get("target_set_claim") is not False:
+            defects.append(f"{rid}: UNRESOLVED asserts target_set_claim")
+
+    if accounting.get("candidate_enumeration") == "complete":
+        # Recompute from the record itself rather than trusting the stored
+        # accounting block: a stale or edited block must not hide a dropped
+        # target.  Names are compared as sets: identical-code folding gives
+        # several names to one address, so list length is not evidence.  An
+        # unattributed admission (round 4) accounts for a candidate without
+        # claiming it reachable.
+        source_unattributed = (
+            set(source_detail.get("unattributed") or ())
+            if source_detail.get("kind") == "argument-targets" else set())
+        unaccounted = sorted(candidates - acct_admitted - excluded
+                             - source_unattributed)
+        if unaccounted:
+            defects.append(
+                f"{rid}: excluded target(s) without a reason: "
+                + ", ".join(unaccounted[:8]))
+        stored_unaccounted = accounting.get("unaccounted_targets") or []
+        if set(stored_unaccounted) != set(unaccounted):
+            defects.append(
+                f"{rid}: unaccounted_targets is stale: stored "
+                f"{sorted(stored_unaccounted)}, recomputed {unaccounted}")
+    return defects
+
+
+class EdgeRecordValidator:
+    """Stateful validator: per-record checks plus a duplicate-identity set."""
+
+    def __init__(self, oracle=None):
+        self.oracle = oracle
+        self.seen_ids = set()
+
+    def feed(self, rec) -> list:
+        if not isinstance(rec, dict):
+            return ["an edge record is not an object"]
+        rid = rec.get("edge_id", "?")
+        defects = []
+        if not isinstance(rid, str) or not rid:
+            defects.append("an edge record has no edge_id")
+        elif rid in self.seen_ids:
+            # v1.1 seeded ordinals by (function, role) but omitted the role
+            # from edge_id, so two records could share one identity.
+            defects.append(f"{rid}: duplicate edge_id (two records share one "
+                           "identity)")
+        else:
+            self.seen_ids.add(rid)
+        defects.extend(_validate_record(rec, self.oracle))
+        return defects
+
+
+def validate_edge_records(records: list, oracle=None) -> list:
+    """Every claim must be checkable; the record's ledgers are mutually
+    redundant and cross-checked against the graph-derived oracle.
+
+    The admitted set is derived from three places that must agree: the
+    ``target_set`` the record claims, the ``admitted_targets`` accounting block,
+    and the provenance chains.  The candidate set comes from
+    ``candidate_source``, separately from the accounting block.  With an
+    oracle, every negative reachability claim is additionally checked against
+    the final upper bound.
+    """
+    validator = EdgeRecordValidator(oracle)
     defects = []
     for rec in records:
-        rid = rec.get("edge_id", "?")
-        disposition = rec.get("disposition")
-        ident = rec.get("semantic_identity") or {}
-        for field in ("source_operation", "defining_function", "call_site_role"):
-            if not ident.get(field):
-                defects.append(f"{rid}: semantic identity lacks {field}")
-        if disposition not in DISPOSITIONS:
-            defects.append(f"{rid}: unknown disposition {disposition!r}")
-            continue
-        if disposition == DISPOSITION_PROVED and not rec.get("target_set"):
-            defects.append(f"{rid}: PROVED_TARGET_SET with an empty target set")
-        if disposition == DISPOSITION_CONTRACT and not rec.get("witness_id"):
-            defects.append(f"{rid}: CONTRACT_BOUNDED without a witness id")
-        if disposition == DISPOSITION_UNRESOLVED and not rec.get("missing_property"):
-            defects.append(f"{rid}: UNRESOLVED without a missing property")
-        for ex in rec.get("exclusions") or ():
-            reason = ex.get("reason")
-            if reason not in EXCLUSION_REASONS:
-                defects.append(
-                    f"{rid}: excluded target {ex.get('target')!r} has no "
-                    "checkable reason")
-                continue
-            evidence = ex.get("evidence")
-            if not isinstance(evidence, dict) or not evidence:
-                defects.append(
-                    f"{rid}: exclusion {ex.get('target')!r} ({reason}) has no "
-                    "evidence")
-                continue
-            absent = [k for k in EXCLUSION_EVIDENCE_KEYS[reason]
-                      if evidence.get(k) is None]
-            if absent:
-                defects.append(
-                    f"{rid}: exclusion {ex.get('target')!r} ({reason}) lacks "
-                    "evidence fields " + ", ".join(absent))
-        accounting = rec.get("exclusion_accounting") or {}
-        if accounting.get("candidate_enumeration") == "complete":
-            # Recompute from the record itself rather than trusting the stored
-            # accounting block: a stale or edited block must not hide a dropped
-            # target.
-            candidates = set(accounting.get("candidate_targets") or ())
-            admitted = set(accounting.get("admitted_targets") or ())
-            excluded = {e.get("target") for e in (rec.get("exclusions") or ())}
-            unaccounted = sorted(candidates - admitted - excluded - {None})
-            if unaccounted:
-                defects.append(
-                    f"{rid}: excluded target(s) without a reason: "
-                    + ", ".join(unaccounted[:8]))
+        defects.extend(validator.feed(rec))
     return defects
 
 
@@ -4289,22 +5991,387 @@ def edge_refusal_for(defects: list):
     }
 
 
-def edge_closure_refusal(records: list):
+def edge_closure_refusal(records: list, oracle=None):
     """Validate a record set and return (defects, refusal).  A refusal here is
     the object `build_receipt` appends before emitting the closure."""
-    defects = validate_edge_records(records)
+    defects = validate_edge_records(records, oracle)
     return defects, edge_refusal_for(defects)
+
+
+def _audit_observation(oracle, module, symbol, address=None):
+    if oracle is None:
+        return None, "unavailable", False
+    return oracle.is_reachable(module, symbol, address)
+
+
+def _audit_symbol(oracle, module, symbol, address=None):
+    """(in_final_upper_bound, basis) for one excluded symbol; unknown fails closed."""
+    reachable, basis, checkable = _audit_observation(oracle, module, symbol,
+                                                    address)
+    if not checkable:
+        return True, "unavailable"
+    return bool(reachable), basis
+
+
+def _audit_row(rec, oracle, claim_kind, target, symbol, expected,
+               address=None):
+    ident = rec.get("semantic_identity") or {}
+    witness = ident.get("artifact_local_witness") or {}
+    module = witness.get("module")
+    observed, basis, checkable = _audit_observation(oracle, module, symbol,
+                                                    address)
+    violation = (not checkable) or (bool(observed) != (expected == "present"))
+    return {
+        "module": module,
+        "edge_id": rec.get("edge_id"),
+        "site": witness.get("site_address"),
+        "function": ident.get("defining_function"),
+        "role": ident.get("call_site_role"),
+        "claim_kind": claim_kind,
+        "target": target,
+        "subject": symbol,
+        "expected": expected,
+        "in_final_upper_bound": bool(observed),
+        "oracle_basis": basis,
+        "checkable": bool(checkable),
+        "violation": violation,
+    }
+
+
+def _audit_record(rec, oracle) -> list:
+    """Audit every subject-scoped claim of one record against the bound.
+
+    v1.1 walked only site metadata: a semantic call-site row with
+    ``included: false`` and a caller-bound dropped target were never audited,
+    and ``exclusions[].target`` was never checked.  The audit now walks the
+    record, which is the object that actually carries the claims.
+    """
+    rows = []
+    if not isinstance(rec, dict):
+        return rows
+    all_rows = [e for e in (rec.get("exclusions") or ()) if isinstance(e, dict)]
+    for key in ("excluded_callers", "excluded_writers",
+                "unbounded_call_sites"):
+        all_rows.extend(r for r in (rec.get(key) or ()) if isinstance(r, dict))
+    for row in all_rows:
+        reason = row.get("reason")
+        claim = row.get("claim") or {}
+        evidence = row.get("evidence") or {}
+        target = row.get("target")
+        if reason in REACHABILITY_CLAIM_KINDS:
+            addresses = _subject_addresses(evidence)
+            for subject in claim.get("subjects") or ():
+                rows.append(_audit_row(rec, oracle, reason, target, subject,
+                                       "absent", addresses.get(subject)))
+        elif reason == "declared-name-absent":
+            # The declared name is checked by the validator; the *dropped
+            # target* is a negative reachability claim in its own right and is
+            # audited against the final upper bound here.
+            for listed in (evidence.get("targets") or ()):
+                rows.append(_audit_row(rec, oracle, reason, target, listed,
+                                       "absent"))
+        elif reason == "not-contributed-by-reachable-callers":
+            addresses = _subject_addresses(evidence)
+            for entry in claim.get("reachable_callers") or ():
+                if not isinstance(entry, dict):
+                    continue
+                address = entry.get("address")
+                try:
+                    address = (int(address, 16) if isinstance(address, str)
+                               else address)
+                except ValueError:
+                    address = None
+                rows.append(_audit_row(rec, oracle, reason, target,
+                                       entry.get("symbol"), "present", address))
+            for subject in claim.get("excluded_callers") or ():
+                rows.append(_audit_row(rec, oracle, reason, target, subject,
+                                       "absent", addresses.get(subject)))
+    source = rec.get("candidate_source") or {}
+    if isinstance(source, dict) and source.get("kind") == "store-writer-call-sites":
+        for row in source.get("rows") or ():
+            if not isinstance(row, dict):
+                continue
+            if row.get("included") is False \
+                    and row.get("reason") == "caller-not-in-reachable-set":
+                rows.append(_audit_row(rec, oracle, "candidate-source-caller",
+                                       None, row.get("caller"), "absent"))
+    return rows
+
+
+def reachability_exclusion_audit(graphs: dict, oracle, records=None) -> list:
+    """Every reachability-based exclusion, checked against the final upper bound.
+
+    The final upper bound is authoritative.  A claim that a caller, writer or
+    dropped target is unreachable is a violation when the bound contains it,
+    whichever branch of the derivation produced the claim.  An unknown module is
+    itself a violation: "not checkable" is never a pass.
+    """
+    if records is None:
+        records = build_edge_records(graphs, oracle)
+    rows = []
+    for rec in records:
+        rows.extend(_audit_record(rec, oracle))
+    return rows
 
 
 def edge_record_summary(records: list) -> dict:
     counts = collections.Counter(r.get("disposition") for r in records)
     reasons = collections.Counter(
         e.get("reason") for r in records for e in (r.get("exclusions") or ()))
+    demotions = collections.Counter(r.get("disposition_demotion")
+                                    for r in records
+                                    if r.get("disposition_demotion"))
     return {
         "schema": EDGE_RECORD_SCHEMA,
         "count": len(records),
         "dispositions": dict(sorted(counts.items())),
         "exclusion_reasons": dict(sorted(reasons.items())),
+        "demotions": dict(sorted(demotions.items())),
+    }
+
+
+def _sample_view(rec: dict, cap: int = 32) -> dict:
+    """A bounded projection of one record for the receipt.
+
+    The population is in the JSONL sidecar; the sample exists so a reader can
+    see the shape of every non-proved / exclusion-bearing / reachable-residual
+    record without embedding 52k records (or their full lists) in the receipt.
+    Exclusions are kept in full because they are the claims under review.
+    """
+    ident = dict(rec.get("semantic_identity") or {})
+    chain = list(ident.get("provenance_chain") or ())
+    ident["provenance_chain"] = chain[:cap]
+    ident["provenance_chain_count"] = len(chain)
+    accounting = dict(rec.get("exclusion_accounting") or {})
+    for key in ("candidate_targets", "admitted_targets"):
+        values = list(accounting.get(key) or ())
+        accounting[key] = values[:cap]
+        accounting[f"{key}_count"] = len(values)
+    source = dict(rec.get("candidate_source") or {})
+    if isinstance(source.get("rows"), list):
+        rows = []
+        for row in source["rows"][:cap]:
+            item = dict(row)
+            targets = list(item.get("targets") or ())
+            item["targets"] = targets[:cap]
+            item["target_count"] = len(targets)
+            rows.append(item)
+        source["rows"] = rows
+        source["row_count"] = len(rec["candidate_source"]["rows"])
+    if isinstance(source.get("targets"), list):
+        targets = list(source["targets"])
+        source["targets"] = targets[:cap]
+        source["target_count"] = len(targets)
+    return {
+        "schema": rec.get("schema"),
+        "edge_id": rec.get("edge_id"),
+        "semantic_identity": ident,
+        "disposition": rec.get("disposition"),
+        "disposition_demotion": rec.get("disposition_demotion"),
+        "target_set": rec.get("target_set"),
+        "target_set_claim": rec.get("target_set_claim"),
+        "target_reachability": rec.get("target_reachability"),
+        "witness_id": rec.get("witness_id"),
+        "missing_property": rec.get("missing_property"),
+        "exclusions": rec.get("exclusions") or [],
+        "excluded_callers": rec.get("excluded_callers") or [],
+        "excluded_writers": rec.get("excluded_writers") or [],
+        "unbounded_call_sites": rec.get("unbounded_call_sites") or [],
+        "candidate_source": source,
+        "exclusion_accounting": accounting,
+        "unattributed_admissions": (
+            list(rec.get("unattributed_admissions") or ())[:cap]),
+        "unattributed_admissions_count": len(
+            rec.get("unattributed_admissions") or ()),
+        "sample_list_cap": cap,
+    }
+
+
+class EdgeRecordStream:
+    """Validate, audit and persist edge records in one bounded pass.
+
+    v1.1 accumulated every record and then ``json.dumps(receipt)`` in memory,
+    which OOMed the ssh closure at the court's default 4 GiB.  The population is
+    streamed to a JSONL sidecar (one JSON object per line); the receipt keeps
+    counts, defects, audit rows and a bounded sample.
+    """
+
+    def __init__(self, oracle=None, path=None, sample_cap=None,
+                 reachable_residual=()):
+        self.oracle = oracle
+        self.validator = EdgeRecordValidator(oracle)
+        self.sample_cap = (EDGE_RECORD_SAMPLE_DEFAULT if sample_cap is None
+                           else int(sample_cap))
+        self.reachable_residual = set(reachable_residual)
+        self.count = 0
+        self.dispositions = collections.Counter()
+        self.reasons = collections.Counter()
+        self.demoted = collections.Counter()
+        self.demoted_sites = []
+        self.defects = []
+        self._priority_sample = []
+        self._other_sample = []
+        self.sample_eligible = 0
+        self.sample_truncated = False
+        self.audit_rows = []
+        self.audit_total = 0
+        self.violations = 0
+        self.violation_rows = []
+        self.unattributed_total = 0
+        self.unattributed_rows = []
+        self.path = Path(path) if path is not None else None
+        self.records_sha256 = None
+        self._hash = hashlib.sha256()
+        self._fh = open(self.path, "w") if self.path is not None else None
+        self._written = 0
+
+    def feed(self, record: dict) -> list:
+        self.count += 1
+        line = json.dumps(record, sort_keys=True) + "\n"
+        self._hash.update(line.encode())
+        if self._fh is not None:
+            self._fh.write(line)
+            self._written += 1
+            if self._written % 200 == 0:
+                self._fh.flush()
+        self.dispositions[record.get("disposition")] += 1
+        for row in record.get("exclusions") or ():
+            if isinstance(row, dict):
+                self.reasons[row.get("reason")] += 1
+        demotion = record.get("disposition_demotion")
+        if demotion:
+            self.demoted[demotion] += 1
+            if len(self.demoted_sites) < 40:
+                ident = record.get("semantic_identity") or {}
+                witness = ident.get("artifact_local_witness") or {}
+                self.demoted_sites.append({
+                    "module": witness.get("module"),
+                    "function": ident.get("defining_function"),
+                    "site": witness.get("site_address"),
+                    "demotion": demotion,
+                })
+        self.defects.extend(self.validator.feed(record))
+        admissions = record.get("unattributed_admissions") or ()
+        if isinstance(admissions, list):
+            self.unattributed_total += len(admissions)
+            for entry in admissions:
+                if len(self.unattributed_rows) < EDGE_AUDIT_RENDER_LIMIT:
+                    self.unattributed_rows.append(entry)
+        for row in _audit_record(record, self.oracle):
+            self.audit_total += 1
+            if row.get("violation"):
+                self.violations += 1
+                if len(self.violation_rows) < 8:
+                    self.violation_rows.append(row)
+            if len(self.audit_rows) < EDGE_AUDIT_RENDER_LIMIT:
+                self.audit_rows.append(row)
+        priority = self._sample_priority(record)
+        if priority is not None:
+            self.sample_eligible += 1
+            view = _sample_view(record)
+            if priority == 0:
+                # The claims under review (every exclusion-bearing record and
+                # every reachable residual site) are admitted first so a large
+                # UNRESOLVED population cannot crowd them out of the sample.
+                if len(self._priority_sample) < self.sample_cap:
+                    self._priority_sample.append(view)
+                    overflow = (len(self._priority_sample)
+                                + len(self._other_sample) - self.sample_cap)
+                    if overflow > 0:
+                        del self._other_sample[:overflow]
+                else:
+                    self.sample_truncated = True
+            elif len(self._priority_sample) + len(self._other_sample) \
+                    < self.sample_cap:
+                self._other_sample.append(view)
+            else:
+                self.sample_truncated = True
+        return record
+
+    __call__ = feed
+
+    def _sample_priority(self, record):
+        """0 = exclusion/reachable-residual, 1 = non-PROVED, None = other."""
+        ident = record.get("semantic_identity") or {}
+        witness = ident.get("artifact_local_witness") or {}
+        if record.get("exclusions"):
+            return 0
+        if (witness.get("module"), witness.get("site_address")) in \
+                self.reachable_residual:
+            return 0
+        if record.get("disposition") != DISPOSITION_PROVED:
+            return 1
+        return None
+
+    @property
+    def sample(self):
+        return self._priority_sample + self._other_sample
+
+    def close(self):
+        if self._fh is not None:
+            self._fh.flush()
+            self._fh.close()
+            self._fh = None
+        self.records_sha256 = self._hash.hexdigest()
+
+    def summary(self) -> dict:
+        return {
+            "schema": EDGE_RECORD_SCHEMA,
+            "count": self.count,
+            "dispositions": dict(sorted(self.dispositions.items())),
+            "exclusion_reasons": dict(sorted(self.reasons.items())),
+            "unattributed_admissions": {
+                "count": self.unattributed_total,
+                "truncated": self.unattributed_total
+                             > len(self.unattributed_rows),
+                "rule": ("a candidate target that no caller row attributes is "
+                         "admitted into the upper bound and never dropped; the "
+                         "list is the receipt's account of those admissions"),
+                "admissions": self.unattributed_rows,
+            },
+        }
+
+
+def _tool_identity() -> dict:
+    """The exact validator identity bound into every receipt (AGENTS.md 22)."""
+    path = Path(__file__).resolve()
+    return {"path": TOOL, "version": 4,
+            "sha256": sha256_file(path),
+            "schema": EDGE_RECORD_SCHEMA}
+
+
+def _edge_records_path(args, repo: Path, artifact_sha: str,
+                       workdir: Path) -> Path:
+    """Where the record sidecar goes.
+
+    The default is always the (gitignored) workdir: a multi-hundred-MB sidecar
+    must never land beside ``--output`` by accident.  ``--edge-records`` is the
+    only way to choose another path, and it is explicit.
+    """
+    explicit = getattr(args, "edge_records", None)
+    if explicit:
+        path = Path(explicit)
+        if not path.is_absolute():
+            path = (repo / path).resolve()
+        return path
+    return workdir / f"edge-records.{artifact_sha[:16]}.jsonl"
+
+
+def _admissibility(tool_sha256: str, artifact_sha256: str,
+                   records_sha256, sidecar_lines: int) -> dict:
+    """The identity chain a reader must re-run to admit a record set.
+
+    Record-level validation cannot distinguish an analyzer-produced record from
+    a forged one that is internally consistent.  This block is the binding a
+    reader needs: the pinned validator digest, the record schema, the analysed
+    artefact, the sidecar digest and its line count.
+    """
+    return {
+        "validator_sha256": tool_sha256,
+        "record_schema": EDGE_RECORD_SCHEMA,
+        "artifact_sha256": artifact_sha256,
+        "records_sha256": records_sha256,
+        "sidecar_lines": sidecar_lines,
     }
 
 
@@ -4832,6 +6899,8 @@ def git_blob_hashes(repo: Path, commit: str, files: list[str]) -> tuple[dict, st
 
 def build_receipt(args) -> dict:
     repo = Path(args.repo).resolve()
+    tool_identity = _tool_identity()
+    tool_sha = tool_identity["sha256"]
     install = (repo / args.install).resolve()
     artifact = Path(args.artifact)
     if not artifact.is_absolute():
@@ -4947,7 +7016,7 @@ def build_receipt(args) -> dict:
     if getattr(args, "skip_graph_on_refusal", False) and refusals:
         return {
             "schema": SCHEMA,
-            "tool": {"path": TOOL, "version": 3},
+            "tool": tool_identity,
             "generated_utc": now_utc(),
             "family": args.family,
             "artifact_identity": {
@@ -5026,43 +7095,50 @@ def build_receipt(args) -> dict:
     upper_reach = closure["upper_reachable"]
 
     # ---- edge provenance records ----------------------------------------- #
-    # Every indirect site emits a semantic record.  An exclusion without a
-    # checkable reason is a defect, and the closure refuses rather than
-    # emitting a record that silently dropped a target.
-    edge_records = build_edge_records(graphs)
-    edge_defects, edge_refusal = edge_closure_refusal(edge_records)
+    # Every indirect site emits a semantic record.  The *final upper bound* is
+    # the authoritative oracle for every negative reachability claim: the
+    # derivation-time reachable set is the pre-closure direct set, which is an
+    # under-approximation and cannot prove an absence.
+    oracle = ReachabilityOracle(graphs, upper_reach)
+    # The population is streamed to a sidecar and validated/audited in the same
+    # pass.  Nothing here retains 52k records: the receipt keeps counts, the
+    # defects, the audit rows and a bounded sample.  v1.1 kept the population
+    # and then json.dumps()ed it, which OOMed the ssh closure at 4 GiB.
+    records_path = _edge_records_path(args, repo, artifact_sha, workdir)
+    records_path.parent.mkdir(parents=True, exist_ok=True)
+    residual_sites = {(d, hex(s.get("addr", 0)))
+                      for d, _a, s in closure["reachable_residual_sites"]}
+    stream = EdgeRecordStream(
+        oracle, path=records_path,
+        sample_cap=getattr(args, "max_record_sample",
+                           EDGE_RECORD_SAMPLE_DEFAULT),
+        reachable_residual=residual_sites)
+    try:
+        build_edge_records(graphs, oracle, sink=stream)
+    finally:
+        stream.close()
+    edge_records = stream  # summary/counters live on the stream
+    edge_defects = stream.defects
+    edge_refusal = edge_refusal_for(edge_defects)
     if edge_refusal is not None:
         refusals.append(edge_refusal)
 
-    # Reachable-caller bounding uses the pre-closure reachable set, while the
-    # final upper bound can admit a few additional targets from evidence
-    # classes.  An "excluded" caller that the final upper bound admits would
-    # make the exclusion unsafe, so the closure refuses rather than accepting
-    # the narrowed set.
-    rcb_audit = []
-    for g in graphs.values():
-        for s in g.sites.values():
-            rcb = s.get("reachable_caller_bound")
-            if not rcb:
-                continue
-            for excluded in rcb["excluded_callers"]:
-                node = (g.name, int(excluded["function"], 16))
-                rcb_audit.append({
-                    "dso": g.name,
-                    "site": hex(s["addr"]),
-                    "excluded_caller": excluded["function"],
-                    "excluded_symbol": excluded["symbol"],
-                    "in_final_upper_bound": node in upper_reach,
-                })
-    rcb_violations = [r for r in rcb_audit if r["in_final_upper_bound"]]
-    if rcb_violations:
+    # Every reachability-based exclusion -- reachable-caller bounding,
+    # method-store writer exclusion, a dropped target, or a semantic call-site
+    # row -- is re-checked against the final upper bound as it streams.  An
+    # "excluded" subject that the bound admits makes the exclusion unsafe, so
+    # the closure refuses rather than accepting the narrowed set.
+    reachability_audit = stream.audit_rows
+    reachability_violations = stream.violation_rows
+    if stream.violations:
         refusals.append({
-            "code": "RCB_EXCLUDED_CALLER_REACHABLE",
+            "code": "REACHABILITY_EXCLUSION_UNSOUND",
             "detail": (
-                "a caller excluded by reachable-caller target bounding is in "
-                "the final upper bound: "
-                + ", ".join(f"{r['excluded_symbol']} at {r['site']}"
-                             for r in rcb_violations)),
+                "a reachability-based exclusion contradicts the final upper "
+                "bound (site, role, subject): "
+                + ", ".join(
+                    f"{r['site']} {r['role']} {r['subject']}"
+                    for r in reachability_violations)),
         })
 
     reachable_names = set()
@@ -5340,7 +7416,7 @@ def build_receipt(args) -> dict:
     verdict_state = "REFUSED" if refusals else "ACCEPTED"
     receipt = {
         "schema": SCHEMA,
-        "tool": {"path": TOOL, "version": 3},
+        "tool": tool_identity,
         "generated_utc": now_utc(),
         "family": args.family,
         "source_identity": {
@@ -5643,9 +7719,14 @@ def build_receipt(args) -> dict:
                 "rule": (
                     "an indirect site whose target set was unbounded is bounded by "
                     "the argument values contributed by callers that are themselves "
-                    "in this family's reachable set; a non-image argument from any "
-                    "reachable caller, an unknown caller, or a non-argument target "
-                    "keeps the site unresolved"),
+                    "in this family's reachable set; every caller row -- reachable "
+                    "or excluded -- carries the per-call-site witness and the "
+                    "argument-summary attribution that produced its contribution; "
+                    "a non-image argument from any reachable caller, an unknown "
+                    "caller, or a non-argument target keeps the site unresolved; a "
+                    "candidate that no caller row attributes is admitted into the "
+                    "upper bound (never dropped) and is listed in "
+                    "unattributed_admissions"),
                 "schema": REACHABLE_CALLER_SCHEMA,
                 "not_a_contract_class": True,
                 "abi_contract_class": None,
@@ -5661,14 +7742,26 @@ def build_receipt(args) -> dict:
                      "excluded_callers": s["reachable_caller_bound"][
                          "excluded_callers"],
                      "bounded_targets": s["reachable_caller_bound"][
-                         "bounded_targets"]}
+                         "bounded_targets"],
+                     "attributed_targets": s["reachable_caller_bound"].get(
+                         "attributed_targets", []),
+                     "unattributed_targets": s["reachable_caller_bound"].get(
+                         "unattributed_targets", [])}
                     for name, g in graphs.items() for s in g.sites.values()
                     if s.get("reachable_caller_bound")],
                 "count": sum(
                     1 for g in graphs.values() for s in g.sites.values()
                     if s.get("reachable_caller_bound")),
-                "excluded_caller_audit": rcb_audit,
-                "excluded_caller_violations": rcb_violations,
+                "excluded_caller_audit": [
+                    {"dso": r["dso"], "site": r["site"],
+                     "excluded_caller": r["symbol_address"],
+                     "excluded_symbol": r["symbol"],
+                     "in_final_upper_bound": r["in_final_upper_bound"]}
+                    for r in reachability_audit
+                    if r["role"] == "reachable-caller"],
+                "excluded_caller_violations": [
+                    r for r in reachability_violations
+                    if r["role"] == "reachable-caller"],
             },
             "abi_contract_bounded": {
                 "allocator": {
@@ -5723,19 +7816,96 @@ def build_receipt(args) -> dict:
                  "class and admits the global address-taken union")),
         },
         "edge_provenance": {
-            **(edge_record_summary(edge_records)),
+            **stream.summary(),
             "rule": (
                 "every indirect site emits a semantic identity (source "
                 "operation, defining function, call-site role, per-target "
                 "provenance chain) plus a disposition; an address is recorded "
-                "only as an artifact-local witness; every excluded target "
-                "carries a checkable reason and the evidence used"),
+                "only as an artifact-local witness; every row carries a "
+                "row_kind from a closed vocabulary, so `exclusions[]` holds "
+                "only target drops and the auxiliary lists hold only subject "
+                "claims; every target drop is bound to a structured "
+                "subject-to-target mapping (candidate_source for caller-bound "
+                "drops, evidence.targets for declared-name drops, writer "
+                "would_store_targets for writer drops); a caller-bound drop is "
+                "recomputed from candidate_source's per-call-site witnesses, and "
+                "a candidate that no caller row attributes is admitted and "
+                "listed in unattributed_admissions; every claim is bound "
+                "to the record's own module; a chain step comes from a closed "
+                "vocabulary and carries a payload"),
             "refusal_rule": (
-                "a target dropped without a checkable exclusion reason, or an "
-                "exclusion without evidence, refuses the closure with "
-                "EDGE_RECORD_EXCLUSION_UNSOUND"),
-            "defects": edge_defects,
-            "records": edge_records,
+                "a row whose row_kind or reason belongs to the other list "
+                "kind, a target dropped without a checkable structured "
+                "mapping, a claim whose mapping disagrees with the "
+                "recomputed candidate_source, an exclusion whose subject "
+                "disagrees with its target or module, a claim that disagrees "
+                "with a mutually redundant ledger (target_set, "
+                "candidate_source, admitted_targets, derivation, disposition-"
+                "derived target_reachability), a duplicate edge identity, a "
+                "proved/contract record with an empty target or no defining "
+                "symbol, or a reachability exclusion that contradicts the "
+                "final upper bound refuses the closure with "
+                "EDGE_RECORD_EXCLUSION_UNSOUND / REACHABILITY_EXCLUSION_UNSOUND"),
+            "defects_total": len(edge_defects),
+            "defects": (edge_defects
+                        if len(edge_defects) <= EDGE_DEFECT_RENDER_LIMIT
+                        else edge_defects[:EDGE_DEFECT_RENDER_LIMIT]),
+            "defects_complete": len(edge_defects) <= EDGE_DEFECT_RENDER_LIMIT,
+            "demotions": {
+                "vacuous_target_sets_demoted":
+                    stream.demoted.get("empty-target-set", 0),
+                "no_symbol_function_demoted":
+                    stream.demoted.get("no-defining-symbol", 0),
+                "first_sites": stream.demoted_sites,
+                "note": (
+                    "an empty admitted set or a missing defining symbol is a "
+                    "resolver gap, not a proof; those records are demoted to "
+                    "UNRESOLVED so the gap stays visible instead of being "
+                    "counted as PROVED_TARGET_SET"),
+            },
+            "records_path": rel(records_path, repo),
+            "records_path_basis": (
+                "repo-relative when the sidecar is inside the repository, "
+                "otherwise absolute; the default is the gitignored workdir and "
+                "--edge-records is the only override"),
+            "records_sha256": stream.records_sha256,
+            "records_bytes": (records_path.stat().st_size
+                              if records_path.is_file() else None),
+            "sidecar_lines": stream.count,
+            "validator_sha256": tool_sha,
+            "admissibility": _admissibility(
+                tool_sha, artifact_sha, stream.records_sha256, stream.count),
+            "records_sample": stream.sample,
+            "records_sample_eligible": stream.sample_eligible,
+            "records_sample_truncated": stream.sample_truncated,
+            "sample_cap": stream.sample_cap,
+            "sample_policy": (
+                "records_sample is a bounded selection, not the population. "
+                "Exclusion-bearing records and reachable residual sites are "
+                "admitted first (every exclusion is a claim under review); "
+                "non-PROVED records then fill the remaining slots, in stream "
+                "order, up to sample_cap records in total.  Long per-record "
+                "lists are truncated to sample_list_cap entries and keep a "
+                "count; the complete population is the JSONL sidecar named by "
+                "records_path (digest records_sha256), one record per line"),
+            "reachability_oracle": {
+                "schema": REACHABILITY_ORACLE_SCHEMA,
+                "basis": "final-upper-bound",
+                "authoritative": True,
+                "audit": reachability_audit,
+                "audit_total": stream.audit_total,
+                "audit_truncated":
+                    stream.audit_total > len(reachability_audit),
+                "violations": stream.violations,
+                "violation_examples": reachability_violations,
+                "note": (
+                    "the final upper bound is authoritative for every "
+                    "reachability-based exclusion; a reachable address "
+                    "contributes every name the image records for it, an "
+                    "unknown module is a violation (never 'unavailable is "
+                    "fine'), and pre-closure direct reach is retained only as "
+                    "the derivation input"),
+            },
         },
         "obligations": obligations,
         "closure_scope": {
@@ -5781,6 +7951,13 @@ def build_receipt(args) -> dict:
             "tool did not re-audit, re-run or independently review that receipt.",
             "The upper bound is a function-level linked-code over-approximation, not a "
             "whole-program or source-level call graph.",
+            "Record-level validation proves internal consistency and agreement with "
+            "the graph-derived final upper bound.  It does not prove that a record "
+            "was produced by this analyzer rather than forged: a forged record that "
+            "is internally consistent is outside its power.  Admissibility needs "
+            "the identity chain in edge_provenance.admissibility (validator sha256, "
+            "record schema, artefact sha256, sidecar digest and line count) and a "
+            "re-run of the pinned validator over the pinned sidecar.",
             "No crate build, test, Miri, ASan or cryptographic court was run by this tool.",
             "The dynamic-trace axis is absent unless a trace is supplied; its absence is "
             "recorded, not treated as evidence.",
@@ -6191,6 +8368,12 @@ def self_test() -> int:
         def __init__(self, calls, insns=None):
             self.calls = calls
             self.insns_by_func = insns or {}
+            self.summary = collections.defaultdict(
+                lambda: [set() for _ in _ARGREGS])
+
+        def summary_vals(self, f, k):
+            return (self.summary[f][k] if 0 <= k < len(_ARGREGS)
+                    else set())
 
     class _RCG:
         name = "control.so"
@@ -6237,8 +8420,12 @@ def self_test() -> int:
 
     g, s = _rcb_graph()
     apply_evidence_classes(g, set(), {0x10, 0x20, 0x40})
-    check("reachable fixed caller resolves the site", s["unresolved"], False)
-    check("reachable fixed caller bounds the target set", s["targets"], {0x50})
+    check("reachable fixed caller narrows the site", s["unresolved"], False)
+    # The excluded caller forwards its parameter but has no summary value, so
+    # its contribution is empty.  The flat candidate is therefore unattributed
+    # and is admitted (round 4), never dropped: the site keeps both targets.
+    check("unattributed candidate is admitted rather than dropped",
+          s["targets"], {0x50, 0x60})
     check("reachable-caller bound is not a contract class",
           s["class"] in ABI_CONTRACT_CLASSES, False)
     check("reachable-caller bound has no ABI witness",
@@ -6274,6 +8461,22 @@ def self_test() -> int:
     apply_evidence_classes(g, set(), None)
     check("no reachability evidence keeps caller bounding off",
           s["unresolved"], True)
+
+    # Round 4: an excluded caller that forwards its own parameter contributes
+    # exactly the values its argument summary admits -- the same expansion that
+    # produced the site's flat arg_targets.  With no summary values it
+    # contributes nothing (and the target is admitted, not dropped).
+    g, s = _rcb_graph()
+    g.precision.summary[0x30][1] = {0x60}
+    apply_evidence_classes(g, set(), {0x10, 0x20, 0x40})
+    exrow = s["reachable_caller_bound"]["excluded_callers"][0]
+    check("excluded caller attribution resolves a forwarded parameter",
+          (exrow["contributed_targets"],
+           exrow["call_sites"][0]["arguments"][0]["targets"]),
+          (["0x60"], ["0x60"]))
+    check("reachable caller row is marked reachable",
+          s["reachable_caller_bound"]["reachable_callers"][0]["reachable"],
+          True)
 
     # ---- stored-value provenance for Method.free (offset 0x20) ------------- #
     # The slot is bounded by the values reachable code stores, never by the
@@ -6311,6 +8514,12 @@ def self_test() -> int:
         def __init__(self, calls, insns):
             self.calls = calls
             self.insns_by_func = insns
+            self.summary = collections.defaultdict(
+                lambda: [set() for _ in _ARGREGS])
+
+        def summary_vals(self, f, k):
+            return (self.summary[f][k] if 0 <= k < len(_ARGREGS)
+                    else set())
 
     class _MG:
         name = "control.so"
@@ -6466,8 +8675,16 @@ def self_test() -> int:
           rec0["target_set"])
     check("the unreachable writer's target is excluded with a witness",
           any(e.get("target") == "dead_target"
-              and e.get("reason") == "not-in-reachable-set"
+              and e.get("reason") == "no-reachable-writer"
+              and e.get("row_kind") == "target-drop"
               for e in rec0["exclusions"]), True)
+    check("the writer itself is a subject row, not a target drop",
+          any(w.get("target") == g5.funcs.get(0x500)
+              and w.get("reason") == "writer-not-in-reachable-set"
+              and w.get("row_kind") == "subject"
+              and w.get("evidence", {}).get("would_store_targets")
+              == ["dead_target"]
+              for w in rec0.get("excluded_writers") or ()), True)
 
     # The refusal test required by this subphase: inject an exclusion with no
     # reason and require the closure to refuse it.
@@ -6494,6 +8711,126 @@ def self_test() -> int:
         "reason": "not-in-reachable-set", "evidence": {}})
     check("an exclusion without evidence is a defect",
           bool(validate_edge_records([evidence_free])), True)
+
+    # ---- mutually redundant accounting, derivation and oracle controls ---- #
+    # Each control mutates exactly one ledger of an otherwise valid record and
+    # requires the validator to refuse it.  These are the canaries for the two
+    # defects this subphase fixes: an admitted set taken from the record's own
+    # accounting (A), and a reachability exclusion that its evidence does not
+    # establish (B).
+    def _mutated(mutator):
+        rec = json.loads(json.dumps(rec0))
+        mutator(rec)
+        return validate_edge_records([rec])
+
+    check("dropping a target from target_set only is refused",
+          bool(_mutated(lambda r: r["target_set"].pop())), True)
+    check("removing a provenance chain row for a claimed target is refused",
+          bool(_mutated(
+              lambda r: r["semantic_identity"]["provenance_chain"].pop())),
+          True)
+
+    def _set_first_step(step):
+        def apply(rec):
+            rec["semantic_identity"]["provenance_chain"][0]["derivation"][0] = step
+        return apply
+
+    check("an unknown derivation step is refused",
+          bool(_mutated(_set_first_step({"step": "trust-me"}))), True)
+    check("a derivation step with no payload is refused",
+          bool(_mutated(_set_first_step({"step": "resolver"}))), True)
+
+    def _exclude_admitted(rec):
+        name = rec["target_set"][0]
+        rec["exclusions"].append({
+            "target": name,
+            "reason": "target-not-in-reachable-set",
+            "row_kind": "target-drop",
+            "claim": {"kind": "target-not-in-reachable-set",
+                      "module": rec["semantic_identity"]
+                                ["artifact_local_witness"]["module"],
+                      "subjects": [name]},
+            "evidence": {"reachable_set_member": False, "symbol": name,
+                         "reachable_basis": "pre-closure-direct",
+                         "symbols_checked": [name]}})
+
+    check("an exclusion naming an admitted target is refused",
+          bool(_mutated(_exclude_admitted)), True)
+
+    def _flip_member(rec):
+        for row in rec.get("excluded_writers") or ():
+            if row.get("reason") == "writer-not-in-reachable-set":
+                row["evidence"]["reachable_set_member"] = True
+
+    check("flipping reachable_set_member to True is refused",
+          bool(_mutated(_flip_member)), True)
+    check("stale admitted_targets accounting is refused",
+          bool(_mutated(
+              lambda r: r["exclusion_accounting"]["admitted_targets"].pop())),
+          True)
+
+    # A `declared-name-absent` row is a target drop bound by a structured
+    # `evidence.targets` list.  The v1.2 fixture emitted a cross-check name as
+    # if it were a dropped target; that is no longer an exclusion.  The controls
+    # below use a crafted record so each new check is exercised directly.
+    check("the semantic fixture no longer emits a declared-name cross-check as "
+          "a target drop",
+          [e for e in rec0["exclusions"]
+           if e.get("reason") == "declared-name-absent"], [])
+
+    check("declared-name-absent with present=True is refused",
+          bool(_mutated(lambda r: r["exclusions"].append({
+              "target": r["target_set"][0],
+              "reason": "declared-name-absent",
+              "row_kind": "target-drop",
+              "claim": {"kind": "declared-name-absent",
+                        "module": r["semantic_identity"]
+                                  ["artifact_local_witness"]["module"],
+                        "subjects": ["absent_name"]},
+              "evidence": {"declared_name": "absent_name",
+                           "present": True, "targets": ["absent_name"]}}))), True)
+
+    # Issue-B control: an oracle that places the excluded writer in the final
+    # upper bound must make the record (and the audit) refuse.  The writer is
+    # excluded because it was outside the *pre-closure direct* set; the final
+    # upper bound admits it, so the negative claim is unsound.
+    dead_writer = [e for e in (rec0.get("excluded_writers") or ())
+                   if e.get("reason") == "writer-not-in-reachable-set"]
+    check("the fixture carries a reachability exclusion for the dead writer",
+          bool(dead_writer), True)
+    oracle_dead = ReachabilityOracle({g5.name: g5}, {(g5.name, 0x500)})
+    records_dead = build_edge_records({g5.name: g5}, oracle_dead)
+    dead_audit = [r for r in
+                  reachability_exclusion_audit({g5.name: g5}, oracle_dead,
+                                               records_dead)
+                  if r["claim_kind"] == "writer-not-in-reachable-set"]
+    check("an excluded writer the final upper bound reaches is refused",
+          (bool(validate_edge_records(records_dead, oracle_dead)),
+           any(r["in_final_upper_bound"] for r in dead_audit)),
+          (True, True))
+
+    # Positive control: the same records with an oracle that does not reach the
+    # writer validate cleanly, so the refusal above is caused by the oracle.
+    oracle_live = ReachabilityOracle({g5.name: g5},
+                                     {(g5.name, a) for a in _reach})
+    records_live = build_edge_records({g5.name: g5}, oracle_live)
+    check("a writer outside the upper bound validates cleanly (positive control)",
+          validate_edge_records(records_live, oracle_live), [])
+    check("the audit reports no violation when the writer is outside the bound",
+          [r for r in
+           reachability_exclusion_audit({g5.name: g5}, oracle_live,
+                                        records_live)
+           if r["violation"]], [])
+
+    # The oracle check has a separate role: a record whose evidence was
+    # built against a truthful oracle is still refused when the oracle used to
+    # validate it disagrees.  Without this check the record would pass on its
+    # own (internally consistent) account.
+    records_truth = build_edge_records({g5.name: g5}, oracle_live)
+    check("a record built against a truthful oracle validates",
+          validate_edge_records(records_truth, oracle_live), [])
+    check("the same record is refused by a disagreeing oracle",
+          bool(validate_edge_records(records_truth, oracle_dead)), True)
 
     # The provenance resolver seeds entry arguments and records outgoing stack
     # arguments, which is what lets a writer's parameter be followed.
@@ -6626,6 +8963,470 @@ def self_test() -> int:
                         {"line": 999, "kind": "UNSAFE_FN_DEF"},
                         overrides)[0], None)
 
+    # ---- v1.2 hole controls (reviewer H1-H10) ----------------------------- #
+    # Every control below isolates one check: it is refused when the check is
+    # enabled and accepted when that check alone is disabled (see the
+    # mutation table in edge-validator-hardening.json).
+    MOD = "libfoo.so"
+
+    class _CallerG:
+        name = MOD
+        funcs = {0x700: "site_func", 0x1000: "target_ok",
+                 0x1100: "target_dropped", 0x1200: "excluded_caller",
+                 0x1300: "reachable_caller", 0x1400: "target_unreachable",
+                 0x2000: "alias_primary", 0x3000: "reachable_target"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+
+    def _caller_fixture():
+        g = _CallerG()
+        g.names_at = {a: set(n) for a, n in _CallerG.funcs.items()}
+        g.sites = {(0x700, 0x701, "call"): {
+            "kind": "call", "func": 0x700, "addr": 0x701,
+            "text": "call *%rax", "targets": {0x1000},
+            "unresolved": False, "reason": "reachable-caller target bounding",
+            "class": "reachable-caller-target", "field_offsets": set(),
+            "arg_deps": {0}, "arg_targets": {0x1100},
+            "reachable_caller_bound": {
+                "reachable_callers": [{
+                    "function": "0x1300", "symbol": "reachable_caller",
+                    "reachable": True, "reason": None,
+                    "call_sites": [{"call_site": "0x1301", "arguments": [{
+                        "argument": 0, "argument_index": 0,
+                        "value": ["0x1000"], "targets": ["0x1000"],
+                        "non_image_values": [], "unresolved": False,
+                        "witness_instruction": [
+                            {"addr": "0x12ff", "text": "lea"}]}]}],
+                    "contributed_targets": ["0x1000"]}],
+                "excluded_callers": [{
+                    "function": "0x1200", "symbol": "excluded_caller",
+                    "reachable": False,
+                    "in_reachable_set": False, "reason": "x",
+                    "in_image_references": [],
+                    "call_sites": [{"call_site": "0x1201", "arguments": [{
+                        "argument": 0, "argument_index": 0,
+                        "value": [], "targets": ["0x1100"],
+                        "non_image_values": [], "unresolved": True,
+                        "witness_instruction": [
+                            {"addr": "0x11ff", "text": "mov"}]}]}],
+                    "contributed_targets": ["0x1100"]}],
+                "bounded_targets": ["0x1000"]}}}
+        return g
+
+    def _caller_oracle(g):
+        return ReachabilityOracle(
+            {MOD: g},
+            {(MOD, a) for a in (0x700, 0x1000, 0x1100, 0x1300, 0x3000)})
+
+    def _caller_record(alias=False):
+        g = _caller_fixture()
+        if alias:
+            g.names_at[0x3000] = {"reachable_target", "alias_secondary"}
+        oracle = _caller_oracle(g)
+        rec = _edge_record(g, g.sites[(0x700, 0x701, "call")], 1, oracle)
+        return g, oracle, rec
+
+    def _clone(rec):
+        return json.loads(json.dumps(rec))
+
+    gC, oC, rC = _caller_record()
+    # H10 positive control: the v1m caller-bound shape.  The dropped target is
+    # reachable in its own right; the excluded caller is not.  The claim is
+    # caller-scoped, so this must validate cleanly with no audit violation.
+    check("H10 v1m caller-bound shape validates cleanly",
+          validate_edge_records([rC], oC), [])
+    check("H10 dropped target is reachable; the excluded caller is not",
+          (oC.is_reachable(MOD, "target_dropped")[0],
+           oC.is_reachable(MOD, "excluded_caller")[0]), (True, False))
+    check("H10 the audit reports no violation",
+          [r for r in reachability_exclusion_audit({MOD: gC}, oC, [rC])
+           if r["violation"]], [])
+
+    # ---- round-4 attribution controls ------------------------------------- #
+    def _bound_record(reachable_contrib, excluded_contrib, admitted):
+        """Build a record from a bound whose contributions we control."""
+        g = _caller_fixture()
+        site = g.sites[(0x700, 0x701, "call")]
+        bound = site["reachable_caller_bound"]
+        rrow = bound["reachable_callers"][0]
+        rrow["contributed_targets"] = list(reachable_contrib)
+        rrow["call_sites"][0]["arguments"][0]["targets"] = \
+            list(reachable_contrib)
+        erow = bound["excluded_callers"][0]
+        erow["contributed_targets"] = list(excluded_contrib)
+        erow["call_sites"][0]["arguments"][0]["targets"] = \
+            list(excluded_contrib)
+        site["targets"] = set(admitted)
+        oracle = _caller_oracle(g)
+        return g, oracle, _edge_record(g, site, 1, oracle)
+
+    # H11: no caller attributes target_dropped.  It is admitted (widening the
+    # upper bound), never dropped, and the record validates cleanly.
+    gI, oI, rI = _bound_record(["0x1000"], [], [0x1000])
+    check("H11 an unattributed candidate is admitted, not dropped",
+          ([e["target"] for e in rI["exclusions"]],
+           sorted(rI["exclusion_accounting"]["admitted_targets"]),
+           [a["target"] for a in (rI.get("unattributed_admissions") or ())],
+           validate_edge_records([rI], oI)),
+          ([], ["target_dropped", "target_ok"], ["target_dropped"], []))
+
+    # H12: no caller attributes *any* candidate.  No bounded set is emitted:
+    # the record is UNRESOLVED and names the incomplete attribution.
+    gZ, oZ, rZ = _bound_record([], [], [])
+    check("H12 a wholly unattributable bounding is unresolved",
+          (rZ["disposition"], rZ["target_set"],
+           rZ["missing_property"],
+           rZ["exclusion_accounting"]["admitted_targets"],
+           validate_edge_records([rZ], oZ)),
+          (DISPOSITION_UNRESOLVED, [],
+           ATTRIBUTION_INCOMPLETE_PROPERTY.format(n=1), [], []))
+
+    # H13: a contribution must be the union of its own call-site witness.  The
+    # excluded caller keeps its contribution but loses the call site that would
+    # witness it, so the drop is unsupported and only this check refuses it.
+    h13 = _clone(rC)
+    h13["candidate_source"]["excluded_callers"][0]["call_sites"] = []
+    check("H13 a contribution without its call-site witness is refused",
+          bool(validate_edge_records([h13], oC)), True)
+
+    # H14: an unattributed admission cannot name a contributed target.
+    h14 = _clone(rI)
+    if h14.get("unattributed_admissions"):
+        h14["unattributed_admissions"][0]["target"] = "target_ok"
+    check("H14 a forged unattributed admission is refused",
+          bool(validate_edge_records([h14], oI)), True)
+
+    # H15: a record with zero attribution cannot claim a bounded set.
+    h15 = _clone(rZ)
+    h15["disposition"] = DISPOSITION_PROVED
+    h15["target_set"] = sorted(rZ["candidate_source"]["targets"])
+    h15["target_set_claim"] = True
+    h15["target_reachability"] = "claimed"
+    h15["missing_property"] = None
+    h15["exclusion_accounting"]["admitted_targets"] = sorted(
+        rZ["candidate_source"]["targets"])
+    h15["semantic_identity"]["provenance_chain"] = [
+        {"target": t, "derivation": [{"step": "unattributed-admission",
+                                        "reason": "forged"}]}
+        for t in h15["target_set"]]
+    check("H15 a zero-attribution record cannot claim PROVED_TARGET_SET",
+          bool(validate_edge_records([h15], oZ)), True)
+
+    def _target_claim(target, subject, checked=None):
+        return {
+            "target": target,
+            "reason": "target-not-in-reachable-set",
+            "row_kind": "target-drop",
+            "claim": {"kind": "target-not-in-reachable-set", "module": MOD,
+                      "subjects": [subject]},
+            "evidence": {"reachable_set_member": False, "symbol": subject,
+                         "reachable_basis": "final-upper-bound",
+                         "symbols_checked": ([subject] if checked is None
+                                              else checked)}}
+
+    # H1: the exclusion target is a different, reachable symbol than the one
+    # the evidence names.  v1.1 validated only the evidence symbol.
+    h1 = _clone(rC)
+    h1["exclusions"] = [_target_claim("reachable_target", "excluded_caller")]
+    h1["candidate_source"]["targets"] = ["reachable_target", "target_ok"]
+    h1["exclusion_accounting"].update({
+        "candidate_targets": ["reachable_target", "target_ok"],
+        "excluded_targets": ["reachable_target"]})
+    check("H1 target/evidence binding",
+          bool(validate_edge_records([h1], oC)), True)
+
+    # H2: the claim is rebound to a different DSO that also reaches the named
+    # caller, so only the module-identity rule can catch it.
+    class _OtherG:
+        name = "libbar.so"
+        funcs = {0x1300: "reachable_caller", 0x9000: "other_func"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+
+    og = _OtherG()
+    o2 = ReachabilityOracle(
+        {MOD: gC, "libbar.so": og},
+        {(MOD, a) for a in (0x700, 0x1000, 0x1100, 0x1300, 0x3000)}
+        | {("libbar.so", 0x1300)})
+    h2 = _clone(rC)
+    for row in (h2["exclusions"] + (h2.get("excluded_callers") or [])):
+        row["claim"]["module"] = "libbar.so"
+    check("H2 claim module binding",
+          bool(validate_edge_records([h2], o2)), True)
+
+    # H3: an ICF alias at a reachable address.  The oracle must expose every
+    # name at the address, not one representative.
+    gA, oA, rA = _caller_record(alias=True)
+    h3 = _clone(rA)
+    h3["exclusions"] = [_target_claim("alias_secondary", "alias_secondary")]
+    h3["candidate_source"]["targets"] = ["alias_secondary", "target_ok"]
+    h3["exclusion_accounting"].update({
+        "candidate_targets": ["alias_secondary", "target_ok"],
+        "excluded_targets": ["alias_secondary"]})
+    check("H3 ICF alias at a reachable address",
+          bool(validate_edge_records([h3], oA)), True)
+
+    # H4: the removed caller-count exemption.  A forged count and an empty
+    # symbols_checked list do not excuse the claim; the field is not read (and
+    # is not produced), so the row is refused.
+    h4 = _clone(rC)
+    h4["exclusions"] = [_target_claim("excluded_caller", "excluded_caller",
+                                      checked=[])]
+    h4["exclusions"][0]["evidence"]["reachable_caller_count"] = 0
+    h4["candidate_source"]["targets"] = ["excluded_caller", "target_ok"]
+    h4["exclusion_accounting"].update({
+        "candidate_targets": ["excluded_caller", "target_ok"],
+        "excluded_targets": ["excluded_caller"]})
+    check("H4 forged caller count no longer exempts symbols_checked",
+          bool(validate_edge_records([h4], oC)), True)
+    check("H4 the caller-count exemption is structurally absent",
+          "reachable_caller_count" not in json.dumps(rC), True)
+
+    # H5a: no-reachable-writer whose own derived_targets contain the target.
+    h5 = _clone(rC)
+    h5["exclusions"] = [{
+        "target": "target_dropped", "reason": "no-reachable-writer",
+        "claim": {"kind": "no-reachable-writer", "module": MOD,
+                  "subjects": []},
+        "evidence": {"writer": "w",
+                     "derived_targets": ["target_dropped", "target_ok"],
+                     "reachable_writers": []}}]
+    check("H5 no-reachable-writer contradicting its own derived_targets",
+          bool(validate_edge_records([h5], oC)), True)
+
+    # H5b: declared-name-absent naming an unrelated absent symbol for a target
+    # whose mapping is not explained.
+    h5b = _clone(rC)
+    h5b["target_reachability"] = "not-claimed"
+    h5b["exclusions"] = [{
+        "target": "target_dropped", "reason": "declared-name-absent",
+        "claim": {"kind": "declared-name-absent", "module": MOD,
+                  "subjects": ["unrelated_absent_name"]},
+        "evidence": {"declared_name": "unrelated_absent_name",
+                     "present": False}}]
+    check("H5 declared-name-absent for an unrelated target",
+          bool(validate_edge_records([h5b], oC)), True)
+
+    # H6a: a semantic call-site row with included:false naming a reachable
+    # caller.  The auxiliary list is untouched, so only the candidate-source
+    # walk can catch it.  The record is built against the oracle so the
+    # pre-closure-basis defect cannot mask the control.
+    h6 = _clone(next(r for r in records_live
+                    if r["semantic_identity"]["call_site_role"]
+                    == "method-store-slot"))
+    h6["candidate_source"]["rows"].append({
+        "caller": g5.funcs[0x300], "call_site": "0x999",
+        "included": False, "reason": "caller-not-in-reachable-set",
+        "targets": []})
+    check("H6 semantic included:false caller row is audited",
+          bool(validate_edge_records([h6], oracle_live)), True)
+
+    # H6b: the claim omits the reachable caller's contribution.  The
+    # recomputable candidate_source still says the reachable caller contributes
+    # target_ok, so the claim's mapping disagrees with the source.
+    h6b = _clone(rC)
+    for row in h6b["exclusions"]:
+        if row["reason"] == "not-contributed-by-reachable-callers":
+            row["claim"]["reachable_callers"][0]["contributed_targets"] = []
+    check("H6 caller-bound dropped target contributed by a reachable caller",
+          bool(validate_edge_records([h6b], oC)), True)
+
+    # H7: delete the exclusion and its candidate from the accounting block.
+    # candidate_source still names it, so the deletion is refused.
+    h7 = _clone(rC)
+    h7["exclusions"] = []
+    h7["exclusion_accounting"].update({
+        "excluded_targets": [], "candidate_targets": ["target_ok"]})
+    check("H7 exclusion and candidate both deleted",
+          bool(validate_edge_records([h7], oC)), True)
+
+    # H8: an empty admitted set and a definition-less function are resolver
+    # gaps, never proofs.
+    class _EmptyG:
+        name = "empty.so"
+        funcs = {0x10: "empty_func", 0x20: "unused"}
+        start_set = set(funcs)
+        all_syms = dict(funcs)
+        names_at = {a: {n} for a, n in funcs.items()}
+        sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": set(), "unresolved": False,
+            "reason": None, "class": "field", "field_offsets": set(),
+            "seam": None, "arg_deps": set()}}
+
+    eG = _EmptyG()
+    eRec = build_edge_records({"empty.so": eG})[0]
+    check("H8 an empty target set is demoted",
+          (eRec["disposition"], eRec["disposition_demotion"]),
+          (DISPOSITION_UNRESOLVED, "empty-target-set"))
+
+    class _NoSymG:
+        name = "nosym.so"
+        funcs = {}
+        start_set = set()
+        all_syms = {}
+        names_at = {}
+        sites = {(0x10, 0x11, "call"): {
+            "kind": "call", "func": 0x10, "addr": 0x11,
+            "text": "call *%rax", "targets": {0x99}, "unresolved": False,
+            "reason": None, "class": "field", "field_offsets": set(),
+            "seam": None, "arg_deps": set()}}
+
+    nRec = build_edge_records({"nosym.so": _NoSymG()})[0]
+    check("H8 a definition-less function is demoted",
+          (nRec["disposition"], nRec["disposition_demotion"]),
+          (DISPOSITION_UNRESOLVED, "no-defining-symbol"))
+    badq = _clone(nRec)
+    badq["disposition"] = DISPOSITION_PROVED
+    badq["target_set"] = ["<0x99>"]
+    badq["target_set_claim"] = True
+    check("H8 the validator refuses a proved record with no defining symbol",
+          bool(validate_edge_records([badq])), True)
+
+    # H9: two records may not share an identity.  v1.1 seeded ordinals by
+    # (function, role) but omitted the role from edge_id.
+    check("H9 duplicate edge_id is refused",
+          bool(validate_edge_records([_clone(rC), _clone(rC)], oC)), True)
+
+    # ---- v1.3 row-kind, target-drop binding and identity controls ---------- #
+    # Every control below is isolated: the mutation table in
+    # edge-validator-hardening.json disables exactly the named check and requires
+    # this control (and only this control) to change verdict.
+
+    def _declared_rec(target="target_unreachable", listed=None,
+                      name="unrelated_absent_name", include_targets=True):
+        rec = _clone(rC)
+        listed = [target] if listed is None else listed
+        evidence = {"declared_name": name, "present": False}
+        if include_targets:
+            evidence["targets"] = list(listed)
+        rec["exclusions"] = [{
+            "target": target,
+            "reason": "declared-name-absent",
+            "row_kind": "target-drop",
+            "claim": {"kind": "declared-name-absent", "module": MOD,
+                      "subjects": [name]},
+            "evidence": evidence,
+        }]
+        rec["candidate_source"]["targets"] = sorted({"target_ok", target})
+        rec["candidate_source"]["excluded_callers"][0][
+            "contributed_targets"] = []
+        rec["candidate_source"]["excluded_callers"][0]["call_sites"] = []
+        rec["exclusion_accounting"].update({
+            "candidate_targets": rec["candidate_source"]["targets"],
+            "admitted_targets": ["target_ok"],
+            "excluded_targets": [target],
+            "unaccounted_targets": [],
+        })
+        return rec
+
+    c_rowkind = _clone(rC)
+    c_rowkind["exclusions"][0]["row_kind"] = "subject"
+    check("v1.3 exclusion row kind",
+          bool(validate_edge_records([c_rowkind], oC)), True)
+
+    c_vocab = _clone(rC)
+    c_vocab["exclusions"].append({
+        "target": "target_dropped",
+        "reason": "writer-not-in-reachable-set",
+        "row_kind": "target-drop",
+        "claim": {"kind": "writer-not-in-reachable-set", "module": MOD,
+                  "subjects": ["excluded_caller"]},
+        "evidence": {"reachable_set_member": False,
+                     "reachable_basis": "final-upper-bound",
+                     "symbol": "excluded_caller",
+                     "symbols_checked": ["excluded_caller"],
+                     "would_store_targets": ["target_dropped"]}})
+    check("v1.3 target-drop reason vocabulary",
+          bool(validate_edge_records([c_vocab], oC)), True)
+
+    c_decltext = _declared_rec(include_targets=False)
+    c_decltext["exclusions"][0]["claim"]["target_derivation"] = (
+        "a free-text claim is not a mapping")
+    check("v1.3 declared-name structured targets",
+          bool(validate_edge_records([c_decltext], oC)), True)
+
+    c_declmember = _declared_rec(listed=["target_ok"])
+    check("v1.3 declared-name target membership",
+          bool(validate_edge_records([c_declmember], oC)), True)
+
+    c_declreach = _declared_rec(target="target_dropped",
+                                listed=["target_dropped"])
+    check("v1.3 declared-name target unreachable",
+          bool(validate_edge_records([c_declreach], oC)), True)
+
+    c_declcand = _declared_rec(
+        listed=["target_unreachable", "invented_name"])
+    check("v1.3 declared-name targets are candidates",
+          bool(validate_edge_records([c_declcand], oC)), True)
+
+    c_argmap = _clone(rC)
+    del c_argmap["candidate_source"]["callers"]
+    check("v1.3 argument-target caller mapping required",
+          bool(validate_edge_records([c_argmap], oC)), True)
+
+    # R3: both the claim and candidate_source say a reachable caller
+    # contributes the dropped target.  The mapping agrees, but the target is
+    # then not droppable and the admitted set is not the reachable image set.
+    c_argrecomp = _clone(rC)
+    c_argrecomp["candidate_source"]["callers"][0]["contributed_targets"] = [
+        "target_ok", "target_dropped"]
+    c_argrecomp["candidate_source"]["callers"][0]["call_sites"][0][
+        "arguments"][0]["targets"] = ["target_ok", "target_dropped"]
+    for row in c_argrecomp["exclusions"]:
+        if row["reason"] == "not-contributed-by-reachable-callers":
+            row["claim"]["reachable_callers"][0]["contributed_targets"] = [
+                "target_ok", "target_dropped"]
+    check("v1.3 caller contributions recomputed",
+          bool(validate_edge_records([c_argrecomp], oC)), True)
+
+    c_argexcluded = _clone(rC)
+    c_argexcluded["candidate_source"]["excluded_callers"][0][
+        "contributed_targets"] = ["target_ok"]
+    c_argexcluded["candidate_source"]["excluded_callers"][0][
+        "call_sites"][0]["arguments"][0]["targets"] = ["target_ok"]
+    check("v1.3 dropped target attributed to an excluded caller",
+          bool(validate_edge_records([c_argexcluded], oC)), True)
+
+    c_argcand = _clone(rC)
+    c_argcand["exclusion_accounting"]["candidate_enumeration"] = "not-applicable"
+    c_argcand["candidate_source"]["targets"].append("extra_candidate")
+    c_argcand["exclusion_accounting"]["candidate_targets"].append(
+        "extra_candidate")
+    check("v1.3 candidates equal admitted plus excluded",
+          bool(validate_edge_records([c_argcand], oC)), True)
+
+    c_writerwould = _clone(rec0)
+    for row in c_writerwould.get("excluded_writers") or ():
+        if row.get("reason") == "writer-not-in-reachable-set":
+            row["evidence"].pop("would_store_targets", None)
+    check("v1.3 writer would_store_targets binding",
+          bool(validate_edge_records([c_writerwould])), True)
+
+    c_targetreach = _clone(rC)
+    c_targetreach["target_reachability"] = "not-claimed"
+    check("v1.3 target_reachability is derived",
+          bool(validate_edge_records([c_targetreach], oC)), True)
+
+    with tempfile.TemporaryDirectory() as td:
+        wd = Path(td) / "workdir"
+
+        class _A:
+            output = str(Path(td) / "receipt.json")
+            edge_records = None
+
+        resolved = _edge_records_path(_A(), Path(td), "ab" * 32, wd)
+        check("v1.3 sidecar default is under the workdir",
+              (resolved.parent == wd,
+               resolved.name.startswith("edge-records.")), (True, True))
+
+    tool_identity = _tool_identity()
+    check("v1.3 tool identity carries the validator sha256",
+          (len(tool_identity.get("sha256") or "") == 64,
+           tool_identity.get("schema") == EDGE_RECORD_SCHEMA), (True, True))
+
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
@@ -6638,8 +9439,19 @@ def self_test() -> int:
           f"(AGENTS.md section 22), the in-image slot target rule "
           f"(reachable-writer and static-initialiser negative controls), "
           f"reachable-caller target bounding (fixed-vs-parameter caller controls), "
-          f"and per-edge provenance records (unaccounted/unwitnessed exclusion "
-          f"refusal)")
+          f"per-edge provenance records (unaccounted/unwitnessed exclusion "
+          f"refusal), mutually redundant target accounting, the closed "
+          f"derivation vocabulary, the final-upper-bound reachability oracle "
+          f"(writer-exclusion negative and positive controls), the v1.2 "
+          f"subject-scoped claim controls (H1 target/evidence binding, H2 module "
+          f"binding, H3 ICF aliases, H4 caller-count exemption removal, H5 "
+          f"self-contradicting evidence, H6 audit coverage, H7 candidate deletion, "
+          f"H8 vacuous-set demotion, H9 duplicate identities, H10 v1m "
+          f"caller-scoped positive control), and the v1.3 row-kind and "
+          f"target-binding controls (row kind, reason vocabulary, structured "
+          f"declared targets, target attribution, recomputed caller "
+          f"contributions, candidate equality, writer would_store_targets, "
+          f"derived target_reachability, sidecar default and tool identity)")
     return 0
 
 
@@ -6672,6 +9484,15 @@ def main(argv=None) -> int:
     ap.add_argument("--skip-graph-on-refusal", action="store_true",
                     help="stop after identity/import refusals; used for negative controls")
     ap.add_argument("--output")
+    ap.add_argument("--edge-records",
+                    help="explicit JSONL sidecar path; the default is "
+                         "<workdir>/edge-records.<artifact_sha[:16]>.jsonl and "
+                         "is never written beside --output")
+    ap.add_argument("--max-record-sample", type=int,
+                    default=EDGE_RECORD_SAMPLE_DEFAULT,
+                    help="maximum records embedded in the receipt sample; the "
+                         "full population is always written to the JSONL "
+                         "sidecar")
     ap.add_argument("--summary", action="store_true")
     args = ap.parse_args(argv)
 
