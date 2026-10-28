@@ -27,16 +27,15 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::AtomicPtr;
 
 use crate::engine::eng_lib::{Engine, EngineDigestsPtr};
 use crate::engine::eng_list::{ENGINE_get_first, ENGINE_get_next};
 use crate::engine::eng_table::{
     engine_table_cleanup, engine_table_register, engine_table_unregister, ossl_engine_table_select,
+    EngineTableSlot,
 };
 use crate::runtime::err::err_sites::TB_DIGEST_78;
 use crate::runtime::err::raise_site;
-use crate::runtime::lhash::OpenSslLhash;
 
 /// `OPENSSL_FILE` for this unit, for the `ossl_engine_table_select` coordinate.
 const FILE: *const c_char = c"crypto/engine/tb_digest.c".as_ptr();
@@ -45,13 +44,12 @@ const LINE_SELECT: c_int = 69;
 
 /// `static ENGINE_TABLE *digest_table = NULL` (`:15`).
 ///
-/// The `ENGINE_TABLE *` is the lhash pointer, as `eng_table.rs` documents; the atomic is
-/// the stable home for the slot the table helpers write through.
-static DIGEST_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
+/// The slot is the typed home `eng_table.rs` documents for the lhash pointer.
+static DIGEST_TABLE: EngineTableSlot = EngineTableSlot::new();
 
-/// The `ENGINE_TABLE **` the table helpers take.
-pub(crate) fn digest_table_slot() -> *mut *mut OpenSslLhash {
-    core::ptr::addr_of!(DIGEST_TABLE) as *mut *mut OpenSslLhash
+/// The typed `ENGINE_TABLE *` slot the table helpers take.
+pub(crate) fn digest_table_slot() -> &'static EngineTableSlot {
+    &DIGEST_TABLE
 }
 
 /// `void ENGINE_unregister_digests(ENGINE *e)` — `crypto/engine/tb_digest.c:17-20`.

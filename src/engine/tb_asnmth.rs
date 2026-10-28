@@ -21,18 +21,16 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
-use core::sync::atomic::AtomicPtr;
 
 use crate::engine::eng_lib::{up_ref, Engine, EnginePkeyAsn1MethsPtr};
 use crate::engine::eng_list::{ENGINE_get_first, ENGINE_get_next};
 use crate::engine::eng_table::{
     engine_table_cleanup, engine_table_doall, engine_table_register, engine_table_unregister,
-    ossl_engine_table_select,
+    ossl_engine_table_select, EngineTableSlot,
 };
 use crate::evp::pkey_asn1::{EVP_PKEY_asn1_free, EvpPkeyAsn1Method};
 use crate::runtime::err::err_sites::{TB_ASNMTH_200, TB_ASNMTH_213, TB_ASNMTH_92};
 use crate::runtime::err::raise_site;
-use crate::runtime::lhash::OpenSslLhash;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::str::OPENSSL_strncasecmp;
 use crate::runtime::thread::{CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock};
@@ -48,11 +46,11 @@ const FILE: *const c_char = c"crypto/engine/tb_asnmth.c".as_ptr();
 const LINE_SELECT: c_int = 80;
 
 /// `static ENGINE_TABLE *pkey_asn1_meth_table = NULL` (`:26`).
-static PKEY_ASN1_METH_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
+static PKEY_ASN1_METH_TABLE: EngineTableSlot = EngineTableSlot::new();
 
-/// The `ENGINE_TABLE **` the table helpers take.
-pub(crate) fn pkey_asn1_meth_table_slot() -> *mut *mut OpenSslLhash {
-    core::ptr::addr_of!(PKEY_ASN1_METH_TABLE) as *mut *mut OpenSslLhash
+/// The typed `ENGINE_TABLE *` slot the table helpers take.
+pub(crate) fn pkey_asn1_meth_table_slot() -> &'static EngineTableSlot {
+    &PKEY_ASN1_METH_TABLE
 }
 
 /// `void ENGINE_unregister_pkey_asn1_meths(ENGINE *e)` — `crypto/engine/tb_asnmth.c:28-31`.
@@ -418,7 +416,7 @@ pub unsafe extern "C" fn ENGINE_pkey_asn1_find_str(
     if unsafe { CRYPTO_THREAD_read_lock(crate::engine::eng_lib::global_engine_lock()) } == 0 {
         return ptr::null();
     }
-    let table = PKEY_ASN1_METH_TABLE.load(core::sync::atomic::Ordering::Acquire);
+    let table = PKEY_ASN1_METH_TABLE.load();
     // SAFETY: `table` is this module's static lhash; `fstr` outlives the walk.
     unsafe {
         engine_table_doall(

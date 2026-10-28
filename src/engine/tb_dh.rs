@@ -13,31 +13,28 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
-use core::ptr;
-use core::sync::atomic::AtomicPtr;
-
 use crate::engine::eng_lib::Engine;
 use crate::engine::eng_list::{ENGINE_get_first, ENGINE_get_next};
 use crate::engine::eng_table::{
     engine_table_cleanup, engine_table_register, engine_table_unregister, ossl_engine_table_select,
+    EngineTableSlot,
 };
-use crate::runtime::lhash::OpenSslLhash;
-
+use core::ffi::{c_char, c_int, c_void};
+use core::ptr;
 /// `OPENSSL_FILE` for this unit, for the `ossl_engine_table_select` coordinate.
 const FILE: *const c_char = c"crypto/engine/tb_dh.c".as_ptr();
 /// `OPENSSL_LINE` of the `ossl_engine_table_select` call (`:61`).
 const LINE_SELECT: c_int = 61;
 
 /// `static ENGINE_TABLE *dh_table = NULL` (`:15`).
-static DH_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(ptr::null_mut());
+static DH_TABLE: EngineTableSlot = EngineTableSlot::new();
 
 /// `static const int dummy_nid = 1` (`:16`).
 static DUMMY_NID: c_int = 1;
 
-/// The `ENGINE_TABLE **` the table helpers take.
-pub(crate) fn dh_table_slot() -> *mut *mut OpenSslLhash {
-    core::ptr::addr_of!(DH_TABLE) as *mut *mut OpenSslLhash
+/// The typed `ENGINE_TABLE *` slot the table helpers take.
+pub(crate) fn dh_table_slot() -> &'static EngineTableSlot {
+    &DH_TABLE
 }
 
 /// `void ENGINE_unregister_DH(ENGINE *e)` — `crypto/engine/tb_dh.c:18-21`.
