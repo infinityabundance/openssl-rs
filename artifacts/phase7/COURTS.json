@@ -343,6 +343,22 @@
       "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
     },
     {
+      "name": "candidate-libcrypto-so-3",
+      "note": "the DSO every probe links through -L artifacts/phase2 -lcrypto",
+      "path": "artifacts/phase2/libcrypto.so.3",
+      "sha256": "c335ac3c7f04b694f62ec27906a094cfbea319eb4b6efbeb4cc661d76e6aa36b"
+    },
+    {
+      "name": "candidate-source-commit",
+      "note": "git rev-parse HEAD (provenance; the tree digest is the live binding)",
+      "sha256": "c63fc23de2048533f634adbcd00fd12c34487d13"
+    },
+    {
+      "name": "candidate-source-tree",
+      "note": "sha256 over sorted (relpath, size, sha256) of src, Cargo.toml, Cargo.lock, build.rs; files=887",
+      "sha256": "a1d8c9fc642b9f4c97e325e4f876a5e50b8a0a9406cb23f5ec59b397d5092bc2"
+    },
+    {
       "name": "probe",
       "path": "courts/phase7/rt_fetch_probe.c",
       "sha256": "bbd752db6c52867a27260ebda57ed0cecbd8ebcbea2764a55181983cef367ff4"

@@ -184,6 +184,24 @@ def observations(body: dict | None) -> dict[str, int]:
 # committed file, which is a fact about the commit.
 CANONICAL_PATHS: tuple[str, ...] = ()
 
+# Inputs whose digest is **provenance, not candidate identity**. AGENTS.md section 22 separates
+# the frozen source candidate `S` from the evidence commit `E`: adding `E` moves `HEAD` without
+# changing the candidate. A `source_commit` input therefore changes across the very commit that
+# lands the artefact, and a byte-for-byte comparison would fail every time. The precedent is
+# `downstream_candidate_freeze.py`, which excludes `source_commit` from its identity hash for the
+# same reason. The exclusion is deliberately narrow: the source-tree digest and the DSO hashes in
+# the same `inputs` list are still compared, so a candidate change cannot hide behind it.
+PROVENANCE_INPUT_NAMES: frozenset[str] = frozenset({"candidate-source-commit"})
+
+
+def _normalise_provenance(doc: dict) -> dict:
+    """Blank the digest of provenance-only inputs, leaving every candidate binding compared."""
+    out = json.loads(json.dumps(doc))
+    for entry in out.get("inputs") or []:
+        if isinstance(entry, dict) and entry.get("name") in PROVENANCE_INPUT_NAMES:
+            entry["sha256"] = "<provenance:excluded-from-comparison>"
+    return out
+
 
 def compare_records(committed: dict, fresh: dict) -> list[str]:
     """Every difference between the committed court record and the fresh one.
@@ -192,7 +210,7 @@ def compare_records(committed: dict, fresh: dict) -> list[str]:
     that says "the JSON differs" sends a reader to `git diff` on a 400-line file, while
     one that says `courts[3].residual_count: 0 -> 2` is the finding.
     """
-    return _walk(committed, fresh, "")[0]
+    return _walk(_normalise_provenance(committed), _normalise_provenance(fresh), "")[0]
 
 
 def _walk(a: object, b: object, path: str) -> tuple[list[str], bool]:
