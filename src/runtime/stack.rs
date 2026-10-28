@@ -598,6 +598,40 @@ pub unsafe extern "C" fn OPENSSL_sk_push(st: *mut OpenSslStack, data: *const c_v
     })
 }
 
+/// Test-only insertion fault injection for the CMS ownership controls.
+///
+/// `#[cfg(test)]`-only and thread-local, so a test that forces the next insert to fail cannot
+/// disturb a concurrently running test and the module does not exist in a release build
+/// (AGENTS §13: test-only bypasses never ship). The fault models the only fallible step of an
+/// insert after the capacity check: `sk_reserve` answering false, as a real allocation failure
+/// does, without raising (see `sk_reserve`'s `try_reserve` arms).
+#[cfg(test)]
+pub(crate) mod test_hooks {
+    use core::cell::Cell;
+
+    std::thread_local! {
+        static INSERT_FAILURES: Cell<usize> = const { Cell::new(0) };
+    }
+
+    /// Make the next `OPENSSL_sk_insert` on this thread answer 0 without inserting.
+    pub(crate) fn fail_next_insert() {
+        INSERT_FAILURES.with(|n| n.set(1));
+    }
+
+    /// Consume one pending fault, if any.
+    pub(crate) fn take_insert_failure() -> bool {
+        INSERT_FAILURES.with(|n| {
+            let pending = n.get();
+            if pending == 0 {
+                false
+            } else {
+                n.set(pending - 1);
+                true
+            }
+        })
+    }
+}
+
 /// `int OPENSSL_sk_insert(OPENSSL_STACK *sk, const void *data, int where)`
 ///
 /// A `where` at or beyond the end appends, and **a negative `where` appends
@@ -621,6 +655,10 @@ pub unsafe extern "C" fn OPENSSL_sk_insert(
             };
             if s.items.len() as c_int == MAX_NODES {
                 raise_site(&err_sites::STACK_275);
+                return 0;
+            }
+            #[cfg(test)]
+            if test_hooks::take_insert_failure() {
                 return 0;
             }
             if !sk_reserve(s, 1, false) {
@@ -1015,4 +1053,61 @@ pub unsafe extern "C" fn OPENSSL_sk_deep_copy(
             p
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    //! The `OPENSSL_sk_new_reserve` capacity invariant the CMS `get1_*` helpers rely on, and the
+    //! negative control for the test-only insert fault hook.
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    /// After a successful `OPENSSL_sk_new_reserve(None, n)`, the next `n` appends must not grow
+    /// the array and must not fail. `num_alloc` and the `Vec` capacity are the observable record:
+    /// `num_alloc` changes only in `sk_reserve`, and the capacity only on a `Vec` reallocation.
+    #[test]
+    fn a_reserved_stack_absorbs_its_reservation_without_growth() {
+        let marker = 0u8;
+        let p = (&raw const marker).cast::<c_void>();
+        for n in [1usize, 2, 4, 5, 9, 33] {
+            // SAFETY: `st` is this module's allocation, exclusively owned here; every element is
+            // `p`, a live local pointer.
+            unsafe {
+                let st = OPENSSL_sk_new_reserve(None, n as c_int);
+                assert!(!st.is_null());
+                let reserved = inner(st).unwrap().num_alloc;
+                let capacity = inner(st).unwrap().items.capacity();
+                assert_eq!(reserved, core::cmp::max(n as c_int, MIN_NODES));
+                assert!(capacity >= n);
+                for i in 0..n {
+                    assert_eq!(OPENSSL_sk_push(st, p), (i + 1) as c_int);
+                }
+                let s = inner(st).unwrap();
+                assert_eq!(s.items.len(), n);
+                assert_eq!(s.num_alloc, reserved, "a push took the growth path");
+                assert_eq!(s.items.capacity(), capacity, "the Vec reallocated");
+                OPENSSL_sk_free(st);
+            }
+        }
+    }
+
+    /// Negative control: the fault hook really does refuse an insert, without mutating the stack,
+    /// and is consumed by exactly one call. Without this, the CMS controls could pass because the
+    /// injection silently never fired.
+    #[test]
+    fn the_test_only_insert_fault_refuses_once_without_mutating() {
+        let marker = 0u8;
+        let p = (&raw const marker).cast::<c_void>();
+        // SAFETY: `st` is this module's allocation, exclusively owned here; `p` is a live local.
+        unsafe {
+            let st = OPENSSL_sk_new_reserve(None, 1);
+            assert!(!st.is_null());
+            test_hooks::fail_next_insert();
+            assert_eq!(OPENSSL_sk_push(st, p), 0);
+            assert_eq!(OPENSSL_sk_num(st), 0);
+            assert_eq!(OPENSSL_sk_push(st, p), 1);
+            OPENSSL_sk_free(st);
+        }
+    }
 }

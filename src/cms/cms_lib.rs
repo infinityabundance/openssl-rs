@@ -1483,3 +1483,188 @@ pub(crate) unsafe fn ossl_cms_sign_encrypt(
     }
     evd
 }
+
+#[cfg(test)]
+mod tests {
+    //! Fault-injected ownership controls for `ossl_cms_get1_{certs,crls}_ex` and for
+    //! `X509_add_cert(..., X509_ADD_FLAG_UP_REF)` as reached from the certificate arm.
+    //!
+    //! The injected insert failure is **not** a claim of production reachability. The capacity
+    //! invariant (proved by `runtime::stack::tests::a_reserved_stack_absorbs_its_reservation_without_growth`)
+    //! makes the destination insert infallible at these two sites, so the failure arms are
+    //! unreachable at the measured capacity. The controls establish what the code does *if* the
+    //! insert failed — the failure-atomicity property — and keep the CRL gap recorded rather
+    //! than papered over.
+    use super::*;
+    use crate::cms::cms_sd::CMS_SignedData_init;
+    use crate::runtime::stack::test_hooks;
+    use crate::x509::x_crl::X509_CRL_new;
+    use crate::x509::x_x509::X509_new;
+    use core::sync::atomic::Ordering;
+
+    /// A `signedData` container with empty certificate and CRL choice slots.
+    fn signed_cms() -> *mut CmsContentInfo {
+        let cms = CMS_ContentInfo_new();
+        assert!(!cms.is_null());
+        // SAFETY: `cms` is live and owned here.
+        assert_eq!(unsafe { CMS_SignedData_init(cms) }, 1);
+        cms
+    }
+
+    /// Insert `cert` with the container taking the caller's reference (the `CMS_add0_cert`
+    /// arm): no up-ref and no failure arm, which is what makes the `get1` capacity `n` equal
+    /// to one insert per certificate choice.
+    ///
+    /// # Safety
+    /// `cms` is live; `cert` is live and ownership passes to `cms`.
+    unsafe fn add_cert_owned(cms: *mut CmsContentInfo, cert: *mut X509) {
+        // SAFETY: `cms` is live per the contract.
+        let cch = unsafe { CMS_add0_CertificateChoices(cms) };
+        assert!(!cch.is_null());
+        // SAFETY: `cch` is a live choice now owned by `cms`; `cert` is live per the contract.
+        unsafe {
+            (*cch).type_ = CMS_CERTCHOICE_CERT;
+            (*cch).d = cert.cast();
+        }
+    }
+
+    /// CRL counterpart of [`add_cert_owned`].
+    ///
+    /// # Safety
+    /// `cms` is live; `crl` is live and ownership passes to `cms`.
+    unsafe fn add_crl_owned(cms: *mut CmsContentInfo, crl: *mut X509Crl) {
+        // SAFETY: `cms` is live per the contract.
+        let rch = unsafe { CMS_add0_RevocationInfoChoice(cms) };
+        assert!(!rch.is_null());
+        // SAFETY: `rch` is a live choice now owned by `cms`; `crl` is live per the contract.
+        unsafe {
+            (*rch).type_ = CMS_REVCHOICE_CRL;
+            (*rch).d = crl.cast();
+        }
+    }
+
+    /// The two helpers at a measured capacity of five (greater than `MIN_NODES`, so the exact
+    /// reservation is exercised): both fill their whole reserved stack without a failure, and
+    /// the references they take are released by the stack's own `pop_free`.
+    #[test]
+    fn both_get1_helpers_fill_their_reserved_stacks_at_capacity() {
+        // Touches the process-global ERR queue through the CMS/X509 paths.
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every pointer is an object this test owns and frees below.
+        unsafe {
+            let cms = signed_cms();
+            let mut certs_owned = Vec::new();
+            let mut crls_owned = Vec::new();
+            for _ in 0..5 {
+                let cert = X509_new();
+                assert!(!cert.is_null());
+                add_cert_owned(cms, cert);
+                certs_owned.push(cert);
+                let crl = X509_CRL_new();
+                assert!(!crl.is_null());
+                add_crl_owned(cms, crl);
+                crls_owned.push(crl);
+            }
+
+            let mut certs: *mut OpenSslStack = ptr::null_mut();
+            assert_eq!(ossl_cms_get1_certs_ex(cms, &mut certs), 1);
+            assert_eq!(
+                OPENSSL_sk_num(certs),
+                5,
+                "all five reserved appends succeeded"
+            );
+            for &cert in &certs_owned {
+                assert_eq!((*cert).references.load(Ordering::Relaxed), 2);
+            }
+            OPENSSL_sk_pop_free(certs, Some(x509_free_void));
+            for &cert in &certs_owned {
+                assert_eq!((*cert).references.load(Ordering::Relaxed), 1);
+            }
+
+            let mut crls: *mut OpenSslStack = ptr::null_mut();
+            assert_eq!(ossl_cms_get1_crls_ex(cms, &mut crls), 1);
+            assert_eq!(
+                OPENSSL_sk_num(crls),
+                5,
+                "all five reserved appends succeeded"
+            );
+            for &crl in &crls_owned {
+                assert_eq!((*crl).references.load(Ordering::Relaxed), 2);
+            }
+            OPENSSL_sk_pop_free(crls, Some(x509_crl_free_void));
+            for &crl in &crls_owned {
+                assert_eq!((*crl).references.load(Ordering::Relaxed), 1);
+            }
+
+            // The container owns the remaining reference of each choice.
+            CMS_ContentInfo_free(cms);
+        }
+    }
+
+    /// Control: with the insert forced to fail after `X509_add_cert` has taken its `UP_REF`, the
+    /// certificate's count returns to its pre-call value. The rollback arm is the `X509_free` at
+    /// `src/x509/x509_cmp.rs:1151`; the outer cleanup releases only previously inserted certs.
+    #[test]
+    fn a_failed_cert_insertion_releases_the_up_ref() {
+        // Touches the process-global ERR queue: the failure arm raises `X509_CMP_222`.
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every pointer is an object this test owns and frees below.
+        unsafe {
+            let cms = signed_cms();
+            let cert = X509_new();
+            assert!(!cert.is_null());
+            assert_eq!(CMS_add1_cert(cms, cert), 1);
+            let before = (*cert).references.load(Ordering::Relaxed);
+            assert_eq!(before, 2, "the test's reference plus the container's");
+
+            test_hooks::fail_next_insert();
+            let mut certs: *mut OpenSslStack = ptr::null_mut();
+            assert_eq!(ossl_cms_get1_certs_ex(cms, &mut certs), 0);
+            assert!(certs.is_null(), "the failure arm must null the out-slot");
+            let after = (*cert).references.load(Ordering::Relaxed);
+            assert_eq!(
+                after, before,
+                "X509_add_cert must undo its UP_REF on insert failure"
+            );
+
+            CMS_ContentInfo_free(cms);
+            X509_free(cert);
+        }
+    }
+
+    /// Control: with the push forced to fail after `X509_CRL_up_ref` has succeeded,
+    /// `ossl_cms_get1_crls_ex` has no rollback arm, so exactly one reference is orphaned. The
+    /// intended property (`after == before`) does **not** hold; this control records the gap.
+    /// It does not claim the push can fail at the reserved capacity — see the module comment.
+    #[test]
+    fn a_failed_crl_push_orphans_one_reference_control() {
+        // Touches the process-global ERR queue through the CMS/X509 paths.
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every pointer is an object this test owns and frees below.
+        unsafe {
+            let cms = signed_cms();
+            let crl = X509_CRL_new();
+            assert!(!crl.is_null());
+            assert_eq!(CMS_add1_crl(cms, crl), 1);
+            let before = (*crl).references.load(Ordering::Relaxed);
+            assert_eq!(before, 2, "the test's reference plus the container's");
+
+            test_hooks::fail_next_insert();
+            let mut crls: *mut OpenSslStack = ptr::null_mut();
+            assert_eq!(ossl_cms_get1_crls_ex(cms, &mut crls), 0);
+            assert!(crls.is_null(), "the failure arm must null the out-slot");
+            let after = (*crl).references.load(Ordering::Relaxed);
+            assert_eq!(
+                after,
+                before + 1,
+                "the injected push failure must orphan exactly the up-ref"
+            );
+
+            // Release the orphan by hand: the code under test does not. If a rollback arm is
+            // ever added, this control must be rewritten to assert `after == before`.
+            X509_CRL_free(crl);
+            CMS_ContentInfo_free(cms);
+            X509_CRL_free(crl);
+        }
+    }
+}
